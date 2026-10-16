@@ -1,6 +1,7 @@
 -- | Closing an allocation under the booking lock: back to FINDING with a bumped attempt count, or the rider's last no-show cancelling the booking.
 module SharedLogic.SharedCab.Allocation.Reallocate
   ( Closed (..),
+    CloseResult (..),
     closeLocked,
     afterClose,
     releaseCancelledBooking,
@@ -41,10 +42,18 @@ import qualified Storage.Queries.PersonStats as QPS
 
 data Closed = Closed
   { closedCity :: Id DMOC.MerchantOperatingCity,
-    fallbackJustTriggered :: Bool, -- this close crossed maxAttempts
-    autoCancelled :: Bool, -- this close was the rider's last allowed no-show: the booking is cancelled, not FINDING
+    result :: CloseResult,
     heldTrip :: Maybe Text -- the trip the allocation was made to, from its alloc key
   }
+
+data CloseResult
+  = -- | back to FINDING
+    Reallocated
+  | -- | back to FINDING, and this close crossed maxAttempts: the rider is offered any cab
+    ReallocatedIntoFallback
+  | -- | the rider's last allowed no-show: the booking is cancelled, not FINDING
+    AutoCancelled
+  deriving (Show, Eq)
 
 -- | Inside the booking lock: CAS plate -> null (back to FINDING), clear the alloc key, bump attempts. Nothing when another closer won.
 closeLocked ::
@@ -70,7 +79,7 @@ closeLocked cfg bookingId expectedPlate outcome =
         then do
           cancelForNoShows b
           clearAllocationKeys bookingId
-          pure Closed {closedCity = b.merchantOperatingCityId, fallbackJustTriggered = False, autoCancelled = True, heldTrip}
+          pure Closed {closedCity = b.merchantOperatingCityId, result = AutoCancelled, heldTrip}
         else reallocate b heldTrip
     reallocate b heldTrip = do
       shared $ Redis.del (allocKey bookingId)
@@ -85,7 +94,7 @@ closeLocked cfg bookingId expectedPlate outcome =
       when (attemptsNow < cfg.maxAttempts) $ shared $ Redis.del (fallbackPushedKey bookingId)
       when fallbackJustTriggered $
         logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); fallback surface"
-      pure Closed {closedCity = b.merchantOperatingCityId, fallbackJustTriggered, autoCancelled = False, heldTrip}
+      pure Closed {closedCity = b.merchantOperatingCityId, result = if fallbackJustTriggered then ReallocatedIntoFallback else Reallocated, heldTrip}
 
 -- | The rider's last allowed no-show: cancelled by the system, fare kept (marking it refund-pending would make the payment
 -- service refund). SMS and Google Wallet flips are skipped: they need the API Flow the scheduler env lacks. The row flips
@@ -136,7 +145,7 @@ eventBlame = \case
 
 afterClose :: AllocFlow m r => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> Maybe Closed -> m ()
 afterClose cfg bookingId plate outcome closed =
-  whenJust closed $ \Closed {closedCity = cityId, fallbackJustTriggered, autoCancelled, heldTrip} -> do
+  whenJust closed $ \Closed {closedCity = cityId, result, heldTrip} -> do
     now <- getCurrentTime
     trip <- fmap (getId . (.vehicleTripId)) <$> Session.readSession plate
     Events.emit cityId . Events.withTrip trip $
@@ -146,13 +155,14 @@ afterClose cfg bookingId plate outcome closed =
     mbBooking <- QFRFSTicketBooking.findById bookingId
     withTryCatch "sharedCabMisses" (NoShow.record (blameFor outcome) (mbBooking <&> (.riderId)) (Id <$> heldTrip))
       >>= either (\e -> logError $ "shared-cab miss count bump failed for booking " <> bookingId.getId <> ": " <> show e) pure
-    if autoCancelled
-      then do
+    case result of
+      AutoCancelled -> do
         decision <- maybe (pure NoRefund) (`gateByPayment` NoRefund) mbBooking
         Events.emit cityId $ Events.bookingEvent (Events.BookingCancelled "system" (refundWord decision) (Just "max_no_shows")) bookingId.getId (Just plate) Nothing now
         mapM_ (\b -> Notify.notifyBookingCancelled b.sharedCabNoShows b) mbBooking
-      else forM_ (Notify.reassignReasonFor outcome) $ \reason ->
-        mapM_ (Notify.notifyReassigned reason) mbBooking
-    when fallbackJustTriggered $
-      whenM (claimFallbackPush cfg bookingId) $
-        mapM_ Notify.notifyBoardAny mbBooking
+      Reallocated -> notifyReassignment mbBooking
+      ReallocatedIntoFallback -> do
+        notifyReassignment mbBooking
+        whenM (claimFallbackPush cfg bookingId) $ mapM_ Notify.notifyBoardAny mbBooking
+  where
+    notifyReassignment mbBooking = forM_ (Notify.reassignReasonFor outcome) $ \reason -> mapM_ (Notify.notifyReassigned reason) mbBooking
