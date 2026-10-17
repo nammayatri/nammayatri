@@ -43,7 +43,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.JourneyModule.Types (mkRouteDetail)
-import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.FRFSLiveTrip as FRFSLiveTrip
 import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.FRFSCancellationConfig as CQFRFSCancellationConfig
@@ -466,32 +465,10 @@ confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfi
           Spec.BUS -> Seconds $ if (fromMaybe False mbIsSingleMode) then frfsConfig.busStationTtl.getSeconds else 2 * frfsConfig.busStationTtl.getSeconds
           Spec.METRO -> Seconds frfsConfig.metroStationTtl
           _ -> Seconds frfsConfig.metroStationTtl
-  qrTtl <- case (booking.vehicleType, booking.tripId, booking.routeCode) of
-    (Spec.BUS, Just tripId, Just routeCode) -> do
-      let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId tripId
-      mbSchedule <- withTryCatch "getBusTripSchedule_confirm" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig)
-      case mbSchedule of
-        Right [] -> return baseQrTtl
-        Right (firstSchedule : _) -> do
-          -- The schedule is keyed by the platform the bus calls at, so a booking made against a
-          -- station code is only found through the platforms under it.
-          fromStationCodes <- OTPRest.getEquivalentStopCodes booking.fromStationCode integratedBPPConfig
-          case find (\eta -> eta.stopCode `elem` fromStationCodes) firstSchedule.eta of
-            Just boardingStopEta -> do
-              currentTime <- getCurrentTime
-              let extraTtlSeconds =
-                    ( nominalDiffTimeToSeconds $
-                        diffUTCTime
-                          (unixToUTC boardingStopEta.arrivalTimeUnix)
-                          currentTime
-                    ).getSeconds
-              let addedTtl = max extraTtlSeconds 0
-              return $ Seconds (baseQrTtl.getSeconds + addedTtl)
-            Nothing -> return baseQrTtl
-        Left err -> do
-          logError $ "Failed to fetch bus trip schedule: " <> show err
-          return baseQrTtl
-    _ -> return baseQrTtl
+  confirmTime <- getCurrentTime
+  let qrTtl = case booking.startTime of
+        Just tripStart -> Seconds (baseQrTtl.getSeconds + max 0 (nominalDiffTimeToSeconds (diffUTCTime tripStart confirmTime)).getSeconds)
+        Nothing -> baseQrTtl
   order <- CallAPI.createOrder integratedBPPConfig qrTtl (mRiderName, mRiderNumber) booking quoteCategories
   let tickets =
         map

@@ -15,6 +15,7 @@ import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.Common (Seconds)
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime, logDebug)
@@ -30,6 +31,16 @@ findAllActiveByRiderId riderId = do
   now <- getCurrentTime
   let lastDay = addUTCTime (-60 * 60 * 24) now
   findAllWithKV [Se.And [Se.Is Beam.status $ Se.In [Just DJ.CONFIRMED, Just DJ.INPROGRESS, Just DJ.FEEDBACK_PENDING], Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId), Se.Is Beam.createdAt $ Se.GreaterThanOrEq lastDay]]
+
+findAllOlderActiveByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Int -> m [DJ.Journey]
+findAllOlderActiveByRiderId riderId limit = do
+  now <- getCurrentTime
+  let lastDay = addUTCTime (-60 * 60 * 24) now
+  findAllWithOptionsDb
+    [Se.And [Se.Is Beam.status $ Se.In [Just DJ.CONFIRMED, Just DJ.INPROGRESS, Just DJ.FEEDBACK_PENDING], Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId), Se.Is Beam.createdAt $ Se.LessThan lastDay]]
+    (Se.Desc Beam.createdAt)
+    (Just limit)
+    Nothing
 
 findAllByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Maybe Integer -> Maybe Integer -> Maybe UTCTime -> Maybe UTCTime -> [DJ.JourneyStatus] -> Maybe Bool -> m [DJ.Journey]
 findAllByRiderId (Kernel.Types.Id.Id personId) mbLimit mbOffset mbFromDate mbToDate mbJourneyStatusList mbIsPaymentSuccess = do
@@ -96,4 +107,16 @@ updateStatusAndEndTime status journeyId = do
   let endTimeUpdate = ([Se.Set Beam.endTime $ Just _now | status == DJ.FEEDBACK_PENDING])
   updateOneWithKV
     ([Se.Set Beam.status $ Just status, Se.Set Beam.updatedAt _now] <> endTimeUpdate)
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId journeyId)]
+
+updateTripTimesAndStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DJ.JourneyStatus -> Maybe UTCTime -> Maybe UTCTime -> Maybe Seconds -> Kernel.Types.Id.Id DJ.Journey -> m ()
+updateTripTimesAndStatus status startTime endTime estimatedDuration journeyId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.status $ Just status,
+      Se.Set Beam.startTime startTime,
+      Se.Set Beam.endTime endTime,
+      Se.Set Beam.estimatedDuration estimatedDuration,
+      Se.Set Beam.updatedAt _now
+    ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId journeyId)]
