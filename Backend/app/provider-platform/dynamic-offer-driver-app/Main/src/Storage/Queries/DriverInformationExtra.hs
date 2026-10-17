@@ -318,7 +318,7 @@ updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOper
             merchantOperatingCityId = Just merchantOperatingCityId,
             blockedBy = blockedBy,
             actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
-            requestorId = Nothing,
+            requestorId = blockStateModifier,
             specialZoneId = Nothing
           }
 

@@ -723,7 +723,8 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
             else True
 
     QDI.updateRentalInterCityAndIntraCitySwitch canSwitchToRental' canSwitchToInterCity' canSwitchToIntraCity' personId
-    QDI.updateAirportSwitch enableForAirport Nothing Nothing personId
+    unless (enableForAirport == DI.BLOCKED || enableForAirport == driverInfo.enableForAirport) $
+      QDI.updateAirportSwitch enableForAirport Nothing Nothing personId
 
   return Success
   where
