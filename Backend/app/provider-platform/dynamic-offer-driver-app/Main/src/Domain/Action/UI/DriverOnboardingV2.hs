@@ -646,6 +646,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
   whenJust airConditioned $ \ac -> SDO.checkAndUpdateAirConditioned False ac.isWorking personId merchantOperatingCityId cityVehicleServiceTiers Nothing False
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  fleetLocksAutoAssign <- maybe False (not . (.allowDriverToToggle)) <$> FDA.getDriverFleetAutoAssignConfig personId merchantOperatingCityId
 
   -- Same lock checkAndAutoDisableWalletGatedTiers takes: a concurrent wallet-debit revoke must not
   -- interleave its strip between this read and these writes.
@@ -656,7 +657,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
     person <- PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     now <- getCurrentTime
     let hasAutoAssignTag tier =
-          Yudhishthira.elemTagValue (LYT.TagName "AutoAssign") (show tier) (Yudhishthira.filterExpiredTags' now (fromMaybe [] person.driverTag))
+          Yudhishthira.elemTagValue (LYT.TagName FDA.autoAssignTagName) (show tier) (Yudhishthira.filterExpiredTags' now (fromMaybe [] person.driverTag))
 
     -- Single pass over the driver's own filtered tier list, not cityVehicleServiceTiers -- force-select must never bypass isUsageRestricted.
     driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOperatingCityId
@@ -676,26 +677,36 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
             -- runs in the debit-driven auto-revoke either (PostActions.runPostActionsForAccount
             -- gates the call on the same flag). Dispatch time never wallet-checks (see attemptPriorityDirectAssign).
             walletGateEnabled = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck
-        if not isUsageRestricted && isSelected
-          then do
-            -- Only call checkMinWalletBalance (a real DB query) when its result actually matters:
-            -- an AutoAcceptOptional tier the driver isn't requesting auto-accept for never consults it.
-            let walletCheckNeeded = walletGateEnabled && (isAutoAcceptOnlyTier || wantsAutoAccept)
-            hasSufficientWalletBalance <- if walletCheckNeeded then checkMinWalletBalance driverServiceTier personId else pure True
-            -- AutoAcceptOnly has no non-priority existence, so insufficient wallet drops the base tier too.
-            -- AutoAcceptOptional base-tier eligibility stays wallet-independent, matching checkAndAutoDisableWalletGatedTiers.
-            let baseTierSurvivesWalletCheck = hasSufficientWalletBalance || not isAutoAcceptOnlyTier
-            pure
-              ( if baseTierSurvivesWalletCheck then Just driverServiceTier.serviceTierType else Nothing,
-                if hasSufficientWalletBalance && wantsAutoAccept then Just driverServiceTier.serviceTierType else Nothing
-              )
-          else pure (Nothing, Nothing)
+            isFleetLockedTier = fleetLocksAutoAssign && FDA.isAutoAcceptEnabledTier driverServiceTier
+            keepIfPreviously tierTypes = if driverServiceTier.serviceTierType `elem` tierTypes then Just driverServiceTier.serviceTierType else Nothing
+        if
+            | isUsageRestricted -> pure (Nothing, Nothing)
+            | isFleetLockedTier -> do
+              when (isJust mbServiceTierDriverRequest) $
+                logInfo $ "Ignoring driver service tier request for fleet-managed auto-assign tier " <> show driverServiceTier.serviceTierType <> " for driver " <> personId.getId
+              pure (keepIfPreviously vehicle.selectedServiceTiers, keepIfPreviously (fromMaybe [] vehicle.selectedAutoAcceptTiers))
+            | isSelected -> do
+              -- Only call checkMinWalletBalance (a real DB query) when its result actually matters:
+              -- an AutoAcceptOptional tier the driver isn't requesting auto-accept for never consults it.
+              let walletCheckNeeded = walletGateEnabled && (isAutoAcceptOnlyTier || wantsAutoAccept)
+              hasSufficientWalletBalance <- if walletCheckNeeded then checkMinWalletBalance driverServiceTier personId else pure True
+              -- AutoAcceptOnly has no non-priority existence, so insufficient wallet drops the base tier too.
+              -- AutoAcceptOptional base-tier eligibility stays wallet-independent, matching checkAndAutoDisableWalletGatedTiers.
+              let baseTierSurvivesWalletCheck = hasSufficientWalletBalance || not isAutoAcceptOnlyTier
+              pure
+                ( if baseTierSurvivesWalletCheck then Just driverServiceTier.serviceTierType else Nothing,
+                  if hasSufficientWalletBalance && wantsAutoAccept then Just driverServiceTier.serviceTierType else Nothing
+                )
+            | otherwise -> pure (Nothing, Nothing)
     -- Rating-gated tiers (vehicleRating threshold set) are eligibility-driven, not
     -- opt-in: the driver's toggle cannot remove one the vehicle qualifies for — an
     -- automated recompute would re-add it on the next rating/AC event anyway.
     let ratingGatedTiers = [t.serviceTierType | (t, isUsageRestricted) <- driverVehicleServiceTierTypes, not isUsageRestricted, isJust t.vehicleRating]
         selectedServiceTierTypes = DL.nub $ mapMaybe fst tierResults <> ratingGatedTiers
-        selectedAutoAcceptTierTypes = mapMaybe snd tierResults
+        -- Fleet-kept auto-accept tiers this vehicle cannot serve are not in tierResults.
+        vehicleTierTypes = map ((.serviceTierType) . fst) driverVehicleServiceTierTypes
+        fleetKeptAutoAcceptTiers = if fleetLocksAutoAssign then filter (`notElem` vehicleTierTypes) (fromMaybe [] vehicle.selectedAutoAcceptTiers) else []
+        selectedAutoAcceptTierTypes = DL.nub $ mapMaybe snd tierResults <> fleetKeptAutoAcceptTiers
     QVehicle.updateSelectedServiceTiers selectedServiceTierTypes personId
     QVehicle.updateSelectedAutoAcceptTiers selectedAutoAcceptTierTypes personId
 
@@ -1572,7 +1583,7 @@ postDriverLinkToFleet (mbDriverId, merchantId, merchantOperatingCityId) req = do
           driver <- PersonQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
           SOnboardingComms.setOnboardingAs transporterConfig driver DI.FLEET_DRIVER
           SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver req.fleetOwnerId driverId) SGuard.LinkToFleet (SGuard.TargetDriver driverId) $
-            FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason) (Just merchantId) (Just merchantOperatingCityId) (pure ()) -- created inactive: not part of ACTIVE_DRIVER_COUNT
+            FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (Just (fromMaybe DVC.CAR req.onboardingVehicleCategory)) False (Just requestReason) (Just merchantId) (Just merchantOperatingCityId) (pure ()) -- created inactive: not part of ACTIVE_DRIVER_COUNT
   return Success
 
 postDriverOnboardingShareLink ::

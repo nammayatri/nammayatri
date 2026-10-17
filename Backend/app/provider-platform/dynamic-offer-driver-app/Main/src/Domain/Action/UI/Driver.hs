@@ -281,6 +281,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardi
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import SharedLogic.DriverPool as DP
+import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
@@ -1569,6 +1570,13 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               }
   mVehicle <- QVehicle.findById personId
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
+  let normaliseThreshold val = if val.getMeters < 0 then Nothing else Just val
+      changesThreshold mbRequested current = maybe False ((/= current) . normaliseThreshold) mbRequested
+      changesTripDistance = changesThreshold req.tripDistanceMaxThreshold driverInfo.tripDistanceMaxThreshold || changesThreshold req.tripDistanceMinThreshold driverInfo.tripDistanceMinThreshold
+  when changesTripDistance $ do
+    mbFleetAutoAssign <- QFDA.getDriverFleetAutoAssignConfig personId merchantOpCityId
+    when (maybe False (.disableDriverAreaAndDistancePreference) mbFleetAutoAssign) $
+      throwError $ InvalidRequest "Trip distance preference is disabled by your fleet"
   let isPetModeEnabled = fromMaybe driverInfo.isPetModeEnabled req.isPetModeEnabled
       tripDistanceMaxThreshold = case req.tripDistanceMaxThreshold of
         Nothing -> driverInfo.tripDistanceMaxThreshold
@@ -1672,7 +1680,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   let petTag = Yudhishthira.TagNameValue "PetDriver#\"true\""
   when (isPetModeEnabled && maybe False (Yudhishthira.elemTagNameValue petTag) person.driverTag) $
     logInfo "Tag already exists, update expiry"
-  tag <-
+  petUpdatedTag <-
     if isPetModeEnabled
       then do
         mbNammTag <- YudhishthiraFlow.verifyTag (cast merchantOpCityId) petTag
@@ -1680,6 +1688,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
         let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry petTag (mbNammTag >>= (.validity)) now
         return $ Yudhishthira.replaceTagNameValue person.driverTag reqDriverTagWithExpiry
       else return $ Yudhishthira.removeTagName person.driverTag petTag
+  let tag = if changesTripDistance then Yudhishthira.removeTagName (Just petUpdatedTag) (LYT.TagNameValue AreaPref.distancePreferenceEnabledTagName) else petUpdatedTag
   unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
     QPerson.updateDriverTag (Just tag) personId
 

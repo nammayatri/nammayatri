@@ -401,18 +401,55 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
       ..
     }
 
-makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe [Text] -> Vehicle
-makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now vehicleTag = do
+-- | Takes the driver's previous vehicle: its auto-accept tiers are kept when the variant is unchanged, and a driver of a
+-- fleet with auto-assign on by default gets the fleet's auto-accept tiers unless they had switched auto-accept off.
+makeFullVehicleFromRC ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Maybe Vehicle ->
+  [DVST.VehicleServiceTier] ->
+  DI.DriverInformation ->
+  Person ->
+  Id DTM.Merchant ->
+  Text ->
+  VehicleRegistrationCertificate ->
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  Maybe [Text] ->
+  m Vehicle
+makeFullVehicleFromRC mbPreviousVehicle vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now vehicleTag = do
   let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now vehicleTag
   let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction AutoSelectedVariants driverInfo vehicle vehicleServiceTiers Nothing driver.driverTag now
       -- Rating-gated tiers are eligibility-driven, not auto-selected: a vehicle whose RC
       -- already carries a qualifying rating must get/keep them on (re)activation, or an RC
       -- refresh would strip tiers the vehicle still qualifies for.
       ratingGatedTiers = eligibleRatingGatedTiers driverInfo vehicle vehicleServiceTiers Nothing driver.driverTag now
-  addSelectedServiceTiers (DL.nub (availableServiceTiersForDriver <> ratingGatedTiers)) vehicle
+      builtVehicle = setTiers (DL.nub (availableServiceTiersForDriver <> ratingGatedTiers)) vehicle.selectedAutoAcceptTiers vehicle
+      cityAutoAcceptTiers = map (.serviceTierType) (filter QFDA.isAutoAcceptEnabledTier vehicleServiceTiers)
+      hadAutoAccept = maybe True (not . null . fromMaybe [] . (.selectedAutoAcceptTiers)) mbPreviousVehicle
+      carriedOverVehicle = case mbPreviousVehicle of
+        Just previousVehicle
+          | previousVehicle.variant == builtVehicle.variant,
+            previousAutoAcceptTiers@(_ : _) <- fromMaybe [] previousVehicle.selectedAutoAcceptTiers ->
+            let servableTiers = [tier.serviceTierType | tier <- vehicleServiceTiers, builtVehicle.variant `elem` tier.allowedVehicleVariant]
+             in setTiers (DL.nub (builtVehicle.selectedServiceTiers <> filter (`elem` servableTiers) previousAutoAcceptTiers)) (Just previousAutoAcceptTiers) builtVehicle
+        _ -> builtVehicle
+  fleetResult <- withTryCatch "makeFullVehicleFromRC" $ do
+    mbFleetAutoAssign <- QFDA.getDriverFleetAutoAssignConfig driver.id driver.merchantOperatingCityId
+    if maybe False (.defaultOn) mbFleetAutoAssign && hadAutoAccept && not (null cityAutoAcceptTiers)
+      then do
+        let oldTags = fromMaybe [] driver.driverTag
+            newTags = QFDA.fleetDriverTags now cityAutoAcceptTiers True mbFleetAutoAssign oldTags
+        when (newTags /= oldTags) $ QP.updateDriverTag (Just newTags) driver.id
+        pure $ QFDA.fleetAutoAcceptVehicle now True (Just newTags) vehicleServiceTiers builtVehicle
+      else pure carriedOverVehicle
+  case fleetResult of
+    Left err -> do
+      logError $ "makeFullVehicleFromRC: fleet auto-assign failed for driver " <> driver.id.getId <> ": " <> show err
+      pure carriedOverVehicle
+    Right fullVehicle -> pure fullVehicle
   where
-    addSelectedServiceTiers :: [DVST.ServiceTierType] -> Vehicle -> Vehicle
-    addSelectedServiceTiers serviceTiers Vehicle {..} = Vehicle {selectedServiceTiers = serviceTiers, ..}
+    setTiers :: [DVST.ServiceTierType] -> Maybe [DVST.ServiceTierType] -> Vehicle -> Vehicle
+    setTiers serviceTiers autoAcceptTiers Vehicle {..} = Vehicle {selectedServiceTiers = serviceTiers, selectedAutoAcceptTiers = autoAcceptTiers, ..}
 
 makeVehicleFromRC :: Id Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe [Text] -> Vehicle
 makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now vehicleTag = do
