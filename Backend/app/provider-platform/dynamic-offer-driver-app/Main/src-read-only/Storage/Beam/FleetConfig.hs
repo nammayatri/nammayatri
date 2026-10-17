@@ -22,6 +22,7 @@ data FleetConfigT f = FleetConfigT
     autoAssign :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     blacklistCoinEvents :: B.C f (Kernel.Prelude.Maybe [Lib.DriverCoins.Types.DriverCoinsFunctionType]),
     directlyStartFirstTripAssignment :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableAutoAcceptCta :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     endRideDistanceThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     fleetOwnerId :: B.C f Data.Text.Text,
     fleetPoolingPriority :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

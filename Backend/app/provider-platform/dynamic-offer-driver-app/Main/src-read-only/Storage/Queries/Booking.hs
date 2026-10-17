@@ -18,6 +18,11 @@ import qualified Storage.Beam.Booking as Beam
 import Storage.Queries.BookingExtra as ReExport
 import Storage.Queries.Transformers.Booking
 
+updateAutoAcceptAcknowledged :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ())
+updateAutoAcceptAcknowledged autoAcceptAcknowledged id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.autoAcceptAcknowledged autoAcceptAcknowledged, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateEstimatedDistanceAndFare ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ())

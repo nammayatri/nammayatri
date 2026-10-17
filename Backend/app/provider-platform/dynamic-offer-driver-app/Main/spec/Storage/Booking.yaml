@@ -132,6 +132,8 @@ Booking:
     businessEmailDomain: Maybe Text
     customerLanguage: Maybe Language
     addOnData: "[AddOnData]"
+    autoAcceptOverlaySentAt: Maybe UTCTime
+    autoAcceptAcknowledged: Maybe Bool
 
   excludedFields:
     - merchantId
@@ -281,6 +283,10 @@ Booking:
     updateIsPickupOrDestinationEdited:
       kvFunction: updateOneWithKV
       params: [isPickupOrDestinationEdited]
+      where: id
+    updateAutoAcceptAcknowledged:
+      kvFunction: updateOneWithKV
+      params: [autoAcceptAcknowledged]
       where: id
 
   constraints:

@@ -46,10 +46,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.AddOn as SAddOn
+import SharedLogic.Allocator (AllocatorJobType (..), SchedulerJobFlow, SendAutoAcceptOverlayJobData (..))
 import SharedLogic.Cancel
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.FareCalculator as FC
@@ -67,6 +69,8 @@ import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsa
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQuote
+import qualified Storage.Queries.FleetConfig as QFC
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
@@ -143,7 +147,8 @@ handler ::
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r,
-    HasField "gateNotifiedKeyShards" r Int
+    HasField "gateNotifiedKeyShards" r Int,
+    SchedulerJobFlow r
   ) =>
   Id DM.Merchant ->
   InitReq ->
@@ -176,6 +181,20 @@ handler merchantId req validatedReq = do
         booking <- buildBooking (mkBuildBookingReq DRB.NEW (Just riderDetails.id) req.mbRiderName) searchRequest driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now mbPaymentMethod paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide driverQuote.preferenceMatchScore (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain driverQuote.isAutoAccepted searchTry.addOnData
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
+        when (booking.isAutoAccepted == Just True) $ do
+          mbFleetAssoc <- QFDA.findByDriverId driverQuote.driverId True
+          mbFleetConfig <- maybe (pure Nothing) (QFC.findByPrimaryKey . Id . (.fleetOwnerId)) mbFleetAssoc
+          when (maybe False (.enableAutoAcceptCta) mbFleetConfig) $
+            createJobIn @_ @'SendAutoAcceptOverlay
+              (Just booking.providerId)
+              (Just booking.merchantOperatingCityId)
+              60
+              SendAutoAcceptOverlayJobData
+                { bookingId = booking.id,
+                  driverId = driverQuote.driverId,
+                  merchantId = booking.providerId,
+                  merchantOperatingCityId = booking.merchantOperatingCityId
+                }
         QST.updateStatus DST.COMPLETED (searchTry.id)
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
@@ -422,6 +441,8 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         ledgerWriteMode = Nothing,
         financeInvoiceId = Nothing,
         discountAmount = mbClampedDiscount,
+        autoAcceptAcknowledged = Nothing,
+        autoAcceptOverlaySentAt = Nothing,
         ..
       }
 

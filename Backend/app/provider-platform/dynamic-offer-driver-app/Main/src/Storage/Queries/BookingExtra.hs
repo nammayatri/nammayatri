@@ -412,3 +412,9 @@ updateFinanceInvoiceId bookingId financeInvoiceId = do
   updateOneWithKV
     [Se.Set BeamB.financeInvoiceId financeInvoiceId, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+updateAutoAcceptOverlaySentAt :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> UTCTime -> m ()
+updateAutoAcceptOverlaySentAt bookingId sentAt =
+  updateOneWithKV
+    [Se.Set BeamB.autoAcceptOverlaySentAt (Just sentAt), Se.Set BeamB.updatedAt sentAt]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
