@@ -2,7 +2,6 @@ module Storage.Queries.VehicleRegistrationCertificateExtra where
 
 import Data.Text (toLower)
 import qualified Database.Beam as B
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import Domain.Types.Image hiding (id)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -86,7 +85,6 @@ upsert a@VehicleRegistrationCertificate {..} = do
           Se.Set BeamVRC.verificationStatus verificationStatus,
           Se.Set BeamVRC.approved approved,
           Se.Set BeamVRC.verified verified,
-          Se.Set BeamVRC.docsVerificationStatus docsVerificationStatus,
           Se.Set BeamVRC.reviewedAt reviewedAt,
           Se.Set BeamVRC.failedRules failedRules,
           Se.Set BeamVRC.fleetOwnerId fleetOwnerId,
@@ -236,29 +234,9 @@ partialFindLastVehicleRCFleet certNumber fleetOwnerId limit offset = do
       catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
 
--- | Set RC `docsVerificationStatus` by cert-number hash, stamping docsVerificationStatusUpdatedAt; skips no-op writes
---   so the stamp moves only on a status change (the `IS NULL` OR keeps the first write null-safe).
-updateDocsVerificationStatusByCertificateNumberHash ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe DDVS.DocsVerificationStatus -> DbHash -> m ())
-updateDocsVerificationStatusByCertificateNumberHash docsVerificationStatus certificateHash = do
-  now <- getCurrentTime
-  updateWithKV
-    [ Se.Set BeamVRC.docsVerificationStatus docsVerificationStatus,
-      Se.Set BeamVRC.docsVerificationStatusUpdatedAt (Just now),
-      Se.Set BeamVRC.updatedAt now
-    ]
-    [ Se.And
-        [ Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash,
-          Se.Or
-            [ Se.Is BeamVRC.docsVerificationStatus $ Se.Eq Nothing,
-              Se.Is BeamVRC.docsVerificationStatus $ Se.Not (Se.Eq docsVerificationStatus)
-            ]
-        ]
-    ]
-
 -- | Set RC `verified` by cert-number hash; skips no-op writes (the `IS NULL` OR keeps the first write null-safe).
 --   Downgrading `verified` to False also revokes `approved` (re-approval required), mirroring the driver side.
+--   Stamps `docsVerificationStatusUpdatedAt` (the onboarding lists' sort key) like every onboarding-flag write.
 updateVerifiedByCertificateNumberHash ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe Bool ->
@@ -268,7 +246,8 @@ updateVerifiedByCertificateNumberHash verified certificateHash = do
   now <- getCurrentTime
   updateWithKV
     ( [ Se.Set BeamVRC.verified verified,
-        Se.Set BeamVRC.updatedAt now
+        Se.Set BeamVRC.updatedAt now,
+        Se.Set BeamVRC.docsVerificationStatusUpdatedAt (Just now)
       ]
         <> [Se.Set BeamVRC.approved (Just False) | verified == Just False]
     )
@@ -283,6 +262,7 @@ updateVerifiedByCertificateNumberHash verified certificateHash = do
 
 -- | Targeted `approved` + `verified` update by RC id. Patches only those two fields (not a full-row
 --   updateByPrimaryKey), so it doesn't clobber concurrent writes to other fields.
+--   Stamps `docsVerificationStatusUpdatedAt` (the onboarding lists' sort key) like every onboarding-flag write.
 updateApprovedAndVerifiedById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe Bool ->
@@ -294,7 +274,8 @@ updateApprovedAndVerifiedById approved verified (Id rcId) = do
   updateOneWithKV
     [ Se.Set BeamVRC.approved approved,
       Se.Set BeamVRC.verified verified,
-      Se.Set BeamVRC.updatedAt now
+      Se.Set BeamVRC.updatedAt now,
+      Se.Set BeamVRC.docsVerificationStatusUpdatedAt (Just now)
     ]
     [Se.Is BeamVRC.id $ Se.Eq rcId]
 
@@ -662,8 +643,8 @@ findAllValidRcByFleetOwnerIdsAndSearchStringWithoutVerificationStatusMF limit of
       catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
 
-findAllRCByStatusForFleetMF :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> Maybe Documents.VerificationStatus -> Integer -> Integer -> Id Merchant.Merchant -> Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe DDVS.DocsVerificationStatus -> m [VehicleRegistrationCertificate]
-findAllRCByStatusForFleetMF fleetOwnerIds status limitVal offsetVal (Id merchantId') merchantOperatingCityId statusAwareVehicleNo mbApproved mbFrom mbTo mbDocsVerificationStatus = do
+findAllRCByStatusForFleetMF :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> Maybe Documents.VerificationStatus -> Integer -> Integer -> Id Merchant.Merchant -> Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> m [VehicleRegistrationCertificate]
+findAllRCByStatusForFleetMF fleetOwnerIds status limitVal offsetVal (Id merchantId') merchantOperatingCityId statusAwareVehicleNo mbApproved mbFrom mbTo = do
   dbConf <- getReplicaBeamConfig
   statusAwareVehicleNoHash <- mapM getDbHash statusAwareVehicleNo
   res <-
@@ -680,7 +661,6 @@ findAllRCByStatusForFleetMF fleetOwnerIds status limitVal offsetVal (Id merchant
                         B.&&?. (if null fleetOwnerIds then B.sqlBool_ (B.not_ (B.isNothing_ rc.fleetOwnerId)) else B.sqlBool_ (rc.fleetOwnerId `B.in_` (B.val_ . Just <$> fleetOwnerIds)))
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\s -> rc.verificationStatus B.==?. B.val_ s) status
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\approved -> rc.approved B.==?. B.val_ (Just approved)) mbApproved
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\docsVerificationStatus -> rc.docsVerificationStatus B.==?. B.val_ (Just docsVerificationStatus)) mbDocsVerificationStatus
                         B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\cNum -> B.sqlBool_ $ B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))) statusAwareVehicleNo
                                    B.||?. maybe (B.sqlBool_ $ B.val_ True) (\cNum -> rc.certificateNumberHash B.==?. B.val_ cNum) statusAwareVehicleNoHash
                                )

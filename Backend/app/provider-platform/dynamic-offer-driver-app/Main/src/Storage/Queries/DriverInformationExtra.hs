@@ -3,7 +3,6 @@ module Storage.Queries.DriverInformationExtra where
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.Common as Common
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverFlowStatus as DFS
 import Domain.Types.DriverInformation as DriverInfo
@@ -132,13 +131,15 @@ updateVerifiedState driverId isVerified = do
 
 -- | Set `verified` and `approved` in a single write (`approved` only when given). Leaves `enabled` untouched.
 --   On transition to verified, stamps `firstVerifiedAt` once (race-free).
+--   Stamps `docsVerificationStatusUpdatedAt` (the onboarding lists' sort key) like every onboarding-flag write.
 updateVerifiedAndApprovedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Bool -> m ()
 updateVerifiedAndApprovedState driverId isVerified isApproved = do
   now <- getCurrentTime
   updateOneWithKV
     ( [ Se.Set BeamDI.verified isVerified,
         Se.Set BeamDI.updatedAt now,
-        Se.Set BeamDI.approved isApproved
+        Se.Set BeamDI.approved isApproved,
+        Se.Set BeamDI.docsVerificationStatusUpdatedAt (Just now)
       ]
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId.getId)]
@@ -210,7 +211,8 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified isApproved = do
   enabledAt <- getEnabledAt (Id driverId)
   updateOneWithKV
     ( [ Se.Set BeamDI.enabled isEnabled,
-        Se.Set BeamDI.updatedAt now
+        Se.Set BeamDI.updatedAt now,
+        Se.Set BeamDI.docsVerificationStatusUpdatedAt (Just now)
       ]
         <> ([Se.Set BeamDI.verified (fromJust isVerified) | isJust isVerified])
         <> ([Se.Set BeamDI.approved isApproved | isJust isApproved])
@@ -284,7 +286,8 @@ updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime d
         Se.Set BeamDI.active $ fromMaybe True (mbActive <|> activeState),
         Se.Set BeamDI.mode $ mbMode <|> modeState,
         Se.Set BeamDI.blockReasonFlag (Just blockReasonFlag),
-        Se.Set BeamDI.updatedAt now
+        Se.Set BeamDI.updatedAt now,
+        Se.Set BeamDI.docsVerificationStatusUpdatedAt (Just now)
       ]
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
     )
@@ -330,7 +333,8 @@ updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOper
     ( [ Se.Set BeamDI.blocked isBlocked,
         Se.Set BeamDI.blockStateModifier blockStateModifier,
         Se.Set BeamDI.blockExpiryTime Nothing, --this prevents wrong date to be in this column because same is passed in error to frontend
-        Se.Set BeamDI.updatedAt now
+        Se.Set BeamDI.updatedAt now,
+        Se.Set BeamDI.docsVerificationStatusUpdatedAt (Just now)
       ]
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
     )
@@ -487,16 +491,6 @@ updateApproved approved driverId = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
-
--- | Kept in step with verified / approved by the onboarding recompute. The UI APIs and the legacy
---   ClickHouse status counts still read this column, so it must not go stale under the unified flow.
---   Called only on a status change, so it also stamps docsVerificationStatusUpdatedAt (the onboarding lists' sort key).
-updateDocsVerificationStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DDVS.DocsVerificationStatus -> Id Person.Driver -> m ()
-updateDocsVerificationStatus docsVerificationStatus driverId = do
-  now <- getCurrentTime
-  updateWithKV
-    [Se.Set BeamDI.docsVerificationStatus docsVerificationStatus, Se.Set BeamDI.docsVerificationStatusUpdatedAt (Just now), Se.Set BeamDI.updatedAt now]
-    [Se.Is BeamDI.driverId (Se.Eq $ getId driverId)]
 
 updateOnboardingAs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DriverInfo.OnboardingAs -> Id Person.Driver -> m ()
 updateOnboardingAs onboardingAs driverId = do

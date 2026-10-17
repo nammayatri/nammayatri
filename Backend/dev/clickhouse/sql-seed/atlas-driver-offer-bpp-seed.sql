@@ -53,6 +53,8 @@ ORDER BY (merchant_local_date, driver_id, id);
 CREATE TABLE atlas_driver_offer_bpp.driver_information (
     `driver_id` String,
     `driver_flow_status` Nullable(String),
+    `verified` Nullable(String),
+    `approved` Nullable(String),
     `enabled` Boolean,
     `enabled_at` Nullable(DateTime),
     `version` DateTime DEFAULT now()
@@ -164,7 +166,8 @@ create table atlas_driver_offer_bpp.vehicle_registration_certificate (
     `unencrypted_certificate_number` Nullable(String),
     `vehicle_model` Nullable(String),
     `vehicle_manufacturer` Nullable(String),
-    `docs_verification_status` Nullable(String),
+    `verified` Nullable(String),
+    `approved` Nullable(String),
     `fleet_owner_id` Nullable(String),
     `version` DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(version)
@@ -185,7 +188,8 @@ ORDER BY (merchant_local_date, fleet_owner_id, rc_id);
 CREATE TABLE atlas_driver_offer_bpp.fleet_owner_information (
     `fleet_owner_person_id` String,
     `fleet_name` Nullable(String),
-    `docs_verification_status` Nullable(String),
+    `verified` Nullable(String),
+    `approved` Nullable(String),
     `merchant_operating_city_id` Nullable(String),
     `version` DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(version)
@@ -306,6 +310,8 @@ FROM atlas_driver_offer_bpp.daily_stats_queue;
 CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.driver_information_queue (
     `driver_id` String,
     `driver_flow_status` Nullable(String),
+    `verified` Nullable(String),
+    `approved` Nullable(String),
     `enabled` Boolean,
     `enabled_at` Nullable(DateTime),
     `updated_at` Nullable(DateTime)
@@ -314,7 +320,7 @@ SETTINGS kafka_broker_list='localhost:29092', kafka_topic_list='adob-sessionizer
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS atlas_driver_offer_bpp.driver_information_mv
 TO atlas_driver_offer_bpp.driver_information AS
-SELECT driver_id, driver_flow_status, enabled, enabled_at, updated_at AS version
+SELECT driver_id, driver_flow_status, verified, approved, enabled, enabled_at, updated_at AS version
 FROM atlas_driver_offer_bpp.driver_information_queue;
 
 -- fleet_operator_daily_stats ------------------------------------------------
@@ -453,7 +459,8 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.vehicle_registration_certifica
     `unencrypted_certificate_number` Nullable(String),
     `vehicle_model` Nullable(String),
     `vehicle_manufacturer` Nullable(String),
-    `docs_verification_status` Nullable(String),
+    `verified` Nullable(String),
+    `approved` Nullable(String),
     `fleet_owner_id` Nullable(String),
     `updated_at` Nullable(DateTime)
 ) ENGINE = Kafka
@@ -461,7 +468,7 @@ SETTINGS kafka_broker_list='localhost:29092', kafka_topic_list='adob-sessionizer
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS atlas_driver_offer_bpp.vehicle_registration_certificate_mv
 TO atlas_driver_offer_bpp.vehicle_registration_certificate AS
-SELECT id, unencrypted_certificate_number, vehicle_model, vehicle_manufacturer, docs_verification_status, fleet_owner_id, updated_at AS version
+SELECT id, unencrypted_certificate_number, vehicle_model, vehicle_manufacturer, verified, approved, fleet_owner_id, updated_at AS version
 FROM atlas_driver_offer_bpp.vehicle_registration_certificate_queue;
 
 -- fleet_rc_daily_stats ------------------------------------------------------
@@ -486,7 +493,8 @@ FROM atlas_driver_offer_bpp.fleet_rc_daily_stats_queue;
 CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.fleet_owner_information_queue (
     `fleet_owner_person_id` String,
     `fleet_name` Nullable(String),
-    `docs_verification_status` Nullable(String),
+    `verified` Nullable(String),
+    `approved` Nullable(String),
     `merchant_operating_city_id` Nullable(String),
     `updated_at` Nullable(DateTime)
 ) ENGINE = Kafka
@@ -494,7 +502,7 @@ SETTINGS kafka_broker_list='localhost:29092', kafka_topic_list='adob-sessionizer
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS atlas_driver_offer_bpp.fleet_owner_information_mv
 TO atlas_driver_offer_bpp.fleet_owner_information AS
-SELECT fleet_owner_person_id, fleet_name, docs_verification_status, merchant_operating_city_id, updated_at AS version
+SELECT fleet_owner_person_id, fleet_name, verified, approved, merchant_operating_city_id, updated_at AS version
 FROM atlas_driver_offer_bpp.fleet_owner_information_queue;
 
 -- ============================================================================

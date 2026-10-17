@@ -7,7 +7,6 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
-import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.DriverFlowStatus
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.Plan
@@ -54,7 +53,6 @@ data DriverInformationT f = DriverInformationT
     disabledReasonFlag :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DisabledReasonFlag),
     dlNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     dlNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
-    docsVerificationStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus),
     docsVerificationStatusUpdatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverBankAccountDetails :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     driverDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

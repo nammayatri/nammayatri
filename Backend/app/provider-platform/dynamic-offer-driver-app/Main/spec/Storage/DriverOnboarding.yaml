@@ -291,9 +291,6 @@ DriverLicense:
 VehicleRegistrationCertificate:
   tableName: vehicle_registration_certificate
   types:
-    DocsVerificationStatus:
-      enum: "ADMIN_PENDING,ADMIN_APPROVED,ADMIN_REJECTED"
-      derive: "ToParamSchema"
     PendingChallanResult:
       pendingChallanCount: Maybe Int
       errorMessage: Maybe Text
@@ -336,8 +333,7 @@ VehicleRegistrationCertificate:
     approved: Maybe Bool # Set by the BOT API on approval. (verified/enabled are statusHandler-computed; approved is the BOT gate.)
     verified: Maybe Bool # statusHandler-computed: true iff all isMandatory vehicle docs are VALID (InspectionHub is one of them). Bidirectional.
     isNew: Maybe Bool
-    docsVerificationStatus: Maybe DocsVerificationStatus
-    docsVerificationStatusUpdatedAt: Maybe UTCTime # Set by the onboarding recompute whenever docsVerificationStatus changes; the onboarding lists sort by it.
+    docsVerificationStatusUpdatedAt: Maybe UTCTime # Stamped by every unified-flow write of verified / approved; the onboarding lists sort by it.
     pendingChallan: Maybe PendingChallanResult
     vehicleImageId: Maybe (Id MediaFile)
     initiatedBy: Maybe Domain.Types.InitiatedBy.InitiatedBy
@@ -429,8 +425,6 @@ VehicleRegistrationCertificate:
       where: id
   extraOperations:
     - EXTRA_QUERY_FILE
-  domainInstance:
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <DocsVerificationStatus>
 
 DriverRCAssociation:
   tableName: driver_rc_association

@@ -148,7 +148,6 @@ data DriverInfoRes = DriverInfoRes
     bankIfsc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bankVerificationStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     upiId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
     courtRecord :: Kernel.Prelude.Maybe CourtRecordResult,
     approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     disabledReasonFlag :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DisabledReasonFlag,

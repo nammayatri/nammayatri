@@ -7,7 +7,6 @@ import Data.Text (takeEnd, toLower)
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.Common as DI
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverBankAccount as DDBA
 import Domain.Types.DriverInformation
 import qualified Domain.Types.FleetConfig as DFC
@@ -777,12 +776,12 @@ findAllDriverByFleetOwnerIds fleetOwnerIds mbLimit mbOffset mbMobileNumberSearch
 
 --------------------------------- multi fleet owner queries ----------------------------------
 
-findAllActiveDriverByFleetOwnerIdWithDriverInfoMF :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => [Text] -> Text -> Text -> Int -> Int -> Maybe DbHash -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe DI.DriverMode -> Maybe Bool -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> Maybe DDVS.DocsVerificationStatus -> m [(FleetDriverAssociation, Person, DriverInformation)]
-findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merchantOperatingCityId limit offset mbMobileNumberSearchStringHash mbName mbSearchString mbDriverId mbIsActive mbMode mbHasRequestReason mbEnabled mbFrom mbTo mbApproved mbDocsVerificationStatus = do
+findAllActiveDriverByFleetOwnerIdWithDriverInfoMF :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => [Text] -> Text -> Text -> Int -> Int -> Maybe DbHash -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe DI.DriverMode -> Maybe Bool -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> m [(FleetDriverAssociation, Person, DriverInformation)]
+findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merchantOperatingCityId limit offset mbMobileNumberSearchStringHash mbName mbSearchString mbDriverId mbIsActive mbMode mbHasRequestReason mbEnabled mbFrom mbTo mbApproved = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
   encryptedMobileNumberHash <- mapM getDbHash mbSearchString
-  let needsDriverInfoJoin = isJust mbMode || isJust mbEnabled || isJust mbApproved || isJust mbDocsVerificationStatus
+  let needsDriverInfoJoin = isJust mbMode || isJust mbEnabled || isJust mbApproved
 
   if needsDriverInfoJoin
     then do
@@ -823,7 +822,6 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merch
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hasRequestReason -> if hasRequestReason then fleetDriverAssociation.requestReason B./=?. B.val_ Nothing else B.sqlBool_ $ B.val_ True) mbHasRequestReason
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\enabled -> driverInformation.enabled B.==?. B.val_ enabled) mbEnabled
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\approved -> driverInformation.approved B.==?. B.val_ (Just approved)) mbApproved
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\docsVerificationStatus -> driverInformation.docsVerificationStatus B.==?. B.val_ (Just docsVerificationStatus)) mbDocsVerificationStatus
                       )
                       do
                         fleetDriverAssociation <- B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)

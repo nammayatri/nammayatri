@@ -83,8 +83,8 @@ schema). The V2 OTP login + register sequence cross-writes to both.
 | 06–08 | TaxiTransportLicense: upload → common → approve | `POST /driver/{id}/document/upload`, `…/documents/common`, `…/driver/documents/update` | 1st of 4 mandatory FLEET_BUSINESS docs |
 | 09–11 | FinnishIDResidencePermit: upload → common → approve | (same trio) | 2nd doc |
 | 12–14 | BusinessLicense: upload → common → approve | (same trio) | 3rd doc |
-| 15–17 | TAXDetails: upload → common → approve | (same trio) | 4th doc — completes `fleet_owner_information.docs_verification_status = ADMIN_APPROVED` |
-| 18 | SQL Backstop | `POST /mock/sql/select` against `fleet_owner_information` | Authoritative check: `docs_verification_status = 'ADMIN_APPROVED'` |
+| 15–17 | TAXDetails: upload → common → approve | (same trio) | 4th doc — completes the fleet owner's mandatory set, so `fleet_owner_information.verified` flips to true |
+| 18 | SQL Backstop | `POST /mock/sql/select` against `fleet_owner_information` | Authoritative check: `verified = true`, `approved` true or null, `enabled = true` |
 | 19 | SQL Backstop | `POST /mock/sql/select` against `common_driver_onboarding_documents` | Authoritative check: each of 4 doc types `verification_status = 'APPROVED'` |
 
 JSON shape note: `/driver/documents/update` body uses Aeson's `{tag, contents}`
@@ -95,7 +95,7 @@ and nested `ApproveDetails = CommonDocument …`. Mirrors `test-doc-status-flow.
 
 - Does not bootstrap the JUSPAY_ADMIN — relies on config-sync + local-testing-data.
 - Does not invoke Stripe onboarding — that is `02-StripeOnboarding.json` (next).
-- Does not assert `fleet_owner_information.docs_verification_status` via SQL —
+- Does not assert the `fleet_owner_information` flags via SQL beyond step 18 —
   the API-level assertion in step 16 (all 4 docs listed) is the proxy; SQL-level
   assertion is the orchestrator's job (`run-helsinki-e2e.sh` can `psql -c …`).
 

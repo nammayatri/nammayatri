@@ -815,7 +815,7 @@
       }
     },
     {
-      "name": "18 - SQL Backstop: fleet_owner_information.docs_verification_status = ADMIN_APPROVED",
+      "name": "18 - SQL Backstop: fleet_owner_information flags (verified / approved / enabled)",
       "event": [
         {
           "listen": "test",
@@ -827,7 +827,10 @@
               "pm.test('Fleet owner row exists', () => pm.expect(rows.length).to.be.above(0));",
               "if (rows.length) {",
               "  console.log('fleet_owner_information row:', rows[0]);",
-              "  pm.test('docs_verification_status = ADMIN_APPROVED', () => pm.expect(rows[0].docs_verification_status).to.eql('ADMIN_APPROVED'));",
+              "  pm.test('verified = true', () => pm.expect(rows[0].verified).to.eql(true));",
+              "  pm.test('approved is true or null', () => pm.expect([true, null]).to.include(rows[0].approved));",
+              "  pm.test('enabled = true', () => pm.expect(rows[0].enabled).to.eql(true));",
+              "  pm.test('disabled_reason_flag is null', () => pm.expect(rows[0].disabled_reason_flag).to.eql(null));",
               "}"
             ],
             "type": "text/javascript"
@@ -844,7 +847,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"fleet_owner_information\", \"select\": [\"fleet_owner_person_id\", \"fleet_name\", \"docs_verification_status\", \"enabled\", \"updated_at\"], \"where_clause\": [{\"column_name\": \"fleet_owner_person_id\", \"val\": \"{{fleet_owner_id}}\", \"op\": \"=\"}], \"limit\": 1}"
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"fleet_owner_information\", \"select\": [\"fleet_owner_person_id\", \"fleet_name\", \"enabled\", \"verified\", \"approved\", \"disabled_reason_flag\", \"updated_at\"], \"where_clause\": [{\"column_name\": \"fleet_owner_person_id\", \"val\": \"{{fleet_owner_id}}\", \"op\": \"=\"}], \"limit\": 1}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",

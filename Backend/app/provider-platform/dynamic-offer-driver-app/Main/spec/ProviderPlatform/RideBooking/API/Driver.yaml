@@ -19,7 +19,6 @@ imports:
   Rating: Domain.Types.Rating
   Ride: Domain.Types.Ride
   VerifiedBy: Domain.Types.DriverPanCard
-  DocsVerificationStatus: Dashboard.Common
   CRCVerificationResponse: Kernel.External.Verification.Types
   OnboardingAs: Dashboard.Common.Driver
   DisabledReasonFlag: Dashboard.Common.Driver
@@ -327,7 +326,6 @@ types:
     - bankIfsc: Maybe Text
     - bankVerificationStatus: Maybe Text
     - upiId: Maybe Text
-    - docsVerificationStatus: Maybe DocsVerificationStatus
     - courtRecord: Maybe CourtRecordResult
     - approved: Maybe Bool
     - disabledReasonFlag: Maybe DisabledReasonFlag

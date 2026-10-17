@@ -7,7 +7,6 @@ module Storage.Queries.OnboardingList.FleetList (findFleetOwners) where
 
 import Data.Text (toLower)
 import qualified Database.Beam as B
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.FleetOwnerInformation
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -27,7 +26,6 @@ findFleetOwners ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   Maybe Domain.Types.FleetOwnerInformation.FleetType ->
-  Maybe DDVS.DocsVerificationStatus ->
   Maybe UTCTime ->
   Maybe Text ->
   Maybe Bool ->
@@ -38,7 +36,7 @@ findFleetOwners ::
   Maybe (Maybe Bool) ->
   Maybe Bool ->
   m [(Domain.Types.FleetOwnerInformation.FleetOwnerInformation, DP.Person)]
-findFleetOwners merchantOperatingCityId mbFleetType mbDocsVerificationStatus mbFromDate mbSearchString mbBlocked mbToDate mbLimit mbOffset mbVerified mbApprovalFilter mbEnabled = do
+findFleetOwners merchantOperatingCityId mbFleetType mbFromDate mbSearchString mbBlocked mbToDate mbLimit mbOffset mbVerified mbApprovalFilter mbEnabled = do
   searchHash <- mapM getDbHash mbSearchString
   dbConf <- getReplicaBeamConfig
   res <-
@@ -52,7 +50,6 @@ findFleetOwners merchantOperatingCityId mbFleetType mbDocsVerificationStatus mbF
                   ( \(fleetOwnerInfo, person) ->
                       fleetOwnerInfo.merchantOperatingCityId B.==?. B.val_ (Just $ getId merchantOperatingCityId)
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fleetType -> fleetOwnerInfo.fleetType B.==?. B.val_ fleetType) mbFleetType
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\docsVerificationStatus -> fleetOwnerInfo.docsVerificationStatus B.==?. B.val_ (Just docsVerificationStatus)) mbDocsVerificationStatus
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\enabled -> fleetOwnerInfo.enabled B.==?. B.val_ enabled) mbEnabled
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\blocked -> fleetOwnerInfo.blocked B.==?. B.val_ blocked) mbBlocked
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> fleetOwnerInfo.verified B.==?. B.val_ verified) mbVerified

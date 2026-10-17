@@ -214,8 +214,6 @@ data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
     isDriverOnPickup :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDriverActive :: Kernel.Prelude.Bool,
     isRcAssociated :: Kernel.Prelude.Bool,
-    driverDocsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
-    vehicleDocsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
     verificationDocsStatus :: Kernel.Prelude.Maybe VerificationDocsStatus,
     upcomingRouteCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
@@ -249,8 +247,6 @@ data DriveVehicleAssociationListItemT = DriveVehicleAssociationListItemT
     isDriverOnPickup :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDriverActive :: Kernel.Prelude.Bool,
     isRcAssociated :: Kernel.Prelude.Bool,
-    driverDocsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
-    vehicleDocsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
     verificationDocsStatus :: Kernel.Prelude.Maybe VerificationDocsStatus,
     upcomingRouteCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fleetOwnerId :: Kernel.Prelude.Text,
@@ -299,8 +295,7 @@ data DriverDetailsRes = DriverDetailsRes
     firstName :: Kernel.Prelude.Text,
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dob :: Kernel.Prelude.Maybe Data.Time.Day,
-    email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus
+    email :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -806,7 +801,6 @@ data FleetOwnerInfoRes = FleetOwnerInfoRes
     upiId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     linkedDriverIds :: [Kernel.Prelude.Text],
     fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
     address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     addressState :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState,
     addressDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType,
@@ -845,7 +839,6 @@ data FleetOwnerListItem = FleetOwnerListItem
     fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     docsVerificationStatusUpdatedAt :: Kernel.Prelude.UTCTime
@@ -1427,11 +1420,7 @@ type API = ("driver" :> (GetDriverFleetAccessList :<|> GetDriverFleetOwnerList :
 type GetDriverFleetAccessList = ("fleet" :> "access" :> "list" :> QueryParam "fleetMemberId" Kernel.Prelude.Text :> Get '[JSON] FleetOwnerListRes)
 
 type GetDriverFleetOwnerList =
-  ( "fleetOwner" :> "list" :> QueryParam "approvalStatus" Dashboard.Common.Driver.ApprovalStatusFilter
-      :> QueryParam
-           "blocked"
-           Kernel.Prelude.Bool
-      :> QueryParam "docsVerificationStatus" Dashboard.Common.DocsVerificationStatus
+  ( "fleetOwner" :> "list" :> QueryParam "approvalStatus" Dashboard.Common.Driver.ApprovalStatusFilter :> QueryParam "blocked" Kernel.Prelude.Bool
       :> QueryParam
            "enabled"
            Kernel.Prelude.Bool
@@ -2127,9 +2116,6 @@ type GetDriverFleetDriverAssociation =
            "approved"
            Kernel.Prelude.Bool
       :> QueryParam
-           "driverDocsVerificationStatus"
-           Dashboard.Common.DocsVerificationStatus
-      :> QueryParam
            "driverId"
            Kernel.Prelude.Text
       :> QueryParam
@@ -2176,9 +2162,6 @@ type GetDriverFleetVehicleAssociation =
       :> QueryParam
            "approved"
            Kernel.Prelude.Bool
-      :> QueryParam
-           "vehicleDocsVerificationStatus"
-           Dashboard.Common.DocsVerificationStatus
       :> QueryParam
            "pickLatestDoc"
            Kernel.Prelude.Bool
@@ -2853,7 +2836,7 @@ type GetDriverVehicleInfo = ("vehicle" :> "info" :> QueryParam "vehicleNo" Kerne
 
 data DriverAPIs = DriverAPIs
   { getDriverFleetAccessList :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetOwnerListRes,
-    getDriverFleetOwnerList :: Kernel.Prelude.Maybe Dashboard.Common.Driver.ApprovalStatusFilter -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient [FleetOwnerListItem],
+    getDriverFleetOwnerList :: Kernel.Prelude.Maybe Dashboard.Common.Driver.ApprovalStatusFilter -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient [FleetOwnerListItem],
     postDriverFleetAccessSelect :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetV2AccessSelect :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetV2AccessMultiOwnerIdSelect :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> MultiOwnerSelect -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -2879,8 +2862,8 @@ data DriverAPIs = DriverAPIs
     getDriverFleetAssignments :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBookingAssignmentsResponse,
     getDriverFleetDriverVehicleAssociation :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient DrivertoVehicleAssociationRes,
     getDriverFleetDriverListStats :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe FleetDriverListStatsSortOn -> Kernel.Prelude.Maybe FleetDriverStatsResponseType -> EulerHS.Types.EulerClient FleetDriverStatsListRes,
-    getDriverFleetDriverAssociation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe DriverMode -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient DrivertoVehicleAssociationResT,
-    getDriverFleetVehicleAssociation :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe FleetVehicleStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient DrivertoVehicleAssociationResT,
+    getDriverFleetDriverAssociation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe DriverMode -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient DrivertoVehicleAssociationResT,
+    getDriverFleetVehicleAssociation :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe FleetVehicleStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient DrivertoVehicleAssociationResT,
     postDriverFleetVehicleEdit :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EditVehicleReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetVehicleDriverRcStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> RCStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverUpdateFleetOwnerInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateFleetOwnerInfoReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

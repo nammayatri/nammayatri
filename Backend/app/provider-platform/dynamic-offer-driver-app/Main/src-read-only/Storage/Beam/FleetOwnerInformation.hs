@@ -6,7 +6,6 @@ module Storage.Beam.FleetOwnerInformation where
 import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
-import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.FleetOwnerInformation
 import qualified Domain.Types.InitiatedBy
@@ -38,7 +37,6 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     businessLicenseNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     dailyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     disabledReasonFlag :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DisabledReasonFlag),
-    docsVerificationStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus),
     docsVerificationStatusUpdatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     enableCashRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enabled :: B.C f Kernel.Prelude.Bool,

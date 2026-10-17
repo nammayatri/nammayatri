@@ -8,6 +8,7 @@ module SharedLogic.DriverOnboarding.OnboardingFlags.Flow
     OnboardingFlagsResult (..),
     OnboardingCounterEntity (..),
     OnboardingBuckets (..),
+    bucketsOfFlags,
     OnboardingCounts (..),
     readOnboardingCounts,
     removeDriverFromOnboardingCounters,
@@ -292,13 +293,6 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
       when (not shouldEnable && driverInfo.enabled) $
         SDO.disableDriverWithAnalytics merchantOpCityId person.id Nothing
   let mbFleetOwnerId = if effectiveOnboardingAs == DI.FLEET_DRIVER then (.fleetOwnerId) <$> mbFleetAssoc else Nothing
-  -- docsVerificationStatus is derived from the same documents as the flags and is written on every
-  -- recompute, unified or not. It is the column the UI APIs and the legacy ClickHouse status counts
-  -- still read, so letting the unified flow move verified / approved without it would leave those
-  -- surfaces showing a stale status.
-  let newDocsVerificationStatus = Just $ computeAdminDocsVerificationStatus driverDocuments
-  when (newDocsVerificationStatus /= driverInfo.docsVerificationStatus) $
-    DIQueryExtra.updateDocsVerificationStatus newDocsVerificationStatus (cast person.id)
   when (useUnifiedOnboardingFlagsRecompute && driverInfo.isNew /= Just False) $ DIQuery.updateIsNew (Just False) (cast person.id)
   adjustOnboardingCounters
     useUnifiedOnboardingFlagsRecompute
@@ -345,13 +339,6 @@ recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleC
       newEnabled = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then fleetOwnerInfo.enabled else allFleetEnablingDocsValid && approvedGateOk
   when (newEnabled /= fleetOwnerInfo.enabled) $
     QFOI.updateFleetOwnerEnabledStatus newEnabled person.id
-  -- docsVerificationStatus is derived from the same documents as the flags and is written on every
-  -- recompute, unified or not. It is the column the UI APIs and the legacy ClickHouse status counts
-  -- still read, so letting the unified flow move verified / approved without it would leave those
-  -- surfaces showing a stale status.
-  let newDocsVerificationStatus = Just $ computeAdminDocsVerificationStatus driverDocuments
-  when (newDocsVerificationStatus /= fleetOwnerInfo.docsVerificationStatus) $
-    QFOI.updateDocsVerificationStatus newDocsVerificationStatus person.id
   when (useUnifiedOnboardingFlagsRecompute && fleetOwnerInfo.isNew /= Just False) $ QFOI.updateIsNew (Just False) person.id
   adjustOnboardingCounters
     useUnifiedOnboardingFlagsRecompute
@@ -374,11 +361,6 @@ recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationCo
   let vehicleDocItem' = vehicleDocItem
       allVehicleMandatoryDocsValid = checkAllVehicleDocsValidForVerified allDocumentVerificationConfigs vehicleDocItem' makeSelfieAadhaarPanMandatory
   rcHash <- getDbHash registrationNo
-  -- docsVerificationStatus is derived from the same documents as the flags and is written on every
-  -- recompute, unified or not. It is the column the UI APIs and the legacy ClickHouse status counts
-  -- still read, so letting the unified flow move verified / approved without it would leave those
-  -- surfaces showing a stale status.
-  RCQuery.updateDocsVerificationStatusByCertificateNumberHash (Just $ computeAdminDocsVerificationStatus vehicleDocItem'.documents) rcHash
   mbRc <- RCQuery.findLastVehicleRCWrapper registrationNo
   let derivedApproved = computeApprovedFromDocs Nothing (Right allDocumentVerificationConfigs) DP.DRIVER vehicleDocItem'.documents
       approvalSupported = approvalSupportedInConfigs (Right allDocumentVerificationConfigs)
@@ -475,9 +457,8 @@ mkOnboardingCounterKey entity merchantOpCityId mbFleetOwnerId bucket =
 --   not touched, so an idempotent recompute writes nothing.
 --
 --   Maintained only under unifiedOnboardingFlagsRecompute: that is the flow where these flags are
---   the source of truth. Note the counters therefore describe the *flag* state; the existing
---   statusSummary endpoint still counts docsVerificationStatus in ClickHouse, so the two do not
---   agree until that read path is switched over (and gains a rebuild-on-miss fallback).
+--   the source of truth. Elsewhere the statusSummary endpoint buckets the same flags from the
+--   ClickHouse mirrors with `bucketsOfFlags`, so both paths describe the flag state.
 adjustOnboardingCounters ::
   OnboardingFlow m r =>
   Bool ->

@@ -42,7 +42,6 @@ import qualified Domain.Action.Dashboard.Fleet.Driver as Driver
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.AadhaarCard
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverFee as DDF
@@ -639,7 +638,6 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         bankIfsc = bankIfsc',
         bankVerificationStatus = bankVerificationStatus',
         upiId = driverInfo.payoutVpa,
-        docsVerificationStatus = castDriverDocsVerificationStatus <$> info.docsVerificationStatus,
         courtRecord = courtRecord',
         approved = driverInfo.approved,
         disabledReasonFlag = castDisabledReasonFlag <$> driverInfo.disabledReasonFlag,
@@ -680,12 +678,6 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
       DI.FleetDisabled -> Common.FleetDisabled
       DI.AdminDisabled -> Common.AdminDisabled
       DI.DriverDisabled -> Common.DriverDisabled
-
-castDriverDocsVerificationStatus :: DDVS.DocsVerificationStatus -> Dashboard.Common.DocsVerificationStatus
-castDriverDocsVerificationStatus = \case
-  DDVS.ADMIN_PENDING -> Dashboard.Common.ADMIN_PENDING
-  DDVS.ADMIN_APPROVED -> Dashboard.Common.ADMIN_APPROVED
-  DDVS.ADMIN_REJECTED -> Dashboard.Common.ADMIN_REJECTED
 
 buildAadhaarAssociationAPIEntity :: EncFlow m r => DriverInformation -> AadhaarCard -> m Common.AadhaarAssociationAPIEntity
 buildAadhaarAssociationAPIEntity driverInfo AadhaarCard {..} = do

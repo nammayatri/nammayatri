@@ -32,8 +32,6 @@ conventions:
                 fleet disablement is pulled by the driver on its own recompute; Redis bucket
                 counters are maintained on every flag transition.
       - false : legacy behaviour, approved is left null/false and counters are not maintained.
-    docsVerificationStatus is written on EVERY recompute regardless of this flag, because the UI
-    APIs and the legacy ClickHouse counts still read it.
 
 endpoints:
   # ---------------------------------------------------------------------------------------------
@@ -113,7 +111,6 @@ endpoints:
         vehicleModel:                # Maybe Text.
         dateOfUpload:                # Maybe UTCTime.
         documentExpiry:              # Maybe UTCTime.
-        docsVerificationStatus:      # Maybe DocsVerificationStatus.
         s3Path:                      # Maybe Text.
         imageId:                     # Maybe Text.
         documents:                   # [DocumentStatusItem] — same shape as driverDocuments above.
@@ -154,8 +151,6 @@ endpoints:
       onboardingVehicleCategory:     # VehicleCategory.
       providePrefillDetails:         # Bool. Needed for the DL/RC detail lists.
       onlyMandatoryDocs:             # Bool.
-      docsVerificationStatus:        # DocsVerificationStatus. Filters vehicleDocuments to one
-                                     # status (ADMIN_APPROVED | ADMIN_PENDING | ADMIN_REJECTED).
       enableDocumentMetadata:        # Bool. Needed for bank details in DocumentStatusItem.metadata.
     response:
       enabled:            # Bool.
@@ -442,9 +437,8 @@ endpoints:
       Under unifiedOnboardingFlagsRecompute the buckets are read from the Redis counters the
       recompute maintains, so they agree with the flags the grids render. A cold key rebuilds from
       Postgres under a lock and seeds Redis.
-      In legacy cities the endpoint keeps its ClickHouse docsVerificationStatus counts — those
-      mirror tables carry no verified/approved/blocked/disabledReasonFlag columns and cannot serve
-      flag buckets at all.
+      In legacy cities the endpoint counts the mirrored verified / approved flags in ClickHouse and
+      buckets them with the same rule, so both branches describe the flag state.
 
 # Cross-cutting naming, worth knowing before you go looking for a field:
 #   fleetOwnerId  is never exposed under that name. Dashboard: DriverAssociationInfo.personId.

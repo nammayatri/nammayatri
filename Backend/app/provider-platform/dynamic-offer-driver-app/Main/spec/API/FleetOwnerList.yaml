@@ -4,7 +4,6 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   FleetType: Domain.Types.FleetOwnerInformation
   Address: Kernel.External.Payment.Stripe.Types
-  DocsVerificationStatus: Domain.Types.DocsVerificationStatus
   ApprovalStatusFilter: Dashboard.Common.Driver
   DisabledReasonFlag: Domain.Types.DriverInformation
 module: FleetOwnerList
@@ -25,7 +24,6 @@ types:
     - fleetName: Maybe Text
     - email: Maybe Text
     - mobileNumber: Maybe Text
-    - docsVerificationStatus: Maybe DocsVerificationStatus
     - disabledReasonFlag: Maybe DisabledReasonFlag
     - mobileCountryCode: Maybe Text
     - createdAt: Maybe UTCTime
@@ -44,7 +42,6 @@ apis:
         toDate: UTCTime
         limit: Int
         offset: Int
-        docsVerificationStatus: DocsVerificationStatus
         verified: Bool
         approvalStatus: ApprovalStatusFilter
         enabled: Bool

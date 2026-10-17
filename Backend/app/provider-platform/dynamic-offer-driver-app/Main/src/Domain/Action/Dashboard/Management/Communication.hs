@@ -565,7 +565,7 @@ resolveRecipientIdsForSelectAll merchant merchantOpCity mbSelectAllRoles mbFleet
                 else pure [],
               if CommAPI.ROLE_FLEET_OWNER `elem` rolesToFetch
                 then do
-                  fleetOwners <- QFleetList.findFleetOwners merchantOpCity.id Nothing Nothing Nothing Nothing Nothing Nothing (Just selectAllMaxLimit) (Just 0) Nothing Nothing Nothing
+                  fleetOwners <- QFleetList.findFleetOwners merchantOpCity.id Nothing Nothing Nothing Nothing Nothing (Just selectAllMaxLimit) (Just 0) Nothing Nothing Nothing
                   pure $ map (\(fo, _) -> (fo.fleetOwnerPersonId.getId, DDelivery.RR_FLEET_OWNER)) fleetOwners
                 else pure [],
               if CommAPI.ROLE_OPERATOR `elem` rolesToFetch

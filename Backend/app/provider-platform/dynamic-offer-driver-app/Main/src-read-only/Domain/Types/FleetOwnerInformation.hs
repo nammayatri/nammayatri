@@ -4,7 +4,6 @@
 module Domain.Types.FleetOwnerInformation where
 
 import Data.Aeson
-import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.InitiatedBy
 import qualified Domain.Types.Merchant
@@ -37,7 +36,6 @@ data FleetOwnerInformationE e = FleetOwnerInformation
     businessLicenseNumberDec :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dailyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     disabledReasonFlag :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DisabledReasonFlag,
-    docsVerificationStatus :: Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus,
     docsVerificationStatusUpdatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     enableCashRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enabled :: Kernel.Prelude.Bool,
@@ -111,7 +109,6 @@ instance EncryptedItem FleetOwnerInformation where
           businessLicenseNumberDec = businessLicenseNumberDec entity,
           dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
           disabledReasonFlag = disabledReasonFlag entity,
-          docsVerificationStatus = docsVerificationStatus entity,
           docsVerificationStatusUpdatedAt = docsVerificationStatusUpdatedAt entity,
           enableCashRide = enableCashRide entity,
           enabled = enabled entity,
@@ -177,7 +174,6 @@ instance EncryptedItem FleetOwnerInformation where
             businessLicenseNumberDec = businessLicenseNumberDec entity,
             dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
             disabledReasonFlag = disabledReasonFlag entity,
-            docsVerificationStatus = docsVerificationStatus entity,
             docsVerificationStatusUpdatedAt = docsVerificationStatusUpdatedAt entity,
             enableCashRide = enableCashRide entity,
             enabled = enabled entity,

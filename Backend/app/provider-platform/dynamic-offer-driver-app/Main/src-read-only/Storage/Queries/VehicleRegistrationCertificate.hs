@@ -144,7 +144,6 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.certificateNumberEncrypted (certificateNumber & unEncrypted . encrypted),
       Se.Set Beam.certificateNumberHash (certificateNumber & hash),
       Se.Set Beam.dateOfRegistration dateOfRegistration,
-      Se.Set Beam.docsVerificationStatus docsVerificationStatus,
       Se.Set Beam.docsVerificationStatusUpdatedAt docsVerificationStatusUpdatedAt,
       Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
       Se.Set Beam.documentImageId2 (Kernel.Types.Id.getId <$> documentImageId2),

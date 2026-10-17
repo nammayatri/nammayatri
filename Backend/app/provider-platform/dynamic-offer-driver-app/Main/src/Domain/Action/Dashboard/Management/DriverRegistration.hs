@@ -50,7 +50,6 @@ import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
-import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver as CommonDriver
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as DAK
@@ -80,7 +79,6 @@ import qualified Domain.Types.AadhaarCard as DAadhaar
 import qualified Domain.Types.BusinessLicense as DBL
 import qualified Domain.Types.CommonDocumentData as DCommonDocData
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DocumentVersionMetadata as DDVM
 import qualified Domain.Types.DriverGstin as DGstin
@@ -1348,15 +1346,8 @@ castVehicleDocItem vd =
       documents = castDocStatusItem <$> vd.documents,
       dateOfUpload = vd.dateOfUpload,
       s3Path = vd.s3Path,
-      expiryDate = vd.documentExpiry,
-      docsVerificationStatus = castMgmtDocsVerificationStatus <$> vd.docsVerificationStatus
+      expiryDate = vd.documentExpiry
     }
-
-castMgmtDocsVerificationStatus :: DDVS.DocsVerificationStatus -> Dashboard.Common.DocsVerificationStatus
-castMgmtDocsVerificationStatus = \case
-  DDVS.ADMIN_PENDING -> Dashboard.Common.ADMIN_PENDING
-  DDVS.ADMIN_APPROVED -> Dashboard.Common.ADMIN_APPROVED
-  DDVS.ADMIN_REJECTED -> Dashboard.Common.ADMIN_REJECTED
 
 castMgmtResponseStatus :: SStatus.ResponseStatus -> Common.VerificationStatus
 castMgmtResponseStatus = \case
@@ -1416,11 +1407,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                   DRC.vehicleDoors = req.vehicleDoors <|> rc.vehicleDoors,
                   DRC.vehicleSeatBelts = req.vehicleSeatBelts <|> rc.vehicleSeatBelts,
                   DRC.fitnessExpiry = if isJust req.fitnessExpiry then fromJust req.fitnessExpiry else rc.fitnessExpiry,
-                  DRC.permitExpiry = req.permitExpiry <|> rc.permitExpiry,
-                  DRC.docsVerificationStatus =
-                    if transporterConfig.enableManualDocumentStatusCheck == Just True
-                      then Just DDVS.ADMIN_APPROVED
-                      else rc.docsVerificationStatus
+                  DRC.permitExpiry = req.permitExpiry <|> rc.permitExpiry
                 }
         QRC.updateByPrimaryKey udpatedRC
         SDocVersion.saveRCVersionMetadata udpatedRC
@@ -1493,10 +1480,6 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                       DRC.createdAt = now,
                       DRC.updatedAt = now,
                       DRC.verified = Nothing,
-                      DRC.docsVerificationStatus =
-                        if transporterConfig.enableManualDocumentStatusCheck == Just True
-                          then Just DDVS.ADMIN_APPROVED
-                          else Nothing,
                       DRC.docsVerificationStatusUpdatedAt = Nothing,
                       DRC.pendingChallan = Nothing,
                       DRC.initiatedBy = Nothing,

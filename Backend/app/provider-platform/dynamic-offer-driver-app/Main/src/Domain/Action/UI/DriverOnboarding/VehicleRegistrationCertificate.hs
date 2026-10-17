@@ -50,7 +50,6 @@ import qualified Data.Text as T hiding (elem, find, map, zip)
 import Data.Time (Day)
 import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocStatus as DocStatus
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DI
@@ -91,7 +90,6 @@ import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
-import qualified SharedLogic.DriverOnboarding.VehicleDocs as SStatus
 import SharedLogic.DriverOnboardingDocumentVersion (saveRCVersionMetadata)
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
@@ -530,7 +528,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       Just vehicleVariant ->
         maybeM
           (return Nothing)
-          ((Just <$>) . createVehicleRC nonTransportRejected transporterConfig person.merchantId person.merchantOperatingCityId rcInput vehicleVariant allFailures)
+          ((Just <$>) . createVehicleRC nonTransportRejected person.merchantId person.merchantOperatingCityId rcInput vehicleVariant allFailures)
           (encrypt `mapM` rcVerificationResponse.registrationNumber)
       Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput allFailures
   if isNothing mbVehicleVariant && mbRemPriorityList /= Just [] && isJust mbRemPriorityList && ((mVehicleRC <&> (.verificationStatus)) == Just Documents.MANUAL_VERIFICATION_REQUIRED || join (mVehicleRC <&> (.reviewRequired)) == Just True)
@@ -588,8 +586,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
     readFromJson (Number val) = Just $ T.pack $ show (floor val :: Int)
     readFromJson _ = Nothing
 
-    createVehicleRC :: (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> DTC.TransporterConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> DV.VehicleVariant -> [Text] -> EncryptedHashedField 'AsEncrypted Text -> m DVRC.VehicleRegistrationCertificate
-    createVehicleRC nonTransportRejected transporterConfig merchantId merchantOperatingCityId input vehicleVariant failedRules certificateNumber = do
+    createVehicleRC :: (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> DV.VehicleVariant -> [Text] -> EncryptedHashedField 'AsEncrypted Text -> m DVRC.VehicleRegistrationCertificate
+    createVehicleRC nonTransportRejected merchantId merchantOperatingCityId input vehicleVariant failedRules certificateNumber = do
       now <- getCurrentTime
       id <- generateGUID
       let updatedVehicleVariant = case input.vehicleCategory of
@@ -636,10 +634,6 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             vehicleRating = Nothing,
             vehicleRatingRemark = Nothing,
             failedRules = failedRules,
-            docsVerificationStatus =
-              if transporterConfig.enableManualDocumentStatusCheck == Just True
-                then Just DDVS.ADMIN_PENDING
-                else Nothing,
             docsVerificationStatusUpdatedAt = Nothing,
             dateOfRegistration = input.dateOfRegistration,
             vehicleModelYear = input.vehicleModelYear,
@@ -821,7 +815,6 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) isTaxiBoothRequest req@RCS
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if req.isActivate
     then do
-      SStatus.validateMandatoryVehicleDocsForRC transporterConfig rc
       validated <- validateRCActivation isTaxiBoothRequest driverId transporterConfig rc
       when validated $ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc
     else do

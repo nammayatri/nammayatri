@@ -2,7 +2,6 @@
 
 module Storage.Clickhouse.DriverInformation where
 
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -11,12 +10,11 @@ import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 import Kernel.Types.Id
 
-instance CH.ClickhouseValue DDVS.DocsVerificationStatus
-
 data DriverInformationT f = DriverInformationT
   { driverId :: C f (Id DP.Person),
     driverFlowStatus :: C f (Maybe DDF.DriverFlowStatus),
-    docsVerificationStatus :: C f (Maybe DDVS.DocsVerificationStatus),
+    verified :: C f (Maybe Text),
+    approved :: C f (Maybe Text),
     enabled :: C f Bool,
     enabledAt :: C f (Maybe UTCTime),
     mode :: C f (Maybe Text),
@@ -32,7 +30,8 @@ driverInformationTTable =
   DriverInformationT
     { driverId = "driver_id",
       driverFlowStatus = "driver_flow_status",
-      docsVerificationStatus = "docs_verification_status",
+      verified = "verified",
+      approved = "approved",
       enabled = "enabled",
       enabledAt = "enabled_at",
       mode = "mode",
@@ -103,21 +102,39 @@ countEnabledByDriverIds driverIds =
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
       pure $ fromMaybe 0 (listToMaybe res)
 
+-- | Driver counts per (verified, approved) for the legacy statusSummary; the caller buckets them
+--   with the same rule as the Redis onboarding counters.
 getStatusCountsByDriverIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   [Id DP.Person] ->
-  m [(Maybe DDVS.DocsVerificationStatus, Int)]
+  m [(Maybe Bool, Maybe Bool, Int)]
 getStatusCountsByDriverIds driverIds =
-  CH.findAll $
-    CH.select_
-      ( \info -> do
-          let status = info.docsVerificationStatus
-          let countDrivers = CH.count_ info.driverId
-          CH.groupBy status $ \s -> (s, countDrivers)
+  map flagCountRow
+    <$> CH.findAll
+      ( CH.select_
+          ( \info -> do
+              let countDrivers = CH.count_ info.driverId
+              CH.groupBy (info.verified, info.approved) $ \(verified, approved) -> (verified, approved, countDrivers)
+          )
+          $ CH.filter_
+            (\info -> info.driverId `CH.in_` driverIds)
+            (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
       )
-      $ CH.filter_
-        (\info -> info.driverId `CH.in_` driverIds)
-        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
+
+-- | The flag mirrors are Nullable(String) like `on_ride` below, with the same mixed casing, and the
+--   prod views extract a JSON null as "" -- which the Bool decoder rejects, failing the whole read.
+--   So the flags are read as text and only a recognised spelling counts; "" and NULL are "not set".
+flagFromText :: Maybe Text -> Maybe Bool
+flagFromText value
+  | value `elem` flagTruthy = Just True
+  | value `elem` flagFalsy = Just False
+  | otherwise = Nothing
+  where
+    flagTruthy = Just <$> ["True", "TRUE", "true"]
+    flagFalsy = Just <$> ["False", "FALSE", "false"]
+
+flagCountRow :: (Maybe Text, Maybe Text, Int) -> (Maybe Bool, Maybe Bool, Int)
+flagCountRow (verified, approved, n) = (flagFromText verified, flagFromText approved, n)
 
 -- | `on_ride` is a Nullable(String) in ClickHouse, not a boolean, and historical rows
 -- carry mixed casing -- verified against prod on the sibling `active` column, whose
