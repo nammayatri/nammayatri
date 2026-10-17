@@ -60,6 +60,18 @@ let dontEnableForDb = [] : List Text
 
 let dontEnableForKafka = [] : List Text
 
+let dropColumnsForDb = [] : List Text
+
+let dropColumnsForCh = [] : List Text
+
+let dropColumnsForBoth = [] : List Text
+
+let dropTablesForDb = [] : List Text
+
+let dropTablesForCh = [] : List Text
+
+let dropTablesForBoth = [] : List Text
+
 let kafkaProperties =
         [ { propName = "queue.buffering.max.messages", propValue = "5000" }
         , { propName = "message.max.bytes", propValue = "1000000" }
@@ -79,4 +91,10 @@ in  { esqDBCfg
     , dontEnableForDb
     , dontEnableForKafka
     , kafkaProperties
+    , dropColumnsForDb
+    , dropColumnsForCh
+    , dropColumnsForBoth
+    , dropTablesForDb
+    , dropTablesForCh
+    , dropTablesForBoth
     }
