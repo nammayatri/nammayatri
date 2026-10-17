@@ -4,8 +4,9 @@
 #   ping   the runner can SSH into the dev-box (DEVBOX_SSH_KEY; its public half
 #          is on the dev-box, restricted to the runner's IP)
 #   spawn  nammayatri@backend_ref (+ control-center@cc_ref inside it) → a
-#          workspace on a dev-box: sync, build, start, data, control centre.
-#          The log carries DEVBOX_STAGE lines and ends with DEVBOX_RESULT.
+#          workspace on a dev-box, one step per SCC stage: Preparing, Sync,
+#          Build, Start, Data, Control centre, Result. GitHub reports each
+#          step live; the Result step's log ends with DEVBOX_RESULT (URLs).
 #   stop   remove that workspace (control centre, stack, folder, registry entry)
 #
 # Inputs reach the shell only through env vars, never inline in `run:`.
@@ -72,8 +73,11 @@ jobs:
       DATA_VERSION: ${{ inputs.data_version }}
       RELEASE_ID: ${{ inputs.release_id }}
       OWNER: ${{ inputs.owner }}
-      DEVBOX_HOST: ${{ inputs.devbox_host }}
-      DEVBOX_USER: ${{ inputs.devbox_user }}
+      # What the caller asked for. The dev-box actually used is DEVBOX_HOST /
+      # DEVBOX_USER / DEVBOX_NAME, set for later steps by "Check inputs" (ping,
+      # stop) or "Preparing" (spawn) through $GITHUB_ENV.
+      INPUT_HOST: ${{ inputs.devbox_host }}
+      INPUT_USER: ${{ inputs.devbox_user }}
       SRC: ${{ github.workspace }}/ws/nammayatri
     steps:
       - name: Check inputs
@@ -81,17 +85,19 @@ jobs:
           case "$ACTION" in
             ping)
               # The push test hook has no inputs: ping soya-chaap.
-              if [ -z "$DEVBOX_HOST" ]; then
-                echo "DEVBOX_HOST=192.168.10.107" >> "$GITHUB_ENV"
-                echo "DEVBOX_USER=soya-chaap" >> "$GITHUB_ENV"
-              fi ;;
+              echo "DEVBOX_HOST=${INPUT_HOST:-192.168.10.107}" >> "$GITHUB_ENV"
+              echo "DEVBOX_USER=${INPUT_USER:-soya-chaap}" >> "$GITHUB_ENV" ;;
             spawn|stop)
               [[ "$WORKSPACE" =~ ^[A-Za-z0-9_-]+$ ]] || { echo "::error::workspace must be letters, digits, - or _"; exit 1; }
               [ -n "$RELEASE_ID" ] || { echo "::error::release_id is required"; exit 1; } ;;
           esac
           if [ "$ACTION" = spawn ] && [ -z "$BACKEND_REF" ]; then echo "::error::backend_ref is required for spawn"; exit 1; fi
-          if [ "$ACTION" = stop ] && { [ -z "$DEVBOX_HOST" ] || [ -z "$DEVBOX_USER" ]; }; then
-            echo "::error::devbox_host and devbox_user are required for stop"; exit 1
+          if [ "$ACTION" = stop ]; then
+            if [ -z "$INPUT_HOST" ] || [ -z "$INPUT_USER" ]; then
+              echo "::error::devbox_host and devbox_user are required for stop"; exit 1
+            fi
+            echo "DEVBOX_HOST=$INPUT_HOST" >> "$GITHUB_ENV"
+            echo "DEVBOX_USER=$INPUT_USER" >> "$GITHUB_ENV"
           fi
           echo "runner machine: $(hostname)  addresses: $(hostname -I 2>/dev/null || true)"
 
@@ -152,17 +158,59 @@ jobs:
               "$DEVBOX_USER@$DEVBOX_HOST" \
               'echo "runner address as seen by $(hostname): ${SSH_CONNECTION%% *}"'
 
-      - name: Spawn
+      # spawn: one step per stage SCC shows. The step names ARE the stage names
+      # (SCC's poller reads them live), so keep them exactly as they are.
+      - name: Preparing
         if: env.ACTION == 'spawn'
         working-directory: tools/Backend/dev
         run: |
-          args=(--name "$WORKSPACE" --src "$SRC"
-                --owner-by scc --owner-user "$OWNER" --owner-release "$RELEASE_ID"
-                --cc-branch "$CC_REF" --cc-commit "${CC_COMMIT:-}")
-          [ "$DATA_FROM" != none ] && args+=(--from "$DATA_FROM")
+          pick=(--github-env)
+          [ -n "$INPUT_HOST" ] && pick+=(--host "$INPUT_HOST" --user "$INPUT_USER")
+          out=$(python3 -m devbox_core pick "${pick[@]}") || { echo "$out"; exit 1; }
+          echo "$out"
+          host=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["host"])' <<< "$out")
+          user=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["user"])' <<< "$out")
+          python3 -m devbox_core register --host "$host" --user "$user" --name "$WORKSPACE" \
+            --owner-by scc --owner-user "$OWNER" --owner-release "$RELEASE_ID"
+
+      - name: Sync
+        if: env.ACTION == 'spawn'
+        working-directory: tools/Backend/dev
+        run: |
+          python3 -m devbox_core sync --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --src "$SRC" \
+            --name "$WORKSPACE" --owner-by scc --owner-user "$OWNER" --owner-release "$RELEASE_ID"
+
+      - name: Build
+        if: env.ACTION == 'spawn'
+        working-directory: tools/Backend/dev
+        run: |
+          python3 -m devbox_core stack-start --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE"
+          python3 -m devbox_core stack-wait --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE" --until services
+
+      - name: Start
+        if: env.ACTION == 'spawn'
+        working-directory: tools/Backend/dev
+        run: python3 -m devbox_core stack-wait --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE"
+
+      - name: Data
+        if: env.ACTION == 'spawn' && env.DATA_FROM != 'none'
+        working-directory: tools/Backend/dev
+        run: |
+          args=(--host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE" --from "$DATA_FROM")
           [ -n "$DATA_VERSION" ] && args+=(--version "$DATA_VERSION")
-          [ -n "$DEVBOX_HOST" ] && args+=(--host "$DEVBOX_HOST" --user "$DEVBOX_USER")
-          python3 -m devbox_core spawn "${args[@]}"
+          python3 -m devbox_core data "${args[@]}"
+
+      - name: Control centre
+        if: env.ACTION == 'spawn' && inputs.cc_ref != ''
+        working-directory: tools/Backend/dev
+        run: |
+          python3 -m devbox_core cc-start --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE" \
+            --cc-branch "$CC_REF" --cc-commit "${CC_COMMIT:-}" --wait
+
+      - name: Result
+        if: env.ACTION == 'spawn'
+        working-directory: tools/Backend/dev
+        run: python3 -m devbox_core result --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE" --devbox "$DEVBOX_NAME"
 
       - name: Stop
         if: env.ACTION == 'stop'

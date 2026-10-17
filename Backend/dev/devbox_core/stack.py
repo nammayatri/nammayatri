@@ -129,11 +129,13 @@ def ready_urls(host: str, name: str) -> list:
 
 def wait_ready(t: ssh.Target, name: str, wdir: str, timeout: int = 3600,
                interval: int = 15, out: Callable[[str], None] = print,
-               on_stage: Callable[[str], None] | None = None) -> dict:
+               on_stage: Callable[[str], None] | None = None,
+               until: str = "ready") -> dict:
     """Follow the stack until rider-app and driver-app answer through the front
-    desk. Prints each stage change (and passes it to on_stage). Raises
-    RuntimeError (with the last log lines) when the stack dies, the build
-    fails, or the timeout passes."""
+    desk (until="ready"), or only until the services start, i.e. the build is
+    over (until="services"). Prints each stage change (and passes it to
+    on_stage). Raises RuntimeError (with the last log lines) when the stack
+    dies, the build fails, or the timeout passes."""
     deadline = time.time() + timeout
     seen = ""
     while True:
@@ -147,6 +149,8 @@ def wait_ready(t: ssh.Target, name: str, wdir: str, timeout: int = 3600,
             raise RuntimeError("build failed\n" + tail(t, wdir, 40))
         if not st["alive"]:
             raise RuntimeError("stack is not running\n" + tail(t, wdir, 40))
+        if until == "services" and seen == "services":
+            return {"services": True}
         if seen == "services" and all(_answers(u) for u in ready_urls(t.host, name)):
             out("[stack] stage: ready")
             return {"ready": True, "urls": ready_urls(t.host, name)}

@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import re
 import shlex
+import subprocess
 
 from . import ssh
 
@@ -71,15 +72,24 @@ def _raise_for(r, host: str) -> None:
 
 
 def read_registry(t: ssh.Target, timeout: int = 10) -> dict:
-    """The registry JSON from the devbox; {"users": {}} when missing or unreadable."""
+    """The registry JSON from the devbox; {"users": {}} when the file does not
+    exist yet. Raises RuntimeError when the devbox cannot be reached or the file
+    cannot be read: "could not look" must never pass for "nothing there" (stop
+    would report a running workspace as already gone)."""
     script = f"cat {REGISTRY_FILE} 2>/dev/null || echo '{{\"users\": {{}}}}'"
     try:
         r = ssh.run(t, script, timeout=timeout)
-        if r.returncode == 0 and r.stdout.strip():
-            return json.loads(r.stdout)
-    except Exception:
-        pass
-    return {"users": {}}
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"cannot reach {t.host} (no answer in {timeout}s)") from e
+    except OSError as e:
+        raise RuntimeError(f"cannot reach {t.host}: {e}") from e
+    if r.returncode != 0 or not r.stdout.strip():
+        raise RuntimeError(f"cannot read the registry on {t.host}: "
+                           f"{(r.stderr or '').strip() or f'exit {r.returncode}'}")
+    try:
+        return json.loads(r.stdout)
+    except ValueError as e:
+        raise RuntimeError(f"registry on {t.host} is not valid JSON") from e
 
 
 def register(t: ssh.Target, name: str, owner: dict | None = None, timeout: int = 40) -> dict:

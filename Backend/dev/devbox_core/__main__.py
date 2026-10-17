@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from typing import Callable
@@ -51,20 +52,33 @@ def cmd_machines(args: argparse.Namespace) -> int:
 
 
 def cmd_pick(args: argparse.Namespace) -> int:
-    boxes, err = _devboxes(args)
-    if err:
-        print(json.dumps({"error": err}))
+    """The dev-box a workspace would use: the least-loaded reachable one with a
+    front desk (or --host, checked). --github-env also hands it to the next
+    workflow steps as DEVBOX_HOST / DEVBOX_USER / DEVBOX_NAME."""
+    os.environ["BASE_API_HOST"], os.environ["BASE_API_PORT"] = args.base_host, args.base_port
+    try:
+        t, name = flow.pick_target(args.user, args.host, None)
+    except RuntimeError as e:
+        print(json.dumps({"error": str(e)}))
         return 1
-    m = fleet.pick(boxes)
-    if m is None:
-        print(json.dumps({"error": "no reachable dev-box"}))
-        return 1
-    print(json.dumps(_summary(m)))
+    if args.github_env:
+        path = os.environ.get("GITHUB_ENV")
+        if not path:
+            print(json.dumps({"error": "--github-env needs GITHUB_ENV (only set inside GitHub Actions)"}))
+            return 1
+        with open(path, "a") as f:
+            f.write(f"DEVBOX_HOST={t.host}\nDEVBOX_USER={t.user}\nDEVBOX_NAME={name}\n")
+    print(json.dumps({"name": name, "host": t.host, "user": t.user}))
     return 0
 
 
 def cmd_registry(args: argparse.Namespace) -> int:
-    print(json.dumps(workspace.read_registry(_target(args)), indent=2))
+    try:
+        reg = workspace.read_registry(_target(args))
+    except RuntimeError as e:
+        print(json.dumps({"error": str(e)}))
+        return 1
+    print(json.dumps(reg, indent=2))
     return 0
 
 
@@ -171,7 +185,25 @@ def cmd_cc_start(args: argparse.Namespace) -> int:
         print(json.dumps({"error": "workspace ports not known yet — start the stack first"}))
         return 1
     info = {"branch": args.cc_branch, "commit": args.cc_commit}
-    return _cc_result(cc.start(t, wdir, rider, driver, info))
+    res = cc.start(t, wdir, rider, driver, info)
+    if args.wait and not res.get("error"):
+        try:
+            res = cc.wait_running(t, wdir, timeout=args.timeout)
+        except RuntimeError as e:
+            res = {"error": str(e)}
+    return _cc_result(res)
+
+
+def cmd_result(args: argparse.Namespace) -> int:
+    from . import output
+    try:
+        fields = flow.result_fields(_target(args), args.name, args.devbox)
+    except RuntimeError as e:
+        print(json.dumps({"error": str(e)}))
+        return 1
+    output.stage("ready", "done")
+    output.result(fields)
+    return 0
 
 
 def cmd_cc_status(args: argparse.Namespace) -> int:
@@ -231,10 +263,15 @@ def main(argv: list | None = None) -> int:
 
     base_host, base_port = fleet.base_api()
     for name, func, help_ in (("machines", cmd_machines, "list the dev-boxes and their route from here"),
-                              ("pick", cmd_pick, "the least-loaded reachable dev-box")):
+                              ("pick", cmd_pick, "the least-loaded reachable dev-box with a front desk")):
         c = sub.add_parser(name, help=help_)
         c.add_argument("--base-host", default=base_host, help="service discovery host (env BASE_API_HOST)")
         c.add_argument("--base-port", default=base_port, help="service discovery port (env BASE_API_PORT)")
+        if name == "pick":
+            c.add_argument("--host", help="use this dev-box (its front desk is still checked)")
+            c.add_argument("--user", help="SSH user for --host")
+            c.add_argument("--github-env", action="store_true",
+                           help="also write DEVBOX_HOST/USER/NAME to $GITHUB_ENV for the next steps")
         c.set_defaults(func=func)
 
     reg = sub.add_parser("registry", help="show the devbox's workspace registry")
@@ -263,7 +300,7 @@ def main(argv: list | None = None) -> int:
          lambda a, t, w: stack.start(t, w)),
         ("stack-status", "running? which stage? (--tail N shows the last log lines)", _stack_status),
         ("stack-wait", "follow the stack until rider-app and driver-app answer",
-         lambda a, t, w: stack.wait_ready(t, a.name, w, timeout=a.timeout)),
+         lambda a, t, w: stack.wait_ready(t, a.name, w, timeout=a.timeout, until=a.until)),
         ("stack-stop", "stop the stack and everything running in the workspace folder",
          lambda a, t, w: stack.stop(t, w)),
     ):
@@ -274,6 +311,8 @@ def main(argv: list | None = None) -> int:
             c.add_argument("--tail", type=int, default=0)
         if name == "stack-wait":
             c.add_argument("--timeout", type=int, default=3600, help="seconds (default 3600)")
+            c.add_argument("--until", choices=("services", "ready"), default="ready",
+                           help="services = the build is over and services are starting; ready = they answer (default)")
         c.set_defaults(func=_stack_cmd(fn))
 
     vs = sub.add_parser("versions", help="published data versions (read through the devbox)")
@@ -300,7 +339,15 @@ def main(argv: list | None = None) -> int:
         if name == "cc-start":
             c.add_argument("--cc-branch", default="", help="control-center branch (shown in status)")
             c.add_argument("--cc-commit", default="", help="control-center commit (shown in status)")
+            c.add_argument("--wait", action="store_true", help="wait until it answers")
+            c.add_argument("--timeout", type=int, default=900, help="seconds for --wait (default 900)")
         c.set_defaults(func=func)
+
+    rs = sub.add_parser("result", help="print DEVBOX_RESULT for a workspace (its URLs, data, control centre)")
+    _add_target_args(rs)
+    rs.add_argument("--name", required=True, help="workspace name")
+    rs.add_argument("--devbox", default="", help="dev-box name to report (default: the host)")
+    rs.set_defaults(func=cmd_result)
 
     sp = sub.add_parser("spawn", help="bring a whole workspace up: pick, sync, build, start, data, control centre")
     _add_owner_args(sp)

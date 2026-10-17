@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import shlex
+import time
 
 from . import ssh
 
@@ -111,6 +112,21 @@ echo "$PORT"
     if r.returncode != 0:
         return {"error": (r.stderr or r.stdout or "").strip() or f"start exited {r.returncode}"}
     return status(t, wdir)
+
+
+def wait_running(t: ssh.Target, wdir: str, timeout: int = 900, interval: int = 10) -> dict:
+    """Wait until the control centre answers (npm install on a fresh workspace
+    can take a while). Returns its status; raises RuntimeError with the last
+    log lines when it exits or the timeout passes."""
+    deadline = time.time() + timeout
+    r = status(t, wdir)
+    while r.get("state") != "running":
+        if r.get("state") in ("exited", "stopped") or time.time() > deadline:
+            tail = "\n".join((r.get("log") or [])[-15:])
+            raise RuntimeError(f"control centre {r.get('state')}\n{tail}")
+        time.sleep(interval)
+        r = status(t, wdir)
+    return r
 
 
 def stop(t: ssh.Target, wdir: str) -> dict:

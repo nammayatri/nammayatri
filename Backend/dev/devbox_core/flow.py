@@ -1,7 +1,9 @@
-"""Whole-workspace flows: spawn (bring one up) and stop (remove it).
+"""Whole-workspace flows: spawn (bring one up), result (what is up) and stop.
 
-These are what the devbox workflow runs. Each step prints DEVBOX_STAGE lines
-(output.py) under the stage names SCC shows, and spawn ends with DEVBOX_RESULT.
+The devbox workflow runs one step per SCC stage (pick → sync → stack → data →
+control centre → result) so GitHub reports each stage live; `spawn` runs the
+same steps in one go for use by hand, printing DEVBOX_STAGE lines (output.py)
+and ending with DEVBOX_RESULT.
 """
 from __future__ import annotations
 
@@ -19,7 +21,7 @@ def _has_frontdesk(host: str) -> bool:
     return ssh.tcp_open(host, stack.FRONTDESK_PORT)
 
 
-def _pick_target(user: str | None, host: str | None, key: str | None) -> tuple[ssh.Target, str]:
+def pick_target(user: str | None, host: str | None, key: str | None) -> tuple[ssh.Target, str]:
     """The devbox to use: the given host, else the least-loaded reachable one
     that has a front desk."""
     if host:
@@ -39,6 +41,28 @@ def _pick_target(user: str | None, host: str | None, key: str | None) -> tuple[s
     return ssh.Target(m.get("user") or "", m["bestIp"], 22, key or ssh.find_key()), m.get("name", m["bestIp"])
 
 
+def result_fields(t: ssh.Target, name: str, devbox: str = "") -> dict:
+    """The DEVBOX_RESULT fields, read from the workspace as it is now: its URLs,
+    the control centre's URL, the data it holds and the build cache it used.
+    Needs nothing from earlier steps, so a workflow can call it last. Raises
+    RuntimeError when the devbox cannot be reached or the workspace is not there."""
+    if name not in (workspace.read_registry(t).get("users") or {}):
+        raise RuntimeError(f"no workspace {name!r} on {t.host}")
+    wdir = workspace.workspace_dir(name)
+    ws = f"http://{t.host}:{stack.FRONTDESK_PORT}/{name}"
+    held = (data.ctx(ws, "/api/config-sync/status", timeout=5).get("last_synced") or {})
+    c = cc.status(t, wdir)
+    commit = ssh.run(t, f"cat {shlex.quote(wdir)}/Backend/.ci-cache-sha 2>/dev/null").stdout.strip()
+    rider, driver = stack.ready_urls(t.host, name)
+    return {
+        "devbox": devbox or t.host, "host": t.host, "user": t.user, "workspace": name,
+        "backend_url": ws, "rider_url": rider, "driver_url": driver,
+        "cc_url": c.get("url", "") if c.get("state") == "running" else "",
+        "data": f"{held.get('from')} {held.get('version')}" if held.get("from") else "",
+        "cache_commit": commit,
+    }
+
+
 def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
           user: str | None = None, key: str | None = None, source: str | None = None,
           version: str | None = None, cc_info: dict | None = None,
@@ -49,7 +73,7 @@ def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
     error is raised); the workspace is left as it is for a look, and `stop`
     cleans it up. Returns the DEVBOX_RESULT fields."""
     with output.Stage("preparing"):
-        t, devbox = _pick_target(user, host, key)
+        t, devbox = pick_target(user, host, key)
         workspace.register(t, name, owner)
     wdir = workspace.workspace_dir(name)
 
@@ -103,14 +127,7 @@ def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
         elif r.get("error"):
             raise RuntimeError(r["error"])
         else:
-            deadline = time.time() + CC_READY_TIMEOUT
-            while r.get("state") != "running":
-                if r.get("state") in ("exited", "stopped") or time.time() > deadline:
-                    tail = "\n".join((r.get("log") or [])[-15:])
-                    raise RuntimeError(f"control centre {r.get('state')}\n{tail}")
-                time.sleep(10)
-                r = cc.status(t, wdir)
-            cc_url = r.get("url", "")
+            cc_url = cc.wait_running(t, wdir, timeout=CC_READY_TIMEOUT).get("url", "")
 
     fields = {
         "devbox": devbox, "host": t.host, "user": t.user, "workspace": name,
