@@ -25,16 +25,21 @@ fileUploadToS3 ::
   ) =>
   Int ->
   Text ->
+  Text ->
   FileUploadReq ->
   m FileUploadRes
-fileUploadToS3 mediaFileSizeUpperLimit mediaFileUrlPattern FileUploadReq {..} = do
+fileUploadToS3 mediaFileSizeUpperLimit mediaFileUrlPattern uploaderId FileUploadReq {..} = do
   let cfg = domainConfig domain
   contentType <- IssueAction.validateContentType fileType reqContentType
   fileSize <- L.runIO $ withFile file ReadMode hFileSize
   when (fileSize > fromIntegral mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
-  mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- S3.createFilePath cfg.s3Prefix "" fileType contentType
+  rawFile <- L.runIO $ BS.readFile file
+  when (cfg.scopeToUploader && fileType == S3.Image && not (looksLikeImage rawFile)) $
+    throwError $ FileFormatNotSupported "not an image"
+  let mediaFile = base64Encode rawFile
+  pathIdentifier <- if cfg.scopeToUploader then (\guid -> "/" <> uploaderId <> "/" <> guid) <$> generateGUIDText else pure ""
+  filePath <- S3.createFilePath cfg.s3Prefix pathIdentifier fileType contentType
   let url =
         cfg.routeSegment <&> \seg ->
           mediaFileUrlPattern
@@ -62,3 +67,19 @@ fetchFileMedia ::
   Text ->
   m Text
 fetchFileMedia filePath = S3.get (T.unpack filePath)
+
+-- Same read, for the files of a ride evidence domain: a missing or unreadable file is answered as not found instead of as a server error.
+fetchFileMediaOrNotFound ::
+  ( MonadFlow m,
+    MonadReader r m,
+    HasField "s3Env" r (S3.S3Env m)
+  ) =>
+  Text ->
+  m Text
+fetchFileMediaOrNotFound filePath = do
+  when (T.null filePath || "/" `T.isPrefixOf` filePath) $
+    throwError $ FileDoesNotExist filePath
+  S3.get (T.unpack filePath)
+    `catch` \(e :: SomeException) -> do
+      logError $ "S3 read failed for " <> filePath <> ": " <> show e
+      throwError $ FileDoesNotExist filePath

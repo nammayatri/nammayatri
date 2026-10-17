@@ -53,3 +53,18 @@ UPDATE atlas_dashboard.transaction
 ------- SQL updates -------
 
 ------- SQL updates -------
+
+
+------- SQL updates -------
+
+-- {"api":"GetRideEvidence","migration":"capability","param":"city-operations.ride.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.ride.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/GET_RIDE_EVIDENCE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"GetRideEvidenceFile","migration":"capability","param":"city-operations.ride.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.ride.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/GET_RIDE_EVIDENCE_FILE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostRideEvidenceVisibility","migration":"capability","param":"city-operations.ride.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.ride.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/POST_RIDE_EVIDENCE_VISIBILITY' ) ON CONFLICT DO NOTHING;

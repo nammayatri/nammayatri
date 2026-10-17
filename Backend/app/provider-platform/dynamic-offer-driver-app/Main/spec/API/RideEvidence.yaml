@@ -1,0 +1,41 @@
+imports:
+  Ride: Domain.Types.Ride
+  RideEvidence: Domain.Types.RideEvidence
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  MediaFileUploadStatus: IssueManagement.Domain.Types.MediaFile
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+module: RideEvidence
+
+types:
+  AddRideEvidenceReq:
+    fileId: Id MediaFile
+    description: Maybe Text
+  RideEvidenceItem:
+    id: Id RideEvidence
+    fileId: Id MediaFile
+    filePath: Maybe Text
+    description: Maybe Text
+    rideStatus: Domain.Types.Ride.RideStatus
+    fileStatus: Maybe MediaFileUploadStatus
+    createdAt: UTCTime
+
+apis:
+  - POST:
+      endpoint: /ride/{rideId}/evidence
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        rideId: Id Ride
+      request:
+        type: AddRideEvidenceReq
+      response:
+        type: RideEvidenceItem
+
+  - GET:
+      endpoint: /ride/{rideId}/evidence
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        rideId: Id Ride
+      response:
+        type: "[API.Types.UI.RideEvidence.RideEvidenceItem]"

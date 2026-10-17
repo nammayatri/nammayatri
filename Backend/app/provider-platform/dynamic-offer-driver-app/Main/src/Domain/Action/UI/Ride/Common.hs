@@ -41,6 +41,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime, diffUTCTime)
 import qualified Domain.Action.UI.Location as DLocUI
+import qualified Domain.Action.UI.RideEvidence as RideEvidence
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
@@ -197,6 +198,7 @@ data DriverRideRes = DriverRideRes
     tollCharges :: Maybe HighPrecMoney,
     tollConfidence :: Maybe Confidence,
     mustCallEndRideRequirements :: Bool,
+    rideEvidenceEnabled :: Maybe Bool,
     customerCancellationDuesWithCurrency :: PriceAPIEntity,
     estimatedTollChargesWithCurrency :: Maybe PriceAPIEntity,
     parkingChargeWithCurrency :: Maybe PriceAPIEntity,
@@ -328,7 +330,7 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam pay
       cur = ride.currency
       paymentChargeGross = paymentChargeNet + paymentChargeVat
       amountPaidByCustomer = fare - (if customerBearsCharge then paymentChargeGross else 0) - discount + tips
-      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare, lblAirportConvenienceFee, lblServiceCharge, lblPaymentCharge, lblPaymentChargeVat, lblPaymentChargePaid} = labels
+      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare, lblAirportConvenienceFee, lblServiceCharge, lblPaymentCharge, lblPaymentChargeVat, lblPaymentChargePaid, lblTollCharges} = labels
       cancellationDues =
         fromMaybe 0 $
           case finalFareParam of
@@ -338,6 +340,8 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam pay
         fromMaybe (fromMaybe 0 estimatedFareParam.airportConvenienceFee) (finalFareParam >>= (.airportConvenienceFee))
       serviceCharge =
         fromMaybe (fromMaybe 0 estimatedFareParam.serviceCharge) (finalFareParam >>= (.serviceCharge))
+      tollAmount =
+        fromMaybe (fromMaybe 0 estimatedFareParam.tollCharges) (finalFareParam >>= (.tollCharges))
   let mkComp sec key mbLabel value applicable =
         if applicable
           then
@@ -365,7 +369,8 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam pay
             mkComp FareBreakup "PAYMENT_CHARGE_VAT" lblPaymentChargeVat paymentChargeVat (not clubPaymentCharge && chargeBorneByDriver && paymentChargeVat > 0),
             mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0),
             mkComp FareBreakup "AIRPORT_CONVENIENCE_FEE" lblAirportConvenienceFee airportConvenienceFee (airportConvenienceFee > 0),
-            mkComp FareBreakup "SERVICE_CHARGE" lblServiceCharge serviceCharge (serviceCharge > 0)
+            mkComp FareBreakup "SERVICE_CHARGE" lblServiceCharge serviceCharge (serviceCharge > 0),
+            mkComp FareBreakup "TOLL_CHARGES" (Just (fromMaybe "Toll charges (included in fare)" lblTollCharges)) tollAmount (tollAmount > 0)
           ]
   footnoteItems <- buildFootnotes lang booking ride estimatedFareParam finalFareParam
 
@@ -472,7 +477,8 @@ data EarningsLabels = EarningsLabels
     lblServiceCharge :: Maybe Text,
     lblPaymentCharge :: Maybe Text,
     lblPaymentChargeVat :: Maybe Text,
-    lblPaymentChargePaid :: Maybe Text
+    lblPaymentChargePaid :: Maybe Text,
+    lblTollCharges :: Maybe Text
   }
 
 fetchEarningsLabels ::
@@ -493,6 +499,7 @@ fetchEarningsLabels lang =
     <*> resolveLabel lang "PAYMENT_CHARGE"
     <*> resolveLabel lang "PAYMENT_CHARGE_VAT"
     <*> resolveLabel lang "PAYMENT_CHARGE_PAID_BY_CUSTOMER"
+    <*> resolveLabel lang "TOLL_CHARGES"
 
 mkExoPhone :: Maybe DExophone.Exophone -> DRB.Booking -> Text
 mkExoPhone mbExophone booking =
@@ -705,6 +712,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         -- A toll-applicable trip can only need the panel off an estimate: without one the detector
         -- refuses to validate pending tolls, so the requirements check could only answer "no panel".
         mustCallEndRideRequirements = maybe False (\config -> isManualTollChargeEnabled config booking.tripCategory && not (DTC.isTollExemptVehicleTier booking.vehicleServiceTier) && (not (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) || maybe False (> 0) ride.estimatedTollCharges || maybe False (not . null) ride.estimatedTollIds)) mbTransporterConfig,
+        rideEvidenceEnabled = (\config -> RideEvidence.isRideEvidenceEnabled config && ride.status /= DRide.UPCOMING) <$> mbTransporterConfig,
         customerCancellationDuesWithCurrency = flip PriceAPIEntity estimatedFareParams.currency $ fromMaybe 0 estimatedFareParams.customerCancellationDues,
         estimatedTollChargesWithCurrency = flip PriceAPIEntity estimatedFareParams.currency <$> estimatedFareParams.tollCharges,
         parkingChargeWithCurrency = flip PriceAPIEntity estimatedFareParams.currency <$> displayParkingCharge,

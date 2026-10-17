@@ -462,6 +462,7 @@ library
       Domain.Action.UI.Ride.StartRide
       Domain.Action.UI.Ride.StartRide.Internal
       Domain.Action.UI.RideDetails
+      Domain.Action.UI.RideEvidence
       Domain.Action.UI.RideRoute
       Domain.Action.UI.RideSummary
       Domain.Action.UI.Route
@@ -1313,6 +1314,7 @@ library
       API.Action.UI.PriceBreakup
       API.Action.UI.Reels
       API.Action.UI.ReferralPayout
+      API.Action.UI.RideEvidence
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.SpecialLocation
@@ -1503,6 +1505,7 @@ library
       API.Types.UI.PriceBreakup
       API.Types.UI.Reels
       API.Types.UI.ReferralPayout
+      API.Types.UI.RideEvidence
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.SpecialLocationWarrior
@@ -1682,6 +1685,7 @@ library
       Domain.Types.ReviewRequest
       Domain.Types.Ride
       Domain.Types.RideDetails
+      Domain.Types.RideEvidence
       Domain.Types.RideFeedbackConfig
       Domain.Types.RideFeedbackResponse
       Domain.Types.RiderDetails
@@ -1882,6 +1886,7 @@ library
       Storage.Beam.ReviewRequest
       Storage.Beam.Ride
       Storage.Beam.RideDetails
+      Storage.Beam.RideEvidence
       Storage.Beam.RideFeedbackConfig
       Storage.Beam.RideFeedbackResponse
       Storage.Beam.RiderDetails
@@ -2190,6 +2195,7 @@ library
       Storage.Queries.ReviewRequest
       Storage.Queries.Ride
       Storage.Queries.RideDetails
+      Storage.Queries.RideEvidence
       Storage.Queries.RideFeedbackConfig
       Storage.Queries.RideFeedbackResponse
       Storage.Queries.RiderDetails

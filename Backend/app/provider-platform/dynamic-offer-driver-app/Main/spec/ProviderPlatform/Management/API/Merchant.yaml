@@ -690,6 +690,15 @@ types:
     - enabled: Bool
   Status:
     - enum: "PENDING_VERIFICATION, APPROVED, REJECTED"
+  RideEvidenceConfigItem:
+    - enabled: Maybe Bool
+    - maxFilesPerRide: Maybe Int
+    - completedRideWindowHours: Maybe Int
+  ManualTollChargeConfigItem:
+    - tripCategories: Maybe [Text]
+    - maxAmountWithoutEstimate: HighPrecMoney
+    - approvalTimeoutSeconds: Maybe Int
+    - maxApprovalAttempts: Maybe Int
   MerchantCommonConfigRes:
     - pickupLocThreshold: Meters
     - dropLocThreshold: Meters
@@ -728,6 +737,8 @@ types:
     - negativeFareAdjustmentMinDistanceMeters: Maybe Int
     - negativeFareAdjustmentMaxAmount: Maybe Int
     - driverCoolOffPeriod: Maybe Seconds
+    - rideEvidenceConfig: Maybe RideEvidenceConfigItem
+    - manualTollChargeConfig: Maybe ManualTollChargeConfigItem
     - createdAt: UTCTime
     - updatedAt: UTCTime
   MerchantCommonConfigUpdateReq:
@@ -779,6 +790,8 @@ types:
     - negativeFareAdjustmentMinDistanceMeters: Maybe (OptionalValue Int)
     - negativeFareAdjustmentMaxAmount: Maybe (OptionalValue Int)
     - driverCoolOffPeriod: Maybe (OptionalValue Seconds)
+    - rideEvidenceConfig: Maybe (OptionalValue RideEvidenceConfigItem)
+    - manualTollChargeConfig: Maybe (OptionalValue ManualTollChargeConfigItem)
     - derive: "'HideSecrets"
   DriverPoolConfigRes:
     - recordType: Type

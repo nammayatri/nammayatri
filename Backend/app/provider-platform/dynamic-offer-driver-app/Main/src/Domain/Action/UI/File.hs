@@ -4,6 +4,7 @@ module Domain.Action.UI.File
   )
 where
 
+import qualified Domain.Action.UI.RideEvidence as RideEvidence
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -27,11 +28,15 @@ postFilesUpload ::
     FCommon.FileUploadReq ->
     Environment.Flow FCommon.FileUploadRes
   )
-postFilesUpload (_mbPersonId, _merchantId, merchantOpCityId) req = do
+postFilesUpload (mbPersonId, _merchantId, merchantOpCityId) req = do
+  personId <- fromMaybeM (PersonNotFound "person id not present in token") mbPersonId
   transporterConfig <-
     getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  DFile.fileUploadToS3 transporterConfig.mediaFileSizeUpperLimit transporterConfig.mediaFileUrlPattern req
+  when (req.domain == FCommon.RideEvidence) $ do
+    unless (RideEvidence.isRideEvidenceEnabled transporterConfig) $ throwError RideEvidenceDisabled
+    RideEvidence.checkEvidenceUploadRate personId transporterConfig
+  DFile.fileUploadToS3 transporterConfig.mediaFileSizeUpperLimit transporterConfig.mediaFileUrlPattern personId.getId req
 
 getFilesMedia ::
   ( ( Kernel.Prelude.Maybe (Id Domain.Types.Person.Person),
@@ -41,5 +46,10 @@ getFilesMedia ::
     Kernel.Prelude.Text ->
     Environment.Flow Kernel.Prelude.Text
   )
-getFilesMedia (_mbPersonId, _merchantId, _merchantOpCityId) =
-  DFile.fetchFileMedia
+getFilesMedia (mbPersonId, _merchantId, _merchantOpCityId) filePath = do
+  personId <- fromMaybeM (PersonNotFound "person id not present in token") mbPersonId
+  unless (FCommon.canReadFile personId.getId filePath) $
+    throwError (InvalidRequest "File is not accessible")
+  if FCommon.isInDomainFolder FCommon.RideEvidence filePath
+    then DFile.fetchFileMediaOrNotFound filePath
+    else DFile.fetchFileMedia filePath

@@ -1,6 +1,7 @@
 module FileManagement.Common.UI.File where
 
 import AWS.S3 (FileType (..))
+import qualified Data.ByteString as BS
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
@@ -9,13 +10,14 @@ import Kernel.ServantMultipart
 import Kernel.Types.Id
 import qualified Text.Read as TR (readMaybe)
 
-data FileDomain = RideChat
+data FileDomain = RideChat | RideEvidence
   deriving stock (Eq, Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DomainConfig = DomainConfig
   { s3Prefix :: Text,
-    routeSegment :: Maybe Text
+    routeSegment :: Maybe Text,
+    scopeToUploader :: Bool
   }
   deriving stock (Eq, Show, Generic)
 
@@ -23,8 +25,35 @@ domainConfig :: FileDomain -> DomainConfig
 domainConfig RideChat =
   DomainConfig
     { s3Prefix = "ride-chat",
-      routeSegment = Just "files"
+      routeSegment = Just "files",
+      scopeToUploader = False
     }
+domainConfig RideEvidence =
+  DomainConfig
+    { s3Prefix = "ride-evidence",
+      routeSegment = Nothing,
+      scopeToUploader = True
+    }
+
+-- Where the files of one uploader live in a domain that scopes its paths to the uploader.
+ownerFolder :: FileDomain -> Text -> Text
+ownerFolder fileDomain ownerId = (domainConfig fileDomain).s3Prefix <> "/" <> ownerId <> "/"
+
+-- The part of a stored path that starts at the folder of a domain, or empty when the path is not in that folder. The S3 path prefix of the environment, and any leading slash, come before it.
+fromDomainFolder :: FileDomain -> Text -> Text
+fromDomainFolder fileDomain = snd . T.breakOn ((domainConfig fileDomain).s3Prefix <> "/")
+
+isInDomainFolder :: FileDomain -> Text -> Bool
+isInDomainFolder fileDomain = not . T.null . fromDomainFolder fileDomain
+
+isOwnedBy :: FileDomain -> Text -> Text -> Bool
+isOwnedBy fileDomain ownerId path = ownerFolder fileDomain ownerId `T.isPrefixOf` fromDomainFolder fileDomain path
+
+-- A file in an uploader-scoped domain can only be read by the person who uploaded it. Every other path is not restricted here.
+canReadFile :: Text -> Text -> Bool
+canReadFile readerId path
+  | isInDomainFolder RideEvidence path = isOwnedBy RideEvidence readerId path && not (".." `T.isInfixOf` path)
+  | otherwise = True
 
 data FileUploadReq = FileUploadReq
   { file :: FilePath,
@@ -58,3 +87,11 @@ data FileUploadRes = FileUploadRes
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- The first bytes of the image formats a proof may use: png, jpeg, gif, webp and heic or heif.
+-- A file that does not start like one of them, an empty file included, is not accepted as an image.
+looksLikeImage :: BS.ByteString -> Bool
+looksLikeImage bytes =
+  any (`BS.isPrefixOf` bytes) [BS.pack [0x89, 0x50, 0x4E, 0x47], BS.pack [0xFF, 0xD8, 0xFF], "GIF87a", "GIF89a"]
+    || (BS.take 4 bytes == "RIFF" && BS.take 4 (BS.drop 8 bytes) == "WEBP")
+    || BS.take 4 (BS.drop 4 bytes) == "ftyp"
