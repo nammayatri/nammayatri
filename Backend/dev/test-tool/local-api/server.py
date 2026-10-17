@@ -75,6 +75,17 @@ PORT = 7083
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent  # nammayatri/
 
+# Shared devbox helpers (Backend/dev/devbox_core), also used by the devbox workflow.
+_DEVBOX_CORE_PARENT = SCRIPT_DIR.parent.parent  # Backend/dev
+if str(_DEVBOX_CORE_PARENT) not in sys.path:
+    sys.path.insert(0, str(_DEVBOX_CORE_PARENT))
+from devbox_core import cc as _dc_cc  # noqa: E402
+from devbox_core import data as _dc_data  # noqa: E402
+from devbox_core import deploy as _dc_deploy  # noqa: E402
+from devbox_core import fleet as _dc_fleet  # noqa: E402
+from devbox_core import ssh as _dc_ssh  # noqa: E402
+from devbox_core import workspace as _dc_workspace  # noqa: E402
+
 KNOWN_REPOS: dict = {
     "nammayatri/ny-react-native": PROJECT_ROOT / "data" / "ny-react-native",
     "nammayatri/control-center":  PROJECT_ROOT / "data" / "control-center",
@@ -920,45 +931,15 @@ import termios as _termios
 import uuid as _uuid
 from collections import deque as _deque
 
-# Build artefacts: never copied, and exactly what `cabal clean` wipes on the
-# stack host (see remote_cabal_clean) — one list so the two can't drift.
-BUILD_STATE_EXCLUDES = [
-    "dist-newstyle",
-    "dist",
-    "_build",
-    "result", "result-*",
-    ".cabal-dir",
-    ".hie",
-    "hie",
-    ".nix-deps",
-    ".ci-project-root",
-    ".ci-cabal-dir",
-    ".ci-cache-sha",
-    "cabal.project.local",
-]
-
-# Per-machine state: never copied, and never deleted by cabal clean either.
-# Everything cabal clean wipes — the build-state list minus files a developer
-# may have hand-written (cabal.project.local is theirs, not a build artefact).
-CABAL_CLEAN_TARGETS = [e for e in BUILD_STATE_EXCLUDES if e != "cabal.project.local"]
-
-# Per-machine state: never copied, and never deleted by cabal clean either.
-# data/ holds the stack host's own published port map (data/ports.json)
-# plus its service state, so excluding it keeps a redeploy from clobbering them.
-MACHINE_STATE_EXCLUDES = [
-    "data", "node_modules", ".direnv",
-    ".git",
-    "*.log",
-    ".stack-state.json",
-    "Frontend/android-native", "Frontend/ios",
-    "Frontend/build", "Frontend/dist",
-]
-
-# Single source of truth for what never leaves this machine. Used both as the
-# rsync --exclude list AND as the filter for the workspace fingerprint that
-# decides whether a deploy is needed — adding an entry here automatically stops
+# What never leaves this machine and what cabal clean wipes: the lists live in
+# devbox_core.deploy (shared with the devbox workflow). REMOTE_EXCLUDES is both
+# the rsync --exclude list AND the filter for the workspace fingerprint that
+# decides whether a deploy is needed — adding an entry there automatically stops
 # it from triggering a redeploy.
-REMOTE_EXCLUDES = BUILD_STATE_EXCLUDES + MACHINE_STATE_EXCLUDES
+BUILD_STATE_EXCLUDES = _dc_deploy.BUILD_STATE_EXCLUDES
+CABAL_CLEAN_TARGETS = _dc_deploy.CABAL_CLEAN_TARGETS
+MACHINE_STATE_EXCLUDES = _dc_deploy.MACHINE_STATE_EXCLUDES
+REMOTE_EXCLUDES = _dc_deploy.EXCLUDES
 REMOTE_DEFAULT_DIR = "/tmp/nammayatri"
 # A dev-box is shared, so its stack resolves free ports at startup and puts caddy
 # in front of them. Locally nothing has to coexist, so the fixed ports.nix map is
@@ -977,21 +958,17 @@ REMOTE_BUFFER_BYTES = 256 * 1024  # last ~256 KB per session for re-attach
 
 # ── SSH key + ServiceDiscovery helpers ──
 
-_SSH_KEY_CANDIDATES = [
-    os.path.expanduser("~/.ssh/id_ed25519"),
-    os.path.expanduser("~/.ssh/id_rsa"),
-    os.path.expanduser("~/.ssh/id_ecdsa"),
-]
+_SSH_KEY_CANDIDATES = [os.path.expanduser(k) for k in _dc_ssh.KEY_CANDIDATES]
 BASE_API_HOST = os.environ.get("BASE_API_HOST", "service-discovery.devenv.movingtech.net")
 BASE_API_PORT = os.environ.get("BASE_API_PORT", "8787")
+# Devbox front desk (nix-the-builder scripts/frontdesk): one Caddy per dev-box that
+# routes /<workspace-id>/* to that workspace's own Caddy, so the URL survives port changes.
+FRONTDESK_PORT = os.environ.get("FRONTDESK_PORT", "8888")
 
 
 def _find_ssh_key() -> str | None:
     """Return path to the first existing SSH private key, or None."""
-    for k in _SSH_KEY_CANDIDATES:
-        if os.path.isfile(k):
-            return k
-    return None
+    return _dc_ssh.find_key()
 
 
 def _ensure_ssh_key() -> tuple[str, str]:
@@ -1070,119 +1047,10 @@ def _fetch_machines() -> dict:
     Transforms that into:
       { "machines": [MachineInfo, …], "myIps": [...] }
     where MachineInfo = {name, role, localIp, awsIp, bestIp, user, type, resources}
+
+    The logic lives in devbox_core.fleet; this passes the cached reachability probe.
     """
-    if not BASE_API_HOST:
-        return {"machines": [], "myIps": [],
-                "error": "BASE_API_HOST not set — cannot reach base station API"}
-
-    url = f"http://{BASE_API_HOST}:{BASE_API_PORT}/api/status"
-    try:
-        with urllib.request.urlopen(url, timeout=5) as r:
-            data = json.loads(r.read().decode())
-    except Exception as e:
-        return {"machines": [], "myIps": [], "error": f"base station API unreachable: {e}"}
-
-    # Collect this machine's IPs + networks so we can pick the best route.
-    import ipaddress
-    my_networks: list[tuple[str, ipaddress.IPv4Network]] = []
-    try:
-        if sys.platform == "darwin":
-            out = subprocess.check_output(["ifconfig"], text=True, timeout=3)
-            # "inet <ip> netmask <hex>", plus the point-to-point form tunnels use:
-            # "inet 10.4.1.13 --> 10.4.1.13 netmask 0xffffffe0". Skipping the
-            # peer field lost every VPN interface, which made VPN addresses look
-            # like a different network however wide the tunnel's mask was.
-            for m in re.finditer(
-                    r"inet (\d+\.\d+\.\d+\.\d+)(?: --> \d+\.\d+\.\d+\.\d+)? netmask (0x[0-9a-fA-F]+)",
-                    out):
-                ip_str, mask_hex = m.group(1), m.group(2)
-                if ip_str == "127.0.0.1":
-                    continue
-                mask_int = int(mask_hex, 16)
-                prefix = bin(mask_int).count("1")
-                net = ipaddress.ip_network(f"{ip_str}/{prefix}", strict=False)
-                my_networks.append((ip_str, net))
-        else:
-            out = subprocess.check_output(["hostname", "-I"], text=True, timeout=3).strip()
-            for ip_str in out.split():
-                ip_str = ip_str.strip()
-                if ip_str:
-                    # Default /24 for Linux (hostname -I doesn't give netmask)
-                    net = ipaddress.ip_network(f"{ip_str}/24", strict=False)
-                    my_networks.append((ip_str, net))
-    except Exception:
-        pass
-    my_ips = [ip for ip, _ in my_networks]
-    # Our own interfaces as CIDRs — the left-hand side of every same-subnet
-    # comparison below, published so the mask a verdict used is on record.
-    my_networks_cidr = [f"{ip}/{net.prefixlen}" for ip, net in my_networks]
-
-    def _shared_subnet(ip: str) -> str:
-        """CIDR of one of our own interfaces that contains ip, else "".
-
-        This is the same-subnet rule — (mine AND mask) == (theirs AND mask) —
-        evaluated through *our* mask, which is the only mask we know: discovery
-        reports addresses without prefixes. A remote host configured with a wider
-        mask can therefore consider us local while we consider it remote, so this
-        answers "can I deliver directly?" and nothing more."""
-        if not ip:
-            return ""
-        try:
-            target = ipaddress.ip_address(ip)
-        except ValueError:
-            return ""
-        for _, net in my_networks:
-            if target in net:
-                return str(net)
-        return ""
-
-    def _shape_machine(m: dict, role: str, default_name: str) -> dict:
-        local_ip = m.get("localIp", "")
-        aws_ip = m.get("awsIp", "")
-        lan_subnet = _shared_subnet(local_ip)
-        vpn_subnet = _shared_subnet(aws_ip)
-        lan_ok = bool(local_ip) and _reachable_cached(local_ip)
-        # Skip the VPN probe when the local address already answered — same box.
-        vpn_ok = bool(aws_ip) and (False if lan_ok else _reachable_cached(aws_ip))
-        # The local address wins when both answer (no tunnel hop). Neither → no
-        # route from here; the addresses are still reported (for display) but
-        # bestIp/route stay empty so callers can refuse to assign it.
-        if lan_ok:
-            best, route = local_ip, "local"
-        elif vpn_ok:
-            best, route = aws_ip, "vpn"
-        else:
-            best, route = "", ""
-        return {
-            "name":        m.get("name", default_name),
-            "role":        role,
-            "localIp":     local_ip,
-            "awsIp":       aws_ip,
-            "bestIp":      best,
-            "localSubnet": lan_subnet,
-            "vpnSubnet":   vpn_subnet,
-            "route":       route,
-            "localReachable": lan_ok,
-            "vpnReachable": vpn_ok,
-            "user":        m.get("username", "ubuntu"),
-            "type":        m.get("type", ""),
-            "resources":   m.get("resources", {}),
-            "usage":       m.get("usage", {}),
-        }
-
-    machines: list[dict] = []
-    raw_machines = [(data.get("base") or {}, "base", "base")] if data.get("base") else []
-    raw_machines += [(w, "worker", "") for w in data.get("workers", [])]
-
-    # Probe the fleet concurrently: serially this would be
-    # (machines × addresses × timeout) of dead air on every poll.
-    from concurrent.futures import ThreadPoolExecutor
-    if raw_machines:
-        with ThreadPoolExecutor(max_workers=min(8, len(raw_machines) * 2)) as pool:
-            machines = list(pool.map(lambda a: _shape_machine(*a), raw_machines))
-
-    return {"machines": machines, "myIps": my_ips,
-            "myNetworks": my_networks_cidr}
+    return _dc_fleet.fetch_machines(BASE_API_HOST, BASE_API_PORT, _reachable_cached)
 
 
 # ── Devbox auto-assignment ────────────────────────────────────────────────────
@@ -1191,11 +1059,7 @@ DEVBOX_ID_FILE = PROJECT_ROOT / ".devbox-id.json"
 
 def _parse_ram_pct(usage: dict) -> float:
     """'27.5Gi (88%)' -> 88.0. Unknown/missing -> 100.0 (least preferred)."""
-    try:
-        m = re.search(r"\((\d+(?:\.\d+)?)%\)", str((usage or {}).get("ram", "")))
-        return float(m.group(1)) if m else 100.0
-    except Exception:
-        return 100.0
+    return _dc_fleet.ram_pct(usage)
 
 
 NO_DEVBOX_ERROR = (
@@ -1211,14 +1075,48 @@ def _tcp_open(host: str, port: int = 22, timeout: float = 3.0) -> bool:
     Deliberately not _ssh_reachable: that needs key auth to already work, and a
     freshly assigned dev-box (key not authorized yet) is still perfectly
     reachable. Only the network path matters here."""
+    return _dc_ssh.tcp_open(host, port, timeout)
+
+
+def _frontdesk_ok(host: str) -> bool:
+    """True when the dev-box front desk answers its health check — i.e. the
+    stable http://<host>:FRONTDESK_PORT/<workspace-id> URL is usable."""
     if not host:
         return False
-    import socket
     try:
-        with socket.create_connection((host, port), timeout=timeout):
-            return True
-    except OSError:
+        with urllib.request.urlopen(
+                f"http://{host}:{FRONTDESK_PORT}/__frontdesk_health", timeout=1.5) as r:
+            return r.read().strip() == b"ok"
+    except Exception:
         return False
+
+
+# ── Workspace data (config-sync), reached through the dev-box front desk ──
+# The workspace's test-context-api does the actual import; these helpers only
+# pick a version and forward calls to <Workspace URL>/test-context-api/....
+DATA_SOURCES = _dc_data.SOURCES
+
+
+def _published_versions(source: str) -> tuple[list, str | None]:
+    """(versions, error) from <source>_to_local/metadata.json.
+
+    Read through the pinned dev-box when there is one: the bucket only answers
+    the office's whitelisted internet line, which the dev-boxes use and this
+    laptop (e.g. on Wi-Fi) may not. Without a pinned dev-box, read from here."""
+    t = _devbox_cc_target()
+    target = None if t.get("error") else _dc_ssh.Target(t["user"], t["host"], t["port"], _find_ssh_key())
+    return _dc_data.published_versions(target, source)
+
+
+def _pick_version(versions: list) -> dict | None:
+    """'Latest, but safe' (devbox_core.data.pick_version)."""
+    return _dc_data.pick_version(versions)
+
+
+def _workspace_ctx(ws: str, path: str, body: dict | None = None,
+                   timeout: float = 10.0) -> dict:
+    """Call the workspace's test-context-api (devbox_core.data.ctx)."""
+    return _dc_data.ctx(ws, path, body, timeout)
 
 
 def _devbox_state_rehost(dev_id: str, ssh_user: str, old_host: str, new_host: str) -> None:
@@ -1265,8 +1163,7 @@ def _devbox_resolve(force_new: bool = False) -> dict:
     res = _fetch_machines()
     if res.get("error"):
         return {"error": res["error"]}
-    devboxes = [m for m in res.get("machines", [])
-                if m.get("type") == "dev-box" and m.get("role") == "worker"]
+    devboxes = _dc_fleet.devboxes(res.get("machines", []))
     if not devboxes:
         return {"error": NO_DEVBOX_ERROR}
 
@@ -1313,7 +1210,7 @@ def _devbox_resolve(force_new: bool = False) -> dict:
                                  f"Join the VPN / check the fleet, or run with "
                                  f"Run on = Local."}
             return {"error": NO_DEVBOX_ERROR}
-        machine = min(assignable, key=lambda m: _parse_ram_pct(m.get("usage")))
+        machine = _dc_fleet.pick(assignable)
         local_user = re.sub(r"[^a-z0-9]+", "",
                             (os.environ.get("USER") or "dev").lower()) or "dev"
         mslug = re.sub(r"[^a-z0-9]+", "-", machine["name"].lower()).strip("-")[:24]
@@ -1401,6 +1298,8 @@ def _devbox_resolve(force_new: bool = False) -> dict:
         "localSubnet": local_subnet,
         "vpnHost": vpn_host,
         "vpnSubnet": vpn_subnet,
+        "workspaceUrl": f"http://{host}:{FRONTDESK_PORT}/{dev_id}",
+        "frontdeskOk": _frontdesk_ok(host),
         "message": message,
     }
 
@@ -1579,52 +1478,15 @@ def _is_localhost(host: str) -> bool:
 # ── Registry helpers ──
 
 
-def _remote_read_registry(ssh_user: str, host: str, port: int, identity: str | None) -> dict:
-    """Read the devbox registry JSON from the remote host via SSH."""
-    cmd = f'cat {REGISTRY_FILE} 2>/dev/null || echo \'{{"users": {{}}}}\''
-    argv = _ssh_argv(ssh_user, host, port, identity, want_tty=False) + [cmd]
-    try:
-        result = subprocess.run(argv, capture_output=True, timeout=10)
-        if result.returncode == 0 and result.stdout.strip():
-            return json.loads(result.stdout)
-    except Exception:
-        pass
-    return {"users": {}}
-
-
-def _remote_write_registry(ssh_user: str, host: str, port: int, identity: str | None, registry: dict) -> bool:
-    """Write the devbox registry JSON to the remote host via SSH."""
-    data = json.dumps(registry, indent=2)
-    cmd = f"cat > {REGISTRY_FILE}"
-    argv = _ssh_argv(ssh_user, host, port, identity, want_tty=False) + [cmd]
-    try:
-        result = subprocess.run(argv, input=data.encode(), capture_output=True, timeout=10)
-        return result.returncode == 0
-    except Exception:
-        return False
-
-
-_SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
-
-
 def _register_dev_user(ssh_user: str, host: str, port: int, identity: str | None, dev_name: str) -> dict:
-    """Ensure dev_name is in the remote registry; return their entry."""
-    if not _SAFE_NAME_RE.match(dev_name):
-        raise ValueError(f"devName contains unsafe characters: {dev_name!r}")
-    registry = _remote_read_registry(ssh_user, host, port, identity)
-    users = registry.get("users", {})
+    """Ensure dev_name is in the remote registry; return their entry.
 
-    if dev_name in users:
-        return users[dev_name]
-
-    entry = {
-        "dir": f"/tmp/{dev_name}/nammayatri",
-    }
-    users[dev_name] = entry
-    registry["users"] = users
-    _remote_write_registry(ssh_user, host, port, identity, registry)
-
-    return entry
+    Locked read-modify-write in devbox_core.workspace. A failed write still
+    returns the default dir, as before, so callers can go on."""
+    try:
+        return _dc_workspace.register(_dc_ssh.Target(ssh_user, host, port, identity), dev_name)
+    except RuntimeError:
+        return {"dir": _dc_workspace.workspace_dir(dev_name)}
 
 
 # ── Devbox port discovery (single source of truth) ──
@@ -1756,6 +1618,94 @@ def get_devbox_ports(force: bool = False, host_override: str | None = None) -> d
         _devbox_ports_cache["key"] = cache_key
         _devbox_ports_cache["value"] = result
     return result
+
+
+# ── Control centre on the dev-box ─────────────────────────────────────────────
+# This checkout's control-center/ is rsynced with the backend, so it is already
+# in the workspace; devbox_core.cc starts / stops / reports it there. What stays
+# here is 7070-only: the pinned workspace (.devbox-id.json), this Mac's
+# control-center branch/commit, and the "changed since launch" check.
+
+
+def _devbox_cc_target() -> dict:
+    """Where this checkout's workspace is: from .devbox-id.json."""
+    saved = _read_devbox_id()
+    host = (saved.get("host") or "").strip()
+    user = (saved.get("sshUser") or "").strip()
+    remote_dir = (saved.get("remoteDir")
+                  or (f"/tmp/{saved['id']}/nammayatri" if saved.get("id") else ""))
+    if not (host and user and remote_dir) or _is_localhost(host):
+        return {"error": "no dev-box workspace pinned — resolve the dev-box first"}
+    return {"host": host, "user": user, "port": int(saved.get("sshPort") or 22),
+            "dir": remote_dir, "id": saved.get("id") or ""}
+
+
+def _devbox_cc_ssh_target(t: dict) -> "_dc_ssh.Target":
+    return _dc_ssh.Target(t["user"], t["host"], t["port"], _find_ssh_key())
+
+
+def _local_cc_checkout() -> dict:
+    """Branch / commit of this Mac's control-center checkout (what rsync copies)."""
+    cc = PROJECT_ROOT / "control-center"
+    def _git(*a):
+        r = subprocess.run(["git", "-C", str(cc), *a], capture_output=True, text=True, timeout=10)
+        return r.stdout.strip() if r.returncode == 0 else ""
+    if not (cc / ".git").exists():
+        return {}
+    return {"branch": _git("rev-parse", "--abbrev-ref", "HEAD"),
+            "commit": _git("rev-parse", "--short", "HEAD"),
+            "dirty": bool(_git("status", "--porcelain"))}
+
+
+def devbox_cc_status() -> dict:
+    t = _devbox_cc_target()
+    if t.get("error"):
+        return {"state": "unavailable", "error": t["error"]}
+    st = _dc_cc.status(_devbox_cc_ssh_target(t), t["dir"])
+    st["checkout"] = _local_cc_checkout()
+    # Files deployed since this control centre was launched → the running
+    # process may be older than the workspace (Vite only hot-reloads some files).
+    now = _devbox_cc_deploy_hash(t)
+    st["changedSinceLaunch"] = bool(st.get("deployHash") and now and st["deployHash"] != now)
+    return st
+
+
+def _devbox_cc_deploy_hash(t: dict) -> str:
+    """Fingerprint of the files last rsynced to this workspace (recorded by the deploy)."""
+    key = f"{t['user']}@{t['host']}/{t['id']}"
+    return (_stack_state_read().get(key) or {}).get("workspaceHash") or ""
+
+
+def devbox_cc_start() -> dict:
+    t = _devbox_cc_target()
+    if t.get("error"):
+        return t
+    current = devbox_cc_status()
+    if current.get("state") in ("starting", "running"):
+        return current
+    if not current.get("checkoutPresent"):
+        return {"error": "no control-center/ in the workspace — keep your control-center "
+                         "checkout at <repo>/control-center and ▶ Start once so it is rsynced"}
+    ports = get_devbox_ports(force=True).get("ports") or {}
+    rider, driver = ports.get("rider-app"), ports.get("dynamic-offer-driver-app")
+    if not (rider and driver):
+        return {"error": "workspace ports not known yet — start the stack first"}
+    info = {**_local_cc_checkout(), "deployHash": _devbox_cc_deploy_hash(t)}
+    r = _dc_cc.start(_devbox_cc_ssh_target(t), t["dir"], rider, driver, info)
+    if r.get("error"):
+        return r
+    return devbox_cc_status()
+
+
+def devbox_cc_stop() -> dict:
+    """Stop exactly the process group started above, so nothing is left behind."""
+    t = _devbox_cc_target()
+    if t.get("error"):
+        return t
+    r = _dc_cc.stop(_devbox_cc_ssh_target(t), t["dir"])
+    if r.get("error"):
+        return r
+    return devbox_cc_status()
 
 
 EDITOR_CLI = "code"
@@ -1943,24 +1893,7 @@ def _remote_pipe_reader(session: dict, stream) -> None:
 
 
 def _ssh_argv(user: str, host: str, port: int, identity: str | None, want_tty: bool) -> list:
-    argv = ["ssh"]
-    if want_tty:
-        argv += ["-tt"]
-    argv += [
-        "-o", "StrictHostKeyChecking=accept-new",
-        "-o", "ServerAliveInterval=15",
-        "-o", "GSSAPIAuthentication=no",
-        "-o", "ConnectTimeout=10",
-        "-o", "BatchMode=yes",
-        "-p", str(port),
-    ]
-    if identity:
-        argv += ["-i", identity]
-    if user:
-        argv += [f"{user}@{host}"]
-    else:
-        argv += [host]
-    return argv
+    return _dc_ssh.argv(_dc_ssh.Target(user, host, port, identity), tty=want_tty)
 
 
 # ── Service log viewer ────────────────────────────────────────────────────────
@@ -2072,53 +2005,8 @@ def _log_clear(body: dict) -> dict:
 
 
 def _compute_cache_commit(project_root: str, max_n: int = 30) -> str:
-    def _git(args, timeout=20):
-        return subprocess.run(
-            ["git", "-C", project_root, *args],
-            capture_output=True, text=True, timeout=timeout,
-        )
-
-    # 1. best-effort fetch (works offline with stale refs; failures are non-fatal)
-    for fetch_args in (
-        ["fetch", "--quiet", "origin",
-         "refs/tags/minio-pushed/*:refs/tags/minio-pushed/*"],
-        ["fetch", "--quiet", "origin", "main"],
-    ):
-        try:
-            _git(fetch_args, timeout=30)
-        except Exception:  # noqa: BLE001
-            pass
-
-    # 2. merge-base with main (fallback HEAD)
-    base = "HEAD"
-    try:
-        mb = _git(["merge-base", "origin/main", "HEAD"], timeout=15)
-        if mb.returncode == 0 and mb.stdout.strip():
-            base = mb.stdout.strip()
-    except Exception:  # noqa: BLE001
-        pass
-
-    # 3. walk back and return the NEAREST commit carrying a minio-pushed tag —
-    #    the single commit whose build cache cache-restore should pull. CI tags a
-    #    commit once its build is pushed to MinIO. If none of the recent ancestors
-    #    is tagged, return "" and cabal builds from scratch.
-    walk = []
-    try:
-        lg = _git(["log", "--format=%H", "-n", str(max_n), base], timeout=15)
-        if lg.returncode == 0:
-            walk = lg.stdout.split()
-    except Exception:  # noqa: BLE001
-        pass
-
-    for sha in walk:
-        try:
-            r = _git(["rev-parse", "-q", "--verify",
-                      f"refs/tags/minio-pushed/{sha}"], timeout=10)
-            if r.returncode == 0:
-                return sha
-        except Exception:  # noqa: BLE001
-            pass
-    return ""
+    """Nearest minio-pushed ancestor (devbox_core.deploy.cache_commit)."""
+    return _dc_deploy.cache_commit(project_root, max_n)
 
 
 # ── Start pre-flight: workspace fingerprint + git-history check ───────────────
@@ -2419,32 +2307,7 @@ def _deploy_plan(target: dict) -> dict:
         target["identityFile"], target["devName"],
     )
     remote_dir = entry["dir"]
-
-    ssh_cmd_parts = [
-        "ssh",
-        "-o", "StrictHostKeyChecking=accept-new",
-        "-o", "BatchMode=yes",
-        "-o", "ConnectTimeout=10",
-        "-p", str(target["port"]),
-    ]
-    if target["identityFile"]:
-        ssh_cmd_parts += ["-i", target["identityFile"]]
-    ssh_cmd = " ".join(ssh_cmd_parts)
-
-    excludes = []
-    for ex in REMOTE_EXCLUDES:
-        excludes += ["--exclude", ex]
-
-    # Use --rsync-path to create the destination directory on the remote before
-    # rsync starts — avoids a separate SSH round-trip for mkdir.
-    rsync_path = f"mkdir -p {shlex.quote(remote_dir)} && rsync"
-
-    argv = (
-        ["rsync", "-az", "--delete", "--progress", "--stats",
-         "-e", ssh_cmd, "--rsync-path", rsync_path]
-        + excludes
-        + [f"{PROJECT_ROOT}/", f"{target['user']}@{target['host']}:{remote_dir}/"]
-    )
+    t = _dc_ssh.Target(target["user"], target["host"], target["port"], target["identityFile"])
 
     cache_commit = _compute_cache_commit(str(PROJECT_ROOT))
     notes = [
@@ -2452,32 +2315,10 @@ def _deploy_plan(target: dict) -> dict:
         "[deploy] no minio-pushed cache commit found — cabal will build from scratch"
     ]
 
-    git_ignore_cmd = (
-        "printf '%s\\n' 'dist-newstyle/' 'hie/' '.hie/' '.nix-deps/' "
-        "'.cabal-dir/' '.ci-project-root' '.ci-cabal-dir' '.ci-cache-sha' "
-        "> .git/info/exclude"
-    )
-    git_init_cmd = (
-        f"cd {shlex.quote(remote_dir)} && "
-        f"rm -rf .git && git init -q && {git_ignore_cmd} && git add -A && "
-        f"GIT_AUTHOR_NAME=deploy GIT_AUTHOR_EMAIL=deploy@deploy "
-        f"GIT_COMMITTER_NAME=deploy GIT_COMMITTER_EMAIL=deploy@deploy "
-        f"git commit -q -m deploy --allow-empty 2>/dev/null || true; "
-        f"mkdir -p Backend && printf '%s' {shlex.quote(cache_commit)} "
-        f"> Backend/.ci-cache-sha"
-    )
-    ssh_base = [
-        "ssh", "-o", "StrictHostKeyChecking=accept-new",
-        "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
-        "-p", str(target["port"]),
-    ]
-    if target["identityFile"]:
-        ssh_base += ["-i", target["identityFile"]]
-
     return {
-        "argv": argv,
+        "argv": _dc_deploy.rsync_argv(str(PROJECT_ROOT), t, remote_dir),
         "notes": notes,
-        "post_ssh_argv": ssh_base + [f"{target['user']}@{target['host']}", git_init_cmd],
+        "post_ssh_argv": _dc_deploy.post_ssh_argv(t, remote_dir, cache_commit),
     }
 
 
@@ -3953,6 +3794,64 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             q = _pq(urlparse(self.path).query)
             force = (q.get("new", ["0"])[0] or "0") in ("1", "true")
             self._send_json(_devbox_resolve(force_new=force))
+            return True
+
+        # GET /api/devbox/data/sources
+        # Sources DB Manager has published, each with its versions and the
+        # "latest, but safe" pick. A source with no version list is left out.
+        if method == "GET" and path == "/api/devbox/data/sources":
+            sources, errors = [], []
+            for src in DATA_SOURCES:
+                versions, err = _published_versions(src)
+                if err:
+                    errors.append(f"{src}: {err}")
+                if versions:
+                    pick = _pick_version(versions)
+                    sources.append({"name": src, "versions": versions,
+                                    "recommended": pick["version"] if pick else None})
+            self._send_json({"sources": sources, "errors": errors})
+            return True
+
+        # GET /api/devbox/data/status?ws=<Workspace URL>
+        # What the workspace holds (last_synced) and whether a sync is running.
+        if method == "GET" and path == "/api/devbox/data/status":
+            from urllib.parse import parse_qs as _pq
+            ws = (_pq(urlparse(self.path).query).get("ws", [""])[0] or "").strip()
+            st = _workspace_ctx(ws, "/api/config-sync/status", timeout=5)
+            # Only context-api's own status has `running`; any other reply (an empty
+            # page from a Caddy that is still coming up, …) means "not up yet".
+            if "running" not in st and not st.get("error"):
+                st = {"unreachable": True, "error": "stack not up yet (no sync status)"}
+            if isinstance(st.get("log"), list):
+                st["log"] = st["log"][-40:]
+            self._send_json(st)
+            return True
+
+        # POST /api/devbox/data/sync  {ws, from, version}
+        # Starts the import on the workspace. Always sends an explicit version.
+        if method == "POST" and path == "/api/devbox/data/sync":
+            body = self._read_json_body() or {}
+            src, version = body.get("from"), body.get("version")
+            if src not in DATA_SOURCES:
+                self._send_json({"error": f"unknown source {src!r}"}, 400)
+                return True
+            if not re.fullmatch(r"v\d+", str(version or "")):
+                self._send_json({"error": f"invalid version {version!r} (expected e.g. 'v13')"}, 400)
+                return True
+            self._send_json(_workspace_ctx((body.get("ws") or "").strip(), "/api/config-sync/import",
+                                           {"from": src, "version": version}))
+            return True
+
+        # Control centre on the dev-box (this checkout's control-center/, next to
+        # the workspace's rider-app / driver-app).
+        if method == "GET" and path == "/api/devbox/cc/status":
+            self._send_json(devbox_cc_status())
+            return True
+        if method == "POST" and path == "/api/devbox/cc/start":
+            self._send_json(devbox_cc_start())
+            return True
+        if method == "POST" and path == "/api/devbox/cc/stop":
+            self._send_json(devbox_cc_stop())
             return True
 
         # GET /api/devbox/ports[?refresh=1][&host=...]

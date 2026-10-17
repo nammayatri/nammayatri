@@ -560,7 +560,7 @@ _:
               --arg dir "''${FLAKE_ROOT}" \
               --argjson ports "$PORTS_JSON" \
               --argjson caddy "''${CADDY_PORT:-null}" \
-              '.users[$dev] = {dir: $dir, ports: $ports, caddyPort: $caddy}')
+              '.users[$dev] = ((.users[$dev] // {}) + {dir: $dir, ports: $ports, caddyPort: $caddy})')
             # temp + rename = atomic; set -eo pipefail aborts if either fails.
             printf '%s\n' "$REG" > "$REGISTRY.tmp.$$"
             mv -f "$REGISTRY.tmp.$$" "$REGISTRY"

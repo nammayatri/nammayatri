@@ -62,6 +62,11 @@ export interface DevboxAssignment {
   previousHost?: string;
   /** Pinned machine answered on neither address, so it was re-assigned. */
   lostRoute?: boolean;
+  /** http://<host>:8888/<id> — this workspace through the dev-box front desk;
+   *  stays the same when the workspace's own ports change. */
+  workspaceUrl?: string;
+  /** Whether the dev-box front desk answered its health check. */
+  frontdeskOk?: boolean;
   /** Human-readable explanation of whichever recovery path was taken. */
   message?: string;
   error?: string;
@@ -175,6 +180,80 @@ export const setAutoDeploy = (
 
 export const resolveDevbox = (forceNew = false): Promise<DevboxAssignment> =>
   json(`/api/devbox/resolve${forceNew ? '?new=1' : ''}`);
+
+// ── Workspace data (config-sync) — local-api forwards these to the workspace's
+// test-context-api through the dev-box front desk (ws = Workspace URL).
+
+export type DataSourceName = 'master' | 'prod' | 'prod_international';
+
+/** One version DB Manager published for a source (<source>_to_local/metadata.json). */
+export interface PublishedVersion {
+  version: number;
+  status?: 'verified' | 'not_verified' | 'not_stable';
+  metadata?: string;
+  created_at?: string;
+  uploaded_by?: string;
+}
+
+export interface DataSource {
+  name: DataSourceName;
+  versions: PublishedVersion[];
+  /** Picked by the "latest, but safe" rule; null when nothing qualifies. */
+  recommended?: number | null;
+}
+
+export interface WorkspaceDataStatus {
+  running?: boolean;
+  started_at?: number | null;
+  error?: string | null;
+  /** What the workspace holds; version is null for syncs recorded before it was tracked. */
+  last_synced?: { from: string; version?: string | null; finished_at: number } | null;
+  log?: string[];
+  /** Front desk answered but the stack (its context-api) is not up yet — wait and retry. */
+  unreachable?: boolean;
+}
+
+const wsQuery = (ws: string) => `ws=${encodeURIComponent(ws)}`;
+
+/** Read straight from S3 by local-api, so it works before the stack is up. */
+export const publishedDataSources = (): Promise<{ sources: DataSource[]; errors?: string[] }> =>
+  json('/api/devbox/data/sources');
+
+export const workspaceDataStatus = (ws: string): Promise<WorkspaceDataStatus> =>
+  json(`/api/devbox/data/status?${wsQuery(ws)}`);
+
+export const workspaceDataSync = (
+  ws: string, from: DataSourceName, version: string,
+): Promise<{ started?: boolean; error?: string }> =>
+  json('/api/devbox/data/sync', { ws, from, version });
+
+// ── Control centre on the dev-box — this checkout's control-center/, run next to
+// the workspace's rider-app / driver-app (local-api devbox_cc_*).
+
+export interface DevboxCcStatus {
+  /** running = Vite answers; starting = process up, not answering yet (npm install…);
+   *  exited = process died (see log); unavailable = no dev-box pinned. */
+  state?: 'stopped' | 'starting' | 'running' | 'exited' | 'unknown' | 'unavailable';
+  url?: string;
+  port?: number;
+  pid?: number;
+  startedAt?: number;
+  /** What was launched (recorded at launch, not read from the Mac later). */
+  branch?: string;
+  commit?: string;
+  dirty?: boolean;
+  /** Files were deployed after launch — the running process may be older. */
+  changedSinceLaunch?: boolean;
+  checkoutPresent?: boolean;
+  /** This Mac's control-center checkout right now. */
+  checkout?: { branch?: string; commit?: string; dirty?: boolean };
+  log?: string[];
+  error?: string;
+}
+
+export const devboxCcStatus = (): Promise<DevboxCcStatus> => json('/api/devbox/cc/status');
+export const devboxCcStart = (): Promise<DevboxCcStatus> => json('/api/devbox/cc/start', {});
+export const devboxCcStop = (): Promise<DevboxCcStatus> => json('/api/devbox/cc/stop', {});
 
 export interface LogListResponse { files?: string[]; error?: string }
 export interface LogTailResponse { file?: string; content?: string; truncated?: boolean; error?: string }

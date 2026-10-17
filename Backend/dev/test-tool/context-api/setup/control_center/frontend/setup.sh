@@ -55,8 +55,10 @@ exec nix shell --inputs-from "$REPO_ROOT" \
   npm install
   # The standalone dashboard services are gone; dashboard APIs are served
   # directly by the app servers (see docs/backend/design/dashboard-direct-serving.md).
-  export VITE_DASHBOARD_DIRECT=true
-  export VITE_BPP_DIRECT_URL=http://localhost:8016
-  export VITE_BAP_DIRECT_URL=http://localhost:8013
+  # control-center reads VITE_BAP_URL / VITE_BPP_URL (vite.config.ts); a
+  # "localhost" target makes it use the app server /direct-dashboard paths.
+  # A caller may pass its own; otherwise the local stack.
+  export VITE_BAP_URL="${VITE_BAP_URL:-http://localhost:8013}"
+  export VITE_BPP_URL="${VITE_BPP_URL:-http://localhost:8016}"
   exec npm run dev
 '
