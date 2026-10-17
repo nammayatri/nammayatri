@@ -1802,3 +1802,35 @@ sharedCabAllocationFCM ::
 sharedCabAllocationFCM apiKey internalUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (sharedCabAllocationFCMClient req (Just apiKey)) "SharedCabAllocationFCM" sharedCabAllocationFCMApi
+
+newtype SharedCabDriverCallNumberResp = SharedCabDriverCallNumberResp {driverNumber :: Text}
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+type SharedCabDriverCallNumberAPI =
+  "internal"
+    :> "sharedCab"
+    :> "driver"
+    :> Capture "driverId" Text
+    :> "callNumber"
+    :> Header "token" Text
+    :> Get '[JSON] SharedCabDriverCallNumberResp
+
+sharedCabDriverCallNumberClient :: Text -> Maybe Text -> EulerClient SharedCabDriverCallNumberResp
+sharedCabDriverCallNumberClient = client sharedCabDriverCallNumberApi
+
+sharedCabDriverCallNumberApi :: Proxy SharedCabDriverCallNumberAPI
+sharedCabDriverCallNumberApi = Proxy
+
+sharedCabDriverCallNumber ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m SharedCabDriverCallNumberResp
+sharedCabDriverCallNumber apiKey internalUrl driverId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (sharedCabDriverCallNumberClient driverId (Just apiKey)) "SharedCabDriverCallNumber" sharedCabDriverCallNumberApi

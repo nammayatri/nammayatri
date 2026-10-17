@@ -212,6 +212,8 @@ data RiderConfig = RiderConfig
     sharedCabAutoEndAfterDropSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabBoardAttemptsPer10Min :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabBoardProximityM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabCallEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    sharedCabChatEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sharedCabDegradedTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sharedCabEventsTopic :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

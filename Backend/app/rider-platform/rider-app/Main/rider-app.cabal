@@ -710,6 +710,7 @@ library
       SharedLogic.SharedCab.Boarding
       SharedLogic.SharedCab.Booking
       SharedLogic.SharedCab.BookingState
+      SharedLogic.SharedCab.Call
       SharedLogic.SharedCab.Cancel
       SharedLogic.SharedCab.Config
       SharedLogic.SharedCab.ConfirmHook

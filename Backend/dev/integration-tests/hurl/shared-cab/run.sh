@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the shared-cab scenarios against a live rider-app. usage: run.sh [driver|flush|rider|boarding|all] (default all)
+# Runs the shared-cab scenarios against a live rider-app. usage: run.sh [driver|flush|rider|boarding|callchat|calloff|tripcheck|nearbybus|all] (default all)
 # ENV (default local.env) picks the variables file; REDIS_CLI (default redis-cli) reaches the rider-app's Redis for the flush
 # step (a local cluster needs REDIS_CLI="redis-cli -c -p 30001"). Local setup is documented in README.md, not done here:
 # seed/*.sql applied, the apps' Redis config caches cleared (each app has its own key prefix) and the processes restarted,
@@ -52,6 +52,8 @@ rider_id() { echo "${CLEAN_RIDER_ID:-$(session 2>/dev/null | jq -r '.person.id /
 rider() { clean; h --variable token="$(token)" rider-flow.hurl; }
 boarding() { clean; h --variable token="$(token)" boarding-flow.hurl; }
 quantity() { clean; h --variable token="$(token)" quantity-flow.hurl; }
+callchat() { clean; h --variable token="$(token)" call-chat-flow.hurl; }
+nearbybus() { h --variable token="$(token)" nearby-bus.hurl; }
 standalone() { clean; h --variable token="$(token)" standalone-flow.hurl; }
 # SUSPEND_CMD / RESUME_CMD flip rider_config.shared_cab_enabled and refresh the rider-app and scheduler config caches (they cache for
 # an hour, so locally that is the UPDATE plus a restart; see README). The flow needs shared_cab_finding_timeout_sec = 25 for the city.
@@ -68,6 +70,31 @@ suspended() {
   bash -c "$RESUME_CMD"; trap - EXIT
 }
 
+# CALL_OFF_CMD / CALL_ON_CMD flip rider_config.shared_cab_call_enabled and shared_cab_chat_enabled and refresh the config caches (as SUSPEND_CMD).
+calloff() {
+  : "${CALL_OFF_CMD:?set CALL_OFF_CMD (see README)}" "${CALL_ON_CMD:?set CALL_ON_CMD (see README)}"
+  clean
+  bash -c "$CALL_OFF_CMD"
+  trap 'bash -c "$CALL_ON_CMD"' EXIT
+  h --variable token="$(token)" call-chat-off-flow.hurl
+  bash -c "$CALL_ON_CMD"; trap - EXIT
+}
+
+# A rider boarded on one trip must not reach the cab running another: tripcheck points the boarded booking at a different trip (SQL, so
+# CLEAN_DB_URL must name the local database) and expects call and chat closed. Needs the frfs_ticket_booking table off KV (seed/05-local-config.sql).
+tripcheck() {
+  : "${CLEAN_DB_URL:?set CLEAN_DB_URL (a local Postgres)}"
+  clean
+  tok=$(token)
+  cap() { jq -r --arg n "$1" '[.entries[].captures[]? | select(.name == $n)][-1].value' <<<"$out"; }
+  out=$(hurl --json --variables-file "$env" --variable date="$date" --variable token="$tok" call-chat-trip-before.hurl)
+  booking=$(cap bookingId)
+  psql "$CLEAN_DB_URL" -q -At -v booking="$booking" <<'SQL'
+UPDATE atlas_app.frfs_ticket_booking b SET vehicle_trip_id = (SELECT t.id FROM atlas_app.vehicle_trip t WHERE t.id <> b.vehicle_trip_id ORDER BY t.started_at LIMIT 1) WHERE b.id = :'booking';
+SQL
+  h --variable token="$tok" --variable journeyId="$(cap journeyId)" --variable legOrder="$(cap legOrder)" --variable bookingId="$booking" call-chat-trip-after.hurl
+}
+
 case ${1:-all} in
   clean) clean ;;
   driver) driver ;;
@@ -75,6 +102,10 @@ case ${1:-all} in
   rider) rider ;;
   boarding) boarding ;;
   standalone) standalone ;;
+  callchat) callchat ;;
+  nearbybus) nearbybus ;;
+  tripcheck) tripcheck ;;
+  calloff) calloff ;;
   suspended) suspended ;;
   quantity) quantity ;;
   all) driver; flush; rider; boarding; standalone; quantity ;;

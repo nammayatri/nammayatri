@@ -7,8 +7,9 @@ module SharedCabProxyTests (tests) where
 import "dynamic-offer-driver-app" API.Types.UI.SharedCab (CancelBookingReq (..))
 import Data.Aeson (Value (..), decode, encode, object, (.=))
 import "dynamic-offer-driver-app" Domain.Action.UI.SharedCabBooking (BookingAction (..), actionReason)
+import "dynamic-offer-driver-app" Domain.Action.UI.SharedCabCall (SharedCabMessageReq (..))
 import "beckn-spec" Domain.Types.SharedCabSession (RiderStatus (..))
-import "dynamic-offer-driver-app" SharedLogic.SharedCab.RiderClient (BAPDriverReq (..))
+import "dynamic-offer-driver-app" SharedLogic.SharedCab.RiderClient (BAPDriverReq (..), BAPMessageReq (..), RiderCallNumberResp (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -34,5 +35,10 @@ tests =
       testCase "every rider status rider-app sends decodes" $
         map decode ["\"AT_STOP\"", "\"MINUTES_AWAY\"", "\"ARRIVING\"", "\"BOARDED\""] @?= map Just [AT_STOP, MINUTES_AWAY, ARRIVING, BOARDED],
       testCase "a status rider-app adds later decodes as the fallback instead of failing the session view" $
-        map decode ["\"IN_TRANSIT\"", "\"\""] @?= map Just [UNKNOWN_STATUS, UNKNOWN_STATUS]
+        map decode ["\"IN_TRANSIT\"", "\"\""] @?= map Just [UNKNOWN_STATUS, UNKNOWN_STATUS],
+      testCase "rider-app's call-number answer decodes" $ decode "{\"riderNumber\":\"+919876543210\"}" @?= Just (RiderCallNumberResp {riderNumber = "+919876543210"}),
+      testCase "the app's chat body {message} decodes" $ decode "{\"message\":\"on my way\"}" @?= Just (SharedCabMessageReq {message = "on my way"}),
+      testCase "the message request to rider-app carries the driver, the plate and the text" $
+        (decode . encode) (BAPMessageReq {driverId = "d1", vehicleNumber = "ML05A9999", message = "on my way"})
+          @?= Just (object ["driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "message" .= ("on my way" :: String)])
     ]

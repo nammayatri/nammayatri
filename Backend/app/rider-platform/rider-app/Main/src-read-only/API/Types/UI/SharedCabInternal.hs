@@ -17,6 +17,10 @@ data AffectedRider = AffectedRider {bookingId :: Kernel.Prelude.Text, dropStop :
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data RiderCallNumberResp = RiderCallNumberResp {riderNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data SeatsReq = SeatsReq {driverId :: Kernel.Prelude.Text, vehicleNumber :: Kernel.Prelude.Text, version :: Kernel.Prelude.Int, walkupCount :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -41,6 +45,10 @@ data SelectRouteResp = SelectRouteResp {affectedRiders :: Kernel.Prelude.Maybe [
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SharedCabDriverReq = SharedCabDriverReq {driverId :: Kernel.Prelude.Text, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text, vehicleNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedCabMessageReq = SharedCabMessageReq {driverId :: Kernel.Prelude.Text, message :: Kernel.Prelude.Text, vehicleNumber :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

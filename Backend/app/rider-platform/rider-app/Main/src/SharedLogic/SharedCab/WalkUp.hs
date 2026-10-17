@@ -73,10 +73,10 @@ cabRouteRequest :: Maybe [Text] -> [Text] -> Bool
 cabRouteRequest Nothing _ = False
 cabRouteRequest (Just feedRouteCodes) requested = not (null requested) && all (`elem` feedRouteCodes) requested
 
--- | A stop-search request names no route: the cab feed's routes between the two stops make it a cab request. No route between
--- them leaves it on the bus path.
+-- | A stop-search request names no route: the cab feed's routes between the two stops (or, with only a source stop, the routes
+-- passing it) make it a cab request. No such route leaves it on the bus path.
 stopPairLegs :: Maybe Text -> Maybe Text -> [Text] -> Maybe [ApiTypes.RouteCodesWithLeg]
-stopPairLegs (Just _) (Just _) routes@(_ : _) = Just [ApiTypes.RouteCodesWithLeg {legOrder = 0, routeCodes = routes}]
+stopPairLegs (Just _) _ routes@(_ : _) = Just [ApiTypes.RouteCodesWithLeg {legOrder = 0, routeCodes = routes}]
 stopPairLegs _ _ _ = Nothing
 
 -- | The tier a route of this feed advertises in the public-transport data: a shared-cab route says SHARED_CAB, but only to a client
@@ -258,6 +258,11 @@ routeServiceability mbPersonId req =
       (Just src, Just dest) ->
         withTryCatch "routeServiceability:sharedCabStopPair" (findSharedCabConfig mbPersonId >>= traverse (\cabIbc -> (,) cabIbc <$> JLU.getRouteCodesFromTo src dest cabIbc)) >>= \case
           Right (Just (cabIbc, routes)) -> pure $ (\legs -> (cabIbc, legs, Just routes)) <$> stopPairLegs req.sourceStopCode req.destinationStopCode routes
+          _ -> pure Nothing
+      -- the stop picked on its own: the routes of the cab feed that pass it
+      (Just src, Nothing) ->
+        withTryCatch "routeServiceability:sharedCabStop" (findSharedCabConfig mbPersonId >>= traverse (\cabIbc -> (,) cabIbc . nub . map (.routeCode) <$> OTPRest.getRouteStopMappingByStopCode src cabIbc)) >>= \case
+          Right (Just (cabIbc, routes)) -> pure $ (\legs -> (cabIbc, legs, Just routes)) <$> stopPairLegs req.sourceStopCode Nothing routes
           _ -> pure Nothing
       _ -> pure Nothing
 

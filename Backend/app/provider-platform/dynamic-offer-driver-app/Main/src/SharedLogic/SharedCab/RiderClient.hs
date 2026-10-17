@@ -21,6 +21,10 @@ module SharedLogic.SharedCab.RiderClient
     getSharedCabTrips,
     postBookingAction,
     postCabFull,
+    RiderCallNumberResp (..),
+    getRiderCallNumber,
+    BAPMessageReq (..),
+    postRiderMessage,
   )
 where
 
@@ -31,6 +35,7 @@ import qualified Data.Text as T
 import EulerHS.Types (EulerClient, client)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Error (ExternalAPICallError (..))
 import qualified Kernel.Types.Error.BaseError.HTTPError.CallAPIError as CallAPIError
 import Kernel.Utils.Common hiding (Error)
@@ -142,6 +147,31 @@ type TripsAPI =
 
 type BookingActionAPI = InternalAPI ("booking" :> Capture "bookingId" Text :> Capture "action" Text :> TokenHeader :> ReqBody '[JSON] BAPDriverReq :> Post '[JSON] SharedCabSession)
 
+newtype RiderCallNumberResp = RiderCallNumberResp {riderNumber :: Text}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON)
+
+type CallNumberAPI =
+  InternalAPI
+    ( "booking"
+        :> Capture "bookingId" Text
+        :> "callNumber"
+        :> QueryParam' '[Required, Strict] "driverId" Text
+        :> QueryParam' '[Required, Strict] "vehicleNumber" Text
+        :> TokenHeader
+        :> Get '[JSON] RiderCallNumberResp
+    )
+
+data BAPMessageReq = BAPMessageReq
+  { driverId :: Text,
+    vehicleNumber :: Text,
+    message :: Text
+  }
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON)
+
+type MessageAPI = InternalAPI ("booking" :> Capture "bookingId" Text :> "message" :> TokenHeader :> ReqBody '[JSON] BAPMessageReq :> Post '[JSON] APISuccess)
+
 type CabFullAPI = InternalAPI ("cabFull" :> TokenHeader :> ReqBody '[JSON] BAPDriverReq :> Post '[JSON] SharedCabSession)
 
 sessionClient :: Text -> Text -> Maybe Text -> EulerClient (Maybe SharedCabSession)
@@ -222,3 +252,13 @@ postCabFull :: BAPFlow m r => Text -> BaseUrl -> BAPDriverReq -> m SharedCabSess
 postCabFull apiKey internalUrl req = do
   logInfo $ "CallSharedCabBooking: cab full on " <> req.vehicleNumber <> " by driver " <> req.driverId
   callRider internalUrl "SharedCabCabFull" (client (Proxy @CabFullAPI) (Just apiKey) req) (Proxy @CabFullAPI)
+
+-- | The rider's phone for a driver-initiated masked call; rider-app answers only for the driver whose live cab holds the booking.
+getRiderCallNumber :: BAPFlow m r => Text -> BaseUrl -> Text -> Text -> Text -> m RiderCallNumberResp
+getRiderCallNumber apiKey internalUrl bookingId driverId vehicleNumber =
+  callRider internalUrl "GetSharedCabRiderCallNumber" (client (Proxy @CallNumberAPI) bookingId driverId vehicleNumber (Just apiKey)) (Proxy @CallNumberAPI)
+
+-- | The driver's chat message for a rider; rider-app checks the booking is on this driver's live cab and sends the push.
+postRiderMessage :: BAPFlow m r => Text -> BaseUrl -> Text -> BAPMessageReq -> m APISuccess
+postRiderMessage apiKey internalUrl bookingId req =
+  callRider internalUrl "PostSharedCabRiderMessage" (client (Proxy @MessageAPI) bookingId (Just apiKey) req) (Proxy @MessageAPI)

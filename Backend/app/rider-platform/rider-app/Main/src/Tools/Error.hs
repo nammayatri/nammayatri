@@ -1618,3 +1618,37 @@ instance IsHTTPError SharedCabDriverActionError where
     CancelReasonRequired -> E400
 
 instance IsAPIError SharedCabDriverActionError
+
+data SharedCabContactError
+  = SharedCabCallDisabled
+  | SharedCabCallNotAvailable
+  | SharedCabCallNumberMissing
+  | SharedCabChatDisabled
+  | SharedCabChatNotAvailable
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SharedCabContactError
+
+instance IsBaseError SharedCabContactError where
+  toMessage = \case
+    SharedCabCallDisabled -> Just "Calling the driver is not available in this city."
+    SharedCabCallNotAvailable -> Just "This booking can't be called right now."
+    SharedCabCallNumberMissing -> Just "No phone number is available for this call."
+    SharedCabChatDisabled -> Just "Chat with the driver is not available in this city."
+    SharedCabChatNotAvailable -> Just "This booking can't be messaged right now."
+
+instance IsHTTPError SharedCabContactError where
+  toErrorCode = \case
+    SharedCabCallDisabled -> "SHARED_CAB_CALL_DISABLED"
+    SharedCabCallNotAvailable -> "SHARED_CAB_CALL_NOT_AVAILABLE"
+    SharedCabCallNumberMissing -> "SHARED_CAB_CALL_NUMBER_MISSING"
+    SharedCabChatDisabled -> "SHARED_CAB_CHAT_DISABLED"
+    SharedCabChatNotAvailable -> "SHARED_CAB_CHAT_NOT_AVAILABLE"
+  toHttpCode = \case
+    SharedCabCallDisabled -> E403
+    SharedCabCallNotAvailable -> E400
+    SharedCabCallNumberMissing -> E400
+    SharedCabChatDisabled -> E403
+    SharedCabChatNotAvailable -> E400
+
+instance IsAPIError SharedCabContactError

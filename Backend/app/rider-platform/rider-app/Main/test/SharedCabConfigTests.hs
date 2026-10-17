@@ -49,6 +49,11 @@ tests =
           newestNonCab fst snd ([] :: [(Text, UTCTime)])
         )
           @?= (Just ("chennai_b", t 3), Just ("chennai_c", t 2), Nothing, Nothing),
+      testCase "a city with only the shared-cab row has no bus config (the nearby-bus lookup answers empty, not an error)" $
+        ( newestNonCab fst snd [("shillong_shared_cab:SHARED_CAB", t 9)],
+          newestNonCab fst snd [("shillong_shared_cab:SHARED_CAB", t 9), ("shillong_bus", t 1)]
+        )
+          @?= (Nothing, Just ("shillong_bus", t 1)),
       testCase "a rider polling a leg that is not over keeps the city's chains alive; a finished or cancelled leg does not" $
         map legNeedsChains [FINDING, ALLOCATED, ARRIVING, FALLBACK, BOARDED, DEGRADED, DROPPED, CANCELLED]
           @?= [True, True, True, True, True, True, False, False],
@@ -87,7 +92,9 @@ tests =
               boardProximityM = 150,
               boardAttemptsPer10Min = 5,
               noLocationSpotBookingsPerVehiclePerDay = 5,
-              maxCabSpeedMps = 14
+              maxCabSpeedMps = 14,
+              callEnabled = False,
+              chatEnabled = False
             },
       testGroup
         "agency key shared by several integrated configs: each caller gets the row of its own platform"

@@ -3,6 +3,9 @@ module SharedLogic.SharedCab.LegState
     SharedCabLegStatus (..),
     CabPosition (..),
     cabTracking,
+    callWindow,
+    tripMatches,
+    callWindowState,
     CancelReason (..),
     FallbackGate (..),
     fallbackDue,
@@ -67,6 +70,8 @@ data SharedCabLegStatus = SharedCabLegStatus
     etaToBoardStopSec :: Maybe Int,
     etaToDropStopSec :: Maybe Int,
     position :: Maybe CabPosition,
+    maskedCallNumber :: Maybe Text,
+    chatChannelId :: Maybe Text,
     cabsComing :: Int,
     boardDeadlineSec :: Maybe Int,
     cancelReason :: Maybe CancelReason
@@ -125,6 +130,20 @@ deriveSharedCabState now bookingStatus mbVehicleNumber hasLiveSession fallbackGa
       | fallbackDue' = FALLBACK
       | otherwise = FINDING
     fallbackDue' = maybe False (fallbackDue now) fallbackGate
+
+-- | Calling and chatting with the cab's driver is open only while a cab holds the rider's seat.
+callWindowState :: SharedCabState -> Bool
+callWindowState = (`elem` [ALLOCATED, ARRIVING, BOARDED])
+
+-- | The same window from the booking's own rows, for callers that have no leg status: a confirmed booking on a plate with a held ticket.
+callWindow :: DFRFSBooking.FRFSTicketBookingStatus -> [DFRFSTicket.FRFSTicketStatus] -> Maybe Text -> Bool
+callWindow bookingStatus ticketStatuses mbPlate = bookingStatus == DFRFSBooking.CONFIRMED && isJust mbPlate && seatsHeld ticketStatuses > 0
+
+-- | A boarded booking (it carries the trip it boarded on) may only reach the cab running that same trip: a rider still marked
+-- on board from an earlier run of the plate is not this driver's rider. Before boarding there is no trip and the plate and
+-- allocation decide.
+tripMatches :: Maybe Text -> Text -> Bool
+tripMatches bookingTrip sessionTrip = maybe True (== sessionTrip) bookingTrip
 
 isDroppable :: DFRFSTicket.FRFSTicketStatus -> Bool
 isDroppable status = status `elem` [DFRFSTicket.ACTIVE, DFRFSTicket.INPROGRESS]

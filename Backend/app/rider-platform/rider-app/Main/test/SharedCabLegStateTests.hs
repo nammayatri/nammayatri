@@ -20,6 +20,7 @@ import "rider-app" Lib.JourneyModule.State.Utils (onlyTransitLeg)
 import qualified "rider-app" Lib.JourneyModule.Utils as JMU
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
 import "rider-app" SharedLogic.SharedCab.Booking (bookingSeats, partyMap)
+import "rider-app" SharedLogic.SharedCab.Call (exophoneCandidates)
 import "rider-app" SharedLogic.SharedCab.LegState
 import "rider-app" SharedLogic.SharedCab.Session (CabDriverInfo (..))
 import Test.Tasty (TestTree, testGroup)
@@ -127,6 +128,33 @@ tests =
           testCase "used ticket untouched" $ isDroppable DFRFSTicket.USED @?= False
         ],
       testGroup
+        "call and chat window"
+        [ testCase "open only while a cab holds the seat" $
+            map callWindowState [FINDING, ALLOCATED, ARRIVING, FALLBACK, BOARDED, DEGRADED, DROPPED, CANCELLED]
+              @?= [False, True, True, False, True, False, False, False],
+          testCase "from the booking rows: a confirmed booking on a plate with a held ticket" $
+            [ callWindow DFRFSBooking.CONFIRMED [DFRFSTicket.ACTIVE] plate,
+              callWindow DFRFSBooking.CONFIRMED [DFRFSTicket.INPROGRESS] plate,
+              callWindow DFRFSBooking.CONFIRMED [DFRFSTicket.ACTIVE] Nothing,
+              callWindow DFRFSBooking.CONFIRMED [DFRFSTicket.USED] plate,
+              callWindow DFRFSBooking.CONFIRMED [] plate,
+              callWindow DFRFSBooking.CANCELLED [DFRFSTicket.ACTIVE] plate
+            ]
+              @?= [True, True, False, False, False, False],
+          testCase "the dialled ExoPhone is matched with and without its leading zero" $
+            map exophoneCandidates ["8071274370", "08071274370"] @?= replicate 2 ["8071274370", "08071274370"],
+          testCase "a boarded rider reaches only the trip they boarded on; before boarding the plate decides" $
+            [tripMatches booked running | (booked, running) <- [(Nothing, "trip-2"), (Just "trip-2", "trip-2"), (Just "trip-1", "trip-2")]]
+              @?= [True, True, False],
+          testCase "agrees with the leg status for every ticket state with a live session" $
+            [ callWindow DFRFSBooking.CONFIRMED [ts] plate
+              | ts <- [DFRFSTicket.ACTIVE, DFRFSTicket.INPROGRESS, DFRFSTicket.USED, DFRFSTicket.EXPIRED, DFRFSTicket.CANCELLED]
+            ]
+              @?= [ maybe False callWindowState (derive (JMState.FRFSTicket ts) plate True Nothing Nothing)
+                    | ts <- [DFRFSTicket.ACTIVE, DFRFSTicket.INPROGRESS, DFRFSTicket.USED, DFRFSTicket.EXPIRED, DFRFSTicket.CANCELLED]
+                  ]
+        ],
+      testGroup
         "cancelReason on the leg status"
         [ testCase "reason encodes SCREAMING like SharedCabState" $ BLC.unpack (encode NO_SHOW_CAP) @?= "\"NO_SHOW_CAP\"",
           testCase "status with a reason round-trips" $ decode (encode statusWithReason) @?= Just statusWithReason,
@@ -199,6 +227,8 @@ tests =
           etaToBoardStopSec = Nothing,
           etaToDropStopSec = Nothing,
           position = Nothing,
+          maskedCallNumber = Nothing,
+          chatChannelId = Nothing,
           cabsComing = 0,
           boardDeadlineSec = Nothing,
           cancelReason = Nothing

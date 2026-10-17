@@ -105,3 +105,9 @@ No other `shared_cab` column exists in the driver-app storage specs (`spec/Stora
 - Auth: loads the driver (`Person`, replica read) and its merchant; the `token` must equal `merchant.internalApiKey`. An unknown driver, unknown merchant and wrong key all return `AuthBlocked "Invalid BPP internal api key"` (no driver-id probing).
 - Action: `notifySharedCabAllocation` sends an FCM via `dynamicFCMNotifyPerson` with key and type `SHARED_CAB_ALLOCATION`, entity data = the request fields, template params `seats`, `boardingCode`, `vehicleNumber`, `boardStopCode`, `etaSeconds`; language = person language, default ENGLISH; returns `Success`.
 - Caller: rider-app `Allocation/Claim.notifyDriverOfAllocation` (forked; failures logged only).
+
+## Masked call to the rider and the driver number lookup
+
+`POST /sharedCab/booking/{bookingId}/call` (`Domain.Action.UI.SharedCabCall.callRider`, TokenAuth) fetches the rider's phone from rider-app (`RiderClient.getRiderCallNumber`, which also checks the call window and that this driver owns the booking) and connects driver and rider through Exotel exactly as `initiateCallToCustomer` does for a ride. The `call_status` entity id is the booking id; `sendFCMToBAPOnFailedCallStatus` finds no ride for it and skips the BAP nudge, so the status callback just records the status. `GET /sharedCab/call/{callId}/status` polls it. rider-app calls `GET /internal/sharedCab/driver/{driverId}/callNumber` (`API.Internal.SharedCabCallNumber`, merchant `internalApiKey`) for the ExoPhone dial-in. Details: rider-app `SharedLogic/SharedCab/ARCHITECTURE.md` section 11.
+
+`POST /sharedCab/booking/{bookingId}/message {message}` (`Domain.Action.UI.SharedCabCall.sendMessage`) is the booking-keyed twin of `POST /onMessage`: it forwards the text to rider-app (`RiderClient.postRiderMessage`), which checks the booking is on this driver's live cab and sends the rider the CHAT_MESSAGE push.

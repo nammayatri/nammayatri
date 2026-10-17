@@ -124,7 +124,7 @@ tests =
             row "b3" "Mei" 1 "B" "C" False
           ]
           @?= [ View.RidersAtStop "Alpha" [boarding "b1" "Asha" 2 "Charlie"] [],
-                View.RidersAtStop "Bravo" [boarding "b3" "Mei" 1 "Charlie"] [View.AlightingRider "b2" "Ravi" 1]
+                View.RidersAtStop "Bravo" [boarding "b3" "Mei" 1 "Charlie"] [View.AlightingRider "b2" "Ravi" 1 Nothing False]
               ],
       testCase "ridersByStop: a booking holding no seat and an empty cab produce nothing" $ do
         View.groupRidersByStop routeStops [row "b1" "Asha" 0 "A" "C" False, row "b2" "Ravi" 0 "Z" "Y" True] @?= []
@@ -138,8 +138,8 @@ tests =
             row "b4" "Lu" 1 "B" "C" True
           ]
           @?= [ View.RidersAtStop "Alpha" [boarding "b1" "Asha" 1 "Charlie"] [],
-                View.RidersAtStop "Charlie" [] [View.AlightingRider "b4" "Lu" 1],
-                View.RidersAtStop "Other stops" [boarding "b3" "Mei" 1 "Charlie"] [View.AlightingRider "b2" "Ravi" 1]
+                View.RidersAtStop "Charlie" [] [View.AlightingRider "b4" "Lu" 1 Nothing False],
+                View.RidersAtStop "Other stops" [boarding "b3" "Mei" 1 "Charlie"] [View.AlightingRider "b2" "Ravi" 1 Nothing False]
               ],
       testCase "real-state status: a flipped ticket beats an allocation, an allocation beats walking" $
         map (uncurry View.riderStatusOf) [(True, True), (True, False), (False, True), (False, False)]
@@ -159,10 +159,15 @@ tests =
                   fare = 10,
                   riderStatus = View.ARRIVING,
                   minutesAway = Just 3,
-                  expiresAt = deadline
+                  expiresAt = deadline,
+                  chatChannelId = Just "b1",
+                  callable = True
                 }
          in View.groupRidersByStop routeStops [arriving]
-              @?= [View.RidersAtStop "Alpha" [View.BoardingRider "b1" "Asha" 1 "Charlie" 10 View.ARRIVING (Just 3) deadline] []],
+              @?= [View.RidersAtStop "Alpha" [View.BoardingRider "b1" "Asha" 1 "Charlie" 10 View.ARRIVING (Just 3) deadline (Just "b1") True] []],
+      testCase "an alighting rider keeps its chat channel and call flag" $
+        View.groupRidersByStop routeStops [(row "b2" "Ravi" 1 "A" "B" True) {View.chatChannelId = Just "b2", View.callable = True}]
+          @?= [View.RidersAtStop "Bravo" [] [View.AlightingRider "b2" "Ravi" 1 (Just "b2") True]],
       testCase "H3: finish reports exactly the riders whose drop failed" $
         stranded [("b1", Right ()), ("b2", Left ("timeout" :: Text)), ("b3", Right ()), ("b4", Left "timeout")] @?= ["b2", "b4"],
       testCase "expiry and ops ends drop the riders as the tick" $
@@ -176,8 +181,8 @@ routeStops = [("A", "Alpha"), ("B", "Bravo"), ("C", "Charlie")]
 
 row :: Text -> Text -> Int -> Text -> Text -> Bool -> View.RiderRow
 row bookingId firstName seats boardStopCode dropStopCode boarded =
-  View.RiderRow {bookingId, firstName, seats, boardStopCode, dropStopCode, boarded, fare = 10, riderStatus = View.MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing}
+  View.RiderRow {bookingId, firstName, seats, boardStopCode, dropStopCode, boarded, fare = 10, riderStatus = View.MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing, chatChannelId = Nothing, callable = False}
 
 boarding :: Text -> Text -> Int -> Text -> View.BoardingRider
 boarding bookingId firstName seats dropStop =
-  View.BoardingRider {bookingId, firstName, seats, dropStop, fare = 10, riderStatus = View.MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing}
+  View.BoardingRider {bookingId, firstName, seats, dropStop, fare = 10, riderStatus = View.MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing, chatChannelId = Nothing, callable = False}

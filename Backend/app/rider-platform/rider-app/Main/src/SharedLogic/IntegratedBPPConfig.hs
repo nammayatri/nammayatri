@@ -84,6 +84,16 @@ findBusIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType 
   (newestNonCab (.agencyKey) (.createdAt) <$> findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType)
     >>= fromMaybeM IntegratedBPPConfigNotFound
 
+-- | 'findBusIntegratedBPPConfig' for callers that have nothing to do in a city without a bus fleet (a cab-only city has only the shared-cab row).
+findMaybeBusIntegratedBPPConfig ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Enums.VehicleCategory ->
+  PlatformType ->
+  m (Maybe IntegratedBPPConfig)
+findMaybeBusIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType =
+  newestNonCab (.agencyKey) (.createdAt) <$> findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType
+
 newestNonCab :: (a -> Text) -> (a -> UTCTime) -> [a] -> Maybe a
 newestNonCab agencyKeyOf createdAtOf rows =
   listToMaybe (sortBy (\a b -> compare (createdAtOf b) (createdAtOf a)) (filter (not . isSharedCabAgency . agencyKeyOf) rows))

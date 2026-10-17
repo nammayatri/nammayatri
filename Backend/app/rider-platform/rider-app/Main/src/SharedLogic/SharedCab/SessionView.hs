@@ -39,7 +39,9 @@ data RiderRow = RiderRow
     fare :: HighPrecMoney,
     riderStatus :: RiderStatus,
     minutesAway :: Maybe Int,
-    expiresAt :: Maybe UTCTime
+    expiresAt :: Maybe UTCTime,
+    chatChannelId :: Maybe Text,
+    callable :: Bool
   }
   deriving (Show, Eq)
 
@@ -53,8 +55,8 @@ groupRidersByStop stops rows =
     group stopName atStop =
       RidersAtStop
         { stopName,
-          boarding = [BoardingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, dropStop = nameOf r.dropStopCode, fare = r.fare, riderStatus = r.riderStatus, minutesAway = r.minutesAway, expiresAt = r.expiresAt} | r <- held, not r.boarded, atStop r.boardStopCode],
-          alighting = [AlightingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats} | r <- held, r.boarded, atStop r.dropStopCode]
+          boarding = [BoardingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, dropStop = nameOf r.dropStopCode, fare = r.fare, riderStatus = r.riderStatus, minutesAway = r.minutesAway, expiresAt = r.expiresAt, chatChannelId = r.chatChannelId, callable = r.callable} | r <- held, not r.boarded, atStop r.boardStopCode],
+          alighting = [AlightingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, chatChannelId = r.chatChannelId, callable = r.callable} | r <- held, r.boarded, atStop r.dropStopCode]
         }
     nonEmpty g = not (null g.boarding && null g.alighting)
     nameOf code = fromMaybe code (lookup code stops)

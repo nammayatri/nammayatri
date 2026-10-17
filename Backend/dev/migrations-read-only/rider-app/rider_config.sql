@@ -971,3 +971,10 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_enabled boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_max_cab_speed_mps integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_chat_enabled boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_call_enabled boolean ;

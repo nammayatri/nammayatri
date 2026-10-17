@@ -36,7 +36,10 @@ data SharedCabTunables = SharedCabTunables
     noLocationSpotBookingsPerVehiclePerDay :: Int,
     -- | Fastest a cab can plausibly travel (m/s): a candidate whose straight-line distance to the stop exceeds its ETA times this (plus
     -- the at-stop radius) has a bad ETA.
-    maxCabSpeedMps :: Int
+    maxCabSpeedMps :: Int,
+    -- | Masked rider/driver call and per-booking chat; off unless the city's rider_config turns them on.
+    callEnabled :: Bool,
+    chatEnabled :: Bool
   }
   deriving (Show, Eq, Generic)
 
@@ -60,7 +63,9 @@ defaultTunables =
       boardProximityM = 150,
       boardAttemptsPer10Min = 5,
       noLocationSpotBookingsPerVehiclePerDay = 5,
-      maxCabSpeedMps = 14
+      maxCabSpeedMps = 14,
+      callEnabled = False,
+      chatEnabled = False
     }
 
 tunablesFrom :: Maybe DRC.RiderConfig -> SharedCabTunables
@@ -84,7 +89,9 @@ tunablesFrom (Just rc) =
       boardProximityM = pick rc.sharedCabBoardProximityM (.boardProximityM),
       boardAttemptsPer10Min = pick rc.sharedCabBoardAttemptsPer10Min (.boardAttemptsPer10Min),
       noLocationSpotBookingsPerVehiclePerDay = pick rc.sharedCabNoLocationSpotBookingsPerVehiclePerDay (.noLocationSpotBookingsPerVehiclePerDay),
-      maxCabSpeedMps = pick rc.sharedCabMaxCabSpeedMps (.maxCabSpeedMps)
+      maxCabSpeedMps = pick rc.sharedCabMaxCabSpeedMps (.maxCabSpeedMps),
+      callEnabled = pick rc.sharedCabCallEnabled (.callEnabled),
+      chatEnabled = pick rc.sharedCabChatEnabled (.chatEnabled)
     }
   where
     pick mbValue field = fromMaybe (field defaultTunables) mbValue

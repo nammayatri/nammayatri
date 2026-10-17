@@ -95,6 +95,7 @@ library
       API.Internal.SendEmailOTP
       API.Internal.SendSMS
       API.Internal.SharedCabAllocation
+      API.Internal.SharedCabCallNumber
       API.Internal.SpecialLocationList
       API.Internal.SpecialLocationUpsert
       API.Internal.StopDetection
@@ -355,6 +356,7 @@ library
       Domain.Action.Internal.SendEmailOTP
       Domain.Action.Internal.SendSMS
       Domain.Action.Internal.SharedCabAllocation
+      Domain.Action.Internal.SharedCabCallNumber
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.TollUpsert
@@ -476,6 +478,7 @@ library
       Domain.Action.UI.SearchRequestLocation
       Domain.Action.UI.SharedCab
       Domain.Action.UI.SharedCabBooking
+      Domain.Action.UI.SharedCabCall
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialLocation

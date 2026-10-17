@@ -44,7 +44,7 @@ tests =
             [chooseWalkUp False ManyCabs, chooseWalkUp False NoCab] @?= [PickRoute, UseBus],
           testCase "serviceability answers from the cabs only for routes of a readable shared-cab feed" $
             [cabRouteRequest (Just ["SC-A-F", "SC-A-R"]) ["SC-A-F"], cabRouteRequest (Just ["SC-A-F"]) ["SC-A-F", "MTC-1"], cabRouteRequest (Just ["SC-A-F"]) []] @?= [True, False, False],
-          testCase "a stop-search request (two stop codes, no route) is a cab request only when the cab feed has a route between them" $
+          testCase "a stop-search request (two stop codes, or just the source stop, no route) is a cab request only when the cab feed has a route there" $
             map
               (fmap (map (\ApiTypes.RouteCodesWithLeg {ApiTypes.legOrder = o, ApiTypes.routeCodes = c} -> (o, c))))
               [ stopPairLegs (Just "SC_POLO") (Just "SC_NONGTHYMMAI") ["SC-PRD-F"],
@@ -52,7 +52,7 @@ tests =
                 stopPairLegs (Just "SC_POLO") Nothing ["SC-PRD-F"],
                 stopPairLegs Nothing (Just "SC_NONGTHYMMAI") ["SC-PRD-F"]
               ]
-              @?= [Just [(0, ["SC-PRD-F"])], Nothing, Nothing, Nothing],
+              @?= [Just [(0, ["SC-PRD-F"])], Nothing, Just [(0, ["SC-PRD-F"])], Nothing],
           testCase "the bus fleet's configs never include the shared-cab feed" $
             withoutCabRows fst [("chennai_data_bus", 1 :: Int), ("shillong_shared_cab:SHARED_CAB", 2)] @?= [("chennai_data_bus", 1)],
           testCase "a shared-cab route advertises SHARED_CAB only to a client that declared the tier; other routes and clients are untouched" $

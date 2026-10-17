@@ -10,6 +10,7 @@ imports:
   SharedCabSession: SharedLogic.SharedCab.SessionView
   EndRouteReq: SharedLogic.SharedCab.SessionView
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
+  APISuccess: Kernel.Types.APISuccess
 
 module: SharedCabInternal
 
@@ -52,6 +53,14 @@ types:
     driverId: Text
     vehicleNumber: Text
     reason: Maybe Text
+
+  RiderCallNumberResp:
+    riderNumber: Text
+
+  SharedCabMessageReq:
+    driverId: Text
+    vehicleNumber: Text
+    message: Text
 
   SharedCabTrip:
     id: Id VehicleTrip
@@ -166,6 +175,29 @@ apis:
         type: SharedCabDriverReq
       response:
         type: SharedCabSession
+  - GET:
+      endpoint: /sharedCab/booking/{bookingId}/callNumber
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        bookingId: Id FRFSTicketBooking
+      mandatoryQuery:
+        driverId: Text
+        vehicleNumber: Text
+      response:
+        type: RiderCallNumberResp
+  - POST:
+      endpoint: /sharedCab/booking/{bookingId}/message
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        bookingId: Id FRFSTicketBooking
+      request:
+        type: SharedCabMessageReq
+      response:
+        type: APISuccess
   - POST:
       endpoint: /sharedCab/cabFull
       auth: NoAuth

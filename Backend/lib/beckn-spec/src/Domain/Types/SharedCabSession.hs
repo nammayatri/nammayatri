@@ -71,14 +71,18 @@ data BoardingRider = BoardingRider
     fare :: HighPrecMoney,
     riderStatus :: RiderStatus,
     minutesAway :: Maybe Int,
-    expiresAt :: Maybe UTCTime
+    expiresAt :: Maybe UTCTime,
+    chatChannelId :: Maybe Text,
+    callable :: Bool
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 data AlightingRider = AlightingRider
   { bookingId :: Text,
     firstName :: Text,
-    seats :: Int
+    seats :: Int,
+    chatChannelId :: Maybe Text,
+    callable :: Bool
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 

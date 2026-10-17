@@ -29,6 +29,7 @@ import qualified SharedLogic.SharedCab.Allocation.Select as Select
 import SharedLogic.SharedCab.Allocation.Types (RiderFix (..), allocationDeadline)
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
 import SharedLogic.SharedCab.BookingState (readAlloc, readAttempts, readFindingSince)
+import qualified SharedLogic.SharedCab.Call as SharedCabCall
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as SharedCabDegraded
 import qualified SharedLogic.SharedCab.Events as SharedCabEvents
@@ -87,6 +88,10 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
             findingSince,
             fallbackAfterSec = cfg.fallbackAfterSec
           }
+  let onThisTrip session = session.status /= SharedCabSessionState.ENDED && SharedCabLeg.tripMatches (getId <$> booking.vehicleTripId) session.vehicleTripId.getId
+      inWindow = maybe False onThisTrip mbSession && maybe False SharedCabLeg.callWindowState mbState
+  maskedCall <- if cfg.callEnabled && inWindow then SharedCabCall.maskedCallNumber booking.merchantOperatingCityId else pure Nothing
+  let chatChannel = if cfg.chatEnabled && inWindow then Just booking.id.getId else Nothing
   -- where the rider is while a cab is on its way decides the blame if it passes the stop
   when (mbState `elem` [Just SharedCabLeg.ALLOCATED, Just SharedCabLeg.ARRIVING]) $
     whenJust (listToMaybe riderLastPoints) $ \p -> SharedCabBooking.recordRiderFix booking.id RiderFix {position = p.latLong, takenAt = p.currTime}
@@ -110,7 +115,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
           fleetNo = journeyLeg.finalBoardedBusNumber,
           serviceTierType = Just Spec.SHARED_CAB,
           merchantOperatingCityId = booking.merchantOperatingCityId,
-          sharedCab = mkLegStatus booking mbDriverInfo cabsComing boardDeadlineSec cabTrack mbCancelReason <$> mbState
+          sharedCab = mkLegStatus booking mbDriverInfo cabsComing boardDeadlineSec cabTrack maskedCall chatChannel mbCancelReason <$> mbState
         }
   where
     mbRouteCode = listToMaybe journeyLeg.routeDetails >>= (.routeGtfsId) <&> gtfsIdtoDomainCode
@@ -141,10 +146,12 @@ mkLegStatus ::
   Int ->
   Maybe Int ->
   Maybe CabTrack ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe SharedCabLeg.CancelReason ->
   SharedCabLeg.SharedCabState ->
   SharedCabLeg.SharedCabLegStatus
-mkLegStatus booking mbDriverInfo cabsComing boardDeadlineSec cabTrack reason st =
+mkLegStatus booking mbDriverInfo cabsComing boardDeadlineSec cabTrack maskedCall chatChannel reason st =
   SharedCabLeg.SharedCabLegStatus
     { state = st,
       bookingId = booking.id.getId,
@@ -155,6 +162,8 @@ mkLegStatus booking mbDriverInfo cabsComing boardDeadlineSec cabTrack reason st 
       etaToBoardStopSec = live >>= (\(_, board, _) -> board),
       etaToDropStopSec = live >>= (\(_, _, dropEta) -> dropEta),
       position = (\(pos, _, _) -> pos) <$> live,
+      maskedCallNumber = maskedCall,
+      chatChannelId = chatChannel,
       cabsComing,
       boardDeadlineSec,
       cancelReason = reason

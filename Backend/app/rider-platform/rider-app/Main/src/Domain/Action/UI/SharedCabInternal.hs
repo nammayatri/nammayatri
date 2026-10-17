@@ -10,6 +10,8 @@ module Domain.Action.UI.SharedCabInternal
     postSharedCabBookingBoardedWithoutCode,
     postSharedCabBookingDropped,
     postSharedCabCabFull,
+    getSharedCabBookingCallNumber,
+    postSharedCabBookingMessage,
   )
 where
 
@@ -27,6 +29,7 @@ import qualified Domain.Types.VehicleTrip as DVT
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
@@ -34,9 +37,12 @@ import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Types as AllocTypes
 import qualified SharedLogic.SharedCab.Booking as Booking
 import qualified SharedLogic.SharedCab.BookingState as BookingState
+import qualified SharedLogic.SharedCab.Call as SharedCabCall
+import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Demand as Demand
 import SharedLogic.SharedCab.DriverAction (DriverAction (..), runDriverAction)
 import qualified SharedLogic.SharedCab.Invariants as Invariants
+import qualified SharedLogic.SharedCab.LegState as LegState
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.Schedule (ensureAllocationTick)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -45,11 +51,14 @@ import qualified SharedLogic.SharedCab.SessionView as View
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.IntegratedBPPConfigExtra as QIBCExtra
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import qualified Storage.Queries.VehicleTrip as QVT
 import Tools.Error
+import Tools.Notifications (SharedCabChatEntityData (..), notifyChatMessage)
 
 defaultCapacity :: Int
 defaultCapacity = 4
@@ -238,8 +247,8 @@ sessionRoute integratedBppConfig code = do
       }
 
 -- | The plate's live bookings as rider rows; status/ETA/deadline come from the booking's real state.
-liveRiderRows :: [(Text, LatLong)] -> Text -> Environment.Flow [View.RiderRow]
-liveRiderRows stopPoints plate = do
+liveRiderRows :: Config.SharedCabTunables -> Text -> [(Text, LatLong)] -> Text -> Environment.Flow [View.RiderRow]
+liveRiderRows cfg sessionTrip stopPoints plate = do
   bookings <- Booking.liveBookingsForVehicle plate
   if null bookings
     then pure []
@@ -250,6 +259,7 @@ liveRiderRows stopPoints plate = do
       let pointsByCode = Map.fromList stopPoints
           nameOf b = fromMaybe "Rider" $ listToMaybe [w | p <- persons, p.id == b.riderId, Just n <- [p.firstName], w <- T.words n]
           statusesOf b = [t.status | t <- tickets, t.frfsTicketBookingId == b.id]
+          onThisTrip b = LegState.tripMatches (getId <$> b.vehicleTripId) sessionTrip
       parties <- Booking.partySizes bookings
       forM bookings $ \b -> do
         let statuses = statusesOf b
@@ -277,7 +287,10 @@ liveRiderRows stopPoints plate = do
               fare = b.totalPrice.amount,
               riderStatus = View.riderStatusOf boarded (isJust mbAlloc),
               minutesAway,
-              expiresAt
+              expiresAt,
+              -- a live row holds a seat on a live cab; a rider boarded on an earlier run of the plate is not this run's rider
+              chatChannelId = if cfg.chatEnabled && onThisTrip b then Just b.id.getId else Nothing,
+              callable = cfg.callEnabled && onThisTrip b
             }
 
 -- | Until the tick lands: moving, next stops are the whole route. `available` is derived: capacity less walk-ups less held seats.
@@ -289,7 +302,8 @@ mkSessionResp s = do
   demand <- Demand.demandByStop s.merchantOperatingCityId.getId s.routeCode (map (.stopCode) stops)
   queuedRoute <- traverse (sessionRoute integratedBppConfig) s.queuedRouteCode
   bookedSeats <- Booking.liveSeatsOnVehicle s.vehicleNumber
-  riders <- liveRiderRows [(stop.stopCode, stop.stopPoint) | stop <- stops] s.vehicleNumber
+  cfg <- Config.getTunables s.merchantOperatingCityId
+  riders <- liveRiderRows cfg s.vehicleTripId.getId [(stop.stopCode, stop.stopPoint) | stop <- stops] s.vehicleNumber
   pure
     View.SharedCabSession
       { route,
@@ -311,3 +325,33 @@ mkSessionResp s = do
         lowDemandCard = Nothing,
         offRoute = Nothing
       }
+
+-- | The rider's number for a driver-initiated masked call; only for the driver whose live cab holds the booking, inside the call window.
+getSharedCabBookingCallNumber :: Id DFTB.FRFSTicketBooking -> Text -> Text -> Maybe Text -> Environment.Flow API.RiderCallNumberResp
+getSharedCabBookingCallNumber bookingId driverId vehicleNumber mbToken = do
+  checkToken mbToken
+  booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (FRFSTicketBookingDoesNotExist bookingId.getId)
+  cfg <- Config.getTunables booking.merchantOperatingCityId
+  unless cfg.callEnabled $ throwError SharedCabCallDisabled
+  mbSession <- SharedCabCall.callableSession cfg booking
+  case mbSession of
+    Just s | s.driverId == driverId, s.vehicleNumber == canonicalisePlate vehicleNumber -> API.RiderCallNumberResp <$> SharedCabCall.riderCallNumber booking
+    _ -> throwError SharedCabCallNotAvailable
+
+-- | A driver's chat message to a rider's cab chat as a push. Same authorisation as the call (the city's chat switch instead), so
+-- only the driver whose live cab holds the booking on its current trip can write to the rider.
+postSharedCabBookingMessage :: Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabMessageReq -> Environment.Flow APISuccess
+postSharedCabBookingMessage bookingId mbToken req = do
+  checkToken mbToken
+  booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (FRFSTicketBookingDoesNotExist bookingId.getId)
+  cfg <- Config.getTunables booking.merchantOperatingCityId
+  unless cfg.chatEnabled $ throwError SharedCabChatDisabled
+  mbSession <- SharedCabCall.chatSession cfg booking
+  case mbSession of
+    Just s | s.driverId == req.driverId, s.vehicleNumber == canonicalisePlate req.vehicleNumber -> pure ()
+    _ -> throwError SharedCabChatNotAvailable
+  let message = T.strip req.message
+  when (T.null message) $ throwError (InvalidRequest "message is empty")
+  mbLeg <- QJourneyLeg.findByLegSearchId (Just booking.searchId.getId)
+  notifyChatMessage booking.riderId message (SharedCabChatEntityData {sharedCabBookingId = bookingId.getId, journeyId = (.journeyId.getId) <$> mbLeg})
+  pure Success

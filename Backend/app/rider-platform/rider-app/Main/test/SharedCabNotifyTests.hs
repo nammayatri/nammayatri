@@ -3,18 +3,22 @@
 
 module SharedCabNotifyTests (tests) where
 
-import "aeson" Data.Aeson (Value (String), toJSON)
+import "aeson" Data.Aeson (Value (String), object, toJSON, (.=))
 import "rider-app" SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), Blame (..), SkipReason (..))
 import "rider-app" SharedLogic.SharedCab.Notify
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
+import "rider-app" Tools.Notifications (SharedCabChatEntityData (..))
 import Prelude
 
 tests :: TestTree
 tests =
   testGroup
     "SharedCab rider notifications"
-    [ testCase "keys match the merchant_push_notification rows" $
+    [ testCase "the cab chat push routes on sharedCabBookingId and journeyId" $
+        toJSON (SharedCabChatEntityData {sharedCabBookingId = "b1", journeyId = Just "j1"})
+          @?= object ["sharedCabBookingId" .= String "b1", "journeyId" .= String "j1"],
+      testCase "keys match the merchant_push_notification rows" $
         map notificationKey [minBound .. maxBound]
           @?= [ "SHARED_CAB_ASSIGNED",
                 "SHARED_CAB_ARRIVING",
