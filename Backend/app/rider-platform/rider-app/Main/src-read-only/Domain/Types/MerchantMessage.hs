@@ -67,6 +67,7 @@ data MessageKey
   | WHATSAPP_BUS_TRIP_STARTED
   | WHATSAPP_SHUTTLE_BOOKING_CONFIRMED
   | WHATSAPP_FRFS_TRIP_DETAILS_UPDATED
+  | SEND_WHATSAPP_OTP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
 type MerchantMessage = MerchantMessageD 'Safe
