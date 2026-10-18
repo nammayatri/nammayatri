@@ -214,7 +214,9 @@ heartbeats its own cars, and that timer re-stamped real drivers too.
 **They answer real ride requests.** Before the first real passenger:
 `./fleet-service.sh uninstall`, and erase the twelve accounts **and the two test
 passengers below** the same way as on 2026-10-01 (the console's
-`anonymise.sql`). Never sign in as one of the cars: it revokes the daemon's
+`anonymise.sql`) -- since 2026-10-18 that is one script,
+`./launch-cleanup.sh`, with a rehearsal and a go/no-go gate: see the
+[launch runbook](runbooks/launch.md). Never sign in as one of the cars: it revokes the daemon's
 session.
 
 **Each car drives its own ride, in parallel (2026-10-04).** The daemon used to

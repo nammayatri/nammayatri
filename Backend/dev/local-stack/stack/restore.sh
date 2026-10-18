@@ -330,6 +330,16 @@ rehearse() {
 
   verify "$R-pg" atlas_dev rehearse_decrypt "$R-docs" "$WORK/codes.json"
 
+  # A change to be rehearsed on the copy, e.g. the launch clean-up:
+  #   REHEARSE_HOOK='./launch-cleanup.sh --rehearsal "$R_PG" --apply' ./restore.sh rehearse offsite:latest
+  # It runs here, on the restored data, and the copy is removed right after.
+  # R_PG is the copy's database container; the live stack is not named.
+  if [ -n "${REHEARSE_HOOK:-}" ]; then
+    say "rehearsing a change on the copy: $REHEARSE_HOOK"
+    if R_PG="$R-pg" R_DB=atlas_dev bash -c "$REHEARSE_HOOK"; then ok "it ran on the copy"
+    else bad "it failed on the copy"; FAIL=1; fi
+  fi
+
   say "removing the throwaway copy"
   teardown
   ok "removed"
