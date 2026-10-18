@@ -1,0 +1,981 @@
+{
+  "info": {
+    "name": "ONDC Scheduled Ride Flow (Workbench BAP)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Replays the ONDC workbench buyer (TRV10 2.1.0, SCHEDULED_TRIP) against the local BPP, then the seeded driver accepts the scheduled booking, starts with the OTP from the RIDE_ASSIGNED on_update and ends the ride. Callbacks land on the mock server's /workbench-bap. Each run drops at a random point drop_min_km..drop_max_km from pickup, so every ride has its own fare.\n\nLocal prerequisites (driver app):\n- dhall-configs/dev/dynamic-offer-driver-app.dhall: noSignatureSubscribers must contain \"workbench.ondc.tech\" — the collection signs search/select/init/confirm with a placeholder signature, so the BPP skips verification for this subscriber (registry lookup still happens).\n- dev/local-testing-data/mock-registry.sql: registry rows (BAP + BG) for workbench.ondc.tech / key c11d8b66-… so both Authorization and X-Gateway-Authorization resolve.\n- dev/local-testing-data/dynamic-offer-driver-app.sql: whitelists the workbench in white_list_org, enables transporter_config.enable_ondc_scheduled_ride_support (Quote-based select/init), seeds the fleet owner's mobile number + fleet_owner_information so the fleet driver can go online.\n- Restart the driver app after changing the dhall or transporter_config (ConfigPilot caches it in memory for 1h)."
+  },
+  "item": [
+    {
+      "name": "Switch to Merchant City (Dashboard)",
+      "_group": "Setup",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "",
+              "var d = pm.response.json();",
+              "pm.environment.set('city_dashboard_token', d.authToken);",
+              "console.log('Dashboard token for', d.merchantId, d.city);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{dashboard_city}}\"}"
+        }
+      }
+    },
+    {
+      "name": "Route Search via Google Maps Mock (Dashboard)",
+      "_group": "Setup",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "",
+              "// Local OSRM has Bangalore data only; through the Google mock the route distance (and so the fare)",
+              "// follows the destination. Config sync from master resets this, so every run re-applies it.",
+              "console.log('get_routes -> Google');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{city_dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/serviceUsageConfig/maps/update",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"getRoutes\": \"Google\"}"
+        }
+      }
+    },
+    {
+      "name": "List Prepaid Plans (Fleet Owner)",
+      "_group": "Setup",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// the seed driver is linked to a fleet, so setActivity checks the fleet owner's prepaid wallet (Driver.hs setActivity)",
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// the credit must clear the go-online threshold (subscriptionConfig.fleetPrepaidSubscriptionThreshold, 100 in dev),",
+              "// so take the cheapest plan at or above prepaid_min_plan_amount (env, default 500)",
+              "var minAmount = Number(pm.environment.get('prepaid_min_plan_amount') || 500);",
+              "var plans = (d.list || []).filter(function (p) { return Number(p.planBaseAmount) >= minAmount; });",
+              "pm.test('A prepaid plan exists for this city', function () { pm.expect(plans.length).to.be.above(0); });",
+              "// cheapest qualifying plan",
+              "plans.sort(function (a, b) { return Number(a.planBaseAmount) - Number(b.planBaseAmount); });",
+              "pm.collectionVariables.set('_test_prepaid_plan_id', plans[0].id);",
+              "pm.collectionVariables.set('_test_prepaid_amount', String(plans[0].planBaseAmount));",
+              "console.log('Prepaid plan:', plans[0].id, plans[0].name, plans[0].planBaseAmount);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_owner_token}}"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/plan/list?serviceName=%22PREPAID_SUBSCRIPTION%22&limit=50&offset=0"
+      }
+    },
+    {
+      "name": "Buy Prepaid Plan (Fleet Owner)",
+      "_group": "Setup",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Payment order created', function () { pm.expect(d.orderId).to.not.be.undefined; });",
+              "pm.collectionVariables.set('_test_prepaid_order_id', d.orderId);",
+              "pm.collectionVariables.set('_test_prepaid_order_short_id', (d.orderResp && d.orderResp.order_id) || d.orderId);",
+              "console.log('Prepaid order:', d.orderId, 'short:', pm.collectionVariables.get('_test_prepaid_order_short_id'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_owner_token}}"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/plan/{{_test_prepaid_plan_id}}/subscribe?serviceName=%22PREPAID_SUBSCRIPTION%22",
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "Override Juspay Status (Prepaid CHARGED)",
+      "_group": "Setup",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// driver-app polls Juspay by the order's short id; register the uuid form too, as the other suites do",
+              "var resp = { status: 'CHARGED', amount: Number(pm.collectionVariables.get('_test_prepaid_amount')), effective_amount: Number(pm.collectionVariables.get('_test_prepaid_amount')), currency: 'INR', payment_method_type: 'UPI', payment_method: 'UPI' };",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('mockServerUrl') + '/mock/override',",
+              "    method: 'POST',",
+              "    header: { 'Content-Type': 'application/json' },",
+              "    body: { mode: 'raw', raw: JSON.stringify({ service: 'juspay', extract: 'path.2', match: '/orders', value: pm.collectionVariables.get('_test_prepaid_order_id'), response: resp }) }",
+              "}, function () {});"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Mock override accepted', function () { pm.response.to.have.status(200); pm.expect(d.ok).to.be.true; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/override",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"{{_test_prepaid_order_short_id}}\", \"response\": {\"status\": \"CHARGED\", \"amount\": {{_test_prepaid_amount}}, \"effective_amount\": {{_test_prepaid_amount}}, \"currency\": \"INR\", \"payment_method_type\": \"UPI\", \"payment_method\": \"UPI\"}}"
+        }
+      }
+    },
+    {
+      "name": "Confirm Prepaid Payment (Fleet Owner)",
+      "_group": "Setup",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const start = Date.now();",
+              "while (Date.now() - start < 1500) { /* let the override settle */ }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Prepaid order status:', d.status);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Prepaid order CHARGED (purchase activated)', function () { pm.expect(d.status).to.eql('CHARGED'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_owner_token}}"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/payment/{{_test_prepaid_order_id}}/status"
+      }
+    },
+    {
+      "name": "Clear Juspay Override",
+      "_group": "Setup",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Override cleared', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/override",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"value\": \"{{_test_prepaid_order_short_id}}\"}"
+        }
+      }
+    },
+    {
+      "name": "Set Driver Online (Driver)",
+      "_group": "Setup",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Driver set online');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "Search (Workbench BAP)",
+      "_group": "Workbench BAP → BPP (Beckn)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// New transaction, scheduled pickup (city lead time is 24h) and a random destination",
+              "// drop_min_km..drop_max_km from pickup on every run, so each ride gets its own fare.",
+              "function uuid() {",
+              "    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {",
+              "        var r = Math.random() * 16 | 0;",
+              "        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);",
+              "    });",
+              "}",
+              "pm.environment.set('ondc_txn_id', uuid());",
+              "var leadMin = Number(pm.environment.get('pickup_lead_minutes') || 1560);",
+              "pm.environment.set('ondc_pickup_time', new Date(Date.now() + leadMin * 60000).toISOString().replace(/\\.\\d{3}Z$/, 'Z'));",
+              "pm.environment.set('vehicle_category', pm.environment.get('vehicle_variant') === 'AUTO_RICKSHAW' ? 'AUTO_RICKSHAW' : 'CAB');",
+              "// Drop: the runner's Drop dropdown sets drop_mode=fixed + drop_lat/drop_lon/drop_address (one of the",
+              "// env's drop_locations); otherwise a random point drop_min_km..drop_max_km from pickup so each run gets its own fare.",
+              "var dropNote;",
+              "if (pm.environment.get('drop_mode') === 'fixed' && pm.environment.get('drop_lat') && pm.environment.get('drop_lon')) {",
+              "    dropNote = 'fixed: ' + (pm.environment.get('drop_name') || pm.environment.get('drop_address'));",
+              "} else {",
+              "    var lat = Number(pm.environment.get('origin_lat')), lon = Number(pm.environment.get('origin_lon'));",
+              "    var minKm = Number(pm.environment.get('drop_min_km') || 2), maxKm = Number(pm.environment.get('drop_max_km') || 15);",
+              "    var km = minKm + Math.random() * (maxKm - minKm), b = Math.random() * 2 * Math.PI;",
+              "    pm.environment.set('drop_lat', (lat + km / 111.32 * Math.cos(b)).toFixed(6));",
+              "    pm.environment.set('drop_lon', (lon + km / (111.32 * Math.cos(lat * Math.PI / 180)) * Math.sin(b)).toFixed(6));",
+              "    pm.environment.set('drop_address', 'Connaught Place, New Delhi');",
+              "    dropNote = 'random ~' + km.toFixed(1) + ' km';",
+              "}",
+              "console.log('txn', pm.environment.get('ondc_txn_id'), 'drop', pm.environment.get('drop_lat') + ',' + pm.environment.get('drop_lon'), dropNote);",
+              "",
+              "function uuid() {",
+              "    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {",
+              "        var r = Math.random() * 16 | 0;",
+              "        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);",
+              "    });",
+              "}",
+              "var created = Math.floor(Date.now() / 1000);",
+              "var sig = 'A';",
+              "while (sig.length < 86) sig += 'A';",
+              "pm.environment.set('ondc_message_id', uuid());",
+              "pm.environment.set('ondc_timestamp', new Date().toISOString());",
+              "pm.environment.set('ondc_beckn_auth', 'Signature keyId=\"' + pm.environment.get('ondc_bap_id') + '|' + pm.environment.get('ondc_bap_key_id') + '|ed25519\",algorithm=\"ed25519\",created=\"' + created + '\",expires=\"' + (created + 3600) + '\",headers=\"(created) (expires) digest\",signature=\"' + sig + '==\"');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('ACK', function () {",
+              "    var ack = ((pm.response.json() || {}).message || {}).ack || {};",
+              "    if (ack.status !== 'ACK') throw new Error('expected ACK, got ' + JSON.stringify(pm.response.json()));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "{{ondc_beckn_auth}}"
+          },
+          {
+            "key": "X-Gateway-Authorization",
+            "value": "{{ondc_beckn_auth}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"context\": {\n    \"action\": \"search\",\n    \"bap_id\": \"{{ondc_bap_id}}\",\n    \"bap_uri\": \"{{mockServerUrl}}/workbench-bap\",\n    \"domain\": \"ONDC:TRV10\",\n    \"location\": {\n      \"city\": {\n        \"code\": \"{{ondc_city_code}}\"\n      },\n      \"country\": {\n        \"code\": \"IND\"\n      }\n    },\n    \"message_id\": \"{{ondc_message_id}}\",\n    \"timestamp\": \"{{ondc_timestamp}}\",\n    \"transaction_id\": \"{{ondc_txn_id}}\",\n    \"ttl\": \"PT30S\",\n    \"version\": \"2.1.0\"\n  },\n  \"message\": {\n    \"intent\": {\n      \"category\": {\n        \"descriptor\": {\n          \"code\": \"SCHEDULED_TRIP\"\n        }\n      },\n      \"fulfillment\": {\n        \"stops\": [\n          {\n            \"location\": {\n              \"address\": \"Connaught Place, New Delhi\",\n              \"area_code\": \"110001\",\n              \"city\": {\n                \"code\": \"{{ondc_city_code}}\"\n              },\n              \"country\": {\n                \"code\": \"IND\"\n              },\n              \"district\": \"New Delhi\",\n              \"gps\": \"{{origin_lat}},{{origin_lon}}\"\n            },\n            \"type\": \"START\",\n            \"time\": {\n              \"timestamp\": \"{{ondc_pickup_time}}\"\n            }\n          },\n          {\n            \"location\": {\n              \"address\": \"{{drop_address}}\",\n              \"area_code\": \"110001\",\n              \"city\": {\n                \"code\": \"{{ondc_city_code}}\"\n              },\n              \"country\": {\n                \"code\": \"IND\"\n              },\n              \"district\": \"New Delhi\",\n              \"gps\": \"{{drop_lat}},{{drop_lon}}\"\n            },\n            \"type\": \"END\"\n          }\n        ]\n      },\n      \"payment\": {\n        \"collected_by\": \"BPP\"\n      },\n      \"tags\": [\n        {\n          \"descriptor\": {\n            \"code\": \"BAP_TERMS\",\n            \"name\": \"BAP Terms of Engagement\"\n          },\n          \"display\": false,\n          \"list\": [\n            {\n              \"descriptor\": {\n                \"code\": \"BUYER_FINDER_FEES_PERCENTAGE\"\n              },\n              \"value\": \"1\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"DELAY_INTEREST\"\n              },\n              \"value\": \"5\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"STATIC_TERMS\"\n              },\n              \"value\": \"https://example-test-bap.com/static-terms.txt\"\n            }\n          ]\n        }\n      ]\n    }\n  }\n}"
+        },
+        "url": "{{baseURL_BPP_Beckn}}/{{driver_merchant_id}}/search"
+      }
+    },
+    {
+      "name": "Wait on_search (Pick Vehicle)",
+      "_group": "Workbench BAP → BPP (Beckn)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "setTimeout(function () {}, 3000);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('on_search received', function () {",
+              "    if (pm.response.code !== 200) throw new Error('no ' + 'on_search' + ' callback yet (' + pm.response.code + ')');",
+              "});",
+              "var p = pm.response.json() || {};",
+              "pm.test('on_search has no error', function () {",
+              "    if (p.error) throw new Error(JSON.stringify(p.error));",
+              "});",
+              "",
+              "var prov = ((p.message || {}).catalog || {}).providers ? p.message.catalog.providers[0] : null;",
+              "var variant = pm.environment.get('vehicle_variant');",
+              "var ful = {};",
+              "(prov ? prov.fulfillments : []).forEach(function (f) { ful[f.id] = f; });",
+              "var item = null;",
+              "(prov ? prov.items : []).forEach(function (i) {",
+              "    var f = ful[(i.fulfillment_ids || [])[0]] || {};",
+              "    if (!item && (f.vehicle || {}).variant === variant) item = i;",
+              "});",
+              "pm.test('on_search offers ' + variant, function () {",
+              "    if (!item) throw new Error('no ' + variant + ' item in on_search');",
+              "});",
+              "if (item) {",
+              "    pm.environment.set('ondc_provider_id', prov.id);",
+              "    pm.environment.set('ondc_item_id', item.id);",
+              "    pm.environment.set('ondc_fulfillment_id', item.fulfillment_ids[0]);",
+              "    console.log('Picked', variant, item.id, 'quote', item.price.value);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{mockServerUrl}}/workbench-bap/callbacks?txn={{ondc_txn_id}}&action=on_search"
+      }
+    },
+    {
+      "name": "Select (Workbench BAP)",
+      "_group": "Workbench BAP → BPP (Beckn)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function uuid() {",
+              "    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {",
+              "        var r = Math.random() * 16 | 0;",
+              "        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);",
+              "    });",
+              "}",
+              "var created = Math.floor(Date.now() / 1000);",
+              "var sig = 'A';",
+              "while (sig.length < 86) sig += 'A';",
+              "pm.environment.set('ondc_message_id', uuid());",
+              "pm.environment.set('ondc_timestamp', new Date().toISOString());",
+              "pm.environment.set('ondc_beckn_auth', 'Signature keyId=\"' + pm.environment.get('ondc_bap_id') + '|' + pm.environment.get('ondc_bap_key_id') + '|ed25519\",algorithm=\"ed25519\",created=\"' + created + '\",expires=\"' + (created + 3600) + '\",headers=\"(created) (expires) digest\",signature=\"' + sig + '==\"');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('ACK', function () {",
+              "    var ack = ((pm.response.json() || {}).message || {}).ack || {};",
+              "    if (ack.status !== 'ACK') throw new Error('expected ACK, got ' + JSON.stringify(pm.response.json()));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "{{ondc_beckn_auth}}"
+          },
+          {
+            "key": "X-Gateway-Authorization",
+            "value": "{{ondc_beckn_auth}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"context\": {\n    \"action\": \"select\",\n    \"bap_id\": \"{{ondc_bap_id}}\",\n    \"bap_uri\": \"{{mockServerUrl}}/workbench-bap\",\n    \"domain\": \"ONDC:TRV10\",\n    \"location\": {\n      \"city\": {\n        \"code\": \"{{ondc_city_code}}\"\n      },\n      \"country\": {\n        \"code\": \"IND\"\n      }\n    },\n    \"message_id\": \"{{ondc_message_id}}\",\n    \"timestamp\": \"{{ondc_timestamp}}\",\n    \"transaction_id\": \"{{ondc_txn_id}}\",\n    \"ttl\": \"PT30S\",\n    \"version\": \"2.1.0\",\n    \"bpp_id\": \"{{bpp_subscriber_id}}\",\n    \"bpp_uri\": \"{{baseURL_BPP_Beckn}}/{{driver_merchant_id}}\"\n  },\n  \"message\": {\n    \"order\": {\n      \"items\": [\n        {\n          \"id\": \"{{ondc_item_id}}\"\n        }\n      ],\n      \"provider\": {\n        \"id\": \"{{ondc_provider_id}}\"\n      },\n      \"fulfillments\": [\n        {\n          \"id\": \"{{ondc_fulfillment_id}}\"\n        }\n      ]\n    }\n  }\n}"
+        },
+        "url": "{{baseURL_BPP_Beckn}}/{{driver_merchant_id}}/select"
+      }
+    },
+    {
+      "name": "Wait on_select",
+      "_group": "Workbench BAP → BPP (Beckn)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "setTimeout(function () {}, 3000);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('on_select received', function () {",
+              "    if (pm.response.code !== 200) throw new Error('no ' + 'on_select' + ' callback yet (' + pm.response.code + ')');",
+              "});",
+              "var p = pm.response.json() || {};",
+              "pm.test('on_select has no error', function () {",
+              "    if (p.error) throw new Error(JSON.stringify(p.error));",
+              "});",
+              "",
+              "console.log('Quote', p.message.order.quote.price.value);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{mockServerUrl}}/workbench-bap/callbacks?txn={{ondc_txn_id}}&action=on_select"
+      }
+    },
+    {
+      "name": "Init (Workbench BAP)",
+      "_group": "Workbench BAP → BPP (Beckn)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function uuid() {",
+              "    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {",
+              "        var r = Math.random() * 16 | 0;",
+              "        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);",
+              "    });",
+              "}",
+              "var created = Math.floor(Date.now() / 1000);",
+              "var sig = 'A';",
+              "while (sig.length < 86) sig += 'A';",
+              "pm.environment.set('ondc_message_id', uuid());",
+              "pm.environment.set('ondc_timestamp', new Date().toISOString());",
+              "pm.environment.set('ondc_beckn_auth', 'Signature keyId=\"' + pm.environment.get('ondc_bap_id') + '|' + pm.environment.get('ondc_bap_key_id') + '|ed25519\",algorithm=\"ed25519\",created=\"' + created + '\",expires=\"' + (created + 3600) + '\",headers=\"(created) (expires) digest\",signature=\"' + sig + '==\"');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('ACK', function () {",
+              "    var ack = ((pm.response.json() || {}).message || {}).ack || {};",
+              "    if (ack.status !== 'ACK') throw new Error('expected ACK, got ' + JSON.stringify(pm.response.json()));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "{{ondc_beckn_auth}}"
+          },
+          {
+            "key": "X-Gateway-Authorization",
+            "value": "{{ondc_beckn_auth}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"context\": {\n    \"action\": \"init\",\n    \"bap_id\": \"{{ondc_bap_id}}\",\n    \"bap_uri\": \"{{mockServerUrl}}/workbench-bap\",\n    \"domain\": \"ONDC:TRV10\",\n    \"location\": {\n      \"city\": {\n        \"code\": \"{{ondc_city_code}}\"\n      },\n      \"country\": {\n        \"code\": \"IND\"\n      }\n    },\n    \"message_id\": \"{{ondc_message_id}}\",\n    \"timestamp\": \"{{ondc_timestamp}}\",\n    \"transaction_id\": \"{{ondc_txn_id}}\",\n    \"ttl\": \"PT30S\",\n    \"version\": \"2.1.0\",\n    \"bpp_id\": \"{{bpp_subscriber_id}}\",\n    \"bpp_uri\": \"{{baseURL_BPP_Beckn}}/{{driver_merchant_id}}\"\n  },\n  \"message\": {\n    \"order\": {\n      \"items\": [\n        {\n          \"id\": \"{{ondc_item_id}}\"\n        }\n      ],\n      \"provider\": {\n        \"id\": \"{{ondc_provider_id}}\"\n      },\n      \"billing\": {\n        \"name\": \"{{rider_name}}\"\n      },\n      \"fulfillments\": [\n        {\n          \"customer\": {\n            \"contact\": {\n              \"phone\": \"{{_test_rider_number}}\"\n            },\n            \"person\": {\n              \"name\": \"{{rider_name}}\"\n            }\n          },\n          \"id\": \"{{ondc_fulfillment_id}}\",\n          \"stops\": [\n            {\n              \"id\": \"0\",\n              \"location\": {\n                \"address\": \"Connaught Place, New Delhi\",\n                \"area_code\": \"110001\",\n                \"city\": {\n                  \"name\": \"New Delhi\"\n                },\n                \"country\": {\n                  \"name\": \"India\"\n                },\n                \"gps\": \"{{origin_lat}}, {{origin_lon}}\",\n                \"state\": {\n                  \"name\": \"Delhi\"\n                }\n              },\n              \"type\": \"START\",\n              \"time\": {\n                \"duration\": \"PT10M\",\n                \"timestamp\": \"{{ondc_pickup_time}}\"\n              }\n            },\n            {\n              \"id\": \"1\",\n              \"location\": {\n                \"address\": \"{{drop_address}}\",\n                \"area_code\": \"110001\",\n                \"city\": {\n                  \"name\": \"New Delhi\"\n                },\n                \"country\": {\n                  \"name\": \"India\"\n                },\n                \"gps\": \"{{drop_lat}}, {{drop_lon}}\",\n                \"state\": {\n                  \"name\": \"Delhi\"\n                }\n              },\n              \"type\": \"END\",\n              \"parent_stop_id\": \"0\"\n            }\n          ],\n          \"vehicle\": {\n            \"category\": \"{{vehicle_category}}\",\n            \"variant\": \"{{vehicle_variant}}\"\n          }\n        }\n      ],\n      \"payments\": [\n        {\n          \"collected_by\": \"BPP\",\n          \"status\": \"NOT-PAID\",\n          \"type\": \"ON-FULFILLMENT\"\n        }\n      ],\n      \"tags\": [\n        {\n          \"descriptor\": {\n            \"code\": \"BAP_TERMS\",\n            \"name\": \"BAP Terms of Engagement\"\n          },\n          \"display\": false,\n          \"list\": [\n            {\n              \"descriptor\": {\n                \"code\": \"BUYER_FINDER_FEES_PERCENTAGE\"\n              },\n              \"value\": \"1\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_WINDOW\"\n              },\n              \"value\": \"PT60M\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_BASIS\"\n              },\n              \"value\": \"DELIVERY\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_TYPE\"\n              },\n              \"value\": \"UPI\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_AMOUNT\"\n              },\n              \"value\": \"3.24\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"MANDATORY_ARBITRATION\"\n              },\n              \"value\": \"true\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"COURT_JURISDICTION\"\n              },\n              \"value\": \"New Delhi\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"DELAY_INTEREST\"\n              },\n              \"value\": \"5\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"STATIC_TERMS\"\n              },\n              \"value\": \"https://example-test-bap.com/static-terms.txt\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_BANK_CODE\"\n              },\n              \"value\": \"XXXXXXXXX\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_BANK_ACCOUNT_NUMBER\"\n              },\n              \"value\": \"xxxxxxxxxxxxxx\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_VIRTUAL_PAYMENT_ADDRESS\"\n              },\n              \"value\": \"9988199772@okicic\"\n            }\n          ]\n        }\n      ]\n    }\n  }\n}"
+        },
+        "url": "{{baseURL_BPP_Beckn}}/{{driver_merchant_id}}/init"
+      }
+    },
+    {
+      "name": "Wait on_init (Booking Id)",
+      "_group": "Workbench BAP → BPP (Beckn)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "setTimeout(function () {}, 3000);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('on_init received', function () {",
+              "    if (pm.response.code !== 200) throw new Error('no ' + 'on_init' + ' callback yet (' + pm.response.code + ')');",
+              "});",
+              "var p = pm.response.json() || {};",
+              "pm.test('on_init has no error', function () {",
+              "    if (p.error) throw new Error(JSON.stringify(p.error));",
+              "});",
+              "",
+              "var o = p.message.order;",
+              "var pay = (o.payments || [{}])[0];",
+              "pm.environment.set('ondc_booking_id', o.id);",
+              "pm.environment.set('ondc_payment_id', pay.id || '');",
+              "pm.environment.set('ondc_amount', (pay.params || {}).amount || o.quote.price.value);",
+              "console.log('Booking', o.id, 'amount', pm.environment.get('ondc_amount'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{mockServerUrl}}/workbench-bap/callbacks?txn={{ondc_txn_id}}&action=on_init"
+      }
+    },
+    {
+      "name": "Confirm (Workbench BAP)",
+      "_group": "Workbench BAP → BPP (Beckn)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function uuid() {",
+              "    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {",
+              "        var r = Math.random() * 16 | 0;",
+              "        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);",
+              "    });",
+              "}",
+              "var created = Math.floor(Date.now() / 1000);",
+              "var sig = 'A';",
+              "while (sig.length < 86) sig += 'A';",
+              "pm.environment.set('ondc_message_id', uuid());",
+              "pm.environment.set('ondc_timestamp', new Date().toISOString());",
+              "pm.environment.set('ondc_beckn_auth', 'Signature keyId=\"' + pm.environment.get('ondc_bap_id') + '|' + pm.environment.get('ondc_bap_key_id') + '|ed25519\",algorithm=\"ed25519\",created=\"' + created + '\",expires=\"' + (created + 3600) + '\",headers=\"(created) (expires) digest\",signature=\"' + sig + '==\"');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('ACK', function () {",
+              "    var ack = ((pm.response.json() || {}).message || {}).ack || {};",
+              "    if (ack.status !== 'ACK') throw new Error('expected ACK, got ' + JSON.stringify(pm.response.json()));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "{{ondc_beckn_auth}}"
+          },
+          {
+            "key": "X-Gateway-Authorization",
+            "value": "{{ondc_beckn_auth}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"context\": {\n    \"action\": \"confirm\",\n    \"bap_id\": \"{{ondc_bap_id}}\",\n    \"bap_uri\": \"{{mockServerUrl}}/workbench-bap\",\n    \"domain\": \"ONDC:TRV10\",\n    \"location\": {\n      \"city\": {\n        \"code\": \"{{ondc_city_code}}\"\n      },\n      \"country\": {\n        \"code\": \"IND\"\n      }\n    },\n    \"message_id\": \"{{ondc_message_id}}\",\n    \"timestamp\": \"{{ondc_timestamp}}\",\n    \"transaction_id\": \"{{ondc_txn_id}}\",\n    \"ttl\": \"PT30S\",\n    \"version\": \"2.1.0\",\n    \"bpp_id\": \"{{bpp_subscriber_id}}\",\n    \"bpp_uri\": \"{{baseURL_BPP_Beckn}}/{{driver_merchant_id}}\"\n  },\n  \"message\": {\n    \"order\": {\n      \"items\": [\n        {\n          \"id\": \"{{ondc_item_id}}\"\n        }\n      ],\n      \"provider\": {\n        \"id\": \"{{ondc_provider_id}}\"\n      },\n      \"billing\": {\n        \"name\": \"{{rider_name}}\"\n      },\n      \"fulfillments\": [\n        {\n          \"customer\": {\n            \"contact\": {\n              \"phone\": \"{{_test_rider_number}}\"\n            },\n            \"person\": {\n              \"name\": \"{{rider_name}}\"\n            }\n          },\n          \"id\": \"{{ondc_fulfillment_id}}\",\n          \"stops\": [\n            {\n              \"id\": \"0\",\n              \"location\": {\n                \"address\": \"Connaught Place, New Delhi\",\n                \"area_code\": \"110001\",\n                \"city\": {\n                  \"name\": \"New Delhi\"\n                },\n                \"country\": {\n                  \"name\": \"India\"\n                },\n                \"gps\": \"{{origin_lat}}, {{origin_lon}}\",\n                \"state\": {\n                  \"name\": \"Delhi\"\n                }\n              },\n              \"type\": \"START\",\n              \"time\": {\n                \"duration\": \"PT10M\",\n                \"timestamp\": \"{{ondc_pickup_time}}\"\n              }\n            },\n            {\n              \"id\": \"1\",\n              \"location\": {\n                \"address\": \"{{drop_address}}\",\n                \"area_code\": \"110001\",\n                \"city\": {\n                  \"name\": \"New Delhi\"\n                },\n                \"country\": {\n                  \"name\": \"India\"\n                },\n                \"gps\": \"{{drop_lat}}, {{drop_lon}}\",\n                \"state\": {\n                  \"name\": \"Delhi\"\n                }\n              },\n              \"type\": \"END\",\n              \"parent_stop_id\": \"0\"\n            }\n          ],\n          \"vehicle\": {\n            \"category\": \"{{vehicle_category}}\",\n            \"variant\": \"{{vehicle_variant}}\"\n          },\n          \"type\": \"DELIVERY\"\n        }\n      ],\n      \"payments\": [\n        {\n          \"collected_by\": \"BPP\",\n          \"id\": \"{{ondc_payment_id}}\",\n          \"params\": {\n            \"amount\": \"{{ondc_amount}}\",\n            \"bank_account_number\": \"xyz@upi\",\n            \"bank_code\": \"xyz\",\n            \"currency\": \"INR\"\n          },\n          \"status\": \"NOT-PAID\",\n          \"tags\": [\n            {\n              \"descriptor\": {\n                \"code\": \"BUYER_FINDER_FEES\",\n                \"name\": \"Buyer Finder Fees Information\"\n              },\n              \"display\": false,\n              \"list\": [\n                {\n                  \"descriptor\": {\n                    \"code\": \"BUYER_FINDER_FEES_PERCENTAGE\",\n                    \"name\": \"Buyer Finder Fees\"\n                  },\n                  \"display\": false,\n                  \"value\": \"0\"\n                }\n              ]\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_TERMS\",\n                \"name\": \"Settlement Terms Information\"\n              },\n              \"display\": false,\n              \"list\": [\n                {\n                  \"descriptor\": {\n                    \"code\": \"SETTLEMENT_AMOUNT\"\n                  },\n                  \"display\": false,\n                  \"value\": \"{{ondc_amount}}\"\n                },\n                {\n                  \"descriptor\": {\n                    \"code\": \"SETTLEMENT_WINDOW\"\n                  },\n                  \"display\": false,\n                  \"value\": \"PT1D\"\n                },\n                {\n                  \"descriptor\": {\n                    \"code\": \"DELAY_INTEREST\"\n                  },\n                  \"display\": false,\n                  \"value\": \"0\"\n                },\n                {\n                  \"descriptor\": {\n                    \"code\": \"SETTLEMENT_BASIS\"\n                  },\n                  \"display\": false,\n                  \"value\": \"INVOICE_RECIEPT\"\n                },\n                {\n                  \"descriptor\": {\n                    \"code\": \"MANDATORY_ARBITRATION\"\n                  },\n                  \"display\": false,\n                  \"value\": \"TRUE\"\n                },\n                {\n                  \"descriptor\": {\n                    \"code\": \"COURT_JURISDICTION\"\n                  },\n                  \"display\": false,\n                  \"value\": \"Delhi\"\n                },\n                {\n                  \"descriptor\": {\n                    \"code\": \"STATIC_TERMS\"\n                  },\n                  \"display\": false,\n                  \"value\": \"https://api.example-bap.com/booking/terms\"\n                },\n                {\n                  \"descriptor\": {\n                    \"code\": \"SETTLEMENT_BANK_CODE\"\n                  },\n                  \"display\": false,\n                  \"value\": \"xyz\"\n                },\n                {\n                  \"descriptor\": {\n                    \"code\": \"SETTLEMENT_BANK_ACCOUNT_NUMBER\"\n                  },\n                  \"display\": false,\n                  \"value\": \"xyz@upi\"\n                }\n              ]\n            }\n          ],\n          \"type\": \"ON-FULFILLMENT\"\n        }\n      ],\n      \"tags\": [\n        {\n          \"descriptor\": {\n            \"code\": \"BAP_TERMS\",\n            \"name\": \"BAP Terms of Engagement\"\n          },\n          \"display\": false,\n          \"list\": [\n            {\n              \"descriptor\": {\n                \"code\": \"BUYER_FINDER_FEES_PERCENTAGE\"\n              },\n              \"value\": \"1\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_WINDOW\"\n              },\n              \"value\": \"PT60M\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_BASIS\"\n              },\n              \"value\": \"DELIVERY\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_TYPE\"\n              },\n              \"value\": \"UPI\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_AMOUNT\"\n              },\n              \"value\": \"3.24\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"MANDATORY_ARBITRATION\"\n              },\n              \"value\": \"true\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"COURT_JURISDICTION\"\n              },\n              \"value\": \"New Delhi\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"DELAY_INTEREST\"\n              },\n              \"value\": \"5\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"STATIC_TERMS\"\n              },\n              \"value\": \"https://example-test-bap.com/static-terms.txt\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_BANK_CODE\"\n              },\n              \"value\": \"XXXXXXXXX\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_BANK_ACCOUNT_NUMBER\"\n              },\n              \"value\": \"xxxxxxxxxxxxxx\"\n            },\n            {\n              \"descriptor\": {\n                \"code\": \"SETTLEMENT_VIRTUAL_PAYMENT_ADDRESS\"\n              },\n              \"value\": \"9988199772@okicic\"\n            }\n          ]\n        }\n      ]\n    }\n  }\n}"
+        },
+        "url": "{{baseURL_BPP_Beckn}}/{{driver_merchant_id}}/confirm"
+      }
+    },
+    {
+      "name": "Wait on_confirm",
+      "_group": "Workbench BAP → BPP (Beckn)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "setTimeout(function () {}, 3000);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('on_confirm received', function () {",
+              "    if (pm.response.code !== 200) throw new Error('no ' + 'on_confirm' + ' callback yet (' + pm.response.code + ')');",
+              "});",
+              "var p = pm.response.json() || {};",
+              "pm.test('on_confirm has no error', function () {",
+              "    if (p.error) throw new Error(JSON.stringify(p.error));",
+              "});",
+              "",
+              "pm.test('Order ACTIVE', function () {",
+              "    if (p.message.order.status !== 'ACTIVE') throw new Error('order status ' + p.message.order.status);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{mockServerUrl}}/workbench-bap/callbacks?txn={{ondc_txn_id}}&action=on_confirm"
+      }
+    },
+    {
+      "name": "Accept Scheduled Booking (Driver)",
+      "_group": "Driver Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/driver/accept/scheduledBooking?bookingId={{ondc_booking_id}}"
+      }
+    },
+    {
+      "name": "Latest Ride (Driver)",
+      "_group": "Driver Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "",
+              "var ride = (pm.response.json().list || [])[0] || {};",
+              "// A scheduled booking's ride comes back UPCOMING; an on-demand one NEW.",
+              "pm.test('Latest ride is startable', function () {",
+              "    if (['NEW', 'UPCOMING'].indexOf(ride.status) < 0) throw new Error('latest ride status ' + ride.status);",
+              "});",
+              "pm.environment.set('ondc_ride_id', ride.id);",
+              "console.log('Ride', ride.id, ride.shortRideId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/driver/ride/list?limit=1"
+      }
+    },
+    {
+      "name": "Wait Ride OTP (on_update RIDE_ASSIGNED)",
+      "_group": "Driver Ride",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "setTimeout(function () {}, 3000);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('on_update received', function () {",
+              "    if (pm.response.code !== 200) throw new Error('no ' + 'on_update' + ' callback yet (' + pm.response.code + ')');",
+              "});",
+              "var p = pm.response.json() || {};",
+              "pm.test('on_update has no error', function () {",
+              "    if (p.error) throw new Error(JSON.stringify(p.error));",
+              "});",
+              "function stateOf(u) { var f = ((u.message || {}).order || {}).fulfillments || [{}]; return ((f[0].state || {}).descriptor || {}).code; }",
+              "",
+              "var assigned = (p.on_update || []).filter(function (u) { return stateOf(u) === 'RIDE_ASSIGNED'; })[0];",
+              "var start = assigned ? assigned.message.order.fulfillments[0].stops.filter(function (s) { return s.type === 'START'; })[0] : null;",
+              "var otp = start && start.authorization ? start.authorization.token : '';",
+              "pm.test('OTP received', function () { if (!otp) throw new Error('no RIDE_ASSIGNED on_update with an OTP yet'); });",
+              "pm.environment.set('ondc_ride_otp', otp);",
+              "console.log('OTP', otp);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{mockServerUrl}}/workbench-bap/callbacks?txn={{ondc_txn_id}}"
+      }
+    },
+    {
+      "name": "Start Ride (Driver)",
+      "_group": "Driver Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/driver/ride/{{ondc_ride_id}}/start",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideOtp\": \"{{ondc_ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}"
+        }
+      }
+    },
+    {
+      "name": "End Ride (Driver)",
+      "_group": "Driver Ride",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "setTimeout(function () {}, 2000);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/driver/ride/{{ondc_ride_id}}/end",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"point\": {\"lat\": {{drop_lat}}, \"lon\": {{drop_lon}}}}"
+        }
+      }
+    },
+    {
+      "name": "Verify Ride Ended (on_update RIDE_ENDED)",
+      "_group": "Driver Ride",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "setTimeout(function () {}, 3000);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('on_update received', function () {",
+              "    if (pm.response.code !== 200) throw new Error('no ' + 'on_update' + ' callback yet (' + pm.response.code + ')');",
+              "});",
+              "var p = pm.response.json() || {};",
+              "pm.test('on_update has no error', function () {",
+              "    if (p.error) throw new Error(JSON.stringify(p.error));",
+              "});",
+              "function stateOf(u) { var f = ((u.message || {}).order || {}).fulfillments || [{}]; return ((f[0].state || {}).descriptor || {}).code; }",
+              "",
+              "var ended = (p.on_update || []).filter(function (u) { return stateOf(u) === 'RIDE_ENDED'; })[0];",
+              "pm.test('RIDE_ENDED on_update received', function () { if (!ended) throw new Error('no RIDE_ENDED on_update yet'); });",
+              "if (ended) console.log('Final fare', ended.message.order.quote.price.value);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{mockServerUrl}}/workbench-bap/callbacks?txn={{ondc_txn_id}}"
+      }
+    }
+  ]
+}

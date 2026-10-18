@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import './CollectionRunner.css';
 import {
   CollectionGroup, CollectionEnvironment, CollectionSuite,
@@ -170,6 +170,26 @@ async function waitForServicesReady(
   return false;
 }
 
+interface DropLocation {
+  name: string;
+  lat: number;
+  lon: number;
+  address?: string;
+}
+
+// drop_locations is a JSON array in the env file; anything malformed just hides the dropdown.
+function parseDropLocations(raw: string | undefined): DropLocation[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((d): d is DropLocation =>
+      d && typeof d.name === 'string' && typeof d.lat === 'number' && typeof d.lon === 'number');
+  } catch {
+    return [];
+  }
+}
+
 interface Props {
   onLog: (level: LogEntry['level'], message: string, extra?: Partial<LogEntry>) => void;
 }
@@ -288,6 +308,8 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const [selectedEnvType, setSelectedEnvType] = useState('Local');
   const [selectedSyncEnv, setSelectedSyncEnv] = useState<string>('master');
   const [selectedEnv, setSelectedEnv] = useState('');
+  // Drop dropdown: '' = random drop per run (collection default), else the name of one of the env's drop_locations
+  const [selectedDrop, setSelectedDrop] = useState('');
   const [selectedSuite, setSelectedSuite] = useState('');
 
   // Parsed collection state
@@ -352,7 +374,25 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const currentGroup = groups.find(g => g.directory === selectedDir);
   const envTypes = currentGroup?.envTypes ?? ['Local', 'Master'];
   const filteredEnvs = (currentGroup?.environments ?? []).filter(e => e.envType === selectedEnvType);
-  const currentEnv = filteredEnvs.find(e => e.envName === selectedEnv);
+  const baseEnv = filteredEnvs.find(e => e.envName === selectedEnv);
+  // Optional per-city list of named drops in the env file (drop_locations: JSON [{name, lat, lon, address}]),
+  // so one run can be pinned to a known distance and therefore a known fare.
+  const dropLocations = useMemo<DropLocation[]>(() => parseDropLocations(baseEnv?.variables.drop_locations), [baseEnv]);
+  const currentEnv = useMemo(() => {
+    const drop = dropLocations.find(d => d.name === selectedDrop);
+    if (!baseEnv || !drop) return baseEnv;
+    return {
+      ...baseEnv,
+      variables: {
+        ...baseEnv.variables,
+        drop_mode: 'fixed',
+        drop_name: drop.name,
+        drop_lat: String(drop.lat),
+        drop_lon: String(drop.lon),
+        drop_address: drop.address ?? drop.name,
+      },
+    };
+  }, [baseEnv, dropLocations, selectedDrop]);
   const currentSuite = currentGroup?.suites.find(s => s.filename === selectedSuite);
   // Default Sync-From options: India envs run against `prod`+`master`; cities
   // in INTERNATIONAL_CITIES route to the EU cluster instead, so they get
@@ -1405,6 +1445,15 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                 ))}
           </select>
         </label>
+        {dropLocations.length > 0 && (
+          <label title="Pin the ride's drop to one of the env's drop_locations; Random picks a new point each run">
+            <span>Drop</span>
+            <select value={selectedDrop} onChange={e => setSelectedDrop(e.target.value)}>
+              <option value="">Random (per run)</option>
+              {dropLocations.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
+            </select>
+          </label>
+        )}
         <label>
           <span>Suite</span>
           <select value={selectedSuite} onChange={e => setSelectedSuite(e.target.value)}>
