@@ -171,4 +171,4 @@ he wants them changed).
   `movin-fleet`): addresses and handles, not the brand.
 
 Nothing here is released: the changed files reach the server only through
-`ops/deploy.sh`, and the Chargily description is the one passengers' drivers see.
+`ops/deploy.sh`, and the Chargily description is what a driver reads on Chargily's page.
