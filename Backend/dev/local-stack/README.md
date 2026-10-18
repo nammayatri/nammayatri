@@ -73,7 +73,7 @@ Demo script for showing it works: `./demo.sh` (or `demo.ps1` on Windows).
 Beside them:
 
 - **[Decisions](docs/adr/README.md)** — why it is built this way: shims not Haskell, config not code, patches at build time, one merchant per country, the wallet.
-- **Runbooks** — [release a change](docs/runbooks/release.md) and [undo one](docs/runbooks/rollback.md), step by step.
+- **Runbooks** — [release a change](docs/runbooks/release.md), [undo one](docs/runbooks/rollback.md) and [launch](docs/runbooks/launch.md) (the launch plan as a procedure, with the clean-up and the go/no-go gate), step by step.
 - **[What is ours and what is upstream's](docs/ours-and-upstream.md)** — in a fork of 15 000 files, the ~200 that are this deployment.
 - **[The restructuring report](../../../docs/Movin-backend-restructuring-report.pdf)** (PDF, 2026-10-08) — the 24 September plan checked step by step, and the structure it produced.
 - **Records** — the server as found and as changed by the restructuring: [box snapshot](docs/box-snapshot-2026-10-04.md) (phases 0–6, every release) and [box inventory](docs/box-inventory-2026-10-06.md) (every file, by hash).

@@ -115,6 +115,9 @@ async function open() {
   return {
     pool,
     sql: async (text, params) => (await db.query(text, params)).rows,
+    // The raw PGlite `exec`: several statements, one result set each, with their
+    // columns -- what lib/fake-docker.js needs to answer a `psql -f`.
+    exec: (text) => db.exec(text),
     close: () => db.close(),
   };
 }
