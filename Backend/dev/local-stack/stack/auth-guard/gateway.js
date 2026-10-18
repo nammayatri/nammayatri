@@ -72,7 +72,7 @@ let smsSent = 0;
  * force UCS-2 and halve the room. There are none here.
  */
 const smsText = (code) =>
-  `Movin : votre code est ${code}. Ne le communiquez a personne. ` +
+  `Mova : votre code est ${code}. Ne le communiquez a personne. ` +
   'Il expire dans 10 minutes.';
 
 /**

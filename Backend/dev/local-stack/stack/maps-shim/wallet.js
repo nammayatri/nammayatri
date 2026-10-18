@@ -389,7 +389,7 @@ async function chargilyTopup(pool, transactionId, amount, method, cfg, res) {
       currency: 'dzd',
       payment_method: pay,
       locale: 'fr',
-      description: `Movin - rechargement ${amount} DA`,
+      description: `Mova - rechargement ${amount} DA`,
       chargily_pay_fees_allocation: 'merchant',
       success_url: `${PUBLIC_URL}/wallet/done?ok=1`,
       failure_url: `${PUBLIC_URL}/wallet/done?ok=0`,
@@ -748,7 +748,7 @@ function done(query, res) {
   const ok = query.get('ok') === '1';
   const body = `<!doctype html><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Movin</title>
+<title>Mova</title>
 <style>body{font:16px system-ui;margin:0;display:grid;place-items:center;height:100vh;
 background:#fff;color:#111;text-align:center;padding:24px}p{color:#666}</style>
 <h1>${ok ? 'Merci' : 'Paiement annulé'}</h1>
