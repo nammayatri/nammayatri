@@ -44,6 +44,8 @@ The plan's three jobs, in this order. Each of the first two has a rehearsal.
 
 This restores last night's off-site backup into throwaway containers (about 70 seconds), proves the restore, runs the clean-up **on that copy**, and removes the copy. Read the clean-up's output for: *the accounts to remove* (12 drivers and 2 passengers, or fewer if some are already gone), *what stays* and any warning, and *none of the listed numbers can be found any more*. It also proves the backup itself can be put back, which is the last item of this day.
 
+**Rehearsed 2026-10-18, passed (105 s).** On the backup of 20261018T003335Z (the 106 tables exact, 20 numbers decrypted, 25 documents): the script found exactly **12 drivers and 2 passengers**, with the number formats the simulator had written (Algerian drivers `+213` with the trunk zero, Mauritanian `+222` without; the two passengers `+213 0555000199` and `+222 22778899`); no uploaded papers; **39 wallet-ledger entries** belonging to those cars, which stay by design (see below). Each erase touched 6 rows per car and 4 per passenger, left every person row in place (56 drivers and 84 passengers before and after), wrote 14 audit rows and found none of the numbers afterwards. 6 drivers still have a number on record: the real ones.
+
 ### 3b. Remove the 12 simulated cars and the 2 test passengers
 
     sudo ./launch-cleanup.sh              # who would go, and what stays. Writes nothing.
