@@ -1,0 +1,87 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Value: Data.Aeson
+  Currency: Kernel.Types.Common
+  ServiceCountMap: Domain.Types.Extra.PersonRidePatternSummary
+  MoneyByServiceMap: Domain.Types.Extra.PersonRidePatternSummary
+  RoutePatternMap: Domain.Types.Extra.PersonRidePatternSummary
+
+PersonRidePatternSummary:
+  tableName: person_ride_pattern_summary
+
+  fields:
+    personId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    analysisWindowDays: Int
+    windowStart: UTCTime
+    windowEnd: UTCTime
+    totalTrips: Int
+    completedTaxiRides: Int
+    cancelledTaxiRides: Int
+    scheduledTaxiRides: Int
+    publicTransportTrips: Int
+    serviceTakenCounts: ServiceCountMap
+    uniqueRoutesTravelled: Int
+    routePatterns: RoutePatternMap
+    tipComfortability: Maybe Double
+    medianTipValue: MoneyByServiceMap
+    medianFareByService: MoneyByServiceMap
+    hourOfDayCounts: "[Int]"
+    dayOfWeekCounts: "[Int]"
+    lastTripAt: Maybe UTCTime
+    currency: Maybe Currency
+    freeFormSummary: Maybe Text
+    lastSummarizedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    serviceTakenCounts: Value
+    routePatterns: Value
+    medianTipValue: Value
+    medianFareByService: Value
+    hourOfDayCounts: Value
+    dayOfWeekCounts: Value
+
+  sqlType:
+    serviceTakenCounts: jsonb
+    routePatterns: jsonb
+    medianTipValue: jsonb
+    medianFareByService: jsonb
+    hourOfDayCounts: jsonb
+    dayOfWeekCounts: jsonb
+    tipComfortability: double precision
+
+  toTType:
+    serviceTakenCounts: Data.Aeson.toJSON|I
+    routePatterns: Data.Aeson.toJSON|I
+    medianTipValue: Data.Aeson.toJSON|I
+    medianFareByService: Data.Aeson.toJSON|I
+    hourOfDayCounts: Data.Aeson.toJSON|I
+    dayOfWeekCounts: Data.Aeson.toJSON|I
+
+  fromTType:
+    serviceTakenCounts: Storage.Queries.Transformers.PersonRidePatternSummary.decodeOrEmpty|I
+    routePatterns: Storage.Queries.Transformers.PersonRidePatternSummary.decodeOrEmpty|I
+    medianTipValue: Storage.Queries.Transformers.PersonRidePatternSummary.decodeOrEmpty|I
+    medianFareByService: Storage.Queries.Transformers.PersonRidePatternSummary.decodeOrEmpty|I
+    hourOfDayCounts: Storage.Queries.Transformers.PersonRidePatternSummary.decodeOrEmpty|I
+    dayOfWeekCounts: Storage.Queries.Transformers.PersonRidePatternSummary.decodeOrEmpty|I
+
+  constraints:
+    personId: PrimaryKey
+
+  queries:
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: personId
+    updateFreeFormSummary:
+      kvFunction: updateOneWithKV
+      params: [freeFormSummary, lastSummarizedAt]
+      where: personId
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE

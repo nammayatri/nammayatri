@@ -611,3 +611,16 @@ updateEstimatedFare bookingId newFare = do
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+findAllByRiderIdAndStatusesCreatedAfter :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> [BookingStatus] -> UTCTime -> Int -> m [Booking]
+findAllByRiderIdAndStatusesCreatedAfter (Id personId) statuses since limit =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamB.riderId $ Se.Eq personId,
+          Se.Is BeamB.status $ Se.In statuses,
+          Se.Is BeamB.createdAt $ Se.GreaterThanOrEq since
+        ]
+    ]
+    (Se.Desc BeamB.createdAt)
+    (Just limit)
+    Nothing

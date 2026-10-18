@@ -1,4 +1,5 @@
 imports:
+  LLMChatCompletionService: ChatCompletion.Types
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   EmailOTPConfig: Email.Types
@@ -139,6 +140,10 @@ RiderConfig:
     remindEverydayUntilPassExpiry: Maybe Bool
     passExpiryReminderBatchSize: Maybe Int
     legalPolicyNotificationBatchSize: Maybe Int
+    ridePatternSummaryPersonIds: "Maybe [Text]"
+    ridePatternSummaryRolloutPercentage: Maybe Int
+    ridePatternSummaryTextRefreshDays: Maybe Int
+    ridePatternSummaryLLMService: Maybe LLMChatCompletionService
     sendLegalPolicyUpdateEmail: Maybe Bool
     passExpiryReminderNextRunLocalTime: Maybe TimeOfDay
     bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
@@ -635,6 +640,8 @@ RiderConfig:
     exotelAppIdMapping: "json"
     cxAgentDetails: text []
     sensitiveWords: text []
+    ridePatternSummaryPersonIds: text []
+    ridePatternSummaryLLMService: text
     sensitiveWordsForExactMatch: text []
     validCancellationReasonCodesForImmediateCharge: text []
     permissibleModes: text []

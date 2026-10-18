@@ -675,3 +675,13 @@ findMostRecentRideForRider (Id personId) = do
           mbRide <- fromTType' ride'
           pure $ (,) <$> mbRide <*> mbBooking
     Left _ -> pure Nothing
+
+findAllCompletedByBookingIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> m [Ride]
+findAllCompletedByBookingIds [] = pure []
+findAllCompletedByBookingIds bookingIds =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamR.bookingId $ Se.In (getId <$> bookingIds),
+          Se.Is BeamR.status $ Se.Eq Ride.COMPLETED
+        ]
+    ]

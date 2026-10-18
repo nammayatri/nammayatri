@@ -4,6 +4,7 @@
 module Storage.Beam.RiderConfig where
 
 import qualified BecknV2.FRFS.Enums
+import qualified ChatCompletion.Types
 import qualified Data.Aeson
 import qualified Data.Time
 import qualified Database.Beam as B
@@ -194,6 +195,10 @@ data RiderConfigT f = RiderConfigT
     refundStatusUpdateRetries :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     remindEverydayUntilPassExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     rentalsConfig :: B.C f (Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.RentalsConfig]),
+    ridePatternSummaryLLMService :: B.C f (Kernel.Prelude.Maybe ChatCompletion.Types.LLMChatCompletionService),
+    ridePatternSummaryPersonIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    ridePatternSummaryRolloutPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    ridePatternSummaryTextRefreshDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     routeCacheMaxDurationDeviation :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     safetyCheckEndTime :: B.C f Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: B.C f Kernel.Types.Common.Seconds,

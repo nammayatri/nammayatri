@@ -1,0 +1,84 @@
+imports:
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  TravelMode: Domain.Types.Extra.PersonRidePatternSummary
+  ServiceCountMap: Domain.Types.Extra.PersonRidePatternSummary
+  MoneyByServiceMap: Domain.Types.Extra.PersonRidePatternSummary
+  RoutePatternMap: Domain.Types.Extra.PersonRidePatternSummary
+
+module: PersonRidePattern
+
+types:
+  WindowUnit:
+    enum: "Days"
+
+  DataWindow:
+    value: Int
+    unit: WindowUnit
+
+  SuggestionReason:
+    enum: "FREQUENT_ROUTE, USUAL_TIME, NEAR_ORIGIN, RECENTLY_TRAVELLED, SAME_DAY_TYPE"
+
+  RouteSuggestion:
+    routeKey: Text
+    travelMode: TravelMode
+    fromLat: Maybe Double
+    fromLon: Maybe Double
+    toLat: Maybe Double
+    toLon: Maybe Double
+    fromAddress: Maybe Text
+    toAddress: Maybe Text
+    fromStopCode: Maybe Text
+    toStopCode: Maybe Text
+    suggestedService: Maybe Text
+    suggestedTip: Maybe HighPrecMoney
+    typicalFare: Maybe HighPrecMoney
+    currency: Maybe Currency
+    usualTimeOfDay: "[Text]"
+    tripsInWindow: Int
+    score: Double
+    reasons: "[SuggestionReason]"
+
+  RideSuggestionsResp:
+    suggestions: "[RouteSuggestion]"
+    preferredService: Maybe Text
+    dataFor: Maybe DataWindow
+    lastAnalysedAt: Maybe UTCTime
+
+  RidePatternSummaryResp:
+    dataFor: DataWindow
+    totalTrips: Int
+    completedTaxiRides: Int
+    cancelledTaxiRides: Int
+    scheduledTaxiRides: Int
+    publicTransportTrips: Int
+    serviceTakenCounts: ServiceCountMap
+    uniqueRoutesTravelled: Int
+    routePatterns: RoutePatternMap
+    tipComfortability: Maybe Double
+    medianTipValue: MoneyByServiceMap
+    medianFareByService: MoneyByServiceMap
+    hourOfDayCounts: "[Int]"
+    dayOfWeekCounts: "[Int]"
+    lastTripAt: Maybe UTCTime
+    currency: Maybe Currency
+    freeFormSummary: Maybe Text
+    lastSummarizedAt: Maybe UTCTime
+    lastAnalysedAt: UTCTime
+
+apis:
+  - GET:
+      endpoint: /ridePattern/summary
+      auth: TokenAuth
+      response:
+        type: RidePatternSummaryResp
+
+  - GET:
+      endpoint: /ridePattern/suggestions
+      auth: TokenAuth
+      query:
+        - lat: Double
+        - lon: Double
+        - limit: Int
+      response:
+        type: RideSuggestionsResp

@@ -1,0 +1,28 @@
+CREATE TABLE atlas_app.person_ride_pattern_summary ();
+
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN analysis_window_days integer NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN cancelled_taxi_rides integer NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN completed_taxi_rides integer NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN currency text ;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN day_of_week_counts jsonb NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN free_form_summary text ;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN hour_of_day_counts jsonb NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN last_summarized_at timestamp with time zone ;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN last_trip_at timestamp with time zone ;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN median_fare_by_service jsonb NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN median_tip_value jsonb NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN person_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN public_transport_trips integer NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN route_patterns jsonb NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN scheduled_taxi_rides integer NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN service_taken_counts jsonb NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN tip_comfortability double precision ;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN total_trips integer NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN unique_routes_travelled integer NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN window_end timestamp with time zone NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD COLUMN window_start timestamp with time zone NOT NULL;
+ALTER TABLE atlas_app.person_ride_pattern_summary ADD PRIMARY KEY ( person_id);

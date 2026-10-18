@@ -22,6 +22,8 @@ module Storage.CachedQueries.Merchant.MerchantServiceConfig
   )
 where
 
+import qualified ChatCompletion.Interface.Types as CIT
+import qualified ChatCompletion.Types as CT
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
@@ -209,6 +211,9 @@ getServiceName msc = case msc.serviceConfig of
   FleetEngineServiceConfig _ -> FleetEngineService GoogleFleetEngine
   PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig _ -> PartnerSdkService Aarokya
+  LLMChatCompletionServiceConfig llmCfg -> case llmCfg of
+    CIT.AzureOpenAI _ -> LLMChatCompletionService CT.AzureOpenAI
+    CIT.Gemini _ -> LLMChatCompletionService CT.Gemini
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig cfg = do

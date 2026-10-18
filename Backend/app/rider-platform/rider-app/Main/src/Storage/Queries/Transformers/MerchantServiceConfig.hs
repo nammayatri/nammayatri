@@ -1,5 +1,7 @@
 module Storage.Queries.Transformers.MerchantServiceConfig where
 
+import qualified ChatCompletion.Interface.Types as CIT
+import qualified ChatCompletion.Types as CT
 import qualified Data.Aeson as A
 import qualified Domain.Types.MerchantServiceConfig as Domain
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
@@ -104,6 +106,8 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.EventTrackingService EventTracking.FirebaseAnalytics -> Domain.EventTrackingServiceConfig . EventTrackingInterface.FirebaseAnalyticsConfig <$> valueToMaybe configJSON
     Domain.FleetEngineService Domain.GoogleFleetEngine -> Domain.FleetEngineServiceConfig <$> valueToMaybe configJSON
     Domain.PartnerSdkService Domain.Aarokya -> Domain.PartnerSdkServiceConfig . PartnerSdk.AarokyaPartnerSdkConfig <$> valueToMaybe configJSON
+    Domain.LLMChatCompletionService CT.AzureOpenAI -> Domain.LLMChatCompletionServiceConfig . CIT.AzureOpenAI <$> valueToMaybe configJSON
+    Domain.LLMChatCompletionService CT.Gemini -> Domain.LLMChatCompletionServiceConfig . CIT.Gemini <$> valueToMaybe configJSON
 
 mkPaymentServiceConfig :: A.Value -> Payment.PaymentService -> Maybe Payment.PaymentServiceConfig
 mkPaymentServiceConfig configJSON = \case
@@ -208,6 +212,9 @@ getServiceNameConfigJson = \case
   Domain.FleetEngineServiceConfig cfg -> (Domain.FleetEngineService Domain.GoogleFleetEngine, toJSON cfg)
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig cfg -> (Domain.PartnerSdkService Domain.Aarokya, toJSON cfg)
+  Domain.LLMChatCompletionServiceConfig llmCfg -> case llmCfg of
+    CIT.AzureOpenAI cfg -> (Domain.LLMChatCompletionService CT.AzureOpenAI, toJSON cfg)
+    CIT.Gemini cfg -> (Domain.LLMChatCompletionService CT.Gemini, toJSON cfg)
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> (Payment.PaymentService, A.Value)
 getPaymentServiceConfigJson = \case

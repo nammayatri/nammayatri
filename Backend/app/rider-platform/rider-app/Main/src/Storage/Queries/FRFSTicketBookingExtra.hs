@@ -142,3 +142,16 @@ findAllConfirmedByWaybillNo waybillNo = do
           Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED
         ]
     ]
+
+findAllByRiderIdAndStatusesCreatedAfter :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> [DFRFSTicketBookingStatus.FRFSTicketBookingStatus] -> UTCTime -> Int -> m [FRFSTicketBooking]
+findAllByRiderIdAndStatusesCreatedAfter riderId statuses since limit =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.riderId $ Se.Eq (getId riderId),
+          Se.Is Beam.status $ Se.In statuses,
+          Se.Is Beam.createdAt $ Se.GreaterThanOrEq since
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just limit)
+    Nothing

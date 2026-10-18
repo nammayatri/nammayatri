@@ -934,3 +934,15 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN pickup_eta_refresh_interval_second
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_dynamic_pickup_eta boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN ride_pattern_summary_text_refresh_days integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN ride_pattern_summary_rollout_percentage integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN ride_pattern_summary_person_ids text [] ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN ride_pattern_summary_llm_service text ;
+
+
+------- SQL updates -------
+

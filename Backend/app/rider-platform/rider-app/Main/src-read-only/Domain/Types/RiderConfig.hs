@@ -6,6 +6,7 @@ module Domain.Types.RiderConfig (module Domain.Types.RiderConfig, module ReExpor
 
 import qualified BecknV2.FRFS.Enums
 import qualified BecknV2.OnDemand.Enums
+import qualified ChatCompletion.Types
 import Data.Aeson
 import qualified Data.Time
 import Domain.Types.Extra.RiderConfig as ReExport
@@ -197,6 +198,10 @@ data RiderConfig = RiderConfig
     refundStatusUpdateRetries :: Kernel.Prelude.Int,
     remindEverydayUntilPassExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rentalsConfig :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.RentalsConfig],
+    ridePatternSummaryLLMService :: Kernel.Prelude.Maybe ChatCompletion.Types.LLMChatCompletionService,
+    ridePatternSummaryPersonIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    ridePatternSummaryRolloutPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    ridePatternSummaryTextRefreshDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     routeCacheMaxDurationDeviation :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     safetyCheckEndTime :: Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: Kernel.Types.Common.Seconds,

@@ -123,6 +123,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Offer as SOffer
 import SharedLogic.Payment as SPayment
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
+import qualified SharedLogic.PersonRidePatternSummary as SPRPS
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
 import qualified SharedLogic.SilentReallocation as SilentRealloc
@@ -1245,6 +1246,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   QRide.updateMultiple updRide.id updRide
+  fork "refresh ride pattern summary" $ SPRPS.refreshOnRideEnd booking.riderId
   -- A completed ride returns the deposit; only a fee-bearing cancellation captures it.
   void $ withTryCatch "rideCompleted:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit booking
   fork "Increment completed count + evaluate rewards" $ do
