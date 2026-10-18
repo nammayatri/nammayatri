@@ -151,7 +151,7 @@ function deliver(raw, headers) {
     const waiting = expected.get(from);
     if (signed && code && waiting && waiting.code === code && now - waiting.at <= KEEP_MS) {
       expected.delete(from);
-      void answer(m.from, 'Movin : votre numéro est vérifié ✅ Retournez dans l’application.');
+      void answer(m.from, 'Mova : votre numéro est vérifié ✅ Retournez dans l’application.');
     }
     console.log(
       `[whatsapp] message from ${mask(m.from)} (${m.type}${code ? ', with a sign-in code' : ''}` +

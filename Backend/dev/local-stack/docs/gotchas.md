@@ -140,3 +140,35 @@ rider-app has migrated.
   the two-country patches. Hashed inside the containers on 2026-10-05: the
   gateway and the registry match `bin/`, `rider-app-exe` and
   `dynamic-offer-driver-app-exe` do not. Ask the containers, not the folder.
+
+## The product is called Mova (2026-10-18) — what moved here, and what did not
+
+The boss renamed the product **Mova** (store pages: **Mova Ride**). The apps and
+the public pages follow; this stack changed only the words a person reads:
+the Chargily checkout description and the wallet « done » page title
+(`maps-shim/wallet.js`), the WhatsApp « numéro vérifié » reply
+(`auth-guard/whatsapp.js`) and the `sms`-mode text (`auth-guard/gateway.js`).
+The private bot's messages still start « Movin · » (the owner reads them; say if
+he wants them changed).
+
+**Left as « Movin » on purpose, each for a reason that is not cosmetic:**
+
+- **The sign-in keyword `MOVIN <code>`** that a person sends by WhatsApp or SMS
+  (`whatsapp.js`, `sms-inbox.js`, and the app's pre-typed message). Every build
+  already on a phone sends it; changing the guard alone would lock them out, and
+  changing the app alone would break the new build. If it is ever renamed, the
+  guard accepts both words first, and the app switches a release later.
+- **`SMS_SENDER`** — « Movin » is the sender Moorsyl registered; an unregistered
+  one may be refused, and Mauritanian sign-in is the one route that spends money.
+  Ask Moorsyl to register « Mova » **before** changing it. In `verify` mode (the
+  live one) the SMS text is Moorsyl's own template, so its brand name is theirs to
+  change too.
+- **Merchant names and ids** in the databases (`Movin Algérie`,
+  `MOVIN.DZ.PROVIDER`, `MOVIN_DZ_PARTNER`): ids the Beckn registry and the
+  dispatch are keyed by. The name column is shown nowhere the passenger reads
+  today; changing it is SQL, not code, and is left until someone sees it.
+- Domains, e-mail addresses, container and file names (`movin-bot`,
+  `movin-fleet`): addresses and handles, not the brand.
+
+Nothing here is released: the changed files reach the server only through
+`ops/deploy.sh`, and the Chargily description is the one passengers' drivers see.
