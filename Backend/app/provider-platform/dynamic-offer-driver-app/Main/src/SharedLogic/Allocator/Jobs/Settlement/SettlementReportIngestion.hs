@@ -193,7 +193,6 @@ runPgSettlementIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
     case configs of
       [] -> do
         logWarning "No settlement configs found; nothing to ingest"
-        when shouldScheduleNext $ scheduleNextPgIngestionJob merchantId merchantOperatingCityId jobData
         pure Complete
       _ -> do
         logInfo $ "Running settlement pipeline for " <> show (length configs) <> " provider(s)"
@@ -235,11 +234,13 @@ runPgSettlementIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
             logWarning "Pipeline fetch failure or lock contention on one or more providers, retrying"
             pure Retry
           else do
-            when shouldScheduleNext $ scheduleNextPgIngestionJob merchantId merchantOperatingCityId jobData
             let allSucceeded = all (== Just True) results
             unless allSucceeded $
               logWarning "Some settlement services had failures, but scheduling next run anyway"
             pure Complete
+
+  when shouldScheduleNext $ scheduleNextPgIngestionJob merchantId merchantOperatingCityId jobData
+
   case result of
     Right execResult -> pure execResult
     Left err -> do

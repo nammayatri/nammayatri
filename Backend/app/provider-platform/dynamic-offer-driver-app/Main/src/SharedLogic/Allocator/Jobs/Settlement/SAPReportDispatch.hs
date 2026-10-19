@@ -76,6 +76,7 @@ runSAPSubscriptionPurchaseDispatchJob Job {id, jobInfo} = do
           params.maxApiRetries
           params.startTime
           params.endTime
+          params.timeDiffFromUtc
           currency
           subRows
           subTotals
@@ -106,15 +107,16 @@ runSAPPGSettlementDispatchJob Job {id, jobInfo} = do
             retries = params.maxApiRetries
             fromTime = params.startTime
             toTime = params.endTime
+            utcOffset = params.timeDiffFromUtc
         (pgTotals, orderRows, refundRows, chargebackRows) <- fetchPGSettlementTotals mId.getId mocid fromTime toTime
         merchantOperatingCity <- CQMOC.findById mocid >>= fromMaybeM (MerchantOperatingCityNotFound mocid.getId)
         let currency = merchantOperatingCity.currency
         pgSettlementOrderOk <-
-          dispatchEntry sapCfg token mId mocid retries PGSettlementOrder pgTotals.totalOrderAmount pgTotals.orderCount fromTime toTime currency orderRows
+          dispatchEntry sapCfg token mId mocid retries PGSettlementOrder pgTotals.totalOrderAmount pgTotals.orderCount fromTime toTime utcOffset currency orderRows
         refundOk <-
-          dispatchEntry sapCfg token mId mocid retries RefundEntry pgTotals.totalRefundAmount pgTotals.refundCount fromTime toTime currency refundRows
+          dispatchEntry sapCfg token mId mocid retries RefundEntry pgTotals.totalRefundAmount pgTotals.refundCount fromTime toTime utcOffset currency refundRows
         chargebackOk <-
-          dispatchEntry sapCfg token mId mocid retries ChargebackEntry pgTotals.totalChargebackAmount pgTotals.chargebackCount fromTime toTime currency chargebackRows
+          dispatchEntry sapCfg token mId mocid retries ChargebackEntry pgTotals.totalChargebackAmount pgTotals.chargebackCount fromTime toTime utcOffset currency chargebackRows
         pure $ pgSettlementOrderOk && refundOk && chargebackOk
     )
 
@@ -141,14 +143,15 @@ dispatchEntry ::
   Int ->
   UTCTime ->
   UTCTime ->
+  Seconds ->
   Currency ->
   [PGSettlementTransactionRow] ->
   m Bool
-dispatchEntry _ _ _ _ _ entryType amount _ _ _ _currency _
+dispatchEntry _ _ _ _ _ entryType amount _ _ _ _utcOffset _currency _
   | amount == 0 = do
     logInfo $ "No amount for " <> show entryType <> ", skipping"
     pure True
-dispatchEntry sapCfg token mId mocid maxRetries entryType amount txnCount fromTime toTime currency pgRows = do
+dispatchEntry sapCfg token mId mocid maxRetries entryType amount txnCount fromTime toTime utcOffset currency pgRows = do
   let label = show entryType
       txnType = toTransactionType entryType
   alreadyPosted <- skipJvIfAlreadyPostedSuccess mocid fromTime toTime label txnType
@@ -156,7 +159,7 @@ dispatchEntry sapCfg token mId mocid maxRetries entryType amount txnCount fromTi
     then pure True
     else do
       logInfo $ "Dispatching aggregated " <> label <> " entry to SAP, amount=" <> show amount <> " txnCount=" <> show txnCount
-      req <- buildJournalRequest sapCfg entryType amount fromTime currency
+      req <- buildJournalRequest sapCfg entryType amount fromTime utcOffset currency
       logInfo $ "SAP journal entry request body = " <> show req
       result <- callSAPWithRetry sapCfg token req label maxRetries
       let saveTransactionAction sapEntryId sapBatchId = savePGSettlementTransactions mId mocid sapEntryId sapBatchId currency pgRows
@@ -209,13 +212,14 @@ buildJournalRequest ::
   SAPEntryType ->
   HighPrecMoney ->
   UTCTime ->
+  Seconds ->
   Currency ->
   m SAPJournalRequest
-buildJournalRequest sapCfg entryType amount fromTime currency = do
+buildJournalRequest sapCfg entryType amount fromTime utcOffset currency = do
   let acctMap = sapCfg.accountMapping
   bId <- getNextBatchId
   items <- buildItems entryType acctMap bId currency amount
-  buildJournalRequestFromItems sapCfg (show entryType) fromTime items
+  buildJournalRequestFromItems sapCfg (show entryType) fromTime utcOffset items
 
 -- ---------------------------------------------------------------------------
 -- Item builders per entry type
@@ -265,15 +269,16 @@ dispatchSubscriptionPurchase ::
   Int ->
   UTCTime ->
   UTCTime ->
+  Seconds ->
   Currency ->
   [SubscriptionTransactionRow] ->
   SubscriptionTotals ->
   m Bool
-dispatchSubscriptionPurchase _ _ _ _ _ _ _ _ _currency _ totals
+dispatchSubscriptionPurchase _ _ _ _ _ _ _ _ _utcOffset _currency _ totals
   | totals.grossAmount == 0 && totals.netAmount == 0 = do
     logInfo "No subscription purchase data found, skipping"
     pure True
-dispatchSubscriptionPurchase sapCfg token mId mocid entryType maxRetries fromTime toTime currency subRows totals = do
+dispatchSubscriptionPurchase sapCfg token mId mocid entryType maxRetries fromTime toTime utcOffset currency subRows totals = do
   let label = show entryType
   alreadyPosted <- skipJvIfAlreadyPostedSuccess mocid fromTime toTime label SJE.SubscriptionPurchase
   if alreadyPosted
@@ -291,7 +296,7 @@ dispatchSubscriptionPurchase sapCfg token mId mocid entryType maxRetries fromTim
           <> show totals.igst
           <> " netAmount="
           <> show totals.netAmount
-      req <- buildSubscriptionJournalRequest sapCfg fromTime totals entryType currency
+      req <- buildSubscriptionJournalRequest sapCfg fromTime utcOffset totals entryType currency
       result <- callSAPWithRetry sapCfg token req label maxRetries
       let saveTransactionAction sapEntryId sapBatchId = saveSubscriptionTransactions mId mocid sapEntryId sapBatchId currency subRows
       handleSAPResponse label req result SJE.SubscriptionPurchase totals.txnCount mId mocid fromTime toTime currency saveTransactionAction
@@ -300,11 +305,12 @@ buildSubscriptionJournalRequest ::
   (BeamFlow m r, CacheFlow m r) =>
   SAPConfig.SAPServiceConfig ->
   UTCTime ->
+  Seconds ->
   SubscriptionTotals ->
   SAPEntryType ->
   Currency ->
   m SAPJournalRequest
-buildSubscriptionJournalRequest sapCfg fromTime totals entryType currency = do
+buildSubscriptionJournalRequest sapCfg fromTime utcOffset totals entryType currency = do
   let acctMap = sapCfg.accountMapping
   bId <- getNextBatchId
   items <-
@@ -315,7 +321,7 @@ buildSubscriptionJournalRequest sapCfg fromTime totals entryType currency = do
         mkItem bId "4" "SGST_PAYABLE A/C" acctMap Credit totals.sgst currency,
         mkItem bId "5" "IGST_PAYABLE A/C" acctMap Credit totals.igst currency
       ]
-  buildJournalRequestFromItems sapCfg (show entryType) fromTime items
+  buildJournalRequestFromItems sapCfg (show entryType) fromTime utcOffset items
 
 -- ---------------------------------------------------------------------------
 -- SAP Journal Entry persistence
