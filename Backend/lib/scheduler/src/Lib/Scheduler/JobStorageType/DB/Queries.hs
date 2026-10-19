@@ -153,14 +153,16 @@ getPendingStuckJobs fromTime toTime mbLimit mbOffset = do
     mbLimit
     mbOffset
 
-getJobByTypeAndScheduleTime :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => Text -> UTCTime -> UTCTime -> m [AnyJob t]
-getJobByTypeAndScheduleTime jobType minScheduleTime maxScheduleTime = do
+-- Scoped to one merchant operating city (Nothing matches rows with no city), so a pending job of the same type in another city is not mistaken for this city's job
+getJobByTypeAndScheduleTime :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => Text -> Maybe Text -> UTCTime -> UTCTime -> m [AnyJob t]
+getJobByTypeAndScheduleTime jobType mbMerchantOperatingCityId minScheduleTime maxScheduleTime = do
   findAllWithKVScheduler
     [ Se.And
         [ Se.Is BeamST.status $ Se.Eq Pending,
           Se.Is BeamST.scheduledAt $ Se.GreaterThan (T.utcToLocalTime T.utc minScheduleTime),
           Se.Is BeamST.scheduledAt $ Se.LessThan (T.utcToLocalTime T.utc maxScheduleTime),
-          Se.Is BeamST.jobType $ Se.Eq jobType
+          Se.Is BeamST.jobType $ Se.Eq jobType,
+          Se.Is BeamST.merchantOperatingCityId $ Se.Eq mbMerchantOperatingCityId
         ]
     ]
 
