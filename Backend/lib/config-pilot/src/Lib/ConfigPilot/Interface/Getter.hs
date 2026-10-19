@@ -15,7 +15,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Logging (logDebug)
-import Lib.ConfigPilot.Config.GetterInternal (PersonIdKey (..), configPilotInMemKey, getConfigImpl, invalidateConfigInMem, selectActiveElementVersions)
+import Lib.ConfigPilot.Config.GetterInternal (PersonIdKey (..), configPilotInMemKey, getCodeVersion, getConfigImpl, invalidateConfigInMem, selectActiveElementVersions)
 import Lib.ConfigPilot.Interface.Types (ConfigDimensions (..))
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Yudhishthira.Types as LYT
@@ -70,12 +70,14 @@ resolveConfigList ::
 resolveConfigList dims logicDomain mocId fetch matchers fallback = do
   versions <- selectActiveElementVersions logicDomain mocId
   let versionKey = show (sort versions)
+  deploymentVersion <- getCodeVersion
   let l1Key = configPilotInMemKey dims <> [versionKey]
-  logDebug $ "CP Log: [READ] domain=" <> show logicDomain <> " dims=" <> dimensionsCacheKey dims <> " selectedVersions=" <> versionKey <> " l1Key=" <> show l1Key <> " l2Field=" <> (dimensionsCacheKey dims <> ":v:" <> versionKey)
+  let l2Field = dimensionsCacheKey dims <> ":v:" <> versionKey <> ":c:" <> deploymentVersion
+  logDebug $ "CP Log: [READ] domain=" <> show logicDomain <> " dims=" <> dimensionsCacheKey dims <> " selectedVersions=" <> versionKey <> " codeVersion=" <> deploymentVersion <> " l1Key=" <> show l1Key <> " l2Field=" <> l2Field
 
-  IM.withInMemCache l1Key 3600 $
-    Hedis.withRedisCache redisHashPrefix [dimensionsCacheKey dims <> ":v:" <> versionKey] 7200 $ do
-      logDebug $ "CP Log: [FILL] domain=" <> show logicDomain <> " dims=" <> dimensionsCacheKey dims <> " versions=" <> versionKey
+  IM.withInMemCache l1Key 7200 $
+    Hedis.withRedisCache redisHashPrefix [l2Field] 14400 $ do
+      logDebug $ "CP Log: [FILL] domain=" <> show logicDomain <> " dims=" <> dimensionsCacheKey dims <> " versions=" <> versionKey <> " codeVersion=" <> deploymentVersion
       cfgs <- runInMasterDbAndRedis fetch
       let applyMatchers ms = filter (\c -> all (matchesDim dims c) ms) cfgs
       let filtered = case (applyMatchers matchers, fallback) of
