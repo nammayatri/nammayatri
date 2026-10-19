@@ -166,6 +166,10 @@ getServiceName msc = case msc.serviceConfig of
     Payment.JuspayConfig _ -> MembershipPaymentService Payment.Juspay
     Payment.StripeConfig stripeCfg -> stripePaymentService MembershipPaymentService stripeCfg
     Payment.PaytmEDCConfig _ -> MembershipPaymentService Payment.PaytmEDC
+  DepositPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> DepositPaymentService Payment.Juspay
+    Payment.StripeConfig stripeCfg -> stripePaymentService DepositPaymentService stripeCfg
+    Payment.PaytmEDCConfig _ -> DepositPaymentService Payment.PaytmEDC
   IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
     Ticket.ZendeskConfig _ -> IssueTicketService Ticket.Zendesk
