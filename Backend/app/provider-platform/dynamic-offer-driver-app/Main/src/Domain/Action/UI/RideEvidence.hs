@@ -194,9 +194,9 @@ checkEvidenceUploadRate driverId transporterConfig =
     ("RideEvidence:Upload:DriverId-" <> driverId.getId)
     (APIRateLimitOptions {limit = maxFilesPerRide transporterConfig, limitResetTimeInSec = 3600})
 
--- Turning this off stops new proofs only. The proofs already stored stay readable, and ops hide them one by one through the dashboard.
+-- Proofs are off until a city sets enabled to true. Turning them off again stops new proofs only. The proofs already stored stay readable, and ops hide them one by one through the dashboard.
 isRideEvidenceEnabled :: DTConf.TransporterConfig -> Bool
-isRideEvidenceEnabled transporterConfig = fromMaybe True (transporterConfig.rideEvidenceConfig >>= (.enabled))
+isRideEvidenceEnabled transporterConfig = fromMaybe False (transporterConfig.rideEvidenceConfig >>= (.enabled))
 
 maxFilesPerRide :: DTConf.TransporterConfig -> Int
 maxFilesPerRide transporterConfig = fromMaybe defaultMaxFilesPerRide (transporterConfig.rideEvidenceConfig >>= (.maxFilesPerRide))

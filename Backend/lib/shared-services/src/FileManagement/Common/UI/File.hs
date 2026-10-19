@@ -2,6 +2,7 @@ module FileManagement.Common.UI.File where
 
 import AWS.S3 (FileType (..))
 import qualified Data.ByteString as BS
+import Data.Char (isAlphaNum, isAscii)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
@@ -52,10 +53,14 @@ isInDomainFolder fileDomain = not . T.null . fromDomainFolder fileDomain
 isOwnedBy :: FileDomain -> Text -> Text -> Bool
 isOwnedBy fileDomain ownerId path = ownerFolder fileDomain ownerId `T.isPrefixOf` fromDomainFolder fileDomain path
 
+-- A key the server wrote holds only these characters, so a path with anything else is not one of ours.
+isPlainKey :: Text -> Bool
+isPlainKey = T.all (\c -> (isAscii c && isAlphaNum c) || c `elem` ['.', '_', '/', '-'])
+
 -- A file in an uploader-scoped domain can only be read by the person who uploaded it. Every other path is not restricted here.
 canReadFile :: Text -> Text -> Bool
 canReadFile readerId path
-  | isInDomainFolder RideEvidence path = isOwnedBy RideEvidence readerId path && not (".." `T.isInfixOf` path)
+  | isInDomainFolder RideEvidence path = isOwnedBy RideEvidence readerId path && isPlainKey path && not (".." `T.isInfixOf` path)
   | otherwise = True
 
 data FileUploadReq = FileUploadReq

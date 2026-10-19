@@ -57,10 +57,11 @@ data ManualTollChargeRequirement = ManualTollChargeRequirement
     suggestedAmount :: Maybe HighPrecMoney,
     maxAllowedAmount :: HighPrecMoney,
     currency :: Currency,
-    approvalMode :: ManualTollChargeApprovalMode,
     approvalStatus :: Maybe ManualTollChargeApprovalStatus,
     requestedAmount :: Maybe HighPrecMoney,
-    timeoutSeconds :: Int
+    timeoutSeconds :: Int,
+    -- Seconds left of the request's own window, counted on the server so the driver app needs no clock of its own.
+    secondsLeft :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -106,11 +107,8 @@ getEndRideRequirements (driverId, _merchantId, merchantOpCityId) rideId mbTripEn
       mbRecord :: Maybe TollChargeState <- Redis.get' (tollChargeStateKey ride.id) (pure ())
       case mbRecord of
         Just record -> do
-          approvalMode <- getApprovalMode ride.id booking.id.getId
           now <- getCurrentTime
-          let mbApprovalStatus = case approvalMode of
-                CUSTOMER_APPROVAL -> Just (clientVisibleApprovalStatus (effectiveApprovalStatus now record))
-                DRIVER_DECLARATION_WITH_CAP -> Nothing
+          let mbApprovalStatus = Just (clientVisibleApprovalStatus (effectiveApprovalStatus now record))
           pure
             EndRideRequirementsRes
               { manualTollCharge =
@@ -120,10 +118,10 @@ getEndRideRequirements (driverId, _merchantId, merchantOpCityId) rideId mbTripEn
                         suggestedAmount = Just record.amount,
                         maxAllowedAmount = maxAllowedAmount,
                         currency = ride.currency,
-                        approvalMode = approvalMode,
                         approvalStatus = mbApprovalStatus,
                         requestedAmount = Just record.amount,
-                        timeoutSeconds = approvalTimeoutSeconds thresholdConfig
+                        timeoutSeconds = approvalTimeoutSeconds thresholdConfig,
+                        secondsLeft = Just (max 0 (ceiling (diffUTCTime (addUTCTime (fromIntegral record.timeoutSeconds) record.requestedAt) now)))
                       }
               }
         Nothing -> do
@@ -158,8 +156,7 @@ getEndRideRequirements (driverId, _merchantId, merchantOpCityId) rideId mbTripEn
               tollBilling = TollDecision.decideTollBilling tollInput
               signal = ManualTollChargeSignal {tollConfidence = tollBilling.tollConfidence, hasNoTollEvidence = TollDecision.hasNoTollEvidence tollInput}
           if shouldRequestManualTollCharge (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) signal
-            then do
-              approvalMode <- getApprovalMode ride.id booking.id.getId
+            then
               pure
                 EndRideRequirementsRes
                   { manualTollCharge =
@@ -169,10 +166,10 @@ getEndRideRequirements (driverId, _merchantId, merchantOpCityId) rideId mbTripEn
                             suggestedAmount = tollBilling.tollCharges <|> ride.estimatedTollCharges,
                             maxAllowedAmount = maxAllowedAmount,
                             currency = ride.currency,
-                            approvalMode = approvalMode,
                             approvalStatus = Nothing,
                             requestedAmount = Nothing,
-                            timeoutSeconds = approvalTimeoutSeconds thresholdConfig
+                            timeoutSeconds = approvalTimeoutSeconds thresholdConfig,
+                            secondsLeft = Nothing
                           }
                   }
             else pure EndRideRequirementsRes {manualTollCharge = Nothing}
@@ -195,8 +192,6 @@ requestManualTollChargeApproval (driverId, _merchantId, merchantOpCityId) rideId
   when (DTC.isTollExemptVehicleTier booking.vehicleServiceTier) $ throwError ManualTollChargeNotAllowed
   maxAllowedAmount <- manualTollChargeMaxAmountWithoutEstimate thresholdConfig & fromMaybeM ManualTollChargeNotAllowed
   when (req.amount < 0 || req.amount > maxAllowedAmount) $ throwError (ManualTollChargeAboveLimit maxAllowedAmount)
-  approvalMode <- getApprovalMode ride.id booking.id.getId
-  unless (approvalMode == CUSTOMER_APPROVAL) $ throwError ManualTollChargeNotAllowed
   now <- getCurrentTime
   -- A declared 0 needs nobody's approval, so leave any existing record alone rather than overwrite
   -- it with one end-ride will never read.
@@ -206,8 +201,11 @@ requestManualTollChargeApproval (driverId, _merchantId, merchantOpCityId) rideId
     mbRecordToSend <- withTollChargeStateLock ride.id $ do
       mbRecord <- readTollChargeState ride.id (throwError TollChargeApprovalRequestFailed)
       case mbRecord of
-        -- Not yet acknowledged: resend under the same requestId and deadline.
-        Just record | record.amount == req.amount && effectiveApprovalStatus now record == TOLL_CHARGE_PENDING_CUSTOMER_APPROVAL -> pure (Just record)
+        -- Not yet acknowledged, or the last send failed: resend under the same requestId and deadline.
+        Just record | record.amount == req.amount && effectiveApprovalStatus now record `elem` [TOLL_CHARGE_PENDING_CUSTOMER_APPROVAL, TOLL_CHARGE_SEND_FAILED] -> do
+          let resendRecord = record {status = TOLL_CHARGE_PENDING_CUSTOMER_APPROVAL}
+          Redis.setExp (tollChargeStateKey ride.id) resendRecord tollChargeStateTtlSec
+          pure (Just resendRecord)
         -- Already delivered, approved, or auto-approved for this amount: nothing new to ask.
         Just record | record.amount == req.amount && effectiveApprovalStatus now record `elem` [TOLL_CHARGE_DELIVERED_TO_CUSTOMER, TOLL_CHARGE_APPROVED_BY_CUSTOMER, TOLL_CHARGE_AUTO_APPROVED] -> pure Nothing
         _ -> do
@@ -249,11 +247,32 @@ requestManualTollChargeApproval (driverId, _merchantId, merchantOpCityId) rideId
                   requestId = record.requestId,
                   requestedAt = record.requestedAt
                 }
-      -- Left in place on failure: stays PENDING, can't be charged, expires as NOT_DELIVERED.
-      whenLeft requestResult $ \err -> do
-        logError $ "Toll charge approval request failed for ride " <> ride.id.getId <> ": " <> show err
+      -- Left in place on failure: marked SEND_FAILED, can't be charged, expires as NOT_DELIVERED.
+      whenLeft requestResult $ \_ -> do
+        logError $ "Toll charge approval request failed for ride " <> ride.id.getId <> ", amount " <> show req.amount <> ", request " <> record.requestId
+        markTollSendFailed ride.id record.requestId
+        recordTollSendFailure ride.id req.amount
         throwError TollChargeApprovalRequestFailed
   pure Success
+
+-- Only a record still waiting on this very request is marked: a rider who did get the request and already
+-- answered or acknowledged it, or a newer request, must not be overwritten. A failure to mark never hides the send failure.
+markTollSendFailed :: Id DRide.Ride -> Text -> Flow ()
+markTollSendFailed rideId requestId =
+  void . withTryCatch "markTollSendFailed" $
+    withTollChargeStateLock rideId $ do
+      mbRecord <- readTollChargeState rideId (throwError TollChargeApprovalRequestFailed)
+      whenJust mbRecord $ \record ->
+        when (record.requestId == requestId && record.status == TOLL_CHARGE_PENDING_CUSTOMER_APPROVAL) $
+          Redis.setExp (tollChargeStateKey rideId) record {status = TOLL_CHARGE_SEND_FAILED} tollChargeStateTtlSec
+
+-- Kept on the ride so support can verify a ticket later. A failure to write it never hides the send failure itself.
+recordTollSendFailure :: Id DRide.Ride -> HighPrecMoney -> Flow ()
+recordTollSendFailure rideId amount = do
+  failedAt <- getCurrentTime
+  void . withTryCatch "recordTollSendFailure" $ do
+    ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+    QRide.updateRideTags (Just (fromMaybe [] ride.rideTags <> [manualTollChargeSendFailedTag amount failedAt])) ride.id
 
 retryTollApprovalSend :: MonadFlow m => Int -> m (Either SomeException a) -> m (Either SomeException a)
 retryTollApprovalSend attemptsLeft send = do
@@ -278,6 +297,8 @@ applyTollChargeApprovalAck rideId req apiKey = do
     unless (record.requestId == req.requestId) $ throwError TollChargeApprovalNotPending
     case effectiveApprovalStatus now record of
       TOLL_CHARGE_PENDING_CUSTOMER_APPROVAL -> Redis.setExp (tollChargeStateKey rideId) record {status = TOLL_CHARGE_DELIVERED_TO_CUSTOMER} tollChargeStateTtlSec
+      -- The driver saw a failed send, but the rider backend did store the request and the rider's app showed it.
+      TOLL_CHARGE_SEND_FAILED -> Redis.setExp (tollChargeStateKey rideId) record {status = TOLL_CHARGE_DELIVERED_TO_CUSTOMER} tollChargeStateTtlSec
       -- Acknowledging the same request twice is harmless.
       TOLL_CHARGE_DELIVERED_TO_CUSTOMER -> pure ()
       _ -> throwError TollChargeApprovalNotPending
@@ -300,7 +321,7 @@ applyTollChargeApprovalDecision rideId req apiKey = do
     -- Repeating a decision already applied to this request is harmless. A different decision on a
     -- request that is no longer open is refused.
     unless (record.status == decidedStatus) $ do
-      unless (effectiveApprovalStatus now record `elem` [TOLL_CHARGE_PENDING_CUSTOMER_APPROVAL, TOLL_CHARGE_DELIVERED_TO_CUSTOMER] && record.amount == req.amount) $
+      unless (effectiveApprovalStatus now record `elem` [TOLL_CHARGE_PENDING_CUSTOMER_APPROVAL, TOLL_CHARGE_SEND_FAILED, TOLL_CHARGE_DELIVERED_TO_CUSTOMER] && record.amount == req.amount) $
         throwError TollChargeApprovalNotPending
       let updatedRejectionCount = if req.approved then record.rejectionCount else record.rejectionCount + 1
           updatedRejectedAmounts = if req.approved then record.rejectedAmounts else record.rejectedAmounts <> [record.amount]

@@ -13,8 +13,7 @@
 -}
 
 module SharedLogic.ManualTollCharge
-  ( ManualTollChargeApprovalMode (..),
-    ManualTollChargeApprovalStatus (..),
+  ( ManualTollChargeApprovalStatus (..),
     ManualTollChargeConfirmedBy (..),
     ManualTollChargeResolution (..),
     ManualTollChargeSignal (..),
@@ -28,18 +27,18 @@ module SharedLogic.ManualTollCharge
     maxApprovalAttempts,
     effectiveApprovalStatus,
     clientVisibleApprovalStatus,
-    getApprovalMode,
     resolveManualTollChargeForEndRide,
     manualTollChargeTag,
     manualTollChargeRejectionTag,
+    manualTollChargeSendFailedTag,
     manualTollChargeConfidence,
     isManualTollChargeRide,
   )
 where
 
-import qualified Data.HashMap.Strict as HM
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as T
+import Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTConf
@@ -50,14 +49,10 @@ import Kernel.Types.Confidence
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import Tools.Error
-import Tools.Metrics (CoreMetrics)
 
-data ManualTollChargeApprovalMode = DRIVER_DECLARATION_WITH_CAP | CUSTOMER_APPROVAL
-  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
-
--- PENDING = written, not yet acknowledged by the rider app; DELIVERED = acknowledged.
+-- PENDING = written, not yet acknowledged by the rider app; DELIVERED = acknowledged;
+-- SEND_FAILED = every try to reach the rider backend failed, so the driver can send again or end without a toll.
 -- NOT_DELIVERED and AUTO_APPROVED are never stored, only derived by effectiveApprovalStatus.
 data ManualTollChargeApprovalStatus
   = TOLL_CHARGE_PENDING_CUSTOMER_APPROVAL
@@ -66,11 +61,12 @@ data ManualTollChargeApprovalStatus
   | TOLL_CHARGE_REJECTED_BY_CUSTOMER
   | TOLL_CHARGE_AUTO_APPROVED
   | TOLL_CHARGE_NOT_DELIVERED
+  | TOLL_CHARGE_SEND_FAILED
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
 -- Each "no charge" outcome is its own case so the tag stays distinguishable: NoTollDeclared is a
 -- driver declaring 0, Unsettled is the rejection cap hit, NotDelivered is a prompt never seen.
-data ManualTollChargeConfirmedBy = ConfirmedByDriver | ConfirmedByCustomer | ConfirmedByTimeout | ConfirmedByNoTollDeclared | ConfirmedByUnsettled | ConfirmedByNotDelivered
+data ManualTollChargeConfirmedBy = ConfirmedByCustomer | ConfirmedByTimeout | ConfirmedByNoTollDeclared | ConfirmedByUnsettled | ConfirmedByNotDelivered
   deriving (Generic, Show, Eq)
 
 data ManualTollChargeResolution = ManualTollChargeResolution
@@ -135,14 +131,6 @@ shouldRequestManualTollCharge isTollApplicableTrip signal = case signal.tollConf
 tollChargeStateKey :: Id DRide.Ride -> Text
 tollChargeStateKey rideId = "TollChargeState:RideId-" <> rideId.getId
 
-tollChargeApprovalModeKey :: Id DRide.Ride -> Text
-tollChargeApprovalModeKey rideId = "TollChargeApprovalMode:RideId-" <> rideId.getId
-
--- Short enough that a BAP outage doesn't pin declaration mode for the rest of a long ride, long
--- enough to cover the gap between the requirements check and the end-ride call that follows it.
-approvalModeFallbackTtlSec :: Int
-approvalModeFallbackTtlSec = 120
-
 -- The record also carries the rejection history, so it must outlive the longest ride rather than
 -- just the approval window. It is refreshed on every write.
 tollChargeStateTtlSec :: Int
@@ -160,7 +148,7 @@ maxApprovalAttempts transporterConfig = fromMaybe 3 (transporterConfig.manualTol
 -- unacknowledged reads as NOT_DELIVERED (no charge), acknowledged reads as AUTO_APPROVED.
 effectiveApprovalStatus :: UTCTime -> TollChargeState -> ManualTollChargeApprovalStatus
 effectiveApprovalStatus now record
-  | expired && record.status == TOLL_CHARGE_PENDING_CUSTOMER_APPROVAL = TOLL_CHARGE_NOT_DELIVERED
+  | expired && record.status `elem` [TOLL_CHARGE_PENDING_CUSTOMER_APPROVAL, TOLL_CHARGE_SEND_FAILED] = TOLL_CHARGE_NOT_DELIVERED
   | expired && record.status == TOLL_CHARGE_DELIVERED_TO_CUSTOMER = TOLL_CHARGE_AUTO_APPROVED
   | otherwise = record.status
   where
@@ -172,61 +160,26 @@ clientVisibleApprovalStatus :: ManualTollChargeApprovalStatus -> ManualTollCharg
 clientVisibleApprovalStatus TOLL_CHARGE_DELIVERED_TO_CUSTOMER = TOLL_CHARGE_PENDING_CUSTOMER_APPROVAL
 clientVisibleApprovalStatus status = status
 
--- The BAP decides whether the rider's app can show the approval prompt. When it cannot be reached
--- the driver declaration path applies, so ending a ride never depends on the BAP being up.
-getApprovalMode ::
-  ( MonadFlow m,
-    CacheFlow m r,
-    CoreMetrics m,
-    HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal, "internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasRequestId r
-  ) =>
-  Id DRide.Ride ->
-  Text ->
-  m ManualTollChargeApprovalMode
-getApprovalMode rideId bppBookingId = do
-  mbCachedMode <- Redis.safeGet (tollChargeApprovalModeKey rideId)
-  case mbCachedMode of
-    Just cachedMode -> pure cachedMode
-    Nothing -> do
-      appBackendBapInternal <- asks (.appBackendBapInternal)
-      modeResponse <- withTryCatch "getTollChargeApprovalMode" $ CallBAPInternal.getTollChargeApprovalMode appBackendBapInternal.apiKey appBackendBapInternal.url bppBookingId
-      case modeResponse of
-        Right response -> do
-          let approvalMode = if response.customerApprovalSupported then CUSTOMER_APPROVAL else DRIVER_DECLARATION_WITH_CAP
-          Redis.setExp (tollChargeApprovalModeKey rideId) approvalMode tollChargeStateTtlSec
-          pure approvalMode
-        Left err -> do
-          logWarning $ "Could not get toll charge approval mode for ride " <> rideId.getId <> ": " <> show err
-          -- Cached briefly too, so a transient failure can't flip CUSTOMER_APPROVAL back in before
-          -- this same end-ride attempt finishes; a later ride still re-asks the BAP.
-          Redis.setExp (tollChargeApprovalModeKey rideId) DRIVER_DECLARATION_WITH_CAP approvalModeFallbackTtlSec
-          pure DRIVER_DECLARATION_WITH_CAP
-
 -- Nothing means the declaration is no longer eligible, so end ride bills the automatic toll
 -- decision instead of failing: the client declared against an earlier requirements check, and both
 -- the config and the final toll evidence can change before the ride actually ends.
 resolveManualTollChargeForEndRide ::
   ( MonadFlow m,
-    CacheFlow m r,
-    CoreMetrics m,
-    HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal, "internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasRequestId r
+    CacheFlow m r
   ) =>
   DTConf.TransporterConfig ->
   DRide.Ride ->
   DTC.TripCategory ->
   DTC.ServiceTierType ->
-  Text ->
   ManualTollChargeSignal ->
   HighPrecMoney ->
   m (Maybe ManualTollChargeResolution)
-resolveManualTollChargeForEndRide transporterConfig ride tripCategory vehicleServiceTier bppBookingId autoDecision declaredAmount =
+resolveManualTollChargeForEndRide transporterConfig ride tripCategory vehicleServiceTier autoDecision declaredAmount =
   -- Re-checks the exact rule the requirements endpoint used instead of trusting a client-side skip.
   if isManualTollChargeEnabled transporterConfig tripCategory
     && not (DTC.isTollExemptVehicleTier vehicleServiceTier)
     && shouldRequestManualTollCharge (DTC.isTollApplicableForTrip vehicleServiceTier tripCategory) autoDecision
-    then Just <$> resolveEligibleManualTollChargeForEndRide transporterConfig ride bppBookingId declaredAmount
+    then Just <$> resolveEligibleManualTollChargeForEndRide transporterConfig ride declaredAmount
     else do
       logWarning $ "Manual toll charge no longer eligible at end ride, billing automatically. RideId: " <> ride.id.getId
       pure Nothing
@@ -235,21 +188,22 @@ resolveManualTollChargeForEndRide transporterConfig ride tripCategory vehicleSer
 -- since the driver has to act on them: a rejection needs a new amount, a pending one needs a wait.
 resolveEligibleManualTollChargeForEndRide ::
   ( MonadFlow m,
-    CacheFlow m r,
-    CoreMetrics m,
-    HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal, "internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasRequestId r
+    CacheFlow m r
   ) =>
   DTConf.TransporterConfig ->
   DRide.Ride ->
-  Text ->
   HighPrecMoney ->
   m ManualTollChargeResolution
-resolveEligibleManualTollChargeForEndRide transporterConfig ride bppBookingId declaredAmount = do
+resolveEligibleManualTollChargeForEndRide transporterConfig ride declaredAmount = do
   maxAmount <- manualTollChargeMaxAmountWithoutEstimate transporterConfig & fromMaybeM ManualTollChargeNotAllowed
   when (declaredAmount < 0 || declaredAmount > maxAmount) $ throwError (ManualTollChargeAboveLimit maxAmount)
-  -- Never deleted on decode failure, so a corrupt record can't drop the rejection history.
-  mbRecord :: Maybe TollChargeState <- Redis.get' (tollChargeStateKey ride.id) (throwError TollChargeApprovalRequired)
+  -- Never deleted on decode failure, so a corrupt record can't drop the rejection history. A declared 0 bills no
+  -- toll whatever the record says, so for it a failed or corrupt read must not block the end ride: it only loses
+  -- the rejection history on the tags.
+  mbRecord :: Maybe TollChargeState <-
+    if declaredAmount == 0
+      then either (const Nothing) identity <$> withTryCatch "readTollChargeStateForZeroToll" (Redis.get' (tollChargeStateKey ride.id) (throwError TollChargeApprovalRequired))
+      else Redis.get' (tollChargeStateKey ride.id) (throwError TollChargeApprovalRequired)
   now <- getCurrentTime
   let rejectedAmounts = maybe [] (.rejectedAmounts) mbRecord
   let attemptsExhausted = case mbRecord of
@@ -260,23 +214,19 @@ resolveEligibleManualTollChargeForEndRide transporterConfig ride bppBookingId de
       pure ManualTollChargeResolution {amount = 0, confirmedBy = ConfirmedByUnsettled, rejectedAmounts}
     else
       if declaredAmount == 0
-        then -- A declared 0 needs nobody's approval, in either mode.
+        then -- A declared 0 needs nobody's approval.
           pure ManualTollChargeResolution {amount = 0, confirmedBy = ConfirmedByNoTollDeclared, rejectedAmounts}
-        else do
-          approvalMode <- getApprovalMode ride.id bppBookingId
-          case approvalMode of
-            DRIVER_DECLARATION_WITH_CAP -> pure ManualTollChargeResolution {amount = declaredAmount, confirmedBy = ConfirmedByDriver, rejectedAmounts}
-            CUSTOMER_APPROVAL -> case mbRecord of
-              Just record | record.amount == declaredAmount -> case effectiveApprovalStatus now record of
-                TOLL_CHARGE_APPROVED_BY_CUSTOMER -> pure ManualTollChargeResolution {amount = declaredAmount, confirmedBy = ConfirmedByCustomer, rejectedAmounts}
-                TOLL_CHARGE_AUTO_APPROVED -> pure ManualTollChargeResolution {amount = declaredAmount, confirmedBy = ConfirmedByTimeout, rejectedAmounts}
-                -- Never reached the rider's app, so nothing is charged, whatever the driver declared.
-                TOLL_CHARGE_NOT_DELIVERED -> pure ManualTollChargeResolution {amount = 0, confirmedBy = ConfirmedByNotDelivered, rejectedAmounts}
-                -- A rejection is a resolved, known outcome, distinct from still-pending, so the driver
-                -- app can tell "declare a new amount" apart from "keep waiting".
-                TOLL_CHARGE_REJECTED_BY_CUSTOMER -> throwError TollChargeApprovalRejected
-                _ -> throwError TollChargeApprovalRequired
-              _ -> throwError TollChargeApprovalRequired
+        else case mbRecord of
+          Just record | record.amount == declaredAmount -> case effectiveApprovalStatus now record of
+            TOLL_CHARGE_APPROVED_BY_CUSTOMER -> pure ManualTollChargeResolution {amount = declaredAmount, confirmedBy = ConfirmedByCustomer, rejectedAmounts}
+            TOLL_CHARGE_AUTO_APPROVED -> pure ManualTollChargeResolution {amount = declaredAmount, confirmedBy = ConfirmedByTimeout, rejectedAmounts}
+            -- Never reached the rider's app, so nothing is charged, whatever the driver declared.
+            TOLL_CHARGE_NOT_DELIVERED -> pure ManualTollChargeResolution {amount = 0, confirmedBy = ConfirmedByNotDelivered, rejectedAmounts}
+            -- A rejection is a resolved, known outcome, distinct from still-pending, so the driver
+            -- app can tell "declare a new amount" apart from "keep waiting".
+            TOLL_CHARGE_REJECTED_BY_CUSTOMER -> throwError TollChargeApprovalRejected
+            _ -> throwError TollChargeApprovalRequired
+          _ -> throwError TollChargeApprovalRequired
 
 manualTollChargeTagPrefix :: Text
 manualTollChargeTagPrefix = "TollConfirmedBy#"
@@ -285,20 +235,18 @@ manualTollChargeTag :: ManualTollChargeConfirmedBy -> LYT.TagNameValue
 manualTollChargeTag confirmedBy =
   LYT.TagNameValue $
     manualTollChargeTagPrefix <> case confirmedBy of
-      ConfirmedByDriver -> "Driver"
       ConfirmedByCustomer -> "Customer"
       ConfirmedByTimeout -> "Timeout"
       ConfirmedByNoTollDeclared -> "NoTollDeclared"
       ConfirmedByUnsettled -> "Unsettled"
       ConfirmedByNotDelivered -> "NotDelivered"
 
--- Customer/NoTollDeclared are confirmed by a party with standing to; Driver is uncorroborated;
--- Timeout/Unsettled/NotDelivered are all system defaults, not confirmations.
+-- Customer/NoTollDeclared are confirmed by a party with standing to; Timeout/Unsettled/NotDelivered are
+-- all system defaults, not confirmations.
 manualTollChargeConfidence :: ManualTollChargeConfirmedBy -> Confidence
 manualTollChargeConfidence = \case
   ConfirmedByCustomer -> Sure
   ConfirmedByNoTollDeclared -> Sure
-  ConfirmedByDriver -> Neutral
   ConfirmedByTimeout -> Unsure
   ConfirmedByUnsettled -> Unsure
   ConfirmedByNotDelivered -> Unsure
@@ -314,3 +262,13 @@ manualTollChargeRejectionTagPrefix = "TollRejectionAmounts#"
 manualTollChargeRejectionTag :: [HighPrecMoney] -> Maybe LYT.TagNameValue
 manualTollChargeRejectionTag [] = Nothing
 manualTollChargeRejectionTag amounts = Just $ LYT.TagNameValue $ manualTollChargeRejectionTagPrefix <> T.intercalate "&" (map (show . (roundToIntegral :: HighPrecMoney -> Integer)) amounts)
+
+manualTollChargeSendFailedTagPrefix :: Text
+manualTollChargeSendFailedTagPrefix = "TollSendFailed#"
+
+-- One tag per send that failed after every try: the amount the driver tried to charge and when, so support
+-- can verify a ticket later.
+manualTollChargeSendFailedTag :: HighPrecMoney -> UTCTime -> LYT.TagNameValue
+manualTollChargeSendFailedTag amount failedAt =
+  LYT.TagNameValue $
+    manualTollChargeSendFailedTagPrefix <> show (roundToIntegral amount :: Integer) <> "@" <> T.pack (formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" failedAt)
