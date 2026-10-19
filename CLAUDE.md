@@ -141,11 +141,38 @@ Types: feat, fix, chore, ci, docs, perf, refactor, test
 
 ---
 
-# This fork: Movin (Mauritania and Algeria on one stack, since 2026-09-13)
+# This fork: Mova, still called Movin in its code and servers (Mauritania and Algeria on one stack, since 2026-09-13)
 
 Everything above is upstream Namma Yatri and still applies to the Haskell
 services. This section is what is different here, and it is mostly about what
 **not** to look for.
+
+## The name, and the launch (2026-10-18)
+
+**The product is called Mova** (the boss's word; store pages « Mova Ride »). It
+was Movin until 2026-10-18 and Movin DZ until 2026-09-02, and **the code, the
+database, the containers and the domain still say Movin on purpose**: the
+rename changed what a person reads, not identifiers. Do not "finish" it.
+Written « Mova » since: the Chargily checkout line and the wallet page
+(`maps-shim/wallet.js`), the WhatsApp reply and the `sms`-mode text
+(`auth-guard/`). **Still « Movin », and why:** the sign-in keyword
+`MOVIN <code>` (every build already on a phone sends it), `SMS_SENDER` (the
+sender Moorsyl registered), the merchant ids and names, `movin-*` units and
+files, the bot's messages. The website's wordmark and the server's texts stay
+plain « Mova »; only the app's logo carries the Arabic name (« Mova | موفا »),
+by the owner's word of 2026-10-19. The list, with reasons: `local-stack/docs/
+gotchas.md`, *The product is called Mova*.
+
+**The launch is a procedure now:** `local-stack/docs/runbooks/launch.md`, from
+the day the date is known to the end of the first week. Three tools carry it,
+all in `stack/`: `launch-cleanup.sh` (removes the 12 simulated cars and the 2
+test passengers through the console's own `anonymise.sql`; dry run by default;
+rehearsed 2026-10-18 on a copy of that night's backup, via `restore.sh rehearse`
+and its `REHEARSE_HOOK`), `launch-gate.sh` (read-only go / no-go: test mode,
+bypasses, the fleet, wallet drift, backup age, keys, certificates, disk), and
+`backup.sh` / `restore.sh rehearse` for the proof the backup can be put back.
+**Nothing there has been run for real yet.** The real clean-up is a production
+step, run by the owner on the day before launch.
 
 ## What we actually run
 
@@ -451,3 +478,18 @@ rclone sees only what it uploaded since then; older backups are in Drive's
   ny-backend` — the image the server runs.** Until then it pulled
   `ghcr.io/<repo owner>/...`, which on MohaGNPro is a six-week-old build; for
   the same reason, run the backend BUILD workflow in the company repository.
+- **A new `stack/db/*.sql` is applied to the LIVE database by the next release.**
+  Anything that is not a migration (a read, a list of accounts) goes beside the
+  script that uses it, never in `db/`: `launch-cleanup-targets.sql` was moved out
+  before the release that would have run it (2026-10-18).
+- **Production steps are the owner's to run.** A release, an erase, a restore:
+  hand him the exact command with `| tee ~/<name>.log`, wait for the log, then
+  read it and run the read-only `ops/deploy.sh verify`. An assistant's
+  production deploy and reads of the live person tables are refused by the
+  harness, whatever was said earlier. The dry run (`ops/deploy.sh --dry-run`) is
+  not refused.
+- **A script that talks to its database through `docker exec` can be tested
+  without Docker:** `tests/lib/fake-docker.js` answers `docker exec ... psql`
+  from PGlite, and `tests/launch-cleanup.test.js` runs the real shell script
+  against it. Use it for the next script of this kind, and mutate the script once
+  to prove the test can fail.
