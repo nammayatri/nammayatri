@@ -65,6 +65,7 @@ data MerchantT f = MerchantT
     signatureExpiry :: B.C f Kernel.Prelude.Int,
     signingPrivateKey :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),
     signingPublicKey :: B.C f Kernel.Types.Base64.Base64,
+    socialIdentityValidityInDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     stuckRideAutoCancellationBuffer :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     subscriberId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

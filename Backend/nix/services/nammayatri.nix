@@ -195,6 +195,7 @@ in
           REDIS_SECONDARY_CLUSTER_PORT = toString ports.redis-cluster-n2;
           DB_PRIMARY_PORT = toString ports.db-primary;
           DB_PRIMARY_REPLICA_PORT = toString ports.db-primary-replica;
+          DASHBOARD_DB_PORT = toString ports.db-primary;
           CLICKHOUSE_PORT = toString ports.clickhouse;
           KAFKA_PORT = toString ports.kafka;
           KAFKA_BROKER_PORT = toString ports.kafka;
@@ -296,6 +297,7 @@ in
               ${cmd}
             "
           else
+            export LOCALE_ARCHIVE=${glibcLocaleArchive}
             ${cmd}
           fi
         '';
@@ -475,6 +477,8 @@ in
             "cluster1-n6".shutdown.signal = 9;
             "cluster1-cluster-create".shutdown.signal = 9;
             "kafka".shutdown.signal = 9;
+            "clickhouse-db".environment.CLICKHOUSE_WATCHDOG_ENABLE = "0";
+            "clickhouse-db-init".environment.CLICKHOUSE_WATCHDOG_ENABLE = "0";
             "zookeeper".shutdown.signal = 9;
             "db-primary".shutdown.signal = lib.mkForce 9;
             "db-primary-replica".shutdown.signal = lib.mkForce 9;
@@ -676,7 +680,7 @@ in
                   fi
                   while true; do
                     find .. -maxdepth 1 -name '*.log' -size +10M -exec truncate -s 0 {} \;
-                    find /tmp -maxdepth 1 -name '*.log' -size +10M -exec truncate -s 0 {} \;
+                    find "''${NY_LOG_DIR:-/tmp}" -maxdepth 1 -name '*.log' -size +10M -exec truncate -s 0 {} \;
                     sleep 1
                   done
                 '';
@@ -1832,7 +1836,7 @@ in
 
           clickhouse."clickhouse-db" = {
             enable = true;
-            port = 9000; # clickhouse native TCP port — not in ports.nix (internal only)
+            port = ports.clickhouse-native or 9000;
             extraConfig.http_port = ports.clickhouse;
             initialDatabases = [
               {

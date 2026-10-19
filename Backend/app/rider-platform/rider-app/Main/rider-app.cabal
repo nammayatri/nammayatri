@@ -694,6 +694,7 @@ library
       SharedLogic.Search
       SharedLogic.Serviceability
       SharedLogic.SilentReallocation
+      SharedLogic.SocialLogin
       SharedLogic.SosLocationTracking
       SharedLogic.SyncSearchDispatch
       SharedLogic.TicketRule.Apply
@@ -1385,6 +1386,7 @@ library
       Domain.Types.PersonDisability
       Domain.Types.PersonFlowStatus
       Domain.Types.PersonPTStats
+      Domain.Types.PersonSocialIdentity
       Domain.Types.PersonStats
       Domain.Types.PickupInstructions
       Domain.Types.PlaceBasedServiceConfig
@@ -1561,6 +1563,7 @@ library
       Storage.Beam.Person
       Storage.Beam.PersonDisability
       Storage.Beam.PersonPTStats
+      Storage.Beam.PersonSocialIdentity
       Storage.Beam.PersonStats
       Storage.Beam.PickupInstructions
       Storage.Beam.PlaceBasedServiceConfig
@@ -1823,6 +1826,7 @@ library
       Storage.Queries.Person
       Storage.Queries.PersonDisability
       Storage.Queries.PersonPTStats
+      Storage.Queries.PersonSocialIdentity
       Storage.Queries.PersonStats
       Storage.Queries.PickupInstructions
       Storage.Queries.PlaceBasedServiceConfig

@@ -1,5 +1,7 @@
 let common = ../generic/common.dhall
 
+let devCommon = ./common.dhall
+
 let appCfg = ./dynamic-offer-driver-app.dhall
 
 let sec = ./secrets/dynamic-offer-driver-app.dhall
@@ -12,7 +14,8 @@ let schedulerConfig =
       { loggerConfig =
               common.loggerConfig
           //  { logRawSql = True
-              , logFilePath = "/tmp/driver-offer-allocator-scheduler.log"
+              , logFilePath =
+                  "${devCommon.logDir}/driver-offer-allocator-scheduler.log"
               , logToConsole = False
               , logToFile = False
               , prettyPrinting = True
@@ -60,7 +63,8 @@ in  { appCfg =
             appCfg
         //  { loggerConfig =
                     appCfg.loggerConfig
-                //  { logFilePath = "/tmp/driver-offer-allocator-app.log"
+                //  { logFilePath =
+                        "${devCommon.logDir}/driver-offer-allocator-app.log"
                     , logToFile = False
                     }
             }

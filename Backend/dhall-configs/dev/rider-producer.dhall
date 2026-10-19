@@ -90,7 +90,7 @@ in  { hedisCfg
     , esqDBReplicaCfg
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/rider-producer.log"
+        //  { logFilePath = "${common.logDir}/rider-producer.log"
             , prettyPrinting = True
             , logToConsole = False
             , logToFile = True

@@ -37,6 +37,8 @@ data PersonT f = PersonT
     deviceToken :: B.C f (Kernel.Prelude.Maybe Kernel.External.Notification.FCM.Types.FCMRecipientToken),
     driverTag :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     email :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    emailSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.Person.EmailSource),
+    emailVerified :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     faceImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     firstName :: B.C f Kernel.Prelude.Text,
     gender :: B.C f Domain.Types.Person.Gender,

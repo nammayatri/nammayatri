@@ -797,6 +797,7 @@ library
       SharedLogic.SearchRequestProcessing
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
+      SharedLogic.SocialLogin
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand
       SharedLogic.Subscription.BillingModel
@@ -1689,6 +1690,7 @@ library
       Domain.Types.PayoutConfig
       Domain.Types.PayoutStatusHistory
       Domain.Types.Person
+      Domain.Types.PersonSocialIdentity
       Domain.Types.PlaceNameCache
       Domain.Types.Plan
       Domain.Types.PlanTranslation
@@ -1892,6 +1894,7 @@ library
       Storage.Beam.PayoutConfig
       Storage.Beam.PayoutStatusHistory
       Storage.Beam.Person
+      Storage.Beam.PersonSocialIdentity
       Storage.Beam.PlaceNameCache
       Storage.Beam.Plan
       Storage.Beam.PlanTranslation
@@ -2204,6 +2207,7 @@ library
       Storage.Queries.PayoutConfig
       Storage.Queries.PayoutStatusHistory
       Storage.Queries.Person
+      Storage.Queries.PersonSocialIdentity
       Storage.Queries.PlaceNameCache
       Storage.Queries.Plan
       Storage.Queries.PlanTranslation

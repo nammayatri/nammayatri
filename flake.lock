@@ -4021,17 +4021,14 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1792694686,
-        "narHash": "sha256-YbsnOWBXagvBk2IyVG252FiNqV2DowbC2ryovO6J0Vk=",
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "rev": "730cd6d5a7f377adb8840337cbcdeea45d494870",
-        "type": "github"
+        "lastModified": 1791888491,
+        "narHash": "sha256-fcFXpbELKwjEHi9SMw2IIZj/BmvifnvGYg0/hWzQM3g=",
+        "path": "/Users/praveenkumar/Documents/NammaYatri/shared-kernel",
+        "type": "path"
       },
       "original": {
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "type": "github"
+        "path": "/Users/praveenkumar/Documents/NammaYatri/shared-kernel",
+        "type": "path"
       }
     },
     "systems": {

@@ -25,6 +25,10 @@ MerchantConfig:
     authPhoneNumberCountWindow1 : Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
     authPhoneNumberCountThreshold2 : Maybe Int
     authPhoneNumberCountWindow2 : Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    authEmailCountThreshold1 : Maybe Int
+    authEmailCountWindow1 : Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    authEmailCountThreshold2 : Maybe Int
+    authEmailCountWindow2 : Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
     createdAt : Maybe UTCTime
     updatedAt : Maybe UTCTime
     enabled : Bool
@@ -50,6 +54,8 @@ MerchantConfig:
     fraudAuthCountWindow: json
     authPhoneNumberCountWindow1: json
     authPhoneNumberCountWindow2: json
+    authEmailCountWindow1: json
+    authEmailCountWindow2: json
 
   default:
     fraudBookingCancellationCountWindow: |-

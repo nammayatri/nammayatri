@@ -18,6 +18,7 @@ import Kernel.Utils.Common (fromMaybeM, throwError)
 import Servant hiding (throwError)
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.PersonPTStats as SPersonPTStats
+import qualified SharedLogic.SocialLogin as SSocialLogin
 import qualified SharedLogic.Utils as SLUtils
 import qualified Storage.Queries.DeletedPerson as QD
 import qualified Storage.Queries.Person as QP
@@ -49,6 +50,7 @@ postDeletedPerson (mbPersonId, merchantId) (API.Types.UI.DeletedPerson.DeletedPe
   void $ notifyAboutDeletedPerson personId
   QD.create (createDeletedPerson person now mbStaticPersonId)
   SPersonPTStats.stampPersonCreatedAt person mbStaticPersonId
+  SSocialLogin.deleteSocialIdentities personId
   _ <- QP.deleteById personId
   _ <- QSRL.deleteAllByRiderId personId
   pure APISuccess.Success

@@ -19,7 +19,8 @@ let healthCheckAppCfg =
       , fcmNofificationSendCount = +2
       , loggerConfig =
               appCfg.loggerConfig
-          //  { logFilePath = "/tmp/driver-tracking-healthcheck.log" }
+          //  { logFilePath = "${common.logDir}/driver-tracking-healthcheck.log"
+              }
       , batchSize = +100
       , numberOfShards = +10
       , enabledMerchantCityIds

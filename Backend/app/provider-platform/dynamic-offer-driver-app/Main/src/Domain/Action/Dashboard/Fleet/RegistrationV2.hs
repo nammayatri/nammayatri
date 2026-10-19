@@ -65,6 +65,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
 import qualified SharedLogic.PersonBankAccount as SPBA
+import qualified SharedLogic.SocialLogin as SSL
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
@@ -173,9 +174,19 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
         Just Common.BUSINESS_FLEET -> DP.FLEET_BUSINESS
         Just Common.NORMAL_FLEET -> DP.FLEET_OWNER
         _ -> person.role
-  let updPerson = person{firstName = req.firstName, lastName = Just req.lastName, email = updEmail, role = newRole}
+  let emailChanged = (SSL.normalizeEmail <$> updEmail) /= (SSL.normalizeEmail <$> person.email)
+      updPerson =
+        person
+          { DP.firstName = req.firstName,
+            DP.lastName = Just req.lastName,
+            DP.email = updEmail,
+            DP.emailVerified = if emailChanged then Just False else person.emailVerified,
+            DP.emailSource = if emailChanged then Nothing else person.emailSource,
+            DP.role = newRole
+          }
   SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Add (SGuard.TargetFleetOwner fleetOwnerId) $ do
     void $ QP.updateByPrimaryKey updPerson
+    when emailChanged $ SSL.unlinkIdentitiesWithOtherEmail person.id updEmail
     void $ updateFleetOwnerInfo fleetOwnerInfo req
     -- FleetRegistration is treated as a mandatory doc — fire the funnel so recompute picks up the fresh
     -- registeredAt / role and re-derives verified/approved/enabled.
