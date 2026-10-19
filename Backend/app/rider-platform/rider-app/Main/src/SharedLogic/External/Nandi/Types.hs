@@ -1249,17 +1249,18 @@ data ScheduleNumber = ScheduleNumber
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
--- Extra fields (tag_number..updated_at) populated only by /vehicles/upsert, /vehicles/query and the
--- extended /fleets response; historical /fleets consumers just see them as Nothing (server omits them via skip_serializing_if).
 data Fleet = Fleet
-  { vehicle_id :: Value,
+  { vehicle_id :: Text,
     vehicle_no :: Maybe Text,
     fleet_no :: Maybe Text,
     tag_number :: Maybe Text,
     vehicle_variant :: Maybe Text,
     created_at :: Maybe UTCTime,
     status :: Maybe Text,
-    updated_at :: Maybe UTCTime
+    updated_at :: Maybe UTCTime,
+    bus_service_type_id :: Maybe Text,
+    entity_id :: Maybe Text,
+    organization_id :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
@@ -1270,7 +1271,10 @@ data VehicleUpsertRequest = VehicleUpsertRequest
     fleet_no :: Maybe Text,
     tag_number :: Maybe Text,
     status :: Maybe Text,
-    vehicle_variant :: Maybe Text
+    vehicle_variant :: Maybe Text,
+    bus_service_type_id :: Maybe Text,
+    entity_id :: Maybe Text,
+    organization_id :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 

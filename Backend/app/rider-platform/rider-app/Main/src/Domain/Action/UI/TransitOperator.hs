@@ -379,7 +379,10 @@ transitOperatorUpsertVehiclesUtil merchantShortId city vehicleCategory items = d
         req{vehicle_no = vNo,
             fleet_no = nonBlankText req.fleet_no,
             tag_number = nonBlankText req.tag_number,
-            status = nonBlankText req.status
+            status = nonBlankText req.status,
+            bus_service_type_id = nonBlankText req.bus_service_type_id,
+            entity_id = nonBlankText req.entity_id,
+            organization_id = nonBlankText req.organization_id
            }
 
 transitOperatorDeleteVehicleUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Flow RowsAffectedResp
