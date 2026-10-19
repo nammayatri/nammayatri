@@ -198,10 +198,21 @@ data TicketStatusCallBackReq = TicketStatusCallBackReq
   { ticketId :: Text,
     status :: Text,
     subStatus :: Maybe Text,
-    queue :: Maybe Text
+    queue :: Maybe Text,
+    shortDesc :: Maybe Text,
+    resolution :: Maybe TicketStatusResolution
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToSchema)
+
+data TicketStatusResolution = TicketStatusResolution
+  { shortDesc :: Maybe Text,
+    longDesc :: Maybe Text,
+    actionTriggered :: Maybe Text,
+    refundAmount :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance FromJSON TicketStatusCallBackReq where
   parseJSON = withObject "TicketStatusCallBackReq" $ \v ->
@@ -210,6 +221,8 @@ instance FromJSON TicketStatusCallBackReq where
       <*> v .: "status"
       <*> parseSubStatus v
       <*> v .:? "queue"
+      <*> v .:? "shortDesc"
+      <*> v .:? "resolution"
     where
       parseSubStatus :: Object -> Parser (Maybe Text)
       parseSubStatus v = firstJustM (v .:?) ["subStatus", "sub_status", "sub-status"]
