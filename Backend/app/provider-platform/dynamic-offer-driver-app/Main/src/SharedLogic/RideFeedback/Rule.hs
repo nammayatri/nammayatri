@@ -1,5 +1,6 @@
 module SharedLogic.RideFeedback.Rule
   ( evaluateRule,
+    decodeCondition,
     unsupportedOperators,
     supportedOperatorNames,
     stableBucket,
@@ -12,6 +13,7 @@ import qualified Data.Aeson.KeyMap as KM
 import Data.Char (ord)
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Vector as V
 import JsonLogic (isOperatorKey, jsonLogicEither, operationKeys, specialOperationKeys)
 import Kernel.Prelude
@@ -27,10 +29,19 @@ isSupportedOperator op = isOperatorKey (AK.fromText (fromMaybe op (T.stripSuffix
 supportedOperatorNames :: [Text]
 supportedOperatorNames = map AK.toText (Set.toAscList (specialOperationKeys <> operationKeys))
 
+-- | An action rule's condition as json-logic. Config Pilot applies a patch by running it as json-logic,
+-- which would also run a condition written into the patch as an object (leaving only its result), so
+-- the dashboard sends conditions as JSON text, which a patch passes through. Conditions stored as
+-- objects still work.
+decodeCondition :: A.Value -> Either Text A.Value
+decodeCondition (A.String txt) = either (Left . ("condition is not valid JSON: " <>) . T.pack) Right $ A.eitherDecodeStrict (TE.encodeUtf8 txt)
+decodeCondition rule = Right rule
+
 -- | A missing rule always matches. A rule matches only when it evaluates to exactly @true@.
 evaluateRule :: A.ToJSON ctx => Maybe A.Value -> ctx -> Either Text Bool
 evaluateRule Nothing _ = Right True
-evaluateRule (Just rule) ctx =
+evaluateRule (Just condition) ctx = do
+  rule <- decodeCondition condition
   case unsupportedOperators rule of
     ops@(_ : _) -> Left $ "Unsupported json-logic operators: " <> T.intercalate ", " ops
     [] -> case jsonLogicEither rule (A.toJSON ctx) of

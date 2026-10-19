@@ -8,6 +8,7 @@ module SharedLogic.RideFeedback.Actions
 where
 
 import qualified API.Types.UI.RideFeedback as API
+import qualified Amazonka.Types as AWS
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as KM
@@ -29,6 +30,7 @@ import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Utils.Common
+import qualified Network.HTTP.Types as HTTP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Person as SLP
 import SharedLogic.RideFeedback.Types (MatchedFeedbackAction (..), RideFeedbackActionResult (..), RideFeedbackActionStatus (..), RideFeedbackActionType (..))
@@ -93,10 +95,14 @@ runAction env action = do
 
 -- | Short, secret-free description of a failure for storage and logs. HTTP client errors render
 -- the whole request (including auth headers such as the BPP internal token) after "Request {",
--- so the text is cut there, at the first line break, and at 200 characters.
+-- so the text is cut there, at the first line break, and at 200 characters. AWS service errors
+-- show their response headers first, which would push the error code past the cut, so they are
+-- reduced to status, code and message.
 summarizeError :: SomeException -> Text
-summarizeError =
-  T.take 200 . T.strip . fst . T.breakOn "Request {" . T.takeWhile (/= '\n') . show
+summarizeError err = T.take 200 . T.strip $ case fromException err of
+  Just (AWS.ServiceError AWS.ServiceError' {AWS.status = httpStatus, AWS.code = AWS.ErrorCode errCode, AWS.message = errMessage}) ->
+    "AWS " <> show (HTTP.statusCode httpStatus) <> " " <> errCode <> maybe "" ((": " <>) . AWS.fromErrorMessage) errMessage
+  _ -> fst . T.breakOn "Request {" . T.takeWhile (/= '\n') $ show err
 
 -- | Left = invalid configuration (not retried); Right = done, with an optional external reference.
 executeAction :: ActionEnv -> MatchedFeedbackAction -> Flow (Either Text (Maybe Text))
@@ -166,11 +172,13 @@ executeAction env action = case action.actionType of
 
     createTicket category subCategory queue = do
       phoneNumber <- mapM decrypt env.person.mobileNumber
+      -- Xyne needs an id for the ticket's thread; each feedback ticket is its own thread.
+      ticketThreadId <- generateGUID
       let req =
             Ticket.CreateTicketReq
               { category,
                 subCategory,
-                issueId = Nothing,
+                issueId = Just ticketThreadId,
                 issueDescription = answerSummary,
                 mediaFiles = Nothing,
                 name = Just $ SLP.getName env.person,
