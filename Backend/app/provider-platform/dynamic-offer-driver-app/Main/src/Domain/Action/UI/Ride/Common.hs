@@ -340,8 +340,9 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam pay
         fromMaybe (fromMaybe 0 estimatedFareParam.airportConvenienceFee) (finalFareParam >>= (.airportConvenienceFee))
       serviceCharge =
         fromMaybe (fromMaybe 0 estimatedFareParam.serviceCharge) (finalFareParam >>= (.serviceCharge))
+      -- A completed ride always has final fare params, and their toll is what the fare contains, so a missing final toll is zero and not the estimate.
       tollAmount =
-        fromMaybe (fromMaybe 0 estimatedFareParam.tollCharges) (finalFareParam >>= (.tollCharges))
+        fromMaybe 0 (fromMaybe estimatedFareParam finalFareParam).tollCharges
   let mkComp sec key mbLabel value applicable =
         if applicable
           then

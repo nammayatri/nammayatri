@@ -1080,7 +1080,7 @@ TransporterConfig:
       maxApprovalAttempts: Maybe Int # defaults to 3 when absent
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     RideEvidenceConfig:
-      enabled: Maybe Bool # on when absent
+      enabled: Maybe Bool # off when absent
       maxFilesPerRide: Maybe Int # defaults to 100 when absent
       completedRideWindowHours: Maybe Int # defaults to 72 when absent
       linkExpirySeconds: Maybe Int # defaults to 300 when absent
