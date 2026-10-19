@@ -3,7 +3,6 @@ module Domain.Action.UI.CustomerReferral where
 import API.Types.UI.CustomerReferral
 import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Action.Internal.Payout as DPayout
-import qualified Domain.Action.UI.Payout as UIPayout
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as MerchantOpCity
 import qualified Domain.Types.Person as Person
@@ -14,6 +13,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as KT
 import qualified Kernel.External.Payout.Interface as Payout
+import qualified Kernel.External.Payout.Juspay.Types.Payout as JuspayPayout
 import Kernel.External.Types (SchedulerFlow)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -27,7 +27,9 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as DP
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import qualified SharedLogic.Referral as Referral
 import Storage.Beam.Payment ()
@@ -85,9 +87,12 @@ getReferralPayoutHistory (mbPersonId, _mbMerchantId) mbLimit mbOffset = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   payoutOrders <- QPayoutOrder.findAllByCustomerIdWithLimitOffset mbLimit mbOffset personId.getId
-  refreshedOrders <- forM payoutOrders $ \payoutOrder ->
-    if isPayoutOrderTerminal payoutOrder.status
-      then pure payoutOrder
+  history <- forM payoutOrders $ \payoutOrder -> do
+    mbRequestStatus <- findPayoutRequestStatus payoutOrder
+    -- a paid request needs no refresh; a failed one still does, since a failed create call
+    -- does not prove Juspay never got the order
+    if isFinalOrderStatus payoutOrder.status || (mbRequestStatus >>= requestPayoutStatus) == Just PS.Success
+      then pure $ getPayoutOrderDetails payoutOrder mbRequestStatus
       else do
         void $
           withTryCatch ("getReferralPayoutHistory:refreshPayoutStatus:" <> payoutOrder.orderId) $ do
@@ -99,19 +104,49 @@ getReferralPayoutHistory (mbPersonId, _mbMerchantId) mbLimit mbOffset = do
             let payoutStatusServiceReq = DP.PayoutStatusServiceReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
                 payoutOrderStatusCall = TPayout.payoutOrderStatus person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just personId.getId)
             DP.payoutStatusService (cast person.merchantId) (cast personId) payoutStatusServiceReq payoutOrderStatusCall
-        QPayoutOrder.findByOrderId payoutOrder.orderId <&> fromMaybe payoutOrder
-  let history = map getPayoutOrderDetails refreshedOrders
+        refreshedOrder <- QPayoutOrder.findByOrderId payoutOrder.orderId <&> fromMaybe payoutOrder
+        pure $ getPayoutOrderDetails refreshedOrder mbRequestStatus
   pure $ PayoutHistory {..}
   where
-    isPayoutOrderTerminal status = UIPayout.isPayoutOrderSuccess status || UIPayout.isPayoutStatusFailed status
-    getPayoutOrderDetails payoutOrder =
-      PayoutItem
-        { amount = payoutOrder.amount.amount,
-          vpa = payoutOrder.vpa,
-          payoutAt = payoutOrder.createdAt,
-          payoutStatus = DPayout.castOrderStatus payoutOrder.status,
-          orderId = payoutOrder.orderId
-        }
+    -- the payout request id is the order's first entity id; orders without a request get Nothing
+    findPayoutRequestStatus payoutOrder =
+      case Kernel.Prelude.listToMaybe =<< payoutOrder.entityIds of
+        Just payoutRequestId -> fmap (.status) <$> QPR.findById (Id payoutRequestId)
+        Nothing -> pure Nothing
+
+    requestPayoutStatus = \case
+      DPR.CREDITED -> Just PS.Success
+      DPR.CASH_PAID -> Just PS.Success
+      DPR.AUTO_PAY_FAILED -> Just PS.Failed
+      DPR.FAILED -> Just PS.Failed
+      DPR.CANCELLED -> Just PS.Failed
+      _ -> Nothing
+
+    isFinalOrderStatus orderStatus = orderPayoutStatus orderStatus `elem` [PS.Success, PS.Failed]
+
+    orderPayoutStatus = \case
+      JuspayPayout.DISCARDED -> PS.Failed
+      JuspayPayout.INVALID -> PS.Failed
+      JuspayPayout.REVERSED -> PS.Failed
+      JuspayPayout.CONFLICTED -> PS.ManualReview
+      JuspayPayout.MANUAL_REVIEW -> PS.ManualReview
+      orderStatus -> DPayout.castOrderStatus orderStatus
+
+    -- success on the order or the request wins, then a final order status, then a failed request
+    getPayoutOrderDetails payoutOrder mbRequestStatus =
+      let orderStatus = orderPayoutStatus payoutOrder.status
+          requestStatus = mbRequestStatus >>= requestPayoutStatus
+       in PayoutItem
+            { amount = payoutOrder.amount.amount,
+              vpa = payoutOrder.vpa,
+              payoutAt = payoutOrder.createdAt,
+              payoutStatus =
+                if
+                    | orderStatus == PS.Success || requestStatus == Just PS.Success -> PS.Success
+                    | orderStatus == PS.Failed -> PS.Failed
+                    | otherwise -> fromMaybe orderStatus requestStatus,
+              orderId = payoutOrder.orderId
+            }
 
 postPayoutVpaUpsert :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> UpdatePayoutVpaReq -> Flow APISuccess
 postPayoutVpaUpsert (mbPersonId, _mbMerchantId) req = do
