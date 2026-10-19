@@ -11,6 +11,7 @@ import qualified Lib.ConfigPilot.Interface.Getter as LCP
 import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
+import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.TransporterConfig as QTransporterConfig
 
