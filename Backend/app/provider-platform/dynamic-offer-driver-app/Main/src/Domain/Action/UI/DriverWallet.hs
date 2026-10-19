@@ -595,7 +595,12 @@ getWalletPayoutHistory (mbPersonId, _merchantId, _mocId) mbFrom mbTo mbStatuses 
           payoutMethod = i.payoutMethod,
           payoutVpa = i.payoutVpa,
           bankName = i.bankName,
-          bankAccountLast4 = i.bankAccountLast4
+          bankAccountLast4 = i.bankAccountLast4,
+          payoutType = i.payoutType,
+          transactionId = i.transactionId,
+          bankReference = i.bankReference,
+          bankReferenceType = i.bankReferenceType,
+          statusUpdatedAt = Just i.statusUpdatedAt
         }
 
 --------------------------------------------------------------------------------
