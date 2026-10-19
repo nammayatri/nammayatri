@@ -19,20 +19,45 @@ import qualified Domain.Types.RideFeedbackConfig as DRFC
 import IssueManagement.Common (IssueReportType (..))
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
-import SharedLogic.RideFeedback.Rule (unsupportedOperators)
+import SharedLogic.RideFeedback.Rule (decodeCondition, unsupportedOperators)
 
 -- | Problems with a Config Pilot patch of a city's questions, given the questions before and after
 -- it (same order): a patch may change any question's content, but not which questions exist, their
--- ids or city.
+-- ids or city, nor what stored answers and rules refer to (see 'lockedFieldErrors').
 validatePatchedCity :: [DRFC.RideFeedbackConfig] -> [DRFC.RideFeedbackConfig] -> [Text]
 validatePatchedCity before after =
   check (sort (map (.id.getId) before) == sort (map (.id.getId) after)) "a patch cannot add, remove or re-id questions"
     <> check (all (\(b, a) -> b.merchantOperatingCityId == a.merchantOperatingCityId && b.merchantId == a.merchantId) (zip before after)) "a patch cannot move a question to another city"
     <> check (length (nub keys) == length keys) "questionKeys must stay unique in the city"
+    <> concat [map ((a.questionKey <> ": ") <>) (lockedFieldErrors b a) | a <- after, Just b <- [find ((== a.id) . (.id)) before]]
     <> concat [map ((c.questionKey <> ": ") <>) (validateConfig after c) | c <- after]
   where
     keys = map (.questionKey) after
     check cond msg = [msg | not cond]
+
+-- | Edits that would leave stored answers and rules pointing at something else. Answers are kept
+-- with the question's type, so a different type is a new question. Action rules match option keys,
+-- so an option a rule still matches cannot be removed (a renamed key counts as removed): the rule
+-- has to be changed in the same edit, or it would silently stop matching.
+lockedFieldErrors :: DRFC.RideFeedbackConfig -> DRFC.RideFeedbackConfig -> [Text]
+lockedFieldErrors before after =
+  [ "the question type cannot be changed (" <> show before.questionType <> " to " <> show after.questionType <> "): create a new question and disable this one"
+    | before.questionType /= after.questionType
+  ]
+    <> [ "option " <> removed <> " is removed but action rule " <> rule.ruleId <> " still matches it: change or remove the rule in the same edit"
+         | removed <- optionKeys before \\ optionKeys after,
+           rule <- fromMaybe [] after.actionRules,
+           removed `elem` conditionStrings rule
+       ]
+  where
+    optionKeys c = map (.key) (fromMaybe [] c.options)
+    -- Option keys appear in a condition as string literals ("NO" in {"==":[{"var":"answer.primaryOptionKey"},"NO"]}).
+    conditionStrings rule = either (const []) strings (maybe (Right A.Null) decodeCondition rule.condition)
+    strings = \case
+      A.String t -> [t]
+      A.Array vs -> concatMap strings (toList vs)
+      A.Object obj -> concatMap strings (KM.elems obj)
+      _ -> []
 
 -- | Human-readable problems with a question config; empty means valid.
 -- 'cityConfigs' are the other questions of the same city (to resolve option.nextQuestionKey).
@@ -115,13 +140,15 @@ validateConfig cityConfigs c =
         <> check (null (ruleIds \\ nub ruleIds)) "action rule ids must be unique"
         <> concatMap ruleErrors rules
     ruleErrors rule =
-      [ "action rule " <> rule.ruleId <> " uses unsupported operators: " <> T.intercalate ", " ops
-        | Just cond <- [rule.condition],
-          let ops = unsupportedOperators cond,
-          not (null ops)
-      ]
+      conditionErrors rule
         <> check (not (null rule.actions)) ("action rule " <> rule.ruleId <> " has no actions")
         <> concatMap (actionErrors rule.ruleId) rule.actions
+    conditionErrors rule = case decodeCondition <$> rule.condition of
+      Nothing -> []
+      Just (Left err) -> ["action rule " <> rule.ruleId <> ": " <> err]
+      Just (Right cond) ->
+        let ops = unsupportedOperators cond
+         in ["action rule " <> rule.ruleId <> " uses unsupported operators: " <> T.intercalate ", " ops | not (null ops)]
     actionErrors ruleId action =
       check
         (not (bookingQuestion && needsRide action.actionType))

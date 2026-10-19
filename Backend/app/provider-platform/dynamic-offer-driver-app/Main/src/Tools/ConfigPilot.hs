@@ -241,7 +241,7 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
     LYT.DRIVER_CONFIG LYT.DocumentVerificationStagesConfig -> do
       handleConfigUpdateViaJson (\mocId' -> SQDVSC.findAllByMerchantOpCityId Nothing Nothing mocId') (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.DocumentVerificationStagesConfig)) SQDVSC.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.RideFeedbackConfig -> do
-      handleConfigUpdateViaJson SQRFC.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.RideFeedbackConfig)) SQRFC.updateByPrimaryKey (cast merchantOpCityId)
+      handleConfigUpdateViaJson RFC.findAllCurrent (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.RideFeedbackConfig)) SQRFC.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.GoHomeConfig -> do
       handleConfigUpdateViaJson (\mocId' -> maybeToList <$> SQGHC.findByMerchantOpCityId mocId') (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.GoHomeConfig)) SQGHC.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.LeaderBoardConfig -> do

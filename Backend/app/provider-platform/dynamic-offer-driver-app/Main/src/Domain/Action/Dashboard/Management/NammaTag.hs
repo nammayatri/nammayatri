@@ -175,7 +175,7 @@ import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsa
 import Storage.ConfigPilot.Config.Overlay (OverlayDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.ReminderConfig (ReminderConfigDimensions (..))
-import Storage.ConfigPilot.Config.RideFeedbackConfig (RideFeedbackConfigDimensions (..))
+import Storage.ConfigPilot.Config.RideFeedbackConfig (RideFeedbackConfigDimensions (..), findAllCurrent)
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.TagActionNotificationConfig (TagActionNotificationConfigDimensions (..))
@@ -1320,7 +1320,7 @@ postNammaTagConfigPilotCreateRow _merchantShortId _opCity configType req = do
 -- is served them outside any staged change.
 patchRideFeedbackCity :: Id DMOC.MerchantOperatingCity -> [A.Value] -> Environment.Flow ([DRFCfg.RideFeedbackConfig], Either [Text] [DRFCfg.RideFeedbackConfig])
 patchRideFeedbackCity merchantOpCityId rules = do
-  rows <- SQRFCfg.findAllByMerchantOperatingCityId merchantOpCityId
+  rows <- findAllCurrent merchantOpCityId
   let domain = LYT.DRIVER_CONFIG LYT.RideFeedbackConfig
   mbBase <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) domain
   baseLogics <- maybe (pure []) (\base -> map (.logic) <$> CADLE.findByDomainAndVersion domain base.version) mbBase

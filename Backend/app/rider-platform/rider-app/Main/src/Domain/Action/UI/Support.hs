@@ -133,13 +133,15 @@ safetyCheckSupport (personId, _merchantId) req = do
   where
     ticketReq ride person phoneNumber description disposition queue = do
       rideDesc <- mkRideInfo (Just ride) person phoneNumber
+      -- Xyne needs an id for the ticket's thread; each safety check ticket is its own thread.
+      ticketThreadId <- L.generateGUID
       pure $
         Ticket.CreateTicketReq
           { category = "Code Red",
             subCategory = Just "Night safety check",
             disposition,
             queue,
-            issueId = Nothing,
+            issueId = Just ticketThreadId,
             issueDescription = description,
             mediaFiles = Just [show ride.trackingUrl],
             name = Just $ SLP.getName person,
