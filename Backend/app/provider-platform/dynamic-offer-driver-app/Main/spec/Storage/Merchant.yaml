@@ -1586,6 +1586,7 @@ TransporterConfig:
     overrideOperatorDriverJoiningWithDeepLink: Maybe Bool
     mandateEmailVerification: Maybe Bool
     forceDirectCalling: Maybe Bool
+    showRoutePerRequest: Maybe Bool # When True, the driver app shows the route on the ride request popup and the ride-assigned screen
     allowNonFleetDriverLiveMap: Maybe Bool
     allowInvalidRcDeletionOnReplacement: Maybe Bool # When True, allows deleting an invalid RC and its driver/fleet associations when a replacement RC is submitted
     metricsDistanceBucketsKm: "Maybe [Int]" # BPP funnel distance buckets: upper edges in KILOMETRES, ascending, max 4, e.g. {5,12,30}. Nothing = defaults (5/12/30 km, matching ClickHouse trip_distance_bin). See SharedLogic.MetricsLabels.distanceBucketEdges for how a config is validated and when it is rejected.
@@ -2193,6 +2194,7 @@ TransporterConfig:
     isGstPanLinkCheckRequired: "false"
     useCategoryBasedVerificationPriorityList: "true"
     forceDirectCalling: "false"
+    showRoutePerRequest: "false"
     enableOndcScheduledRideSupport: "false"
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -2268,6 +2270,7 @@ TransporterConfig:
         - enableBppReallocation
         - manualTollChargeConfig
         - rideEvidenceConfig
+        - showRoutePerRequest
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId

@@ -348,6 +348,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.RegistrationToken as QRegister
 import Storage.Queries.Ride as Ride
+import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.RiderDriverCorrelation as QRDC
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -1975,13 +1976,14 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       (estimate :: Maybe Estimate) <- runInReplica $ QEst.findById (Id searchTry.estimateId)
       bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id searchRequest.bapId) Domain.MOBILITY
       isValueAddNP <- CQVAN.isValueAddNP searchRequest.bapId
+      mbRiderDetails <- maybe (pure Nothing) (runInReplica . QRiderDetails.findById) searchRequest.riderId
       farePolicy <- getFarePolicyByEstOrQuoteId (Just $ Maps.getCoordinates searchRequest.fromLocation) (Just . Maps.getCoordinates =<< searchRequest.toLocation) searchRequest.fromLocGeohash searchRequest.toLocGeohash searchRequest.estimatedDistance searchRequest.estimatedDuration searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) Nothing Nothing searchRequest.dynamicPricingLogicVersion (Just (TransactionId (Id searchRequest.transactionId))) searchRequest.configInExperimentVersions searchRequest.specialLocationName
       popupDelaySeconds <- DP.getPopupDelay merchantOpCityId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       let useSilentFCMForForwardBatch = transporterConfig.useSilentFCMForForwardBatch
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
           parkingCharges = farePolicy.parkingCharge
       let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) farePolicy.conditionalCharges
-      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (Just transporterConfig.driverWalletConfig) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (Just transporterConfig.driverWalletConfig) mbRiderDetails transporterConfig.showRoutePerRequest -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 

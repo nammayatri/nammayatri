@@ -25,6 +25,7 @@ import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.ParcelType as DParcel
+import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchReqLocation as DSSL
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
@@ -124,6 +125,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     isPaymentOnline :: Maybe Bool,
     driverCancellationNotAllowed :: Maybe Bool,
     isScheduled :: Bool,
+    customerRating :: Maybe Centesimal,
+    showRoutePerRequest :: Maybe Bool,
     -- Only present when at least one of the driver's own preferences applied to this request.
     preferenceMatchScore :: Maybe Double
   }
@@ -131,8 +134,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
 
 $(deriveJSON defaultOptions {omitNothingFields = True} ''SearchRequestForDriverAPIEntity)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe DTConf.DriverWalletConfig -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge safetyCharges congestionCharges petCharges priorityCharges tollCharges mbDriverWalletConfig = do
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe DTConf.DriverWalletConfig -> Maybe DRD.RiderDetails -> Maybe Bool -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge safetyCharges congestionCharges petCharges priorityCharges tollCharges mbDriverWalletConfig mbRiderDetails showRoutePerRequest = do
   let isTollApplicable = DTC.isTollApplicableForTrip requestedVehicleServiceTier searchTry.tripCategory
       specialZoneExtraTip = (\a -> if a == 0 then Nothing else Just a) =<< min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation
       driverDefaultStepFee = specialZoneExtraTip <|> nearbyReq.driverDefaultStepFee
@@ -221,6 +224,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           commissionCharges = nearbyReq.commissionCharges,
           isPaymentOnline = deriveIsPaymentOnline searchTry.paymentInstrument,
           driverCancellationNotAllowed = nearbyReq.driverCancellationNotAllowed,
+          customerRating = mbRiderDetails >>= (.customerRating),
           ..
         }
   where
