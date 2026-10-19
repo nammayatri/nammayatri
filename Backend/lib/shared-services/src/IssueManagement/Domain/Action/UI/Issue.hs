@@ -896,7 +896,10 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
           ((chat, Left botMessage) : rest) -> (Just botMessage, Just "Auto Reply", xyneChatExternalId issueReport.id chat, rest)
           ((chat, Right userText) : rest) -> (Just userText, Nothing, xyneChatExternalId issueReport.id chat, rest)
     ticket <- buildTicket issueReport categoryText mbCategory mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles mbTicketBody mbSenderName ticketExternalId
-    ticketResponse <- withTryCatch "createTicket:issueReport" (issueHandle.createTicket merchantId mocId ticket)
+    -- Not 'withShortRetry': that only retries connection errors / 503 on a typed
+    -- ExternalAPICallError, and the Xyne client already re-wraps failures as
+    -- InternalError before they reach us (NY-143422 was a plain 500).
+    ticketResponse <- createTicketWithRetry (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right (primaryResp, additionalId) -> do
         QIR.updateTicketIds issueReport.id primaryResp.ticketId additionalId
@@ -1791,6 +1794,22 @@ mediaFileToTicketUri iHandle mf = do
 -------------------------------------------------------------------------
 -- Live chat (rider/driver-side) --------------------------------------
 
+createTicketMaxAttempts :: Int
+createTicketMaxAttempts = 3
+
+createTicketWithRetry :: BeamFlow m r => m a -> m (Either SomeException a)
+createTicketWithRetry = go 1
+  where
+    go attempt action = do
+      result <- withTryCatch "createTicket:issueReport" action
+      case result of
+        Left err | attempt < createTicketMaxAttempts -> do
+          logTagInfo ("Create Ticket API failed (attempt " <> show attempt <> "), retrying - ") (show err)
+          -- 1s, then 2s: same shape as the kernel's 'retryAction' backoff.
+          threadDelaySec $ Seconds (2 ^ (attempt - 1))
+          go (attempt + 1) action
+        _ -> pure result
+
 -- | Rider (or driver) posts a chat message against an existing issue.
 -- Enforces that the caller owns the issue before persisting. After the local
 -- ChatMessage row is written, the message is forwarded to the merchant's
@@ -1882,10 +1901,16 @@ forwardChatToTicketService issueReport identifier issueHandle messageText mediaI
       -- is XyneSpaces). Without the gate, Zendesk/Kapture tickets would also
       -- receive duplicate comments from every chat write.
       shouldForward <- maybe (pure False) (\chk -> chk merchantId mocId) issueHandle.mbShouldForwardChatToTicketService
-      when shouldForward $ doForward merchantId mocId
+      when shouldForward $
+        case issueReport.additionalTicketIds <|> issueReport.ticketId of
+          -- No provider ticket stored: createTicket failed or never ran. Posting
+          -- against the threadId now would make Xyne open a second, metadata-less
+          -- ticket for this issue (NY-143422), so skip rather than fall back.
+          Nothing -> logTagInfo "Chat forward skipped - no ticket on issueReport " issueReport.id.getId
+          Just xyneTicketId -> doForwardTo merchantId mocId xyneTicketId
     _ -> pure ()
   where
-    doForward merchantId mocId = do
+    doForwardTo merchantId mocId xyneTicketId = do
       mbCategory <- case issueReport.categoryId of
         Just cid -> CQIC.findById cid identifier
         Nothing -> pure Nothing
@@ -1901,14 +1926,9 @@ forwardChatToTicketService issueReport identifier issueHandle messageText mediaI
       mbSenderPhone <- case mbSender of
         Just p -> traverse decrypt p.mobileNumber
         Nothing -> pure Nothing
-      -- When Xyne runs as a secondary its ticketId is in additionalTicketIds;
-      -- when it runs as the primary its ticketId is in 'ticketId'. Falling back
-      -- to 'issueReport.id.getId' preserves the historical behaviour of using
-      -- the internal issueReportId as the Xyne threadId when no ticket has
-      -- been created yet (e.g. Beckn IGM flows).
-      let xyneTicketId =
-            fromMaybe (fromMaybe issueReport.id.getId issueReport.ticketId) issueReport.additionalTicketIds
-          ticketReq =
+      -- xyneTicketId is additionalTicketIds when Xyne runs as a secondary,
+      -- ticketId when it is the primary (resolved by the caller above).
+      let ticketReq =
             TIT.UpdateTicketReq
               { comment = messageText,
                 ticketId = xyneTicketId,
@@ -1960,19 +1980,23 @@ forwardChatToTicketServiceAs senderLabel issueReport identifier issueHandle mess
   case (issueReport.merchantId, issueReport.merchantOperatingCityId) of
     (Just merchantId, Just mocId) -> do
       shouldForward <- maybe (pure False) (\chk -> chk merchantId mocId) issueHandle.mbShouldForwardChatToTicketService
-      when shouldForward $ doForward merchantId mocId
+      when shouldForward $
+        case issueReport.additionalTicketIds <|> issueReport.ticketId of
+          -- No provider ticket stored: createTicket failed or never ran. Posting
+          -- against the threadId now would make Xyne open a second, metadata-less
+          -- ticket for this issue (NY-143422), so skip rather than fall back.
+          Nothing -> logTagInfo "Chat forward skipped - no ticket on issueReport " issueReport.id.getId
+          Just xyneTicketId -> doForwardTo merchantId mocId xyneTicketId
     _ -> pure ()
   where
-    doForward merchantId mocId = do
+    doForwardTo merchantId mocId xyneTicketId = do
       mbCategory <- case issueReport.categoryId of
         Just cid -> CQIC.findById cid identifier
         Nothing -> pure Nothing
       mediaUrls <- fmap catMaybes . forM mediaIds $ \mfId -> do
         mbFile <- CQMF.findById mfId identifier
         traverse (mediaFileToTicketUri issueHandle) mbFile
-      let xyneTicketId =
-            fromMaybe (fromMaybe issueReport.id.getId issueReport.ticketId) issueReport.additionalTicketIds
-          ticketReq =
+      let ticketReq =
             TIT.UpdateTicketReq
               { comment = messageText,
                 ticketId = xyneTicketId,
