@@ -148,8 +148,8 @@ the public pages follow; this stack changed only the words a person reads:
 the Chargily checkout description and the wallet « done » page title
 (`maps-shim/wallet.js`), the WhatsApp « numéro vérifié » reply
 (`auth-guard/whatsapp.js`) and the `sms`-mode text (`auth-guard/gateway.js`).
-The private bot's messages still start « Movin · » (the owner reads them; say if
-he wants them changed).
+The private bot's messages (`movin-bot.py`) start « Mova · » since 2026-10-19
+(33 lines; the file and the service keep their `movin-` names).
 
 **Left as « Movin » on purpose, each for a reason that is not cosmetic:**
 

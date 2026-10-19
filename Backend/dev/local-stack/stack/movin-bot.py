@@ -333,11 +333,11 @@ def check_registrations(_):
         if int(decl or 0):
             papers += ", véhicule déclaré"
         out.append((f"reg:new:{pid}", "normal",
-                    f"Movin · {headline}\n{land}\n\n{name}\n{number}\n"
+                    f"Mova · {headline}\n{land}\n\n{name}\n{number}\n"
                     f"{papers}\nÀ l'instant\n\nhttps://admin.movinapp.net"))
         if hours >= PATIENCE_H:
             out.append((f"reg:waited:{pid}", "normal",
-                        f"Movin · chauffeur toujours en attente\n{land}\n\n{name}\n{number}\n"
+                        f"Mova · chauffeur toujours en attente\n{land}\n\n{name}\n{number}\n"
                         f"{papers}\nEn attente depuis {hours} h\n\n"
                         f"https://admin.movinapp.net"))
     return out
@@ -356,13 +356,13 @@ def check_sms_budget(_):
         return []
     if b.get("exhausted"):
         return [("sms:exhausted", "loud",
-                 f"Movin · BUDGET SMS ÉPUISÉ\n\n{hour}/{hmax} cette heure, "
+                 f"Mova · BUDGET SMS ÉPUISÉ\n\n{hour}/{hmax} cette heure, "
                  f"{day}/{dmax} aujourd'hui.\n\nPlus aucun code n'est envoyé : "
                  f"les nouvelles inscriptions échouent jusqu'à ce que la limite "
                  f"soit relevée ou que l'heure passe.")]
     if hour * 5 >= hmax * 4 or day * 5 >= dmax * 4:
         return [("sms:low", "loud",
-                 f"Movin · budget SMS bientôt atteint\n\n{hour}/{hmax} cette heure, "
+                 f"Mova · budget SMS bientôt atteint\n\n{hour}/{hmax} cette heure, "
                  f"{day}/{dmax} aujourd'hui.")]
     return []
 
@@ -381,7 +381,7 @@ def check_sms_gateway(state):
         return []
     state["sms:lasterror"] = err
     return [("sms:gateway:" + str(abs(hash(err)) % 10**8), "loud",
-             f"Movin · la passerelle SMS a refusé un envoi\n\n{str(err)[:300]}")]
+             f"Mova · la passerelle SMS a refusé un envoi\n\n{str(err)[:300]}")]
 
 
 # Minutes of silence before the office SMS phone is called gone. Its
@@ -420,7 +420,7 @@ def check_sms_phone(state):
     if silent >= SMS_PHONE_SILENT_MIN:
         state["smsphone:down"] = heard.isoformat()
         return [("smsphone:silent", "loud",
-                 f"Movin · le téléphone SMS de l'agence ne répond plus\n\n"
+                 f"Mova · le téléphone SMS de l'agence ne répond plus\n\n"
                  f"Aucun message ni signe de vie depuis {int(silent)} min "
                  f"(dernier : {heard.astimezone().strftime('%H:%M')}).\n\n"
                  f"{names} : ceux qui choisissent « Confirmer en nous envoyant un "
@@ -429,7 +429,7 @@ def check_sms_phone(state):
                  f"toujours.")]
     if state.pop("smsphone:down", None):
         return [("smsphone:back:" + str(last), "loud",
-                 "Movin · le téléphone SMS de l'agence répond de nouveau ✅")]
+                 "Mova · le téléphone SMS de l'agence répond de nouveau ✅")]
     return []
 
 
@@ -444,7 +444,7 @@ def check_wallet(_):
     for did, number, bal, merchant in (neg or []):
         c = country_of(merchant)
         out.append((f"wallet:neg:{did}", "normal",
-                    f"Movin · porte-monnaie négatif\n{where(merchant)}\n\n{number}\n"
+                    f"Mova · porte-monnaie négatif\n{where(merchant)}\n\n{number}\n"
                     f"Solde : {bal} {c['cur'] if c else ''}".rstrip()))
     tops = psql("""
       SELECT t.transaction_id, p.unencrypted_mobile_number, t.amount, t.currency,
@@ -455,7 +455,7 @@ def check_wallet(_):
          AND t.credited_at > now() - interval '2 days'""")
     for txn, number, amount, cur, merchant in (tops or []):
         out.append((f"wallet:topup:{txn}", "normal",
-                    f"Movin · rechargement reçu\n{where(merchant)}\n\n{number}\n"
+                    f"Mova · rechargement reçu\n{where(merchant)}\n\n{number}\n"
                     f"{amount} {CURRENCY_LABEL.get(cur, cur or '')}".rstrip()))
     return out
 
@@ -478,18 +478,18 @@ def check_deletions(_):
         who = "passager" if (side or "").lower().startswith("rider") else "chauffeur"
         why = f"\nMotif : « {reason[:300]} »" if reason else ""
         out.append((f"del:new:{rid}", "normal",
-                    f"Movin · demande de suppression de compte\n{where(phone=phone)}\n\n"
+                    f"Mova · demande de suppression de compte\n{where(phone=phone)}\n\n"
                     f"{phone} ({who}){why}\n"
                     f"Demandé le {asked}\nÀ traiter avant le {due}\n\n"
                     f"https://admin.movinapp.net"))
         if left < 0:
             out.append((f"del:overdue:{rid}", "loud",
-                        f"Movin · SUPPRESSION EN RETARD\n\n{phone} ({who})\n"
+                        f"Mova · SUPPRESSION EN RETARD\n\n{phone} ({who})\n"
                         f"L'échéance du {due} est dépassée de {abs(left)} jour(s).\n\n"
                         f"https://admin.movinapp.net"))
         elif left <= 3:
             out.append((f"del:soon:{rid}", "loud",
-                        f"Movin · suppression à traiter\n\n{phone} ({who})\n"
+                        f"Mova · suppression à traiter\n\n{phone} ({who})\n"
                         f"Échéance le {due} — {left} jour(s)."))
     return out
 
@@ -517,7 +517,7 @@ def check_no_rides(_):
     if hours < NO_RIDES_H:
         return []
     return [("rides:silent", "normal",
-             f"Movin · aucune course depuis {hours:.0f} h\n\n"
+             f"Mova · aucune course depuis {hours:.0f} h\n\n"
              f"Si c'est inhabituel à cette heure, cela ressemble aux pannes "
              f"silencieuses connues : positions périmées, dispatch, ou recherche "
              f"qui ne renvoie aucun prix.")]
@@ -543,7 +543,7 @@ def check_zero_estimates(_):
     if total < 3 or empty < total:
         return []
     return [("search:zero", "normal",
-             f"Movin · {total} recherche(s) dans l'heure, aucune offre\n\n"
+             f"Mova · {total} recherche(s) dans l'heure, aucune offre\n\n"
              f"Chaque recherche est repartie sans un seul prix. C'est le symptôme "
              f"d'un dispatch en panne, pas d'une absence de clients.")]
 
@@ -567,7 +567,7 @@ def check_stale_positions(_):
     if mins < STALE_MIN:
         return []
     return [("fleet:stale", "normal",
-             f"Movin · positions chauffeurs périmées\n\n"
+             f"Mova · positions chauffeurs périmées\n\n"
              f"La plus récente date de {mins} min. Au-delà, le dispatch cesse de "
              f"voir la flotte et les recherches ne renvoient aucun prix.")]
 
@@ -590,7 +590,7 @@ def check_nobody_online(_):
         if not c or int(n or 0) > 0:
             continue
         out.append((f"fleet:empty:{c['code']}", "normal",
-                    f"Movin · aucun chauffeur en ligne\n{c['label']}\n\n"
+                    f"Mova · aucun chauffeur en ligne\n{c['label']}\n\n"
                     f"Personne ne peut recevoir de course dans ce pays en ce moment."))
     return out
 
@@ -616,7 +616,7 @@ def check_containers(_):
         return []
     return [("infra:containers:" + ",".join(sorted(b.split(" — ")[0] for b in bad)),
              "loud",
-             "Movin · conteneur(s) en panne\n\n" + "\n".join(bad))]
+             "Mova · conteneur(s) en panne\n\n" + "\n".join(bad))]
 
 
 def check_api(_):
@@ -634,7 +634,7 @@ def check_api(_):
     if code is not None:
         return []
     return [("infra:api", "loud",
-             "Movin · l'API ne répond pas\n\n"
+             "Mova · l'API ne répond pas\n\n"
              f"{API_HEALTH} est injoignable depuis le serveur lui-même. "
              "C'est ce que verrait un téléphone.")]
 
@@ -650,7 +650,7 @@ def check_disk(_):
         return []
     free_gb = st.f_bavail * st.f_frsize / 1e9
     return [("infra:disk", "loud",
-             f"Movin · disque à {used} %\n\nIl reste {free_gb:.0f} Go. "
+             f"Mova · disque à {used} %\n\nIl reste {free_gb:.0f} Go. "
              f"Les papiers des chauffeurs et les sauvegardes écrivent ici.")]
 
 
@@ -676,7 +676,7 @@ def check_certs(_):
         left = (end - now()).days
         if left <= CERT_DAYS:
             out.append((f"infra:cert:{name}:{end.date()}", "loud",
-                        f"Movin · certificat TLS bientôt expiré\n\n{name}\n"
+                        f"Mova · certificat TLS bientôt expiré\n\n{name}\n"
                         f"Expire le {end.date()} — {left} jour(s).\n"
                         f"certbot devrait renouveler seul ; s'il ne l'a pas fait, "
                         f"c'est à regarder."))
@@ -693,7 +693,7 @@ def check_backups(_):
     timer = b.get("timer") or {}
     if timer.get("last_result") not in (None, "success"):
         out.append((f"infra:backup:result:{timer.get('last_result')}", "loud",
-                    f"Movin · la sauvegarde a échoué\n\n"
+                    f"Mova · la sauvegarde a échoué\n\n"
                     f"Dernier résultat : {timer.get('last_result')}"))
     archives = b.get("archives") or []
     if archives:
@@ -704,7 +704,7 @@ def check_backups(_):
             age_h = (now() - taken).total_seconds() / 3600
             if age_h > 36:
                 out.append((f"infra:backup:stale:{taken.date()}", "loud",
-                            f"Movin · aucune sauvegarde depuis {age_h:.0f} h\n\n"
+                            f"Mova · aucune sauvegarde depuis {age_h:.0f} h\n\n"
                             f"La plus récente date du {taken.date()}."))
         except Exception:                                     # noqa: BLE001
             pass
@@ -725,7 +725,7 @@ def check_low_ratings(_):
     out = []
     for rid, stars, text, driver, merchant in (rows or []):
         out.append((f"rating:{rid}", "normal",
-                    f"Movin · note basse avec commentaire\n{where(merchant)}\n\n"
+                    f"Mova · note basse avec commentaire\n{where(merchant)}\n\n"
                     f"{stars}/5 — chauffeur {driver or '?'}\n« {text[:300]} »\n\n"
                     f"https://admin.movinapp.net"))
     return out
@@ -755,7 +755,7 @@ def check_cancellations(_):
     if per3h < 1 or recent < 5 or recent < per3h * 3:
         return []
     return [("rides:cancels", "normal",
-             f"Movin · beaucoup d'annulations\n\n{recent} en 3 h, "
+             f"Mova · beaucoup d'annulations\n\n{recent} en 3 h, "
              f"contre {per3h:.1f} habituellement sur la même durée.")]
 
 
@@ -785,7 +785,7 @@ def check_blocked_drivers(_):
         if action == "suspend":
             detail += f"\nJusqu'au {until} UTC" if until else "\nSans date de fin"
         out.append((f"driver:blocked:{pid}", "normal",
-                    f"Movin · {title}\n{where(merchant)}\n\n{name}\n{number}"
+                    f"Mova · {title}\n{where(merchant)}\n\n{name}\n{number}"
                     f"{detail}\n\nhttps://admin.movinapp.net"))
     return out
 
@@ -819,7 +819,7 @@ def check_reports(_):
         car = f" · {plate}" if plate else ""
         course = f"\nCourse {ride}" if ride else ""
         out.append((f"report:{rid}", "loud",
-                    f"Movin · SIGNALEMENT d'un passager\n{where(merchant, rphone)}\n\n"
+                    f"Mova · SIGNALEMENT d'un passager\n{where(merchant, rphone)}\n\n"
                     f"Chauffeur : {driver} {dphone}{car}\n"
                     f"Passager : {rider} {rphone}{course}\n\n"
                     f"« {body[:600]} »\n\nhttps://admin.movinapp.net"))
@@ -885,13 +885,13 @@ def digest(window, title):
                      f"Nouveaux chauffeurs {n['new_drivers']}\n"
                      f"Flotte active      {n['fleet']}\n"
                      f"En attente         {n['pending']}")
-    return (f"Movin · {title}\n\n" + "\n\n".join(parts)
+    return (f"Mova · {title}\n\n" + "\n\n".join(parts)
             + "\n\nhttps://admin.movinapp.net")
 
 
 # ── the commands ────────────────────────────────────────────────────────────
 
-HELP = """Movin · commandes
+HELP = """Mova · commandes
 
 /file        qui attend la validation
 /jour        les chiffres du jour
@@ -924,7 +924,7 @@ def cmd_file(_):
         return "Personne n'attend. La file est vide."
     lines = [f"{n}  {where(m)}\n  {num_} · {h} h · {d} papier(s)"
              for n, num_, h, d, m in rows]
-    return (f"Movin · {len(rows)} en attente\n\n" + "\n\n".join(lines)
+    return (f"Mova · {len(rows)} en attente\n\n" + "\n\n".join(lines)
             + "\n\nhttps://admin.movinapp.net")
 
 
@@ -968,7 +968,7 @@ def cmd_chauffeur(arg):
                    f"Véhicule : {var} {plate}\n"
                    f"Porte-monnaie : {bal} {c['cur'] if c else ''}\nPapiers : {docs}\n"
                    f"Inscrit le {since}")
-    return "Movin · chauffeur\n\n" + "\n\n———\n\n".join(out)
+    return "Mova · chauffeur\n\n" + "\n\n———\n\n".join(out)
 
 
 def cmd_flotte(_):
@@ -990,7 +990,7 @@ def cmd_flotte(_):
              AND di.active AND di.enabled AND NOT di.blocked""", "?")
         body = "\n".join(f"{v:<16} {n}" for v, n in rows) or "aucun"
         sections.append(f"{c['label']}\n{body}\nEn ligne maintenant : {online}")
-    return "Movin · flotte\n\n" + "\n\n".join(sections)
+    return "Mova · flotte\n\n" + "\n\n".join(sections)
 
 
 def cmd_serveur(_):
@@ -1011,7 +1011,7 @@ def cmd_serveur(_):
         disk = f"{100 - (st.f_bavail * 100 // st.f_blocks)} % utilisé"
     except Exception:                                         # noqa: BLE001
         disk = "?"
-    return (f"Movin · serveur\n\n"
+    return (f"Mova · serveur\n\n"
             f"Conteneurs   {up}/{total}" + (f"\n  en panne : {', '.join(bad)}" if bad else "")
             + f"\nDisque       {disk}\n"
             f"Sauvegarde   {newest}\n"
@@ -1024,7 +1024,7 @@ def cmd_budget(_):
         return "Le garde n'a pas répondu."
     g = h.get("gateway") or {}
     b = g.get("budget") or {}
-    return (f"Movin · budget SMS\n\n"
+    return (f"Mova · budget SMS\n\n"
             f"Cette heure  {b.get('hour','?')}/{b.get('hourMax','?')}\n"
             f"Aujourd'hui  {b.get('day','?')}/{b.get('dayMax','?')}\n"
             f"Épuisé       {'oui' if b.get('exhausted') else 'non'}\n"
