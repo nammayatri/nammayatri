@@ -103,6 +103,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.driverCoolOffPeriod driverCoolOffPeriod,
       Se.Set Beam.enableBppReallocation enableBppReallocation,
       Se.Set Beam.manualTollChargeConfig (Kernel.Prelude.toJSON <$> manualTollChargeConfig),
+      Se.Set Beam.rideEvidenceConfig (Kernel.Prelude.toJSON <$> rideEvidenceConfig),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
@@ -400,6 +401,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.requiresDriverOnboardingInspection requiresDriverOnboardingInspection,
       Se.Set Beam.requiresOnboardingInspection requiresOnboardingInspection,
       Se.Set Beam.restrictMobileUpdateToDashboard restrictMobileUpdateToDashboard,
+      Se.Set Beam.rideEvidenceConfig (Kernel.Prelude.toJSON <$> rideEvidenceConfig),
       Se.Set Beam.rideTimeEstimatedThreshold rideTimeEstimatedThreshold,
       Se.Set Beam.routeDeviationThreshold routeDeviationThreshold,
       Se.Set Beam.safetyTeamNumbers safetyTeamNumbers,

@@ -69,6 +69,7 @@ getInvoiceInvoice merchantShortId _ from phoneNumber to = do
                   ("EXTRA_DISTANCE_FARE", "Extra Distance Fare"),
                   ("WAITING_OR_PICKUP_CHARGES", "Wating Charge"),
                   ("PARKING_CHARGE", "Parking Charge"),
+                  ("TOLL_CHARGES", "Toll Charge"),
                   ("RIDE_STOP_CHARGES", "Ride Stop Charges"),
                   ("PER_STOP_CHARGES", "Per Stop Charges"),
                   ("LUGGAGE_CHARGE", "Luggage Charge"),

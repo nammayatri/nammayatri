@@ -2491,3 +2491,34 @@ instance IsHTTPError RideFeedbackError where
     RideFeedbackInvalidConfig _ -> E400
 
 instance IsAPIError RideFeedbackError
+
+data RideEvidenceError
+  = RideEvidenceDisabled
+  | RideEvidenceNotAllowed
+  | RideEvidenceWindowClosed
+  | RideEvidenceLimitReached
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RideEvidenceError
+
+instance IsBaseError RideEvidenceError where
+  toMessage = \case
+    RideEvidenceDisabled -> Just "Adding proofs is no longer available."
+    RideEvidenceNotAllowed -> Just "Proofs cannot be added to an upcoming ride."
+    RideEvidenceWindowClosed -> Just "The time for adding proofs to this ride has passed."
+    RideEvidenceLimitReached -> Just "The maximum number of proofs for this ride has been reached."
+
+instance IsHTTPError RideEvidenceError where
+  toErrorCode = \case
+    RideEvidenceDisabled -> "RIDE_EVIDENCE_DISABLED"
+    RideEvidenceNotAllowed -> "RIDE_EVIDENCE_NOT_ALLOWED"
+    RideEvidenceWindowClosed -> "RIDE_EVIDENCE_WINDOW_CLOSED"
+    RideEvidenceLimitReached -> "RIDE_EVIDENCE_LIMIT_REACHED"
+
+  toHttpCode = \case
+    RideEvidenceDisabled -> E400
+    RideEvidenceNotAllowed -> E400
+    RideEvidenceWindowClosed -> E400
+    RideEvidenceLimitReached -> E400
+
+instance IsAPIError RideEvidenceError

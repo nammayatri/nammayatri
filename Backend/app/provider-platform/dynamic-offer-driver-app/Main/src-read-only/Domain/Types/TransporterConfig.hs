@@ -317,6 +317,7 @@ data TransporterConfig = TransporterConfig
     requiresDriverOnboardingInspection :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requiresOnboardingInspection :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     restrictMobileUpdateToDashboard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    rideEvidenceConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.RideEvidenceConfig,
     rideTimeEstimatedThreshold :: Kernel.Types.Common.Seconds,
     routeDeviationThreshold :: Kernel.Types.Common.Meters,
     safetyTeamNumbers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
@@ -613,6 +614,14 @@ data PickupStallStage = PickupStallStage
 data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY | REALLOCATE_SCHEDULED_RIDE deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data ProjectFareParamsComponent = RIDE_FARE | TOLL_FARE | CANCELLATION_FARE | PARKING_CHARGE | PAYMENT_CHARGE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data RideEvidenceConfig = RideEvidenceConfig
+  { completedRideWindowHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    linkExpirySeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxFilesPerRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data ScheduledPickupMonitoringMode = DISTANCE_BASED | TIME_BASED deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 

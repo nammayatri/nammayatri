@@ -19,11 +19,31 @@ type API =
       :> "deliveryImage"
       :> Header "token" Text
       :> Get '[JSON] Text
+      :<|> "ride"
+        :> Capture "rideId" (Id Ride)
+        :> "evidence"
+        :> Header "token" Text
+        :> Get '[JSON] [Domain.RideEvidenceInternalItem]
+      :<|> "ride"
+        :> Capture "rideId" (Id Ride)
+        :> "evidence"
+        :> Capture "evidenceId" Text
+        :> "file"
+        :> Header "token" Text
+        :> Get '[JSON] Text
   )
 
 handler :: FlowServer API
 handler =
   getDeliveryImage
+    :<|> getRideEvidence
+    :<|> getRideEvidenceFile
 
 getDeliveryImage :: Id Ride -> Maybe Text -> FlowHandler Text
 getDeliveryImage rideId = withFlowHandlerAPI . Domain.getDeliveryImage rideId
+
+getRideEvidence :: Id Ride -> Maybe Text -> FlowHandler [Domain.RideEvidenceInternalItem]
+getRideEvidence rideId = withFlowHandlerAPI . Domain.getRideEvidence rideId
+
+getRideEvidenceFile :: Id Ride -> Text -> Maybe Text -> FlowHandler Text
+getRideEvidenceFile rideId evidenceId = withFlowHandlerAPI . Domain.getRideEvidenceFile rideId evidenceId
