@@ -2,7 +2,8 @@
 # fleet dev-box. System Control Centre ("Devbox Releases") dispatches this.
 #
 #   ping   the runner can SSH into the dev-box (DEVBOX_SSH_KEY; its public half
-#          is on the dev-box, restricted to the runner's IP)
+#          is on the dev-box, restricted to the runner's overlay IP 100.64.0.1,
+#          so the runner reaches dev-boxes over the hopper tailnet)
 #   spawn  nammayatri@backend_ref (+ control-center@cc_ref inside it) → a
 #          workspace on a dev-box, one step per SCC stage: Preparing, Sync,
 #          Build, Start, Data, Control centre, Result. GitHub reports each
@@ -84,8 +85,9 @@ jobs:
         run: |
           case "$ACTION" in
             ping)
-              # The push test hook has no inputs: ping soya-chaap.
-              echo "DEVBOX_HOST=${INPUT_HOST:-192.168.10.107}" >> "$GITHUB_ENV"
+              # The push test hook has no inputs: ping soya-chaap (its overlay
+              # IP; office IPs change after a power cut).
+              echo "DEVBOX_HOST=${INPUT_HOST:-100.64.0.12}" >> "$GITHUB_ENV"
               echo "DEVBOX_USER=${INPUT_USER:-soya-chaap}" >> "$GITHUB_ENV" ;;
             spawn|stop)
               [[ "$WORKSPACE" =~ ^[A-Za-z0-9_-]+$ ]] || { echo "::error::workspace must be letters, digits, - or _"; exit 1; }
@@ -210,7 +212,11 @@ jobs:
       - name: Result
         if: env.ACTION == 'spawn'
         working-directory: tools/Backend/dev
-        run: python3 -m devbox_core result --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE" --devbox "$DEVBOX_NAME"
+        # DEVBOX_HOST is how the runner reaches the dev-box (overlay); the URLs
+        # testers open use its office address, DEVBOX_URL_HOST.
+        run: |
+          python3 -m devbox_core result --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE" \
+            --devbox "$DEVBOX_NAME" --url-host "${DEVBOX_URL_HOST:-}"
 
       - name: Stop
         if: env.ACTION == 'stop'

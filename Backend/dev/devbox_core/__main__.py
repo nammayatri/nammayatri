@@ -33,6 +33,7 @@ def cmd_ping(args: argparse.Namespace) -> int:
 
 def _summary(m: dict) -> dict:
     return {"name": m.get("name", ""), "host": m.get("bestIp", ""),
+            "office_ip": m.get("localIp", ""), "overlay_ip": m.get("overlayIp", ""),
             "user": m.get("user", ""), "route": m.get("route", ""),
             "ram_pct": fleet.ram_pct(m.get("usage"))}
 
@@ -54,10 +55,11 @@ def cmd_machines(args: argparse.Namespace) -> int:
 def cmd_pick(args: argparse.Namespace) -> int:
     """The dev-box a workspace would use: the least-loaded reachable one with a
     front desk (or --host, checked). --github-env also hands it to the next
-    workflow steps as DEVBOX_HOST / DEVBOX_USER / DEVBOX_NAME."""
+    workflow steps as DEVBOX_HOST / DEVBOX_USER / DEVBOX_NAME, and the address
+    its URLs are opened on (office network) as DEVBOX_URL_HOST."""
     os.environ["BASE_API_HOST"], os.environ["BASE_API_PORT"] = args.base_host, args.base_port
     try:
-        t, name = flow.pick_target(args.user, args.host, None)
+        t, name, url_host = flow.pick_target(args.user, args.host, None)
     except RuntimeError as e:
         print(json.dumps({"error": str(e)}))
         return 1
@@ -67,8 +69,9 @@ def cmd_pick(args: argparse.Namespace) -> int:
             print(json.dumps({"error": "--github-env needs GITHUB_ENV (only set inside GitHub Actions)"}))
             return 1
         with open(path, "a") as f:
-            f.write(f"DEVBOX_HOST={t.host}\nDEVBOX_USER={t.user}\nDEVBOX_NAME={name}\n")
-    print(json.dumps({"name": name, "host": t.host, "user": t.user}))
+            f.write(f"DEVBOX_HOST={t.host}\nDEVBOX_USER={t.user}\nDEVBOX_NAME={name}\n"
+                    f"DEVBOX_URL_HOST={url_host}\n")
+    print(json.dumps({"name": name, "host": t.host, "user": t.user, "url_host": url_host}))
     return 0
 
 
@@ -197,7 +200,7 @@ def cmd_cc_start(args: argparse.Namespace) -> int:
 def cmd_result(args: argparse.Namespace) -> int:
     from . import output
     try:
-        fields = flow.result_fields(_target(args), args.name, args.devbox)
+        fields = flow.result_fields(_target(args), args.name, args.devbox, args.url_host)
     except RuntimeError as e:
         print(json.dumps({"error": str(e)}))
         return 1
@@ -347,6 +350,8 @@ def main(argv: list | None = None) -> int:
     _add_target_args(rs)
     rs.add_argument("--name", required=True, help="workspace name")
     rs.add_argument("--devbox", default="", help="dev-box name to report (default: the host)")
+    rs.add_argument("--url-host", default="",
+                    help="address the URLs use, e.g. the office IP when --host is the overlay one (default: --host)")
     rs.set_defaults(func=cmd_result)
 
     sp = sub.add_parser("spawn", help="bring a whole workspace up: pick, sync, build, start, data, control centre")

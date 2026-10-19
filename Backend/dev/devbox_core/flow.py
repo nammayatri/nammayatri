@@ -21,14 +21,17 @@ def _has_frontdesk(host: str) -> bool:
     return ssh.tcp_open(host, stack.FRONTDESK_PORT)
 
 
-def pick_target(user: str | None, host: str | None, key: str | None) -> tuple[ssh.Target, str]:
+def pick_target(user: str | None, host: str | None,
+                key: str | None) -> tuple[ssh.Target, str, str]:
     """The devbox to use: the given host, else the least-loaded reachable one
-    that has a front desk."""
+    that has a front desk. Returns (target, devbox name, url host): the target
+    is how we reach it (the overlay address when it answers), the url host is
+    its office address, which testers' phones can open."""
     if host:
         if not _has_frontdesk(host):
             raise RuntimeError(f"{host} has no front desk on :{stack.FRONTDESK_PORT} "
                                f"(Caddy + devbox-frontdesk-sync), so workspace URLs cannot answer")
-        return ssh.Target(user or "", host, 22, key or ssh.find_key()), host
+        return ssh.Target(user or "", host, 22, key or ssh.find_key()), host, host
     base_host, base_port = fleet.base_api()
     res = fleet.fetch_machines(base_host, base_port)
     if res.get("error"):
@@ -38,26 +41,36 @@ def pick_target(user: str | None, host: str | None, key: str | None) -> tuple[ss
     m = fleet.pick(boxes)
     if m is None:
         raise RuntimeError(f"no reachable dev-box with a front desk on :{stack.FRONTDESK_PORT}")
-    return ssh.Target(m.get("user") or "", m["bestIp"], 22, key or ssh.find_key()), m.get("name", m["bestIp"])
+    return (ssh.Target(m.get("user") or "", m["bestIp"], 22, key or ssh.find_key()),
+            m.get("name", m["bestIp"]), m.get("localIp") or m["bestIp"])
 
 
-def result_fields(t: ssh.Target, name: str, devbox: str = "") -> dict:
+def _cc_url(c: dict, url_host: str) -> str:
+    return f"http://{url_host}:{c['port']}" if c.get("state") == "running" and c.get("port") else ""
+
+
+def result_fields(t: ssh.Target, name: str, devbox: str = "", url_host: str = "") -> dict:
     """The DEVBOX_RESULT fields, read from the workspace as it is now: its URLs,
     the control centre's URL, the data it holds and the build cache it used.
     Needs nothing from earlier steps, so a workflow can call it last. Raises
-    RuntimeError when the devbox cannot be reached or the workspace is not there."""
+    RuntimeError when the devbox cannot be reached or the workspace is not there.
+
+    "host" is how we reach the devbox (Stop uses it again); the URLs use
+    url_host (default: the same), the address testers open them on."""
     if name not in (workspace.read_registry(t).get("users") or {}):
         raise RuntimeError(f"no workspace {name!r} on {t.host}")
+    url_host = url_host or t.host
     wdir = workspace.workspace_dir(name)
     ws = f"http://{t.host}:{stack.FRONTDESK_PORT}/{name}"
     held = (data.ctx(ws, "/api/config-sync/status", timeout=5).get("last_synced") or {})
     c = cc.status(t, wdir)
     commit = ssh.run(t, f"cat {shlex.quote(wdir)}/Backend/.ci-cache-sha 2>/dev/null").stdout.strip()
-    rider, driver = stack.ready_urls(t.host, name)
+    rider, driver = stack.ready_urls(url_host, name)
     return {
         "devbox": devbox or t.host, "host": t.host, "user": t.user, "workspace": name,
-        "backend_url": ws, "rider_url": rider, "driver_url": driver,
-        "cc_url": c.get("url", "") if c.get("state") == "running" else "",
+        "backend_url": f"http://{url_host}:{stack.FRONTDESK_PORT}/{name}",
+        "rider_url": rider, "driver_url": driver,
+        "cc_url": _cc_url(c, url_host),
         "data": f"{held.get('from')} {held.get('version')}" if held.get("from") else "",
         "cache_commit": commit,
     }
@@ -73,7 +86,7 @@ def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
     error is raised); the workspace is left as it is for a look, and `stop`
     cleans it up. Returns the DEVBOX_RESULT fields."""
     with output.Stage("preparing"):
-        t, devbox = pick_target(user, host, key)
+        t, devbox, url_host = pick_target(user, host, key)
         workspace.register(t, name, owner)
     wdir = workspace.workspace_dir(name)
 
@@ -94,7 +107,7 @@ def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
 
     try:
         stack.start(t, wdir)
-        ready = stack.wait_ready(t, name, wdir, timeout=ready_timeout, on_stage=on_stage)
+        stack.wait_ready(t, name, wdir, timeout=ready_timeout, on_stage=on_stage)
     except Exception as e:
         output.stage(phase["now"], "failed", ms=ms(), error=str(e).splitlines()[0] if str(e) else type(e).__name__)
         raise
@@ -127,12 +140,13 @@ def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
         elif r.get("error"):
             raise RuntimeError(r["error"])
         else:
-            cc_url = cc.wait_running(t, wdir, timeout=CC_READY_TIMEOUT).get("url", "")
+            cc_url = _cc_url(cc.wait_running(t, wdir, timeout=CC_READY_TIMEOUT), url_host)
 
+    rider, driver = stack.ready_urls(url_host, name)
     fields = {
         "devbox": devbox, "host": t.host, "user": t.user, "workspace": name,
-        "backend_url": f"http://{t.host}:{stack.FRONTDESK_PORT}/{name}",
-        "rider_url": ready["urls"][0], "driver_url": ready["urls"][1],
+        "backend_url": f"http://{url_host}:{stack.FRONTDESK_PORT}/{name}",
+        "rider_url": rider, "driver_url": driver,
         "cc_url": cc_url, "data": data_label, "cache_commit": synced.get("cacheCommit", ""),
     }
     output.stage("ready", "done")
