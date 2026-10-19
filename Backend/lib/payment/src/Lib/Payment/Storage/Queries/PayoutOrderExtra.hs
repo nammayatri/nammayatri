@@ -142,3 +142,8 @@ updatePostCreateFieldsSafely orderId status mbResponseCode mbResponseMessage mbA
             Se.Is Beam.responseMessage $ Se.Eq (Nothing :: Maybe Text)
           ]
       ]
+
+-- | Orders with any of these ids, in one query.
+findAllByIds :: BeamFlow m r => [Text] -> m [PayoutOrder]
+findAllByIds [] = pure []
+findAllByIds ids = findAllWithKV [Se.Is Beam.id $ Se.In ids]
