@@ -190,6 +190,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       DMSC.PassPaymentServiceConfig cfg -> Just cfg
       DMSC.ParkingPaymentServiceConfig cfg -> Just cfg
       DMSC.MembershipPaymentServiceConfig cfg -> Just cfg
+      DMSC.DepositPaymentServiceConfig cfg -> Just cfg
       DMSC.JuspayWalletServiceConfig cfg -> Just cfg
       _ -> Nothing
 
