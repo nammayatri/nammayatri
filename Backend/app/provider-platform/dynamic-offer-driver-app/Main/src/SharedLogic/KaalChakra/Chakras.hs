@@ -74,7 +74,7 @@ createFetchUserDataJob ::
   m ()
 createFetchUserDataJob merchantId merchantOperatingCityId chakra jobData scheduledTime = do
   now <- getCurrentTime
-  jobs :: [AnyJob AllocatorJobType] <- QAllJ.getJobByTypeAndScheduleTime (show chakra) (addUTCTime 3600 now) (addUTCTime 3600 scheduledTime) -- adding one hour for buffer
+  jobs :: [AnyJob AllocatorJobType] <- QAllJ.getJobByTypeAndScheduleTime (show chakra) (getId <$> merchantOperatingCityId) (addUTCTime 3600 now) (addUTCTime 3600 scheduledTime) -- adding one hour for buffer
   when (length jobs == 0) $
     case chakra of
       LYT.Daily -> QAllJ.createJobByTime @_ @'Daily merchantId merchantOperatingCityId scheduledTime updJobData
@@ -97,7 +97,7 @@ createUpdateUserTagDataJob ::
   m ()
 createUpdateUserTagDataJob merchantId merchantOperatingCityId chakra jobData scheduledTime = do
   now <- getCurrentTime
-  jobs :: [AnyJob AllocatorJobType] <- QAllJ.getJobByTypeAndScheduleTime (show $ chkaraToJobUpdateType chakra) (addUTCTime 3600 now) (addUTCTime 3600 scheduledTime) -- adding one hour for buffer
+  jobs :: [AnyJob AllocatorJobType] <- QAllJ.getJobByTypeAndScheduleTime (show $ chkaraToJobUpdateType chakra) (getId <$> merchantOperatingCityId) (addUTCTime 3600 now) (addUTCTime 3600 scheduledTime) -- adding one hour for buffer
   when (length jobs == 0) $
     case chakra of
       LYT.Daily -> QAllJ.createJobByTime @_ @'DailyUpdateTag merchantId merchantOperatingCityId scheduledTime jobData

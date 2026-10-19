@@ -164,19 +164,19 @@ getTasksById jobs = do
     RedisBased -> RQ.getTasksById jobs
     DbBased -> DBQ.getTasksById jobs
 
-getJobByTypeAndScheduleTime :: forall t m r. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m, JobProcessor t, HasJobInfoMap r) => Text -> UTCTime -> UTCTime -> m [AnyJob t]
-getJobByTypeAndScheduleTime jobType minScheduleTime maxScheduleTime = do
+getJobByTypeAndScheduleTime :: forall t m r. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m, JobProcessor t, HasJobInfoMap r) => Text -> Maybe Text -> UTCTime -> UTCTime -> m [AnyJob t]
+getJobByTypeAndScheduleTime jobType mbMerchantOperatingCityId minScheduleTime maxScheduleTime = do
   schedulerType <- asks (.schedulerType)
   case schedulerType of
     RedisBased -> do
       longRunning <- isLongRunning jobType
-      logDebug $ "LONG RUNNING " <> show longRunning <> " getJobByTypeAndScheduleTime: " <> show jobType <> " minScheduleTime: " <> show minScheduleTime <> " maxScheduleTime: " <> show maxScheduleTime
+      logDebug $ "LONG RUNNING " <> show longRunning <> " getJobByTypeAndScheduleTime: " <> show jobType <> " merchantOperatingCityId: " <> show mbMerchantOperatingCityId <> " minScheduleTime: " <> show minScheduleTime <> " maxScheduleTime: " <> show maxScheduleTime
       if longRunning
         then do
-          DBQ.getJobByTypeAndScheduleTime jobType minScheduleTime maxScheduleTime
+          DBQ.getJobByTypeAndScheduleTime jobType mbMerchantOperatingCityId minScheduleTime maxScheduleTime
         else do
-          RQ.getJobByTypeAndScheduleTime jobType minScheduleTime maxScheduleTime
-    DbBased -> DBQ.getJobByTypeAndScheduleTime jobType minScheduleTime maxScheduleTime
+          RQ.getJobByTypeAndScheduleTime jobType mbMerchantOperatingCityId minScheduleTime maxScheduleTime
+    DbBased -> DBQ.getJobByTypeAndScheduleTime jobType mbMerchantOperatingCityId minScheduleTime maxScheduleTime
 
 getReadyTasks ::
   forall t m r.

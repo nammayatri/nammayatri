@@ -171,6 +171,19 @@ abandonRun h jobId chakra phase mbEventId = do
   Event.clearRunState h.merchantId h.merchantOperatingCityId chakra mbEventId
   pure DuplicateExecution
 
+-- A job without a city can never apply tags (updateUserTagsHandler needs one), so end it instead of letting it reschedule itself forever
+withChakraCity ::
+  Event.ChakraEvent m r action =>
+  Event.Handle m action ->
+  LYT.Chakra ->
+  m ExecutionResult ->
+  m ExecutionResult
+withChakraCity h chakra runJob = case h.merchantOperatingCityId of
+  Nothing -> do
+    logError $ "Terminating " <> show chakra <> " Kaal Chakra job: it has no merchant operating city, so tags cannot be applied"
+    pure $ Terminate "Kaal Chakra job has no merchant operating city"
+  Just _ -> runJob
+
 runKaalChakraAndRescheduleJob ::
   forall m r action.
   Event.ChakraEvent m r action =>
@@ -180,7 +193,7 @@ runKaalChakraAndRescheduleJob ::
   LYT.Chakra ->
   LYT.KaalChakraJobData ->
   m ExecutionResult
-runKaalChakraAndRescheduleJob h jobId isStillActive chakra jobData = do
+runKaalChakraAndRescheduleJob h jobId isStillActive chakra jobData = withChakraCity h chakra $ do
   logInfo $ "Running " <> show chakra <> " Job"
   now <- getCurrentTime
   let req = mkRunKaalChakraJobReq chakra jobData now
@@ -235,7 +248,7 @@ runKaalChakraUpdateTagsJob ::
   LYT.Chakra ->
   LYT.UpdateKaalBasedTagsData ->
   m ExecutionResult
-runKaalChakraUpdateTagsJob h jobId isStillActive chakra jobData = do
+runKaalChakraUpdateTagsJob h jobId isStillActive chakra jobData = withChakraCity h chakra $ do
   logInfo $ "Running " <> show chakra <> "UpdateTag Job"
   batchStartedAt <- getCurrentTime
   let req = mkRunKaalChakraUpdateTagJobReq chakra jobData
