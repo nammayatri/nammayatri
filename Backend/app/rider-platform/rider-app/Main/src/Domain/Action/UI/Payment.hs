@@ -987,6 +987,7 @@ fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> pure vsc
+    Just (DMSC.DepositPaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.JuspayWalletServiceConfig vsc) -> pure vsc
     _ -> throwError $ InternalError "Unknown Service Config"
   where
@@ -998,6 +999,7 @@ fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service
       Just Payment.FRFSMultiModalBooking -> DMSC.MultiModalPaymentService service
       Just Payment.FRFSPassPurchase -> DMSC.PassPaymentService service
       Just Payment.ParkingBooking -> DMSC.ParkingPaymentService service
+      Just DOrder.BookingDeposit -> DMSC.DepositPaymentService service
       Just DOrder.Wallet -> DMSC.JuspayWalletService service
       Just DOrder.RideBooking -> DMSC.PaymentService service
       _ -> DMSC.PaymentService service
