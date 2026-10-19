@@ -43,6 +43,7 @@ module SharedLogic.BookingDeposit
     refundBookingDeposit,
     creditRiderBalance,
     expireOrRepairBookingDeposit,
+    isLocalRepairCancellation,
     holdGraceSeconds,
     unpaidFeeGraceSeconds,
     depositOrderExpiryMinutes,
@@ -447,10 +448,14 @@ prepareDepositRefundLedger booking
             else do
               when (length rows > 1) $
                 logError $ "Booking " <> booking.id.getId <> " has " <> show (length rows) <> " payable deposit orders; refunding all"
+              -- Legs before voiding the holds: until the holds are voided the booking stays visibly unsettled
+              -- (BookingDepositExpiry refunds a live hold on a terminal booking), and the legs are reused on a re-run.
+              let heldForBooking = sum (map (.amount) holds)
+              toSettle <- catMaybes <$> mapM (postRefundLegs heldForBooking) rows
               forM_ holds $ \e -> Ledger.voidEntry e.id "booking deposit refunded to source"
-              catMaybes <$> mapM postRefundLegs rows
+              pure toSettle
   where
-    postRefundLegs row = do
+    postRefundLegs heldForBooking row = do
       mbOrder <- QPaymentOrder.findById row.paymentOrderId
       case mbOrder of
         Nothing -> Nothing <$ logError ("Booking deposit order " <> row.paymentOrderId.getId <> " not found for booking " <> booking.id.getId)
@@ -462,7 +467,8 @@ prepareDepositRefundLedger booking
               -- Only money that entered the wallet may leave through it. An order refunded straight
               -- to source was never credited; refunding it here would spend another order's credit.
               credited <- hasCreditForOrder order.id.getId
-              available <- getAvailableBalance booking.riderId
+              -- This booking's own holds are voided right after, so they do not count against its refund.
+              available <- (+ heldForBooking) <$> getAvailableBalance booking.riderId
               if not credited
                 then Nothing <$ logDebug ("Booking deposit order " <> order.id.getId <> " was never credited; nothing to refund from the wallet")
                 else
@@ -546,7 +552,7 @@ claimDepositRefundAttempt ::
   DRB.Booking ->
   (DBP.BookingPayment, DOrder.PaymentOrder) ->
   m (Maybe DRefundRequest.RefundRequest)
-claimDepositRefundAttempt booking pair = do
+claimDepositRefundAttempt booking pair@(_, order) = do
   mbReq <- findOrCreateDepositRefundRequest booking pair
   case mbReq of
     Nothing -> pure Nothing
@@ -554,9 +560,21 @@ claimDepositRefundAttempt booking pair = do
       | isJust req.refundsId -> Nothing <$ logInfo ("Deposit refund request " <> req.id.getId <> " already has a gateway attempt; not calling again")
       | otherwise -> do
         claimed <- claimDepositRefundCall req.id.getId
-        if claimed
-          then pure (Just req)
-          else Nothing <$ logInfo ("Deposit refund for request " <> req.id.getId <> " is being sent elsewhere; skipping")
+        if not claimed
+          then Nothing <$ logInfo ("Deposit refund for request " <> req.id.getId <> " is being sent elsewhere; skipping")
+          else do
+            -- The claim outlives any live call, so an unlinked refunds row seen by its winner belongs to an attempt
+            -- that was cut off before recording. The row is the gateway's idempotency key: adopt it, never send again.
+            mbAttempt <- HQRefunds.findLatestByOrderId order.shortId
+            case mbAttempt of
+              Just attempt -> do
+                logError $ "Deposit refund request " <> req.id.getId <> " adopting unlinked refund attempt " <> attempt.id.getId <> " (" <> show attempt.status <> ") on order " <> order.id.getId
+                Nothing <$ applyDepositRefundResult booking req pair attempt.id.getId (adoptedRefundStatus attempt) attempt.errorCode
+              Nothing -> pure (Just req)
+  where
+    adoptedRefundStatus attempt
+      | unknownRefundOutcome attempt || neverRecordedRefund attempt = Payment.REFUND_PENDING
+      | otherwise = attempt.status
 
 -- | Calls the gateway without the deposit refund lock, then records the verdict under it unless someone already did.
 executeDepositRefundGateway ::
@@ -632,18 +650,18 @@ applyDepositRefundResult booking refundReq (row, order) refundId refundStatus er
   riderConfig <-
     getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
       >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  resolveDepositRefundLegs booking.riderId order.id refundStatus
   let reqStatus = SPayment.refundStatusToRequestStatus refundStatus
       bpStatus = case refundStatus of
         Payment.REFUND_SUCCESS -> DBP.REFUNDED
         Payment.REFUND_FAILURE -> DBP.REFUND_FAILED
         Payment.REFUND_CANCELED -> DBP.REFUND_FAILED
         _ -> DBP.REFUND_INITIATED
-  QRefundRequest.updateRefundIdAndStatus (Just (Id refundId)) reqStatus refundReq.id
-  QBookingPayment.updateStatusById bpStatus row.id
   createJobIn @_ @'CheckRefundStatus (Just booking.merchantId) (Just booking.merchantOperatingCityId) riderConfig.refundStatusUpdateInterval $
     CheckRefundStatusJobData {refundId = refundId, numberOfRetries = 0}
   logInfo $ "Scheduled CheckRefundStatus for deposit refund " <> refundId <> " order " <> order.id.getId
+  resolveDepositRefundLegs booking.riderId order.id refundStatus
+  QBookingPayment.updateStatusById bpStatus row.id
+  QRefundRequest.updateRefundIdAndStatus (Just (Id refundId)) reqStatus refundReq.id
   when (reqStatus == DRefundRequest.FAILED) $
     logError $
       "Booking deposit gateway refund FAILED for booking " <> booking.id.getId <> " order " <> order.id.getId
@@ -726,6 +744,12 @@ expireOrRepairBookingDeposit booking = do
             Right () -> logInfo $ "Repaired never-staffed booking " <> booking.id.getId <> " and settled its booking deposit"
           pure True
 
+localRepairCancellationInfo :: Text
+localRepairCancellationInfo = "Booking never staffed past its booking-deposit grace window"
+
+isLocalRepairCancellation :: SBCR.BookingCancellationReason -> Bool
+isLocalRepairCancellation r = r.source == SBCR.ByApplication && r.additionalInfo == Just localRepairCancellationInfo
+
 buildLocalCancellationReason :: MonadFlow m => DRB.Booking -> m SBCR.BookingCancellationReason
 buildLocalCancellationReason booking = do
   now <- getCurrentTime
@@ -738,7 +762,7 @@ buildLocalCancellationReason booking = do
         source = SBCR.ByApplication,
         reasonCode = Nothing,
         reasonStage = Nothing,
-        additionalInfo = Just "Booking never staffed past its booking-deposit grace window",
+        additionalInfo = Just localRepairCancellationInfo,
         driverCancellationLocation = Nothing,
         driverDistToPickup = Nothing,
         riderId = Just booking.riderId,

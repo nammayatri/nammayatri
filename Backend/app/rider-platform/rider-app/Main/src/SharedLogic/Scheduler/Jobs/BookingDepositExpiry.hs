@@ -20,6 +20,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Payment as DPaymentAction
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.BookingStatus as DRB
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -36,6 +37,7 @@ import SharedLogic.JobScheduler
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import Tools.Metrics (HasBAPMetrics)
 import TransactionLogs.Types (KeyConfig, TokenConfig)
 import qualified UrlShortner.Common as UrlShortner
@@ -84,7 +86,17 @@ bookingDepositExpiryJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ 
       -- moves the repair deadline to startTime + holdGraceSeconds, so a booking just paid for is not repaired.
       void . withTryCatch "bookingDepositExpiry:reconcileBeforeRepair" $ DPaymentAction.reconcileDepositPayment False booking0
       booking <- fromMaybe booking0 <$> QRB.findById bookingId
-      repaired <- BookingDeposit.expireOrRepairBookingDeposit booking
+      repairedNow <- BookingDeposit.expireOrRepairBookingDeposit booking
+      -- A re-run of this job (its earlier run died after the local cancel) must still tell the BPP.
+      repairedEarlier <-
+        if not repairedNow && booking.status == DRB.CANCELLED
+          then maybe False BookingDeposit.isLocalRepairCancellation <$> QBCR.findByRideBookingId booking.id
+          else pure False
+      let repaired = repairedNow || repairedEarlier
+      -- The holds are voided before the gateway call, so a run that died mid-refund leaves none for the arm below.
+      when repairedEarlier $
+        void . withTryCatch "bookingDepositExpiry:finishRepairRefund" $
+          BookingDeposit.refundBookingDeposit booking
       unless repaired $
         when (booking.status `elem` DRB.terminalBookingStatus) $ do
           holds <- BookingDeposit.findHolds booking.id

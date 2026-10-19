@@ -602,7 +602,9 @@ refundStatusHandler paymentOrder paymentServiceType = do
       DRefunds.Refunds ->
       m ()
     bookingDepositRefundStatusHandler refund = do
-      let newStatus = refundStatusToBookingPaymentStatus refund
+      let newStatus
+            | BookingDepositLedger.unknownRefundOutcome refund = DBP.REFUND_INITIATED
+            | otherwise = refundStatusToBookingPaymentStatus refund
       depositReqs <- filter (\r -> r.refundPurpose == DRefundRequest.BOOKING_DEPOSIT) <$> QRefundRequest.findAllByOrderId paymentOrder.id
       case depositReqs of
         [] -> pure ()

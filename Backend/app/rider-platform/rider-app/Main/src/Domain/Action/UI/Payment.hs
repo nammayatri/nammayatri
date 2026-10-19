@@ -527,7 +527,7 @@ bookingDepositOrderStatusHandler suppressConfirm orderId _merchantId paymentStat
   where
     settleCharged = do
       order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
-      bookingIdText <- order.domainEntityId & fromMaybeM (InvalidRequest "BookingDeposit order has no domainEntityId")
+      bookingIdText <- maybe orderBookingFromAttempt pure order.domainEntityId
       let bookingId = Id bookingIdText :: Id DRB.Booking
       action <- BookingDeposit.withBookingDepositFulfilLock bookingId $ creditAndDecide order bookingId bookingIdText
       case action of
@@ -537,6 +537,16 @@ bookingDepositOrderStatusHandler suppressConfirm orderId _merchantId paymentStat
         Fulfilled mbConfirmFor -> do
           whenJust mbConfirmFor $ sendWithheldConfirm bookingId
           pure (DPayment.FulfillmentSucceeded, Just bookingIdText, Nothing)
+
+    -- The order is minted unlinked and linked right after its booking_payment row is written; an attempt
+    -- cut off in between still names its booking there. Returning the id writes the link back.
+    orderBookingFromAttempt = do
+      rows <- QBookingPayment.findAllByOrderId orderId
+      case rows of
+        row : _ -> do
+          logError $ "BookingDeposit order " <> orderId.getId <> " has no domainEntityId; resolved booking " <> row.bookingId.getId <> " from its booking_payment row"
+          pure row.bookingId.getId
+        [] -> throwError (InvalidRequest "BookingDeposit order has no domainEntityId")
 
     creditAndDecide order bookingId bookingIdText = do
       booking <- QRideB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingIdText)

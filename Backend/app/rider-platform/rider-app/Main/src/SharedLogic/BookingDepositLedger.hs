@@ -7,6 +7,7 @@ module SharedLogic.BookingDepositLedger
     claimDepositRefundCall,
     resolveDepositRefundLegs,
     unknownRefundOutcome,
+    neverRecordedRefund,
   )
 where
 
@@ -65,6 +66,11 @@ claimDepositRefundCall refundRequestId = Redis.runInMasterCloudRedisCellWithCros
 unknownRefundOutcome :: DRefunds.Refunds -> Bool
 unknownRefundOutcome r =
   r.status == Payment.REFUND_FAILURE && r.isApiCallSuccess == Just False && r.idAssignedByServiceProvider == Nothing
+
+-- | A refund row written before its API call whose call never recorded an answer (the process died mid-call).
+neverRecordedRefund :: DRefunds.Refunds -> Bool
+neverRecordedRefund r =
+  r.status == Payment.REFUND_PENDING && isNothing r.isApiCallSuccess && isNothing r.idAssignedByServiceProvider
 
 -- | PENDING legs only: voidEntry would also void a SETTLED leg.
 resolveDepositRefundLegs ::
