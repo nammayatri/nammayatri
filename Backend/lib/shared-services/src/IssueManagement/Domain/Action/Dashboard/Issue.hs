@@ -693,6 +693,7 @@ ticketStatusCallBack reqJson issueHandle identifier = do
     issueReport <- B.runInMasterDbAndRedis $ QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
     let isOffUs = isJust issueReport.becknIssueId
     transformedStatus <- transformKaptureStatus isOffUs req
+    let mbResolution = req.resolution
     case transformedStatus of
       RESOLVED -> do
         person <- issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonNotFound issueReport.personId.getId)
@@ -713,13 +714,19 @@ ticketStatusCallBack reqJson issueHandle identifier = do
               [] -> Nothing
           Nothing -> return Nothing
         safeCreateOrUpdateIssueChatWithKapture req.ticketId issueReport.rideId issueReport.personId kaptureData (Just issueReport.id)
-        when isOffUs $ triggerOnIssueStatusForOffUs issueReport Spec.RESOLVED issueHandle
+        when isOffUs $ do
+          updateIGMIssueResolution issueReport Spec.RESOLVED mbResolution
+          triggerOnIssueStatusForOffUs issueReport Spec.RESOLVED issueHandle
+          recordWebhookRespondentAction issueReport Spec.RESOLVED req.shortDesc issueHandle
         QIR.updateIssueStatus req.ticketId effectiveStatus
       PENDING_EXTERNAL -> case (req.subStatus, req.queue, issueHandle.mbSendUnattendedTicketAlert) of
         (Just "Unattended", Just "SOS", Just sendUnattendedTicketAlert) -> sendUnattendedTicketAlert req.ticketId
         _ -> QIR.updateIssueStatus req.ticketId transformedStatus
       IN_PROGRESS -> do
-        triggerOnIssueStatusForOffUs issueReport Spec.PROCESSING issueHandle
+        when isOffUs $ do
+          updateIGMIssueResolution issueReport Spec.PROCESSING mbResolution
+          triggerOnIssueStatusForOffUs issueReport Spec.PROCESSING issueHandle
+          recordWebhookRespondentAction issueReport Spec.PROCESSING req.shortDesc issueHandle
         QIR.updateIssueStatus req.ticketId transformedStatus
       _ -> return ()
   return Success
@@ -755,6 +762,54 @@ triggerOnIssueStatusForOffUs issueReport' action issueHandle' =
     void $ CallAPI.callOnIssueStatus onIssueStatusReq bapUri merchant
     let updatedIgm = igmIssue {DIGM.respondentAction = Just $ show action, DIGM.updatedAt = now}
     QIGM.updateByPrimaryKey updatedIgm
+
+updateIGMIssueResolution ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    CoreMetrics m
+  ) =>
+  DIR.IssueReport ->
+  Spec.RespondentActions ->
+  Maybe Common.TicketStatusResolution ->
+  m ()
+updateIGMIssueResolution issueReport' action mbResolution =
+  whenJust issueReport'.becknIssueId $ \becknIssueId -> do
+    igmIssue <- QIGM.findByPrimaryKey (Id becknIssueId) >>= fromMaybeM (InvalidRequest "IGM issue not found")
+    now <- getCurrentTime
+    let resShortDesc = mbResolution >>= (.shortDesc)
+        resLongDesc = mbResolution >>= (.longDesc)
+        resActionTriggered = mbResolution >>= (.actionTriggered)
+        resRefundAmount = mbResolution >>= (.refundAmount)
+        updatedIgm =
+          igmIssue
+            { DIGM.respondentAction = Just $ show action,
+              DIGM.resolutionShortDesc = resShortDesc <|> igmIssue.resolutionShortDesc,
+              DIGM.resolutionLongDesc = resLongDesc <|> igmIssue.resolutionLongDesc,
+              DIGM.resolutionActionTriggered = resActionTriggered <|> igmIssue.resolutionActionTriggered,
+              DIGM.resolutionRefundAmount = resRefundAmount <|> igmIssue.resolutionRefundAmount,
+              DIGM.updatedAt = now
+            }
+    QIGM.updateByPrimaryKey updatedIgm
+
+recordWebhookRespondentAction ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    CoreMetrics m
+  ) =>
+  DIR.IssueReport ->
+  Spec.RespondentActions ->
+  Maybe Text ->
+  ServiceHandle m ->
+  m ()
+recordWebhookRespondentAction issueReport' action mbShortDesc issueHandle' =
+  whenJust issueReport'.becknIssueId $ \becknIssueId -> do
+    igmIssue <- QIGM.findByPrimaryKey (Id becknIssueId) >>= fromMaybeM (InvalidRequest "IGM issue not found")
+    merchantId <- issueReport'.merchantId & fromMaybeM (InvalidRequest "MerchantId not found")
+    merchant <- issueHandle'.findByMerchantId (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    igmConfig <- QIGMConfig.findByMerchantId merchantId >>= fromMaybeM (InternalError "IGMConfig not found")
+    now <- getCurrentTime
+    let actionSummary = fromMaybe (show action) mbShortDesc
+    recordRespondentActionTrail becknIssueId action actionSummary now igmIssue igmConfig merchant
 
 transformKaptureStatus :: BeamFlow m r => Bool -> Common.TicketStatusCallBackReq -> m IssueStatus
 transformKaptureStatus isOffUs req = case req.status of

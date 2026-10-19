@@ -129,7 +129,7 @@ buildOnIssueReq ::
   m Spec.OnIssueReq
 buildOnIssueReq txnId msgId bapId bapUri issueRes = do
   let issueDomain = issueRes.domain
-  context <- Utils.buildContext Spec.ON_ISSUE issueDomain issueRes.bppId issueRes.merchant txnId msgId issueRes.merchantOperatingCity.city (Just $ Utils.BapData bapId bapUri) Nothing
+  context <- Utils.buildContext Spec.ON_ISSUE issueDomain issueRes.bppId issueRes.merchant txnId msgId issueRes.merchantOperatingCity.city (Just $ Utils.BapData bapId bapUri) (Just "PT2M")
   let message =
         if issueRes.isValueAddNP
           then tfOnIssueMessage issueRes
