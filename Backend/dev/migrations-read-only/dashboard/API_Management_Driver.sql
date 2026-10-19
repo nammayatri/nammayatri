@@ -269,11 +269,5 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 ------- SQL updates -------
 
--- {"api":"PostDriverDisable","migration":"capability","param":"city-operations.driver_block.write","schema":"atlas_dashboard"}
-INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.driver_block.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_DISABLE' ) ON CONFLICT DO NOTHING;
-
-
-------- SQL updates -------
-
 -- {"api":"PostDriverMembershipFeeCreate","migration":"capability","param":"finance.membership_fee.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'finance.membership_fee.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_MEMBERSHIP_FEE_CREATE' ) ON CONFLICT DO NOTHING;
