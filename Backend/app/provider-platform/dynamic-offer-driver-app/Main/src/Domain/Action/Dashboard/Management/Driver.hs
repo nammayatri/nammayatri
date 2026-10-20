@@ -1563,6 +1563,8 @@ postDriverBulkSubscriptionServiceUpdate merchantShortId _opCity req = do
   when (length req.driverIds > maxBulkSubscriptionDriverIds) $ throwError (InvalidRequest "driver ids limit exceeded")
   let services = nub $ map DCommon.mapServiceName (req.serviceNames <> [Common.YATRI_SUBSCRIPTION])
   QDriverInfo.updateServicesEnabled req.driverIds services
+  when (PREPAID_SUBSCRIPTION `elem` services) $
+    QDriverInfo.enrollInPrepaidBillingModel req.driverIds
   return Success
 
 getDriverPlanDrivers :: ShortId DM.Merchant -> Context.City -> Id Common.Plan -> Flow Common.GetDriversOnPlanRes

@@ -47,7 +47,7 @@ import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.WalletAccount
-import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
+import SharedLogic.Subscription.BillingModel (isPrepaidPayer, resolvePayer)
 import Storage.Beam.Finance ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverLocation.Internal as Int
@@ -260,14 +260,12 @@ buildDriverResult NearestDriversReq {..} isPrepaidEnabled poolDataMap cityServic
   -- the batched balance filter below (`passesPrepaidGates`), which runs against fresh
   -- data rather than out of this cache. Gating them here is what silently removed them
   -- from every pool.
-  -- The fleet disjunct is the pre-existing carve-out, unchanged: fleet drivers under a
-  -- prepaid merchant settle at the fleet-owner level (the wallet filter below redirects
-  -- to `fleetOwnerId` via `resolveOwnerAndThreshold`) and nothing sets their own
-  -- `subscribed`. `fleetOwnerId` is only populated from an association that is already
+  -- A fleet driver under a prepaid merchant is a prepaid payer through the fleet owner
+  -- (resolvePayer). `fleetOwnerId` is only populated from an association that is already
   -- `isActive = True` and unexpired (`associatedTill > now`, see
   -- FleetDriverAssociationExtra.findAllByDriverIds), so its presence IS the
   -- active-association check.
-  guard $ dpd.subscribed || isExemptFromPostpaidDuesFlag isPrepaidEnabled dpd.fleetOwnerId dpd.rideBillingModel
+  guard $ dpd.subscribed || isPrepaidPayer (resolvePayer isPrepaidEnabled (getId dpd.driverId) dpd.fleetOwnerId dpd.rideBillingModel)
   guard $ isDriverModeEligibleHelper dpd.mode dpd.active
   guard $ isTripTypeEligibleHelper isRental isInterCity dpd
   when isAirportRequest $ guard $ dpd.enableForAirport == Just DI.ENABLED

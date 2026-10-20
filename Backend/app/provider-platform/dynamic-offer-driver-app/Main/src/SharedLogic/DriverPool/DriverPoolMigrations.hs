@@ -70,7 +70,8 @@ migrations =
     MigrationEntry 4 backfillEnableForAirport,
     MigrationEntry 5 backfillEnableCashRide,
     MigrationEntry 6 backfillMerchantOperatingCityId,
-    MigrationEntry 7 backfillRideBillingModel
+    MigrationEntry 7 backfillRideBillingModel,
+    MigrationEntry 8 backfillRideBillingModel
   ]
 
 -- | The "head" version, derived from the registry. Equals the largest
@@ -123,7 +124,11 @@ backfillEnabled entries = do
       (\e -> e {enabled = HashMap.lookupDefault e.enabled (cast e.driverId :: Id Person.Person) enabledMap})
       entries
 
--- | v7: backfill 'rideBillingModel' from driver_information.
+-- | v7, and again as v8: backfill 'rideBillingModel' from driver_information.
+--
+-- v8 re-runs the same copy after feature migration 0070 gave every remaining driver an
+-- explicit model (PREPAID from the catalogue, otherwise YATRI). Entries already stamped
+-- v7 still hold the null they copied then, and would never pick the new value up.
 --
 -- Legacy entries default to Nothing, which reads as postpaid
 -- (SharedLogic.Subscription.BillingModel). For a postpaid driver that is already

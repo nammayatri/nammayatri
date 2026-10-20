@@ -765,12 +765,18 @@ updateRideBillingModel rideBillingModel driverId = do
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.rideBillingModel = LTSSync.Set rideBillingModel}
 
--- | Set the billing model only when the driver does not already have one.
-setRideBillingModelIfUnset :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => P.ServiceNames -> Id Person.Person -> m ()
-setRideBillingModelIfUnset model driverId = do
-  mbDriverInfo <- findById (cast driverId)
-  when (maybe False (isNothing . (.rideBillingModel)) mbDriverInfo) $
-    updateRideBillingModel (Just model) driverId
+-- | Move the given drivers onto the prepaid model; drivers already on it are untouched.
+--
+-- The dashboard's bulk catalogue update is how operators enrol drivers into prepaid at
+-- merchants that do not auto-enrol at registration. That used to work through the
+-- catalogue fallback in go-online, which no longer applies once registration writes an
+-- explicit YATRI_SUBSCRIPTION, so adding PREPAID to the catalogue moves the model too.
+-- The reverse is deliberately not done here: a driver on PREPAID may still hold credits.
+enrollInPrepaidBillingModel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => [Text] -> m ()
+enrollInPrepaidBillingModel driverIds = do
+  driverInfos <- findAllByDriverIds driverIds
+  Kernel.Prelude.forM_ (filter ((/= Just P.PREPAID_SUBSCRIPTION) . (.rideBillingModel)) driverInfos) $ \driverInfo ->
+    updateRideBillingModel (Just P.PREPAID_SUBSCRIPTION) (cast driverInfo.driverId)
 
 updateSoftBlock :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe [DVST.ServiceTierType] -> Maybe UTCTime -> Maybe Text -> Id Person.Person -> m ()
 updateSoftBlock softBlockStiers softBlockExpiryTime softBlockReasonFlag driverId = do

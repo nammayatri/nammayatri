@@ -12,56 +12,85 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | Whether `driver_information.subscribed` is the authority on a driver's eligibility.
+-- | Who pays for a driver's rides, and how.
 --
--- `subscribed` is a postpaid (YATRI_SUBSCRIPTION) dues flag: the DriverFee job clears it
--- when a driver's outstanding balance crosses their plan's credit limit. A prepaid driver
--- has no driver_fee rows, so nothing ever sets it for them, and gating them on it removes
--- them from every pool with no error.
+-- Two inputs decide it:
 --
--- Two ways to be exempt, and they are deliberately OR'd rather than unified:
+--   * The driver's own `ride_billing_model` -- YATRI_SUBSCRIPTION (postpaid dues) or
+--     PREPAID_SUBSCRIPTION (prepaid credits). Every driver has one: registration writes it
+--     and feature migration 0070 backfilled the rest.
+--   * An active fleet association. At a merchant running prepaid the fleet owner pays from
+--     their own prepaid balance, whatever the driver's own model says; the driver's model
+--     only takes effect again if they leave the fleet.
 --
---   * `ride_billing_model = PREPAID_SUBSCRIPTION` -- the explicit, per-driver answer.
---   * An active fleet association at a merchant running prepaid -- the pre-existing
---     carve-out, kept verbatim. Fleet drivers settle against the fleet owner's wallet and
---     never carry their own `subscribed`, but this only holds where the merchant actually
---     runs prepaid; a fleet on a postpaid merchant is still governed by dues.
---
--- Keeping the carve-out as a separate disjunct (rather than deriving "fleet implies
--- prepaid") makes this strictly additive: everything eligible today stays eligible, and
--- prepaid drivers are added. Nothing that passes now can start failing.
+-- Every gate that asks "is this driver prepaid?" goes through 'resolvePayer', so pooling,
+-- dispatch, go-online, OTP rides and ride start cannot disagree about the same driver.
 module SharedLogic.Subscription.BillingModel
-  ( isPrepaidBillingModel,
-    isExemptFromPostpaidDuesFlag,
-    isPrepaidDriverWithCatalogueFallback,
+  ( Payer (..),
+    resolvePayer,
+    isPrepaidPayer,
+    modelOrCatalogue,
   )
 where
 
+import Control.Applicative ((<|>))
 import Domain.Types.Extra.Plan (ServiceNames (..))
+import Domain.Types.SubscriptionPurchase (SubscriptionOwnerType (..))
 import Kernel.Prelude
 
--- | The driver's own explicit billing model. Nothing means postpaid -- the behaviour
--- every driver had before the column existed.
-isPrepaidBillingModel :: Maybe ServiceNames -> Bool
-isPrepaidBillingModel = (== Just PREPAID_SUBSCRIPTION)
+data Payer = Payer
+  { -- | Whose prepaid balance and purchases a prepaid payer is checked against. Postpaid
+    -- dues are always the driver's own, so these only matter when 'model' is PREPAID.
+    ownerType :: SubscriptionOwnerType,
+    ownerId :: Text,
+    model :: ServiceNames
+  }
+  deriving (Show, Eq)
 
--- | Whether to skip the `subscribed` dues check for this driver.
+-- | Resolve the payer for a driver.
 --
--- The first argument is @merchant.prepaidSubscriptionAndWalletEnabled@; the second the
--- driver's active fleet owner, if any -- @ride.fleetOwnerId@ when judging a specific ride,
--- otherwise the live association (or @DriverPoolData.fleetOwnerId@ inside pooling).
-isExemptFromPostpaidDuesFlag :: Bool -> Maybe Text -> Maybe ServiceNames -> Bool
-isExemptFromPostpaidDuesFlag merchantPrepaidEnabled mbFleetOwnerId mbModel =
-  isPrepaidBillingModel mbModel || (merchantPrepaidEnabled && isJust mbFleetOwnerId)
+-- Arguments: @merchant.prepaidSubscriptionAndWalletEnabled@; the driver's id; the active
+-- fleet owner, if any (@ride.fleetOwnerId@ when judging a specific ride, otherwise the live
+-- association, or @DriverPoolData.fleetOwnerId@ inside pooling); the driver's own model,
+-- where null reads as YATRI_SUBSCRIPTION (see 'modelOrCatalogue' for callers that have the
+-- catalogue).
+--
+-- A fleet driver's owner is the fleet owner even at a merchant without prepaid, matching
+-- end-ride and go-online, which have always charged prepaid against the fleet owner. Only
+-- the model differs: there the driver's own model still applies.
+resolvePayer :: Bool -> Text -> Maybe Text -> Maybe ServiceNames -> Payer
+resolvePayer merchantPrepaidEnabled driverId mbFleetOwnerId mbDriverModel =
+  let driverModel = fromMaybe YATRI_SUBSCRIPTION mbDriverModel
+   in case mbFleetOwnerId of
+        Just fleetOwnerId ->
+          Payer
+            { ownerType = FLEET_OWNER,
+              ownerId = fleetOwnerId,
+              model = if merchantPrepaidEnabled then PREPAID_SUBSCRIPTION else driverModel
+            }
+        Nothing ->
+          Payer
+            { ownerType = DRIVER,
+              ownerId = driverId,
+              model = driverModel
+            }
 
--- | As 'isExemptFromPostpaidDuesFlag', but falls back to the purchasable-services
--- catalogue when the driver has no explicit model yet.
+-- | Whether `driver_information.subscribed` should be skipped for this payer.
 --
--- An explicit model always wins. Delete the Nothing branch once every row is backfilled.
-isPrepaidDriverWithCatalogueFallback :: Bool -> Maybe Text -> Maybe ServiceNames -> [ServiceNames] -> Bool
-isPrepaidDriverWithCatalogueFallback merchantPrepaidEnabled mbFleetOwnerId mbModel catalogue =
-  case mbModel of
-    Just _ -> isExemptFromPostpaidDuesFlag merchantPrepaidEnabled mbFleetOwnerId mbModel
-    Nothing ->
-      PREPAID_SUBSCRIPTION `elem` catalogue
-        || (merchantPrepaidEnabled && isJust mbFleetOwnerId)
+-- `subscribed` is a postpaid dues flag: the DriverFee job clears it when a driver's
+-- outstanding balance crosses their plan's credit limit. A prepaid payer has no driver_fee
+-- rows, so nothing ever sets it for them, and gating them on it removes them from every
+-- pool with no error.
+isPrepaidPayer :: Payer -> Bool
+isPrepaidPayer payer = payer.model == PREPAID_SUBSCRIPTION
+
+-- | The driver's own model, for callers that also have the catalogue
+-- (`servicesEnabledForSubscription`).
+--
+-- A null model only remains on a row that registered on the old code after 0070 ran; it
+-- resolves the way go-online always resolved it: PREPAID if the catalogue offers it.
+-- Pooling has no catalogue and reads null as YATRI, which is also what it did before.
+-- Delete this once 0070 has been re-run after the deploy.
+modelOrCatalogue :: Maybe ServiceNames -> [ServiceNames] -> Maybe ServiceNames
+modelOrCatalogue mbModel catalogue =
+  mbModel <|> (PREPAID_SUBSCRIPTION <$ guard (PREPAID_SUBSCRIPTION `elem` catalogue))

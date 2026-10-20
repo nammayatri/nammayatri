@@ -300,7 +300,7 @@ import SharedLogic.Ride
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
-import SharedLogic.Subscription.BillingModel (isPrepaidDriverWithCatalogueFallback)
+import SharedLogic.Subscription.BillingModel (isPrepaidPayer, modelOrCatalogue, resolvePayer)
 import qualified SharedLogic.Type as SLT
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.DriverPoolConfig as SCDPC
@@ -1072,18 +1072,16 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
           merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
           mbVehicle <- QVehicle.findById personId
           mbFleetAssociation <- QFDA.findByDriverId driverId True
-          let (ownerType, ownerId) = case mbFleetAssociation of
-                Just fda -> (DSP.FLEET_OWNER, fda.fleetOwnerId)
-                Nothing -> (DSP.DRIVER, personId.getId)
           let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-              isPrepaidDriver =
-                isPrepaidDriverWithCatalogueFallback
+              payer =
+                resolvePayer
                   isPrepaidEnabled
+                  personId.getId
                   (mbFleetAssociation <&> (.fleetOwnerId))
-                  driverInfo.rideBillingModel
-                  driverInfo.servicesEnabledForSubscription
+                  (modelOrCatalogue driverInfo.rideBillingModel driverInfo.servicesEnabledForSubscription)
+              isPrepaidDriver = isPrepaidPayer payer
           if isPrepaidDriver
-            then checkPrepaidGoOnlineEligibility personId transporterConfig ownerType ownerId (mbVehicle >>= (.category))
+            then checkPrepaidGoOnlineEligibility personId transporterConfig payer.ownerType payer.ownerId (mbVehicle >>= (.category))
             else do
               DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle Plan.YATRI_SUBSCRIPTION
               let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation

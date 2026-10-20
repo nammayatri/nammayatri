@@ -66,6 +66,7 @@ import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchas
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Payment
 import qualified SharedLogic.Payment as SPayment
+import SharedLogic.Subscription.BillingModel (modelOrCatalogue)
 import qualified Storage.CachedQueries.Plan as QPD
 import qualified Storage.CachedQueries.PlanExtra as QPDE
 import qualified Storage.CachedQueries.PlanTranslation as CQPTD
@@ -428,12 +429,14 @@ instance Subscription ServiceNames where
       YATRI_RENTAL -> createDriverPlanGeneric YATRI_RENTAL (driverId, merchantId, opCity) plan subscriptionServiceRelatedData subscriptionConfig
       DASHCAM_RENTAL _ -> createDriverPlanGeneric serviceName (driverId, merchantId, opCity) plan subscriptionServiceRelatedData subscriptionConfig
       PREPAID_SUBSCRIPTION -> pure () -- No need to create driver plan for prepaid subscription
-  planSubscribe serviceName = do
+  planSubscribe serviceName planId mediaInfo ids@(driverId, _, _) subscriptionServiceRelatedData = do
+    when (serviceName `elem` [YATRI_SUBSCRIPTION, PREPAID_SUBSCRIPTION]) $
+      ensureOnRideBillingModel serviceName driverId
     case serviceName of
-      YATRI_SUBSCRIPTION -> planSubscribeGeneric YATRI_SUBSCRIPTION
-      YATRI_RENTAL -> planSubscribeGeneric YATRI_RENTAL
-      DASHCAM_RENTAL _ -> planSubscribeGeneric serviceName
-      PREPAID_SUBSCRIPTION -> prepaidPlanSubscribe serviceName
+      YATRI_SUBSCRIPTION -> planSubscribeGeneric YATRI_SUBSCRIPTION planId mediaInfo ids subscriptionServiceRelatedData
+      YATRI_RENTAL -> planSubscribeGeneric YATRI_RENTAL planId mediaInfo ids subscriptionServiceRelatedData
+      DASHCAM_RENTAL _ -> planSubscribeGeneric serviceName planId mediaInfo ids subscriptionServiceRelatedData
+      PREPAID_SUBSCRIPTION -> prepaidPlanSubscribe serviceName planId mediaInfo ids subscriptionServiceRelatedData
   planSwitch serviceName = do
     case serviceName of
       YATRI_SUBSCRIPTION -> planSwitchGeneric YATRI_SUBSCRIPTION
@@ -779,6 +782,20 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
       if order.status `elem` [Payment.NEW, Payment.PENDING_VBV, Payment.AUTHORIZING, Payment.STARTED]
         then return (Just order.id, if isJust order.createMandate then Just AUTOPAY_REGISTRATION else Just CLEAR_DUE)
         else return (Nothing, Nothing)
+
+-- | Subscribing never moves a driver between ride billing models; that is a separate,
+-- explicit switch. A driver can only buy into the model they are already on, so a prepaid
+-- pack cannot quietly take a postpaid driver with unpaid dues off postpaid, and a mandate
+-- cannot be set up for a prepaid driver. Rentals are add-ons billed alongside either model
+-- and are not checked. Fleet owners have no ride billing model of their own.
+ensureOnRideBillingModel :: ServiceNames -> Id SP.Person -> Flow ()
+ensureOnRideBillingModel target personId = do
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (DCommon.checkFleetOwnerRole person.role) $ do
+    driverInfo <- DI.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
+    let current = fromMaybe YATRI_SUBSCRIPTION (modelOrCatalogue driverInfo.rideBillingModel driverInfo.servicesEnabledForSubscription)
+    unless (current == target) $
+      throwError $ RideBillingModelMismatch (show current) (show target)
 
 prepaidPlanSubscribe ::
   ServiceNames ->

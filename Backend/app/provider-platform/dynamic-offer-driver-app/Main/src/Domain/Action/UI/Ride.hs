@@ -95,7 +95,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.FleetEngine as FleetEngine
 import SharedLogic.Ride
-import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
+import SharedLogic.Subscription.BillingModel (isPrepaidPayer, resolvePayer)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -380,12 +380,12 @@ otpRideCreate driver otpCode booking clientId = do
   -- Postpaid-only dues gate: `subscribed` is never set for a prepaid driver, so applying it
   -- to them would block every OTP ride. Prepaid solvency is enforced by the wallet hold in
   -- initializeRide below, which is the authority for this ride's funding.
-  -- Uses the same exemption as pooling rather than the explicit model alone, so a fleet
-  -- driver under a prepaid merchant with a YATRI or null model is not admitted to the pool
-  -- and then refused here. The live association is the right one to read: the ride does not
-  -- exist yet, and initializeRide below is handed this very value.
+  -- Same resolution as pooling, so a fleet driver under a prepaid merchant is not admitted
+  -- to the pool and then refused here. The live association is the right one to read: the
+  -- ride does not exist yet, and initializeRide below is handed this very value.
   let isPrepaidEnabled = fromMaybe False transporter.prepaidSubscriptionAndWalletEnabled
-  unless (isExemptFromPostpaidDuesFlag isPrepaidEnabled (mFleetOwnerId <&> (.fleetOwnerId)) driverInfo.rideBillingModel) $
+      payer = resolvePayer isPrepaidEnabled driver.id.getId (mFleetOwnerId <&> (.fleetOwnerId)) driverInfo.rideBillingModel
+  unless (isPrepaidPayer payer) $
     unless (driverInfo.subscribed || isKaaliPeeliBooking booking) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled || fromMaybe False transporterConfig.allowDisableDriverToTakeSpecialZoneRide) $ throwError DriverAccountDisabled
   when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))

@@ -94,7 +94,7 @@ import SharedLogic.GoogleTranslate
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (offerQuoteLockKeyWithCoolDown)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
-import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
+import SharedLogic.Subscription.BillingModel (isPrepaidPayer, resolvePayer)
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
@@ -663,7 +663,7 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
             -- against the fleet owner's wallet) never carries it, so re-checking it here would
             -- reject at dispatch every driver that pooling just admitted.
             let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-                isBillingEligible d = d.subscribed || isExemptFromPostpaidDuesFlag isPrepaidEnabled d.fleetOwnerId d.rideBillingModel
+                isBillingEligible d = d.subscribed || isPrepaidPayer (resolvePayer isPrepaidEnabled (getId d.driverId) d.fleetOwnerId d.rideBillingModel)
                 isStillLive =
                   maybe False (\d -> not d.blocked && d.enabled && not (fromMaybe False d.isDisabledReasonFlag) && isBillingEligible d && isDriverModeEligibleHelper d.mode d.active) mbFreshPoolData
                     && stillHasTierSelected

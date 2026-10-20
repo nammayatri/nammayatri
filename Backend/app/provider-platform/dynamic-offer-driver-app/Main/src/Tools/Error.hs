@@ -977,6 +977,7 @@ data SubscriptionError
   | PlanVehicleCategoryMismatch
   | EmptyDriverIdList
   | DriverIdListExceeded
+  | RideBillingModelMismatch Text Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''SubscriptionError
@@ -1002,6 +1003,7 @@ instance IsBaseError SubscriptionError where
     PlanVehicleCategoryMismatch -> Just "Plans must have the same vehicle category"
     EmptyDriverIdList -> Just "Driver IDs list cannot be empty"
     DriverIdListExceeded -> Just "Driver IDs list cannot exceed 500"
+    RideBillingModelMismatch current target -> Just $ "Driver is on " <> current <> ". Switch the ride billing model before subscribing to " <> target <> "."
 
 instance IsHTTPError SubscriptionError where
   toErrorCode = \case
@@ -1024,6 +1026,7 @@ instance IsHTTPError SubscriptionError where
     PlanVehicleCategoryMismatch -> "PLAN_VEHICLE_CATEGORY_MISMATCH"
     EmptyDriverIdList -> "EMPTY_DRIVER_ID_LIST"
     DriverIdListExceeded -> "DRIVER_ID_LIST_EXCEEDED"
+    RideBillingModelMismatch _ _ -> "RIDE_BILLING_MODEL_MISMATCH"
   toHttpCode = \case
     PlanNotFound _ -> E500
     MandateNotFound _ -> E500
@@ -1044,6 +1047,7 @@ instance IsHTTPError SubscriptionError where
     PlanVehicleCategoryMismatch -> E400
     EmptyDriverIdList -> E400
     DriverIdListExceeded -> E400
+    RideBillingModelMismatch _ _ -> E400
 
 instance IsAPIError SubscriptionError
 

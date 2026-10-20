@@ -46,7 +46,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.Subscription.BillingModel (isPrepaidDriverWithCatalogueFallback)
+import SharedLogic.Subscription.BillingModel (isPrepaidPayer, modelOrCatalogue, resolvePayer)
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -102,17 +102,17 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
   -- eligible regardless of `active`; `active` only matters when no mode is set.
   -- `subscribed` only speaks for a postpaid driver, so reporting "not subscribed" for a
   -- prepaid one would send ops chasing a flag that is meant to be false for them.
-  -- Same predicate the go-online gate and pooling use, not the bare model: a legacy
-  -- prepaid driver whose ride_billing_model is still null would otherwise be reported
-  -- as "not subscribed", which is exactly the misleading answer noted above.
+  -- Same resolution as the go-online gate, including its catalogue fallback for a model
+  -- that is still null, so ops are told what go-online would decide.
   merchant <- CQM.findById driver.merchantId >>= fromMaybeM (MerchantNotFound driver.merchantId.getId)
   mbFleetAssociation <- QFDA.findByDriverId driver.id True
   let isPrepaid =
-        isPrepaidDriverWithCatalogueFallback
-          (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled)
-          (mbFleetAssociation <&> (.fleetOwnerId))
-          driverInfo.rideBillingModel
-          driverInfo.servicesEnabledForSubscription
+        isPrepaidPayer $
+          resolvePayer
+            (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled)
+            driver.id.getId
+            (mbFleetAssociation <&> (.fleetOwnerId))
+            (modelOrCatalogue driverInfo.rideBillingModel driverInfo.servicesEnabledForSubscription)
       isDriverOnline = case driverInfo.mode of
         Just DCommon.ONLINE -> True
         Just DCommon.SILENT -> True
