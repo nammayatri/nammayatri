@@ -32,6 +32,7 @@ PersonStats:
     backlogPayoutStatus: Maybe PayoutStatus
     backlogPayoutAmount: HighPrecMoney
     isBackfilled: Maybe Bool
+    sharedCabNoShows : Int
     createdAt : UTCTime
     updatedAt : UTCTime
 
@@ -45,6 +46,7 @@ PersonStats:
   default:
     referralCount: "0"
     ticketsBookedInEvent: "0"
+    sharedCabNoShows: "0"
 
   beamType:
     createdAt: Maybe UTCTime
@@ -53,6 +55,7 @@ PersonStats:
     validActivations : Maybe Int
     referralAmountPaid : Maybe HighPrecMoney
     backlogPayoutAmount: Maybe HighPrecMoney
+    sharedCabNoShows: Maybe Int
 
   fromTType:
     createdAt: Kernel.Prelude.fromMaybe updatedAt|I
@@ -61,6 +64,7 @@ PersonStats:
     validActivations : Kernel.Prelude.fromMaybe 0|I
     referralAmountPaid : Kernel.Prelude.fromMaybe 0|I
     backlogPayoutAmount: Kernel.Prelude.fromMaybe 0|I
+    sharedCabNoShows: Kernel.Prelude.fromMaybe 0|I
 
   toTType:
     createdAt: Kernel.Prelude.Just|I
@@ -69,6 +73,7 @@ PersonStats:
     validActivations : Kernel.Prelude.Just|I
     referralAmountPaid : Kernel.Prelude.Just|I
     backlogPayoutAmount: Kernel.Prelude.Just|I
+    sharedCabNoShows: Kernel.Prelude.Just|I
 
   queries:
     findByPersonId:

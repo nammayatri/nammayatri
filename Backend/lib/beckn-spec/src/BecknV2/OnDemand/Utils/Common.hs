@@ -115,6 +115,7 @@ mapVariantToVehicle = \case
   DTV.EV_HATCHBACK -> Enums.CAB
   DTV.EV_SEDAN -> Enums.CAB
   DTV.EV_SUV -> Enums.CAB
+  DTV.SHARED_CAB -> Enums.CAB
 
 castVehicleCategoryToDomain :: Enums.VehicleCategory -> DVC.VehicleCategory
 castVehicleCategoryToDomain = \case
@@ -174,6 +175,7 @@ mapServiceTierToCategory = \case
   EV_SEDAN -> Enums.CAB
   EV_SUV -> Enums.CAB
   INSTANT_AUTO -> Enums.AUTO_RICKSHAW
+  SHARED_CAB -> Enums.CAB
 
 getListOfServiceTireTypes :: Enums.VehicleCategory -> [DVST.ServiceTierType]
 getListOfServiceTireTypes Enums.CAB = [DVST.SEDAN, DVST.SUV, DVST.HATCHBACK, DVST.TAXI, DVST.TAXI_PLUS, DVST.ECO, DVST.COMFY, DVST.PREMIUM, DVST.PREMIUM_SEDAN, DVST.BLACK, DVST.BLACK_XL, DVST.SUV_PLUS, DVST.HERITAGE_CAB, DVST.VIP_ESCORT, DVST.VIP_OFFICER, DVST.AC_PRIORITY, DVST.EV_HATCHBACK, DVST.EV_SEDAN, DVST.EV_SUV]

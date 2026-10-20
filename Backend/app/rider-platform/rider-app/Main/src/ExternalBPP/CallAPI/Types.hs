@@ -10,6 +10,7 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import SharedLogic.SharedCab (SharedCabConfirmFlow)
 import qualified Tools.Metrics as Metrics
 import qualified UrlShortner.Common as UrlShortner
 
@@ -47,5 +48,6 @@ type FRFSConfirmFlow m r c =
     -- Needed for withTimeAPI, used to time the auto-seat hold retry loop
     -- (SharedLogic.FRFSConfirm.selectAndHoldWithRetries).
     HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    SharedCabConfirmFlow m r
   )

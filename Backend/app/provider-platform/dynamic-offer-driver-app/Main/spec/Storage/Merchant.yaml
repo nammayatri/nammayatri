@@ -1593,6 +1593,7 @@ TransporterConfig:
     enableLegalComplianceDocuments: Maybe Bool
     enableGoOnlinePolicyBlocker: Maybe Bool
     driverImagePresignedUrlExpiry: Maybe Seconds # Expiry of the pre-signed S3 URL of the driver image shared with non value-add BAPs. Nothing = 3600 seconds
+    sharedCabReconcilerEnabled: Maybe Bool # Per-city gate for the shared-cab reconciler job (Allocator). Nothing/false = job skips this city (fail-closed).
 
   beamType:
     currency: Maybe Currency
@@ -2016,6 +2017,7 @@ TransporterConfig:
     defaultOnboardingAs: character varying(255)
     metricsDistanceBucketsKm: "integer[]"
     enableOndcScheduledRideSupport: boolean
+    sharedCabReconcilerEnabled: boolean
 
   default:
     enableLegalComplianceDocuments: "false"
@@ -2194,6 +2196,7 @@ TransporterConfig:
     useCategoryBasedVerificationPriorityList: "true"
     forceDirectCalling: "false"
     enableOndcScheduledRideSupport: "false"
+    sharedCabReconcilerEnabled: "false"
   excludedDefaultQueries:
     - findByPrimaryKey
   queries:
@@ -2268,6 +2271,7 @@ TransporterConfig:
         - enableBppReallocation
         - manualTollChargeConfig
         - rideEvidenceConfig
+        - sharedCabReconcilerEnabled
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId

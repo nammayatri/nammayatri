@@ -513,6 +513,7 @@ data JobName
   | AggregatedCommissionInvoiceCreationTrigger
   | RetryAutopayCollectionTrigger
   | SendLegalPolicyNotificationTrigger
+  | SharedCabReconcilerTrigger
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -565,6 +566,7 @@ data MerchantCommonConfigRes = MerchantCommonConfigRes
     driverCoolOffPeriod :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     rideEvidenceConfig :: Kernel.Prelude.Maybe RideEvidenceConfigItem,
     manualTollChargeConfig :: Kernel.Prelude.Maybe ManualTollChargeConfigItem,
+    sharedCabReconcilerEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -621,7 +623,8 @@ data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
     negativeFareAdjustmentMaxAmount :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Int),
     driverCoolOffPeriod :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds),
     rideEvidenceConfig :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue RideEvidenceConfigItem),
-    manualTollChargeConfig :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue ManualTollChargeConfigItem)
+    manualTollChargeConfig :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue ManualTollChargeConfigItem),
+    sharedCabReconcilerEnabled :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Bool)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

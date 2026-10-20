@@ -104,6 +104,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.enableBppReallocation enableBppReallocation,
       Se.Set Beam.manualTollChargeConfig (Kernel.Prelude.toJSON <$> manualTollChargeConfig),
       Se.Set Beam.rideEvidenceConfig (Kernel.Prelude.toJSON <$> rideEvidenceConfig),
+      Se.Set Beam.sharedCabReconcilerEnabled sharedCabReconcilerEnabled,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
@@ -418,6 +419,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.sendMembershipIdInProfile sendMembershipIdInProfile,
       Se.Set Beam.sendSmsOnEnablement sendSmsOnEnablement,
       Se.Set Beam.separateDriverVehicleEnablement separateDriverVehicleEnablement,
+      Se.Set Beam.sharedCabReconcilerEnabled sharedCabReconcilerEnabled,
       Se.Set Beam.snapToRoadConfidenceThreshold snapToRoadConfidenceThreshold,
       Se.Set Beam.specialDrivers specialDrivers,
       Se.Set Beam.specialLocationTags specialLocationTags,

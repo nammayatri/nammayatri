@@ -50,6 +50,7 @@ mapConcurrently fn ar = do
 
 castTravelModeToVehicleCategory :: DTrip.MultimodalTravelMode -> Enums.VehicleCategory
 castTravelModeToVehicleCategory DTrip.Bus = Enums.BUS
+castTravelModeToVehicleCategory DTrip.SharedCab = Enums.BUS -- shared cab rides the BUS FRFS rails
 castTravelModeToVehicleCategory DTrip.Taxi = Enums.AUTO_RICKSHAW
 castTravelModeToVehicleCategory DTrip.Walk = Enums.AUTO_RICKSHAW
 castTravelModeToVehicleCategory DTrip.Metro = Enums.METRO

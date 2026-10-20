@@ -15,7 +15,7 @@
 module Tools.Error (module Tools.Error) where
 
 import qualified Dashboard.Common as Common
-import Data.Aeson (Value (Null), object, (.=))
+import Data.Aeson (Value (Null), decode, object, (.=))
 import qualified Data.Text as T
 import Kernel.External.Types (Language)
 import Kernel.Prelude
@@ -23,7 +23,10 @@ import Kernel.Types.Common (HighPrecMoney)
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error as Tools.Error hiding (PersonError, SosError, SosIdDoesNotExist)
 import Kernel.Types.Error.BaseError.HTTPError
+import Kernel.Types.Error.BaseError.HTTPError.FromResponse (FromResponse (..))
 import Kernel.Utils.Common (Meters)
+import qualified Network.HTTP.Types.Status as HTTP
+import Servant.Client (ResponseF (Response))
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data RatingError
@@ -447,6 +450,7 @@ instance IsAPIError SearchRequestErrorARDU
 data DriverQuoteError
   = FoundActiveQuotes
   | DriverOnRide
+  | DriverInSharedCabSession
   | DriverQuoteNotFound Text
   | DriverQuoteExpired
   | NoSearchRequestForDriver
@@ -469,6 +473,7 @@ instanceExceptionWithParent 'HTTPException ''DriverQuoteError
 instance IsBaseError DriverQuoteError where
   toMessage FoundActiveQuotes = Just "Failed to offer quote, there are other active quotes from this driver"
   toMessage DriverOnRide = Just "Unable to offer a quote while being on ride"
+  toMessage DriverInSharedCabSession = Just "Unable to offer a quote while in a shared-cab taxi-pool session"
   toMessage (DriverQuoteNotFound dqId) = Just $ "Driver quote not found with id:-" <> show dqId
   toMessage DriverQuoteExpired = Just "Driver quote expired"
   toMessage NoSearchRequestForDriver = Just "No search request for this driver"
@@ -489,6 +494,7 @@ instance IsHTTPError DriverQuoteError where
   toErrorCode = \case
     FoundActiveQuotes -> "FOUND_ACTIVE_QUOTES"
     DriverOnRide -> "DRIVER_ON_RIDE"
+    DriverInSharedCabSession -> "DRIVER_IN_SHARED_CAB_SESSION"
     DriverQuoteNotFound _ -> "DRIVER_QUOTE_NOT_FOUND"
     DriverQuoteExpired -> "QUOTE_EXPIRED"
     NoSearchRequestForDriver -> "NO_SEARCH_REQUEST_FOR_DRIVER"
@@ -508,6 +514,7 @@ instance IsHTTPError DriverQuoteError where
   toHttpCode = \case
     FoundActiveQuotes -> E400
     DriverOnRide -> E400
+    DriverInSharedCabSession -> E400
     DriverQuoteNotFound _ -> E400
     DriverQuoteExpired -> E400
     NoSearchRequestForDriver -> E400
@@ -2522,3 +2529,34 @@ instance IsHTTPError RideEvidenceError where
     RideEvidenceLimitReached -> E400
 
 instance IsAPIError RideEvidenceError
+
+-- | Rider-app "/internal/sharedCab/*" API error, carried across verbatim: the proxy re-throws a JSON APIError envelope with
+-- the SAME errorCode, message/payload and HTTP status instead of an opaque 500. The status rides in the value because
+-- 'toHttpCode' and 'fromResponse' are both pure over the decoded type.
+data SharedCabBAPError = SharedCabBAPError
+  { fromBAPErrorCode :: Text,
+    fromBAPErrorMessage :: Maybe Text,
+    fromBAPErrorPayload :: Value,
+    fromBAPHttpCode :: HttpCode
+  }
+  deriving (Show, Generic)
+
+instanceExceptionWithParent 'HTTPException ''SharedCabBAPError
+
+instance FromResponse SharedCabBAPError where
+  fromResponse (Response status _ _ body) = do
+    APIError errorCodeValue errorMessageValue errorPayloadValue <- decode body
+    pure $ SharedCabBAPError errorCodeValue errorMessageValue errorPayloadValue (codeToHttpCodeWith500Default (HTTP.statusCode status))
+
+instance IsBaseError SharedCabBAPError where
+  toMessage = fromBAPErrorMessage
+
+instance IsHTTPError SharedCabBAPError where
+  toErrorCode = fromBAPErrorCode
+  toHttpCode = fromBAPHttpCode
+
+instance IsAPIError SharedCabBAPError where
+  toPayload = fromBAPErrorPayload
+
+instance IsBecknAPIError SharedCabBAPError where
+  toType _ = DOMAIN_ERROR

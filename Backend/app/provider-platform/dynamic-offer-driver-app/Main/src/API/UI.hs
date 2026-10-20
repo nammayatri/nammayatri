@@ -100,6 +100,8 @@ import qualified API.UI.Ride as Ride
 import qualified API.UI.RideRoute as RideRoute
 import qualified API.UI.RideSummary as RideSummary
 import qualified API.UI.Route as Route
+import qualified API.UI.SharedCab as SharedCab
+import qualified API.UI.SharedCabBooking as SharedCabBooking
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Whatsapp as Whatsapp
@@ -210,6 +212,8 @@ type API =
            :<|> PolicyDocument.API
            :<|> DriverFyEarnings.API
            :<|> PaymentCustomer.API
+           :<|> SharedCab.API
+           :<|> SharedCabBooking.API
        )
 
 handler :: FlowServer API
@@ -300,3 +304,5 @@ handler =
     :<|> PolicyDocument.handler
     :<|> DriverFyEarnings.handler
     :<|> PaymentCustomer.handler
+    :<|> SharedCab.handler
+    :<|> SharedCabBooking.handler

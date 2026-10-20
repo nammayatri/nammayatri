@@ -413,6 +413,8 @@ library
       Domain.Action.UI.Search
       Domain.Action.UI.Select
       Domain.Action.UI.Serviceability
+      Domain.Action.UI.SharedCab
+      Domain.Action.UI.SharedCabInternal
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialZoneQuote
@@ -591,6 +593,7 @@ library
       SharedLogic.EditLocationThrottle
       SharedLogic.External.BbpsService.Flow
       SharedLogic.External.LocationTrackingService.API.NearbyDrivers
+      SharedLogic.External.LocationTrackingService.API.Ride
       SharedLogic.External.LocationTrackingService.API.Sos
       SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute
       SharedLogic.External.LocationTrackingService.Flow
@@ -603,6 +606,7 @@ library
       SharedLogic.Finance.CashbackPayout
       SharedLogic.Finance.RidePayment
       SharedLogic.FRFSCancel
+      SharedLogic.FRFSCancelEffects
       SharedLogic.FRFSCancelJourney
       SharedLogic.FRFSConfirm
       SharedLogic.FRFSFareCalculator
@@ -687,12 +691,55 @@ library
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
       SharedLogic.Scheduler.Jobs.SendLegalPolicyNotification
       SharedLogic.Scheduler.Jobs.SettlementReportIngestion
+      SharedLogic.Scheduler.Jobs.SharedCabAllocationTick
+      SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep
+      SharedLogic.Scheduler.Jobs.SharedCabSessionExpiry
       SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
       SharedLogic.Scheduler.Jobs.UnblockCustomer
       SharedLogic.Scheduler.Jobs.UpdateCRISRDSBalance
       SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability
+      SharedLogic.SharedCab
+      SharedLogic.SharedCab.Allocation
+      SharedLogic.SharedCab.Allocation.Claim
+      SharedLogic.SharedCab.Allocation.Reallocate
+      SharedLogic.SharedCab.Allocation.Select
+      SharedLogic.SharedCab.Allocation.Timers
+      SharedLogic.SharedCab.Allocation.Types
+      SharedLogic.SharedCab.Boarding
+      SharedLogic.SharedCab.Booking
+      SharedLogic.SharedCab.BookingState
+      SharedLogic.SharedCab.Call
+      SharedLogic.SharedCab.Cancel
+      SharedLogic.SharedCab.Config
+      SharedLogic.SharedCab.ConfirmHook
+      SharedLogic.SharedCab.Degraded
+      SharedLogic.SharedCab.Demand
+      SharedLogic.SharedCab.DriverAction
+      SharedLogic.SharedCab.Enabled
+      SharedLogic.SharedCab.Events
+      SharedLogic.SharedCab.FindingTimeout
+      SharedLogic.SharedCab.Invariants
+      SharedLogic.SharedCab.JourneyLeg
+      SharedLogic.SharedCab.Keys
+      SharedLogic.SharedCab.LegState
+      SharedLogic.SharedCab.Lts
+      SharedLogic.SharedCab.LtsAttach
+      SharedLogic.SharedCab.NoShow
+      SharedLogic.SharedCab.Notify
+      SharedLogic.SharedCab.Plate
+      SharedLogic.SharedCab.RateLimit
+      SharedLogic.SharedCab.RefundDecision
+      SharedLogic.SharedCab.RefundPolicy
+      SharedLogic.SharedCab.RefundRetry
+      SharedLogic.SharedCab.Schedule
+      SharedLogic.SharedCab.Session
+      SharedLogic.SharedCab.SessionState
+      SharedLogic.SharedCab.SessionView
+      SharedLogic.SharedCab.StopProgress
+      SharedLogic.SharedCab.StopProgress.Rules
+      SharedLogic.SharedCab.WalkUp
       SharedLogic.SilentReallocation
       SharedLogic.SosLocationTracking
       SharedLogic.SyncSearchDispatch
@@ -927,6 +974,7 @@ library
       Storage.Queries.TranslationsExtra
       Storage.Queries.UiRiderConfigExtra
       Storage.Queries.VehicleRouteMappingExtra
+      Storage.Queries.VehicleTripExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.ActorInfo
@@ -1086,6 +1134,8 @@ library
       API.Action.UI.RidePayment
       API.Action.UI.RiderLocation
       API.Action.UI.RiderPreferences
+      API.Action.UI.SharedCab
+      API.Action.UI.SharedCabInternal
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.SupportBot
@@ -1252,6 +1302,8 @@ library
       API.Types.UI.RidePayment
       API.Types.UI.RiderLocation
       API.Types.UI.RiderPreferences
+      API.Types.UI.SharedCab
+      API.Types.UI.SharedCabInternal
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.SupportBot
@@ -1443,6 +1495,7 @@ library
       Domain.Types.VehicleConfig
       Domain.Types.VehicleRouteMapping
       Domain.Types.VehicleSeatLayoutMapping
+      Domain.Types.VehicleTrip
       Domain.Types.VendorSplitDetails
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
@@ -1619,6 +1672,7 @@ library
       Storage.Beam.VehicleConfig
       Storage.Beam.VehicleRouteMapping
       Storage.Beam.VehicleSeatLayoutMapping
+      Storage.Beam.VehicleTrip
       Storage.Beam.VendorSplitDetails
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.AssetRelease
@@ -1804,6 +1858,7 @@ library
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.UiRiderConfig
       Storage.Queries.OrphanInstances.VehicleRouteMapping
+      Storage.Queries.OrphanInstances.VehicleTrip
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.ParcelDetails
       Storage.Queries.ParkingTransaction
@@ -1881,6 +1936,7 @@ library
       Storage.Queries.VehicleConfig
       Storage.Queries.VehicleRouteMapping
       Storage.Queries.VehicleSeatLayoutMapping
+      Storage.Queries.VehicleTrip
       Storage.Queries.VendorSplitDetails
       Storage.Queries.WhiteListOrg
   other-modules:
@@ -2188,6 +2244,26 @@ test-suite rider-app-test
   main-is: Main.hs
   other-modules:
       FRFS.DirectQR
+      SharedCabAllocationTests
+      SharedCabBoardingTests
+      SharedCabCancelRefusalTests
+      SharedCabConfigTests
+      SharedCabDegradedSweepTests
+      SharedCabDegradedTests
+      SharedCabDemandTests
+      SharedCabDriverActionTests
+      SharedCabEventsTests
+      SharedCabExpiryTests
+      SharedCabInvariantsTests
+      SharedCabLegStateTests
+      SharedCabNoShowTests
+      SharedCabNotifyTests
+      SharedCabPlateTests
+      SharedCabRefundPolicyTests
+      SharedCabRefundRetryTests
+      SharedCabSessionTests
+      SharedCabStopProgressTests
+      SharedCabTicketBirthTests
       Paths_rider_app
   hs-source-dirs:
       test
@@ -2238,6 +2314,7 @@ test-suite rider-app-test
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-spec
     , bytestring
     , casing
     , cassava

@@ -62,6 +62,7 @@ import SharedLogic.FRFSStatus
 import SharedLogic.FRFSUtils
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.SharedCab as SharedCab
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -100,7 +101,7 @@ data RescheduleCtx = RescheduleCtx
   }
 
 confirmAndUpsertBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Id Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe RescheduleCtx -> Maybe (Id DPPP.PurchasedPassPayment) -> Bool -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking, FRFSUtils.FRFSFareParameters, [FRFSQuoteCategory.FRFSQuoteCategory], Bool)
-confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId isSpotBooking mbVehicleNumber mbRescheduleCtx mbPurchasedPassPaymentId passSelectionAuthoritative = do
+confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbRequestedTripId isSpotBooking mbVehicleNumber mbRescheduleCtx mbPurchasedPassPaymentId passSelectionAuthoritative = do
   Metrics.withTimeFRFSMerchant "frfsConfirm" "confirmLockTotal" quote.merchantId.getId $
     Hedis.withWaitAndLockMasterCloudCrossAppRedis "frfsConfirm" "waitForConfirmLock" (mkConfirmLockKey quote.searchId.getId) confirmLockTtlSec confirmLockRetryDelayMicros $ do
       quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
@@ -119,6 +120,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                     && booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
               _ -> return $ booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
           Nothing -> return True
+      let mbTripId = FRFSUtils.tripIdForServiceTier (FRFSUtils.getServiceTierTypeFromRouteStationsJson quote.routeStationsJson) mbRequestedTripId
       let mbConfirmVehicleNumber = quote.vehicleNumber <|> mbVehicleNumber
       mbSeatLayoutMapping <- case mbConfirmVehicleNumber of
         Just vNo -> CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vNo integratedBppConfig.feedKey
@@ -443,6 +445,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       -- actual bus departure rather than the booking creation time. Bus-only: metro/subway
       -- have no waybill schedule and leave firstTripId Nothing, so they fall back to `now`.
       mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
+      let isSpotBookingPath = isSpotBooking' == Just True || (mbJourneyLeg >>= (.finalBoardedBusNumberSource)) == Just DJL.UserSpotBooked
       -- Only for a pass booking, where the departure decides which day the pass window is checked
       -- against. Non-pass bookings keep the original `now`. Also rejects a departure that is not in
       -- the future: journey_leg.fromDepartureTime comes from a timetable lookup, and where there is
@@ -548,7 +551,9 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 holdId = mbHoldCtxForAll <&> (\(h, _, _) -> h),
                 tripId = firstTripId,
                 isSpotBooking = isSpotBooking',
-                vehicleNumber = quote'.vehicleNumber <|> mbVehicleNumber,
+                vehicleNumber = FRFSUtils.birthVehicleNumber mbServiceTierType isSpotBookingPath (quote'.vehicleNumber <|> mbVehicleNumber),
+                vehicleTripId = Nothing,
+                sharedCabNoShows = 0,
                 waybillNo = firstTripId <&> (fst . JourneyUtils.getWaybillNoAndTripNoFromTripId),
                 parentBookingId = (.oldBookingId) <$> mbRescheduleCtx,
                 rescheduleCount = mbRescheduleCount,
@@ -572,14 +577,16 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       whenJust mbPassWindowCtx $ \(appliedPass, paymentId, parentOwnerId, tripWindow) ->
         FRFSPassOverride.checkOverlappingBookingLimit rider appliedPass paymentId parentOwnerId tripWindow
 
+      when (SharedCab.isSharedCabBooking booking) $ SharedCab.requireSharedCabEnabled booking.merchantOperatingCityId
       QFRFSTicketBooking.create booking
       Metrics.incrementFRFSBookingCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (show booking.status) "created"
 
+      mbJourneyLeg' <- SharedCab.onBookingCreated booking mbJourneyLeg
       -- Update userBookedRouteShortName and userBookedBusServiceTierType from route_stations_json
       let mbBookedRouteShortName = mbFirstRouteStation <&> (.shortName)
       let mbBookedServiceTierType = mbServiceTierType
       when (isJust mbBookedRouteShortName && isJust mbBookedServiceTierType) $
-        whenJust mbJourneyLeg $ \journeyLeg -> do
+        whenJust mbJourneyLeg' $ \journeyLeg -> do
           whenJust mbBookedRouteShortName $ \bookedRouteShortName ->
             QRouteDetails.updateUserBookedRouteShortName (Just bookedRouteShortName) journeyLeg.id.getId
           QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJL.userBookedBusServiceTierType = mbBookedServiceTierType}
@@ -639,12 +646,13 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
   let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< dConfirmRes.routeStationsJson
   now <- getCurrentTime
-  let isFullyPassCovered = FRFSPassOverride.isFullyPassCovered dConfirmRes.overriddenAmount
+  -- A pay-on-board booking confirms like a pass-covered one: no order, ticket issued now.
+  confirmsWithoutPayment <- FRFSUtils.noPaymentDue dConfirmRes
   -- Only a standalone booking may confirm inline. A journey leg is deferred to
   -- SharedLogic.FRFSPassConfirm, driven either by the journey's payment success or -- when no leg is
   -- payable at all -- by Lib.JourneyModule.Base once every leg is confirmed. Confirming a leg here
   -- would issue a ticket and spend a pass trip before the rider has paid for the journey's other legs.
-  if isFullyPassCovered && dConfirmRes.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.APPROVED] && isNothing mbJourneyId
+  if confirmsWithoutPayment && dConfirmRes.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.APPROVED] && isNothing mbJourneyId
     then do
       bapConfig <-
         getOneConfig
@@ -680,7 +688,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
           FRFSUtils.releasePaymentSuccessLock claimedBooking.id
     else do
       mbCoveredJourneyBookings <-
-        if isFullyPassCovered
+        if confirmsWithoutPayment
           && dConfirmRes.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.APPROVED]
           && isNothing mbRescheduleCtx
           then case mbJourneyId of
@@ -963,7 +971,7 @@ buildJourneyAndLeg booking fareParameters = do
               -- OnConfirm, so OnConfirm's mark finds no leg yet and skips a fully covered booking.
               isPaymentSuccess = if FRFSPassOverride.fullyCoveredByPass booking then Just True else Nothing,
               totalLegs = 1,
-              modes = [mapVehicleCategoryToTripMode booking.vehicleType],
+              modes = [bookingTripMode],
               searchRequestId = booking.searchId.getId, -- Note :: This is not SearchRequest Table's ID. Do not use it to Query SearchReqeust Anywhere in Application.
               merchantId = booking.merchantId,
               status = DJ.CONFIRMED,
@@ -1091,7 +1099,7 @@ buildJourneyAndLeg booking fareParameters = do
     let journeyLeg =
           DJL.JourneyLeg
             { id = journeyLegGuid,
-              mode = mapVehicleCategoryToTripMode booking.vehicleType,
+              mode = bookingTripMode,
               groupCode = Nothing,
               startLocation = LatLngV2 fromLocation.lat fromLocation.lon,
               endLocation = LatLngV2 toLocation.lat toLocation.lon,
@@ -1198,6 +1206,10 @@ buildJourneyAndLeg booking fareParameters = do
     QJourneyLeg.create journeyLeg
   where
     mkBookingJourneyCreateKey = "booking:journey:create:bookingId-" <> booking.id.getId
+
+    bookingTripMode
+      | SharedCab.isSharedCabBooking booking = DTrip.SharedCab
+      | otherwise = mapVehicleCategoryToTripMode booking.vehicleType
 
     mapVehicleCategoryToTripMode = \case
       Spec.BUS -> DTrip.Bus

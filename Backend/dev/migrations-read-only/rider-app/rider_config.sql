@@ -934,3 +934,47 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN pickup_eta_refresh_interval_second
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_dynamic_pickup_eta boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_tick_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_stand_timer_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_off_route_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_off_route_meters integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_no_location_spot_bookings_per_vehicle_per_day integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_moving_timer_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_max_no_shows integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_max_attempts integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_lts_max_age_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_finding_timeout_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_fallback_after_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_events_topic text ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_degraded_timeout_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_board_proximity_m integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_board_attempts_per10_min integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_auto_end_after_drop_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_at_stop_radius_m integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_allocation_window_sec integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_enabled boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_max_cab_speed_mps integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_chat_enabled boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_call_enabled boolean ;

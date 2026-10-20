@@ -100,6 +100,7 @@ getBackfillPersonStatsData personId merchantOpCityid = do
             backlogPayoutStatus = Nothing,
             backlogPayoutAmount = 0,
             isBackfilled = Just True,
+            sharedCabNoShows = 0,
             ..
           }
   return personStatsValues

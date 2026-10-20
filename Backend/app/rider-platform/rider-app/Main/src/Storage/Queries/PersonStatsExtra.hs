@@ -1,7 +1,9 @@
 module Storage.Queries.PersonStatsExtra where
 
+import qualified Database.Beam as B
 import Domain.Types.Person
 import qualified Domain.Types.PersonStats as Domain
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -188,3 +190,21 @@ findTicketsBookedInEvent :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Pe
 findTicketsBookedInEvent (Id personId) = do
   stats <- findOneWithKV [Se.Is BeamPS.personId (Se.Eq personId)]
   pure $ fromMaybe 0 ((.ticketsBookedInEvent) =<< stats)
+
+newtype StatsDB f = StatsDB {stats :: f (B.TableEntity BeamPS.PersonStatsT)}
+  deriving (Generic, B.Database be)
+
+statsDB :: B.DatabaseSettings be StatsDB
+statsDB = B.defaultDbSettings `B.withDbModification` B.dbModification {stats = BeamPS.personStatsTable}
+
+-- | One atomic statement, so concurrent shared-cab closes outside any lock never lose an increment. Raw SQL is
+-- safe here because person_stats is in kv_configs.disableForKV (ddl 1361): there is no KV copy to go stale.
+incrementSharedCabNoShows :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
+incrementSharedCabNoShows personId = do
+  now <- getCurrentTime
+  dbConf <- getMasterBeamConfig
+  void . L.runDB dbConf . L.updateRows $
+    B.update
+      (stats statsDB)
+      (\r -> (BeamPS.sharedCabNoShows r B.<-. B.just_ (B.coalesce_ [B.current_ (BeamPS.sharedCabNoShows r)] (B.val_ 0) + 1)) <> (BeamPS.updatedAt r B.<-. B.val_ now))
+      (\r -> BeamPS.personId r B.==. B.val_ personId.getId)
