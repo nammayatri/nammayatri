@@ -15,7 +15,6 @@ module Domain.Action.Dashboard.Management.RSFReconciliation
 where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.RSFReconciliation as Res
-import Control.Applicative ((<|>))
 import Data.List (nub, sortOn)
 import qualified Data.Map.Strict as Map
 import qualified Data.Time
@@ -111,8 +110,8 @@ getRSFReconciliationRsfOrders merchantShortId _opCity mbBapId mbDate mbLimit mbO
   (from, to) <- dayRange mbDate
   let limit = fromMaybe 50 mbLimit
       offset = fromMaybe 0 mbOffset
-  -- page over rsf_order_state (one row per order, created when first claimed); only the page is folded
-  page <- QOrderState.findPageByMerchantAndCreatedAtRange merchantId from to mbBapId limit offset
+  -- page over rsf_order_state by the day of each order's latest claim; only the page is folded
+  page <- QOrderState.findPageByMerchantAndLastClaimedAtRange merchantId from to mbBapId limit offset
   let orderIds = map (.orderId) page
   view <- loadOrderView merchantId orderIds
   pure $ Res.OrderListRes {totalItems = offset + length page, orders = mapMaybe (toOrderRow view) orderIds}
@@ -122,8 +121,8 @@ getRSFReconciliationRsfSummary :: Kernel.Types.Id.ShortId M.Merchant -> Kernel.T
 getRSFReconciliationRsfSummary merchantShortId _opCity mbDate = do
   merchantId <- findMerchantId merchantShortId
   (from, to) <- dayRange mbDate
-  orderIds <- map (.orderId) <$> QOrderState.findAllByMerchantAndCreatedAtRange merchantId from to
-  utrs <- map (.utr) <$> QUtrState.findAllByMerchantAndCreatedAtRange merchantId from to
+  orderIds <- map (.orderId) <$> QOrderState.findAllByMerchantAndLastClaimedAtRange merchantId from to
+  utrs <- map (.utr) <$> QUtrState.findAllByMerchantAndLastClaimedAtRange merchantId from to
   orderView <- loadOrderView merchantId orderIds
   utrView <- loadUtrView merchantId utrs
   let orders = mapMaybe (toOrderRow orderView) orderIds
@@ -158,7 +157,7 @@ getRSFReconciliationRsfUtrs merchantShortId _opCity mbBapId mbDate mbLimit mbOff
   (from, to) <- dayRange mbDate
   let limit = fromMaybe 20 mbLimit
       offset = fromMaybe 0 mbOffset
-  page <- QUtrState.findPageByMerchantAndCreatedAtRange merchantId from to mbBapId limit offset
+  page <- QUtrState.findPageByMerchantAndLastClaimedAtRange merchantId from to mbBapId limit offset
   let utrs = map (.utr) page
   view <- loadUtrView merchantId utrs
   pure $ Res.UtrListRes {totalItems = offset + length page, utrs = mapMaybe (toUtrSummary view) utrs}
@@ -269,13 +268,14 @@ toOrderRow view orderId =
           fare = mbRide >>= RSFLedger.rideFare
           allocationRows = Map.findWithDefault [] orderId view.allocationsByOrder
           allocated = sum (map (.amount) allocationRows)
-          statuses = mapMaybe (.claimStatus) claims
-          rejected = find (`notElem` [L.PENDING, L.ACCEPTED]) statuses
+          -- the order's status is the status of its latest BAP_CLAIM
+          latestStatus = lastClaim.claimStatus
+          rejected = mfilter (`notElem` [L.PENDING, L.ACCEPTED]) latestStatus
           (verdict, diff) = case (rejected, fare) of
             -- signed, ours − theirs: > 0 underpaid, < 0 overpaid (same convention as the wire)
-            (Just _, _) -> (Res.REJECTED, fromMaybe 0 (listToMaybe (mapMaybe (.rejectionDiff) claims)))
+            (Just _, _) -> (Res.REJECTED, fromMaybe 0 lastClaim.rejectionDiff)
             (_, Just fareAmount)
-              | L.PENDING `notElem` statuses && not (null allocationRows) ->
+              | latestStatus /= Just L.PENDING && not (null allocationRows) ->
                 let d = fareAmount - allocated
                  in (if d == 0 then Res.PAID else if d > 0 then Res.UNDERPAID else Res.OVERPAID, d)
             _ -> (Res.AWAITING, 0)
@@ -292,7 +292,7 @@ toOrderRow view orderId =
                 receivedTotal = allocated,
                 orderVerdict = verdict,
                 orderDiff = diff,
-                claimStatus = rejected <|> find (== L.PENDING) statuses <|> listToMaybe statuses,
+                claimStatus = latestStatus,
                 settlementUtrs = nub (mapMaybe (.utr) claims),
                 allocations = [Res.OrderAllocation {utr = u, amount = a} | (u, a) <- perUtr],
                 anyManuallyConfirmed = any ((== L.ADMIN) . (.actorType)) allocationRows,

@@ -13,6 +13,7 @@ import Tools.Beam.UtilsTH
 data RsfOrderStateT f = RsfOrderStateT
   { bapId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    lastClaimedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     lastReportedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     lastReportedMessageId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     merchantId :: (B.C f Kernel.Prelude.Text),

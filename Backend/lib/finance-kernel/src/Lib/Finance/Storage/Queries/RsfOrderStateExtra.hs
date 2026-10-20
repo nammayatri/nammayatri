@@ -3,14 +3,14 @@
 module Lib.Finance.Storage.Queries.RsfOrderStateExtra
   ( findAllByMerchantAndOrderIds,
     createMissing,
-    findPageByMerchantAndCreatedAtRange,
-    findAllByMerchantAndCreatedAtRange,
+    findPageByMerchantAndLastClaimedAtRange,
+    findAllByMerchantAndLastClaimedAtRange,
     upsertReported,
   )
 where
 
 import qualified Data.HashSet as HS
-import Data.List (nub)
+import Data.List (nub, partition)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
@@ -34,12 +34,19 @@ findAllByMerchantAndOrderIds merchantId orderIds =
         ]
     ]
 
--- Phase 2: one row per order the first time a receiver_recon claims it, reportedStatus NULL.
--- One batched read for the ids already present, then inserts only for the missing ones.
+-- Phase 2: one row per order the first time a receiver_recon names it (reportedStatus NULL), and
+-- lastClaimedAt bumped on every later receiver_recon that names it again, so the dashboard lists the
+-- order under the day of its latest claim. One batched read, inserts for the missing ids, one update
+-- for the rest.
 createMissing :: (BeamFlow m r) => Text -> Maybe Text -> UTCTime -> [Text] -> m ()
 createMissing merchantId bapId now ids = do
   existing <- findAllByMerchantAndOrderIds merchantId ids
   let seen = HS.fromList (map (.orderId) existing)
+      (known, fresh) = partition (`HS.member` seen) (nub ids)
+  unless (null known) $
+    updateWithKV
+      [Se.Set Beam.lastClaimedAt (Just now), Se.Set Beam.updatedAt now]
+      [Se.And [Se.Is Beam.merchantId $ Se.Eq merchantId, Se.Is Beam.orderId $ Se.In known]]
   traverse_
     createWithKV
     [ Domain.RsfOrderState
@@ -51,36 +58,36 @@ createMissing merchantId bapId now ids = do
           reportedCode = Nothing,
           lastReportedMessageId = Nothing,
           lastReportedAt = Nothing,
+          lastClaimedAt = Just now,
           createdAt = now,
           updatedAt = now
         }
-      | orderId <- nub ids,
-        not (HS.member orderId seen)
+      | orderId <- fresh
     ]
 
--- Dashboard paging: orders first claimed in the range, oldest first, one DB page.
-findPageByMerchantAndCreatedAtRange :: (BeamFlow m r) => Text -> UTCTime -> UTCTime -> Maybe Text -> Int -> Int -> m [Domain.RsfOrderState]
-findPageByMerchantAndCreatedAtRange merchantId from to mbBapId limit offset =
+-- Dashboard paging: orders whose latest claim falls in the range, oldest first, one DB page.
+findPageByMerchantAndLastClaimedAtRange :: (BeamFlow m r) => Text -> UTCTime -> UTCTime -> Maybe Text -> Int -> Int -> m [Domain.RsfOrderState]
+findPageByMerchantAndLastClaimedAtRange merchantId from to mbBapId limit offset =
   findAllWithOptionsKV
     [ Se.And $
         [ Se.Is Beam.merchantId $ Se.Eq merchantId,
-          Se.Is Beam.createdAt $ Se.GreaterThanOrEq from,
-          Se.Is Beam.createdAt $ Se.LessThan to
+          Se.Is Beam.lastClaimedAt $ Se.GreaterThanOrEq (Just from),
+          Se.Is Beam.lastClaimedAt $ Se.LessThan (Just to)
         ]
           <> [Se.Is Beam.bapId $ Se.Eq (Just b) | Just b <- [mbBapId]]
     ]
-    (Se.Asc Beam.createdAt)
+    (Se.Asc Beam.lastClaimedAt)
     (Just limit)
     (Just offset)
 
--- Everything first seen in the range (the day summary folds the whole day).
-findAllByMerchantAndCreatedAtRange :: (BeamFlow m r) => Text -> UTCTime -> UTCTime -> m [Domain.RsfOrderState]
-findAllByMerchantAndCreatedAtRange merchantId from to =
+-- Every order whose latest claim falls in the range (the day summary folds the whole day).
+findAllByMerchantAndLastClaimedAtRange :: (BeamFlow m r) => Text -> UTCTime -> UTCTime -> m [Domain.RsfOrderState]
+findAllByMerchantAndLastClaimedAtRange merchantId from to =
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantId $ Se.Eq merchantId,
-          Se.Is Beam.createdAt $ Se.GreaterThanOrEq from,
-          Se.Is Beam.createdAt $ Se.LessThan to
+          Se.Is Beam.lastClaimedAt $ Se.GreaterThanOrEq (Just from),
+          Se.Is Beam.lastClaimedAt $ Se.LessThan (Just to)
         ]
     ]
 
@@ -125,6 +132,7 @@ upsertReported merchantId orderId reportedStatus reportedDiff reportedCode messa
             reportedCode = reportedCode,
             lastReportedMessageId = Just messageId,
             lastReportedAt = Just reportedAt,
+            lastClaimedAt = Just reportedAt,
             createdAt = reportedAt,
             updatedAt = reportedAt
           }

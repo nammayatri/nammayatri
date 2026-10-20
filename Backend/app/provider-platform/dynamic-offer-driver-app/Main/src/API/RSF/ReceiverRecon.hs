@@ -8,6 +8,7 @@ import Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Domain.Action.Beckn.ReceiverRecon as DRecon
+import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -23,8 +24,13 @@ import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Ride as QRide
 
+-- Mounted beside the other Beckn callbacks: the registry advertises this BPP as
+-- <bpp_uri>/beckn/<merchantId>, and collectors append the action to it. SignatureAuth
+-- reads the action from that last path segment (RECEIVER_RECON, shared-kernel #1468).
 type API =
-  "receiver_recon"
+  "beckn"
+    :> Capture "merchantId" (Id DM.Merchant)
+    :> "receiver_recon"
     :> SignatureAuth 'Domain.MOBILITY "Authorization"
     :> ReqBody '[JSON] A.Value -- Specifically done to throw NACK instead of JSON error even before reaching handler function
     :> Post '[JSON] Spec.RSFAckResponse
@@ -33,23 +39,25 @@ handler :: FlowServer API
 handler = receiverRecon
 
 receiverRecon ::
+  Id DM.Merchant ->
   SignatureAuthResult ->
   A.Value ->
   FlowHandler Spec.RSFAckResponse
-receiverRecon authResult rawBody = withFlowHandlerAPI $ do
+receiverRecon merchantId authResult rawBody = withFlowHandlerAPI $ do
   case A.fromJSON rawBody of
-    A.Success (req :: Spec.ReceiverReconReq) -> receiverReconHandler authResult rawBody req
+    A.Success (req :: Spec.ReceiverReconReq) -> receiverReconHandler merchantId authResult rawBody req
     A.Error err -> do
       logError $ "RSF: receiver_recon malformed body: " <> show err
       pure $ RSFUtils.buildNackForCode RSFUtils.RSFMissingMandatory
 
 -- Phase 1 (sync, steps 1-3): decides ACK / NACK and writes nothing.
---   E1 schema + context + the signing subscriber is the context's bap_id, E2 bpp_id -> merchant, E3 message_id unseen,
+--   E1 schema + context + the signing subscriber is the context's bap_id, E2 the merchant in the path exists
+--   (bpp_id is only cross-checked against it: collectors address us by the id they registered), E3 message_id unseen,
 --   E4 every orders[].id resolves to one of our rides (one unknown id NACKs the whole message),
 --   E5 an order already funded from some UTRs repeats every funded leg unchanged (same UTR, same amount).
 -- On ACK the Phase 2 pass is forked with the ride rows already in memory.
-receiverReconHandler :: SignatureAuthResult -> A.Value -> Spec.ReceiverReconReq -> Flow Spec.RSFAckResponse
-receiverReconHandler authResult rawBody req = do
+receiverReconHandler :: Id DM.Merchant -> SignatureAuthResult -> A.Value -> Spec.ReceiverReconReq -> Flow Spec.RSFAckResponse
+receiverReconHandler merchantId authResult rawBody req = do
   let ctx = req.receiverReconReqContext
       subscriber = authResult.subscriber
   case (validateContext ctx, ACL.buildReceiverReconDomain rawBody req, ctx.rsfContextBppId) of
@@ -64,16 +72,18 @@ receiverReconHandler authResult rawBody req = do
     (Nothing, Right domainReq0, Just bppId) -> do
       -- callbacks go to the registry's URL for the signer, never to a URL the body chose
       let domainReq = domainReq0 {DRecon.bapUri = showBaseUrl subscriber.subscriber_url}
-      mbMerchant <- CQMerchant.findBySubscriberId (ShortId bppId)
+      mbMerchant <- CQMerchant.findById merchantId
       case mbMerchant of
         Nothing -> do
-          logError $ "RSF: no merchant found for bpp_id=" <> bppId
-          pure $ RSFUtils.buildNack ("No merchant found for bpp_id: " <> bppId)
+          logError $ "RSF: no merchant found for path merchantId=" <> merchantId.getId
+          pure $ RSFUtils.buildNack ("No merchant found for id: " <> merchantId.getId)
         Just merchant -> do
+          when (bppId /= merchant.subscriberId.getShortId) $
+            logWarning $ "RSF: context bpp_id=" <> bppId <> " differs from merchant subscriberId=" <> merchant.subscriberId.getShortId
           mbMoc <- CQMOC.findByMerchantIdAndCity merchant.id merchant.city
           case mbMoc of
             Nothing -> do
-              logError $ "RSF: no operating city for merchant=" <> bppId
+              logError $ "RSF: no operating city for merchant=" <> merchantId.getId
               pure $ RSFUtils.buildNack "No operating city found for merchant"
             Just moc -> do
               -- E3 first; the ride lookup for E4 only runs for a message we have not seen

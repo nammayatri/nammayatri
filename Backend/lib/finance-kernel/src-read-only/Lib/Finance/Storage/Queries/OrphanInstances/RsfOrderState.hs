@@ -18,6 +18,7 @@ instance FromTType' Beam.RsfOrderState Lib.Finance.Domain.Types.RsfOrderState.Rs
         Lib.Finance.Domain.Types.RsfOrderState.RsfOrderState
           { bapId = bapId,
             createdAt = createdAt,
+            lastClaimedAt = lastClaimedAt,
             lastReportedAt = lastReportedAt,
             lastReportedMessageId = lastReportedMessageId,
             merchantId = merchantId,
@@ -33,6 +34,7 @@ instance ToTType' Beam.RsfOrderState Lib.Finance.Domain.Types.RsfOrderState.RsfO
     Beam.RsfOrderStateT
       { Beam.bapId = bapId,
         Beam.createdAt = createdAt,
+        Beam.lastClaimedAt = lastClaimedAt,
         Beam.lastReportedAt = lastReportedAt,
         Beam.lastReportedMessageId = lastReportedMessageId,
         Beam.merchantId = merchantId,

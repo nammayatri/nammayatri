@@ -190,6 +190,27 @@ function parseDropLocations(raw: string | undefined): DropLocation[] {
   }
 }
 
+// ui_selects in the env file: JSON [{label, var, options: [{name, value}]}]. Each becomes a dropdown that
+// overrides env variable `var` for the run; anything malformed is skipped.
+interface UiSelect {
+  label: string;
+  var: string;
+  options: { name: string; value: string }[];
+}
+
+function parseUiSelects(raw: string | undefined): UiSelect[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((s): s is UiSelect =>
+      s && typeof s.label === 'string' && typeof s.var === 'string' && Array.isArray(s.options) &&
+      s.options.every((o: unknown) => o && typeof (o as { name: unknown }).name === 'string' && typeof (o as { value: unknown }).value === 'string'));
+  } catch {
+    return [];
+  }
+}
+
 interface Props {
   onLog: (level: LogEntry['level'], message: string, extra?: Partial<LogEntry>) => void;
 }
@@ -310,6 +331,8 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const [selectedEnv, setSelectedEnv] = useState('');
   // Drop dropdown: '' = random drop per run (collection default), else the name of one of the env's drop_locations
   const [selectedDrop, setSelectedDrop] = useState('');
+  // Env-defined dropdowns (ui_selects): variable name -> chosen value; unset means the env's own value
+  const [selectValues, setSelectValues] = useState<Record<string, string>>({});
   const [selectedSuite, setSelectedSuite] = useState('');
 
   // Parsed collection state
@@ -378,21 +401,31 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   // Optional per-city list of named drops in the env file (drop_locations: JSON [{name, lat, lon, address}]),
   // so one run can be pinned to a known distance and therefore a known fare.
   const dropLocations = useMemo<DropLocation[]>(() => parseDropLocations(baseEnv?.variables.drop_locations), [baseEnv]);
+  const uiSelects = useMemo<UiSelect[]>(() => parseUiSelects(baseEnv?.variables.ui_selects), [baseEnv]);
   const currentEnv = useMemo(() => {
+    if (!baseEnv) return baseEnv;
     const drop = dropLocations.find(d => d.name === selectedDrop);
-    if (!baseEnv || !drop) return baseEnv;
+    const chosen = Object.fromEntries(
+      uiSelects.filter(sel => selectValues[sel.var] !== undefined).map(sel => [sel.var, selectValues[sel.var]]),
+    );
+    if (!drop && Object.keys(chosen).length === 0) return baseEnv;
     return {
       ...baseEnv,
       variables: {
         ...baseEnv.variables,
-        drop_mode: 'fixed',
-        drop_name: drop.name,
-        drop_lat: String(drop.lat),
-        drop_lon: String(drop.lon),
-        drop_address: drop.address ?? drop.name,
+        ...chosen,
+        ...(drop
+          ? {
+              drop_mode: 'fixed',
+              drop_name: drop.name,
+              drop_lat: String(drop.lat),
+              drop_lon: String(drop.lon),
+              drop_address: drop.address ?? drop.name,
+            }
+          : {}),
       },
     };
-  }, [baseEnv, dropLocations, selectedDrop]);
+  }, [baseEnv, dropLocations, selectedDrop, uiSelects, selectValues]);
   const currentSuite = currentGroup?.suites.find(s => s.filename === selectedSuite);
   // Default Sync-From options: India envs run against `prod`+`master`; cities
   // in INTERNATIONAL_CITIES route to the EU cluster instead, so they get
@@ -1445,6 +1478,17 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                 ))}
           </select>
         </label>
+        {uiSelects.map(sel => (
+          <label key={sel.var} title={`Sets ${sel.var} for this run`}>
+            <span>{sel.label}</span>
+            <select
+              value={selectValues[sel.var] ?? baseEnv?.variables[sel.var] ?? sel.options[0]?.value ?? ''}
+              onChange={e => setSelectValues(prev => ({ ...prev, [sel.var]: e.target.value }))}
+            >
+              {sel.options.map(o => <option key={o.value} value={o.value}>{o.name}</option>)}
+            </select>
+          </label>
+        ))}
         {dropLocations.length > 0 && (
           <label title="Pin the ride's drop to one of the env's drop_locations; Random picks a new point each run">
             <span>Drop</span>

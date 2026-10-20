@@ -3,14 +3,14 @@
 module Lib.Finance.Storage.Queries.RsfUtrStateExtra
   ( findAllByMerchantAndUtrs,
     createMissing,
-    findPageByMerchantAndCreatedAtRange,
-    findAllByMerchantAndCreatedAtRange,
+    findPageByMerchantAndLastClaimedAtRange,
+    findAllByMerchantAndLastClaimedAtRange,
     upsertReported,
   )
 where
 
 import qualified Data.HashSet as HS
-import Data.List (nub)
+import Data.List (nub, partition)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
@@ -35,12 +35,19 @@ findAllByMerchantAndUtrs merchantId utrs =
         ]
     ]
 
--- Phase 2: one row per UTR the first time a receiver_recon mentions it, reportedStatus NULL.
--- One batched read for the ids already present, then inserts only for the missing ones.
+-- Phase 2: one row per UTR the first time a receiver_recon names it (reportedStatus NULL), and
+-- lastClaimedAt bumped on every later receiver_recon that names it again, so the dashboard lists the
+-- UTR under the day of its latest claim. One batched read, inserts for the missing ids, one update
+-- for the rest.
 createMissing :: (BeamFlow m r) => Text -> Maybe Text -> UTCTime -> [Text] -> m ()
 createMissing merchantId bapId now ids = do
   existing <- findAllByMerchantAndUtrs merchantId ids
   let seen = HS.fromList (map (.utr) existing)
+      (known, fresh) = partition (`HS.member` seen) (nub ids)
+  unless (null known) $
+    updateWithKV
+      [Se.Set Beam.lastClaimedAt (Just now), Se.Set Beam.updatedAt now]
+      [Se.And [Se.Is Beam.merchantId $ Se.Eq merchantId, Se.Is Beam.utr $ Se.In known]]
   traverse_
     createWithKV
     [ Domain.RsfUtrState
@@ -51,36 +58,36 @@ createMissing merchantId bapId now ids = do
           reportedDiff = Nothing,
           lastReportedMessageId = Nothing,
           lastReportedAt = Nothing,
+          lastClaimedAt = Just now,
           createdAt = now,
           updatedAt = now
         }
-      | utr <- nub ids,
-        not (HS.member utr seen)
+      | utr <- fresh
     ]
 
--- Dashboard paging: UTRs first mentioned in the range, oldest first, one DB page.
-findPageByMerchantAndCreatedAtRange :: (BeamFlow m r) => Text -> UTCTime -> UTCTime -> Maybe Text -> Int -> Int -> m [Domain.RsfUtrState]
-findPageByMerchantAndCreatedAtRange merchantId from to mbBapId limit offset =
+-- Dashboard paging: UTRs whose latest claim falls in the range, oldest first, one DB page.
+findPageByMerchantAndLastClaimedAtRange :: (BeamFlow m r) => Text -> UTCTime -> UTCTime -> Maybe Text -> Int -> Int -> m [Domain.RsfUtrState]
+findPageByMerchantAndLastClaimedAtRange merchantId from to mbBapId limit offset =
   findAllWithOptionsKV
     [ Se.And $
         [ Se.Is Beam.merchantId $ Se.Eq merchantId,
-          Se.Is Beam.createdAt $ Se.GreaterThanOrEq from,
-          Se.Is Beam.createdAt $ Se.LessThan to
+          Se.Is Beam.lastClaimedAt $ Se.GreaterThanOrEq (Just from),
+          Se.Is Beam.lastClaimedAt $ Se.LessThan (Just to)
         ]
           <> [Se.Is Beam.bapId $ Se.Eq (Just b) | Just b <- [mbBapId]]
     ]
-    (Se.Asc Beam.createdAt)
+    (Se.Asc Beam.lastClaimedAt)
     (Just limit)
     (Just offset)
 
--- Everything first seen in the range (the day summary folds the whole day).
-findAllByMerchantAndCreatedAtRange :: (BeamFlow m r) => Text -> UTCTime -> UTCTime -> m [Domain.RsfUtrState]
-findAllByMerchantAndCreatedAtRange merchantId from to =
+-- Every UTR whose latest claim falls in the range (the day summary folds the whole day).
+findAllByMerchantAndLastClaimedAtRange :: (BeamFlow m r) => Text -> UTCTime -> UTCTime -> m [Domain.RsfUtrState]
+findAllByMerchantAndLastClaimedAtRange merchantId from to =
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantId $ Se.Eq merchantId,
-          Se.Is Beam.createdAt $ Se.GreaterThanOrEq from,
-          Se.Is Beam.createdAt $ Se.LessThan to
+          Se.Is Beam.lastClaimedAt $ Se.GreaterThanOrEq (Just from),
+          Se.Is Beam.lastClaimedAt $ Se.LessThan (Just to)
         ]
     ]
 
@@ -122,6 +129,7 @@ upsertReported merchantId utr reportedStatus reportedDiff messageId reportedAt =
             reportedDiff = Just reportedDiff,
             lastReportedMessageId = Just messageId,
             lastReportedAt = Just reportedAt,
+            lastClaimedAt = Just reportedAt,
             createdAt = reportedAt,
             updatedAt = reportedAt
           }

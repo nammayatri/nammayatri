@@ -5,7 +5,7 @@ imports:
 module: RSFReconciliation
 
 apis:
-  # Orders first claimed by a receiver_recon on `date` (IST day), one row per order.
+  # Orders whose latest receiver_recon claim falls on `date` (IST day), one row per order.
   - GET: # OrderListAPI
       endpoint: /rsf/orders
       migrate:
@@ -30,7 +30,7 @@ apis:
       response:
         type: DaySummaryRes
 
-  # UTRs first mentioned by a receiver_recon on `date` (IST day).
+  # UTRs whose latest receiver_recon mention falls on `date` (IST day).
   - GET: # UtrListAPI
       endpoint: /rsf/utrs
       migrate:
