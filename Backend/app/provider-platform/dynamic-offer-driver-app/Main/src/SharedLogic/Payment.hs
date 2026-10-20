@@ -143,7 +143,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
           else vendorFees
   splitSettlementDetails <- if splitEnabled then mkSplitSettlementDetails currentVendorFees amount else pure Nothing
   logInfo $ "split details: " <> show splitSettlementDetails
-  when (amount <= 0) $ throwError (InternalError "Invalid Amount :- should be greater than 0")
+  when (amount <= 0) $ throwError (InvalidRequest "Invalid Amount :- should be greater than 0")
   unless (isJust existingInvoice) $ QIN.createMany invoices
   nwAddress <- asks (.nwAddress)
   paymentServiceName <- TPayment.decidePaymentService serviceName driver.clientSdkVersion driver.merchantOperatingCityId
