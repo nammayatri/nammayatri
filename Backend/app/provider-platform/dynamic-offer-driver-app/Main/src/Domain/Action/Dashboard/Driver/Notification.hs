@@ -230,6 +230,7 @@ mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle 
           isFavourite = Just False,
           isReferredRideReq = Nothing,
           roundTrip = Just False,
+          returnTime = Nothing,
           middleStopCount = 0,
           parcelQuantity = Nothing,
           parcelType = Nothing,
