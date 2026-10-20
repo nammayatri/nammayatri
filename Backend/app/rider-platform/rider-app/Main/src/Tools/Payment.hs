@@ -253,6 +253,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
     Just (DMSC.PassPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.DepositPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
     Just (DMSC.JuspayWalletServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
     _ -> throwError $ InternalError "Unknown Service Config"
   where
@@ -265,7 +266,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
         _ -> vsc
     getPaymentServiceByType = \case
       Normal -> decidePaymentService (DMSC.PaymentService Payment.Juspay) clientSdkVersion
-      BookingDeposit -> decidePaymentService (DMSC.PaymentService Payment.Juspay) clientSdkVersion
+      BookingDeposit -> pure $ DMSC.DepositPaymentService Payment.Juspay
       Wallet -> pure $ DMSC.JuspayWalletService Payment.Juspay
       BBPS -> pure $ DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> pure $ DMSC.MetroPaymentService Payment.Juspay
@@ -617,13 +618,13 @@ getIsSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServiceTyp
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
+    Just (DMSC.DepositPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
     Just (DMSC.MembershipPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
     _ -> False
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
-      -- Booking fee is an ordinary Juspay collection, same rail as Normal.
-      BookingDeposit -> DMSC.PaymentService Payment.Juspay
+      BookingDeposit -> DMSC.DepositPaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
@@ -658,13 +659,13 @@ useDomainOffers merchantId merchantOperatingCityId mbPlaceId paymentServiceType 
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.getUseDomainOffers vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.getUseDomainOffers vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> Payment.getUseDomainOffers vsc
+    Just (DMSC.DepositPaymentServiceConfig vsc) -> Payment.getUseDomainOffers vsc
     Just (DMSC.MembershipPaymentServiceConfig vsc) -> Payment.getUseDomainOffers vsc
     _ -> False
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
-      -- Booking fee is an ordinary Juspay collection, same rail as Normal.
-      BookingDeposit -> DMSC.PaymentService Payment.Juspay
+      BookingDeposit -> DMSC.DepositPaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
@@ -699,13 +700,13 @@ getIsPercentageSplit merchantId merchantOperatingCityId mbPlaceId paymentService
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
+    Just (DMSC.DepositPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
     Just (DMSC.MembershipPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
     _ -> False
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
-      -- Booking fee is an ordinary Juspay collection, same rail as Normal.
-      BookingDeposit -> DMSC.PaymentService Payment.Juspay
+      BookingDeposit -> DMSC.DepositPaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
@@ -740,13 +741,13 @@ getIsRefundSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
+    Just (DMSC.DepositPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
     Just (DMSC.MembershipPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
     _ -> False
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
-      -- Booking fee is an ordinary Juspay collection, same rail as Normal.
-      BookingDeposit -> DMSC.PaymentService Payment.Juspay
+      BookingDeposit -> DMSC.DepositPaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
@@ -781,6 +782,7 @@ getPaymentOrderValidity merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    Just (DMSC.DepositPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
     Just (DMSC.MembershipPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
     Just (DMSC.JuspayWalletServiceConfig vsc) -> extractPaymentOrderValidity vsc
     _ -> Nothing
@@ -791,8 +793,7 @@ getPaymentOrderValidity merchantId merchantOperatingCityId mbPlaceId paymentServ
 
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
-      -- Booking fee is an ordinary Juspay collection, same rail as Normal.
-      BookingDeposit -> DMSC.PaymentService Payment.Juspay
+      BookingDeposit -> DMSC.DepositPaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
@@ -832,13 +833,13 @@ fetchGatewayReferenceId merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
+    Just (DMSC.DepositPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
     Just (DMSC.MembershipPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
     _ -> Nothing
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
-      -- Booking fee is an ordinary Juspay collection, same rail as Normal.
-      BookingDeposit -> DMSC.PaymentService Payment.Juspay
+      BookingDeposit -> DMSC.DepositPaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
@@ -873,14 +874,14 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> mkSKUPair vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> mkSKUPair vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.DepositPaymentServiceConfig vsc) -> mkSKUPair vsc
     Just (DMSC.MembershipPaymentServiceConfig vsc) -> mkSKUPair vsc
     _ -> (Nothing, Nothing)
   where
     mkSKUPair vsc = (Payment.offerSKUConfig vsc, Payment.childOfferSKUConfig vsc)
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
-      -- Booking fee is an ordinary Juspay collection, same rail as Normal.
-      BookingDeposit -> DMSC.PaymentService Payment.Juspay
+      BookingDeposit -> DMSC.DepositPaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
