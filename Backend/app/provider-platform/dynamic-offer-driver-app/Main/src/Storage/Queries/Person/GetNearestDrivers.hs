@@ -274,6 +274,7 @@ buildDriverResult NearestDriversReq {..} isPrepaidEnabled poolDataMap cityServic
   guard $ not (shouldCheckCashWallet paymentInstrument) || fromMaybe True dpd.enableCashRide
   when dpd.onRide $ do
     guard dpd.forwardBatchingEnabled
+    guard $ not (fromMaybe False dpd.hasAdvanceBooking)
     guard $ dpd.hasRideStarted == Just True
     guard $ isJust dpd.driverTripEndLocation
     guard $ maybe False (\tc -> tc `elem` currentRideTripCategoryValidForForwardBatching) dpd.onRideTripCategory
