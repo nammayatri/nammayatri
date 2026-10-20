@@ -2050,7 +2050,6 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                             driverQuote = driverQuote,
                             driver = driver,
                             driverStats = driverStats,
-                            driverInfo = driverInfo,
                             clientId = clientId,
                             transporterConfig = transporterConfig
                           }
