@@ -65,6 +65,7 @@ import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchTry as QST
@@ -82,7 +83,6 @@ data OneShotAssignReq = OneShotAssignReq
     -- | Already loaded by respondQuote; carried through so the callback payload
     -- builder does not re-read them.
     driverStats :: DStats.DriverStats,
-    driverInfo :: DDI.DriverInformation,
     clientId :: Maybe Text,
     transporterConfig :: TransporterConfig
   }
@@ -135,6 +135,7 @@ oneShotAssign OneShotAssignReq {..} = do
       mFleetAssociation <- QFDA.findByDriverId driver.id True
       (ride, rideDetails, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) True True Nothing
       void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) (Just transporterConfig)
+      driverInfo <- QDI.findById driver.id >>= fromMaybeM DriverInfoNotFound
       -- Everything the payload builder would otherwise re-read is already in hand;
       -- rideDetails in particular would be a replica read of a row created
       -- milliseconds ago (replica-lag abort risk, not just wasted latency).
