@@ -228,6 +228,9 @@ types:
     - walkToPickupDistance: Maybe Meters
     - walkFromDropDistance: Maybe Meters
     - rideDistanceSaved: Maybe Meters
+    - specialLocationTag: Maybe Text
+    - specialLocationName: Maybe Text
+    - isScheduled: Bool
   RideOfferInfo:
     - offerId: Text
     - offerCode: Maybe Text

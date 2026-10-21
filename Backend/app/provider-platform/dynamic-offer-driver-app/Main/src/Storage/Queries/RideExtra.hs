@@ -12,6 +12,7 @@ import Data.Int
 import Data.List (zip6)
 import Data.List.Extra (notNull)
 import Data.Maybe
+import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
@@ -56,6 +57,7 @@ import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Safety.Domain.Types.Sos as SafetySos
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
@@ -581,11 +583,17 @@ data RideItem = RideItem
     customerDropLocation :: Maybe DLoc.Location,
     payoutRequestId :: Maybe (Id DPR.PayoutRequest),
     fleetName :: Maybe Text,
+    fleetOwnerName :: Maybe Text,
     fleetNumber :: Maybe (EncryptedHashed Text),
     vehicleManufacturer :: Maybe Text,
     vehicleModel :: Maybe Text,
     rideTags :: Maybe [LYT.TagNameValue],
-    financeInvoiceId :: Maybe Text
+    financeInvoiceId :: Maybe Text,
+    rideBookingId :: Maybe (Id Booking.Booking),
+    rideDriverId :: Maybe (Id Person),
+    rideSosId :: Maybe (Id SafetySos.Sos),
+    rideDriverDeviatedFromRoute :: Maybe Bool,
+    rideSafetyAlertTriggered :: Maybe Bool
   }
 
 data RideItemV2 = RideItemV2
@@ -654,6 +662,22 @@ mkPaymentModeCond booking Common.ONLINE =
                B.&&?. B.sqlBool_ (B.isJust_ $ BeamB.paymentInstrument booking)
            )
 
+personFullName :: Person -> Text
+personFullName person = T.unwords $ person.firstName : maybeToList person.lastName
+
+findFleetOwnerDetails ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id Person] ->
+  m (HMS.HashMap (Id Person) DFOI.FleetOwnerInformation, HMS.HashMap (Id Person) Person)
+findFleetOwnerDetails [] = pure (HMS.empty, HMS.empty)
+findFleetOwnerDetails fleetOwnerIds = do
+  fleetOwners <- findAllWithKV [Se.Is BeamFOI.fleetOwnerPersonId $ Se.In $ map (.getId) fleetOwnerIds]
+  fleetOwnerPersons <- findAllWithKV [Se.Is BeamP.id $ Se.In $ map (.getId) fleetOwnerIds]
+  pure
+    ( HMS.fromList [(fo.fleetOwnerPersonId, fo) | fo <- fleetOwners],
+      HMS.fromList [(p.id, p) | p <- fleetOwnerPersons]
+    )
+
 findAllRideItems ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Maybe Bool ->
@@ -677,9 +701,12 @@ findAllRideItems ::
   Maybe Text ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
+  Maybe [Text] ->
+  Maybe Bool ->
   m [RideItem]
-findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now mbFrom mbTo mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
-  case mbRideShortId of
+findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now mbFrom mbTo mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount mbPaymentMethodIds mbHasSos
+  | mbPaymentMethodIds == Just [] = pure []
+  | otherwise = case mbRideShortId of
     Just rideShortId -> do
       ride <- findOneWithKV [Se.Is BeamR.shortId $ Se.Eq $ getShortId rideShortId] >>= fromMaybeM (RideNotFound $ "for ride shortId: " <> rideShortId.getShortId)
       case mbFleetOwnerId of
@@ -691,17 +718,14 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
       let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
           fare = mkPrice (Just ride.currency) <$> ride.fare
           estimatedFare = Just $ mkPrice (Just booking.currency) booking.estimatedFare
-      fleetOwners <- findAllWithKV [Se.Is BeamFOI.fleetOwnerPersonId $ Se.In $ maybeToList (fmap (.getId) ride.fleetOwnerId)]
-      fleetOwnerPersons <- findAllWithKV [Se.Is BeamP.id $ Se.In $ maybeToList (fmap (.getId) ride.fleetOwnerId)]
+      (fleetOwnerMap, fleetOwnerPersonMap) <- findFleetOwnerDetails (maybeToList ride.fleetOwnerId)
       vrcs <- findAllWithKV [Se.Is BeamVRC.unencryptedCertificateNumber $ Se.In [Just rideDetails.vehicleNumber]]
 
-      let fleetOwnerMap = HMS.fromList [(fo.fleetOwnerPersonId, fo) | fo <- fleetOwners]
-          fleetOwnerPersonMap = HMS.fromList [(p.id, p) | p <- fleetOwnerPersons]
-          vrcMap = HMS.fromList [(fromMaybe "" vrc.unencryptedCertificateNumber, vrc) | vrc <- vrcs, isJust vrc.unencryptedCertificateNumber]
+      let vrcMap = HMS.fromList [(fromMaybe "" vrc.unencryptedCertificateNumber, vrc) | vrc <- vrcs, isJust vrc.unencryptedCertificateNumber]
 
       payoutRequest <- QPR.findByEntity (getId ride.id) Nothing
       let item = (mkRideItem fleetOwnerMap fleetOwnerPersonMap vrcMap (ride, rideDetails, riderDetails, booking, fareDiff, fare, estimatedFare, booking.paymentInstrument, mkBookingStatus now ride)) {payoutRequestId = (.id) <$> payoutRequest}
-      pure [item]
+      pure [item | matchesPaymentMethod booking, matchesSos ride]
     Nothing -> do
       zippedRides <- case mbTo of
         Just toDate | roundToMidnightUTCToDate toDate >= now -> do
@@ -788,6 +812,8 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rid -> ride.id B.==?. B.val_ (getId rid)) mbRideId
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\did -> ride.driverId B.==?. B.val_ did) mbDriverId
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\pm -> mkPaymentModeCond booking pm) mbPaymentMode
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ids -> B.sqlBool_ (booking.paymentMethodId `B.in_` (B.val_ . Just <$> ids))) mbPaymentMethodIds
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hasSos -> B.sqlBool_ (if hasSos then B.isJust_ ride.sosId else B.isNothing_ ride.sosId)) mbHasSos
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fa -> B.sqlBool_ $ ride.fareAmount B.>=. B.val_ (Just fa)) mbFromAmount
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ta -> B.sqlBool_ $ ride.fareAmount B.<=. B.val_ (Just ta)) mbToAmount
                   )
@@ -834,13 +860,10 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
       let fleetOwnerIds = mapMaybe (.fleetOwnerId) allRidesBeforeExtra
           vehicleNos = map (.rideDetails.vehicleNumber) allRidesBeforeExtra
 
-      fleetOwners <- findAllWithKV [Se.Is BeamFOI.fleetOwnerPersonId $ Se.In $ map (.getId) fleetOwnerIds]
-      fleetOwnerPersons <- findAllWithKV [Se.Is BeamP.id $ Se.In $ map (.getId) fleetOwnerIds]
+      (fleetOwnerMap, fleetOwnerPersonMap) <- findFleetOwnerDetails fleetOwnerIds
       vrcs <- findAllWithKV [Se.Is BeamVRC.unencryptedCertificateNumber $ Se.In (map Just vehicleNos)]
 
-      let fleetOwnerMap = HMS.fromList [(fo.fleetOwnerPersonId, fo) | fo <- fleetOwners]
-          fleetOwnerPersonMap = HMS.fromList [(p.id, p) | p <- fleetOwnerPersons]
-          vrcMap = HMS.fromList [(fromMaybe "" vrc.unencryptedCertificateNumber, vrc) | vrc <- vrcs, isJust vrc.unencryptedCertificateNumber]
+      let vrcMap = HMS.fromList [(fromMaybe "" vrc.unencryptedCertificateNumber, vrc) | vrc <- vrcs, isJust vrc.unencryptedCertificateNumber]
 
       let allRides =
             map
@@ -850,6 +873,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                       mbVrc = HMS.lookup item.rideDetails.vehicleNumber vrcMap
                    in item
                         { fleetName = mbFo >>= (.fleetName),
+                          fleetOwnerName = personFullName <$> mbPerson,
                           fleetNumber = mbPerson >>= (.mobileNumber),
                           vehicleManufacturer = mbVrc >>= (.vehicleManufacturer),
                           vehicleModel = mbVrc >>= (.vehicleModel)
@@ -883,6 +907,12 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
       | ride.status == Ride.CANCELLED = Common.CANCELLED
       | otherwise = Common.ONGOING_6HRS
 
+    matchesSos :: Ride.Ride -> Bool
+    matchesSos ride = maybe True (== isJust ride.sosId) mbHasSos
+
+    matchesPaymentMethod :: Booking.Booking -> Bool
+    matchesPaymentMethod booking = maybe True (\ids -> maybe False ((`elem` ids) . getId) booking.paymentMethodId) mbPaymentMethodIds
+
     mkRideItemUsingMaps :: [DDR.Ride] -> [RideDetails.RideDetails] -> [Booking.Booking] -> [RiderDetails.RiderDetails] -> [RideItem]
     mkRideItemUsingMaps rides rideDetails bookings riderDetails =
       let rideDetailsMap = HMS.fromList [(rideDetail.id, rideDetail) | rideDetail <- rideDetails]
@@ -892,6 +922,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
             ( \ride -> do
                 rideDetail <- ride.id `HMS.lookup` rideDetailsMap
                 booking <- ride.bookingId `HMS.lookup` bookingsMap
+                guard (matchesPaymentMethod booking && matchesSos ride)
                 riderDetail <- booking.riderId >>= (`HMS.lookup` riderDetailsMap)
                 let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
                     fare = mkPrice (Just ride.currency) <$> ride.fare
@@ -927,11 +958,17 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
               customerDropLocation = booking.toLocation,
               payoutRequestId = Nothing,
               fleetName = mbFo >>= (.fleetName),
+              fleetOwnerName = personFullName <$> mbPerson,
               fleetNumber = mbPerson >>= (.mobileNumber),
               vehicleManufacturer = mbVrc >>= (.vehicleManufacturer),
               vehicleModel = mbVrc >>= (.vehicleModel),
               rideTags = ride.rideTags,
               financeInvoiceId = booking.financeInvoiceId,
+              rideBookingId = Just ride.bookingId,
+              rideDriverId = Just ride.driverId,
+              rideSosId = ride.sosId,
+              rideDriverDeviatedFromRoute = ride.driverDeviatedFromRoute,
+              rideSafetyAlertTriggered = Just ride.safetyAlertTriggered,
               ..
             }
 

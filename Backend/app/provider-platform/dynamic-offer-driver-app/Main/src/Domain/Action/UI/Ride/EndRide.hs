@@ -727,6 +727,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         mbDriverPerson <- QP.findById finalUpdatedRide.driverId
         let endRideLanguage = fromMaybe KET.ENGLISH (mbDriverPerson >>= (.language))
         endRideLabels <- DUIRideCommon.fetchEarningsLabels endRideLanguage
+        mbEndRideTransporterConfig <- findConfig (Just (TransactionId (Id booking.transactionId)))
         let endRideCalling =
               DUIRideCommon.ResolvedCalling
                 { riderMobileNumber = Nothing,
@@ -737,7 +738,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                         numberType = DUIRideCommon.ANONYMOUS
                       }
                 }
-        Just <$> DUIRideCommon.mkDriverRideRes endRideLanguage (Just endRideLabels) rideDetail driverNumber rideRating mbExophone (finalUpdatedRide, booking) bapMetadata goHomeReqId Nothing isValueAddNP stopsInfo endRideCalling
+        Just <$> DUIRideCommon.mkDriverRideRes endRideLanguage (Just endRideLabels) rideDetail driverNumber rideRating mbExophone (finalUpdatedRide, booking) bapMetadata goHomeReqId Nothing isValueAddNP stopsInfo endRideCalling (mbEndRideTransporterConfig >>= (.showRoutePerRequest))
 
   return $
     EndRideResp

@@ -1,0 +1,24 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  SearchTry: Domain.Types.SearchTry
+  GetRoutesReq: Kernel.External.Maps
+  GetRoutesResp: Kernel.External.Maps
+
+module: SearchRoute
+
+types:
+  SearchRouteResp:
+    pickupRoute: GetRoutesResp
+    tripRoute: Domain.Types.RideRoute.RouteInfo
+
+apis:
+  - POST:
+      endpoint: /search/{searchTryId}/route
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        searchTryId: Id SearchTry
+      request:
+        type: GetRoutesReq
+      response:
+        type: API.Types.UI.SearchRoute.SearchRouteResp

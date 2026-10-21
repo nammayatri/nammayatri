@@ -34,6 +34,8 @@ import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
+import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.TransporterConfig as Queries
 
@@ -62,6 +64,7 @@ clearCache :: (MonadFlow m, CacheFlow m r) => Id MerchantOperatingCity -> m ()
 clearCache id = do
   IM.refreshInMem (makeMerchantOpCityIdKey id)
   Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ Hedis.del $ makeMerchantOpCityIdKey id
+  invalidateConfigInMem LYT.TransporterConfig
 
 updateFCMConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
 updateFCMConfig = Queries.updateFCMConfig

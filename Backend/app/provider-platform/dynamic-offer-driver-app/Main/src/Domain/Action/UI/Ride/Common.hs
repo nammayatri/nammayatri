@@ -70,7 +70,7 @@ import qualified Kernel.External.Types as KET
 import Kernel.Prelude (readMaybe, roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Minutes, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
+import Kernel.Types.Common (BaseUrl, Centesimal, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Minutes, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
 import Kernel.Types.Confidence (Confidence)
 import Kernel.Types.Id
 import Kernel.Types.Price
@@ -96,6 +96,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FareParameters as SQFP
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Translations as QTranslations
 import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error (LocationMappingError (..))
@@ -261,6 +262,8 @@ data DriverRideRes = DriverRideRes
     freeWaitingTimeInMin :: Maybe Minutes,
     waitingChargePerMin :: Maybe PriceAPIEntity,
     constantWaitingCharge :: Maybe PriceAPIEntity,
+    customerRating :: Maybe Centesimal,
+    showRoutePerRequest :: Maybe Bool,
     invoiceId ::
       Maybe Text -- finance invoice id (booking.financeInvoiceId); the client fetches the PDF on demand via /finance/invoice/pdf (kept out of the hot list path — no per-row presign)
   }
@@ -527,8 +530,9 @@ mkDriverRideRes ::
   Bool ->
   [DSI.StopInformation] ->
   ResolvedCalling ->
+  Maybe Bool ->
   m DriverRideRes
-mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling = do
+mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling showRoutePerRequest = do
   let estimatedFareParams = booking.fareParams
       bearerFlags mbT =
         let mb = (mbT >>= (readMaybe . T.unpack)) :: Maybe DTConf.PaymentChargeBearer
@@ -576,6 +580,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
     DTC.IntercityRental _ _ -> rideStopLocations
     _ -> pure booking.stops
   cancellationReason <- if ride.status == DRide.CANCELLED then runInReplica (QBCR.findByRideId (Just ride.id)) else pure Nothing
+  mbRiderDetails <- maybe (pure Nothing) (runInReplica . QRiderDetails.findById) booking.riderId
 
   -- Lookup pickup zone gate info for entry fee
   (mbGateInfo, mbSpecialLoc) <- case booking.pickupGateId of
@@ -786,6 +791,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
           mbWaitingChargeInfo >>= \wci -> case wci.waitingCharge of
             DFPC.ConstantWaitingCharge amount -> Just $ PriceAPIEntity amount ride.currency
             DFPC.PerMinuteWaitingCharge _ -> Nothing,
+        customerRating = mbRiderDetails >>= (.customerRating),
+        showRoutePerRequest,
         invoiceId = booking.financeInvoiceId
       }
 
