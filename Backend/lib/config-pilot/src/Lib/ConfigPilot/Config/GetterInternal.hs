@@ -4,12 +4,14 @@ module Lib.ConfigPilot.Config.GetterInternal
     selectActiveElementVersions,
     invalidateConfigInMem,
     configPilotInMemKey,
+    getCodeVersion,
     PersonIdKey (..),
   )
 where
 
 import Data.Aeson ((.=))
 import qualified Data.Aeson as A
+import qualified Data.Text as T
 import Data.Time (timeToTimeOfDay, utctDayTime)
 import qualified EulerHS.Language as L
 import EulerHS.Types (OptionEntity)
@@ -32,6 +34,7 @@ import qualified Lib.Yudhishthira.Tools.TimeBoundRollout as LYTB
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType)
+import System.Environment (lookupEnv)
 
 -- | Key for storing personId in EulerHS option local context.
 data PersonIdKey = PersonIdKey
@@ -144,9 +147,16 @@ getConfigImpl activeElementVersions wrappedConfig logicDomain merchantOpCityId =
       throwError $ InvalidRequest $ "Error occurred while applying JSON patch to the config. " <> show e
 
 -- | Build the in-mem cache key from dimensions. Uses 'dimensionsCacheKey' so
--- that every field in the dimensions record is automatically included.
+-- that every field in the dimensions record automatically included.
 configPilotInMemKey :: ConfigDimensions a => a -> [Text]
 configPilotInMemKey dims = ["ConfigPilot", show (getConfigType dims), dimensionsCacheKey dims]
+
+getCodeVersion :: MonadIO m => m Text
+getCodeVersion = do
+  mbVersion <- liftIO $ lookupEnv "DEPLOYMENT_VERSION"
+  pure $ case mbVersion of
+    Just v | not (null v) -> T.pack v
+    _ -> "DEV"
 
 -- | Invalidate both cache layers for a config type across all pods: the in-mem
 -- L1 (shudhi sidecar + Redis cleanup flag) and the Redis L2 hash bucket.

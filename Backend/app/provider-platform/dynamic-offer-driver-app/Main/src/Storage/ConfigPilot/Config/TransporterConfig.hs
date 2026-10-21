@@ -11,8 +11,8 @@ import qualified Lib.ConfigPilot.Interface.Getter as LCP
 import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
+import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as SQ
 import qualified Storage.Queries.TransporterConfig as QTransporterConfig
 
 data TransporterConfigDimensions = TransporterConfigDimensions
@@ -36,7 +36,7 @@ instance ConfigDimensions TransporterConfigDimensions where
         a
         (LYT.DRIVER_CONFIG TransporterConfig)
         (Id a.merchantOperatingCityId)
-        (maybeToList <$> SQ.getTransporterConfigFromDB (Id a.merchantOperatingCityId))
+        (maybeToList <$> QTransporterConfig.findByMerchantOpCityId (Id a.merchantOperatingCityId))
         (([] :: [LCP.DimMatcher TransporterConfigDimensions DT.TransporterConfig]))
         Nothing
-  configFallback a = Just (SQ.getTransporterConfigFromDB (Id a.merchantOperatingCityId))
+  configFallback a = Just (QTransporterConfig.findByMerchantOpCityId (Id a.merchantOperatingCityId))
