@@ -32,9 +32,9 @@ buildCloudAwareEnv cloudType dualWriteEnabled recacheEnabled awsEnv mbGcsEnv =
       headRequestH = cloudAwareHeadRequest
     }
   where
-    readsFromGcsFirst = cloudType == GCP
+    preferGcs = cloudType == GCP
 
-    cloudAwareGet path = case (readsFromGcsFirst, mbGcsEnv) of
+    cloudAwareGet path = case (preferGcs, mbGcsEnv) of
       (True, Just gcsEnv) -> do
         result <- withTryCatch "cloudRouter:gcsGet" (getH gcsEnv path)
         case result of
@@ -46,7 +46,7 @@ buildCloudAwareEnv cloudType dualWriteEnabled recacheEnabled awsEnv mbGcsEnv =
             pure content
       _ -> getH awsEnv path
 
-    cloudAwareGetRaw path = case (readsFromGcsFirst, mbGcsEnv) of
+    cloudAwareGetRaw path = case (preferGcs, mbGcsEnv) of
       (True, Just gcsEnv) -> do
         result <- withTryCatch "cloudRouter:gcsGetRaw" (getRawH gcsEnv path)
         case result of
@@ -86,19 +86,29 @@ buildCloudAwareEnv cloudType dualWriteEnabled recacheEnabled awsEnv mbGcsEnv =
                 Right () -> logInfo $ "[CloudStorage] GCS dual-write (" <> label <> ") succeeded for " <> T.pack path
                 Left err -> logWarning $ "[CloudStorage] GCS dual-write (" <> label <> ") failed for " <> T.pack path <> ": " <> show err
 
-    cloudAwarePut path content = do
-      putH awsEnv path content
-      dualWriteToGcs "put" path (\gcsEnv -> putH gcsEnv path content)
+    writeBothClouds :: Text -> String -> (S3Env m -> m ()) -> m ()
+    writeBothClouds label path action = case mbGcsEnv of
+      Just gcsEnv | dualWriteEnabled && preferGcs -> do
+        gcsResult <- withTryCatch ("cloudRouter:gcsWrite:" <> label) (action gcsEnv)
+        awsResult <- withTryCatch ("cloudRouter:awsWrite:" <> label) (action awsEnv)
+        case (gcsResult, awsResult) of
+          (Right (), Right ()) -> logInfo $ "[CloudStorage] GCS and S3 write (" <> label <> ") succeeded for " <> T.pack path
+          (Left gcsErr, Right ()) -> logWarning $ "[CloudStorage] GCS write (" <> label <> ") failed for " <> T.pack path <> ", S3 succeeded: " <> show gcsErr
+          (Right (), Left awsErr) -> logWarning $ "[CloudStorage] S3 write (" <> label <> ") failed for " <> T.pack path <> ", GCS succeeded: " <> show awsErr
+          (Left gcsErr, Left awsErr) -> do
+            logWarning $ "[CloudStorage] GCS write (" <> label <> ") failed for " <> T.pack path <> ": " <> show gcsErr
+            throwM awsErr
+      _ -> do
+        action awsEnv
+        dualWriteToGcs label path action
 
-    cloudAwarePutRaw path bs contentType_ = do
-      putRawH awsEnv path bs contentType_
-      dualWriteToGcs "putRaw" path (\gcsEnv -> putRawH gcsEnv path bs contentType_)
+    cloudAwarePut path content = writeBothClouds "put" path (\env -> putH env path content)
 
-    cloudAwareDelete path = do
-      deleteH awsEnv path
-      dualWriteToGcs "delete" path (\gcsEnv -> deleteH gcsEnv path)
+    cloudAwarePutRaw path bs contentType_ = writeBothClouds "putRaw" path (\env -> putRawH env path bs contentType_)
 
-    cloudAwareHeadRequest path = case (readsFromGcsFirst, mbGcsEnv) of
+    cloudAwareDelete path = writeBothClouds "delete" path (\env -> deleteH env path)
+
+    cloudAwareHeadRequest path = case (preferGcs, mbGcsEnv) of
       (True, Just gcsEnv) -> do
         result <- withTryCatch "cloudRouter:gcsHead" (headRequestH gcsEnv path)
         case result of
@@ -108,7 +118,7 @@ buildCloudAwareEnv cloudType dualWriteEnabled recacheEnabled awsEnv mbGcsEnv =
             headRequestH awsEnv path
       _ -> headRequestH awsEnv path
 
-    cloudAwareGenerateDownloadUrl path expires = case (readsFromGcsFirst, mbGcsEnv) of
+    cloudAwareGenerateDownloadUrl path expires = case (preferGcs, mbGcsEnv) of
       (True, Just gcsEnv) -> do
         result <- withTryCatch "cloudRouter:gcsHeadForUrl" (headRequestH gcsEnv path)
         case result of
