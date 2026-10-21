@@ -470,7 +470,10 @@ rideInfo merchantId reqRideId = do
         originalTripLocation = booking.parentSearchRequestLocationInfo,
         walkToPickupDistance = mbSearchRequest >>= (.betterPointWalkToPickup),
         walkFromDropDistance = mbSearchRequest >>= (.betterPointWalkFromDrop),
-        rideDistanceSaved = mbSearchRequest >>= (.betterPointRideDistanceSaved)
+        rideDistanceSaved = mbSearchRequest >>= (.betterPointRideDistanceSaved),
+        specialLocationTag = booking.specialLocationTag,
+        specialLocationName = booking.specialLocationName,
+        isScheduled = booking.isScheduled
       }
 
 getRideOfferInfo :: DB.Booking -> DRide.Ride -> DP.Person -> Flow (Maybe Common.RideOfferInfo)

@@ -230,7 +230,10 @@ data RideInfoRes = RideInfoRes
     originalTripLocation :: Kernel.Prelude.Maybe Domain.Types.Extra.Booking.ParentSearchRequestLocationInfo,
     walkToPickupDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     walkFromDropDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
-    rideDistanceSaved :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters
+    rideDistanceSaved :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    isScheduled :: Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
