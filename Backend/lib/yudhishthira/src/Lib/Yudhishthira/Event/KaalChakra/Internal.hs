@@ -250,7 +250,7 @@ fetchUserDataBatch h req eventId chakraQueries batchNumber = do
   -- 2. Execute ClickHouse queries first (to get userIds)
   let limit = Yudhishthira.QLimit req.usersInBatch
   let offset = Yudhishthira.QOffset $ batchNumber * req.usersInBatch
-  let template = Template.Template {limit, offset, usersSet = req.usersSet}
+  let template = Template.Template {limit, offset, usersSet = req.usersSet, merchantOperatingCityId = h.merchantOperatingCityId}
 
   clickhouseResults <- forM clickhouseQueries $ \chakraQuery ->
     withChakraQueryMetric req.chakra chakraQuery isEmptyQueryResult $ do
