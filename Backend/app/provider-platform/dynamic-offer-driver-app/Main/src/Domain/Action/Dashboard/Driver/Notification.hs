@@ -242,6 +242,8 @@ mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle 
           commissionCharges = Nothing,
           isPaymentOnline = Nothing,
           driverCancellationNotAllowed = Nothing,
+          customerRating = Nothing,
+          showRoutePerRequest = Nothing,
           ..
         }
 

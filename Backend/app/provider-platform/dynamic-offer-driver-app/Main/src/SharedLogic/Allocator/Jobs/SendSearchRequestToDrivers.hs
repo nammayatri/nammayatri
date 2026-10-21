@@ -440,7 +440,7 @@ sendSearchRequestToDriversWithTopUp mbTopUpSize driverPoolConfig searchTry drive
           getNextDriverPoolBatch = UI.getNextDriverPoolBatch driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.paymentMethodInfo driverSearchBatchInput.riderDetails,
           popTopUpDrivers = I.popTopUpDrivers driverPoolConfig searchTry.requestId searchTry.id,
           markDriversAttempted = I.markDriversAttempted searchTry.id,
-          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers driverSearchBatchInput.isAllocatorBatch (isJust mbTopUpSize) driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig,
+          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers driverSearchBatchInput.isAllocatorBatch (isJust mbTopUpSize) driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig driverSearchBatchInput.riderDetails,
           logDriversExhausted = do
             logInfo $ "Drivers exhausted mid-search for searchTry: " <> searchTry.id.getId <> "; inserting analytics marker row"
             batchNumber <- I.getPoolBatchNum searchTry.id -- read post-increment, matching real rows' numbering
