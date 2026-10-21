@@ -223,7 +223,7 @@ export const RemoteStackPanel: React.FC = () => {
   const [resolving, setResolving] = useState(false);
   const [sshStatus, setSshStatus] = useState<{ ok: boolean; message?: string } | null>(null);
   const [editorOk, setEditorOk] = useState(false);
-  const [urlCopied, setUrlCopied] = useState(false);
+  const [urlCopied, setUrlCopied] = useState<string | null>(null);
 
   // Same clipboard + textarea fallback as ServicePortsModal's CopyButton.
   const copyWorkspaceUrl = async (url: string) => {
@@ -237,8 +237,8 @@ export const RemoteStackPanel: React.FC = () => {
       document.execCommand('copy');
       document.body.removeChild(ta);
     }
-    setUrlCopied(true);
-    window.setTimeout(() => setUrlCopied(false), 1200);
+    setUrlCopied(url);
+    window.setTimeout(() => setUrlCopied(null), 1200);
   };
 
   // ── Log viewer ── (contents live in RemoteLogsModal)
@@ -1048,7 +1048,7 @@ export const RemoteStackPanel: React.FC = () => {
                         onClick={() => copyWorkspaceUrl(devbox.workspaceUrl!)}
                         title="Copy this workspace's stable URL (dev-box front desk) — it stays the same when ports change"
                       >
-                        {urlCopied ? '✓ Copied' : '⧉ Copy'}
+                        {urlCopied === devbox.workspaceUrl ? '✓ Copied' : '⧉ Copy'}
                       </button>
                       <a
                         className="rsp-btn-ghost"
@@ -1078,6 +1078,39 @@ export const RemoteStackPanel: React.FC = () => {
                     </span>
                   )}
                 </dd>
+                {devbox.frontdeskOk && devbox.publicUrl && (
+                  <>
+                    <dt>Public URL</dt>
+                    <dd className="rsp-ws-url">
+                      <code>{devbox.publicUrl}</code>
+                      <button
+                        className="rsp-btn-ghost"
+                        onClick={() => copyWorkspaceUrl(devbox.publicUrl!)}
+                        title="Copy the URL testers' phones use on any network (hopper gateway) — rider-app and driver-app only"
+                      >
+                        {urlCopied === devbox.publicUrl ? '✓ Copied' : '⧉ Copy'}
+                      </button>
+                      <a
+                        className="rsp-btn-ghost"
+                        href={`${devbox.publicUrl}/rider-app/v2/`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="rider-app health through hopper's gateway"
+                      >
+                        rider-app ↗
+                      </a>
+                      <a
+                        className="rsp-btn-ghost"
+                        href={`${devbox.publicUrl}/dynamic-offer-driver-app/ui/`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="driver-app health through hopper's gateway"
+                      >
+                        driver-app ↗
+                      </a>
+                    </dd>
+                  </>
+                )}
                 <dt>Data</dt>
                 <dd className="rsp-data-row">
                   {!ws ? (
