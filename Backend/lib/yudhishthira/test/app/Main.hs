@@ -1,6 +1,7 @@
 module Main (main) where
 
 import KaalChakraJobs (kaalChakraJobsTests)
+import KaalChakraTemplate (kaalChakraTemplateTests)
 import Kernel.Prelude
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -15,5 +16,6 @@ specs =
     unitTests =
       testGroup
         "Unit tests"
-        [ kaalChakraJobsTests
+        [ kaalChakraJobsTests,
+          kaalChakraTemplateTests
         ]

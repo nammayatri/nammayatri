@@ -13,7 +13,7 @@ import qualified Lib.Yudhishthira.Types as Yudhishthira
 
 --- Chakra Query Templates ---
 
-data TemplateField = Limit | Offset | UsersSetCondition
+data TemplateField = Limit | Offset | UsersSetCondition | MerchantOperatingCityId
   deriving (Show)
 
 showTemplateField :: TemplateField -> Text
@@ -35,19 +35,22 @@ data TemplateUnit = TemplateUnit
 data Template = Template
   { limit :: Yudhishthira.QLimit,
     offset :: Yudhishthira.QOffset,
-    usersSet :: Yudhishthira.UsersSet
+    usersSet :: Yudhishthira.UsersSet,
+    merchantOperatingCityId :: Maybe (Id Yudhishthira.MerchantOperatingCity)
   }
 
 newtype RawQuery = RawQuery {getRawQuery :: Text}
 
 replaceTemplateUnits :: RawQuery -> Template -> Either Text RawQuery
-replaceTemplateUnits rawQuery Template {..} =
+replaceTemplateUnits rawQuery Template {..} = do
+  cityUnit <- mkMerchantOperatingCityIdUnit rawQuery merchantOperatingCityId
   foldlM
     replaceTemplateUnit
     rawQuery
     [ mkLimitUnit limit,
       mkOffsetUnit offset,
-      mkUsersSetConditionUnit usersSet
+      mkUsersSetConditionUnit usersSet,
+      cityUnit
     ]
 
 mkLimitUnit :: Yudhishthira.QLimit -> TemplateUnit
@@ -62,6 +65,15 @@ mkUsersSetConditionUnit (Yudhishthira.LIST_USERS userIds) = do
   let userList = T.intercalate ", " $ userIds <&> \(Id userId) -> "'" <> userId <> "'"
   TemplateUnit UsersSetCondition ("userId IN (" <> userList <> ")") Mandatory
 mkUsersSetConditionUnit Yudhishthira.ALL_USERS = TemplateUnit UsersSetCondition "True" Mandatory
+
+-- Optional: queries without the placeholder stay unchanged; a query that uses it must run with a city
+mkMerchantOperatingCityIdUnit :: RawQuery -> Maybe (Id Yudhishthira.MerchantOperatingCity) -> Either Text TemplateUnit
+mkMerchantOperatingCityIdUnit _ (Just (Id cityId)) = Right $ TemplateUnit MerchantOperatingCityId cityId Optional
+mkMerchantOperatingCityIdUnit query Nothing
+  | T.isInfixOf templateField query.getRawQuery = Left $ "Template field " <> templateField <> " needs a merchant operating city, but none was given for query: '" <> query.getRawQuery <> "'"
+  | otherwise = Right $ TemplateUnit MerchantOperatingCityId "" Optional
+  where
+    templateField = showTemplateField MerchantOperatingCityId
 
 replaceTemplateUnit :: RawQuery -> TemplateUnit -> Either Text RawQuery
 replaceTemplateUnit query templateUnit = do

@@ -291,12 +291,14 @@ validateRedisQueryConfig queryText = do
   when (T.length redisConfig.key < 3) $
     throwError $ InvalidRequest "Redis key template is too short"
 
+-- Dummy city so queries using {merchantOperatingCityId} still get validated by running them
 defaultTemplate :: KaalChakraEvent.Template
 defaultTemplate =
   KaalChakraEvent.Template
     { limit = Lib.Yudhishthira.Types.QLimit 10,
       offset = Lib.Yudhishthira.Types.QOffset 0,
-      usersSet = Lib.Yudhishthira.Types.ALL_USERS
+      usersSet = Lib.Yudhishthira.Types.ALL_USERS,
+      merchantOperatingCityId = Just (Id "00000000-0000-0000-0000-000000000000")
     }
 
 queryDelete ::
