@@ -59,6 +59,7 @@ import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.ReferralPayout as ReferralPayout
 import qualified API.Action.UI.RideEvidence as RideEvidence
+import qualified API.Action.UI.SearchRoute as SearchRoute
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
@@ -210,6 +211,7 @@ type API =
            :<|> PolicyDocument.API
            :<|> DriverFyEarnings.API
            :<|> PaymentCustomer.API
+           :<|> SearchRoute.API
        )
 
 handler :: FlowServer API
@@ -300,3 +302,4 @@ handler =
     :<|> PolicyDocument.handler
     :<|> DriverFyEarnings.handler
     :<|> PaymentCustomer.handler
+    :<|> SearchRoute.handler
