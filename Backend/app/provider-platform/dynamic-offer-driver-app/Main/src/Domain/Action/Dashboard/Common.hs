@@ -97,9 +97,25 @@ castVehicleVariantDashboard = \case
   Just DV.EV_SUV -> Just Common.EV_SUV
   _ -> Nothing
 
-runVerifyRCFlow :: Bool -> Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Bool -> Maybe (Id DP.Person) -> Flow ()
-runVerifyRCFlow skipFleetChecks personId merchant merchantOpCityId operatingCity req isFleet bulkUpload mbFleetOwnerId = do
+runVerifyRCFlow :: Bool -> Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> TransporterConfig -> Common.AddVehicleReq -> Bool -> Bool -> Bool -> Maybe (Id DP.Person) -> Flow ()
+runVerifyRCFlow skipFleetChecks personId merchant merchantOpCityId operatingCity transporterConfig req isFleet bulkUpload autoApproved mbFleetOwnerId = do
   let imageId = maybe "" cast req.imageId
+  -- As in document register, supplied vehicle details are honoured only where the city lets the
+  -- dashboard pass them; with them the RC is created here instead of by an external verification provider.
+  let allowVehicleDetails = transporterConfig.allowDashboardToPassVehicleDetails == Just True
+  let mbVehicleDetails =
+        if allowVehicleDetails && not (T.null req.make) && not (T.null req.model) && not (T.null req.colour)
+          then
+            Just
+              DomainRC.DriverVehicleDetails
+                { vehicleManufacturer = req.make,
+                  vehicleModel = req.model,
+                  vehicleColour = req.colour,
+                  vehicleDoors = Nothing,
+                  vehicleSeatBelts = Nothing,
+                  vehicleModelYear = req.vehicleModelYear
+                }
+          else Nothing
   let rcReq =
         DomainRC.DriverRCReq
           { vehicleRegistrationCertNumber = req.registrationNo,
@@ -111,15 +127,15 @@ runVerifyRCFlow skipFleetChecks personId merchant merchantOpCityId operatingCity
             airConditioned = req.airConditioned,
             oxygen = req.oxygen,
             ventilator = req.ventilator,
-            vehicleDetails = Nothing,
+            vehicleDetails = mbVehicleDetails,
             vehicleCategory = req.vehicleCategory,
-            vehicleClass = Nothing,
+            vehicleClass = if allowVehicleDetails && not (T.null req.vehicleClass) then Just req.vehicleClass else Nothing,
             isRCImageValidated = Nothing,
             engineNumber = Nothing,
             chassisNumber = Nothing,
             previousRcNumber = req.previousRcNumber
           }
-  void $ DomainRC.verifyRC ((not isFleet) || skipFleetChecks) False (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq bulkUpload mbFleetOwnerId
+  void $ DomainRC.verifyRC ((not isFleet) || skipFleetChecks) (autoApproved && isJust mbVehicleDetails) (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq bulkUpload mbFleetOwnerId
 
 notifyYatriRentalEventsToDriver :: Maybe Text -> MessageKey -> Id DP.Person -> TransporterConfig -> Maybe Text -> MediaChannel -> Flow ()
 notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig mbReason channel = do
