@@ -310,12 +310,15 @@ postDriverFleetAddVehicle ::
   Maybe Common.Role ->
   Common.AddVehicleReq ->
   Flow APISuccess
-postDriverFleetAddVehicle = postDriverFleetAddVehicleHelper False
+postDriverFleetAddVehicle = postDriverFleetAddVehicleHelper False False
 
 type IsBulkUpload = Bool
 
+type AutoApproved = Bool
+
 postDriverFleetAddVehicleHelper ::
   IsBulkUpload ->
+  AutoApproved ->
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
@@ -325,7 +328,7 @@ postDriverFleetAddVehicleHelper ::
   Maybe Common.Role ->
   Common.AddVehicleReq ->
   Flow APISuccess
-postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPhoneNo requestorId mbFleetOwnerId mbMobileCountryCode mbRole req = do
+postDriverFleetAddVehicleHelper isBulkUpload autoApproved merchantShortId opCity reqDriverPhoneNo requestorId mbFleetOwnerId mbMobileCountryCode mbRole req = do
   merchant <- findMerchantByShortId merchantShortId
   whenJust mbFleetOwnerId $ \fleetOwnerId -> DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -350,7 +353,7 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
     (DP.DRIVER, Nothing) -> do
       -- DCO case
       void $ checkRCAssociationForDriver getEntityData.id rc True
-      void $ DCommon.runVerifyRCFlow False getEntityData.id merchant merchantOpCityId opCity req True isBulkUpload Nothing -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+      void $ DCommon.runVerifyRCFlow False getEntityData.id merchant merchantOpCityId opCity transporterConfig req True isBulkUpload autoApproved Nothing -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
       pure Success
     (_, Just fleetOwnerId) -> do
@@ -358,7 +361,7 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
       let skipFleetChecks = fromMaybe False req.skipFleetChecks
       whenJust rc $ \rcert -> do
         unless skipFleetChecks $ checkRCAssociationForFleet fleetOwnerId rcert
-      void $ DCommon.runVerifyRCFlow skipFleetChecks getEntityData.id merchant merchantOpCityId opCity req True isBulkUpload (Just $ Id @DP.Person fleetOwnerId) -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+      void $ DCommon.runVerifyRCFlow skipFleetChecks getEntityData.id merchant merchantOpCityId opCity transporterConfig req True isBulkUpload autoApproved (Just $ Id @DP.Person fleetOwnerId) -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       let logTag = case getEntityData.role of
             role | DCommon.checkFleetOwnerRole role -> "dashboard -> addVehicleUnderFleet"
             DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
@@ -1078,7 +1081,15 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
           rcReq
   case mbRequestedPerson of
     Nothing -> do
-      unprocessedRCAdditionEntities <- processVehicle (processVehicleByOperatorOrAdmin merchant transporterConfig merchantOpCity requestorId)
+      -- A row without phone numbers goes under the fleet named in the request; the owner's own
+      -- number stands in for the fleet_phone_no column.
+      mbFleetNoFallback <- forM req.fleetOwnerId $ \fleetOwnerId -> do
+        FleetAccess.FleetOwnerInfo {fleetOwner} <- FleetAccess.checkRequestorAccessToFleet False Nothing fleetOwnerId
+        unless (fleetOwner.merchantId == merchant.id && fleetOwner.merchantOperatingCityId == merchantOpCity.id) $
+          throwError (FleetOwnerNotFound fleetOwnerId)
+        mapM decrypt fleetOwner.mobileNumber >>= fromMaybeM (InvalidRequest "Fleet owner has no mobile number")
+      let autoApproved = transporterConfig.autoApproveOnAdminUpload == Just True
+      unprocessedRCAdditionEntities <- processVehicle (processVehicleByOperatorOrAdmin merchant transporterConfig merchantOpCity requestorId mbFleetNoFallback autoApproved)
       pure Common.APISuccessWithUnprocessedEntities {unprocessedEntities = unprocessedRCAdditionEntities}
     Just requestedPerson ->
       case requestedPerson.role of
@@ -1092,7 +1103,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
           unprocessedRCAdditionEntities <- processVehicle (processVehicleByFleetOwner merchant transporterConfig merchantOpCity requestorId requestedPerson)
           pure Common.APISuccessWithUnprocessedEntities {unprocessedEntities = unprocessedVehicleRouteMappingEntities <> unprocessedRCAdditionEntities}
         DP.OPERATOR -> do
-          unprocessedRCAdditionEntities <- processVehicle (processVehicleByOperatorOrAdmin merchant transporterConfig merchantOpCity requestorId)
+          unprocessedRCAdditionEntities <- processVehicle (processVehicleByOperatorOrAdmin merchant transporterConfig merchantOpCity requestorId Nothing False)
           pure Common.APISuccessWithUnprocessedEntities {unprocessedEntities = unprocessedRCAdditionEntities}
         _ -> throwError $ InvalidRequest "Invalid Data"
   where
@@ -1136,17 +1147,19 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
         Nothing -> pure $ Left $ "Person do not have a mobile number " <> requestedPerson.id.getId
         Just mobileNumber ->
           case (mbFleetNo, mbDriverNo) of
-            (Nothing, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq mobileNumber Nothing (Just Common.FLEET) merchantOpCity -- Add vehicles under requested fleet
-            (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just mobileNumber) (Just DCommonRole.DRIVER) merchantOpCity -- Map driver <-> vehicle under requested fleet
+            (Nothing, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq mobileNumber Nothing (Just Common.FLEET) merchantOpCity False -- Add vehicles under requested fleet
+            (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just mobileNumber) (Just DCommonRole.DRIVER) merchantOpCity False -- Map driver <-> vehicle under requested fleet
             (_, _) -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Invalid request"
 
-    processVehicleByOperatorOrAdmin :: DM.Merchant -> DTCConfig.TransporterConfig -> DMOC.MerchantOperatingCity -> Text -> (Common.RegisterRCReq, Maybe Text, Maybe Text, Maybe Text) -> Flow (Either Text ())
-    processVehicleByOperatorOrAdmin merchant transporterConfig merchantOpCity requestorId (registerRcReq, mbCountryCode, mbFleetNo, mbDriverNo) =
+    processVehicleByOperatorOrAdmin :: DM.Merchant -> DTCConfig.TransporterConfig -> DMOC.MerchantOperatingCity -> Text -> Maybe Text -> Bool -> (Common.RegisterRCReq, Maybe Text, Maybe Text, Maybe Text) -> Flow (Either Text ())
+    processVehicleByOperatorOrAdmin merchant transporterConfig merchantOpCity requestorId mbFleetNoFallback autoApproved (registerRcReq, mbCountryCode, mbFleetNo, mbDriverNo) =
       case (mbFleetNo, mbDriverNo) of
-        (Nothing, Nothing) -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Neither fleet nor driver phone number provided"
-        (Just fleetNo, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq fleetNo (Just fleetNo) (Just Common.FLEET) merchantOpCity -- Add vehicles under fleet
-        (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo Nothing (Just DCommonRole.DRIVER) merchantOpCity -- Add vehicles under DCO
-        (Just fleetNo, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just fleetNo) (Just DCommonRole.DRIVER) merchantOpCity -- Map driver <-> vehicle under fleet
+        (Nothing, Nothing) -> case mbFleetNoFallback of
+          Just fleetNo -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq fleetNo (Just fleetNo) (Just Common.FLEET) merchantOpCity autoApproved -- Add vehicles under the fleet named in the request
+          Nothing -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Neither fleet nor driver phone number provided"
+        (Just fleetNo, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq fleetNo (Just fleetNo) (Just Common.FLEET) merchantOpCity autoApproved -- Add vehicles under fleet
+        (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo Nothing (Just DCommonRole.DRIVER) merchantOpCity autoApproved -- Add vehicles under DCO
+        (Just fleetNo, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just fleetNo) (Just DCommonRole.DRIVER) merchantOpCity autoApproved -- Map driver <-> vehicle under fleet
     handleAddVehicleWithTry ::
       DM.Merchant ->
       DTCConfig.TransporterConfig ->
@@ -1157,8 +1170,9 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
       Maybe Text ->
       Maybe Common.Role ->
       DMOC.MerchantOperatingCity ->
+      Bool ->
       Flow (Either Text ())
-    handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq phoneNo mbFleetNo mbRole merchantOpCity = do
+    handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq phoneNo mbFleetNo mbRole merchantOpCity autoApproved = do
       result <- withTryCatch "handleAddVehicleWithTry" $ do
         let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) (DCommon.appendPlusInMobileCountryCode mbCountryCode)
         let addVehicleReq = convertToAddVehicleReq registerRcReq
@@ -1175,7 +1189,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
             QPerson.findByMobileNumberAndMerchantAndRoles mobileCountryCode phoneHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS] >>= fromMaybeM (FleetOwnerNotFound fleetNo) <&> (Just . (.id.getId))
           Nothing -> pure Nothing
 
-        postDriverFleetAddVehicleHelper True merchant.shortId opCity phoneNo requestorId mbFleetOwnerId mbCountryCode mbRole addVehicleReq
+        postDriverFleetAddVehicleHelper True autoApproved merchant.shortId opCity phoneNo requestorId mbFleetOwnerId mbCountryCode mbRole addVehicleReq
 
       case result of
         Left e -> return $ Left $ "Error: " <> T.pack (displayException e)
@@ -1199,7 +1213,26 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
           mbDriverPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.driverPhoneNo) "Driver Phone Number"
           mbCountryCode :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.countryCode) "Country Code"
           vehicleCategory :: Maybe DVC.VehicleCategory = Csv.readMaybeCSVField idx (fromMaybe "" row.vehicleCategory) "Vehicle Category"
+          mbManufacturer :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.manufacturer) "Manufacturer"
+          mbModel :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.model) "Model"
+          mbColour :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.colour) "Colour"
+          mbVehicleClass :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.vehicleClass) "Vehicle Class"
+          mbVehicleModelYear :: Maybe Int = Csv.readMaybeCSVField idx (fromMaybe "" row.vehicleModelYear) "Vehicle Model Year"
       vehicleRegistrationCertNumber <- Csv.cleanCSVField idx row.registrationNo "Registration No"
+      mbVehicleDetails <- case (mbManufacturer, mbModel, mbColour) of
+        (Just manufacturer', Just model', Just colour') ->
+          pure $
+            Just
+              DC.DriverVehicleDetails
+                { vehicleManufacturer = manufacturer',
+                  vehicleModel = model',
+                  vehicleColour = colour',
+                  vehicleDoors = Nothing,
+                  vehicleSeatBelts = Nothing,
+                  vehicleModelYear = mbVehicleModelYear
+                }
+        (Nothing, Nothing, Nothing) -> pure Nothing
+        _ -> throwError $ InvalidRequest $ "Manufacturer, model and colour must either all be filled or all be left empty at row: " <> show idx
       vehicleNumberHash <- getDbHash vehicleRegistrationCertNumber
       routes <-
         case mbRouteCodes of
@@ -1213,8 +1246,8 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
               operatingCity = show moc.city,
               imageId = Id "bulkVehicleUpload",
               imageId2 = Nothing,
-              vehicleDetails = Nothing,
-              vehicleClass = Nothing,
+              vehicleDetails = mbVehicleDetails,
+              vehicleClass = mbVehicleClass,
               vehicleCategory = Just $ fromMaybe DVC.CAR vehicleCategory,
               udinNumber = Nothing,
               engineNumber = Nothing,
@@ -1250,7 +1283,12 @@ data VehicleDetailsCSVRow = VehicleDetailsCSVRow
     vehicleCategory :: Maybe Text,
     fleetPhoneNo :: Maybe Text,
     driverPhoneNo :: Maybe Text,
-    countryCode :: Maybe Text
+    countryCode :: Maybe Text,
+    manufacturer :: Maybe Text,
+    model :: Maybe Text,
+    colour :: Maybe Text,
+    vehicleClass :: Maybe Text,
+    vehicleModelYear :: Maybe Text
   }
   deriving (Show)
 
@@ -1264,6 +1302,11 @@ instance FromNamedRecord VehicleDetailsCSVRow where
       <*> optional (r .: "fleet_phone_no")
       <*> optional (r .: "driver_phone_no")
       <*> optional (r .: "country_code")
+      <*> optional (r .: "manufacturer")
+      <*> optional (r .: "model")
+      <*> optional (r .: "colour")
+      <*> optional (r .: "vehicle_class")
+      <*> optional (r .: "vehicle_model_year")
 
 ---------------------------------------------------------------------
 postDriverFleetRemoveDriver ::
@@ -3796,8 +3839,16 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber driverCountryCode moc.country
       whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> MobileValidation.validateMobileNumber transporterConfig fleetPhoneNo fleetCountryCode moc.country
       case req_.fleetPhoneNo of
-        Nothing ->
-          throwError $ InvalidRequest "Fleet phone number is required for admin bulk driver addition"
+        Nothing -> case req.fleetOwnerId of
+          -- A row without a fleet phone number goes under the fleet the request names.
+          Just fleetOwnerId -> do
+            FleetAccess.FleetOwnerInfo {fleetOwner} <- FleetAccess.checkRequestorAccessToFleet False Nothing fleetOwnerId
+            unless (fleetOwner.merchantId == merchant.id && fleetOwner.merchantOperatingCityId == moc.id) $
+              throwError (FleetOwnerNotFound fleetOwnerId)
+            DCommon.checkFleetOwnerVerification fleetOwner.id.getId merchant.fleetOwnerEnabledCheck
+            linkDriverToFleetOwner merchant moc transporterConfig fleetOwner Nothing req_
+          Nothing ->
+            throwError $ InvalidRequest "Fleet phone number is required for admin bulk driver addition"
         Just fleetPhoneNo -> do
           mobileNumberHash <- getDbHash fleetPhoneNo
           fleetOwner <-
@@ -4121,7 +4172,7 @@ convertToAddVehicleReq :: Common.RegisterRCReq -> Common.AddVehicleReq
 convertToAddVehicleReq rcReq =
   Common.AddVehicleReq
     { registrationNo = rcReq.vehicleRegistrationCertNumber,
-      vehicleClass = "",
+      vehicleClass = fromMaybe "" rcReq.vehicleClass,
       capacity = Nothing,
       colour = maybe "" (.vehicleColour) rcReq.vehicleDetails,
       energyType = Nothing,
@@ -4136,7 +4187,7 @@ convertToAddVehicleReq rcReq =
       ventilator = rcReq.ventilator,
       dateOfRegistration = rcReq.dateOfRegistration,
       mYManufacturing = Nothing,
-      vehicleModelYear = Nothing,
+      vehicleModelYear = rcReq.vehicleDetails >>= (.vehicleModelYear),
       skipFleetChecks = Nothing,
       vehicleTags = Nothing,
       fuelType = Nothing,
