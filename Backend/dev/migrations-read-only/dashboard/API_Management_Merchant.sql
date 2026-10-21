@@ -278,3 +278,13 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"GetMerchantToll","migration":"capability","param":"city-config.geo.read","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-config.geo.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_TOLL' ) ON CONFLICT DO NOTHING;
+
+
+
+------- SQL updates -------
+
+-- {"api":"GetMerchantConfigFareBreakup","migration":"capability","param":"system-config.fare_policy.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.fare_policy.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_FARE_BREAKUP' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostMerchantConfigFareBreakupUpdate","migration":"capability","param":"system-config.fare_policy.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.fare_policy.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_BREAKUP_UPDATE' ) ON CONFLICT DO NOTHING;

@@ -1475,6 +1475,17 @@ toApiChargeComponent = \case
   FarePolicyD.BoothChargeComponent -> Common.BoothChargeComponent
   FarePolicyD.RideExtraTimeFareComponent -> Common.RideExtraTimeFareComponent
   FarePolicyD.SchedulingChargeComponent -> Common.SchedulingChargeComponent
+  FarePolicyD.GovtChargesComponent -> Common.GovtChargesComponent
+  FarePolicyD.SgstComponent -> Common.SgstComponent
+  FarePolicyD.CgstComponent -> Common.CgstComponent
+  FarePolicyD.ParkingTaxComponent -> Common.ParkingTaxComponent
+  FarePolicyD.CardChargeOnFareComponent -> Common.CardChargeOnFareComponent
+  FarePolicyD.CardChargeFixedComponent -> Common.CardChargeFixedComponent
+  FarePolicyD.ConditionalChargesComponent -> Common.ConditionalChargesComponent
+  FarePolicyD.CustomerGateFeeComponent -> Common.CustomerGateFeeComponent
+  FarePolicyD.DriverSelectedFareComponent -> Common.DriverSelectedFareComponent
+  FarePolicyD.NegotiatedFareDeltaComponent -> Common.NegotiatedFareDeltaComponent
+  FarePolicyD.NegativeFareAdjustmentComponent -> Common.NegativeFareAdjustmentComponent
 
 fromApiChargeComponent :: Common.FPV2FareChargeComponent -> FarePolicyD.FareChargeComponent
 fromApiChargeComponent = \case
@@ -1514,3 +1525,14 @@ fromApiChargeComponent = \case
   Common.BoothChargeComponent -> FarePolicyD.BoothChargeComponent
   Common.RideExtraTimeFareComponent -> FarePolicyD.RideExtraTimeFareComponent
   Common.SchedulingChargeComponent -> FarePolicyD.SchedulingChargeComponent
+  Common.GovtChargesComponent -> FarePolicyD.GovtChargesComponent
+  Common.SgstComponent -> FarePolicyD.SgstComponent
+  Common.CgstComponent -> FarePolicyD.CgstComponent
+  Common.ParkingTaxComponent -> FarePolicyD.ParkingTaxComponent
+  Common.CardChargeOnFareComponent -> FarePolicyD.CardChargeOnFareComponent
+  Common.CardChargeFixedComponent -> FarePolicyD.CardChargeFixedComponent
+  Common.ConditionalChargesComponent -> FarePolicyD.ConditionalChargesComponent
+  Common.CustomerGateFeeComponent -> FarePolicyD.CustomerGateFeeComponent
+  Common.DriverSelectedFareComponent -> FarePolicyD.DriverSelectedFareComponent
+  Common.NegotiatedFareDeltaComponent -> FarePolicyD.NegotiatedFareDeltaComponent
+  Common.NegativeFareAdjustmentComponent -> FarePolicyD.NegativeFareAdjustmentComponent
