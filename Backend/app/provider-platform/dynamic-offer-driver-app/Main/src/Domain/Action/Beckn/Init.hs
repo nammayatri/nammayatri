@@ -15,7 +15,7 @@
 module Domain.Action.Beckn.Init where
 
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
+-- import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import Domain.Types
 import qualified Domain.Types.AddOnConfig as DAddOnConfig
 import qualified Domain.Types.Booking as DRB
@@ -74,7 +74,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
-import qualified Tools.Maps as Maps
+-- import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as BPPMetrics
 
 data FulfillmentId = QuoteId (Id DQ.Quote) | DriverQuoteId (Id DDQ.DriverQuote)
@@ -222,12 +222,13 @@ handler merchantId req validatedReq = do
         booking.id.getId
         pickupZoneGateId
         [(show vehicleVariant, serviceTier)]
-  fork "Updating Demand Hotspots on booking" $ do
-    let lat = searchRequest.fromLocation.lat
-        lon = searchRequest.fromLocation.lon
-        merchantOpCityId = searchRequest.merchantOperatingCityId
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    DemandHotspots.updateDemandHotspotsOnBooking searchRequest.id merchantOpCityId transporterConfig (Maps.LatLong lat lon)
+  -- Search stays in the hotspot until the ride starts.
+  -- fork "Updating Demand Hotspots on booking" $ do
+  --   let lat = searchRequest.fromLocation.lat
+  --       lon = searchRequest.fromLocation.lon
+  --       merchantOpCityId = searchRequest.merchantOperatingCityId
+  --   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  --   DemandHotspots.removeDemandHotspot searchRequest.id merchantOpCityId transporterConfig (Maps.LatLong lat lon) Nothing False
   let paymentMethodInfo = req.paymentMethodInfo
       bppSubscriberId = req.bppSubscriberId
       estimateId = req.estimateId

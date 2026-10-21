@@ -468,7 +468,9 @@ data DemandHotspotsConfig = DemandHotspotsConfig
     nearbySearchStalenessMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     noOfGeohashesToReturn :: Kernel.Prelude.Int,
     precisionOfGeohash :: Kernel.Prelude.Int,
-    resultDurationMinutes :: Kernel.Prelude.Int
+    resultDurationMinutes :: Kernel.Prelude.Int,
+    -- Just True → write 5-element members; missing/False → legacy 3-element (safe for old pods).
+    storeHotspotProductInMember :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
