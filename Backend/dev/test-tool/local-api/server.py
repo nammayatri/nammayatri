@@ -962,7 +962,7 @@ REMOTE_BUFFER_BYTES = 256 * 1024  # last ~256 KB per session for re-attach
 _SSH_KEY_CANDIDATES = [os.path.expanduser(k) for k in _dc_ssh.KEY_CANDIDATES]
 BASE_API_HOST = os.environ.get("BASE_API_HOST", "service-discovery.devenv.movingtech.net")
 BASE_API_PORT = os.environ.get("BASE_API_PORT", "8787")
-# Devbox front desk (nix-the-builder scripts/frontdesk): one Caddy per dev-box that
+# Devbox front desk (nix-the-builder scripts/daemonset/worker/devbox/frontdesk): one Caddy per dev-box that
 # routes /<workspace-id>/* to that workspace's own Caddy, so the URL survives port changes.
 FRONTDESK_PORT = os.environ.get("FRONTDESK_PORT", "8888")
 

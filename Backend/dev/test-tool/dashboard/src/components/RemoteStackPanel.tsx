@@ -1072,7 +1072,7 @@ export const RemoteStackPanel: React.FC = () => {
                   ) : (
                     <span
                       className="rsp-sync-checked"
-                      title="Install it on the dev-box: python3 scripts/frontdesk/setup.py (nix-the-builder)"
+                      title="Install it on the dev-box: python3 scripts/daemonset/worker/devbox/frontdesk/setup.py (nix-the-builder)"
                     >
                       front desk not installed on this dev-box
                     </span>

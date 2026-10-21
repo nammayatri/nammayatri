@@ -45,7 +45,7 @@ https://service-discovery.devenv.movingtech.net/api/<devbox>/8889/<name>   + /ri
 ```
 
 The dev-box's front desk serves only those two apps on `:8889` and announces
-it to hopper (nix-the-builder `scripts/frontdesk`). A dev-box hopper does not
+it to hopper (nix-the-builder `scripts/daemonset/worker/devbox/frontdesk`). A dev-box hopper does not
 list as public is never picked. `office_url` (`http://<office ip>:8888/<name>`,
 every service) and `cc_url` only answer on the office network or the tailnet.
 
