@@ -57,12 +57,16 @@ import Kernel.Beam.Lib.Utils (pushToKafka)
 import qualified Kernel.External.Maps as EMaps
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
@@ -72,6 +76,7 @@ import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import SharedLogic.DriverPool.DriverPoolData (checkRequestCount)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
+import Storage.Beam.SpecialZone ()
 import Storage.Beam.Yudhishthira ()
 import Storage.ConfigPilot.Config.FleetConfig (getCityFleetConfigs)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -202,6 +207,22 @@ getFleetPoolingPriorities mOCityId drivers = do
           Just priority <- [Map.lookup fleetOwnerId fleetConfigs >>= (.fleetPoolingPriority)]
       ]
 
+-- | The search stores one area even when a trip both starts and ends in special locations (the zone priorities pick
+-- one). For fleet pooling priority, widen it to 'SL.PickupDrop' when the other end is also a special location, so the
+-- fleet's Pickup_ and Drop_ entries both count ('resolvePoolingPriority' takes the highest).
+poolingPriorityArea ::
+  (EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, MonadFlow m, CacheFlow m r) =>
+  DSR.SearchRequest ->
+  m (Maybe SL.Area)
+poolingPriorityArea searchReq = case searchReq.area of
+  Just (SL.Pickup pickupId _) -> do
+    mbDropZone <- maybe (pure Nothing) (QSpecialLocation.findSpecialLocationByLatLong' . EMaps.getCoordinates) searchReq.toLocation
+    pure $ maybe searchReq.area (\dropZone -> Just (SL.PickupDrop pickupId dropZone.id Nothing)) mbDropZone
+  Just (SL.Drop dropId) -> do
+    mbPickupZone <- QSpecialLocation.findSpecialLocationByLatLong' (EMaps.getCoordinates searchReq.fromLocation)
+    pure $ maybe searchReq.area (\pickupZone -> Just (SL.PickupDrop pickupZone.id dropId Nothing)) mbPickupZone
+  _ -> pure searchReq.area
+
 -- | Per-driver preference-match checks for a search. Each entry is one independently
 -- pluggable dimension over the driver's own self-selected preferences.
 mkDriverPreferenceChecks :: DSR.SearchRequest -> DriverPoolWithActualDistResult -> [PreferenceCheck]
@@ -254,6 +275,8 @@ mkDriverPreferenceChecks searchReq driver =
 makeTaggedDriverPool ::
   ( CacheFlow m r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    BeamFlow m r,
     MonadFlow m,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
@@ -295,6 +318,7 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
     if null allLogics
       then pure Map.empty
       else withTimeAPI "driverPooling" "fetchingFleetPoolingPriority" $ getFleetPoolingPriorities mOCityId onlyNewDriversWithCustomerInfo
+  priorityArea <- if Map.null fleetPriorities then pure searchReq.area else poolingPriorityArea searchReq
   -- Enrich drivers with their per-driver SRD sliding-window counters and idle time so the POOLING
   -- dynamic-logic rules can reference them. Batched: pipelined cross-slot MGETs for the whole batch
   -- (counters + idle) instead of a Redis read pass per driver.
@@ -314,7 +338,7 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
                     idleTimeSeconds = Map.lookup personId idleMap,
                     preferenceMatchScore = computePreferenceMatchScore preferenceChecks,
                     hasApplicablePreferences = any (.isApplicable) preferenceChecks,
-                    fleetPoolingPriorityLevel = Map.lookup driver.driverPoolResult.driverId fleetPriorities >>= resolvePoolingPriority searchReq.area
+                    fleetPoolingPriorityLevel = Map.lookup driver.driverPoolResult.driverId fleetPriorities >>= resolvePoolingPriority priorityArea
                   }
         )
         onlyNewDriversWithCustomerInfo
