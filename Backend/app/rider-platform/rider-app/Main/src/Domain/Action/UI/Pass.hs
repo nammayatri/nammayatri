@@ -787,7 +787,7 @@ updatePassCatalog merchantShortId opCity passId req = do
             DPass.formVerificationConfig = req.formVerificationConfig <|> passRow.formVerificationConfig,
             DPass.updatedAt = now
           }
-  QPass.updateByPrimaryKey updatedPass
+  QPass.updateCatalogFields updatedPass
   CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId passRow.enable
   CQPass.clearCacheByPassTypeIdAndEnabled updatedPass.passTypeId updatedPass.enable
   pure APISuccess.Success
@@ -797,8 +797,7 @@ deletePassCatalog :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPass.Pass 
 deletePassCatalog merchantShortId opCity passId = do
   merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
   passRow <- findPassInCity passId merchantOperatingCity.id opCity
-  now <- getCurrentTime
-  QPass.updateByPrimaryKey passRow {DPass.enable = False, DPass.updatedAt = now}
+  QPass.updateEnable False passRow.id
   CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId True
   CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId False
   pure APISuccess.Success
