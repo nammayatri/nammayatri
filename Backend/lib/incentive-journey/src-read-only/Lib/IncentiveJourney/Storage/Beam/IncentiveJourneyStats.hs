@@ -14,6 +14,7 @@ import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats
 
 data IncentiveJourneyStatsT f = IncentiveJourneyStatsT
   { cohortId :: B.C f Kernel.Prelude.Text,
+    cohortJourneyMappingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     conditionOperator :: B.C f Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneConditionOperator,
     conditionType :: B.C f Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneConditionType,
     conditionValue :: B.C f Kernel.Prelude.Int,

@@ -1409,16 +1409,26 @@
           "script": {
             "exec": [
               "var d = pm.response.json();",
-              "if (d.estimates && d.estimates.length > 0) {",
+              "function rideEstimates(body) {",
+              "    if (body.estimates && body.estimates.length > 0) return body.estimates;",
+              "    if (body.suggestedEstimates && body.suggestedEstimates.estimates && body.suggestedEstimates.estimates.length > 0) return body.suggestedEstimates.estimates;",
+              "    var alts = (body.alternateSuggestions && body.alternateSuggestions.alternates) || [];",
+              "    var withFares = alts.filter(function (a) { return a.estimates && a.estimates.length > 0; });",
+              "    var preferred = withFares.filter(function (a) { return a.isDefault; });",
+              "    var chosen = preferred[0] || withFares[0];",
+              "    return chosen ? chosen.estimates : [];",
+              "}",
+              "var estimates = rideEstimates(d);",
+              "if (estimates.length > 0) {",
               "    var want = pm.environment.get('auto_vehicle_variant') || 'AUTO_RICKSHAW';",
-              "    var est = d.estimates.find(e => e.vehicleVariant === want)",
-              "           || d.estimates.find(e => e.vehicleServiceTierType === want)",
-              "           || d.estimates[0];",
+              "    var est = estimates.find(e => e.vehicleVariant === want)",
+              "           || estimates.find(e => e.vehicleServiceTierType === want)",
+              "           || estimates[0];",
               "    pm.environment.set('estimateId', est.id);",
               "    console.log('Estimate:', est.id, est.vehicleVariant, est.estimatedFare, '(wanted', want + ')');",
               "}",
               "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });"
+              "pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(estimates, 'estimates').to.be.an('array'); pm.expect(estimates.length, 'estimate count').to.be.above(0); });"
             ],
             "type": "text/javascript"
           }
@@ -2056,16 +2066,26 @@
           "script": {
             "exec": [
               "var d = pm.response.json();",
-              "if (d.estimates && d.estimates.length > 0) {",
+              "function rideEstimates(body) {",
+              "    if (body.estimates && body.estimates.length > 0) return body.estimates;",
+              "    if (body.suggestedEstimates && body.suggestedEstimates.estimates && body.suggestedEstimates.estimates.length > 0) return body.suggestedEstimates.estimates;",
+              "    var alts = (body.alternateSuggestions && body.alternateSuggestions.alternates) || [];",
+              "    var withFares = alts.filter(function (a) { return a.estimates && a.estimates.length > 0; });",
+              "    var preferred = withFares.filter(function (a) { return a.isDefault; });",
+              "    var chosen = preferred[0] || withFares[0];",
+              "    return chosen ? chosen.estimates : [];",
+              "}",
+              "var estimates = rideEstimates(d);",
+              "if (estimates.length > 0) {",
               "    var want = pm.environment.get('auto_vehicle_variant') || 'AUTO_RICKSHAW';",
-              "    var est = d.estimates.find(e => e.vehicleVariant === want)",
-              "           || d.estimates.find(e => e.vehicleServiceTierType === want)",
-              "           || d.estimates[0];",
+              "    var est = estimates.find(e => e.vehicleVariant === want)",
+              "           || estimates.find(e => e.vehicleServiceTierType === want)",
+              "           || estimates[0];",
               "    pm.environment.set('estimateId', est.id);",
               "    console.log('Estimate:', est.id, est.vehicleVariant, est.estimatedFare, '(wanted', want + ')');",
               "}",
               "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });"
+              "pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(estimates, 'estimates').to.be.an('array'); pm.expect(estimates.length, 'estimate count').to.be.above(0); });"
             ],
             "type": "text/javascript"
           }
@@ -2664,7 +2684,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"journeyId\": \"{{ij_journey_id}}\",\n  \"milestoneId\": \"{{ij_earnings_milestone_id}}\",\n  \"periodKey\": \"{{ij_period_key}}\"\n}"
+          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"journeyId\": \"{{ij_journey_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_cohort_journey_mapping_id}}\",\n  \"milestoneId\": \"{{ij_earnings_milestone_id}}\",\n  \"periodKey\": \"{{ij_period_key}}\"\n}"
         }
       }
     },

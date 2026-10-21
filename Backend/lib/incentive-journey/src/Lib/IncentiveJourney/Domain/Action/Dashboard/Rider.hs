@@ -196,12 +196,13 @@ postIncentiveJourneyStatsWaiveOff ::
 postIncentiveJourneyStatsWaiveOff handle merchantShortId opCity req = do
   (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
   let journeyId = ID.cast @Dashboard.Common.IncentiveJourney @DIJ.IncentiveJourney req.journeyId
+      cohortJourneyMappingId = ID.cast @Dashboard.Common.CohortJourneyMapping @DCJM.CohortJourneyMapping req.cohortJourneyMappingId
       milestoneId = ID.cast @Dashboard.Common.IncentiveJourneyMilestone @DIJM.IncentiveJourneyMilestone req.milestoneId
       personId = ID.cast @Dashboard.Common.Person @DIJC.Person req.personId
   journey <- QJourney.findById journeyId >>= fromMaybeM (InvalidRequest "Incentive journey not found")
   when (null req.periodKey) $ throwError (InvalidRequest "periodKey must be non-empty")
   waiveFn <- handle.waiveRiderMilestone & fromMaybeM (InvalidRequest "waiveRiderMilestone not configured")
-  waiveFn personId merchant.id merchantOpCityId journey milestoneId req.periodKey
+  waiveFn personId merchant.id merchantOpCityId journey cohortJourneyMappingId milestoneId req.periodKey
   pure Success
 
 postIncentiveJourneyCohortCreate ::
@@ -505,6 +506,7 @@ toStatsHistoryItem stats =
     { statsId = stats.id.getId,
       personId = ID.cast stats.personId,
       journeyId = ID.cast stats.journeyId,
+      cohortJourneyMappingId = ID.cast <$> stats.cohortJourneyMappingId,
       milestoneId = ID.cast stats.milestoneId,
       periodKey = stats.periodKey,
       conditionType = toApiConditionType stats.conditionType,

@@ -342,12 +342,13 @@ postIncentiveJourneyStatsWaiveOff ::
 postIncentiveJourneyStatsWaiveOff handle merchantShortId opCity req = do
   (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
   let journeyId = ID.cast @Dashboard.Common.IncentiveJourney @DIJ.IncentiveJourney req.journeyId
+      cohortJourneyMappingId = ID.cast @Dashboard.Common.CohortJourneyMapping @DCJM.CohortJourneyMapping req.cohortJourneyMappingId
       milestoneId = ID.cast @Dashboard.Common.IncentiveJourneyMilestone @DIJM.IncentiveJourneyMilestone req.milestoneId
       driverId = ID.cast @Dashboard.Common.Driver @DIJC.Person req.driverId
   journey <- QJourney.findById journeyId >>= fromMaybeM (InvalidRequest "Incentive journey not found")
   when (T.null req.periodKey) $ throwError (InvalidRequest "periodKey must be non-empty")
   waiveFn <- handle.waiveDriverMilestone & fromMaybeM (InvalidRequest "waiveDriverMilestone not configured")
-  waiveFn driverId merchant.id merchantOpCityId journey milestoneId req.periodKey
+  waiveFn driverId merchant.id merchantOpCityId journey cohortJourneyMappingId milestoneId req.periodKey
   pure Success
 
 postIncentiveJourneyCohortCreate ::
@@ -741,6 +742,7 @@ toStatsHistoryItem journeyNameById milestoneNameById stats =
       driverId = ID.cast stats.personId,
       journeyId = ID.cast stats.journeyId,
       journeyName = fromMaybe stats.journeyId.getId (HM.lookup stats.journeyId journeyNameById),
+      cohortJourneyMappingId = ID.cast <$> stats.cohortJourneyMappingId,
       milestoneId = ID.cast stats.milestoneId,
       milestoneName = join (HM.lookup stats.milestoneId milestoneNameById),
       periodKey = stats.periodKey,

@@ -348,8 +348,6 @@ PayoutBatch:
       params: [status, failureReason, failureCode, resolvedAt, nextStatusCallAt]
       where: id
 
-  # Indexes are hand-written in dev/ddl-migrations/dynamic-offer-driver-app/0903-hdfc-bulk-payout-indexes.sql
-  # (partial indexes and a column order the generator cannot express).
   extraOperations:
   - EXTRA_QUERY_FILE
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"

@@ -51,9 +51,9 @@ data ServiceHandle m = ServiceHandle
       Maybe Int ->
       m [DIJS.IncentiveJourneyStats],
     findStatsByPersonIdAndPeriodKey :: Id Common.Person -> Text -> m [DIJS.IncentiveJourneyStats],
-    findStatsByPersonIdJourneyIdAndPeriodKey ::
+    findStatsByPersonIdCjmAndPeriodKey ::
       Id Common.Person ->
-      Id DIJ.IncentiveJourney ->
+      Id DCJM.CohortJourneyMapping ->
       Text ->
       m [DIJS.IncentiveJourneyStats],
     -- | Provider dashboard waive. App loads TransporterConfig / vehicle as needed.
@@ -63,6 +63,7 @@ data ServiceHandle m = ServiceHandle
           Id Common.Merchant ->
           Id Common.MerchantOperatingCity ->
           DIJ.IncentiveJourney ->
+          Id DCJM.CohortJourneyMapping ->
           Id DIJM.IncentiveJourneyMilestone ->
           Text ->
           m ()
@@ -73,6 +74,7 @@ data ServiceHandle m = ServiceHandle
           Id Common.Merchant ->
           Id Common.MerchantOperatingCity ->
           DIJ.IncentiveJourney ->
+          Id DCJM.CohortJourneyMapping ->
           Id DIJM.IncentiveJourneyMilestone ->
           Text ->
           m ()
