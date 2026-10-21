@@ -1,5 +1,6 @@
 module Storage.Queries.LocationMappingExtra where
 
+import Data.List (sortOn)
 import qualified Data.Text as T
 import Domain.Types.LocationMapping
 import Kernel.Beam.Functions
@@ -79,14 +80,15 @@ getLatestStopsByEntityId entityId = do
 
 getLatestStopsByEntityId' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
 getLatestStopsByEntityId' entityId =
-  findAllWithKVAndConditionalDB
-    [ Se.And
-        [ Se.Is BeamLM.entityId $ Se.Eq entityId,
-          Se.Is BeamLM.order $ Se.Not $ Se.Eq 0,
-          Se.Is BeamLM.version $ Se.Eq latestTag
-        ]
-    ]
-    (Just (Se.Asc BeamLM.order))
+  -- Older rows expire from Redis while newer ones stay, so a Redis-only hit would drop the older stops.
+  sortOn (.order)
+    <$> findAllWithKV
+      [ Se.And
+          [ Se.Is BeamLM.entityId $ Se.Eq entityId,
+            Se.Is BeamLM.order $ Se.Not $ Se.Eq 0,
+            Se.Is BeamLM.version $ Se.Eq latestTag
+          ]
+      ]
 
 maxOrderByEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
 maxOrderByEntity entityId = do
