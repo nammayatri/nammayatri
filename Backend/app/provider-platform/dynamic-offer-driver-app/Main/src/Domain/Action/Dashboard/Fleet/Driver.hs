@@ -5629,7 +5629,7 @@ postDriverFleetDriverAutoAssign ::
   Common.FleetDriverAutoAssignReq ->
   Flow APISuccess
 postDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFleetOwnerId req = do
-  (_, _, validatedDriver, cityTiers) <- getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId
+  (merchantOpCityId, fleetOwner, validatedDriver, cityTiers) <- getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId
   when (req.enable && not (any QFDAExtra.isAutoAcceptEnabledTier cityTiers)) $
     throwError $ InvalidRequest "No service tier in this city has auto-accept enabled"
   let personId = validatedDriver.id
@@ -5638,7 +5638,10 @@ postDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFl
     vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
     now <- getCurrentTime
     if req.enable
-      then QFDAExtra.writeFleetDriverTags True (Just DFC.AutoAssignConfig {defaultOn = True, allowDriverToToggle = True, disableDriverAreaAndDistancePreference = False}) driver
+      then do
+        -- The fleet's own settings, with auto-assign switched on for this one driver.
+        fleetAutoAssign <- fromMaybe defaultAutoAssignConfig <$> QFDAExtra.getFleetAutoAssignConfig fleetOwner.id.getId merchantOpCityId
+        QFDAExtra.writeFleetDriverTags True (Just fleetAutoAssign {DFC.defaultOn = True}) driver
       else do
         let tags = fromMaybe [] driver.driverTag
             newTags = Yudhishthira.removeTagName (Just tags) (LYT.TagNameValue QFDAExtra.autoAssignTagName)
