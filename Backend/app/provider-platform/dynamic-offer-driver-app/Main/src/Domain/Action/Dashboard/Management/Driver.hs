@@ -169,6 +169,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Ride
+import qualified SharedLogic.Subscription.BillingModelSwitch as BillingModelSwitch
 import SharedLogic.VehicleServiceTier
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
@@ -1562,9 +1563,9 @@ postDriverBulkSubscriptionServiceUpdate merchantShortId _opCity req = do
   let maxBulkSubscriptionDriverIds = fromMaybe 200 (transporterConfig.limitsConfig >>= (.maxBulkSubscriptionDriverIds))
   when (length req.driverIds > maxBulkSubscriptionDriverIds) $ throwError (InvalidRequest "driver ids limit exceeded")
   let services = nub $ map DCommon.mapServiceName (req.serviceNames <> [Common.YATRI_SUBSCRIPTION])
-  QDriverInfo.updateServicesEnabled req.driverIds services
-  when (PREPAID_SUBSCRIPTION `elem` services) $
-    QDriverInfo.enrollInPrepaidBillingModel req.driverIds
+  if PREPAID_SUBSCRIPTION `elem` services
+    then BillingModelSwitch.enrollInPrepaidByDashboard Nothing req.driverIds (QDriverInfo.updateServicesEnabled req.driverIds services)
+    else QDriverInfo.updateServicesEnabled req.driverIds services
   return Success
 
 getDriverPlanDrivers :: ShortId DM.Merchant -> Context.City -> Id Common.Plan -> Flow Common.GetDriversOnPlanRes

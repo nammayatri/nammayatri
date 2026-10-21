@@ -8,6 +8,7 @@ import qualified Domain.Types.Booking
 import qualified Domain.Types.CancellationReason
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverGoHomeRequest
+import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.Location
@@ -116,6 +117,7 @@ data Ride = Ride
     referralFlagReason :: Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason,
     returnOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     returnStartedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    rideBillingModel :: Kernel.Prelude.Maybe Domain.Types.Extra.Plan.ServiceNames,
     rideEndedBy :: Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy,
     rideTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
     safetyAlertTriggered :: Kernel.Prelude.Bool,

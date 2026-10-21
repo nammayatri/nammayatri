@@ -115,6 +115,7 @@ import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
+import SharedLogic.Subscription.BillingModel (isRideBillingModelEnabled)
 import Storage.Beam.Webhook ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -803,6 +804,10 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         unless isFleetOwner $
           Analytics.incrementOperatorTotalActiveDriversIfFirstDriverSubscription transporterConfig person.id.getId
         SubscriptionPurchaseSvc.updateSubscriptionPurchase latestPurchase updatedPurchase
+        -- Where rides are not billed by model, buying a prepaid pack is what moves a driver onto
+        -- prepaid, as it always has. Where they are, only a model switch moves them.
+        unless (isFleetOwner || isRideBillingModelEnabled transporterConfig.subscriptionConfig) $
+          QDI.enrollInPrepaidBillingModel [person.id.getId]
         -- Schedule expiry job only if expiry was set (not queued)
         whenJust expiryDate $ \expiry -> do
           let delay = diffUTCTime expiry now

@@ -24,10 +24,12 @@ import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
+import Domain.Types.Extra.Plan (ServiceNames (PREPAID_SUBSCRIPTION))
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant as DV
 import Domain.Utils
@@ -47,7 +49,7 @@ import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.WalletAccount
-import SharedLogic.Subscription.BillingModel (isPrepaidPayer, resolvePayer)
+import SharedLogic.Subscription.BillingModel (billedModel, isPrepaidPayer, resolvePayer, rideVehicleCategory)
 import Storage.Beam.Finance ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverLocation.Internal as Int
@@ -84,6 +86,7 @@ data NearestDriversResult = NearestDriversResult
     driverGender :: Person.Gender,
     vehicleNumber :: Maybe Text,
     fleetOwnerId :: Maybe Text,
+    rideBillingModel :: Maybe ServiceNames,
     -- On-ride forward batching fields (Nothing for non-on-ride drivers)
     previousRideDropLat :: Maybe Double,
     previousRideDropLon :: Maybe Double,
@@ -125,6 +128,11 @@ data NearestDriversReq = NearestDriversReq
     now :: UTCTime,
     paymentMode :: Maybe MP.PaymentMode,
     vehicleCategoryScopedPrepaidEnabled :: Bool,
+    -- | 'isRideBillingModelEnabled' for the city: the prepaid balance gate then applies only
+    -- to prepaid payers, as only their rides are billed against prepaid credits.
+    rideBillingModelEnabled :: Bool,
+    -- | Vehicle categories the city charges postpaid (BillingModelSwitch.postpaidChargedCategories).
+    postpaidChargedVehicleCategories :: [DVC.VehicleCategory],
     excludeDriverIds :: [Id Person.Driver],
     prevAttemptedDriverIds :: [Id Person.Driver],
     applyParallelRequestFilter :: Bool,
@@ -363,6 +371,7 @@ mkResultHelper now dpd location dist mbDefaultServiceTierForDriver cityServiceTi
         previousRideDropLon = mbPrevDropLon,
         vehicleNumber = Just dpd.registrationNo,
         fleetOwnerId = dpd.fleetOwnerId,
+        rideBillingModel = dpd.rideBillingModel,
         distanceFromDriverToDestination = mbDistToDestination
       }
 
@@ -401,8 +410,8 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
               (Just fare, Just _) -> Just fare
               _ -> Nothing
             creditsValidAt = if isScheduled then fromMaybe now scheduledPickupTime else now
-        purchasesByOwner <- fetchActivePrepaidPurchasesByOwners (map candidateOwnerId results)
-        filterM (passesPrepaidGates mbFareRequirement creditsValidAt purchasesByOwner) results
+        purchasesByOwner <- fetchActivePrepaidPurchasesByOwners (map candidateOwnerId (filter needsPrepaidCredits results))
+        filterM (\r -> if needsPrepaidCredits r then passesPrepaidGates mbFareRequirement creditsValidAt purchasesByOwner r else pure True) results
       else pure results
 
   let cashCheckApplies = cashWalletCheckEnabled driverWalletConfig && shouldCheckCashWallet paymentInstrument
@@ -436,6 +445,11 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
       Nothing -> (counterpartyDriver, r.driverId.getId, fromMaybe 0 prepaidSubscriptionThreshold)
 
     candidateOwnerId r = let (_, ownerId, _) = resolveOwnerAndThreshold r in ownerId
+    -- Called only where the merchant runs prepaid, hence 'True'. Mirrors initializeRide: a
+    -- postpaid ride the city would not charge is billed prepaid, so it needs credits.
+    needsPrepaidCredits r =
+      not rideBillingModelEnabled
+        || billedModel True (rideVehicleCategory r.serviceTier `elem` postpaidChargedVehicleCategories) (resolvePayer True (getId r.driverId) r.fleetOwnerId r.rideBillingModel).model == PREPAID_SUBSCRIPTION
     passesPrepaidGates mbFareRequirement creditsValidAt purchasesByOwner r = do
       let mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (DV.castServiceTierToVehicleCategory r.serviceTier) else Nothing
           (counterpartyType, ownerId, threshold) = resolveOwnerAndThreshold r

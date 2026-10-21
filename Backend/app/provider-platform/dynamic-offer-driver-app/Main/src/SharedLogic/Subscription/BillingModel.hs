@@ -25,17 +25,32 @@
 --
 -- Every gate that asks "is this driver prepaid?" goes through 'resolvePayer', so pooling,
 -- dispatch, go-online, OTP rides and ride start cannot disagree about the same driver.
+-- Once a ride is assigned, its own recorded model ('modelAtAssignment') takes over.
+--
+-- Billing by the model, and switching between models, is behind
+-- 'isRideBillingModelEnabled', a per-city flag. With it off, a ride is billed the way it
+-- always was: prepaid when the payer holds an active prepaid purchase, postpaid otherwise.
 module SharedLogic.Subscription.BillingModel
   ( Payer (..),
     resolvePayer,
     isPrepaidPayer,
     modelOrCatalogue,
+    modelAtAssignment,
+    isRideBillingModelEnabled,
+    rideBillingModelLockKey,
+    rideVehicleCategory,
+    billedModel,
   )
 where
 
 import Control.Applicative ((<|>))
 import Domain.Types.Extra.Plan (ServiceNames (..))
+import qualified Domain.Types.Person as DP
+import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.SubscriptionPurchase (SubscriptionOwnerType (..))
+import Domain.Types.TransporterConfig (SubscriptionConfig)
+import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleVariant as DVV
 import Kernel.Prelude
 
 data Payer = Payer
@@ -94,3 +109,44 @@ isPrepaidPayer payer = payer.model == PREPAID_SUBSCRIPTION
 modelOrCatalogue :: Maybe ServiceNames -> [ServiceNames] -> Maybe ServiceNames
 modelOrCatalogue mbModel catalogue =
   mbModel <|> (PREPAID_SUBSCRIPTION <$ guard (PREPAID_SUBSCRIPTION `elem` catalogue))
+
+-- | The model to record on a ride when it is assigned (`ride.ride_billing_model`).
+--
+-- Ride start, end-ride and cancellation bill the ride under this value instead of
+-- resolving the driver again, so a model switch after assignment cannot change how an
+-- assigned ride is charged.
+--
+-- Arguments as 'resolvePayer', plus the driver's role and catalogue. A fleet owner taking
+-- a ride in their own vehicle pays as a fleet owner, which is how end-ride bills them.
+modelAtAssignment :: Bool -> DP.Role -> Text -> Maybe Text -> Maybe ServiceNames -> [ServiceNames] -> ServiceNames
+modelAtAssignment merchantPrepaidEnabled role driverId mbFleetOwnerId mbModel catalogue =
+  (resolvePayer merchantPrepaidEnabled driverId payerFleetOwnerId (modelOrCatalogue mbModel catalogue)).model
+  where
+    payerFleetOwnerId = mbFleetOwnerId <|> (driverId <$ guard (role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]))
+
+-- | Whether this city bills rides by their recorded model and lets drivers switch models.
+isRideBillingModelEnabled :: SubscriptionConfig -> Bool
+isRideBillingModelEnabled subscriptionConfig = fromMaybe False subscriptionConfig.rideBillingModelEnabled
+
+-- | Held by a model switch and, where 'isRideBillingModelEnabled', by ride assignment, so a
+-- switch never lands between a ride being offered to a driver and the ride being created.
+rideBillingModelLockKey :: Text -> Text
+rideBillingModelLockKey driverId = "Driver:RideBillingModel:Lock:" <> driverId
+
+-- | The vehicle category a ride is charged postpaid under; the same derivation end-ride's
+-- createDriverFee uses, so a check made at assignment agrees with the charge at the end.
+rideVehicleCategory :: DVST.ServiceTierType -> DVC.VehicleCategory
+rideVehicleCategory = DVV.castVehicleVariantToVehicleCategory . DVV.castServiceTierToVariant
+
+-- | The model a ride is billed under, given the payer's model.
+--
+-- At a merchant running prepaid, a postpaid ride that would not actually be charged
+-- postpaid is billed prepaid instead: postpaid billing is off in the city, or its
+-- YATRI_SUBSCRIPTION config does not charge the ride's vehicle category. Before rides were
+-- billed by model every ride there needed prepaid credits, so this keeps such a driver
+-- exactly where they were rather than riding uncharged. A free trial is not covered: that
+-- is postpaid working as configured.
+billedModel :: Bool -> Bool -> ServiceNames -> ServiceNames
+billedModel merchantPrepaidEnabled chargedPostpaid model
+  | model == YATRI_SUBSCRIPTION && merchantPrepaidEnabled && not chargedPostpaid = PREPAID_SUBSCRIPTION
+  | otherwise = model

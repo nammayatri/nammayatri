@@ -38,6 +38,7 @@ import Data.Time.Clock (utctDay)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationDuesDetails as DCDD
+import Domain.Types.Extra.Plan (ServiceNames (YATRI_SUBSCRIPTION))
 import Domain.Types.FinancialYear (financialYearOf)
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant as DMerc
@@ -94,6 +95,7 @@ import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import SharedLogic.Subscription.BillingModel (isRideBillingModelEnabled)
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -470,8 +472,11 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
               createJobIn @_ @'GenerateInvoicePdf (Just booking.providerId) (Just booking.merchantOperatingCityId) 0 $
                 GenerateInvoicePdfJobData {invoiceId = invId.getId}
       logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
-      whenJust mbRideCreditDebit $ \creditDebit ->
-        SubscriptionConsumption.consumeCancellationRideCredit booking ride creditDebit transporterConfig
+      -- Where rides are billed by model, prepaid credits pay only for a ride billed prepaid;
+      -- a ride assigned before the model was recorded on it is charged as before.
+      when (not (isRideBillingModelEnabled transporterConfig.subscriptionConfig) || ride.rideBillingModel /= Just YATRI_SUBSCRIPTION) $
+        whenJust mbRideCreditDebit $ \creditDebit ->
+          SubscriptionConsumption.consumeCancellationRideCredit booking ride creditDebit transporterConfig
 
 buildCancellationFinanceCtx ::
   ( EsqDBFlow m r,

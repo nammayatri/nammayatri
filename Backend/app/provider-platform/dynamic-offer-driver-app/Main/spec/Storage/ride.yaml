@@ -30,6 +30,7 @@ imports:
   Sos: Safety.Domain.Types.Sos
   PayoutFlagReason: Domain.Types.RiderDetails
   CancellationReasonCode: Domain.Types.CancellationReason
+  ServiceNames: Domain.Types.Extra.Plan
 
 Ride:
   tableName: ride
@@ -62,6 +63,7 @@ Ride:
     status: RideStatus|NoRelation
     driverId: Id Person
     fleetOwnerId: Maybe (Id Person)
+    rideBillingModel: Maybe ServiceNames # the payer's model when the ride was assigned (BillingModel.modelAtAssignment); null on rides assigned before it was recorded
     otp: Text
     endOtp: Maybe Text
     returnOtp: Maybe Text

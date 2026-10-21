@@ -66,7 +66,8 @@ import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchas
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Payment
 import qualified SharedLogic.Payment as SPayment
-import SharedLogic.Subscription.BillingModel (modelOrCatalogue)
+import SharedLogic.Subscription.BillingModel (isRideBillingModelEnabled, modelOrCatalogue)
+import qualified SharedLogic.Subscription.BillingModelSwitch as BillingModelSwitch
 import qualified Storage.CachedQueries.Plan as QPD
 import qualified Storage.CachedQueries.PlanExtra as QPDE
 import qualified Storage.CachedQueries.PlanTranslation as CQPTD
@@ -95,9 +96,22 @@ import Tools.Payment as Payment
 data PlanListAPIRes = PlanListAPIRes
   { list :: [PlanEntity],
     subscriptionStartTime :: UTCTime,
-    isLocalized :: Maybe Bool
+    isLocalized :: Maybe Bool,
+    -- | The driver's ride billing model, where the city bills rides by model; Nothing
+    -- otherwise and for fleet owners.
+    activeBillingModel :: Maybe ServiceNames
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data BillingModelSwitchReq = BillingModelSwitchReq
+  { target :: ServiceNames,
+    -- | Required when the driver still holds prepaid credits and is moving to postpaid:
+    -- they confirm the credits go unused while on postpaid.
+    acknowledged :: Maybe Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type BillingModelSwitchPreviewRes = BillingModelSwitch.SwitchPreview
 
 data PlanEntity = PlanEntity
   { id :: Text,
@@ -429,9 +443,9 @@ instance Subscription ServiceNames where
       YATRI_RENTAL -> createDriverPlanGeneric YATRI_RENTAL (driverId, merchantId, opCity) plan subscriptionServiceRelatedData subscriptionConfig
       DASHCAM_RENTAL _ -> createDriverPlanGeneric serviceName (driverId, merchantId, opCity) plan subscriptionServiceRelatedData subscriptionConfig
       PREPAID_SUBSCRIPTION -> pure () -- No need to create driver plan for prepaid subscription
-  planSubscribe serviceName planId mediaInfo ids@(driverId, _, _) subscriptionServiceRelatedData = do
+  planSubscribe serviceName planId mediaInfo ids@(driverId, _, merchantOpCityId) subscriptionServiceRelatedData = do
     when (serviceName `elem` [YATRI_SUBSCRIPTION, PREPAID_SUBSCRIPTION]) $
-      ensureOnRideBillingModel serviceName driverId
+      ensureOnRideBillingModel serviceName driverId merchantOpCityId
     case serviceName of
       YATRI_SUBSCRIPTION -> planSubscribeGeneric YATRI_SUBSCRIPTION planId mediaInfo ids subscriptionServiceRelatedData
       YATRI_RENTAL -> planSubscribeGeneric YATRI_RENTAL planId mediaInfo ids subscriptionServiceRelatedData
@@ -634,14 +648,14 @@ planList ::
   Flow PlanListAPIRes
 planList (personId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset _mbVariant = do
   person <- QPerson.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  isAutoPayActive <-
+  (isAutoPayActive, mbDriverInfo) <-
     if DCommon.checkFleetOwnerRole person.role
-      then pure False -- prepaid subscription is only for fleet owners
+      then pure (False, Nothing) -- prepaid subscription is only for fleet owners
       else do
         driverInfo <-
           DI.findById (cast personId)
             >>= fromMaybeM (PersonNotFound personId.getId)
-        pure (driverInfo.autoPayStatus == Just DI.ACTIVE)
+        pure (driverInfo.autoPayStatus == Just DI.ACTIVE, Just driverInfo)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let isolationEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
   mDriverPlan <- case serviceName of
@@ -674,8 +688,29 @@ planList (personId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset
     PlanListAPIRes
       { list = plansList,
         subscriptionStartTime = transporterConfig.subscriptionStartTime,
-        isLocalized = Just True
+        isLocalized = Just True,
+        activeBillingModel =
+          if isRideBillingModelEnabled transporterConfig.subscriptionConfig
+            then (\di -> fromMaybe YATRI_SUBSCRIPTION (modelOrCatalogue di.rideBillingModel di.servicesEnabledForSubscription)) <$> mbDriverInfo
+            else Nothing
       }
+
+billingModelSwitchPreview :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe ServiceNames -> Flow BillingModelSwitchPreviewRes
+billingModelSwitchPreview (personId, _, _) mbTarget = do
+  target <- fromMaybeM (InvalidRequest "target is required") mbTarget
+  ensureRideBillingModelTarget target
+  BillingModelSwitch.previewSwitch personId target
+
+billingModelSwitch :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> BillingModelSwitchReq -> Flow APISuccess
+billingModelSwitch (personId, _, _) req = do
+  ensureRideBillingModelTarget req.target
+  BillingModelSwitch.switchByDriver personId req.target (fromMaybe False req.acknowledged)
+  pure Success
+
+ensureRideBillingModelTarget :: ServiceNames -> Flow ()
+ensureRideBillingModelTarget target =
+  unless (target `elem` [YATRI_SUBSCRIPTION, PREPAID_SUBSCRIPTION]) $
+    throwError $ InvalidRequest "target must be YATRI_SUBSCRIPTION or PREPAID_SUBSCRIPTION"
 
 -- This API is for listing current driver plan
 currentPlan ::
@@ -783,15 +818,18 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
         then return (Just order.id, if isJust order.createMandate then Just AUTOPAY_REGISTRATION else Just CLEAR_DUE)
         else return (Nothing, Nothing)
 
--- | Subscribing never moves a driver between ride billing models; that is a separate,
--- explicit switch. A driver can only buy into the model they are already on, so a prepaid
--- pack cannot quietly take a postpaid driver with unpaid dues off postpaid, and a mandate
--- cannot be set up for a prepaid driver. Rentals are add-ons billed alongside either model
--- and are not checked. Fleet owners have no ride billing model of their own.
-ensureOnRideBillingModel :: ServiceNames -> Id SP.Person -> Flow ()
-ensureOnRideBillingModel target personId = do
+-- | Where rides are billed by model, subscribing never moves a driver between models; that
+-- is the explicit switch (SharedLogic.Subscription.BillingModelSwitch). A driver can only buy
+-- into the model they are already on, so a prepaid pack cannot quietly take a postpaid driver
+-- with unpaid dues off postpaid, and a mandate cannot be set up for a prepaid driver. Rentals
+-- are add-ons billed alongside either model and are not checked. Fleet owners have no ride
+-- billing model of their own. Elsewhere a prepaid purchase still moves the driver onto
+-- prepaid, as it always has (Domain.Action.UI.Payment).
+ensureOnRideBillingModel :: ServiceNames -> Id SP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
+ensureOnRideBillingModel target personId merchantOpCityId = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  unless (DCommon.checkFleetOwnerRole person.role) $ do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (isRideBillingModelEnabled transporterConfig.subscriptionConfig && not (DCommon.checkFleetOwnerRole person.role)) $ do
     driverInfo <- DI.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
     let current = fromMaybe YATRI_SUBSCRIPTION (modelOrCatalogue driverInfo.rideBillingModel driverInfo.servicesEnabledForSubscription)
     unless (current == target) $
@@ -1728,9 +1766,15 @@ isOnFreeTrial driverId subscriptionConfig freeTrialDaysLeft mbDriverPlan = do
     Just False -> return (False, Nothing)
     _ -> do
       driverStats <- if isJust numRides then pure Nothing else QDS.findByPrimaryKey driverId
+      -- A driver who moved to postpaid from prepaid has been taking rides already; coming
+      -- back to postpaid is not a trial.
+      switchedOffPrepaid <-
+        if subscriptionConfig.serviceName == YATRI_SUBSCRIPTION
+          then BillingModelSwitch.hasSwitchedOutOf PREPAID_SUBSCRIPTION driverId
+          else pure False
       let freeTrialRides = fromMaybe 0 $ subscriptionConfig.numberOfFreeTrialRides
       let totalRides = fromMaybe 0 $ numRides <|> (driverStats <&> (.totalRides))
-      let isOnFreeTrial' = not $ (totalRides > freeTrialRides && subscriptionConfig.freeTrialRidesApplicable) || freeTrialDaysLeft <= 0
+      let isOnFreeTrial' = not switchedOffPrepaid && not ((totalRides > freeTrialRides && subscriptionConfig.freeTrialRidesApplicable) || freeTrialDaysLeft <= 0)
       fork "update free trial flag" $ QDPlan.updateFreeTrialByDriverIdAndServiceName isOnFreeTrial' driverId subscriptionConfig.serviceName
       return (isOnFreeTrial', Just totalRides)
 

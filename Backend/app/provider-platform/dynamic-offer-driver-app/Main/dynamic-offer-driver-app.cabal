@@ -771,6 +771,7 @@ library
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand
       SharedLogic.Subscription.BillingModel
+      SharedLogic.Subscription.BillingModelSwitch
       SharedLogic.SurgeConfig
       SharedLogic.SyncRide
       SharedLogic.TollDashboard
@@ -1508,6 +1509,7 @@ library
       Domain.Types.BackgroundVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
+      Domain.Types.BillingModelSwitchHistory
       Domain.Types.BlackListOrg
       Domain.Types.BlockedRoute
       Domain.Types.Booking
@@ -1705,6 +1707,7 @@ library
       Storage.Beam.BackgroundVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
+      Storage.Beam.BillingModelSwitchHistory
       Storage.Beam.BlackListOrg
       Storage.Beam.BlockedRoute
       Storage.Beam.Booking
@@ -1907,6 +1910,7 @@ library
       Storage.Queries.BackgroundVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
+      Storage.Queries.BillingModelSwitchHistory
       Storage.Queries.BlackListOrg
       Storage.Queries.BlockedRoute
       Storage.Queries.Booking

@@ -978,6 +978,8 @@ data SubscriptionError
   | EmptyDriverIdList
   | DriverIdListExceeded
   | RideBillingModelMismatch Text Text
+  | RideBillingModelSwitchBlocked [Text]
+  | PostpaidDuesOverdueAfterSwitch Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''SubscriptionError
@@ -1004,6 +1006,8 @@ instance IsBaseError SubscriptionError where
     EmptyDriverIdList -> Just "Driver IDs list cannot be empty"
     DriverIdListExceeded -> Just "Driver IDs list cannot exceed 500"
     RideBillingModelMismatch current target -> Just $ "Driver is on " <> current <> ". Switch the ride billing model before subscribing to " <> target <> "."
+    RideBillingModelSwitchBlocked reasons -> Just $ "Ride billing model cannot be switched now: " <> T.intercalate ", " reasons <> "."
+    PostpaidDuesOverdueAfterSwitch driverId -> Just $ "Driver " <> driverId <> " has overdue postpaid dues from before switching to prepaid. Clear them to go online."
 
 instance IsHTTPError SubscriptionError where
   toErrorCode = \case
@@ -1027,6 +1031,8 @@ instance IsHTTPError SubscriptionError where
     EmptyDriverIdList -> "EMPTY_DRIVER_ID_LIST"
     DriverIdListExceeded -> "DRIVER_ID_LIST_EXCEEDED"
     RideBillingModelMismatch _ _ -> "RIDE_BILLING_MODEL_MISMATCH"
+    RideBillingModelSwitchBlocked _ -> "RIDE_BILLING_MODEL_SWITCH_BLOCKED"
+    PostpaidDuesOverdueAfterSwitch _ -> "POSTPAID_DUES_OVERDUE_AFTER_SWITCH"
   toHttpCode = \case
     PlanNotFound _ -> E500
     MandateNotFound _ -> E500
@@ -1048,6 +1054,8 @@ instance IsHTTPError SubscriptionError where
     EmptyDriverIdList -> E400
     DriverIdListExceeded -> E400
     RideBillingModelMismatch _ _ -> E400
+    RideBillingModelSwitchBlocked _ -> E400
+    PostpaidDuesOverdueAfterSwitch _ -> E403
 
 instance IsAPIError SubscriptionError
 

@@ -126,6 +126,7 @@ import SharedLogic.Finance.Wallet
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.RideEvents.Publisher as RideEventsPublisher
+import SharedLogic.Subscription.BillingModel (isRideBillingModelEnabled)
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -340,13 +341,21 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
   allActivePrepaidPurchases <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
   nowForPrepaidExpiry <- getCurrentTime
   let expiredPrepaidPurchases = filter (\p -> maybe False (<= nowForPrepaidExpiry) p.expiryDate) allActivePrepaidPurchases
-      serviceName = if not (null allActivePrepaidPurchases) then PREPAID_SUBSCRIPTION else YATRI_SUBSCRIPTION
+      -- Prepaid if the payer holds an active purchase. Where rides are billed by model, the
+      -- model recorded on the ride decides instead; a ride assigned before it was recorded
+      -- still follows the purchase rule.
+      purchaseBasedServiceName = if not (null allActivePrepaidPurchases) then PREPAID_SUBSCRIPTION else YATRI_SUBSCRIPTION
+      billsByRideModel = isRideBillingModelEnabled thresholdConfig.subscriptionConfig
+      serviceName = if billsByRideModel then fromMaybe purchaseBasedServiceName ride.rideBillingModel else purchaseBasedServiceName
 
   -- 1. Subscription Flow — route by serviceName.
   case serviceName of
     PREPAID_SUBSCRIPTION -> processEndRidePrepaidSubscription baseFare mbVehicleCategory expiredPrepaidPurchases
-    _ | thresholdConfig.subscription -> createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
-    _ -> pure ()
+    _ -> do
+      when (billsByRideModel && fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled) $
+        releasePrepaidHold mbVehicleCategory
+      when thresholdConfig.subscription $
+        createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
 
   -- 2. Wallet Flow
   when walletFinanceEnabled $ do
@@ -356,6 +365,14 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
   AirportEntryFee.deductAirportEntryFeeAtEndRide (fromMaybe False thresholdConfig.airportEntryFeeEnabled) ride booking
   where
     settlementOwnerId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId
+
+    -- A ride billed postpaid takes nothing from prepaid credits: drop any hold taken
+    -- against them at assignment, and stop deferring the payer's purchase expiry for it.
+    releasePrepaidHold mbVC = do
+      let counterpartyType = maybe counterpartyDriver (const counterpartyFleetOwner) ride.fleetOwnerId
+      Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey settlementOwnerId) 10 10 $
+        voidPrepaidHold counterpartyType settlementOwnerId booking.id.getId "Ride billed postpaid" mbVC
+      clearPrepaidSettlementPending settlementOwnerId ride.id.getId
 
     finalizeDeferredExpiry expiredPurchases ownerId ownerType mbVC = do
       clearPrepaidSettlementPending settlementOwnerId ride.id.getId

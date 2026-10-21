@@ -139,6 +139,8 @@ import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.QuickRetry (withQuickRetry)
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
+import SharedLogic.Subscription.BillingModel (isRideBillingModelEnabled)
+import qualified SharedLogic.Subscription.BillingModelSwitch as BillingModelSwitch
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import Storage.Cac.DriverPoolConfig as Reexport
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -1041,6 +1043,10 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
   let fetchPoolData = if enableLtsPoolData then DPDBuilder.getOrBuildDriverPoolDataBatch else DPDBuilder.buildDriverPoolDataFromDB
   -- R4: a still-unassigned scheduled ride within the open-to-all threshold drops eligibility (offered to everyone).
   let scheduledOpenToAll = isScheduled && maybe False (\pt -> isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes pt now) scheduledPickupTime
+  postpaidChargedVehicleCategories <-
+    if isRideBillingModelEnabled transporterConfig.subscriptionConfig
+      then BillingModelSwitch.postpaidChargedCategories merchantOperatingCityId transporterConfig Nothing
+      else pure []
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
       QPG.getNearestDrivers
@@ -1051,6 +1057,8 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             prepaidSubscriptionThreshold = transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold,
             fleetPrepaidSubscriptionThreshold = transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold,
             vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled,
+            rideBillingModelEnabled = isRideBillingModelEnabled transporterConfig.subscriptionConfig,
+            postpaidChargedVehicleCategories,
             minWalletAmountForCashRides = transporterConfig.driverWalletConfig.minWalletAmountForCashRides,
             minWalletAmountForScheduledRides = transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides,
             paymentInstrument,
@@ -1133,6 +1141,10 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
   let fetchPoolData = if enableLtsPoolData then DPDBuilder.getOrBuildDriverPoolDataBatch else DPDBuilder.buildDriverPoolDataFromDB
   -- R4: a still-unassigned scheduled ride within the open-to-all threshold drops eligibility (offered to everyone).
   let scheduledOpenToAll = isScheduled && maybe False (\pt -> isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes pt now) scheduledPickupTime
+  postpaidChargedVehicleCategories <-
+    if isRideBillingModelEnabled transporterConfig.subscriptionConfig
+      then BillingModelSwitch.postpaidChargedCategories merchantOperatingCityId transporterConfig Nothing
+      else pure []
   let ltsReq =
         QPG.NearestDriversReq
           { fromLocLatLong = coord,
@@ -1141,6 +1153,8 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             prepaidSubscriptionThreshold = transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold,
             fleetPrepaidSubscriptionThreshold = transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold,
             vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled,
+            rideBillingModelEnabled = isRideBillingModelEnabled transporterConfig.subscriptionConfig,
+            postpaidChargedVehicleCategories,
             minWalletAmountForCashRides = transporterConfig.driverWalletConfig.minWalletAmountForCashRides,
             minWalletAmountForScheduledRides = transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides,
             paymentInstrument,

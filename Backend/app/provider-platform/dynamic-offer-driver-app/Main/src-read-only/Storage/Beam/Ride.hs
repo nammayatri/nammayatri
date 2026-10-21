@@ -6,6 +6,7 @@ module Storage.Beam.Ride where
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
+import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Ride
 import qualified Domain.Types.RiderDetails
 import qualified Domain.Types.VehicleVariant
@@ -23,7 +24,7 @@ data RideT f = RideT
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     billingCategory :: B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory),
     bookingId :: B.C f Kernel.Prelude.Text,
-    cancellationAdditionalInfo :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    cancellationAdditionalInfo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cancellationChargesOnCancel :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     cancellationCommission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     cancellationConsequenceRowIdIfCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -31,8 +32,8 @@ data RideT f = RideT
     cancellationFaultVerdict :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cancellationFeeIfCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     cancellationFeeTaxIfCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    cancellationReasonCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    cancelledBy :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    cancellationReasonCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cancelledBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     chargeableDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -110,6 +111,7 @@ data RideT f = RideT
     referralFlagReason :: B.C f (Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason),
     returnOtp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     returnStartedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    rideBillingModel :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.Plan.ServiceNames),
     rideEndedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy),
     rideTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     safetyAlertTriggered :: B.C f Kernel.Prelude.Bool,

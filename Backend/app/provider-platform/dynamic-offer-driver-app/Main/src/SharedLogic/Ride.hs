@@ -23,6 +23,7 @@ import qualified Domain.Types.Common as SReqD
 import qualified Domain.Types.DriverGoHomeRequest as DGetHomeRequest
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.DriverRidePayoutBankAccount as DDPBA
+import Domain.Types.Extra.Plan (ServiceNames (PREPAID_SUBSCRIPTION, YATRI_SUBSCRIPTION))
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DTMM
 import Domain.Types.Person
@@ -71,6 +72,8 @@ import SharedLogic.Finance.Wallet (getPrepaidOfferHoldTotalExcluding, makeWallet
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.ScheduledNotifications as SN
+import SharedLogic.Subscription.BillingModel (billedModel, isRideBillingModelEnabled, modelAtAssignment, rideBillingModelLockKey, rideVehicleCategory)
+import SharedLogic.Subscription.BillingModelSwitch (postpaidChargedCategories)
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -120,144 +123,164 @@ initializeRide ::
   -- ops or fleet-owner dashboard assignment). Nothing at every ordinary self-accept call site.
   Maybe DRide.ScheduledAcceptanceMode ->
   Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
-initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId monitorPickupProgress bookingPreAssigned mbForcedScheduledAcceptanceMode = releaseHoldsOnInitializeRideFailure booking driver.id mFleetOwnerId $ do
-  let merchantId = merchant.id
-      isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  mbSearchTryId <- fmap ((.getId) . (.searchTryId)) <$> QDQ.findById (Id booking.quoteId)
-  when isPrepaidSubscriptionAndWalletEnabled $ do
-    let (counterpartyType, ownerId) = case mFleetOwnerId of
-          Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
-          Nothing -> (counterpartyDriver, driver.id.getId)
-        vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
-        mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (castServiceTierToVehicleCategory booking.vehicleServiceTier) else Nothing
-    mbAccount <- getPrepaidAccountByOwner counterpartyType ownerId mbVehicleCategory
-    -- if prepaid wallet isolation is enabled and there is no account, throw an error. It will prevent the ride from being created.
-    when (isPrepaidSubscriptionAndWalletEnabled && isNothing mbAccount) $ do
-      logError $
-        "Prepaid scoped RideCredit account missing at accept"
-          <> " | counterpartyType="
-          <> show counterpartyType
-          <> " | ownerId="
-          <> ownerId
-          <> " | vehicleCategory="
-          <> show mbVehicleCategory
-          <> " | bookingId="
-          <> booking.id.getId
-      throwError $
-        InvalidRequest "Prepaid ride credits are not available for this vehicle category. Purchase a subscription plan for this category."
-    whenJust mbAccount $ \account -> do
-      Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
-        mbAvailableBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
-        otherPrepaidOfferHolds <- getPrepaidOfferHoldTotalExcluding ownerId mbSearchTryId
-        existingBookingHold <- maybe 0 (.amount) <$> findPendingPrepaidHoldByReference account.id prepaidRideDebitReferenceType booking.id.getId
-        let rideFare = FC.netRideFare booking.fareParams booking.estimatedFare
-            threshold = fromMaybe 0 $ case mFleetOwnerId of
-              Just _ -> transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
-              Nothing -> transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold
-            balance = fromMaybe 0 mbAvailableBalance
-            fareSumTotal = FC.fareSum booking.fareParams Nothing
-            fareScale = case booking.fareParams.bufferedFare of
-              Just bf | fareSumTotal > 0 -> bf.getHighPrecMoney / fareSumTotal.getHighPrecMoney
-              _ -> 1
-            bufferedRideFare = HighPrecMoney (rideFare.getHighPrecMoney * fareScale)
-        when (balance + existingBookingHold - otherPrepaidOfferHolds < bufferedRideFare + threshold) $ throwError (InvalidRequest "Low balance.")
-        _ <-
-          createPrepaidHold
-            counterpartyType
-            ownerId
-            bufferedRideFare
-            booking.currency
-            booking.providerId.getId
-            booking.merchantOperatingCityId.getId
-            booking.id.getId
-            Nothing
-            mbVehicleCategory
-            >>= fromEitherM (\err -> InternalError ("Failed to create prepaid hold: " <> show err))
-        whenJust mbSearchTryId $ removePrepaidOfferHold ownerId
-  reserveWalletForCashRide transporterConfig driver booking ((.getId) <$> mFleetOwnerId) mbSearchTryId
-  otpCode <-
-    case mbOtpCode of
-      Just otp -> pure otp
-      Nothing -> do
-        riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "riderId")
-        riderDetails <- QRiderD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
-        case riderDetails.otpCode of
-          Nothing -> do
-            otpCode <- generateOTPCode
-            QRiderD.updateOtpCode (Just otpCode) riderDetails.id
-            pure otpCode
-          Just otp -> pure otp
-  ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
-  previousRideInprogress <- bool (QDI.findByPrimaryKey driver.id) (pure Nothing) (booking.isScheduled)
-  let isDriverOnRide = bool (Just False) (previousRideInprogress >>= Just . isJust <$> (.driverTripEndLocation)) (isJust previousRideInprogress)
-  now <- getCurrentTime
-  vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
-  mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-  commission <- FC.calculateCommission booking.fareParams mbFarePolicy
-  cancellationCommission <- FC.calculateCancellationCommission booking.fareParams mbFarePolicy
-  let (mbPaymentCharge, mbPaymentChargeBearer) = (booking.paymentCharge, booking.paymentChargeBearer)
-      -- A dashboard/fleet assignment always wins regardless of timing; only a genuine
-      -- driver self-accept falls back to the broadcast-window timing check. A driver
-      -- accepting from the last-minute broadcast is treated as a normal request, using the
-      -- same open-to-all threshold that already governs pool eligibility.
-      mbScheduledAcceptanceMode
-        | not booking.isScheduled = Nothing
-        | isJust mbForcedScheduledAcceptanceMode = mbForcedScheduledAcceptanceMode
-        | DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime now = Just DRide.AcceptedFromBroadcast
-        | otherwise = Just DRide.AcceptedAsScheduled
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode
-  rideDetails <- buildRideDetails booking ride driver vehicle
-  unless bookingPreAssigned $ QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
-  QRide.createRide ride
-  cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
-  let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
-  Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
-  fork "BPP pre_ride pickup-distance histogram" $
-    whenJust ride.distanceToPickup $ \pickupDistanceVal ->
-      Metrics.observePickupDistanceMeters merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) "pre_ride" (realToFrac pickupDistanceVal)
-  QRideD.create rideDetails
-  whenJust booking.riderId (QRiderD.updateTotalBookingsCount . getId)
-  Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
-    when (not booking.isScheduled) $ do
-      whenJust (booking.toLocation) $ \toLoc -> do
-        QDI.updateTripCategoryAndTripEndLocationByDriverId (cast driver.id) (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
-      QDI.updateOnRide True (cast driver.id)
-    Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
-    when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
-    Redis.unlockRedis (editDestinationLockKey ride.driverId)
-  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
-  -- Monitoring is opted in by the caller: remote-driver assignments (Beckn confirm) monitor;
-  -- OTP/meter rides (customer is already with the driver) and scheduled-booking accepts don't.
-  when (monitorPickupProgress && not booking.isScheduled) $
-    fork "schedule pickup progress monitor" $ do
-      mbMonitoringTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-      whenJust (mbMonitoringTransporterConfig >>= (.pickupStallMonitoringConfig)) $ \monitoringConfig ->
-        -- no separate grace period: the first tick is a baseline (sets bestDistance, no
-        -- fault accrual), so monitoring effectively starts one tick after assignment
-        createJobIn @_ @'CheckDriverPickupProgress (Just merchantId) (Just booking.merchantOperatingCityId) (fromIntegral monitoringConfig.tickIntervalSec) $
-          CheckDriverPickupProgressJobData
-            { driverId = ride.driverId,
-              bookingId = booking.id,
-              rideId = ride.id
-            }
+initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId monitorPickupProgress bookingPreAssigned mbForcedScheduledAcceptanceMode = withRideBillingModelLock booking driver.id $
+  releaseHoldsOnInitializeRideFailure booking driver.id mFleetOwnerId $ do
+    let merchantId = merchant.id
+        isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+    mbSearchTryId <- fmap ((.getId) . (.searchTryId)) <$> QDQ.findById (Id booking.quoteId)
+    mbDriverInfo <- QDI.findByPrimaryKey driver.id
+    let billsByRideModel = isRideBillingModelEnabled transporterConfig.subscriptionConfig
+        payerModel =
+          modelAtAssignment
+            isPrepaidSubscriptionAndWalletEnabled
+            driver.role
+            driver.id.getId
+            (getId <$> mFleetOwnerId)
+            (mbDriverInfo >>= (.rideBillingModel))
+            (maybe [] (.servicesEnabledForSubscription) mbDriverInfo)
+    -- Recorded on the ride; start, end and cancellation bill the ride under it.
+    rideBillingModel <-
+      if billsByRideModel && isPrepaidSubscriptionAndWalletEnabled && payerModel == YATRI_SUBSCRIPTION
+        then do
+          chargedCategories <- postpaidChargedCategories booking.merchantOperatingCityId transporterConfig (Just booking.configInExperimentVersions)
+          pure $ billedModel True (rideVehicleCategory booking.vehicleServiceTier `elem` chargedCategories) payerModel
+        else pure payerModel
+    -- Where rides are billed by model, only a prepaid ride needs prepaid credits behind it.
+    let takesPrepaidHold = isPrepaidSubscriptionAndWalletEnabled && (not billsByRideModel || rideBillingModel == PREPAID_SUBSCRIPTION)
+    when takesPrepaidHold $ do
+      let (counterpartyType, ownerId) = case mFleetOwnerId of
+            Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
+            Nothing -> (counterpartyDriver, driver.id.getId)
+          vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
+          mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (castServiceTierToVehicleCategory booking.vehicleServiceTier) else Nothing
+      mbAccount <- getPrepaidAccountByOwner counterpartyType ownerId mbVehicleCategory
+      -- if prepaid wallet isolation is enabled and there is no account, throw an error. It will prevent the ride from being created.
+      when (isPrepaidSubscriptionAndWalletEnabled && isNothing mbAccount) $ do
+        logError $
+          "Prepaid scoped RideCredit account missing at accept"
+            <> " | counterpartyType="
+            <> show counterpartyType
+            <> " | ownerId="
+            <> ownerId
+            <> " | vehicleCategory="
+            <> show mbVehicleCategory
+            <> " | bookingId="
+            <> booking.id.getId
+        throwError $
+          InvalidRequest "Prepaid ride credits are not available for this vehicle category. Purchase a subscription plan for this category."
+      whenJust mbAccount $ \account -> do
+        Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
+          mbAvailableBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
+          otherPrepaidOfferHolds <- getPrepaidOfferHoldTotalExcluding ownerId mbSearchTryId
+          existingBookingHold <- maybe 0 (.amount) <$> findPendingPrepaidHoldByReference account.id prepaidRideDebitReferenceType booking.id.getId
+          let rideFare = FC.netRideFare booking.fareParams booking.estimatedFare
+              threshold = fromMaybe 0 $ case mFleetOwnerId of
+                Just _ -> transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
+                Nothing -> transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold
+              balance = fromMaybe 0 mbAvailableBalance
+              fareSumTotal = FC.fareSum booking.fareParams Nothing
+              fareScale = case booking.fareParams.bufferedFare of
+                Just bf | fareSumTotal > 0 -> bf.getHighPrecMoney / fareSumTotal.getHighPrecMoney
+                _ -> 1
+              bufferedRideFare = HighPrecMoney (rideFare.getHighPrecMoney * fareScale)
+          when (balance + existingBookingHold - otherPrepaidOfferHolds < bufferedRideFare + threshold) $ throwError (InvalidRequest "Low balance.")
+          _ <-
+            createPrepaidHold
+              counterpartyType
+              ownerId
+              bufferedRideFare
+              booking.currency
+              booking.providerId.getId
+              booking.merchantOperatingCityId.getId
+              booking.id.getId
+              Nothing
+              mbVehicleCategory
+              >>= fromEitherM (\err -> InternalError ("Failed to create prepaid hold: " <> show err))
+          whenJust mbSearchTryId $ removePrepaidOfferHold ownerId
+    reserveWalletForCashRide transporterConfig driver booking ((.getId) <$> mFleetOwnerId) mbSearchTryId
+    otpCode <-
+      case mbOtpCode of
+        Just otp -> pure otp
+        Nothing -> do
+          riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "riderId")
+          riderDetails <- QRiderD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
+          case riderDetails.otpCode of
+            Nothing -> do
+              otpCode <- generateOTPCode
+              QRiderD.updateOtpCode (Just otpCode) riderDetails.id
+              pure otpCode
+            Just otp -> pure otp
+    ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
+    let previousRideInprogress = bool mbDriverInfo Nothing booking.isScheduled
+        isDriverOnRide = bool (Just False) (previousRideInprogress >>= Just . isJust <$> (.driverTripEndLocation)) (isJust previousRideInprogress)
+    now <- getCurrentTime
+    vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
+    mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+    commission <- FC.calculateCommission booking.fareParams mbFarePolicy
+    cancellationCommission <- FC.calculateCancellationCommission booking.fareParams mbFarePolicy
+    let (mbPaymentCharge, mbPaymentChargeBearer) = (booking.paymentCharge, booking.paymentChargeBearer)
+        -- A dashboard/fleet assignment always wins regardless of timing; only a genuine
+        -- driver self-accept falls back to the broadcast-window timing check. A driver
+        -- accepting from the last-minute broadcast is treated as a normal request, using the
+        -- same open-to-all threshold that already governs pool eligibility.
+        mbScheduledAcceptanceMode
+          | not booking.isScheduled = Nothing
+          | isJust mbForcedScheduledAcceptanceMode = mbForcedScheduledAcceptanceMode
+          | DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime now = Just DRide.AcceptedFromBroadcast
+          | otherwise = Just DRide.AcceptedAsScheduled
+    ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode rideBillingModel
+    rideDetails <- buildRideDetails booking ride driver vehicle
+    unless bookingPreAssigned $ QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
+    QRide.createRide ride
+    cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
+    let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
+    Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
+    fork "BPP pre_ride pickup-distance histogram" $
+      whenJust ride.distanceToPickup $ \pickupDistanceVal ->
+        Metrics.observePickupDistanceMeters merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) "pre_ride" (realToFrac pickupDistanceVal)
+    QRideD.create rideDetails
+    whenJust booking.riderId (QRiderD.updateTotalBookingsCount . getId)
+    Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
+      when (not booking.isScheduled) $ do
+        whenJust (booking.toLocation) $ \toLoc -> do
+          QDI.updateTripCategoryAndTripEndLocationByDriverId (cast driver.id) (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
+        QDI.updateOnRide True (cast driver.id)
+      Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
+      when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
+      Redis.unlockRedis (editDestinationLockKey ride.driverId)
+    unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
+    -- Monitoring is opted in by the caller: remote-driver assignments (Beckn confirm) monitor;
+    -- OTP/meter rides (customer is already with the driver) and scheduled-booking accepts don't.
+    when (monitorPickupProgress && not booking.isScheduled) $
+      fork "schedule pickup progress monitor" $ do
+        mbMonitoringTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+        whenJust (mbMonitoringTransporterConfig >>= (.pickupStallMonitoringConfig)) $ \monitoringConfig ->
+          -- no separate grace period: the first tick is a baseline (sets bestDistance, no
+          -- fault accrual), so monitoring effectively starts one tick after assignment
+          createJobIn @_ @'CheckDriverPickupProgress (Just merchantId) (Just booking.merchantOperatingCityId) (fromIntegral monitoringConfig.tickIntervalSec) $
+            CheckDriverPickupProgressJobData
+              { driverId = ride.driverId,
+                bookingId = booking.id,
+                rideId = ride.id
+              }
 
-  triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
-  QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
+    triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
+    QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
 
-  if booking.isScheduled
-    then Notify.driverScheduledRideAcceptanceAlert booking.merchantOperatingCityId Notification.SCHEDULED_RIDE_NOTIFICATION notificationTitle (messageForScheduled booking) driver driver.deviceToken
-    else Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
+    if booking.isScheduled
+      then Notify.driverScheduledRideAcceptanceAlert booking.merchantOperatingCityId Notification.SCHEDULED_RIDE_NOTIFICATION notificationTitle (messageForScheduled booking) driver driver.deviceToken
+      else Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
 
-  fork "DriverScoreEventHandler OnNewRideAssigned" $
-    DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
+    fork "DriverScoreEventHandler OnNewRideAssigned" $
+      DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
 
-  fork "FleetEngine: create trip on ride assigned" $ FleetEngine.notifyTripCreated booking ride
+    fork "FleetEngine: create trip on ride assigned" $ FleetEngine.notifyTripCreated booking ride
 
-  notifyRideRelatedNotificationOnEvent ride now DRN.RIDE_ASSIGNED
-  notifyRideRelatedNotificationOnEvent ride now DRN.PICKUP_TIME
+    notifyRideRelatedNotificationOnEvent ride now DRN.RIDE_ASSIGNED
+    notifyRideRelatedNotificationOnEvent ride now DRN.PICKUP_TIME
 
-  return (ride, rideDetails, vehicle)
+    return (ride, rideDetails, vehicle)
   where
     notificationType = Notification.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
@@ -324,6 +347,16 @@ releaseLien ::
   m ()
 releaseLien booking ride =
   releaseBookingHolds booking ride.driverId ride.fleetOwnerId "Ride cancelled" ("releaseLien failed for rideId " <> getId ride.id)
+
+-- | Where rides are billed by model, hold the driver's billing-model lock for the whole
+-- assignment: a model switch takes the same lock and refuses while the driver has a ride,
+-- so it either sees this ride or happens before the ride records its model.
+withRideBillingModelLock :: DBooking.Booking -> Id Person -> Flow a -> Flow a
+withRideBillingModelLock booking driverId action = do
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+  if maybe False (isRideBillingModelEnabled . (.subscriptionConfig)) mbTransporterConfig
+    then Redis.withWaitAndLockRedis (rideBillingModelLockKey driverId.getId) 10 50000 action
+    else action
 
 releaseHoldsOnInitializeRideFailure :: DBooking.Booking -> Id Person -> Maybe (Id Person) -> Flow a -> Flow a
 releaseHoldsOnInitializeRideFailure booking driverId mbFleetOwnerId action = do
@@ -561,8 +594,9 @@ buildRide ::
   Maybe HighPrecMoney ->
   Maybe Text ->
   Maybe DRide.ScheduledAcceptanceMode ->
+  ServiceNames ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode rideBillingModel = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   envCloudType <- asks (.cloudType)
@@ -589,6 +623,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         status = status,
         driverId = cast driver.id,
         fleetOwnerId = mFleetOwnerId, -- fleet owner of driver, rideDetails stores fleet owner of vehicle
+        rideBillingModel = Just rideBillingModel,
         otp = otp,
         endOtp = Nothing,
         trackingUrl = trackingUrl,

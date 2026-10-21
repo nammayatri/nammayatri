@@ -1121,6 +1121,8 @@ TransporterConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney
       fleetPrepaidSubscriptionThreshold: Maybe HighPrecMoney
       vehicleCategoryScopedPrepaidEnabled: Maybe Bool
+      rideBillingModelEnabled: Maybe Bool # bill rides by the model recorded on them and allow switching models; off = billing by active prepaid purchases (SharedLogic.Subscription.BillingModel)
+      rideBillingModelSwitchCooldownHours: Maybe Int # minimum gap between two switches by the same driver; default 24
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     GstBreakup:
       cgstPercentage: Maybe HighPrecMoney

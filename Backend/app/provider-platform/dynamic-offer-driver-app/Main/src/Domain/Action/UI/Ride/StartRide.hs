@@ -32,6 +32,7 @@ import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import Domain.Types.Extra.Plan (ServiceNames (PREPAID_SUBSCRIPTION))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -84,7 +85,7 @@ import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
-import SharedLogic.Subscription.BillingModel (isPrepaidPayer, resolvePayer)
+import SharedLogic.Subscription.BillingModel (isRideBillingModelEnabled, resolvePayer)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -213,7 +214,14 @@ startRideHandler ServiceHandle {..} rideId req = do
   rateLimitStartRide driverId ride.id -- do we need it for dashboard?
   merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-  unless (isPrepaidPayer (resolvePayer isPrepaidEnabled driverId.getId ((.getId) <$> ride.fleetOwnerId) driverInfo.rideBillingModel)) $
+      liveModel = (resolvePayer isPrepaidEnabled driverId.getId ((.getId) <$> ride.fleetOwnerId) driverInfo.rideBillingModel).model
+      -- Where rides are billed by model, the one recorded at assignment; a ride assigned
+      -- before it was recorded resolves the driver as it always did.
+      rideModel =
+        if isRideBillingModelEnabled transporterConfig.subscriptionConfig
+          then fromMaybe liveModel ride.rideBillingModel
+          else liveModel
+  unless (rideModel == PREPAID_SUBSCRIPTION) $
     unless (driverInfo.subscribed || openMarketAllow || isKaaliPeeliBooking booking) $ throwError DriverUnsubscribed
   case req of
     DriverReq driverReq -> do

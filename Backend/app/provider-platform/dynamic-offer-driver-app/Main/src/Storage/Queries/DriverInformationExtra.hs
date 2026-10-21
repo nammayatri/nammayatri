@@ -767,11 +767,9 @@ updateRideBillingModel rideBillingModel driverId = do
 
 -- | Move the given drivers onto the prepaid model; drivers already on it are untouched.
 --
--- The dashboard's bulk catalogue update is how operators enrol drivers into prepaid at
--- merchants that do not auto-enrol at registration. That used to work through the
--- catalogue fallback in go-online, which no longer applies once registration writes an
--- explicit YATRI_SUBSCRIPTION, so adding PREPAID to the catalogue moves the model too.
--- The reverse is deliberately not done here: a driver on PREPAID may still hold credits.
+-- Where rides are not billed by model, a completed prepaid purchase moves the driver onto
+-- prepaid, as it always has (Domain.Action.UI.Payment). Every other move goes through
+-- SharedLogic.Subscription.BillingModelSwitch, which also records it.
 enrollInPrepaidBillingModel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => [Text] -> m ()
 enrollInPrepaidBillingModel driverIds = do
   driverInfos <- findAllByDriverIds driverIds

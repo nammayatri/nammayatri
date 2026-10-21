@@ -632,6 +632,8 @@ data StclConfig = StclConfig {maxSharesPerDriver :: Kernel.Prelude.Maybe Kernel.
 data SubscriptionConfig = SubscriptionConfig
   { fleetPrepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     prepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    rideBillingModelEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    rideBillingModelSwitchCooldownHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleCategoryScopedPrepaidEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)

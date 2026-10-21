@@ -55,6 +55,17 @@ type API =
              :> TokenAuth
              :> QueryParam "serviceName" DPlan.ServiceNames
              :> Get '[JSON] DPlan.CurrentPlanRes
+           :<|> "billingModel"
+             :> "switch"
+             :> "preview"
+             :> TokenAuth
+             :> QueryParam "target" DPlan.ServiceNames
+             :> Get '[JSON] DPlan.BillingModelSwitchPreviewRes
+           :<|> "billingModel"
+             :> "switch"
+             :> TokenAuth
+             :> ReqBody '[JSON] DPlan.BillingModelSwitchReq
+             :> Post '[JSON] APISuccess
            :<|> Capture "planId" (Id DPlan.Plan)
              :> "subscribe"
              :> TokenAuth
@@ -82,6 +93,8 @@ handler =
     :<|> planSuspend
     :<|> planResume
     :<|> currentPlan
+    :<|> billingModelSwitchPreview
+    :<|> billingModelSwitch
     :<|> planSubscribe
     :<|> planSelect
     :<|> planServiceLists
@@ -98,6 +111,12 @@ planResume (driverId, merchantId, merchantOpCityId) mbServiceName = withFlowHand
 
 currentPlan :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler DPlan.CurrentPlanRes
 currentPlan (driverId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo driverId $ DPlan.currentPlan (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) (driverId, merchantId, merchantOpCityId)
+
+billingModelSwitchPreview :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler DPlan.BillingModelSwitchPreviewRes
+billingModelSwitchPreview (driverId, merchantId, merchantOpCityId) mbTarget = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo driverId $ DPlan.billingModelSwitchPreview (driverId, merchantId, merchantOpCityId) mbTarget
+
+billingModelSwitch :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DPlan.BillingModelSwitchReq -> FlowHandler APISuccess
+billingModelSwitch (driverId, merchantId, merchantOpCityId) req = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo driverId $ DPlan.billingModelSwitch (driverId, merchantId, merchantOpCityId) req
 
 planSubscribe :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler DPlan.PlanSubscribeRes
 planSubscribe planId (personId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ do

@@ -281,6 +281,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
+import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -300,7 +301,8 @@ import SharedLogic.Ride
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
-import SharedLogic.Subscription.BillingModel (isPrepaidPayer, modelOrCatalogue, resolvePayer)
+import SharedLogic.Subscription.BillingModel (billedModel, isPrepaidPayer, isRideBillingModelEnabled, modelAtAssignment, modelOrCatalogue, resolvePayer, rideVehicleCategory)
+import qualified SharedLogic.Subscription.BillingModelSwitch as BillingModelSwitch
 import qualified SharedLogic.Type as SLT
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.DriverPoolConfig as SCDPC
@@ -1080,6 +1082,17 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                   (mbFleetAssociation <&> (.fleetOwnerId))
                   (modelOrCatalogue driverInfo.rideBillingModel driverInfo.servicesEnabledForSubscription)
               isPrepaidDriver = isPrepaidPayer payer
+          when (isRideBillingModelEnabled transporterConfig.subscriptionConfig) $ do
+            -- Pooling reads the model from the LTS cache; re-sync it so a missed sync can not
+            -- outlive a go-online.
+            LTSSync.syncDriverPoolDataToLTS driverId $ LTSSync.emptyUpdate {LTSSync.rideBillingModel = LTSSync.Set driverInfo.rideBillingModel}
+            -- Dues can still land after a move off postpaid (a penalty charged later, say);
+            -- a prepaid driver is never gated on `subscribed`, so they are collected here.
+            when (isPrepaidDriver && payer.ownerType == DSP.DRIVER) $ do
+              switchedOffPostpaid <- BillingModelSwitch.hasSwitchedOutOf Plan.YATRI_SUBSCRIPTION personId
+              when switchedOffPostpaid $ do
+                overdue <- QDF.findOneOutstandingPostpaidDue personId [DDF.PAYMENT_OVERDUE]
+                whenJust overdue $ \_ -> throwError $ PostpaidDuesOverdueAfterSwitch personId.getId
           if isPrepaidDriver
             then checkPrepaidGoOnlineEligibility personId transporterConfig payer.ownerType payer.ownerId (mbVehicle >>= (.category))
             else do
@@ -3581,9 +3594,20 @@ acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver c
           if fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
             then Just (castServiceTierToVehicleCategory booking.vehicleServiceTier)
             else Nothing
-    creditsValid <- hasPrepaidCreditsValidAt ownerId ownerType mbVehicleCategory booking.startTime
-    unless creditsValid $
-      throwError (InvalidRequest "Your ride credits expire before this booking's pickup time. Recharge to accept it.")
+    -- Where rides are billed by model, only a ride assigned to a prepaid payer draws on
+    -- credits; this is the model initializeRide will record on the ride.
+    paysPrepaid <-
+      if isRideBillingModelEnabled transporterConfig.subscriptionConfig
+        then do
+          mbDriverInfo <- QDriverInformation.findById (cast driver.id)
+          chargedCategories <- BillingModelSwitch.postpaidChargedCategories booking.merchantOperatingCityId transporterConfig (Just booking.configInExperimentVersions)
+          let payerModel = modelAtAssignment True driver.role driver.id.getId (mbFleetAssociation <&> (.fleetOwnerId)) (mbDriverInfo >>= (.rideBillingModel)) (maybe [] (.servicesEnabledForSubscription) mbDriverInfo)
+          pure $ Plan.PREPAID_SUBSCRIPTION == billedModel True (rideVehicleCategory booking.vehicleServiceTier `elem` chargedCategories) payerModel
+        else pure True
+    when paysPrepaid $ do
+      creditsValid <- hasPrepaidCreditsValidAt ownerId ownerType mbVehicleCategory booking.startTime
+      unless creditsValid $
+        throwError (InvalidRequest "Your ride credits expire before this booking's pickup time. Recharge to accept it.")
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
   void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId transporterConfig mbBooking mbForcedAcceptanceMode
   pure Success

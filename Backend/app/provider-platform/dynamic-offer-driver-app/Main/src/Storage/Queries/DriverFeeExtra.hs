@@ -706,6 +706,23 @@ findAllByStatusAndDriverIdWithServiceName (Id driverId) driverFeeStatus mbDriver
           <> maybe [] (\driverFeeIds -> [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]) mbDriverFeeIds
     ]
 
+-- | One postpaid (YATRI_SUBSCRIPTION) fee of the driver that is still owed or may still be,
+-- in any of the given statuses. Used to refuse a move off postpaid while dues remain.
+findOneOutstandingPostpaidDue ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  [Domain.DriverFeeStatus] ->
+  m (Maybe DriverFee)
+findOneOutstandingPostpaidDue (Id driverId) driverFeeStatus =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE, CANCELLATION_PENALTY],
+          Se.Is BeamDF.serviceName $ Se.Eq (Just YATRI_SUBSCRIPTION),
+          Se.Is BeamDF.status $ Se.In driverFeeStatus,
+          Se.Is BeamDF.driverId $ Se.Eq driverId
+        ]
+    ]
+
 findAllDriverFeesRequiredToMovedIntoBadDebt :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> TransporterConfig -> m [DriverFee]
 findAllDriverFeesRequiredToMovedIntoBadDebt merchantId transporterConfig = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
