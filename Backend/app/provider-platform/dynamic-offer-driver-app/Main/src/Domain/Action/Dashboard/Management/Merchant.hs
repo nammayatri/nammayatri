@@ -1560,7 +1560,8 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId opCity req = do
                                    snapToRoad = fromMaybe merchantServiceUsageConfig.snapToRoad req.snapToRoad,
                                    getPlaceName = fromMaybe merchantServiceUsageConfig.getPlaceName req.getPlaceName,
                                    getPlaceDetails = fromMaybe merchantServiceUsageConfig.getPlaceDetails req.getPlaceDetails,
-                                   autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete
+                                   autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete,
+                                   getEstimatedPickupDistancesFallback = fromMaybe merchantServiceUsageConfig.getEstimatedPickupDistancesFallback (Just <$> req.getEstimatedPickupDistancesFallback)
                                   }
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchantOpCityId

@@ -113,7 +113,7 @@ getEstimatedPickupDistances ::
   Maybe Text ->
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
-getEstimatedPickupDistances = runWithServiceConfig Maps.getDistances (.getEstimatedPickupDistances)
+getEstimatedPickupDistances = runWithServiceConfigAndFallback Maps.getDistances (.getEstimatedPickupDistances) (.getEstimatedPickupDistancesFallback) "getEstimatedPickupDistances"
 
 dynamicPickupDistancesProvider :: MapsService
 dynamicPickupDistancesProvider = Maps.Disha -- our maps.
@@ -288,3 +288,28 @@ runWithServiceConfig func getCfg _merchantId merchantOpCityId entityId req = do
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig msc -> func entityId (Just merchantOpCityId.getId) msc req
     _ -> throwError $ InternalError "Unknown Service Config"
+
+-- Tries the primary provider from usage config; on any failure retries once with the fallback provider (if configured and different).
+runWithServiceConfigAndFallback ::
+  ServiceFlow m r =>
+  (Maybe Text -> Maybe Text -> MapsServiceConfig -> req -> m resp) ->
+  (MerchantServiceUsageConfig -> MapsService) ->
+  (MerchantServiceUsageConfig -> Maybe MapsService) ->
+  Text ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Maybe Text ->
+  req ->
+  m resp
+runWithServiceConfigAndFallback func getCfg getFallbackCfg fnName merchantId merchantOpCityId entityId req = do
+  orgMapsConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  let primary = getCfg orgMapsConfig
+      runWith getService = runWithServiceConfig func getService merchantId merchantOpCityId entityId req
+  case mfilter (/= primary) (getFallbackCfg orgMapsConfig) of
+    Nothing -> runWith getCfg
+    Just fallback ->
+      withTryCatch (fnName <> ":" <> show primary) (runWith getCfg) >>= \case
+        Right resp -> pure resp
+        Left err -> do
+          logError $ fnName <> ": primary maps service " <> show primary <> " failed, falling back to " <> show fallback <> ". Error: " <> show err
+          runWith (const fallback)
