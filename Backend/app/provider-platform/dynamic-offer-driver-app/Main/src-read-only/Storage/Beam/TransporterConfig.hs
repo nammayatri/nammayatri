@@ -202,6 +202,7 @@ data TransporterConfigT f = TransporterConfigT
     exotelStatusCheckSchedulerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     fakeOtpEmails :: B.C f [Kernel.Prelude.Text],
     fakeOtpMobileNumbers :: B.C f [Kernel.Prelude.Text],
+    fareBreakupConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     fareRecomputePolicy :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     favouriteDriverDailyCoinRideThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     fcmServiceAccount :: B.C f Kernel.Prelude.Text,
