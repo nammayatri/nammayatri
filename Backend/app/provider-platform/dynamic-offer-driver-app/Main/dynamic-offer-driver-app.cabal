@@ -732,6 +732,7 @@ library
       SharedLogic.Finance.WalletAccount
       SharedLogic.Finance.WalletPayout
       SharedLogic.Fleet
+      SharedLogic.FleetDriverSettings
       SharedLogic.FleetEngine
       SharedLogic.FleetOperatorStats
       SharedLogic.FleetVehicleStats
