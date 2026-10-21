@@ -214,6 +214,17 @@ data FPV2FareChargeComponent
   | BoothChargeComponent
   | RideExtraTimeFareComponent
   | SchedulingChargeComponent
+  | GovtChargesComponent
+  | SgstComponent
+  | CgstComponent
+  | ParkingTaxComponent
+  | CardChargeOnFareComponent
+  | CardChargeFixedComponent
+  | ConditionalChargesComponent
+  | CustomerGateFeeComponent
+  | DriverSelectedFareComponent
+  | NegotiatedFareDeltaComponent
+  | NegativeFareAdjustmentComponent
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -636,15 +647,15 @@ type PostFarePolicyV2AlertsSubscribe = ("alerts" :> "subscribe" :> ReqBody '[JSO
 type PostFarePolicyV2AlertsUnsubscribe = ("alerts" :> "unsubscribe" :> ReqBody '[JSON] FPV2SubscriptionReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data FarePolicyV2APIs = FarePolicyV2APIs
-  { getFarePolicyV2List :: Kernel.Prelude.Maybe (Dashboard.Common.TripCategory) -> Kernel.Prelude.Maybe (Lib.Types.SpecialLocation.Area) -> Kernel.Prelude.Maybe (Dashboard.Common.ServiceTierType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> EulerHS.Types.EulerClient FPV2ProductListRes,
+  { getFarePolicyV2List :: Kernel.Prelude.Maybe Dashboard.Common.TripCategory -> Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient FPV2ProductListRes,
     getFarePolicyV2Policy :: Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> EulerHS.Types.EulerClient FPV2PolicyRes,
-    postFarePolicyV2PolicyReplace :: Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> FPV2ReplaceReq -> EulerHS.Types.EulerClient FPV2ReplaceRes,
-    postFarePolicyV2BulkReplace :: Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> FPV2BulkReplaceReq -> EulerHS.Types.EulerClient FPV2BulkReplaceRes,
+    postFarePolicyV2PolicyReplace :: Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> FPV2ReplaceReq -> EulerHS.Types.EulerClient FPV2ReplaceRes,
+    postFarePolicyV2BulkReplace :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> FPV2BulkReplaceReq -> EulerHS.Types.EulerClient FPV2BulkReplaceRes,
     postFarePolicyV2Preview :: FPV2PreviewReq -> EulerHS.Types.EulerClient FPV2PreviewRes,
     postFarePolicyV2ProductCreate :: FPV2CreateProductReq -> EulerHS.Types.EulerClient FPV2CreateProductRes,
     postFarePolicyV2ProductUpdate :: Kernel.Types.Id.Id Dashboard.Common.FareProduct -> FPV2UpdateProductReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postFarePolicyV2ProductRemove :: Kernel.Types.Id.Id Dashboard.Common.FareProduct -> FPV2RemoveProductReq -> EulerHS.Types.EulerClient FPV2ChangeRequestRes,
-    getFarePolicyV2ChangeRequestList :: Kernel.Prelude.Maybe (FPV2ChangeRequestStatus) -> EulerHS.Types.EulerClient FPV2ChangeRequestListRes,
+    getFarePolicyV2ChangeRequestList :: Kernel.Prelude.Maybe FPV2ChangeRequestStatus -> EulerHS.Types.EulerClient FPV2ChangeRequestListRes,
     postFarePolicyV2ChangeRequestDecide :: Kernel.Types.Id.Id Dashboard.Common.FarePolicyChangeRequest -> FPV2DecideChangeRequestReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getFarePolicyV2AlertsSubscriptions :: EulerHS.Types.EulerClient FPV2SubscriptionListRes,
     postFarePolicyV2AlertsSubscribe :: FPV2SubscriptionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

@@ -684,6 +684,24 @@ apis:
       migrate:
         capability: system-config.merchant.write
 
+  - GET: # Driver earnings fare breakup config of the city
+      endpoint: /config/fareBreakup
+      auth: ApiAuthV2
+      response:
+        type: FareBreakupConfigRes
+      migrate:
+        capability: system-config.fare_policy.read
+
+  - POST: # Validates the config and saves it only if valid; config = null removes it
+      endpoint: /config/fareBreakup/update
+      auth: ApiAuthV2
+      request:
+        type: FareBreakupConfigUpdateReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.fare_policy.write
+
 types:
   MerchantUpdateReq:
     - name: Maybe Text
@@ -1450,6 +1468,11 @@ types:
     - derive: "'HideSecrets"
   CityListResp:
     - supportedCities: [City]
+  FareBreakupConfigRes:
+    - config: Maybe Value
+  FareBreakupConfigUpdateReq:
+    - config: Maybe Value
+    - derive: "'HideSecrets"
 extraOperations:
   - EXTRA_API_TYPES_FILE
   - EXTRA_API_COMMON_TYPES_FILE

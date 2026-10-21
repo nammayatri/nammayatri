@@ -25,6 +25,7 @@ module Domain.Action.UI.Ride.Common
   )
 where
 
+import Control.Applicative ((<|>))
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
@@ -33,7 +34,7 @@ import Data.Functor ((<&>))
 import qualified Data.HashMap.Strict as HM
 import Data.List (find, nub, partition)
 import qualified Data.List.NonEmpty as NE
-import Data.Maybe (catMaybes, fromMaybe, listToMaybe, mapMaybe)
+import Data.Maybe (catMaybes, fromMaybe, isJust, listToMaybe, mapMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Scientific as Sci
 import Data.Text (Text, pack)
@@ -51,6 +52,7 @@ import qualified Domain.Types.CancellationReason as DTCR
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
+import Domain.Types.Extra.TransporterConfig (FareBreakupNode)
 import qualified Domain.Types.FareParameters as DFareParams
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy.Common as DFPC
@@ -74,7 +76,7 @@ import Kernel.Types.Common (BaseUrl, Centesimal, Distance, EncFlow, EsqDBFlow, H
 import Kernel.Types.Confidence (Confidence)
 import Kernel.Types.Id
 import Kernel.Types.Price
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Common (fromMaybeM, logError)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
@@ -83,6 +85,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYBF
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.FareBreakup as SFB
 import SharedLogic.FareCalculator (driverBorneAppFee, fareSum)
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Finance.Wallet (splitGrossByVatPct)
@@ -279,7 +282,8 @@ data FareUIComponent = FareUIComponent
   { title :: Text,
     price :: PriceAPIEntity,
     uiTranslation :: Maybe Text,
-    section :: FareUISection
+    section :: FareUISection,
+    subItems :: Maybe [FareUIComponent] -- the configured fare breakup under this row; Nothing = not expandable
   }
   deriving stock (Show, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
@@ -324,8 +328,9 @@ buildRideEarnings ::
   Bool ->
   Bool ->
   Bool ->
+  Maybe FareBreakupNode ->
   m RideEarnings
-buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam paymentChargeNet paymentChargeVat customerBearsCharge driverBearsCharge clubPaymentCharge = do
+buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam paymentChargeNet paymentChargeVat customerBearsCharge driverBearsCharge clubPaymentCharge mbFareBreakupConfig = do
   let fare = fromMaybe booking.estimatedFare ride.fare
       discount = fromMaybe 0 ride.discountAmount
       commission = fromMaybe 0 ride.commission
@@ -353,13 +358,36 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam pay
                 { title = key,
                   price = PriceAPIEntity (roundAmountByCurrency' cur value) cur,
                   uiTranslation = mbLabel,
-                  section = sec
+                  section = sec,
+                  subItems = Nothing
                 }
           else Nothing
+      mkFareBreakupRow line = do
+        label <- resolveLabel lang line.key
+        kids <- mapM mkFareBreakupRow line.subItems
+        pure
+          FareUIComponent
+            { title = line.key,
+              price = PriceAPIEntity line.amount cur,
+              uiTranslation = label,
+              section = FareBreakup,
+              subItems = if null kids then Nothing else Just kids
+            }
+  -- The configured breakup replaces the FARE_PAID_BY_CUSTOMER row: its root is
+  -- the total fare before discount (discount and tips keep their own rows), and
+  -- it already contains the cancellation dues, airport fee, service charge and toll.
+  mbFareBreakupRow <- case mbFareBreakupConfig of
+    Nothing -> pure Nothing
+    Just cfg -> case SFB.computeFareBreakup cur cfg (fromMaybe estimatedFareParam finalFareParam) of
+      Left err -> do
+        logError $ "Fare breakup not shown for ride " <> ride.id.getId <> ": " <> err
+        pure Nothing
+      Right line -> Just <$> mkFareBreakupRow line
+  let showsFareBreakup = isJust mbFareBreakupRow
       chargeBorneByDriver = customerBearsCharge || driverBearsCharge
       fareBreakupItems =
         catMaybes
-          [ mkComp FareBreakup "FARE_PAID_BY_CUSTOMER" lblAmountPaid amountPaidByCustomer True,
+          [ mbFareBreakupRow <|> mkComp FareBreakup "FARE_PAID_BY_CUSTOMER" lblAmountPaid amountPaidByCustomer True,
             mkComp FareBreakup "DISCOUNT" lblDiscount discount (discount > 0),
             mkComp FareBreakup "TIPS" lblTips tips (tips > 0),
             mkComp FareBreakup "COMMISSION" lblCommission commission (commission /= 0),
@@ -370,10 +398,10 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam pay
             -- Clubbed into one row or split into charge + VAT, per city config.
             mkComp FareBreakup "PAYMENT_CHARGE" lblPaymentCharge (if clubPaymentCharge then paymentChargeGross else paymentChargeNet) (chargeBorneByDriver && (if clubPaymentCharge then paymentChargeGross else paymentChargeNet) > 0),
             mkComp FareBreakup "PAYMENT_CHARGE_VAT" lblPaymentChargeVat paymentChargeVat (not clubPaymentCharge && chargeBorneByDriver && paymentChargeVat > 0),
-            mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0),
-            mkComp FareBreakup "AIRPORT_CONVENIENCE_FEE" lblAirportConvenienceFee airportConvenienceFee (airportConvenienceFee > 0),
-            mkComp FareBreakup "SERVICE_CHARGE" lblServiceCharge serviceCharge (serviceCharge > 0),
-            mkComp FareBreakup "TOLL_CHARGES" (Just (fromMaybe "Toll charges (included in fare)" lblTollCharges)) tollAmount (tollAmount > 0)
+            mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (not showsFareBreakup && cancellationDues > 0),
+            mkComp FareBreakup "AIRPORT_CONVENIENCE_FEE" lblAirportConvenienceFee airportConvenienceFee (not showsFareBreakup && airportConvenienceFee > 0),
+            mkComp FareBreakup "SERVICE_CHARGE" lblServiceCharge serviceCharge (not showsFareBreakup && serviceCharge > 0),
+            mkComp FareBreakup "TOLL_CHARGES" (Just (fromMaybe "Toll charges (included in fare)" lblTollCharges)) tollAmount (not showsFareBreakup && tollAmount > 0)
           ]
   footnoteItems <- buildFootnotes lang booking ride estimatedFareParam finalFareParam
 
@@ -438,7 +466,8 @@ resolveRawComponent txMap raw =
               { title = raw.title,
                 price = raw.price,
                 uiTranslation = ui,
-                section = raw.section
+                section = raw.section,
+                subItems = Nothing
               }
 
 resolveUiTranslationFromMap :: HM.HashMap Text Text -> Text -> Maybe UiTranslationRaw -> Maybe Text
@@ -648,7 +677,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
           -- Listing a component means "show it as one row"; omitting it means
           -- "show its parts separately". Default is separate.
           clubCharge = maybe False (elem DTConf.PAYMENT_CHARGE) (mbDwc >>= (.clubProjectFareInEarnings))
-      Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams chargeNet chargeVat customerBearsCharge driverBearsCharge clubCharge
+      Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams chargeNet chargeVat customerBearsCharge driverBearsCharge clubCharge (mbTc >>= (.fareBreakupConfig))
     Nothing -> pure Nothing
 
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
