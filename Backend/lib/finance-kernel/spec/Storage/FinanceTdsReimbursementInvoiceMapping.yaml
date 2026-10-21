@@ -32,6 +32,11 @@ FinanceTdsReimbursementInvoiceMapping:
       kvFunction: findAllWithKV
       where: requestId
 
+    findAllByRequestIds:
+      kvFunction: findAllWithKV
+      where:
+        in: [requestId]
+
     findAllByInvoiceId:
       kvFunction: findAllWithKV
       where: invoiceId

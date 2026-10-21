@@ -561,6 +561,27 @@ data TdsReimbursementDetailRes = TdsReimbursementDetailRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data TdsReimbursementHistoryItem = TdsReimbursementHistoryItem
+  { requestId :: Kernel.Types.Id.Id Dashboard.Common.FinanceTdsReimbursementRequest,
+    quarter :: TdsReimbursementQuarter,
+    assessmentYear :: Kernel.Prelude.Text,
+    status :: TdsReimbursementStatus,
+    certNumber :: Kernel.Prelude.Text,
+    certAmount :: Kernel.Types.Common.HighPrecMoney,
+    tdsRate :: Kernel.Prelude.Double,
+    tdsSection :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rejectionReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    submittedAt :: Kernel.Prelude.UTCTime,
+    invoiceLines :: [TdsReimbursementStatusInvoiceLine],
+    totalTdsAmount :: Kernel.Types.Common.HighPrecMoney
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype TdsReimbursementHistoryRes = TdsReimbursementHistoryRes {requests :: [TdsReimbursementHistoryItem]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data TdsReimbursementInvoiceLineReq = TdsReimbursementInvoiceLineReq {invoiceId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice, tdsAmount :: Kernel.Types.Common.HighPrecMoney}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -704,7 +725,7 @@ data WalletLedgerRes = WalletLedgerRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("financeManagement" :> (GetFinanceManagementSubscriptionPurchaseList :<|> GetFinanceManagementFinanceInvoicePdf :<|> GetFinanceManagementFinanceInvoicePdfUrl :<|> GetFinanceManagementFinanceInvoiceList :<|> GetFinanceManagementFinanceAuditList :<|> GetFinanceManagementFinanceReconciliation :<|> GetFinanceManagementFinancePaymentSettlementList :<|> GetFinanceManagementFinancePaymentGatewayTransactionList :<|> GetFinanceManagementFinanceWalletLedger :<|> PostFinanceManagementReconciliationTrigger :<|> PostFinanceManagementFinanceAdjustmentSubmitHelper :<|> GetFinanceManagementFinanceAdjustmentListHelper :<|> PostFinanceManagementFinanceAdjustmentApproveHelper :<|> PostFinanceManagementFinanceAdjustmentRejectHelper :<|> GetFinanceManagementFinanceSapJournals :<|> GetFinanceManagementFinanceSapJournalsTransactions :<|> PostFinanceManagementTdsReimbursementRequestSubmitHelper :<|> GetFinanceManagementTdsReimbursementStatusHelper :<|> GetFinanceManagementTdsReimbursementListHelper :<|> GetFinanceManagementTdsReimbursement :<|> PostFinanceManagementTdsReimbursementRejectHelper))
+type API = ("financeManagement" :> (GetFinanceManagementSubscriptionPurchaseList :<|> GetFinanceManagementFinanceInvoicePdf :<|> GetFinanceManagementFinanceInvoicePdfUrl :<|> GetFinanceManagementFinanceInvoiceList :<|> GetFinanceManagementFinanceAuditList :<|> GetFinanceManagementFinanceReconciliation :<|> GetFinanceManagementFinancePaymentSettlementList :<|> GetFinanceManagementFinancePaymentGatewayTransactionList :<|> GetFinanceManagementFinanceWalletLedger :<|> PostFinanceManagementReconciliationTrigger :<|> PostFinanceManagementFinanceAdjustmentSubmitHelper :<|> GetFinanceManagementFinanceAdjustmentListHelper :<|> PostFinanceManagementFinanceAdjustmentApproveHelper :<|> PostFinanceManagementFinanceAdjustmentRejectHelper :<|> GetFinanceManagementFinanceSapJournals :<|> GetFinanceManagementFinanceSapJournalsTransactions :<|> PostFinanceManagementTdsReimbursementRequestSubmitHelper :<|> GetFinanceManagementTdsReimbursementStatusHelper :<|> GetFinanceManagementTdsReimbursementHistoryHelper :<|> GetFinanceManagementTdsReimbursementListHelper :<|> GetFinanceManagementTdsReimbursement :<|> PostFinanceManagementTdsReimbursementRejectHelper))
 
 type GetFinanceManagementSubscriptionPurchaseList =
   ( "subscriptionPurchase" :> "list" :> QueryParam "amountMax" Kernel.Types.Common.HighPrecMoney
@@ -1199,6 +1220,10 @@ type GetFinanceManagementTdsReimbursementStatusHelper =
       :> Get '[JSON] TdsReimbursementStatusRes
   )
 
+type GetFinanceManagementTdsReimbursementHistory = ("tdsReimbursement" :> "history" :> Get '[JSON] TdsReimbursementHistoryRes)
+
+type GetFinanceManagementTdsReimbursementHistoryHelper = ("tdsReimbursement" :> "history" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> Get '[JSON] TdsReimbursementHistoryRes)
+
 type GetFinanceManagementTdsReimbursementList =
   ( "tdsReimbursement" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
       :> QueryParam
@@ -1307,6 +1332,7 @@ data FinanceManagementAPIs = FinanceManagementAPIs
     getFinanceManagementFinanceSapJournalsTransactions :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Lib.Finance.Domain.Types.SapJournalEntry.TransactionType -> EulerHS.Types.EulerClient SapJournalTransactionsRes,
     postFinanceManagementTdsReimbursementRequestSubmit :: Kernel.Prelude.Text -> TdsReimbursementRequestSubmitReq -> EulerHS.Types.EulerClient TdsReimbursementRequestSubmitRes,
     getFinanceManagementTdsReimbursementStatus :: TdsReimbursementQuarter -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsReimbursementStatusRes,
+    getFinanceManagementTdsReimbursementHistory :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsReimbursementHistoryRes,
     getFinanceManagementTdsReimbursementList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe TdsReimbursementQuarter -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe TdsReimbursementStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsReimbursementListRes,
     getFinanceManagementTdsReimbursement :: Kernel.Types.Id.Id Dashboard.Common.FinanceTdsReimbursementRequest -> EulerHS.Types.EulerClient TdsReimbursementDetailRes,
     postFinanceManagementTdsReimbursementReject :: Kernel.Types.Id.Id Dashboard.Common.FinanceTdsReimbursementRequest -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> TdsReimbursementRejectReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
@@ -1315,7 +1341,7 @@ data FinanceManagementAPIs = FinanceManagementAPIs
 mkFinanceManagementAPIs :: (Client EulerHS.Types.EulerClient API -> FinanceManagementAPIs)
 mkFinanceManagementAPIs financeManagementClient = (FinanceManagementAPIs {..})
   where
-    getFinanceManagementSubscriptionPurchaseList :<|> getFinanceManagementFinanceInvoicePdf :<|> getFinanceManagementFinanceInvoicePdfUrl :<|> getFinanceManagementFinanceInvoiceList :<|> getFinanceManagementFinanceAuditList :<|> getFinanceManagementFinanceReconciliation :<|> getFinanceManagementFinancePaymentSettlementList :<|> getFinanceManagementFinancePaymentGatewayTransactionList :<|> getFinanceManagementFinanceWalletLedger :<|> postFinanceManagementReconciliationTrigger :<|> postFinanceManagementFinanceAdjustmentSubmit :<|> getFinanceManagementFinanceAdjustmentList :<|> postFinanceManagementFinanceAdjustmentApprove :<|> postFinanceManagementFinanceAdjustmentReject :<|> getFinanceManagementFinanceSapJournals :<|> getFinanceManagementFinanceSapJournalsTransactions :<|> postFinanceManagementTdsReimbursementRequestSubmit :<|> getFinanceManagementTdsReimbursementStatus :<|> getFinanceManagementTdsReimbursementList :<|> getFinanceManagementTdsReimbursement :<|> postFinanceManagementTdsReimbursementReject = financeManagementClient
+    getFinanceManagementSubscriptionPurchaseList :<|> getFinanceManagementFinanceInvoicePdf :<|> getFinanceManagementFinanceInvoicePdfUrl :<|> getFinanceManagementFinanceInvoiceList :<|> getFinanceManagementFinanceAuditList :<|> getFinanceManagementFinanceReconciliation :<|> getFinanceManagementFinancePaymentSettlementList :<|> getFinanceManagementFinancePaymentGatewayTransactionList :<|> getFinanceManagementFinanceWalletLedger :<|> postFinanceManagementReconciliationTrigger :<|> postFinanceManagementFinanceAdjustmentSubmit :<|> getFinanceManagementFinanceAdjustmentList :<|> postFinanceManagementFinanceAdjustmentApprove :<|> postFinanceManagementFinanceAdjustmentReject :<|> getFinanceManagementFinanceSapJournals :<|> getFinanceManagementFinanceSapJournalsTransactions :<|> postFinanceManagementTdsReimbursementRequestSubmit :<|> getFinanceManagementTdsReimbursementStatus :<|> getFinanceManagementTdsReimbursementHistory :<|> getFinanceManagementTdsReimbursementList :<|> getFinanceManagementTdsReimbursement :<|> postFinanceManagementTdsReimbursementReject = financeManagementClient
 
 data FinanceManagementUserActionType
   = GET_FINANCE_MANAGEMENT_SUBSCRIPTION_PURCHASE_LIST
@@ -1336,6 +1362,7 @@ data FinanceManagementUserActionType
   | GET_FINANCE_MANAGEMENT_FINANCE_SAP_JOURNALS_TRANSACTIONS
   | POST_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_REQUEST_SUBMIT
   | GET_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_STATUS
+  | GET_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_HISTORY
   | GET_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_LIST
   | GET_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT
   | POST_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_REJECT

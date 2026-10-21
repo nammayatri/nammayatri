@@ -117,6 +117,7 @@ module SharedLogic.Finance.Wallet
     walletReferenceCustomerCancellationGST,
     walletReferenceWalletIncentive,
     walletCreditRefs,
+    alwaysRedeemableWalletRefs,
     counterpartyFromRole,
     getWalletAccountByOwner,
     getControlAccountByOwner,
@@ -239,6 +240,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Finance.TempBalanceHold (addOfferHoldAtKey, getOfferHoldTotalAtKey, removeOfferHoldAtKey)
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.Finance.PostActions (runFinance, runPostActionsForAccount)
+import SharedLogic.Finance.Prepaid (tdsReimbursementReferenceType)
 import SharedLogic.Finance.WalletAccount (cashWalletCheckEnabled, computeTdsRateReason, estimateBufferedStatutoryDeductions, estimateOfferDeductions, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getPrepaidOfferHoldTotalExcluding, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletAvailableBalanceByOwner, getWalletBalanceByOwner, getWalletHoldBalanceByOwner, getWalletOfferHoldTotalExcluding, hasMinWalletBalance, makePrepaidOfferHoldsKey, makeWalletOfferHoldsKey, shouldCheckCashWallet, validateWalletDebitAmount, walletReferenceStatutoryHold)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -492,6 +494,14 @@ walletCreditRefs =
     walletReferencePGPayoutCharges,
     walletReferenceConnectAccountCharges
   ]
+
+-- | Wallet credits that are not earnings, so they are redeemable as soon as they are posted
+--   instead of waiting for the payout cut-off. A TDS reimbursement refunds tax the owner
+--   already paid. Matched only among the owner's own wallet entries, so the platform-side
+--   entry that shares the "TDSReimbursement" reference type (Prepaid.creditPrepaidBalance) is
+--   never picked up.
+alwaysRedeemableWalletRefs :: [Text]
+alwaysRedeemableWalletRefs = [tdsReimbursementReferenceType]
 
 -- | Reference types for entries that represent merchant-to-driver transfers
 --   (amounts funded by the merchant, not by the rider's payment).
@@ -1119,8 +1129,9 @@ data WalletPayoutEligibility = WalletPayoutEligibility
 emptyWalletPayoutEligibility :: WalletPayoutEligibility
 emptyWalletPayoutEligibility = WalletPayoutEligibility 0 0 0 [] 0
 
--- | Driver wallet view over the shared 'LedgerService.getPayoutEligibilityData'
---   (see Note [Redeemable payout calculation] in finance-kernel), plus:
+-- | Driver wallet view over the shared 'LedgerService.getPayoutEligibilityDataWith'
+--   (see Note [Redeemable payout calculation] in finance-kernel), with 'alwaysRedeemableWalletRefs'
+--   never held back by the cut-off, plus:
 --   processing payout balance: amount parked in OwnerPayoutLiability for in-flight payouts (informational)
 --   merchant transfer amount: sum of VAT input + discount credits among the redeemable entries
 getPayoutEligibilityData ::
@@ -1133,7 +1144,7 @@ getPayoutEligibilityData ::
   UTCTime -> -- current time (upper bound)
   m WalletPayoutEligibility
 getPayoutEligibilityData counterpartyType ownerId accountId walletBalance cutoff now = do
-  eligibility <- LedgerService.getPayoutEligibilityData accountId walletBalance cutoff now
+  eligibility <- LedgerService.getPayoutEligibilityDataWith alwaysRedeemableWalletRefs accountId walletBalance cutoff now
   processingPayoutBalance <- getProcessingPayoutBalance counterpartyType ownerId
   let merchantTransferAmount =
         sum

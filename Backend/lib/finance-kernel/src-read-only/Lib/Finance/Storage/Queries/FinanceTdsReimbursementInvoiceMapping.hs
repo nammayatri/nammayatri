@@ -39,6 +39,11 @@ findAllByRequestId ::
   (Kernel.Types.Id.Id Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest -> m [Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping.FinanceTdsReimbursementInvoiceMapping])
 findAllByRequestId requestId = do findAllWithKV [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)]
 
+findAllByRequestIds ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  ([Kernel.Types.Id.Id Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest] -> m [Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping.FinanceTdsReimbursementInvoiceMapping])
+findAllByRequestIds requestId = do findAllWithKV [Se.Is Beam.requestId $ Se.In (Kernel.Types.Id.getId <$> requestId)]
+
 findByRequestIdAndInvoiceId ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Types.Id.Id Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m (Maybe Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping.FinanceTdsReimbursementInvoiceMapping))

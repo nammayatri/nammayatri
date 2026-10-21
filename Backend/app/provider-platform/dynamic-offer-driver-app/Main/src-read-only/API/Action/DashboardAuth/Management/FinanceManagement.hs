@@ -8,10 +8,12 @@ module API.Action.DashboardAuth.Management.FinanceManagement
 where
 
 import qualified API.Types.ProviderPlatform.Management.FinanceManagement
+import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.Management.FinanceManagement
 import qualified "beckn-spec" Domain.Types.Invoice
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Types
@@ -31,7 +33,7 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("financeManagement" :> (GetFinanceManagementSubscriptionPurchaseList :<|> GetFinanceManagementFinanceInvoicePdf :<|> GetFinanceManagementFinanceInvoicePdfUrl :<|> GetFinanceManagementFinanceInvoiceList :<|> GetFinanceManagementFinanceAuditList :<|> GetFinanceManagementFinanceReconciliation :<|> GetFinanceManagementFinancePaymentSettlementList :<|> GetFinanceManagementFinancePaymentGatewayTransactionList :<|> GetFinanceManagementFinanceWalletLedger :<|> PostFinanceManagementReconciliationTrigger :<|> PostFinanceManagementFinanceAdjustmentSubmit :<|> GetFinanceManagementFinanceAdjustmentList :<|> PostFinanceManagementFinanceAdjustmentApprove :<|> PostFinanceManagementFinanceAdjustmentReject :<|> GetFinanceManagementFinanceSapJournals :<|> GetFinanceManagementFinanceSapJournalsTransactions :<|> PostFinanceManagementTdsReimbursementRequestSubmit :<|> GetFinanceManagementTdsReimbursementStatus :<|> GetFinanceManagementTdsReimbursementList :<|> GetFinanceManagementTdsReimbursement :<|> PostFinanceManagementTdsReimbursementReject))
+type API = ("financeManagement" :> (GetFinanceManagementSubscriptionPurchaseList :<|> GetFinanceManagementFinanceInvoicePdf :<|> GetFinanceManagementFinanceInvoicePdfUrl :<|> GetFinanceManagementFinanceInvoiceList :<|> GetFinanceManagementFinanceAuditList :<|> GetFinanceManagementFinanceReconciliation :<|> GetFinanceManagementFinancePaymentSettlementList :<|> GetFinanceManagementFinancePaymentGatewayTransactionList :<|> GetFinanceManagementFinanceWalletLedger :<|> PostFinanceManagementReconciliationTrigger :<|> PostFinanceManagementFinanceAdjustmentSubmit :<|> GetFinanceManagementFinanceAdjustmentList :<|> PostFinanceManagementFinanceAdjustmentApprove :<|> PostFinanceManagementFinanceAdjustmentReject :<|> GetFinanceManagementFinanceSapJournals :<|> GetFinanceManagementFinanceSapJournalsTransactions :<|> PostFinanceManagementTdsReimbursementRequestSubmit :<|> GetFinanceManagementTdsReimbursementStatus :<|> GetFinanceManagementTdsReimbursementHistory :<|> GetFinanceManagementTdsReimbursementList :<|> GetFinanceManagementTdsReimbursement :<|> PostFinanceManagementTdsReimbursementReject))
 
 type GetFinanceManagementSubscriptionPurchaseList =
   ( DashboardUserAuth
@@ -159,6 +161,13 @@ type GetFinanceManagementTdsReimbursementStatus =
       :> API.Types.ProviderPlatform.Management.FinanceManagement.GetFinanceManagementTdsReimbursementStatus
   )
 
+type GetFinanceManagementTdsReimbursementHistory =
+  ( DashboardUserAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      "PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_HISTORY"
+      :> API.Types.ProviderPlatform.Management.FinanceManagement.GetFinanceManagementTdsReimbursementHistory
+  )
+
 type GetFinanceManagementTdsReimbursementList =
   ( DashboardUserAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
@@ -181,7 +190,7 @@ type PostFinanceManagementTdsReimbursementReject =
   )
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getFinanceManagementSubscriptionPurchaseList merchantId city :<|> getFinanceManagementFinanceInvoicePdf merchantId city :<|> getFinanceManagementFinanceInvoicePdfUrl merchantId city :<|> getFinanceManagementFinanceInvoiceList merchantId city :<|> getFinanceManagementFinanceAuditList merchantId city :<|> getFinanceManagementFinanceReconciliation merchantId city :<|> getFinanceManagementFinancePaymentSettlementList merchantId city :<|> getFinanceManagementFinancePaymentGatewayTransactionList merchantId city :<|> getFinanceManagementFinanceWalletLedger merchantId city :<|> postFinanceManagementReconciliationTrigger merchantId city :<|> postFinanceManagementFinanceAdjustmentSubmit merchantId city :<|> getFinanceManagementFinanceAdjustmentList merchantId city :<|> postFinanceManagementFinanceAdjustmentApprove merchantId city :<|> postFinanceManagementFinanceAdjustmentReject merchantId city :<|> getFinanceManagementFinanceSapJournals merchantId city :<|> getFinanceManagementFinanceSapJournalsTransactions merchantId city :<|> postFinanceManagementTdsReimbursementRequestSubmit merchantId city :<|> getFinanceManagementTdsReimbursementStatus merchantId city :<|> getFinanceManagementTdsReimbursementList merchantId city :<|> getFinanceManagementTdsReimbursement merchantId city :<|> postFinanceManagementTdsReimbursementReject merchantId city
+handler merchantId city = getFinanceManagementSubscriptionPurchaseList merchantId city :<|> getFinanceManagementFinanceInvoicePdf merchantId city :<|> getFinanceManagementFinanceInvoicePdfUrl merchantId city :<|> getFinanceManagementFinanceInvoiceList merchantId city :<|> getFinanceManagementFinanceAuditList merchantId city :<|> getFinanceManagementFinanceReconciliation merchantId city :<|> getFinanceManagementFinancePaymentSettlementList merchantId city :<|> getFinanceManagementFinancePaymentGatewayTransactionList merchantId city :<|> getFinanceManagementFinanceWalletLedger merchantId city :<|> postFinanceManagementReconciliationTrigger merchantId city :<|> postFinanceManagementFinanceAdjustmentSubmit merchantId city :<|> getFinanceManagementFinanceAdjustmentList merchantId city :<|> postFinanceManagementFinanceAdjustmentApprove merchantId city :<|> postFinanceManagementFinanceAdjustmentReject merchantId city :<|> getFinanceManagementFinanceSapJournals merchantId city :<|> getFinanceManagementFinanceSapJournalsTransactions merchantId city :<|> postFinanceManagementTdsReimbursementRequestSubmit merchantId city :<|> getFinanceManagementTdsReimbursementStatus merchantId city :<|> getFinanceManagementTdsReimbursementHistory merchantId city :<|> getFinanceManagementTdsReimbursementList merchantId city :<|> getFinanceManagementTdsReimbursement merchantId city :<|> postFinanceManagementTdsReimbursementReject merchantId city
 
 getFinanceManagementSubscriptionPurchaseList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.SubscriptionPurchaseStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.SubscriptionPurchaseListRes)
 getFinanceManagementSubscriptionPurchaseList a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a12 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementSubscriptionPurchaseList a14 a13 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
@@ -261,6 +270,9 @@ postFinanceManagementTdsReimbursementRequestSubmit a4 a3 a2 a1 =
 
 getFinanceManagementTdsReimbursementStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementQuarter -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementStatusRes)
 getFinanceManagementTdsReimbursementStatus a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementTdsReimbursementStatus a5 a4 a2 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3)
+
+getFinanceManagementTdsReimbursementHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementHistoryRes)
+getFinanceManagementTdsReimbursementHistory a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementTdsReimbursementHistory a3 a2 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a1)
 
 getFinanceManagementTdsReimbursementList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementQuarter -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementListRes)
 getFinanceManagementTdsReimbursementList a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a11 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementTdsReimbursementList a13 a12 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a11)

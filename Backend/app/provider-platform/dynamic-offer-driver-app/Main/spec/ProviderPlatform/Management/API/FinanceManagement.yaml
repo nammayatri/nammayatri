@@ -344,6 +344,17 @@ apis:
         mandatoryQuery:
           - requestorId: Text
 
+  - GET:
+      endpoint: /tdsReimbursement/history
+      auth: ApiAuthV2
+      response:
+        type: TdsReimbursementHistoryRes
+      migrate:
+        capability: finance.tds_reimbursement.read
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+
   - GET: # TdsReimbursementListAPI
       endpoint: /tdsReimbursement/list
       query:
@@ -950,6 +961,24 @@ types:
     - tdsSection: Maybe Text
     - rejectionReason: Maybe Text
     - submittedAt: Maybe UTCTime
+    - invoiceLines: [TdsReimbursementStatusInvoiceLine]
+    - totalTdsAmount: HighPrecMoney
+
+  TdsReimbursementHistoryRes:
+    - recordType: NewType
+    - requests: [TdsReimbursementHistoryItem]
+
+  TdsReimbursementHistoryItem:
+    - requestId: Id FinanceTdsReimbursementRequest
+    - quarter: TdsReimbursementQuarter
+    - assessmentYear: Text
+    - status: TdsReimbursementStatus
+    - certNumber: Text
+    - certAmount: HighPrecMoney
+    - tdsRate: Double
+    - tdsSection: Maybe Text
+    - rejectionReason: Maybe Text
+    - submittedAt: UTCTime
     - invoiceLines: [TdsReimbursementStatusInvoiceLine]
     - totalTdsAmount: HighPrecMoney
 
