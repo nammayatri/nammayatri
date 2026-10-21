@@ -648,19 +648,12 @@ endFleetDriverAssociation fleetOwnerId (Id driverId) = do
     updateWithKV
       [Se.Set BeamFDVA.associatedTill $ Just now, Se.Set BeamFDVA.isActive False]
       [Se.And pairUnexpired]
-    mbOtherActive <- findByDriverId (Id driverId) True
-    case mbOtherActive of
-      Just other -> do
-        mbOtherOwnerInfo <- FOI.findByPrimaryKey (Id other.fleetOwnerId)
-        let effective = effectiveEnableCashRide now Nothing (Just other) (mbOtherOwnerInfo >>= (.enableCashRide))
-        LTSSync.syncDriverPoolDataToLTS (Id driverId) $
-          LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set (Just other.fleetOwnerId), LTSSync.enableCashRide = LTSSync.Set (Just effective)}
-      Nothing -> do
-        mbDriverInfo <- QDIE.findById (Id driverId)
-        let effective = effectiveEnableCashRide now (mbDriverInfo >>= (.enableCashRide)) Nothing Nothing
-        LTSSync.syncDriverPoolDataToLTS (Id driverId) $
-          LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set Nothing, LTSSync.enableCashRide = LTSSync.Set (Just effective)}
-        when (any (.isActive) unexpiredAssociations) $ updateFleetDriverTags False (Id driverId) fleetOwnerId
+    mbDriverInfo <- QDIE.findById (Id driverId)
+    let effective = effectiveEnableCashRide now (mbDriverInfo >>= (.enableCashRide)) Nothing Nothing
+    LTSSync.syncDriverPoolDataToLTS (Id driverId) $
+      LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set Nothing, LTSSync.enableCashRide = LTSSync.Set (Just effective)}
+    -- Only an active link carries fleet-written tags; ending a pending invite has nothing to strip.
+    when (any (.isActive) unexpiredAssociations) $ updateFleetDriverTags False (Id driverId) fleetOwnerId
 
 findAllDriversByFleetOwnerIdByMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DI.DriverMode -> Maybe Bool -> Integer -> Integer -> m [FleetDriverAssociation]
 findAllDriversByFleetOwnerIdByMode fleetOwnerId mode mbIsActive limitVal offsetVal = do
