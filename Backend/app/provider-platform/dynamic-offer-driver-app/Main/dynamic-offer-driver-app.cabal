@@ -469,6 +469,7 @@ library
       Domain.Action.UI.SafetyWebhook
       Domain.Action.UI.SearchRequestForDriver
       Domain.Action.UI.SearchRequestLocation
+      Domain.Action.UI.SearchRoute
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialLocation
@@ -1315,6 +1316,7 @@ library
       API.Action.UI.Reels
       API.Action.UI.ReferralPayout
       API.Action.UI.RideEvidence
+      API.Action.UI.SearchRoute
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.SpecialLocation
@@ -1506,6 +1508,7 @@ library
       API.Types.UI.Reels
       API.Types.UI.ReferralPayout
       API.Types.UI.RideEvidence
+      API.Types.UI.SearchRoute
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.SpecialLocationWarrior
