@@ -444,8 +444,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
               sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Vehicle not allowed for toll route."
               throwError $ InvalidRequest "Vehicle not allowed for toll route."
             -- TODO: Currently isDashboard flagged is passed as False here, but fix it properly once we have edit destination from dashboard too
-            fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just dropLatLong) Nothing Nothing (Just (TransactionId (Id booking.transactionId))) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) booking.dynamicPricingLogicVersion booking.tripCategory booking.configInExperimentVersions Nothing
-            farePolicy <- getFarePolicyByEstOrQuoteId (Just booking.createdAt) (Just srcPt) (Just dropLatLong) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) booking.quoteId (Just booking.startTime) (Just False) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
+            farePolicy <- getFarePolicyOnEndRide (Just booking.createdAt) (Just srcPt) (Just dropLatLong) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) dropLatLong merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just False) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
             logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "farePolicy: " <> show farePolicy
             mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.businessEmailDomain booking.billingCategory farePolicy.vehicleServiceTier
             let farePolicy' =
@@ -536,6 +535,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             dropLocMap <- SLM.buildDropLocationMapping dropLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
             QLM.create dropLocMap
             QBUR.create bookingUpdateReq
+            cacheFarePolicyByBookingUpdateRequestId bookingUpdateReq.id.getId (fromIntegral transporterConfig.editLocTimeThreshold + 600) farePolicy
             destLocMapNew <- SLM.buildDropLocationMapping dropLocation.id bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
             QLM.create destLocMapNew
             sendUpdateEditDestToBAP booking mbRide bookingUpdateReq (Just dropLocation) currentPoint SOFT_UPDATE

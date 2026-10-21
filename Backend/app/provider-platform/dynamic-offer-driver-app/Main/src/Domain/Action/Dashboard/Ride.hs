@@ -937,7 +937,11 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
         plannedPickupSpecialLocation = mbPlannedPickupSpecialLocation,
         plannedDropSpecialLocation = mbPlannedDropSpecialLocation,
         actualPickupSpecialLocation = mbActualPickupSpecialLocation,
-        actualDropSpecialLocation = mbActualDropSpecialLocation
+        actualDropSpecialLocation = mbActualDropSpecialLocation,
+        recomputeReason = ride.recomputeReason,
+        passedThroughDestination = ride.passedThroughDestination,
+        finalFarePolicyId = (.getId) <$> ride.finalFarePolicyId,
+        estimatedStaticDuration = booking.estimatedStaticDuration
       }
 
 mkTollInfoEntities :: Maybe [Text] -> Maybe [Text] -> Maybe [Common.TollInfoAPIEntity]
