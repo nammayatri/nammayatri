@@ -1956,7 +1956,8 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
   cancellationRatio <- DP.getLatestCancellationRatio cancellationScoreRelatedConfig merchantOpCityId (cast driverId)
-  searchRequestForDriverAPIEntity <- mapM (buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig) nearbyReqs
+  -- Skip cards whose searchTry is no longer ACTIVE (e.g. the original round after a reallocation): accepting them only returns 409.
+  searchRequestForDriverAPIEntity <- catMaybes <$> mapM (buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig) nearbyReqs
   case searchTryIdReq of
     Just stid -> do
       let filteredSearchRequestForDriverAPIEntity = filter (\srfd -> srfd.searchTryId == stid) searchRequestForDriverAPIEntity
@@ -1966,6 +1967,10 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
     buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq = do
       let searchTryId = nearbyReq.searchTryId
       searchTry <- runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
+      if searchTry.status /= DST.ACTIVE
+        then pure Nothing
+        else Just <$> buildActiveEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq searchTry
+    buildActiveEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq searchTry = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       (estimate :: Maybe Estimate) <- runInReplica $ QEst.findById (Id searchTry.estimateId)
       bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id searchRequest.bapId) Domain.MOBILITY
