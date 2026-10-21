@@ -124,5 +124,5 @@ It is read-only and ends **NO FAIL** or the list of what blocks the launch: a co
 ## What is not in this runbook
 
 - Store accounts, listings and screenshots: the app repository's `docs/store-readiness.md` and `docs/store-listing.md`.
-- The Moorsyl sender and template for « Mova », and the `MOVIN` sign-in keyword: [the rename note](../gotchas.md#the-product-is-called-mova-2026-10-18--what-moved-here-and-what-did-not).
+- The Moorsyl sender and template for « Mova » (the sign-in keyword is `MOVA` now, `MOVIN` still read): [the rename note](../gotchas.md#the-product-is-called-mova-2026-10-18--what-moved-here-and-what-did-not).
 - Anything about the Beckn gateway or the registry: they have not changed since the pilot.

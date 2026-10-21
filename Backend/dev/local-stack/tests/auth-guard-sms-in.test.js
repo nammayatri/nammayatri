@@ -99,7 +99,7 @@ const forward = (from, body, token = TOKEN) =>
   const si = start.json && start.json.smsIn;
   check('start -> 200 with an authId, a code, the SIM and the text',
     start.status === 200 && start.json.authId && /^\d{6}$/.test(si && si.code)
-      && si.number === '+22233000000' && si.text === `MOVIN ${si.code}`, start);
+      && si.number === '+22233000000' && si.text === `MOVA ${si.code}`, start);
   const id = start.json.authId;
   const code = si.code;
   const status = () => call('GET', `/v2/auth/${id}/sms-in`).then((r) => r.json && r.json.confirmed);
@@ -147,9 +147,9 @@ const forward = (from, body, token = TOKEN) =>
   // The driver side, same channel.
   const ds = await call('POST', '/ui/auth/sms-in', { mobileCountryCode: '+222', mobileNumber: '31234567', merchantId: 'm' });
   check('driver start -> 200 with the SIM', ds.status === 200 && ds.json.smsIn && ds.json.smsIn.number === '+22233000000', ds);
-  await forward('+22231234567', `MOVIN ${ds.json.smsIn.code}`);
+  await forward('+22231234567', `mova ${ds.json.smsIn.code}`);
   v = await call('POST', `/ui/auth/${ds.json.authId}/verify`, { otp: ds.json.smsIn.code, deviceToken: 'd' });
-  check('driver verify -> 200 once forwarded', v.status === 200, v);
+  check('driver verify -> 200 once forwarded with MOVA (the passenger above used MOVIN: both work)', v.status === 200, v);
 
   const h = await call('GET', '/healthz');
   check('healthz lists the countries with a SIM, never the number',

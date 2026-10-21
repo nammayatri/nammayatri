@@ -75,8 +75,15 @@ const inbox = new Map();
 let received = 0;
 let rejected = 0;
 
-/** `MOVIN 483920`, however it was spaced or cased. */
-const CODE = /\bMOVIN\s*[-:]?\s*(\d{6})\b/i;
+/**
+ * `MOVA 483920`, however it was spaced or cased -- and `MOVIN 483920`, still.
+ *
+ * The word people send was MOVIN until 2026-10-21 (the product was Movin), and
+ * every build already on a phone writes it, so BOTH are accepted, and will be:
+ * dropping MOVIN would lock out whoever has not updated. What this server
+ * tells the app to write (`expect`) is MOVA.
+ */
+const CODE = /\b(?:MOVA|MOVIN)\s*[-:]?\s*(\d{6})\b/i;
 
 function prune(now) {
   for (const [from, m] of inbox) if (now - m.at > KEEP_MS) inbox.delete(from);
@@ -199,7 +206,7 @@ function ready() {
 /** A sign-in is waiting for this code from this number. Returns the link that writes it. */
 function expect(number, code) {
   expected.set(normal(number), { code, at: Date.now() });
-  const text = `MOVIN ${code}`;
+  const text = `MOVA ${code}`;
   return { number: NUMBER, text, link: `https://wa.me/${NUMBER}?text=${encodeURIComponent(text)}` };
 }
 
