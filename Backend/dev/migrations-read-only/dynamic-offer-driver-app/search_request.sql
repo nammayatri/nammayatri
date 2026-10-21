@@ -215,3 +215,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_pet_ride boolean
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN rider_name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN pickup_drop_area text ;

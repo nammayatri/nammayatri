@@ -64,6 +64,7 @@ data SearchRequest = SearchRequest
     parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     parcelType :: Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType,
     paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
+    pickupDropArea :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area,
     pickupGateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pickupZoneGateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     poolingConfigVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

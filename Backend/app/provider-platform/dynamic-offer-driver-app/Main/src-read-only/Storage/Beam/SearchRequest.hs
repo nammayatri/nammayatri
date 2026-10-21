@@ -62,6 +62,7 @@ data SearchRequestT f = SearchRequestT
     parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType),
     paymentMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode),
+    pickupDropArea :: B.C f (Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area),
     pickupGateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     pickupZoneGateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     poolingConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

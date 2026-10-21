@@ -92,6 +92,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.parcelQuantity parcelQuantity,
       Se.Set Beam.parcelType parcelType,
       Se.Set Beam.paymentMode paymentMode,
+      Se.Set Beam.pickupDropArea pickupDropArea,
       Se.Set Beam.pickupGateId pickupGateId,
       Se.Set Beam.pickupZoneGateId pickupZoneGateId,
       Se.Set Beam.poolingConfigVersion poolingConfigVersion,
