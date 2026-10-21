@@ -612,7 +612,11 @@ data RideInfoRes = RideInfoRes
     plannedPickupSpecialLocation :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     plannedDropSpecialLocation :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     actualPickupSpecialLocation :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    actualDropSpecialLocation :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    actualDropSpecialLocation :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    recomputeReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    passedThroughDestination :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    finalFarePolicyId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    estimatedStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

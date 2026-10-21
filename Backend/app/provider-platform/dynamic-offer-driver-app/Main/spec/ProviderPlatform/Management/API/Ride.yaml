@@ -521,6 +521,10 @@ types:
     - plannedDropSpecialLocation: Maybe Text
     - actualPickupSpecialLocation: Maybe Text
     - actualDropSpecialLocation: Maybe Text
+    - recomputeReason: Maybe Text
+    - passedThroughDestination: Maybe Bool
+    - finalFarePolicyId: Maybe Text
+    - estimatedStaticDuration: Maybe Seconds
   TollInfoAPIEntity:
     - id: Text
     - name: Text
