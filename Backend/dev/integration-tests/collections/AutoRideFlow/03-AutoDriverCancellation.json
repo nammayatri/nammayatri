@@ -1381,9 +1381,11 @@
           "listen": "prerequest",
           "script": {
             "exec": [
-              "// Wait 25s for allocator to reallocate to D2 after D1 cancel",
-              "const start = Date.now();",
-              "while (Date.now() - start < 25000) { /* busy wait */ }"
+              "// Wait 10s for the reallocation round to reach D2 after D1 cancels; retries (set by the test script) skip this wait.",
+              "if (parseInt(pm.collectionVariables.get('_d2_nearby_attempt') || '0') === 0) {",
+              "    const start = Date.now();",
+              "    while (Date.now() - start < 10000) { /* busy wait */ }",
+              "}"
             ],
             "type": "text/javascript"
           }
@@ -1393,18 +1395,33 @@
           "script": {
             "exec": [
               "var d = pm.response.json();",
+              "var retrying = false;",
               "if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
               "    // Pick the newest search (latest startTime): a request from an earlier, cancelled test can still be listed first.",
               "    var req = d.searchRequestsForDriver.reduce(function (a, b) { return new Date(b.startTime) > new Date(a.startTime) ? b : a; });",
               "    pm.environment.set('searchTryId', req.searchTryId);",
               "    console.log('Got search request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare, 'variant:', req.requestedVehicleVariant);",
+              "    pm.collectionVariables.set('_d2_nearby_attempt', '0');",
               "} else {",
-              "    console.log('WARNING: No nearby ride requests found for driver. Response:', JSON.stringify(d));",
+              "    // The backend lists only ACTIVE rounds now, so an empty list means the reallocation card hasn't reached D2 yet: retry every 2s, up to 8 times.",
+              "    var attempt = parseInt(pm.collectionVariables.get('_d2_nearby_attempt') || '0');",
+              "    if (attempt < 8) {",
+              "        console.log('No reallocated request for D2 yet (attempt', attempt + 1, ') - retrying in 2s');",
+              "        var t0 = Date.now(); while (Date.now() - t0 < 2000) {}",
+              "        pm.collectionVariables.set('_d2_nearby_attempt', String(attempt + 1));",
+              "        pm.execution.setNextRequest(pm.info.requestName);",
+              "        retrying = true;",
+              "    } else {",
+              "        console.log('WARNING: No nearby ride requests found for driver after retries. Response:', JSON.stringify(d));",
+              "        pm.collectionVariables.set('_d2_nearby_attempt', '0');",
+              "    }",
               "}",
-              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Has search requests', function () {",
-              "    pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty;",
-              "});"
+              "if (!retrying) {",
+              "    pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "    pm.test('Has search requests', function () {",
+              "        pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty;",
+              "    });",
+              "}"
             ],
             "type": "text/javascript"
           }
