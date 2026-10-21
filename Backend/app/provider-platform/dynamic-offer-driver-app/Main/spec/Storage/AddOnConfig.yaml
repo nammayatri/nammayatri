@@ -22,6 +22,7 @@ AddOnConfig:
       selectedQuantity: Maybe Int
       maxQuantity: Int
       pricePerQuantity: Maybe HighPrecMoney
+      vehicleServiceTier: "[ServiceTierType]"
       derive: Eq
 
   fields:

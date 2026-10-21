@@ -86,16 +86,17 @@ getSelectedQuantity addOn =
 
 -- | The catalogue snapshot stored on the search request
 -- (`SearchRequest.offeredAddOns`) for one `add_on_config` row advertised in
--- on_search: nothing selected yet, with the max quantity and price frozen as
--- shown to the rider. Everything after search validates and prices against
--- these, never against the live table.
+-- on_search: nothing selected yet, with the max quantity, price and tier
+-- scoping frozen as shown to the rider. Everything after search validates and
+-- prices against these, never against the live table.
 mkOfferedAddOnData :: AddOnConfig -> DAddOnConfig.AddOnData
 mkOfferedAddOnData cfg =
   DAddOnConfig.AddOnData
     { configId = cfg.id,
       selectedQuantity = Nothing,
       maxQuantity = cfg.maxQuantity,
-      pricePerQuantity = cfg.pricePerQuantity
+      pricePerQuantity = cfg.pricePerQuantity,
+      vehicleServiceTier = cfg.vehicleServiceTier
     }
 
 -- | The wire-level `Spec.AddOn`s to echo back on on_select/on_init/on_confirm
@@ -151,18 +152,23 @@ parseSelectedAddOns addOns = do
 -- Validation is entirely against `offeredAddOns`, the snapshot on_search
 -- stored on the search request (`SearchRequest.offeredAddOns`): a selected id
 -- must be one that was offered on this search (which already implies it was
--- enabled and in this city at search time), and the quantity must be within
--- the `maxQuantity` shown then. The live `add_on_config` table is never
+-- enabled and in this city at search time), it must be one that was offered
+-- for every tier in `selectedTiers` (the quote's or estimates' tiers --
+-- on_search only lists a tier-scoped add-on under that tier's item, but the
+-- snapshot is one list per search, so an id from another tier's item would
+-- otherwise pass), and the quantity must be within the `maxQuantity` shown
+-- then. The live `add_on_config` table is never
 -- consulted, so a catalogue edit between search and select can neither
 -- reject nor re-price a selection the rider was shown. Each returned row is
 -- the offered one with `selectedQuantity` filled in, so it carries the
 -- price frozen at search for the rest of the transaction.
 resolveAddOnData ::
   (MonadThrow m, Log m) =>
+  [ServiceTierType] ->
   [DAddOnConfig.AddOnData] ->
   [Spec.AddOn] ->
   m [DAddOnConfig.AddOnData]
-resolveAddOnData offeredAddOns addOns = do
+resolveAddOnData selectedTiers offeredAddOns addOns = do
   selected <- parseSelectedAddOns addOns
   let offeredById = M.fromList [(d.configId, d) | d <- offeredAddOns]
       notOffered = filter (`M.notMember` offeredById) (map fst selected)
@@ -172,6 +178,10 @@ resolveAddOnData offeredAddOns addOns = do
     offered <- M.lookup addOnId offeredById & fromMaybeM (InvalidRequest $ "Add-on was not offered on this search: " <> getId addOnId)
     unless (selectedQuantity >= 1 && selectedQuantity <= offered.maxQuantity) $
       throwError $ InvalidRequest $ "Add-on quantity " <> show selectedQuantity <> " exceeds the allowed maximum: " <> getId addOnId
+    -- An empty list means the add-on was offered city-wide, on every tier.
+    let notOfferedTiers = filter (`notElem` offered.vehicleServiceTier) selectedTiers
+    unless (null offered.vehicleServiceTier || null notOfferedTiers) $
+      throwError $ InvalidRequest $ "Add-on " <> getId addOnId <> " was not offered for vehicle service tier(s): " <> show notOfferedTiers
     pure offered {DAddOnConfig.selectedQuantity = Just selectedQuantity}
 
 -- | What the selected add-ons cost in total: pricePerQuantity x selectedQuantity,

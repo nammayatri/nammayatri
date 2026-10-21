@@ -13,7 +13,7 @@ import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
 
 data BapMetadata = BapMetadata
-  { domain :: Data.Text.Text,
+  { domain :: Kernel.Prelude.Maybe Data.Text.Text,
     enableOndcScheduledRideSupport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata,
     logoUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,

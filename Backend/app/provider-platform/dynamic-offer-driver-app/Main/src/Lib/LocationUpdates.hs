@@ -163,9 +163,9 @@ updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = 
           nightSafetyRouteDeviationThreshold = transportConfig.nightSafetyRouteDeviationThreshold
           key = multipleRouteKey booking.transactionId
           shouldPerformSafetyCheck = safetyCheckEnabled && not safetyAlertAlreadyTriggered
-      -- Pilot flag lives on the BAP's metadata (per merchant/city), not on TransporterConfig.
-      mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id booking.bapId) Domain.MOBILITY booking.providerId booking.merchantOperatingCityId
-      let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
+      -- Pilot flag lives on the BAP's metadata (gated to its one piloted city), not on TransporterConfig.
+      mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainAndCity (Id booking.bapId) Domain.MOBILITY booking.merchantOperatingCityId
+      let isOndcScheduledRideSupportEnabled = CQBapMetaData.isOndcScheduledRideSupportEnabled mbBapMetadata
       multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get key
       case multipleRoutes of
         Just routes -> do

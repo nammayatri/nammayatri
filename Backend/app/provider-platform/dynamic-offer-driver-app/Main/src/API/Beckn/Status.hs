@@ -74,8 +74,8 @@ status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
       onStatusReq' <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info (Just msgId)
       -- ONDC scheduled-ride pilot: single call, see
       -- Beckn.OnDemand.Transformer.OndcScheduledRide.OnStatus.ondcScheduledRideStatusReqBuild.
-      mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id dStatusRes.booking.bapId) Domain.MOBILITY dStatusRes.booking.providerId dStatusRes.booking.merchantOperatingCityId
-      let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
+      mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainAndCity (Id dStatusRes.booking.bapId) Domain.MOBILITY dStatusRes.booking.merchantOperatingCityId
+      let isOndcScheduledRideSupportEnabled = CQBapMetaData.isOndcScheduledRideSupportEnabled mbBapMetadata
       onStatusReq <-
         if isOndcScheduledRideSupportEnabled
           then OSROnStatus.ondcScheduledRideStatusReqBuild dStatusRes onStatusReq'

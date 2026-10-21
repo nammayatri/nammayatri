@@ -87,8 +87,8 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
     isValueAddNP <- CQVAN.isValueAddNP bapId
     dConfirmReq' <- ACL.buildConfirmReqV2 reqV2 isValueAddNP
     moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
-    mbBapMetadata' <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id bapId) Domain.MOBILITY transporterId moc.id
-    let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata' >>= (.enableOndcScheduledRideSupport))
+    mbBapMetadata' <- CQBapMetaData.findBySubscriberIdDomainAndCity (Id bapId) Domain.MOBILITY moc.id
+    let isOndcScheduledRideSupportEnabled = CQBapMetaData.isOndcScheduledRideSupportEnabled mbBapMetadata'
     -- Pilot BAPs: patches in the wire item's add-ons before DConfirm.validateRequest verifies them against what was selected earlier.
     let dConfirmReq =
           if isOndcScheduledRideSupportEnabled
@@ -104,7 +104,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
         if isOndcScheduledRideSupportEnabled
           then do
             let incomingOrderTags = reqV2.confirmReqMessage.confirmReqMessageOrder.orderTags
-            OSRCommon.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY transporterId moc.id mbBapMetadata' incomingOrderTags
+            OSRCommon.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY moc.id mbBapMetadata' incomingOrderTags
           else pure mbBapMetadata'
       fork "confirm" $ do
         Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
@@ -149,7 +149,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       bppInvoiceInfo <- ACL.resolveBPPInvoiceInfo dConfirmRes
       let onConfirmMessage' = ACL.buildOnConfirmMessageV2 isValueAddNP dConfirmRes pricing becknConfig mbFarePolicy bppInvoiceInfo
       -- Pilot BAPs get fulfillment-state and BAP/BPP-terms overrides on the on_confirm order; everyone else's message is unchanged.
-      let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
+      let isOndcScheduledRideSupportEnabled = CQBapMetaData.isOndcScheduledRideSupportEnabled mbBapMetadata
       onConfirmMessage <-
         if isOndcScheduledRideSupportEnabled
           then OSROnConfirm.ondcScheduledRideOnConfirmMessageBuild dConfirmRes.booking mbBapMetadata becknConfig onConfirmMessage'

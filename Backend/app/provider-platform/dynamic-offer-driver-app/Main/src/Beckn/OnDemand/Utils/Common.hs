@@ -669,8 +669,8 @@ mkFulfillmentV2' ::
 mkFulfillmentV2' driverDetached mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide driverAccountId mbEvent isValueAddNP riderPhone isAlreadyFav favCount = do
   mbDInfo <- driverInfo
   now <- getCurrentTime
-  mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id booking.bapId) Domain.MOBILITY booking.providerId booking.merchantOperatingCityId
-  let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
+  mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainAndCity (Id booking.bapId) Domain.MOBILITY booking.merchantOperatingCityId
+  let isOndcScheduledRideSupportEnabled = CQBapMetaData.isOndcScheduledRideSupportEnabled mbBapMetadata
       -- Detached: the previous driver is gone, so the cancelled ride's OTPs must not be re-sent.
       mbRideOtp = if driverDetached then Nothing else Just (fromMaybe ride.otp ride.endOtp)
       mbEndOtp = if driverDetached then Nothing else ride.endOtp
@@ -1406,8 +1406,8 @@ mkFulfillmentV2SoftUpdate ::
 mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide driverAccountId mbEvent isValueAddNP newDestination isAlreadyFav favCount = do
   mbDInfo <- driverInfo
   now <- getCurrentTime
-  mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id booking.bapId) Domain.MOBILITY booking.providerId booking.merchantOperatingCityId
-  let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
+  mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainAndCity (Id booking.bapId) Domain.MOBILITY booking.merchantOperatingCityId
+  let isOndcScheduledRideSupportEnabled = CQBapMetaData.isOndcScheduledRideSupportEnabled mbBapMetadata
       rideOtp = fromMaybe ride.otp ride.endOtp
   pure $
     Spec.Fulfillment

@@ -64,8 +64,8 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
     merchant <- QMerch.findById transporterId >>= fromMaybeM (MerchantNotFound transporterId.getId)
     city <- Utils.getContextCity reqV2.selectReqContext
     moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
-    mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id dSelectReq'.bapId) Domain.MOBILITY transporterId moc.id
-    let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
+    mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainAndCity (Id dSelectReq'.bapId) Domain.MOBILITY moc.id
+    let isOndcScheduledRideSupportEnabled = CQBapMetaData.isOndcScheduledRideSupportEnabled mbBapMetadata
 
     if isOndcScheduledRideSupportEnabled
       then do

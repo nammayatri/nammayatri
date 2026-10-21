@@ -119,17 +119,16 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
           dSearchReq' <- ACL.buildSearchReqV2 authResult.subscriber reqV2 bapUri
           msgId <- Utils.getMessageId context
           country <- Utils.getContextCountry context
-
-        mbBapMetadata' <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id dSearchReq'.bapId) Domain.MOBILITY merchant.id moc.id
-        let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata' >>= (.enableOndcScheduledRideSupport))
-        (dSearchReq, mbBapMetadata) <-
-          if isOndcScheduledRideSupportEnabled
-            then do
-              -- Pilot BAPs get isSchedule derived from the category code and their STATIC_TERMS verified/stored, in one pass.
-              updatedBapMetadata <- OSRCommon.verifyIncomingStaticTerms (Id dSearchReq'.bapId) Domain.MOBILITY merchant.id moc.id mbBapMetadata' (reqV2.searchReqMessage.searchReqMessageIntent >>= (.intentTags))
-              pure (OSRSearch.ondcScheduledRideParser reqV2.searchReqMessage dSearchReq', updatedBapMetadata)
-            else pure (dSearchReq', mbBapMetadata')
-        DSearch.validateScheduledBookingWindowForSearch moc.id dSearchReq
+          mbBapMetadata' <- CQBapMetaData.findBySubscriberIdDomainAndCity (Id dSearchReq'.bapId) Domain.MOBILITY moc.id
+          let isOndcScheduledRideSupportEnabled = CQBapMetaData.isOndcScheduledRideSupportEnabled mbBapMetadata'
+          (dSearchReq, mbBapMetadata) <-
+            if isOndcScheduledRideSupportEnabled
+              then do
+                -- Pilot BAPs get isSchedule derived from the category code and their STATIC_TERMS verified/stored, in one pass.
+                updatedBapMetadata <- OSRCommon.verifyIncomingStaticTerms (Id dSearchReq'.bapId) Domain.MOBILITY moc.id mbBapMetadata' (reqV2.searchReqMessage.searchReqMessageIntent >>= (.intentTags))
+                pure (OSRSearch.ondcScheduledRideParser reqV2.searchReqMessage dSearchReq', updatedBapMetadata)
+              else pure (dSearchReq', mbBapMetadata')
+          DSearch.validateScheduledBookingWindowForSearch moc.id dSearchReq
 
           isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
           when isFirst $

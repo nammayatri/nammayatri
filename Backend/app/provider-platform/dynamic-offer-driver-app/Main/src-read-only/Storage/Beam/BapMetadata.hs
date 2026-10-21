@@ -12,7 +12,7 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data BapMetadataT f = BapMetadataT
-  { domain :: B.C f Data.Text.Text,
+  { domain :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     enableOndcScheduledRideSupport :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Data.Text.Text,
     logoUrl :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
@@ -30,13 +30,11 @@ data BapMetadataT f = BapMetadataT
   deriving (Generic, B.Beamable)
 
 instance B.Table BapMetadataT where
-  data PrimaryKey BapMetadataT f
-    = BapMetadataId (B.C f Data.Text.Text) (B.C f Data.Text.Text) (B.C f (Kernel.Prelude.Maybe Data.Text.Text)) (B.C f (Kernel.Prelude.Maybe Data.Text.Text))
-    deriving (Generic, B.Beamable)
-  primaryKey = BapMetadataId <$> domain <*> id <*> merchantId <*> merchantOperatingCityId
+  data PrimaryKey BapMetadataT f = BapMetadataId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
+  primaryKey = BapMetadataId . id
 
 type BapMetadata = BapMetadataT Identity
 
-$(enableKVPG ''BapMetadataT ['domain, 'id, 'merchantId, 'merchantOperatingCityId] [])
+$(enableKVPG ''BapMetadataT ['id] [])
 
 $(mkTableInstances ''BapMetadataT "bap_metadata")

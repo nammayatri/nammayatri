@@ -54,7 +54,6 @@ import qualified Domain.Types.AddOnConfig as DAddOnConfig
 import qualified Domain.Types.BapMetadata as DBapMetadata
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.RideRoute as RI
 import Domain.Types.VehicleVariant (castServiceTierToVariant)
@@ -189,14 +188,14 @@ patchOrderRouteInfo transactionId order = do
 
 -- | Extract BAP_TERMS.STATIC_TERMS off an incoming wire message's tag list,
 -- parse it as a URL, and -- if it parsed and differs from what's on record --
--- store it on that BAP's BapMetadata row. Never throws.
-verifyIncomingStaticTerms :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DBapMetadata.BapMetadata -> Domain.Domain -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DBapMetadata.BapMetadata -> Maybe [Spec.TagGroup] -> m (Maybe DBapMetadata.BapMetadata)
-verifyIncomingStaticTerms bapSubscriberId domain merchantId merchantOpCityId mbBapMetadata tagGroups =
+-- store it on that BAP's BapMetadata row for this operating city. Never throws.
+verifyIncomingStaticTerms :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DBapMetadata.BapMetadata -> Domain.Domain -> Id DMOC.MerchantOperatingCity -> Maybe DBapMetadata.BapMetadata -> Maybe [Spec.TagGroup] -> m (Maybe DBapMetadata.BapMetadata)
+verifyIncomingStaticTerms bapSubscriberId domain merchantOpCityId mbBapMetadata tagGroups =
   case Utils.getTagV2 Tag.BAP_TERMS Tag.STATIC_TERMS tagGroups of
     Nothing -> pure mbBapMetadata
     Just rawUrl -> do
       result <- liftIO $ E.try @E.SomeException $ parseBaseUrl rawUrl
-      either (const (pure mbBapMetadata)) (CQBapMetaData.updateStaticTermsUrlIfChanged bapSubscriberId (show domain) merchantId merchantOpCityId mbBapMetadata) result
+      either (const (pure mbBapMetadata)) (CQBapMetaData.updateStaticTermsUrlIfChanged bapSubscriberId (show domain) merchantOpCityId mbBapMetadata) result
 
 boolTagValue :: Bool -> Text
 boolTagValue True = "true"
@@ -411,9 +410,9 @@ applyOnCancelOrderOverridesIfEnabled ::
   m (Maybe Spec.ConfirmReqMessage)
 applyOnCancelOrderOverridesIfEnabled isValueAddNP booking mbMsg = do
   -- Same gate the other on_* overrides on this branch read (see
-  -- applyOndcScheduledRideOrderOverridesIfEnabled): BapMetadata, keyed on the BAP, merchant and operating city.
-  mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id booking.bapId) Domain.MOBILITY booking.providerId booking.merchantOperatingCityId
-  let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
+  -- applyOndcScheduledRideOrderOverridesIfEnabled): BapMetadata, gated to the BAP's piloted operating city.
+  mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainAndCity (Id booking.bapId) Domain.MOBILITY booking.merchantOperatingCityId
+  let isOndcScheduledRideSupportEnabled = CQBapMetaData.isOndcScheduledRideSupportEnabled mbBapMetadata
   pure $
     if isOndcScheduledRideSupportEnabled
       then (\msg -> msg {Spec.confirmReqMessageOrder = applyOnCancelOrderOverrides isValueAddNP booking msg.confirmReqMessageOrder}) <$> mbMsg
@@ -546,7 +545,6 @@ applyOndcScheduledRideAssignedOrderOverrides isScheduled quoteId isRideStarted a
 applyOndcScheduledRideOrderOverridesIfEnabled ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
   Id DBapMetadata.BapMetadata ->
-  Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Bool ->
   Text ->
@@ -554,9 +552,9 @@ applyOndcScheduledRideOrderOverridesIfEnabled ::
   [DAddOnConfig.AddOnData] ->
   Maybe Spec.ConfirmReqMessage ->
   m (Maybe Spec.ConfirmReqMessage)
-applyOndcScheduledRideOrderOverridesIfEnabled bapSubscriberId merchantId merchantOperatingCityId isScheduled quoteId isRideStarted addOnData mbMsg = do
-  mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity bapSubscriberId Domain.MOBILITY merchantId merchantOperatingCityId
-  let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
+applyOndcScheduledRideOrderOverridesIfEnabled bapSubscriberId merchantOperatingCityId isScheduled quoteId isRideStarted addOnData mbMsg = do
+  mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainAndCity bapSubscriberId Domain.MOBILITY merchantOperatingCityId
+  let isOndcScheduledRideSupportEnabled = CQBapMetaData.isOndcScheduledRideSupportEnabled mbBapMetadata
   if isOndcScheduledRideSupportEnabled
     then traverse patchMsg mbMsg
     else pure mbMsg

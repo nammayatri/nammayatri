@@ -1982,7 +1982,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
     buildActiveEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq searchTry = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       (estimate :: Maybe Estimate) <- runInReplica $ QEst.findById (Id searchTry.estimateId)
-      bapMetadata <- CQSM.findBySubscriberIdDomainMerchantAndCity (Id searchRequest.bapId) Domain.MOBILITY searchRequest.providerId searchRequest.merchantOperatingCityId
+      bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id searchRequest.bapId) Domain.MOBILITY
       isValueAddNP <- CQVAN.isValueAddNP searchRequest.bapId
       mbRiderDetails <- maybe (pure Nothing) (runInReplica . QRiderDetails.findById) searchRequest.riderId
       farePolicy <- getFarePolicyByEstOrQuoteId Nothing (Just $ Maps.getCoordinates searchRequest.fromLocation) (Just . Maps.getCoordinates =<< searchRequest.toLocation) searchRequest.fromLocGeohash searchRequest.toLocGeohash searchRequest.estimatedDistance searchRequest.estimatedDuration searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) Nothing Nothing searchRequest.dynamicPricingLogicVersion (Just (TransactionId (Id searchRequest.transactionId))) searchRequest.configInExperimentVersions searchRequest.specialLocationName

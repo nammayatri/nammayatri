@@ -57,6 +57,7 @@ import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.Queries.Booking as QRB
@@ -331,7 +332,7 @@ validateRequest subscriber transporterId req now mbBapMetadata = do
   let bapMerchantId = booking.bapId
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
+  let isOndcScheduledRideSupportEnabled = CQBapMetaData.isOndcScheduledRideSupportEnabled mbBapMetadata
   -- OneWay OneWayOnDemandStaticOffer is the only category the pilot newly allows for non-value-add (external) BAPs -- everything else they were never validated for must stay blocked, even for a pilot-enabled BAP.
   -- This allows the two pre-existing dynamic-offer categories always, and OneWay OneWayOnDemandStaticOffer only when this BAP has the pilot enabled in this city.
   let isAllowedForNonValueAddNP = case booking.tripCategory of

@@ -16,8 +16,8 @@ BapMetadata:
     id : Id BapMetadata
     name : Text
     logoUrl : Maybe BaseUrl
-    domain: Text # TODO: Use Domain type here
-    merchantId: Maybe (Id Merchant)
+    domain: Maybe Text # TODO: Use Domain type here
+    merchantId: Maybe (Id Merchant) # ONDC 2.1.0 pilot: the single (merchant, city) this BAP is piloted in; ops-set, NULL for everyone else
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     staticTermsUrl : Maybe BaseUrl
     offlineContract : Maybe Bool # OFFLINE_CONTRACT tag echoed on BAP_TERMS/BPP_TERMS -- one fact about this BAP's deal with us, not a per-vehicle-category BecknConfig setting
@@ -28,18 +28,27 @@ BapMetadata:
 
   constraints:
     id: PrimaryKey
-    domain: PrimaryKey
-    merchantId: PrimaryKey
-    merchantOperatingCityId: PrimaryKey
-
-  default:
-    domain: "'MOBILITY'"
 
   queries:
-    findBySubscriberIdDomainMerchantAndCity:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllBySubscriberIdAndDomain:
+      kvFunction: findAllWithKV
+      where:
+        and: [id, domain]
+
+    findBySubscriberIdDomainAndCity:
       kvFunction: findOneWithKV
       where:
-        and: [id, domain, merchantId, merchantOperatingCityId]
+        and: [id, domain, merchantOperatingCityId]
+
+    updateStaticTermsUrlBySubscriberIdDomainAndCity:
+      kvFunction: updateWithKV
+      params: [staticTermsUrl]
+      where:
+        and: [id, domain, merchantOperatingCityId]
 
   beamType:
     logoUrl: Maybe Text

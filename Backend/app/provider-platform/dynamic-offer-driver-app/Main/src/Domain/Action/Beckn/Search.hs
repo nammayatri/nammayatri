@@ -290,7 +290,7 @@ handler :: ValidatedDSearchReq -> DSearchReq -> Flow DSearchRes
 handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   L.setOptionLocal TxnIdKey sReq.transactionId
   bapMetadata <- mkBapMetaData
-  CQBapMetaData.createIfNotPresent bapMetadata (Id sReq.bapId) (show Domain.MOBILITY) merchant.id merchantOpCityId
+  CQBapMetaData.createIfNotPresent bapMetadata (Id sReq.bapId) (show Domain.MOBILITY)
   searchMetricsMVar <- Metrics.startSearchMetrics merchant.name
   let merchantId' = merchant.id
   Metrics.incrementSearchRequestCount merchant.shortId.getShortId (show bapCity) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) sReq.routeDistance)
@@ -579,7 +579,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
       return $
         BapMetadata
           { id = Id sReq.bapId,
-            domain = show Domain.MOBILITY,
+            domain = Just (show Domain.MOBILITY),
             merchantId = Just merchant.id,
             merchantOperatingCityId = Just merchantOpCityId,
             enableOndcScheduledRideSupport = Nothing,

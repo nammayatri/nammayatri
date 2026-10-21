@@ -25,7 +25,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as BUtils
 import Control.Applicative ((<|>))
 import Data.Either.Extra (eitherToMaybe)
-import Data.Text as Text hiding (find)
+import Data.Text as Text hiding (find, map)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.AddOnConfig as DAddOnConfig
 import qualified Domain.Types.ConditionalCharges as DAC
@@ -232,7 +232,7 @@ validateRequest merchantId sReq isOndcScheduledRideSupportEnabled = do
       -- Synchronous NACK, before any fork. Resolved once here and handed to 'handler' (which runs after this, inside its own fork) so it doesn't re-query for the same rows.
       addOnData <-
         if isOndcScheduledRideSupportEnabled
-          then SAddOn.resolveAddOnData searchReq.offeredAddOns sReq.addOns
+          then SAddOn.resolveAddOnData (map (.vehicleServiceTier) ([estimate] <> xs)) searchReq.offeredAddOns sReq.addOns
           else pure []
       return (merchant, searchReq, [estimate] <> xs, addOnData)
 
@@ -273,7 +273,7 @@ applyNegotiatedFare searchReq quoteId sReq =
   -- This locks per quoteId and re-fetches the quote inside the lock.
   Redis.withLockRedisAndReturnValue (quoteNegotiationLockKey quoteId.getId) 60 $ do
     quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
-    addOnData <- computeAddOnData
+    addOnData <- computeAddOnData quote
     -- Priced once, here, and frozen into the quote's FareParameters: the catalogue is what's on offer, the fare parameters are what was charged.
     let addOnCharges = SAddOn.addOnChargesTotal addOnData
         fareParams = quote.fareParams
@@ -313,9 +313,9 @@ applyNegotiatedFare searchReq quoteId sReq =
         -- Total delta from the original fare, not just this negotiation round's step.
         pure $ Just (negotiatedFare - originalFare)
 
-    computeAddOnData
+    computeAddOnData quote
       | Kernel.Prelude.null sReq.addOns = pure [] -- if same request will come which already processed then we should process the latest addOns information not the esisting one
-      | otherwise = SAddOn.resolveAddOnData searchReq.offeredAddOns sReq.addOns
+      | otherwise = SAddOn.resolveAddOnData [quote.vehicleServiceTier] searchReq.offeredAddOns sReq.addOns
 
 quoteNegotiationLockKey :: Text -> Text
 quoteNegotiationLockKey id = "Driver:Select:Negotiate:QuoteId-" <> id

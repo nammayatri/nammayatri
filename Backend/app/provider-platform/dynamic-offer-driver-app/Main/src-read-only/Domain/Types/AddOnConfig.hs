@@ -34,7 +34,8 @@ data AddOnData = AddOnData
   { configId :: Kernel.Types.Id.Id Domain.Types.AddOnConfig.AddOnConfig,
     maxQuantity :: Kernel.Prelude.Int,
     pricePerQuantity :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    selectedQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    selectedQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    vehicleServiceTier :: [Domain.Types.Common.ServiceTierType]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 

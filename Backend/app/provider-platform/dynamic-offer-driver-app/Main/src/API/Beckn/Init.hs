@@ -86,13 +86,13 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
     -- Verifying: store the BAP's declared BAP_TERMS.STATIC_TERMS (if any)
     -- against its BapMetadata row, so it can be echoed back later at on_init.
     moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
-    mbBapMetadata' <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id bapId) Domain.MOBILITY transporterId moc.id
-    let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata' >>= (.enableOndcScheduledRideSupport))
+    mbBapMetadata' <- CQBapMetaData.findBySubscriberIdDomainAndCity (Id bapId) Domain.MOBILITY moc.id
+    let isOndcScheduledRideSupportEnabled = CQBapMetaData.isOndcScheduledRideSupportEnabled mbBapMetadata'
     mbBapMetadata <-
       if isOndcScheduledRideSupportEnabled
         then do
           let incomingOrderTags = reqV2.initReqMessage.confirmReqMessageOrder.orderTags
-          OSRCommon.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY transporterId moc.id mbBapMetadata' incomingOrderTags
+          OSRCommon.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY moc.id mbBapMetadata' incomingOrderTags
         else pure mbBapMetadata'
 
     -- Pilot merchants: corrects Layer 1's echo-based fulfillment-id parse (unreliable once our fulfillment.type override runs) and patches in the wire item's add-ons, in one pass.
