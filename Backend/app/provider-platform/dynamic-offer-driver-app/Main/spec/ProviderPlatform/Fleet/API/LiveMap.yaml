@@ -31,6 +31,14 @@ apis:
               - point: LatLong
             response:
               type: "[MapDriverInfoRes]"
+  - GET:
+      endpoint: /demandHotspots
+      appServerHandler: custom
+      auth: ApiAuthV2
+      response:
+        type: DemandHotspotsResp
+      migrate:
+        capability: fleet.live.read
 
 types:
   MapDriverInfoRes:
@@ -54,3 +62,16 @@ types:
     - fare: Maybe HighPrecMoney
     - source: Text
     - destination: Text
+  DemandHotspotsResp:
+    - createdAt: UTCTime
+    - expiryAt: UTCTime
+    - hotspotsDetails: "[DemandHotspotDetails]"
+    - enableDemandHotspots: Bool
+  DemandHotspotDetails:
+    - frequency: Int
+    - location: LatLong
+    - categories: "[DemandHotspotCategory]"
+  DemandHotspotCategory:
+    - tripOption: Text
+    - isScheduled: Bool
+    - frequency: Int

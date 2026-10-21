@@ -1001,6 +1001,9 @@ TransporterConfig:
       noOfGeohashesToReturn: Int
       nearbyRadiusMeters: Maybe Int
       nearbySearchStalenessMinutes: Maybe Int
+      # When Just True, search writes 5-element members (product + isScheduled).
+      # Missing/False keeps legacy 3-element writes so old pods can still decode during rollout.
+      storeHotspotProductInMember: Maybe Bool
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     AadhaarImageResizeConfig:
       height: Int
