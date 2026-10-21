@@ -87,6 +87,7 @@ import qualified Processor.RideEvents.InternalHelpers as IH
 import qualified "dynamic-offer-driver-app" SharedLogic.Analytics as Analytics
 import qualified "dynamic-offer-driver-app" SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import qualified "dynamic-offer-driver-app" SharedLogic.External.LocationTrackingService.Types as LT
+import qualified "dynamic-offer-driver-app" SharedLogic.FleetOperatorStats as SFleetOperatorStats
 import qualified "dynamic-offer-driver-app" SharedLogic.FleetVehicleStats as FVS
 import qualified "dynamic-offer-driver-app" SharedLogic.GoogleMobilityBilling as GoogleMobilityBilling
 import "dynamic-offer-driver-app" SharedLogic.Reminder.Helper (checkAndCreateRemindersForRidesThreshold)
@@ -218,6 +219,7 @@ handleFleetOperatorStats ::
     Esq.EsqDBReplicaFlow m r,
     MonadFlow m,
     Redis.HedisFlow m r,
+    Analytics.PublishesFleetAnalytics m,
     CoreMetrics.CoreMetrics m,
     EncFlow m r,
     CHConfig.ClickhouseFlow m r
@@ -227,7 +229,8 @@ handleFleetOperatorStats ::
 handleFleetOperatorStats ev = withRideAndBooking ev $ \ride booking -> do
   thresholdConfig <- fetchTransporterConfig ride
   when thresholdConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
-    Analytics.updateOperatorAnalyticsTotalRideCount thresholdConfig ride.driverId ride booking
+    rideStats <- SFleetOperatorStats.mkCompletedRideStats ride booking
+    Analytics.recordFleetOperatorAnalytics thresholdConfig (Analytics.RideCompleted ride.driverId rideStats)
     whenJust ride.fleetOwnerId $ \fleetOwnerId ->
       FVS.updateFleetVehicleDailyStats fleetOwnerId.getId thresholdConfig ride
 

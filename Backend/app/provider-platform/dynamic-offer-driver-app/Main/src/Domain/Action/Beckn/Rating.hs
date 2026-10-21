@@ -35,7 +35,6 @@ import IssueManagement.Domain.Types.MediaFile as D
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (encrypt)
-import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -143,26 +142,46 @@ handler merchantId req ride = do
         return (Just ratingCount, Just ratingsSum)
       else return (driverStats.totalRatings, driverStats.totalRatingScore)
 
-  rating <- B.runInReplica $ QRating.findRatingForRide ride.id
   mediaId <- audioFeedbackUpload mbBooking req.filePath transporterConfig
-  (netRatingValue, shouldIncrementCount) <- case rating of
-    Nothing -> do
-      logTagInfo "FeedbackAPI" $
-        "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.merchantId (Just ride.merchantOperatingCityId) ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance req.shouldFavDriver mediaId
-      QRating.create newRating
-      pure (ratingValue, True)
-    Just rideRating -> do
-      logTagInfo "FeedbackAPI" $
-        "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      let oldRatingValue = rideRating.ratingValue
-      let newRatingValue = ratingValue
-      QRating.updateRating newRatingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
-      pure (newRatingValue - oldRatingValue, False)
-  newRating <- calculateAverageRating driverId merchant.minimumDriverRatesCount shouldIncrementCount netRatingValue ratingCount ratingsSum transporterConfig
+  -- Serialize create/update for one ride so two overlapping ratings do not both
+  -- read the same old value and publish wrong deltas. Primary read under the lock;
+  -- driver_stats is re-read so a waiter sees the score the previous holder wrote.
+  (newRating, shouldIncrementCount, ratingCountForBehaviour) <-
+    Redis.withWaitAndLockRedis (ratingRideLockKey ride.id) 10 5000 $ do
+      rating <- QRating.findRatingForRide ride.id
+      (netRatingValue, shouldIncrementCount) <- case rating of
+        Nothing -> do
+          logTagInfo "FeedbackAPI" $
+            "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
+          newRatingRow <- buildRating ride.merchantId (Just ride.merchantOperatingCityId) ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance req.shouldFavDriver mediaId
+          QRating.create newRatingRow
+          pure (ratingValue, True)
+        Just rideRating -> do
+          logTagInfo "FeedbackAPI" $
+            "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
+          let oldRatingValue = rideRating.ratingValue
+              newRatingValue = ratingValue
+          QRating.updateRating newRatingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
+          pure (newRatingValue - oldRatingValue, False)
+      freshDriverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+      -- Prefer the locked re-read. Fall back to the values computed before the lock when
+      -- this request just backfilled an empty driver_stats row and the re-read is still empty.
+      let freshRatingCount = freshDriverStats.totalRatings <|> ratingCount
+          freshRatingsSum = freshDriverStats.totalRatingScore <|> ratingsSum
+      avgRating <-
+        calculateAverageRating
+          driverId
+          merchant.minimumDriverRatesCount
+          shouldIncrementCount
+          netRatingValue
+          freshRatingCount
+          freshRatingsSum
+          transporterConfig
+          ride.id.getId
+      pure (avgRating, shouldIncrementCount, fromMaybe 0 freshRatingCount)
   syncServiceTiersOnRatingChange driverStats newRating driverId ride.merchantOperatingCityId
   fork "driver rating behaviour" $ do
-    let newRatingCount = fromMaybe 0 ratingCount + (if shouldIncrementCount then 1 else 0)
+    let newRatingCount = ratingCountForBehaviour + (if shouldIncrementCount then 1 else 0)
     LowRating.recordDriverRating transporterConfig driverId ride.merchantOperatingCityId ride.id ratingValue shouldIncrementCount newRating newRatingCount
 
 syncServiceTiersOnRatingChange ::
@@ -181,7 +200,7 @@ syncServiceTiersOnRatingChange driverStats newRating personId merchantOpCityId =
     Right () -> pure ()
 
 calculateAverageRating ::
-  (CacheFlow m r, EsqDBFlow m r, EncFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
+  (CacheFlow m r, EsqDBFlow m r, EncFlow m r, Redis.HedisFlow m r, Analytics.PublishesFleetAnalytics m) =>
   Id DP.Person ->
   Int ->
   Bool ->
@@ -189,8 +208,9 @@ calculateAverageRating ::
   Maybe Int ->
   Maybe Int ->
   DTC.TransporterConfig ->
+  Text ->
   m (Maybe Centesimal)
-calculateAverageRating personId minimumDriverRatesCount shouldIncrementCount ratingValue mbtotalRatings mbtotalRatingScore transporterConfig = do
+calculateAverageRating personId minimumDriverRatesCount shouldIncrementCount ratingValue mbtotalRatings mbtotalRatingScore transporterConfig rideId = do
   logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
   let totalRatings = fromMaybe 0 mbtotalRatings
   let totalRatingScore = fromMaybe 0 mbtotalRatingScore
@@ -213,13 +233,17 @@ calculateAverageRating personId minimumDriverRatesCount shouldIncrementCount rat
     logTagInfo "PersonAPI" "No rating found to calculate"
   let isValidRating = newRatingsCount >= minimumDriverRatesCount
   logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
-  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsRatingScoreKey personId transporterConfig ratingValue shouldIncrementCount
+  submissionId <- generateGUID
+  Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.RatingSubmitted personId ratingValue shouldIncrementCount rideId newRatingsCount submissionId)
   void $ QDriverStats.updateAverageRating personId (Just newRatingsCount) (Just newTotalRatingScore) (Just isValidRating)
   let newRating =
         if newRatingsCount > 0
           then Just $ fromIntegral newTotalRatingScore / fromIntegral newRatingsCount
           else Just 0
   pure newRating
+
+ratingRideLockKey :: Id DRide.Ride -> Text
+ratingRideLockKey rideId = "rating:ride:" <> rideId.getId
 
 buildRating ::
   MonadFlow m =>

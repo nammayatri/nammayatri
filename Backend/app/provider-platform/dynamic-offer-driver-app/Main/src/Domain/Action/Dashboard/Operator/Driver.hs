@@ -109,6 +109,7 @@ import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
 import qualified Storage.Queries.DriverSSN as QDSSN
 import qualified Storage.Queries.DriverUdyam as QUDYAM
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
+import qualified Storage.Queries.FleetOperatorStats as QFleetOps
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIExtra
 import qualified Storage.Queries.Image as IQuery
@@ -746,25 +747,35 @@ getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = 
   unless (operator.role == DP.OPERATOR) $
     throwError AccessDenied
 
-  -- Redis keys for fleet aggregates
+  -- Gauge keys stay out of allTimeMetrics so a missing gauge does not send the six
+  -- counters through ClickHouse. They are passed into convert below, which looks
+  -- them up the same way as the six.
   let allTimeKeysData = AnalyticsExtra.allTimeKeys operator.id.getId
+      gaugeMetrics = [AnalyticsExtra.TOTAL_ASSOCIATED_DRIVER, AnalyticsExtra.TOTAL_ACTIVE_DRIVERS, AnalyticsExtra.TOTAL_ENABLED_DRIVERS]
+      gaugeKeys = map (AnalyticsExtra.makeOperatorAnalyticsKey operator.id.getId) gaugeMetrics
   logTagInfo "allTimeKeysData" (show allTimeKeysData)
 
-  -- try redis first
   mbAllTimeKeysRes <- mapM (Redis.get @Int) allTimeKeysData
+  mbGaugeRes <- mapM (Redis.get @Int) gaugeKeys
   logTagInfo "mbAllTimeKeysRes" (show mbAllTimeKeysRes)
 
-  -- fallback to ClickHouse and populate cache when missing
-  (totalRides, ratingSum, ratingCount, cancelCount, acceptationCount, totalRequestCount, mbTotalAssociatedDriver, mbTotalActiveDrivers, mbTotalEnabledDrivers) <- do
+  res <-
     if all isJust mbAllTimeKeysRes
-      then do
-        let res = AnalyticsExtra.convertToAllTimeFallbackRes (zip AnalyticsExtra.allTimeMetrics (map (fromMaybe 0) mbAllTimeKeysRes))
-        logTagInfo "AllTimeFallbackRes" (show res)
-        Analytics.extractOperatorAnalyticsData res
-      else do
-        res <- AnalyticsExtra.handleCacheMissForAnalyticsAllTimeCommon transporterConfig DP.OPERATOR operator.id.getId allTimeKeysData
-        logTagInfo "AllTimeFallbackRes" (show res)
-        Analytics.extractOperatorAnalyticsData res
+      then
+        pure $
+          AnalyticsExtra.convertToAllTimeFallbackRes $
+            zip AnalyticsExtra.allTimeMetrics (map (fromMaybe 0) mbAllTimeKeysRes)
+              ++ AnalyticsExtra.zipJusts gaugeMetrics mbGaugeRes
+      else AnalyticsExtra.handleCacheMissForAnalyticsAllTimeCommon transporterConfig DP.OPERATOR operator.id.getId allTimeKeysData
+  logTagInfo "AllTimeFallbackRes" (show res)
+  (totalRides, ratingSum, ratingCount, cancelCount, acceptationCount, totalRequestCount, redisAssociated, redisActive, redisEnabled) <-
+    Analytics.extractOperatorAnalyticsData res
+  mbStats <- QFleetOps.findByPrimaryKey operator.id.getId
+  -- No stats row yet: keep the Redis gauges extract returned. A row uses its columns.
+  let (mbTotalAssociatedDriver, mbTotalActiveDrivers, mbTotalEnabledDrivers) =
+        case mbStats of
+          Nothing -> (redisAssociated, redisActive, redisEnabled)
+          Just stats -> (stats.totalAssociatedDriver, stats.totalActiveDrivers, stats.totalEnabledDrivers)
 
   logTagInfo "Total rides" (show totalRides)
   logTagInfo "Rating sum" (show ratingSum)

@@ -10,9 +10,11 @@
 --     downstream (e.g. LOCATION_UPDATE pipes a batch into Redis).
 module Transporter.Kafka.Flow
   ( runPerEvent,
+    runPerEventCommit,
     runBatch,
     getConfigNameFromConsumertype,
     newKafkaConsumer,
+    newFleetAnalyticsKafkaConsumer,
   )
 where
 
@@ -22,6 +24,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Function
 import qualified Data.List as DL
+import qualified Data.Text as T
 import Environment
 import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
@@ -47,6 +50,24 @@ runPerEvent ::
 runPerEvent flowRt appEnv kafkaConsumer handler =
   readMessages kafkaConsumer
     & S.mapM (\(value, key, _cr) -> runFlowWithFreshLocalOptions flowRt appEnv $ withTaggedFlow key $ handler value key)
+    & S.drain
+
+-- | Same as runPerEvent, then commit that record's offset. A throw skips the commit,
+-- so a restarted process reads the same record. Used by FLEET_ANALYTICS_REALTIME.
+runPerEventCommit ::
+  (FromJSON event) =>
+  L.FlowRuntime ->
+  AppEnv ->
+  Consumer.KafkaConsumer ->
+  (event -> Text -> Flow ()) ->
+  IO ()
+runPerEventCommit flowRt appEnv kafkaConsumer handler =
+  readMessages kafkaConsumer
+    & S.mapM
+      ( \(value, key, cr) -> do
+          runFlowR flowRt appEnv $ withTaggedFlow key $ handler value key
+          commitRecord kafkaConsumer cr
+      )
     & S.drain
 
 ------------------------------------------------------------
@@ -102,11 +123,26 @@ readMessages kafkaConsumer = do
       (\message messageKey -> (message, messageKey, cr)) <$> mbMessage <*> mbMessageKey
 
 newKafkaConsumer :: AppEnv -> IO Consumer.KafkaConsumer
-newKafkaConsumer appEnv =
+newKafkaConsumer = newKafkaConsumerWith mempty
+
+-- | No saved offset starts at the beginning of the topic, so a crash before the
+-- first successful commit is still replayed.
+newFleetAnalyticsKafkaConsumer :: AppEnv -> IO Consumer.KafkaConsumer
+newFleetAnalyticsKafkaConsumer = newKafkaConsumerWith (Consumer.offsetReset Consumer.Earliest)
+
+newKafkaConsumerWith :: Consumer.Subscription -> AppEnv -> IO Consumer.KafkaConsumer
+newKafkaConsumerWith extraSub appEnv =
   either (error . ("Unable to open a kafka consumer: " <>) . show) id
     <$> Consumer.newConsumer
       (appEnv.kafkaConsumerCfg.consumerProperties)
-      (Consumer.topics appEnv.kafkaConsumerCfg.topicNames)
+      (Consumer.topics appEnv.kafkaConsumerCfg.topicNames <> extraSub)
+
+commitRecord :: Consumer.KafkaConsumer -> ConsumerRecordD -> IO ()
+commitRecord kafkaConsumer cr = do
+  mbErr <- Consumer.commitOffsetMessage Consumer.OffsetCommit kafkaConsumer cr
+  case mbErr of
+    Nothing -> pure ()
+    Just commitErr -> ioError $ userError $ T.unpack $ "fleet analytics offset commit failed: " <> show commitErr
 
 ------------------------------------------------------------
 -- Consumer-type → Dhall config name
@@ -118,3 +154,4 @@ getConfigNameFromConsumertype = \case
   LOCATION_UPDATE -> pure "location-update"
   FLEET_COMMUNICATION_DISPATCH -> pure "fleet-communication-dispatch"
   RIDE_EVENTS_CONSUMER -> pure "ride-events-consumer"
+  FLEET_ANALYTICS_REALTIME -> pure "fleet-analytics-realtime"

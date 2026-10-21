@@ -49,6 +49,7 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool (getBatchingMode, getNextBatchScheduleTime)
 import SharedLogic.DriverPool.Types
@@ -189,7 +190,8 @@ initiateDriverSearchBatch ::
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
     Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    Analytics.PublishesFleetAnalytics m
   ) =>
   DriverSearchBatchInput m ->
   m DST.SearchTry

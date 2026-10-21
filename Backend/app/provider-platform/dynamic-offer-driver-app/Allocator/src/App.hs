@@ -59,6 +59,7 @@ import SharedLogic.Allocator.Jobs.FCM.RunScheduledFCMS (runScheduledFCMS)
 import SharedLogic.Allocator.Jobs.FCM.SoftBlockNotification
 import SharedLogic.Allocator.Jobs.FarePolicy.DeleteUnreferencedFarePolicies (deleteUnreferencedFarePolicies)
 import SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert (sendFleetAlert)
+import SharedLogic.Allocator.Jobs.FleetAnalytics.RedisRecon (runFleetAnalyticsRedisReconJob)
 import SharedLogic.Allocator.Jobs.FleetEngine.Retry (fleetEngineRetryHandler)
 import SharedLogic.Allocator.Jobs.IncentiveJourney.BulkUserCohortMappingUpload (runBulkUserCohortMappingUploadJob)
 import SharedLogic.Allocator.Jobs.Insurance.IffcoTokioInsurance (triggerIffcoTokioInsuranceForOnRideDrivers)
@@ -213,6 +214,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env runAggregatedCommissionInvoiceCreationJob
           & putJobHandlerInListWrapper flowRt env sendConnectAccountCharge
           & putJobHandlerInListWrapper flowRt env runBulkUserCohortMappingUploadJob
+          & putJobHandlerInListWrapper flowRt env runFleetAnalyticsRedisReconJob
           & putJobHandlerInListWrapper flowRt env deleteUnreferencedFarePolicies
           & putJobHandlerInListWrapper flowRt env runGenerateInvoicePdfJob
           & putJobHandlerInListWrapper flowRt env handleSendLegalPolicyNotification
