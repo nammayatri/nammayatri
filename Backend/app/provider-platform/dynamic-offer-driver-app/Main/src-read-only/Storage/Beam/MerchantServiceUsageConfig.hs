@@ -45,6 +45,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getDistancesForCancelRide :: (B.C f Kernel.External.Maps.Types.MapsService),
     getDistancesForScheduledRides :: (B.C f Kernel.External.Maps.Types.MapsService),
     getEstimatedPickupDistances :: (B.C f Kernel.External.Maps.Types.MapsService),
+    getEstimatedPickupDistancesFallback :: (B.C f (Kernel.Prelude.Maybe [Kernel.External.Maps.Types.MapsService])),
     getExophone :: (B.C f Kernel.External.Call.CallService),
     getPickupRoutes :: (B.C f Kernel.External.Maps.Types.MapsService),
     getPlaceDetails :: (B.C f Kernel.External.Maps.Types.MapsService),
