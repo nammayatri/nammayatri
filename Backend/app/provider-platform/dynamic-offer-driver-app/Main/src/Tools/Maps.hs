@@ -34,6 +34,7 @@ module Tools.Maps
   )
 where
 
+import Data.List (nub)
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceConfig as DOSC
@@ -113,7 +114,11 @@ getEstimatedPickupDistances ::
   Maybe Text ->
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
-getEstimatedPickupDistances = runWithServiceConfig Maps.getDistances (.getEstimatedPickupDistances)
+getEstimatedPickupDistances _merchantId merchantOpCityId entityId req = do
+  merchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  let mapsProvidersPriorityList = nub $ merchantServiceUsageConfig.getEstimatedPickupDistances : fromMaybe [] merchantServiceUsageConfig.getEstimatedPickupDistancesFallback
+  runWithProvidersFallback "getEstimatedPickupDistances" (getMapsServiceConfig merchantOpCityId) mapsProvidersPriorityList $ \msc ->
+    Maps.getDistances entityId (Just merchantOpCityId.getId) msc req
 
 dynamicPickupDistancesProvider :: MapsService
 dynamicPickupDistancesProvider = Maps.Disha -- our maps.
@@ -282,9 +287,14 @@ runWithServiceConfig ::
   m resp
 runWithServiceConfig func getCfg _merchantId merchantOpCityId entityId req = do
   orgMapsConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-  orgMapsServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService $ getCfg orgMapsConfig)}) Nothing
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show $ getCfg orgMapsConfig))
-  case orgMapsServiceConfig.serviceConfig of
-    DOSC.MapsServiceConfig msc -> func entityId (Just merchantOpCityId.getId) msc req
+  msc <- getMapsServiceConfig merchantOpCityId (getCfg orgMapsConfig)
+  func entityId (Just merchantOpCityId.getId) msc req
+
+getMapsServiceConfig :: ServiceFlow m r => Id MerchantOperatingCity -> MapsService -> m MapsServiceConfig
+getMapsServiceConfig merchantOpCityId mapsService = do
+  merchantServiceConfig <-
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService mapsService)}) Nothing
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show mapsService))
+  case merchantServiceConfig.serviceConfig of
+    DOSC.MapsServiceConfig msc -> pure msc
     _ -> throwError $ InternalError "Unknown Service Config"
