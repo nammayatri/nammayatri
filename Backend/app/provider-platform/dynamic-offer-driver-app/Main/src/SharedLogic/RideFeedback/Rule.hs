@@ -60,9 +60,19 @@ unsupportedOperators = \case
   A.Array items -> concatMap unsupportedOperators (V.toList items)
   _ -> []
   where
-    -- The second argument of "switch" is a plain lookup table, not a rule.
-    operatorArgs "switch" (A.Array items) = concatMap unsupportedOperators [v | (i, v) <- zip [0 :: Int ..] (V.toList items), i /= 1]
-    operatorArgs _ args = unsupportedOperators args
+    operatorArgs op args = case (fromMaybe op (T.stripSuffix "'" op), args) of
+      -- The second argument of "switch" is a lookup table: its keys are values to match, not
+      -- operators, but the library runs the matched case's value as logic, so the values are checked.
+      ("switch", A.Array items) -> concatMap switchArg (zip [0 :: Int ..] (V.toList items))
+      (base, A.Array items) | base `elem` listOperators -> concatMap unsupportedOperators (V.toList items)
+      -- Given anything but a list, the library does not run these: it returns the object, which
+      -- counts as true, so the rule would match every time.
+      (base, _) | base `elem` listOperators || base == "switch" -> [op <> " (needs a list of arguments)"]
+      _ -> unsupportedOperators args
+    switchArg (1, A.Object cases) = concatMap unsupportedOperators (KM.elems cases)
+    switchArg (_, v) = unsupportedOperators v
+    -- Operators the library only runs with an array of arguments ('applyOperation'' in json-logic-hs).
+    listOperators = ["filter", "sort", "map", "fold", "on"] :: [Text]
 
 -- | Deterministic bucket in [0, 99]; stable across releases, unlike 'Data.Hashable.hash'.
 stableBucket :: Text -> Int
