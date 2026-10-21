@@ -733,7 +733,7 @@ async function handle(req, res) {
 
     /* ── by WhatsApp: the code goes the other way ────────────────────────────
        No SMS and no cost. The caller is given the code and a link that opens
-       WhatsApp to our number with `MOVIN <code>` already typed; he presses
+       WhatsApp to our number with `MOVA <code>` already typed; he presses
        Send. Knowing the code opens nothing: verify accepts it only once Meta
        has delivered it, signed, FROM the number signing in (see the verify
        route). That is the proof -- WhatsApp's word for who sent it. */

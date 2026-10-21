@@ -65,7 +65,8 @@ const KEEP_MAX = 5000;
 /** One delivery; the forwarder batches, but not a whole phone's history. */
 const MAX_PER_DELIVERY = 200;
 
-const CODE = /\bMOVIN\s*[-:]?\s*(\d{6})\b/i;
+// MOVA, and MOVIN still: see the note on the same line in whatsapp.js.
+const CODE = /\b(?:MOVA|MOVIN)\s*[-:]?\s*(\d{6})\b/i;
 
 /** Sender (international digits, no trunk zero) → the latest message from him. */
 const inbox = new Map();
@@ -194,7 +195,7 @@ const countries = () => [...SIMS.keys()];
 
 /** A sign-in is waiting for this code: what the app shows and writes for him. */
 function expect(dialCode, code) {
-  return { number: simFor(dialCode), text: `MOVIN ${code}` };
+  return { number: simFor(dialCode), text: `MOVA ${code}` };
 }
 
 /** For /healthz. `lastAt` is the phone's pulse; never a secret, never a number. */

@@ -211,7 +211,7 @@ System User token (never expires). The Meta app **movindz** was subscribed to
 the business account the same day.
 
 The plan is sign-in **without a template**: the app opens WhatsApp with
-`MOVIN 483920` already typed, the passenger presses Send, and the sender's
+`MOVA 483920` already typed (`MOVIN` until 2026-10-21, still accepted), the passenger presses Send, and the sender's
 number — WhatsApp's word, not something he typed — proves he holds it.
 Messages people send a business are free and need no approval.
 
@@ -220,7 +220,7 @@ Built (2026-09-27): **sign-in by WhatsApp**, end to end, in the guard
 
 - `POST {/v2,/ui}/auth/whatsapp` is a sign-in start with every check the SMS
   start has, and no SMS: the answer carries a code and a `wa.me` link with
-  `MOVIN <code>` already written. nginx gives it the `signin` bucket.
+  `MOVA <code>` already written. nginx gives it the `signin` bucket.
 - `GET {/v2,/ui}/auth/{id}/whatsapp` → `{confirmed}`; the app polls it.
 - The usual verify accepts the code **only** once Meta has delivered it,
   signed with the app secret, from the number signing in. The code alone was
@@ -246,7 +246,7 @@ superset of this one (see its header): patch it in place, never copy it.
 ### The SMS inbox and sign-in by an SMS he sends (2026-09-29)
 
 The client's plan (2026-09-28) is the WhatsApp flow over plain SMS: the
-passenger texts `MOVIN <code>` to a SIM in an Android phone at the office,
+passenger texts `MOVA <code>` (or `MOVIN`: both are read) to a SIM in an Android phone at the office,
 and that phone's forwarder (the client's own, "chatty-sms") POSTs what it
 received to us. It would replace Moorsyl — which **stays** until this is
 proved on the real phone (owner's decision).

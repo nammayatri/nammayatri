@@ -85,7 +85,7 @@ const deliver = (raw, signed) =>
   // WhatsApp sends without -- the normalisation is part of what is tested.
   const start = await call('POST', '/ui/auth/whatsapp', { mobileCountryCode: '+213', mobileNumber: '0555123456', merchantId: 'm' });
   const wa = start.json && start.json.whatsapp;
-  check('start -> 200 with an authId, a code and a link', start.status === 200 && start.json.authId && /^\d{6}$/.test(wa && wa.code) && /^https:\/\/wa\.me\/213783079161\?text=MOVIN%20\d{6}$/.test(wa.link), start);
+  check('start -> 200 with an authId, a code and a link', start.status === 200 && start.json.authId && /^\d{6}$/.test(wa && wa.code) && /^https:\/\/wa\.me\/213783079161\?text=MOVA%20\d{6}$/.test(wa.link), start);
   const id = start.json.authId;
   const code = wa.code;
   const status = () => call('GET', `/ui/auth/${id}/whatsapp`).then((r) => r.json && r.json.confirmed);
@@ -117,6 +117,15 @@ const deliver = (raw, signed) =>
 
   const again = await call('GET', `/ui/auth/${id}/whatsapp`);
   check('the session is spent after a sign-in', again.status === 404, again);
+
+  // MOVA is the word the server now tells the app to write (2026-10-21); the
+  // sign-in above proved MOVIN, which every build already on a phone still sends.
+  const startNew = await call('POST', '/ui/auth/whatsapp', { mobileCountryCode: '+213', mobileNumber: '0555123458', merchantId: 'm' });
+  const idNew = startNew.json.authId;
+  const codeNew = startNew.json.whatsapp.code;
+  const statusNew = () => call('GET', `/ui/auth/${idNew}/whatsapp`).then((r) => r.json && r.json.confirmed);
+  await deliver(delivery('213555123458', `MOVA ${codeNew}`), true);
+  check('MOVA <code>, signed, from the right number -> confirmed', (await statusNew()) === true);
 
   const h = await call('GET', '/healthz');
   check('healthz says WhatsApp is ready', h.json.whatsapp.ready === true, h.json.whatsapp);

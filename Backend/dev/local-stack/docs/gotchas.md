@@ -153,11 +153,12 @@ The private bot's messages (`movin-bot.py`) start « Mova · » since 2026-10-19
 
 **Left as « Movin » on purpose, each for a reason that is not cosmetic:**
 
-- **The sign-in keyword `MOVIN <code>`** that a person sends by WhatsApp or SMS
-  (`whatsapp.js`, `sms-inbox.js`, and the app's pre-typed message). Every build
-  already on a phone sends it; changing the guard alone would lock them out, and
-  changing the app alone would break the new build. If it is ever renamed, the
-  guard accepts both words first, and the app switches a release later.
+- **The sign-in keyword is `MOVA <code>` since 2026-10-21, and `MOVIN <code>` is
+  accepted for good** (`whatsapp.js`, `sms-inbox.js`: `/\b(?:MOVA|MOVIN)…/`).
+  The order mattered: every build already on a phone writes MOVIN, so the guard
+  was changed to accept both and to tell the app to write MOVA (`expect()`, the
+  WhatsApp link and the SMS text), and the app followed in a later build. **Never
+  drop MOVIN from the pattern**: it would lock out whoever has not updated.
 - **`SMS_SENDER`** — « Movin » is the sender Moorsyl registered; an unregistered
   one may be refused, and Mauritanian sign-in is the one route that spends money.
   Ask Moorsyl to register « Mova » **before** changing it. In `verify` mode (the

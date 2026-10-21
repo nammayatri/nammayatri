@@ -155,8 +155,9 @@ database, the containers and the domain still say Movin on purpose**: the
 rename changed what a person reads, not identifiers. Do not "finish" it.
 Written « Mova » since: the Chargily checkout line and the wallet page
 (`maps-shim/wallet.js`), the WhatsApp reply and the `sms`-mode text
-(`auth-guard/`) and the private bot's messages (« Mova · », 2026-10-19). **Still « Movin », and why:** the sign-in keyword
-`MOVIN <code>` (every build already on a phone sends it), `SMS_SENDER` (the
+(`auth-guard/`) and the private bot's messages (« Mova · », 2026-10-19). The sign-in keyword is `MOVA <code>` since 2026-10-21, and
+the guard still reads `MOVIN <code>` (every build already on a phone sends it:
+never drop it). **Still « Movin », and why:** `SMS_SENDER` (the
 sender Moorsyl registered), the merchant ids and names, `movin-*` units and
 files. The website's wordmark and the server's texts stay
 plain « Mova »; only the app's logo carries the Arabic name (« Mova | موفا »),
