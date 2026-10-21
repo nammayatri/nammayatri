@@ -63,6 +63,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.AddOn as SAddOn
+import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
@@ -115,6 +116,7 @@ type AcceptDynamicOfferFlow m r c =
     -- HasFlowEnv, not plain HasField: avoids an overlapping-instance error where a caller also needs buildSearchRequestForDriver's own HasFlowEnv "version".
     HasFlowEnv m r '["version" ::: DeploymentVersion],
     HasKafkaProducer r,
+    Analytics.PublishesFleetAnalytics m,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     EventStreamFlow m r,

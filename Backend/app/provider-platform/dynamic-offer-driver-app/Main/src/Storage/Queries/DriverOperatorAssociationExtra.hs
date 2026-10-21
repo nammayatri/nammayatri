@@ -178,6 +178,25 @@ getActiveDriverIdsByOperatorId operatorId = do
       ]
   pure $ map (.driverId) associations
 
+findActiveDriverLinksByOperatorIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Text] ->
+  m [(Text, Id DP.Person)]
+findActiveDriverLinksByOperatorIds operatorIds = do
+  now <- getCurrentTime
+  if null operatorIds
+    then pure []
+    else do
+      associations <-
+        findAllWithKV
+          [ Se.And
+              [ Se.Is BeamDOA.operatorId $ Se.In operatorIds,
+                Se.Is BeamDOA.isActive $ Se.Eq True,
+                Se.Is BeamDOA.associatedTill (Se.GreaterThan $ Just now)
+              ]
+          ]
+      pure $ map (\assoc -> (assoc.operatorId, assoc.driverId)) associations
+
 endOperatorDriverAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id DP.Person -> m ()
 endOperatorDriverAssociation operatorId (Id driverId) = do
   now <- getCurrentTime

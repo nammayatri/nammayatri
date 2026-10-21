@@ -303,6 +303,25 @@ getActiveDriverIdsByFleetOwnerId fleetOwnerId = do
       ]
   pure $ map (.driverId) associations
 
+findActiveDriverLinksByFleetOwnerIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Text] ->
+  m [(Text, Id Person)]
+findActiveDriverLinksByFleetOwnerIds fleetOwnerIds = do
+  now <- getCurrentTime
+  if null fleetOwnerIds
+    then pure []
+    else do
+      associations <-
+        findAllWithKV
+          [ Se.And
+              [ Se.Is BeamFDVA.fleetOwnerId $ Se.In fleetOwnerIds,
+                Se.Is BeamFDVA.isActive $ Se.Eq True,
+                Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)
+              ]
+          ]
+      pure $ map (\assoc -> (assoc.fleetOwnerId, assoc.driverId)) associations
+
 findAllActiveByFleetOwnerId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Text ->
