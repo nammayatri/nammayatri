@@ -460,7 +460,9 @@ def _load_last_synced():
         with CONFIG_SYNC_MARKER_PATH.open("r") as f:
             data = json.load(f)
         if data.get("from") and data.get("synced_at"):
-            return {"from": data["from"], "finished_at": data["synced_at"]}
+            # version is absent in records written before it was tracked → None
+            return {"from": data["from"], "version": data.get("version"),
+                    "finished_at": data["synced_at"]}
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         pass
     return None
@@ -704,6 +706,8 @@ def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: b
             with tmp.open("w") as f:
                 json.dump({
                     "from": from_env,
+                    # e.g. "v13"; None = config_transfer.py's built-in default
+                    "version": version,
                     "to": "local",
                     "synced_at": synced_at,
                     "source": "context-api/run_config_sync",
@@ -714,7 +718,8 @@ def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: b
         except OSError as e:
             _append_log(f"WARN: failed to write sync marker: {e}")
         with _config_sync_lock:
-            _config_sync_state["last_synced"] = {"from": from_env, "finished_at": synced_at}
+            _config_sync_state["last_synced"] = {"from": from_env, "version": version,
+                                                 "finished_at": synced_at}
     except Exception as e:
         with _config_sync_lock:
             _config_sync_state["error"] = str(e)

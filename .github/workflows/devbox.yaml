@@ -1,0 +1,230 @@
+# Devbox releases: run Backend/dev/devbox_core on the office runner against a
+# fleet dev-box. System Control Centre ("Devbox Releases") dispatches this.
+#
+#   ping   the runner can SSH into the dev-box (DEVBOX_SSH_KEY; its public half
+#          is on the dev-box, restricted to the runner's overlay IP 100.64.0.1,
+#          so the runner reaches dev-boxes over the hopper tailnet)
+#   spawn  nammayatri@backend_ref (+ control-center@cc_ref inside it) → a
+#          workspace on a dev-box, one step per SCC stage: Preparing, Sync,
+#          Build, Start, Data, Control centre, Result. GitHub reports each
+#          step live; the Result step's log ends with DEVBOX_RESULT (URLs).
+#   stop   remove that workspace (control centre, stack, folder, registry entry)
+#
+# Inputs reach the shell only through env vars, never inline in `run:`.
+name: devbox
+run-name: devbox ${{ inputs.action || 'ping' }} ${{ inputs.workspace }} ${{ inputs.release_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "ping | spawn | stop"
+        type: choice
+        options: [ping, spawn, stop]
+        default: ping
+      workspace:
+        description: "Workspace name (letters, digits, - and _)"
+        default: ""
+      backend_ref:
+        description: "nammayatri commit or branch (spawn)"
+        default: ""
+      cc_ref:
+        description: "control-center commit or branch (spawn; empty = no control centre)"
+        default: ""
+      data_from:
+        description: "Data to load (spawn)"
+        type: choice
+        options: [none, master, prod, prod_international]
+        default: none
+      data_version:
+        description: "Data version, e.g. v14 (empty = latest safe)"
+        default: ""
+      release_id:
+        description: "SCC release id (owner of the workspace)"
+        default: ""
+      owner:
+        description: "Who started it (SCC user)"
+        default: ""
+      devbox_host:
+        description: "Dev-box address (empty = pick one; required for stop)"
+        default: ""
+      devbox_user:
+        description: "Dev-box SSH user (with devbox_host)"
+        default: ""
+  # Test hook until this file is on main (only main's workflows can be
+  # dispatched): a change to this file on the feature branch runs `ping`.
+  push:
+    branches: [backend/feat/devbox-feature-test]
+    paths: [.github/workflows/devbox.yaml]
+
+concurrency:
+  group: devbox-${{ inputs.workspace || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  devbox:
+    runs-on: x86_64_main_push
+    timeout-minutes: 120
+    env:
+      ACTION: ${{ inputs.action || 'ping' }}
+      WORKSPACE: ${{ inputs.workspace }}
+      BACKEND_REF: ${{ inputs.backend_ref }}
+      CC_REF: ${{ inputs.cc_ref }}
+      DATA_FROM: ${{ inputs.data_from || 'none' }}
+      DATA_VERSION: ${{ inputs.data_version }}
+      RELEASE_ID: ${{ inputs.release_id }}
+      OWNER: ${{ inputs.owner }}
+      # What the caller asked for. The dev-box actually used is DEVBOX_HOST /
+      # DEVBOX_USER / DEVBOX_NAME, set for later steps by "Check inputs" (ping,
+      # stop) or "Preparing" (spawn) through $GITHUB_ENV.
+      INPUT_HOST: ${{ inputs.devbox_host }}
+      INPUT_USER: ${{ inputs.devbox_user }}
+      SRC: ${{ github.workspace }}/ws/nammayatri
+    steps:
+      - name: Check inputs
+        run: |
+          case "$ACTION" in
+            ping)
+              # The push test hook has no inputs: ping soya-chaap (its overlay
+              # IP; office IPs change after a power cut).
+              echo "DEVBOX_HOST=${INPUT_HOST:-100.64.0.12}" >> "$GITHUB_ENV"
+              echo "DEVBOX_USER=${INPUT_USER:-soya-chaap}" >> "$GITHUB_ENV" ;;
+            spawn|stop)
+              [[ "$WORKSPACE" =~ ^[A-Za-z0-9_-]+$ ]] || { echo "::error::workspace must be letters, digits, - or _"; exit 1; }
+              [ -n "$RELEASE_ID" ] || { echo "::error::release_id is required"; exit 1; } ;;
+          esac
+          if [ "$ACTION" = spawn ] && [ -z "$BACKEND_REF" ]; then echo "::error::backend_ref is required for spawn"; exit 1; fi
+          if [ "$ACTION" = stop ]; then
+            if [ -z "$INPUT_HOST" ] || [ -z "$INPUT_USER" ]; then
+              echo "::error::devbox_host and devbox_user are required for stop"; exit 1
+            fi
+            echo "DEVBOX_HOST=$INPUT_HOST" >> "$GITHUB_ENV"
+            echo "DEVBOX_USER=$INPUT_USER" >> "$GITHUB_ENV"
+          fi
+          echo "runner machine: $(hostname)  addresses: $(hostname -I 2>/dev/null || true)"
+
+      # The tools come from the workflow's own commit (main, once merged), so a
+      # feature branch being tested cannot change how it is deployed.
+      - name: Checkout devbox_core
+        uses: actions/checkout@v4
+        with:
+          path: tools
+          sparse-checkout: Backend/dev/devbox_core
+
+      - name: Checkout nammayatri ${{ inputs.backend_ref }}
+        if: env.ACTION == 'spawn'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.backend_ref }}
+          path: ws/nammayatri
+          # The build cache needs history: the nearest main ancestor carrying
+          # a minio-pushed tag (devbox_core.deploy.cache_commit).
+          fetch-depth: 200
+
+      - name: Fetch main and build-cache tags
+        if: env.ACTION == 'spawn'
+        working-directory: ws/nammayatri
+        run: |
+          git fetch --quiet --depth=200 origin main \
+            'refs/tags/minio-pushed/*:refs/tags/minio-pushed/*' || echo "::warning::could not fetch main / cache tags — the build may start from scratch"
+
+      - name: Checkout control-center ${{ inputs.cc_ref }}
+        if: env.ACTION == 'spawn' && inputs.cc_ref != ''
+        uses: actions/checkout@v4
+        with:
+          repository: nammayatri/control-center
+          ref: ${{ inputs.cc_ref }}
+          token: ${{ secrets.CONTROL_CENTER_TOKEN }}
+          path: ws/nammayatri/control-center
+          persist-credentials: false
+
+      - name: Control-center commit
+        if: env.ACTION == 'spawn' && inputs.cc_ref != ''
+        run: echo "CC_COMMIT=$(git -C "$SRC/control-center" rev-parse --short HEAD)" >> "$GITHUB_ENV"
+
+      - name: Dev-box key
+        env:
+          DEVBOX_SSH_KEY: ${{ secrets.DEVBOX_SSH_KEY }}
+        run: |
+          key="$RUNNER_TEMP/devbox_key"
+          (umask 077; printf '%s\n' "$DEVBOX_SSH_KEY" > "$key")
+          echo "DEVBOX_SSH_KEY_FILE=$key" >> "$GITHUB_ENV"
+
+      - name: Ping
+        if: env.ACTION == 'ping'
+        working-directory: tools/Backend/dev
+        run: |
+          python3 -m devbox_core ping --host "$DEVBOX_HOST" --user "$DEVBOX_USER"
+          ssh -i "$DEVBOX_SSH_KEY_FILE" -o IdentitiesOnly=yes -o BatchMode=yes \
+              -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+              "$DEVBOX_USER@$DEVBOX_HOST" \
+              'echo "runner address as seen by $(hostname): ${SSH_CONNECTION%% *}"'
+
+      # spawn: one step per stage SCC shows. The step names ARE the stage names
+      # (SCC's poller reads them live), so keep them exactly as they are.
+      - name: Preparing
+        if: env.ACTION == 'spawn'
+        working-directory: tools/Backend/dev
+        run: |
+          pick=(--github-env)
+          [ -n "$INPUT_HOST" ] && pick+=(--host "$INPUT_HOST" --user "$INPUT_USER")
+          out=$(python3 -m devbox_core pick "${pick[@]}") || { echo "$out"; exit 1; }
+          echo "$out"
+          host=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["host"])' <<< "$out")
+          user=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["user"])' <<< "$out")
+          python3 -m devbox_core register --host "$host" --user "$user" --name "$WORKSPACE" \
+            --owner-by scc --owner-user "$OWNER" --owner-release "$RELEASE_ID"
+
+      - name: Sync
+        if: env.ACTION == 'spawn'
+        working-directory: tools/Backend/dev
+        run: |
+          python3 -m devbox_core sync --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --src "$SRC" \
+            --name "$WORKSPACE" --owner-by scc --owner-user "$OWNER" --owner-release "$RELEASE_ID"
+
+      - name: Build
+        if: env.ACTION == 'spawn'
+        working-directory: tools/Backend/dev
+        run: |
+          python3 -m devbox_core stack-start --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE"
+          python3 -m devbox_core stack-wait --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE" --until services
+
+      - name: Start
+        if: env.ACTION == 'spawn'
+        working-directory: tools/Backend/dev
+        run: python3 -m devbox_core stack-wait --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE"
+
+      - name: Data
+        if: env.ACTION == 'spawn' && env.DATA_FROM != 'none'
+        working-directory: tools/Backend/dev
+        run: |
+          args=(--host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE" --from "$DATA_FROM")
+          [ -n "$DATA_VERSION" ] && args+=(--version "$DATA_VERSION")
+          python3 -m devbox_core data "${args[@]}"
+
+      - name: Control centre
+        if: env.ACTION == 'spawn' && inputs.cc_ref != ''
+        working-directory: tools/Backend/dev
+        run: |
+          python3 -m devbox_core cc-start --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE" \
+            --cc-branch "$CC_REF" --cc-commit "${CC_COMMIT:-}" --wait
+
+      - name: Result
+        if: env.ACTION == 'spawn'
+        working-directory: tools/Backend/dev
+        # DEVBOX_HOST is how the runner reaches the dev-box (overlay); the URLs
+        # testers open use its office address, DEVBOX_URL_HOST.
+        run: |
+          python3 -m devbox_core result --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE" \
+            --devbox "$DEVBOX_NAME" --url-host "${DEVBOX_URL_HOST:-}"
+
+      - name: Stop
+        if: env.ACTION == 'stop'
+        working-directory: tools/Backend/dev
+        run: |
+          python3 -m devbox_core stop --host "$DEVBOX_HOST" --user "$DEVBOX_USER" \
+            --name "$WORKSPACE" --owner-by scc --owner-user "$OWNER" --owner-release "$RELEASE_ID"
+
+      - name: Clean up
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/devbox_key" "${{ github.workspace }}/ws"
