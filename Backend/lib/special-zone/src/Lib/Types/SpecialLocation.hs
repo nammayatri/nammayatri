@@ -104,6 +104,9 @@ data SpecialLocation = SpecialLocation
     isQueueEnabled :: Maybe Bool,
     parkingFeeExemptionEnabled :: Maybe Bool,
     enforceTollRoute :: Maybe Bool,
+    -- | Overrides the city's @RiderConfig.enableOneWayScheduledRides@ for pickups inside
+    --   this zone, either way; 'Nothing' follows the city.
+    enableOneWayScheduledRides :: Maybe Bool,
     render :: Maybe RenderType,
     fetchAllGateFareProduct :: Maybe Bool,
     priority :: Int,

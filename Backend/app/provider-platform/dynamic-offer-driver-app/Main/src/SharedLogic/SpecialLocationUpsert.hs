@@ -84,6 +84,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     specialLocationId :: Text,
     isQueueEnabled :: Maybe Text,
     parkingFeeExemptionEnabled :: Maybe Text,
+    enableOneWayScheduledRides :: Maybe Text,
     supportNumber :: Maybe Text,
     gateInfoMinDriverThreshold :: Maybe Text,
     gateInfoDemandThreshold :: Maybe Text,
@@ -138,6 +139,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
     specialLocationId <- r .: "special_location_id"
     isQueueEnabled <- optional (r .: "is_queue_enabled")
     parkingFeeExemptionEnabled <- optional (r .: "parking_fee_exemption_enabled")
+    enableOneWayScheduledRides <- optional (r .: "enable_one_way_scheduled_rides")
     supportNumber <- optional (r .: "support_number")
     gateInfoMinDriverThreshold <- optional (r .: "gate_info_min_driver_threshold")
     gateInfoDemandThreshold <- optional (r .: "gate_info_demand_threshold")
@@ -313,6 +315,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
   let priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
       mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
       mbParkingFeeExemptionEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.parkingFeeExemptionEnabled) "Parking Fee Exemption Enabled"
+      mbEnableOneWayScheduledRides :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.enableOneWayScheduledRides) "Enable One Way Scheduled Rides"
       supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
       boothSpecificFleet :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.boothSpecificFleet) "Booth Specific Fleet"
       mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
@@ -364,6 +367,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             isQueueEnabled = mbIsQueueEnabled,
             parkingFeeExemptionEnabled = mbParkingFeeExemptionEnabled,
             enforceTollRoute = mbEnforceTollRoute,
+            enableOneWayScheduledRides = mbEnableOneWayScheduledRides,
             render = mbRender,
             fetchAllGateFareProduct = mbFetchAllGateFareProduct,
             supportNumber = supportNumber,
@@ -515,6 +519,7 @@ mergeSpecialLocationWithExisting new (Just old) =
       DSL.fetchAllGateFareProduct = new.fetchAllGateFareProduct <|> old.fetchAllGateFareProduct,
       DSL.render = new.render <|> old.render,
       DSL.enforceTollRoute = new.enforceTollRoute <|> old.enforceTollRoute,
+      DSL.enableOneWayScheduledRides = new.enableOneWayScheduledRides <|> old.enableOneWayScheduledRides,
       DSL.fareSettlementType = new.fareSettlementType <|> old.fareSettlementType,
       DSL.boothSpecificFleet = new.boothSpecificFleet <|> old.boothSpecificFleet
      }

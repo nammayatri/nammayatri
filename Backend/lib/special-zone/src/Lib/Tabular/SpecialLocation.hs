@@ -48,6 +48,7 @@ mkPersist
       isQueueEnabled Bool Maybe
       parkingFeeExemptionEnabled Bool Maybe
       enforceTollRoute Bool Maybe
+      enableOneWayScheduledRides Bool Maybe
       render Domain.RenderType Maybe
       fetchAllGateFareProduct Bool Maybe
       supportNumber Text Maybe

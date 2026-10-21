@@ -934,3 +934,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN pickup_eta_refresh_interval_second
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_dynamic_pickup_eta boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_one_way_scheduled_rides boolean ;
