@@ -17,8 +17,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
-import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
@@ -33,7 +31,6 @@ postDriverTagUpdate ::
 postDriverTagUpdate (mbPersonId, _, _) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   tagName <- validateTagPart "tagName" req.tagName
-  when (isReservedTagName tagName) $ throwError (InvalidRequest $ "tagName " <> tagName <> " is reserved")
   mbTagValue <- traverse (validateTagPart "tagValue") req.tagValue
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let updatedTags = case req.action of
@@ -49,13 +46,6 @@ postDriverTagUpdate (mbPersonId, _, _) req = do
             Just tagValue -> Yudhishthira.removeTagNameValue person.driverTag (LYT.TagNameValue $ tagName <> "#" <> tagValue)
   QPerson.updateDriverTag (Just updatedTags) personId
   pure APIT.DriverTagRes {driverTags = updatedTags}
-
--- | Written only by fleet settings and the area-preference flow.
-isReservedTagName :: Text -> Bool
-isReservedTagName tagName =
-  name == T.toLower QFDA.autoAssignTagName || name == T.toLower AreaPref.distancePreferenceEnabledTagName || "areapreference" `T.isPrefixOf` name
-  where
-    name = T.toLower tagName
 
 -- | Tag parts are stored joined by "#" (and multi-values by "&"), so neither may appear inside.
 validateTagPart :: (MonadThrow m, Log m) => Text -> Text -> m Text

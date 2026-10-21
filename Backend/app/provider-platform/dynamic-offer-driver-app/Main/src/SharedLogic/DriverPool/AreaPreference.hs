@@ -58,6 +58,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Types.Common
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 
 -- | A driver's preferred area, in exactly one of the two supported forms. The two
@@ -190,12 +191,11 @@ distancePreferenceEnabledTagName :: Text
 distancePreferenceEnabledTagName = "DistancePreferenceEnabled"
 
 isDistancePreferenceEnabledJson :: A.Value -> Bool
-isDistancePreferenceEnabledJson (A.Object tagsObj) =
-  case KM.lookup (A.fromText distancePreferenceEnabledTagName) tagsObj of
+isDistancePreferenceEnabledJson tags =
+  case Yudhishthira.accessTagKey (LYT.TagName distancePreferenceEnabledTagName) tags of
     Just (A.Bool enabled) -> enabled
     Just (A.String value) -> fromMaybe True (parseEnabledTagValue value)
     _ -> True
-isDistancePreferenceEnabledJson _ = True
 
 -- | Every tag name that must be cleared before writing a new selection --
 -- both the radius tag and every existing cell tag, regardless of which

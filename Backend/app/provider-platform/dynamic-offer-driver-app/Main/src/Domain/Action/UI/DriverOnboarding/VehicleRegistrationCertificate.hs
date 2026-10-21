@@ -736,11 +736,11 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                     driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
                     driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
                     vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
-                    rebuiltVehicle <- makeFullVehicleFromRC (Just vehicle) vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing
-                    let updatedVehicle = rebuiltVehicle {DVeh.exemptParkingFee = vehicle.exemptParkingFee}
+                    let updatedVehicle = (makeFullVehicleFromRC (Just vehicle) vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing) {DVeh.exemptParkingFee = vehicle.exemptParkingFee}
                     when (updatedVehicle.category /= vehicle.category) $
                       forceDriverOffline vehicle.driverId
                     VQuery.upsert updatedVehicle
+                    fork "applyFleetAutoAssignToNewVehicle" $ applyFleetAutoAssignToNewVehicle (Just vehicle) driver
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey transporterConfig num
         Nothing -> pure ()
 
@@ -963,8 +963,9 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
       person <- Person.findById driverInfo.driverId >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
       -- driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
-      vehicle <- makeFullVehicleFromRC mbPreviousVehicle cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing
+      let vehicle = makeFullVehicleFromRC mbPreviousVehicle cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing
       VQuery.create vehicle
+      fork "applyFleetAutoAssignToNewVehicle" $ applyFleetAutoAssignToNewVehicle mbPreviousVehicle person
       pure vehicle
 
 deactivateCurrentRC :: OnboardingFlow m r => DTC.TransporterConfig -> Id Person.Person -> m ()

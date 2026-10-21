@@ -401,21 +401,9 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
       ..
     }
 
--- | Takes the driver's previous vehicle: its auto-accept tiers are kept when the variant is unchanged, and a driver of a
--- fleet with auto-assign on by default gets the fleet's auto-accept tiers unless they had switched auto-accept off.
-makeFullVehicleFromRC ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
-  Maybe Vehicle ->
-  [DVST.VehicleServiceTier] ->
-  DI.DriverInformation ->
-  Person ->
-  Id DTM.Merchant ->
-  Text ->
-  VehicleRegistrationCertificate ->
-  Id DMOC.MerchantOperatingCity ->
-  UTCTime ->
-  Maybe [Text] ->
-  m Vehicle
+-- | Takes the driver's previous vehicle: its auto-accept tiers are kept when the variant is unchanged.
+-- The fleet's auto-assign is applied afterwards by 'applyFleetAutoAssignToNewVehicle', forked by the callers.
+makeFullVehicleFromRC :: Maybe Vehicle -> [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe [Text] -> Vehicle
 makeFullVehicleFromRC mbPreviousVehicle vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now vehicleTag = do
   let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now vehicleTag
   let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction AutoSelectedVariants driverInfo vehicle vehicleServiceTiers Nothing driver.driverTag now
@@ -424,8 +412,6 @@ makeFullVehicleFromRC mbPreviousVehicle vehicleServiceTiers driverInfo driver me
       -- refresh would strip tiers the vehicle still qualifies for.
       ratingGatedTiers = eligibleRatingGatedTiers driverInfo vehicle vehicleServiceTiers Nothing driver.driverTag now
       builtVehicle = setTiers (DL.nub (availableServiceTiersForDriver <> ratingGatedTiers)) vehicle.selectedAutoAcceptTiers vehicle
-      cityAutoAcceptTiers = map (.serviceTierType) (filter QFDA.isAutoAcceptEnabledTier vehicleServiceTiers)
-      hadAutoAccept = maybe True (not . null . fromMaybe [] . (.selectedAutoAcceptTiers)) mbPreviousVehicle
       carriedOverVehicle = case mbPreviousVehicle of
         Just previousVehicle
           | previousVehicle.variant == builtVehicle.variant,
@@ -433,23 +419,22 @@ makeFullVehicleFromRC mbPreviousVehicle vehicleServiceTiers driverInfo driver me
             let servableTiers = [tier.serviceTierType | tier <- vehicleServiceTiers, builtVehicle.variant `elem` tier.allowedVehicleVariant]
              in setTiers (DL.nub (builtVehicle.selectedServiceTiers <> filter (`elem` servableTiers) previousAutoAcceptTiers)) (Just previousAutoAcceptTiers) builtVehicle
         _ -> builtVehicle
-  fleetResult <- withTryCatch "makeFullVehicleFromRC" $ do
-    mbFleetAutoAssign <- QFDA.getDriverFleetAutoAssignConfig driver.id driver.merchantOperatingCityId
-    if maybe False (.defaultOn) mbFleetAutoAssign && hadAutoAccept && not (null cityAutoAcceptTiers)
-      then do
-        let oldTags = fromMaybe [] driver.driverTag
-            newTags = QFDA.fleetDriverTags now cityAutoAcceptTiers True mbFleetAutoAssign oldTags
-        when (newTags /= oldTags) $ QP.updateDriverTag (Just newTags) driver.id
-        pure $ QFDA.fleetAutoAcceptVehicle now True (Just newTags) vehicleServiceTiers builtVehicle
-      else pure carriedOverVehicle
-  case fleetResult of
-    Left err -> do
-      logError $ "makeFullVehicleFromRC: fleet auto-assign failed for driver " <> driver.id.getId <> ": " <> show err
-      pure carriedOverVehicle
-    Right fullVehicle -> pure fullVehicle
+  carriedOverVehicle
   where
     setTiers :: [DVST.ServiceTierType] -> Maybe [DVST.ServiceTierType] -> Vehicle -> Vehicle
     setTiers serviceTiers autoAcceptTiers Vehicle {..} = Vehicle {selectedServiceTiers = serviceTiers, selectedAutoAcceptTiers = autoAcceptTiers, ..}
+
+-- | Run in a fork once a vehicle built from an RC is saved: a driver of a fleet with auto-assign on by default gets the
+-- fleet's auto-accept tags and tiers, unless they had switched auto-accept off on their previous vehicle.
+applyFleetAutoAssignToNewVehicle ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Maybe Vehicle ->
+  Person ->
+  m ()
+applyFleetAutoAssignToNewVehicle mbPreviousVehicle driver =
+  when (maybe True (not . null . fromMaybe [] . (.selectedAutoAcceptTiers)) mbPreviousVehicle) $ do
+    mbFleetAutoAssign <- QFDA.getDriverFleetAutoAssignConfig driver.id driver.merchantOperatingCityId
+    when (maybe False (.defaultOn) mbFleetAutoAssign) $ QFDA.writeFleetDriverTags True mbFleetAutoAssign driver
 
 makeVehicleFromRC :: Id Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe [Text] -> Vehicle
 makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now vehicleTag = do
