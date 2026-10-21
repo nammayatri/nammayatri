@@ -12,6 +12,7 @@ import qualified Domain.Types.VehicleCategory as VehicleCategory
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.TimeBound (TimeBound)
+import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as DIJC
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
@@ -50,7 +51,8 @@ data IncentiveJourneyMilestoneItem = IncentiveJourneyMilestoneItem
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data IncentiveJourneyListItem = IncentiveJourneyListItem
-  { description :: Maybe Text,
+  { cohortJourneyMappingId :: Id DCJM.CohortJourneyMapping,
+    description :: Maybe Text,
     enabled :: Bool,
     endDate :: UTCTime,
     journeyId :: Id DIJ.IncentiveJourney,
@@ -69,6 +71,7 @@ data IncentiveJourneyListRes = IncentiveJourneyListRes {journeys :: [IncentiveJo
 
 data IncentiveJourneyHistoryItem = IncentiveJourneyHistoryItem
   { areaType :: Maybe DIJM.MilestoneAreaType,
+    cohortJourneyMappingId :: Maybe (Id DCJM.CohortJourneyMapping),
     completedAt :: Maybe UTCTime,
     conditionOperator :: DIJM.MilestoneConditionOperator,
     conditionType :: DIJM.MilestoneConditionType,

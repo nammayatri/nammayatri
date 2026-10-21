@@ -150,6 +150,7 @@ data RewardSpec = RewardSpec
 data RewardDispatchCtx = RewardDispatchCtx
   { personId :: Text,
     journeyName :: Text,
+    cohortJourneyMappingId :: Text,
     milestoneId :: Text
   }
   deriving (Eq, Show, Generic)

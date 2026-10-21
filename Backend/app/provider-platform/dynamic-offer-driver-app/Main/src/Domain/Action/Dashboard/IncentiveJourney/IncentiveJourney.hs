@@ -117,10 +117,9 @@ mkHandle =
         QStats.findHistoryByPersonIdAndCreatedAtRange personId dayStart dayEnd mbLimit mbOffset,
       findStatsByPersonIdAndPeriodKey = \personId periodKey ->
         QStats.findByPersonIdAndPeriodKey personId periodKey,
-      findStatsByPersonIdJourneyIdAndPeriodKey = \personId journeyId periodKey ->
-        CQStats.findByPersonIdAndJourneyIdAndPeriodKey IJ.DriverActor personId journeyId periodKey,
+      findStatsByPersonIdCjmAndPeriodKey = CQStats.findByPersonIdAndCjmAndPeriodKey IJ.DriverActor,
       waiveDriverMilestone =
-        Just $ \driverId merchantId merchantOpCityId journey milestoneId periodKey -> do
+        Just $ \driverId merchantId merchantOpCityId journey cohortJourneyMappingId milestoneId periodKey -> do
           transporterConfig <-
             getOneConfig
               (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
@@ -134,6 +133,7 @@ mkHandle =
             (cast merchantOpCityId)
             transporterConfig
             journey
+            cohortJourneyMappingId
             milestoneId
             periodKey
             vehCategory

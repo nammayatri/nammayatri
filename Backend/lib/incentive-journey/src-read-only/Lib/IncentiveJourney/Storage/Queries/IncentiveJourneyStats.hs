@@ -11,6 +11,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
 import qualified Lib.IncentiveJourney.Domain.Types.Common
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
@@ -36,6 +37,19 @@ findByPersonId ::
   (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.Person -> m [Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.IncentiveJourneyStats])
 findByPersonId limit offset personId = do findAllWithOptionsKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)] (Se.Desc Beam.createdAt) limit offset
 
+findByPersonIdAndCohortJourneyMappingIdAndMilestoneIdAndPeriodKey ::
+  (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.Person -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping) -> Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.IncentiveJourneyMilestone -> Kernel.Prelude.Text -> m (Maybe Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.IncentiveJourneyStats))
+findByPersonIdAndCohortJourneyMappingIdAndMilestoneIdAndPeriodKey personId cohortJourneyMappingId milestoneId periodKey = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId),
+          Se.Is Beam.cohortJourneyMappingId $ Se.Eq (Kernel.Types.Id.getId <$> cohortJourneyMappingId),
+          Se.Is Beam.milestoneId $ Se.Eq (Kernel.Types.Id.getId milestoneId),
+          Se.Is Beam.periodKey $ Se.Eq periodKey
+        ]
+    ]
+
 findByPersonIdAndJourneyId ::
   (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.Person -> Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourney.IncentiveJourney -> m [Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.IncentiveJourneyStats])
@@ -50,19 +64,6 @@ findByPersonIdAndJourneyId limit offset personId journeyId = do
     limit
     offset
 
-findByPersonIdAndJourneyIdAndMilestoneIdAndPeriodKey ::
-  (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.Person -> Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourney.IncentiveJourney -> Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.IncentiveJourneyMilestone -> Kernel.Prelude.Text -> m (Maybe Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.IncentiveJourneyStats))
-findByPersonIdAndJourneyIdAndMilestoneIdAndPeriodKey personId journeyId milestoneId periodKey = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId),
-          Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId),
-          Se.Is Beam.milestoneId $ Se.Eq (Kernel.Types.Id.getId milestoneId),
-          Se.Is Beam.periodKey $ Se.Eq periodKey
-        ]
-    ]
-
 findByPrimaryKey ::
   (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.IncentiveJourneyStats -> m (Maybe Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.IncentiveJourneyStats))
@@ -73,6 +74,7 @@ updateByPrimaryKey (Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.Ince
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.cohortId (Kernel.Types.Id.getId cohortId),
+      Se.Set Beam.cohortJourneyMappingId (Kernel.Types.Id.getId <$> cohortJourneyMappingId),
       Se.Set Beam.conditionOperator conditionOperator,
       Se.Set Beam.conditionType conditionType,
       Se.Set Beam.conditionValue conditionValue,
