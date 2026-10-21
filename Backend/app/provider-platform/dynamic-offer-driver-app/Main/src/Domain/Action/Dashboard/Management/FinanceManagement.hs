@@ -14,6 +14,7 @@ module Domain.Action.Dashboard.Management.FinanceManagement
     getFinanceManagementFinanceSapJournalsTransactions,
     postFinanceManagementTdsReimbursementRequestSubmit,
     getFinanceManagementTdsReimbursementStatus,
+    getFinanceManagementTdsReimbursementHistory,
     getFinanceManagementTdsReimbursementList,
     getFinanceManagementTdsReimbursement,
     postFinanceManagementTdsReimbursementReject,
@@ -1657,7 +1658,7 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
           let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
               cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
               cutoff = WalletService.payoutCutoffTimeUTC timeDiff cutOffDays now
-          lockedBalance <- (.nonRedeemableBalance) <$> LedgerService.getPayoutEligibilityData account.id availableBalance cutoff now
+          lockedBalance <- (.nonRedeemableBalance) <$> LedgerService.getPayoutEligibilityDataWith WalletService.alwaysRedeemableWalletRefs account.id availableBalance cutoff now
 
           -- Get last wallet update time from latest ledger entry
           mbLatestEntry <- LedgerService.getLatestEntryByAccount account.id
@@ -2008,12 +2009,7 @@ postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity reques
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   let fleetOwnerId = Id requestorId :: Id DP.Person
-  fleetOwner <- QPerson.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist requestorId)
-
-  unless (fleetOwner.merchantId == merchant.id && fleetOwner.merchantOperatingCityId == merchantOpCityId) $
-    throwError (PersonDoesNotExist requestorId)
-  unless (fleetOwner.role == DP.FLEET_BUSINESS) $
-    throwError (InvalidRequest "Only business fleet owners can submit TDS reimbursement requests")
+  validateBusinessFleetOwner merchant merchantOpCityId requestorId "submit TDS reimbursement requests"
 
   (assessmentYear, fyStartYear) <- DTdsReqExtra.mkAssessmentYearWithFyStartYear req.assessmentYear
   let quarter = castTdsReimbursementQuarter req.quarter
@@ -2190,14 +2186,7 @@ getFinanceManagementTdsReimbursementStatus ::
 getFinanceManagementTdsReimbursementStatus merchantShortId opCity apiQuarter assessmentYearText requestorId = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-
-  let fleetOwnerId = Id requestorId :: Id DP.Person
-  fleetOwner <- QPerson.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist requestorId)
-
-  unless (fleetOwner.merchantId == merchant.id && fleetOwner.merchantOperatingCityId == merchantOpCityId) $
-    throwError (PersonDoesNotExist requestorId)
-  unless (fleetOwner.role == DP.FLEET_BUSINESS) $
-    throwError (InvalidRequest "Only business fleet owners can view TDS reimbursement status")
+  validateBusinessFleetOwner merchant merchantOpCityId requestorId "view TDS reimbursement status"
 
   assessmentYear <- DTdsReqExtra.mkAssessmentYear assessmentYearText
   let quarter = castTdsReimbursementQuarter apiQuarter
@@ -2240,33 +2229,101 @@ getFinanceManagementTdsReimbursementStatus merchantShortId opCity apiQuarter ass
             totalTdsAmount = totalTdsAmount
           }
 
+-- | Every request the fleet owner has submitted, newest first. Unlike the status API this
+-- keeps rejected requests that were later resubmitted for the same period.
+-- Not paginated: a fleet owner can hold only one PENDING or APPROVED request per quarter and
+-- assessment year (checked on submit and by the partial unique index from 0857). Rejected requests
+-- aren't capped, but each one is an admin rejecting a PENDING request, so they stay few.
+getFinanceManagementTdsReimbursementHistory ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Flow API.TdsReimbursementHistoryRes
+getFinanceManagementTdsReimbursementHistory merchantShortId opCity requestorId = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  validateBusinessFleetOwner merchant merchantOpCityId requestorId "view TDS reimbursement history"
+
+  requests <- sortOn (Down . (.createdAt)) <$> QTdsReq.findAllByFleetOwnerIdAndMerchantOperatingCityId requestorId merchantOpCityId.getId
+  -- Invoice lines for all requests are loaded together, so the number of lookups doesn't grow with the history.
+  mappings <- if null requests then pure [] else QTdsMap.findAllByRequestIds (map (.id) requests)
+  linesByMapping <- buildInvoiceLinesByMapping mappings
+  -- A missing invoice is skipped rather than failing the response, so one bad record doesn't hide the whole history.
+  forM_ linesByMapping $ \(mapping, mbLine) ->
+    when (isNothing mbLine) $
+      logError $ "Invoice " <> mapping.invoiceId.getId <> " of TDS reimbursement request " <> mapping.requestId.getId <> " not found, leaving it out of the history"
+  let linesByRequestId = HM.fromListWith (flip (<>)) [(mapping.requestId.getId, [(mapping, mbLine)]) | (mapping, mbLine) <- linesByMapping]
+      items = requests <&> \request -> mkTdsHistoryItem request (HM.findWithDefault [] request.id.getId linesByRequestId)
+  pure API.TdsReimbursementHistoryRes {requests = items}
+
+mkTdsHistoryItem ::
+  DTdsReq.FinanceTdsReimbursementRequest ->
+  [(DTdsMap.FinanceTdsReimbursementInvoiceMapping, Maybe API.TdsReimbursementStatusInvoiceLine)] ->
+  API.TdsReimbursementHistoryItem
+mkTdsHistoryItem request requestLines =
+  let DTdsReq.AssessmentYear assessmentYearText = request.assessmentYear
+   in API.TdsReimbursementHistoryItem
+        { requestId = cast request.id,
+          quarter = castDomainQuarterToTds request.quarter,
+          assessmentYear = assessmentYearText,
+          status = castTdsReimbursementRequestStatus request.status,
+          certNumber = request.certNumber,
+          certAmount = request.certAmount,
+          tdsRate = request.tdsRate,
+          tdsSection = request.tdsSection,
+          rejectionReason = request.rejectionReason,
+          submittedAt = request.createdAt,
+          invoiceLines = mapMaybe snd requestLines,
+          totalTdsAmount = sum $ map ((.tdsAmount) . fst) requestLines
+        }
+
+-- | The requestor must be a business fleet owner of this merchant and city.
+validateBusinessFleetOwner :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Flow ()
+validateBusinessFleetOwner merchant merchantOpCityId requestorId action = do
+  fleetOwner <- QPerson.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonDoesNotExist requestorId)
+  unless (fleetOwner.merchantId == merchant.id && fleetOwner.merchantOperatingCityId == merchantOpCityId) $
+    throwError (PersonDoesNotExist requestorId)
+  unless (fleetOwner.role == DP.FLEET_BUSINESS) $
+    throwError (InvalidRequest $ "Only business fleet owners can " <> action)
+
 buildStatusInvoiceLines :: [DTdsMap.FinanceTdsReimbursementInvoiceMapping] -> Flow [API.TdsReimbursementStatusInvoiceLine]
 buildStatusInvoiceLines mappings = do
+  linesByMapping <- buildInvoiceLinesByMapping mappings
+  forM linesByMapping $ \(mapping, mbLine) ->
+    mbLine & fromMaybeM (InvalidRequest $ "Invoice not found: " <> mapping.invoiceId.getId)
+
+-- | Each mapping with its invoice line, or Nothing when the invoice can't be found,
+-- so the caller decides whether a missing invoice is an error.
+buildInvoiceLinesByMapping ::
+  [DTdsMap.FinanceTdsReimbursementInvoiceMapping] ->
+  Flow [(DTdsMap.FinanceTdsReimbursementInvoiceMapping, Maybe API.TdsReimbursementStatusInvoiceLine)]
+buildInvoiceLinesByMapping mappings = do
   invoices <- QFinanceInvoiceExtra.findByIds (map (.invoiceId) mappings)
   let invoiceById = HM.fromList [(invoice.id.getId, invoice) | invoice <- invoices]
   indirectTaxTxns <- QIndirectTaxExtra.findByInvoiceNumbers (map (.invoiceNumber) invoices)
   let indirectTaxByInvoiceNumber = HM.fromListWith (\_new existing -> existing) [(invoiceNumber, txn) | txn <- indirectTaxTxns, Just invoiceNumber <- [txn.invoiceNumber]]
   forM mappings $ \mapping -> do
-    invoice <- HM.lookup mapping.invoiceId.getId invoiceById & fromMaybeM (InvalidRequest $ "Invoice not found: " <> mapping.invoiceId.getId)
-    (baseValue, gst) <- case HM.lookup invoice.invoiceNumber indirectTaxByInvoiceNumber of
-      Just txn -> pure (Just txn.taxableValue, Just txn.totalGstAmount)
-      Nothing -> do
-        logWarning $ "No indirect tax transaction found for invoice " <> invoice.invoiceNumber
-        pure (Nothing, Nothing)
+    mbLine <- forM (HM.lookup mapping.invoiceId.getId invoiceById) $ \invoice -> do
+      (baseValue, gst) <- case HM.lookup invoice.invoiceNumber indirectTaxByInvoiceNumber of
+        Just txn -> pure (Just txn.taxableValue, Just txn.totalGstAmount)
+        Nothing -> do
+          logWarning $ "No indirect tax transaction found for invoice " <> invoice.invoiceNumber
+          pure (Nothing, Nothing)
 
-    pure
-      API.TdsReimbursementStatusInvoiceLine
-        { invoiceId = mapping.invoiceId,
-          invoiceNumber = invoice.invoiceNumber,
-          invoiceDate = utctDay invoice.issuedAt,
-          baseValue = baseValue,
-          gst = gst,
-          invoiceValue = invoice.totalAmount,
-          tdsAmount = mapping.tdsAmount,
-          revenueRecognisedSnapshot = mapping.revenueRecognisedSnapshot,
-          tdsCreditReceivable = mapping.tdsCreditReceivable,
-          deferment = mapping.tdsAmount - mapping.tdsCreditReceivable
-        }
+      pure
+        API.TdsReimbursementStatusInvoiceLine
+          { invoiceId = mapping.invoiceId,
+            invoiceNumber = invoice.invoiceNumber,
+            invoiceDate = utctDay invoice.issuedAt,
+            baseValue = baseValue,
+            gst = gst,
+            invoiceValue = invoice.totalAmount,
+            tdsAmount = mapping.tdsAmount,
+            revenueRecognisedSnapshot = mapping.revenueRecognisedSnapshot,
+            tdsCreditReceivable = mapping.tdsCreditReceivable,
+            deferment = mapping.tdsAmount - mapping.tdsCreditReceivable
+          }
+    pure (mapping, mbLine)
 
 castDomainQuarterToTds :: DTdsReq.Quarter -> API.TdsReimbursementQuarter
 castDomainQuarterToTds DTdsReq.Q1 = API.Q1

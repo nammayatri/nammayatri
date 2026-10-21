@@ -65,6 +65,11 @@ FinanceTdsReimbursementRequest:
       where:
         and: [fleetOwnerId, quarter, assessmentYear, merchantOperatingCityId]
 
+    findAllByFleetOwnerIdAndMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [fleetOwnerId, merchantOperatingCityId]
+
     findAllByIds:
       kvFunction: findAllWithKV
       where:
