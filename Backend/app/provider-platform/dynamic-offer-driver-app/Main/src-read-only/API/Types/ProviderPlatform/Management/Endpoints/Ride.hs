@@ -548,7 +548,11 @@ data RideInfoRes = RideInfoRes
     badge :: [Kernel.Prelude.Text],
     rating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     estimatedTollInfo :: Kernel.Prelude.Maybe [TollInfoAPIEntity],
-    actualTollInfo :: Kernel.Prelude.Maybe [TollInfoAPIEntity]
+    actualTollInfo :: Kernel.Prelude.Maybe [TollInfoAPIEntity],
+    recomputeReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    passedThroughDestination :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    finalFarePolicyId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    estimatedStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
