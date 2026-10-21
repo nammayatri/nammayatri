@@ -32,7 +32,9 @@ import qualified Lib.IncentiveJourney.Period as Period
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.Assignment as CQAssignment
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyStats as CQStats
+import qualified Lib.IncentiveJourney.Storage.Queries.CohortJourneyMappingExtra as QCJMExtra
 import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyStatsExtra as QStats
+import qualified Lib.IncentiveJourney.Storage.Queries.UserCohortMapping as QUCM
 import qualified Lib.IncentiveJourney.Streak as Streak
 import qualified Lib.IncentiveJourney.StreakEnd as StreakEnd
 import qualified Lib.IncentiveJourney.Types as IJ
@@ -157,6 +159,7 @@ evaluateSingleJourney ijHandle input localTime journey cjm = do
         IJ.RewardDispatchCtx
           { personId = input.personId.getId,
             journeyName = journey.name,
+            cohortJourneyMappingId = cjm.id.getId,
             milestoneId = ""
           }
       store = mkMilestoneStore ijHandle input journey cjm periodKey milestones
@@ -174,7 +177,7 @@ evaluateSingleJourney ijHandle input localTime journey cjm = do
   when (StreakEnd.hasStreakEndRewardConfigured cjm) $
     tryAwardStreakEnd ijHandle input.personId periodKey journey cjm milestones
 
--- | Dashboard waive-off: mark one (person, journey, milestone, periodKey) as WaivedOff,
+-- | Dashboard waive-off: mark one (person, campaign, milestone, periodKey) as WaivedOff,
 -- then attempt streak-end payout if configured.
 -- Returns True when a new WaivedOff row was written (False if already terminal / skipped).
 waiveMilestoneForPeriod ::
@@ -185,14 +188,20 @@ waiveMilestoneForPeriod ::
   Id Common.MerchantOperatingCity ->
   Maybe Text ->
   DIJ.IncentiveJourney ->
+  Id DCJM.CohortJourneyMapping ->
   Id DIJM.IncentiveJourneyMilestone ->
   Text ->
   m Bool
-waiveMilestoneForPeriod ijHandle personId merchantId merchantOpCityId mbVehicleCategory journey milestoneId periodKey = do
+waiveMilestoneForPeriod ijHandle personId merchantId merchantOpCityId mbVehicleCategory journey cohortJourneyMappingId milestoneId periodKey = do
   milestones <- ijHandle.loadMilestones journey.id
   milestone <- case find (\m -> m.id == milestoneId) milestones of
     Just m -> pure m
     Nothing -> throwError (InternalError $ "Milestone not found for waive-off: " <> milestoneId.getId)
+  cjm <-
+    QCJMExtra.findCohortJourneyMappingById cohortJourneyMappingId
+      >>= fromMaybeM (InvalidRequest $ "Cohort journey mapping not found: " <> cohortJourneyMappingId.getId)
+  unless (cjm.journeyId == journey.id && cjm.merchantId == merchantId && cjm.merchantOperatingCityId == merchantOpCityId) $
+    throwError (InvalidRequest "Cohort journey mapping does not match this journey and city")
   assignments <-
     CQAssignment.findAssignmentsForDriver
       ijHandle.actor
@@ -200,22 +209,16 @@ waiveMilestoneForPeriod ijHandle personId merchantId merchantOpCityId mbVehicleC
       merchantId
       merchantOpCityId
       mbVehicleCategory
-  let mbCjm =
-        (.cohortJourneyMapping)
-          <$> find
-            (\a -> a.cohortJourneyMapping.journeyId == journey.id)
-            assignments
-  cjm <-
-    case mbCjm of
-      Just mapping -> pure mapping
-      Nothing ->
-        throwError $
-          InvalidRequest $
-            "No cohort_journey_mapping assignment for person="
-              <> personId.getId
-              <> " journey="
-              <> journey.id.getId
-  mbExisting <- QStats.findStatsByPersonAndMilestonePeriod personId journey.id milestoneId periodKey
+  mbUcm <- QUCM.findByUserIdAndCohortMappingId personId cjm.id
+  let assignedNow = any (\a -> a.cohortJourneyMapping.id == cjm.id) assignments
+  unless (assignedNow || isJust mbUcm) $
+    throwError $
+      InvalidRequest $
+        "No cohort_journey_mapping assignment for person="
+          <> personId.getId
+          <> " cohortJourneyMappingId="
+          <> cjm.id.getId
+  mbExisting <- QStats.findStatsByPersonCjmAndMilestonePeriod personId cjm.id milestoneId periodKey
   now <- getCurrentTime
   case mbExisting of
     Just existing
@@ -230,7 +233,7 @@ waiveMilestoneForPeriod ijHandle personId merchantId merchantOpCityId mbVehicleC
         pure False
     _ -> do
       whenJust cjm.maxWaiveOffCount $ \maxCount -> do
-        periodStats <- QStats.findStatsByPersonJourneyAndPeriod personId journey.id periodKey
+        periodStats <- QStats.findStatsByPersonCjmAndPeriod personId cjm.id periodKey
         let waivedCount = length $ filter ((== DIJS.WaivedOff) . (.status)) periodStats
         when (waivedCount >= maxCount) $
           throwError $
@@ -250,6 +253,7 @@ waiveMilestoneForPeriod ijHandle personId merchantId merchantOpCityId mbVehicleC
               merchantId = merchantId,
               merchantOperatingCityId = merchantOpCityId,
               cohortId = cjm.cohortId,
+              cohortJourneyMappingId = Just cjm.id,
               journeyId = journey.id,
               milestoneId = milestone.id,
               periodKey = periodKey,
@@ -288,7 +292,7 @@ tryAwardStreakEnd ::
   [DIJM.IncentiveJourneyMilestone] ->
   m ()
 tryAwardStreakEnd ijHandle personId periodKey journey cjm milestones = do
-  currentPeriodStats <- QStats.findStatsByPersonJourneyAndPeriod personId journey.id periodKey
+  currentPeriodStats <- QStats.findStatsByPersonCjmAndPeriod personId cjm.id periodKey
   if not (StreakEnd.shouldAttemptStreakEnd journey cjm periodKey milestones currentPeriodStats)
     then
       logInfo $
@@ -300,7 +304,7 @@ tryAwardStreakEnd ijHandle personId periodKey journey cjm milestones = do
           <> periodKey
     else do
       let neededPeriodKeys = StreakEnd.periodKeysForStreakEndEligibility journey cjm
-      scopedStats <- QStats.findStatsByPersonJourneyAndPeriodKeys personId journey.id neededPeriodKeys
+      scopedStats <- QStats.findStatsByPersonCjmAndPeriodKeys personId cjm.id neededPeriodKeys
       let eligible = StreakEnd.isStreakEndEligible journey cjm periodKey milestones scopedStats
       if not eligible
         then
@@ -348,9 +352,9 @@ mkMilestoneStore ijHandle input journey cjm periodKey milestones =
           Nothing -> pure Nothing
           Just milestone -> do
             mbStats <-
-              QStats.findStatsByPersonAndMilestonePeriod
+              QStats.findStatsByPersonCjmAndMilestonePeriod
                 input.personId
-                journey.id
+                cjm.id
                 milestone.id
                 periodKey
             pure $ fmap Convert.toEvalStats mbStats,
@@ -370,9 +374,9 @@ mkMilestoneStore ijHandle input journey cjm periodKey milestones =
         Nothing -> pure ()
         Just milestone -> do
           mbExisting <-
-            QStats.findStatsByPersonAndMilestonePeriod
+            QStats.findStatsByPersonCjmAndMilestonePeriod
               input.personId
-              journey.id
+              cjm.id
               milestone.id
               periodKey
           now <- getCurrentTime
@@ -386,6 +390,7 @@ mkMilestoneStore ijHandle input journey cjm periodKey milestones =
                   merchantId = input.merchantId,
                   merchantOperatingCityId = input.merchantOperatingCityId,
                   cohortId = cjm.cohortId,
+                  cohortJourneyMappingId = Just cjm.id,
                   journeyId = journey.id,
                   milestoneId = milestone.id,
                   periodKey = periodKey,

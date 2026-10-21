@@ -95,16 +95,16 @@ mkHandle =
         QStats.findHistoryByPersonIdAndCreatedAtRange personId dayStart dayEnd mbLimit mbOffset,
       findStatsByPersonIdAndPeriodKey = \personId periodKey ->
         QStats.findByPersonIdAndPeriodKey personId periodKey,
-      findStatsByPersonIdJourneyIdAndPeriodKey = \personId journeyId periodKey ->
-        QStats.findStatsByPersonJourneyAndPeriod personId journeyId periodKey,
+      findStatsByPersonIdCjmAndPeriodKey = QStats.findStatsByPersonCjmAndPeriod,
       waiveDriverMilestone = Nothing,
       waiveRiderMilestone =
-        Just $ \personId merchantId merchantOpCityId journey milestoneId periodKey ->
+        Just $ \personId merchantId merchantOpCityId journey cohortJourneyMappingId milestoneId periodKey ->
           SLJourney.waiveRiderMilestone
             (cast personId)
             (cast merchantId)
             (cast merchantOpCityId)
             journey
+            cohortJourneyMappingId
             milestoneId
             periodKey,
       putBulkAssignCsv = Nothing,

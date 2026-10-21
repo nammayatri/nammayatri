@@ -67,8 +67,7 @@ mkHandle =
         QStats.findHistoryByPersonIdAndCreatedAtRange personId dayStart dayEnd mbLimit mbOffset,
       findStatsByPersonIdAndPeriodKey = \personId periodKey ->
         QStats.findByPersonIdAndPeriodKey personId periodKey,
-      findStatsByPersonIdJourneyIdAndPeriodKey = \personId journeyId periodKey ->
-        CQStats.findByPersonIdAndJourneyIdAndPeriodKey IJ.DriverActor personId journeyId periodKey,
+      findStatsByPersonIdCjmAndPeriodKey = CQStats.findByPersonIdAndCjmAndPeriodKey IJ.DriverActor,
       waiveDriverMilestone = Nothing,
       waiveRiderMilestone = Nothing,
       putBulkAssignCsv = Nothing,

@@ -9,6 +9,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Kernel.Utils.TH
 import qualified Lib.IncentiveJourney.Domain.Types.CohortDetails
+import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
 import qualified Lib.IncentiveJourney.Domain.Types.Common
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
@@ -16,6 +17,7 @@ import qualified Tools.Beam.UtilsTH
 
 data IncentiveJourneyStats = IncentiveJourneyStats
   { cohortId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortDetails.CohortDetails,
+    cohortJourneyMappingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping),
     conditionOperator :: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneConditionOperator,
     conditionType :: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneConditionType,
     conditionValue :: Kernel.Prelude.Int,
