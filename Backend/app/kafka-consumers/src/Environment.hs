@@ -92,6 +92,7 @@ data ConsumerType
   | IJ_BEHAVIOR_TICK_CONSUMER
   | DRIVER_POOL_STATE
   | SESSIONIZER
+  | DRIVER_PERFORMANCE
   deriving (Generic, FromDhall, Read, Eq)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
@@ -105,6 +106,7 @@ instance Show ConsumerType where
   show IJ_BEHAVIOR_TICK_CONSUMER = "ij-behavior-tick-consumer"
   show DRIVER_POOL_STATE = "driver-pool-state-writer"
   show SESSIONIZER = "sessionizer"
+  show DRIVER_PERFORMANCE = "driver-performance"
 
 -- | Which transport a given Dhall deployment uses. Each consumer-type Dhall
 -- file picks one; switching is a config change, not a code change.
@@ -124,7 +126,7 @@ data AppCfg = AppCfg
     ltsRedisCfgs :: [HedisCloudCfg],
     ltsReplicaRedisCfg :: Maybe HedisCfg,
     hedisClusterCfgs :: [HedisCloudCfg],
-    -- | The sessionizer's own state store (DRIVER_POOL_STATE / SESSIONIZER only).
+    -- | The sessionizer's own state store (DRIVER_POOL_STATE / SESSIONIZER / DRIVER_PERFORMANCE only).
     driverStateRedisCfg :: Maybe HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,

@@ -164,3 +164,4 @@ getConfigNameFromConsumertype = \case
   IJ_BEHAVIOR_TICK_CONSUMER -> pure "ij-behavior-tick-consumer"
   DRIVER_POOL_STATE -> pure "driver-pool-state-writer"
   SESSIONIZER -> pure "sessionizer"
+  DRIVER_PERFORMANCE -> pure "driver-performance"

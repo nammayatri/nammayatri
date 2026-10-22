@@ -35,7 +35,7 @@ progressEvery = 100
 -- | While idle, commit and report at most this often (ms), instead of on every
 -- empty poll.
 idleProgressEveryMs :: Integer
-idleProgressEveryMs = 5000
+idleProgressEveryMs = 1000
 
 runOrderedCommitting ::
   (FromJSON event) =>

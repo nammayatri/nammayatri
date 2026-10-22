@@ -203,12 +203,6 @@ let eventStreamMappings =
           , globalCommon.eventType.SearchRequest
           , globalCommon.eventType.Quotes
           , globalCommon.eventType.Estimate
-          , globalCommon.eventType.ExophoneData
-          , globalCommon.eventType.AutoCompleteData
-          , globalCommon.eventType.RouteCollection
-          , globalCommon.eventType.EventTracker
-          , globalCommon.eventType.MarketingParamsData
-          , globalCommon.eventType.MarketingParamsPreLoginData
           ]
         }
       , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
