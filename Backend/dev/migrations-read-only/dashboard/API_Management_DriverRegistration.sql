@@ -70,3 +70,12 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostDriverRegistrationOnboardingLink","migration":"capability","param":"city-operations.onboarding.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_ONBOARDING_LINK' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverRegistrationAddDrivers","migration":"capability","param":"city-operations.onboarding.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_ADD_DRIVERS' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostDriverRegistrationAddVehicles","migration":"capability","param":"city-operations.onboarding.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_ADD_VEHICLES' ) ON CONFLICT DO NOTHING;
