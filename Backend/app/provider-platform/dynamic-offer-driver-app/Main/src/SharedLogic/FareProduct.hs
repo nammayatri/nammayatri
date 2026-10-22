@@ -246,15 +246,17 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
           mapM getBoundedOrDefaultFareProduct fareProducts
 
     getBoundedOrDefaultFareProduct fareProduct = do
-      boundedFareProduct <- getBoundedFareProduct fareProduct.merchantOperatingCityId searchSources fareProduct.tripCategory fareProduct.vehicleServiceTier fareProduct.area
+      boundedFareProduct <- getBoundedFareProduct Nothing fareProduct.merchantOperatingCityId searchSources fareProduct.tripCategory fareProduct.vehicleServiceTier fareProduct.area
       return $ fromMaybe fareProduct boundedFareProduct
 
-getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m (Maybe DFareProduct.FareProduct)
-getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier area = do
+getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => Maybe UTCTime -> Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m (Maybe DFareProduct.FareProduct)
+getBoundedFareProduct mbPricingTime merchantOpCityId searchSources tripCategory serviceTier area = do
   fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbTransporterConfig
-  currentIstTime <- getLocalCurrentTime timeDiffFromUtc
-  case listToMaybe (DTB.findBoundedDomain fareProducts currentIstTime) of
+  localPricingTime <- case mbPricingTime of
+    Just pricingTime -> pure $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) pricingTime
+    Nothing -> getLocalCurrentTime timeDiffFromUtc
+  case listToMaybe (DTB.findBoundedDomain fareProducts localPricingTime) of
     Just fp -> return (Just fp)
     Nothing -> return Nothing

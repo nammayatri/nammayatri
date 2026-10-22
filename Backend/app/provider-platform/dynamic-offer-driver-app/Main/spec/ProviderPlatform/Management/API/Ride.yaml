@@ -445,6 +445,10 @@ types:
     - rating: Maybe Int
     - estimatedTollInfo: Maybe [TollInfoAPIEntity]
     - actualTollInfo: Maybe [TollInfoAPIEntity]
+    - recomputeReason: Maybe Text
+    - passedThroughDestination: Maybe Bool
+    - finalFarePolicyId: Maybe Text
+    - estimatedStaticDuration: Maybe Seconds
   TollInfoAPIEntity:
     - id: Text
     - name: Text

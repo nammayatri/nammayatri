@@ -265,7 +265,7 @@ mkRecomputeConfig tc = do
       down = pol >>= (.downward)
       tim = pol >>= (.time)
   RecomputeConfig
-    { cfgRecomputeIfPickupDropNotOutsideOfThreshold = fromMaybe True (up >>= (.allowWithinThreshold)),
+    { cfgRecomputeIfPickupDropNotOutsideOfThreshold = fromMaybe False (up >>= (.allowWithinThreshold)),
       cfgRecomputeThresholds = Just $ fromMaybe defaultRecomputeBands (up >>= (.bands)),
       cfgActualRideDistanceDiffThreshold = fromMaybe 1200 (up >>= (.smallOverageForgivenessMeters)),
       cfgUpwardsRecomputeBuffer = fromMaybe 2000 (up >>= (.bufferMeters)),
@@ -281,10 +281,10 @@ mkRecomputeConfig tc = do
           (Just bands, _) -> bands
           (Nothing, Just flat) -> [ExtraTC.TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = flat}]
           (Nothing, Nothing) -> defaultTimeForgivenessBands,
-      cfgGateExtraTimeChargeByRecompute = (tim >>= (.gateExtraTimeOnEstimateBilled)) == Just True,
-      cfgFloorTimeAtEstimateWithinThreshold = (tim >>= (.floorAtEstimateWithinThreshold)) /= Just False,
-      cfgRecomputeCongestionOnEndRide = (pol >>= (.recomputeCongestionOnEndRide)) == Just True,
-      cfgEstimatedTollFallback = (pol >>= (.estimatedTollFallback)) == Just True,
+      cfgGateExtraTimeChargeByRecompute = fromMaybe False (tim >>= (.gateExtraTimeOnEstimateBilled)),
+      cfgFloorTimeAtEstimateWithinThreshold = fromMaybe True (tim >>= (.floorAtEstimateWithinThreshold)),
+      cfgRecomputeCongestionOnEndRide = fromMaybe False (pol >>= (.recomputeCongestionOnEndRide)),
+      cfgEstimatedTollFallback = fromMaybe False (pol >>= (.estimatedTollFallback)),
       cfgNotifyDriverOnBudgetExceeded = fromMaybe True (up >>= (.notifyDriverOnBudgetExceeded))
     }
 
@@ -392,7 +392,7 @@ decideRecompute input = applyFareStepAdjustments input (basePick input)
 -- calculateFinalValuesFor* ladders.
 basePick :: RecomputeInput -> RecomputeDecision
 basePick RecomputeInput {cfg = RecomputeConfig {..}, ..}
-  | requestSource == CronJobSource = pick UseEstimate QuotedPolicy CronJobEstimate (Just estimate)
+  | requestSource == CronJobSource = (pick UseEstimate QuotedPolicy CronJobEstimate (Just estimate)) {durationSource = UseEstimatedDuration}
   | isOdometerBilled = pick UseOdometer QuotedPolicy OdometerBilled odometerDistance
   | isRectificationCategory =
     if distanceCalculationFailed

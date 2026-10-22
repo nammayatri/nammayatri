@@ -5,6 +5,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Price: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
 
 
 BookingUpdateRequest:
@@ -45,6 +46,8 @@ BookingUpdateRequest:
     routeInfoResp: Maybe Text
     snapToRoadFailed: Maybe Bool
     discountAmount: Maybe HighPrecMoney
+    estimatedDuration: Maybe Seconds # edit route duration (original pickup -> new drop), written to the booking on confirm
+    estimatedStaticDuration: Maybe Seconds # traffic-free duration of the same route
 
   beamType:
     distanceUnit: Maybe DistanceUnit

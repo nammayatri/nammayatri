@@ -787,7 +787,11 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
         badge = map (.badge) feedbacks,
         rating = mbFeedback >>= (.rating),
         estimatedTollInfo = mkTollInfoEntities ride.estimatedTollIds ride.estimatedTollNames,
-        actualTollInfo = mkTollInfoEntities ride.tollIds ride.tollNames
+        actualTollInfo = mkTollInfoEntities ride.tollIds ride.tollNames,
+        recomputeReason = ride.recomputeReason,
+        passedThroughDestination = ride.passedThroughDestination,
+        finalFarePolicyId = (.getId) <$> ride.finalFarePolicyId,
+        estimatedStaticDuration = booking.estimatedStaticDuration
       }
 
 mkTollInfoEntities :: Maybe [Text] -> Maybe [Text] -> Maybe [Common.TollInfoAPIEntity]
