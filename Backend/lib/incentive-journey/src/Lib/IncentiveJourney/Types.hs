@@ -151,7 +151,8 @@ data RewardDispatchCtx = RewardDispatchCtx
   { personId :: Text,
     journeyName :: Text,
     cohortJourneyMappingId :: Text,
-    milestoneId :: Text
+    milestoneId :: Text,
+    periodKey :: Text
   }
   deriving (Eq, Show, Generic)
 

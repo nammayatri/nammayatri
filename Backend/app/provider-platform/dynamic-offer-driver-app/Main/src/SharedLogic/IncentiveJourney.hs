@@ -25,7 +25,6 @@ where
 import qualified Data.Text as T
 import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DriverPlan as DDriverPlan
-import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.Extra.Plan ()
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -33,17 +32,19 @@ import qualified Domain.Types.Overlay as DOverlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DTV
-import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.External.Types (Language (..), SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis (HedisLTSFlowEnv)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Error.Types (FinanceError)
+import qualified Lib.Finance.Ledger.Service as LedgerService
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
@@ -51,24 +52,18 @@ import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as 
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.Assignment as CQAssignment
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourney as CQJourney
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyMilestone as CQMilestone
-import qualified Lib.Payment.Domain.Action as DPayment
-import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
-import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
+import SharedLogic.Finance.Prepaid (counterpartyDriver)
+import qualified SharedLogic.Finance.Wallet as SLFW
 import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
-import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
-import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverPlan as SQPlan
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
-import Tools.Encryption
 import Tools.Error
 import Tools.Notifications (mkOverlayReq, sendOverlay)
-import qualified Tools.Payout as Payout
 
 type JourneyRewardDispatchFlow m r =
   ( MonadFlow m,
@@ -78,6 +73,7 @@ type JourneyRewardDispatchFlow m r =
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     PaymentBeamFlow.BeamFlow m r,
+    BeamFlow m r,
     Finance.HasActorInfo m r,
     Coins.EventFlow m r,
     SchedulerFlow r,
@@ -333,8 +329,7 @@ dispatchDriverReward driverId merchantId merchantOpCityId transporterConfig jour
             merchantId
             merchantOpCityId
             transporterConfig
-            vehCategory
-            ("incentive journey cashback: " <> journey.name <> " milestone " <> ctx.milestoneId)
+            (milestoneCashReferenceId driverId ctx)
             amount
     IJ.SubscriptionWaiveOff ->
       awardJourneySubscriptionWaiveOff driverId ("milestone " <> ctx.milestoneId <> " journey " <> journey.name) spec
@@ -404,8 +399,7 @@ dispatchDriverStreakEndReward driverId merchantId merchantOpCityId transporterCo
             merchantId
             merchantOpCityId
             transporterConfig
-            vehCategory
-            ("incentive streak-end cashback: " <> journey.name <> " campaignKey=" <> campaignKey)
+            (streakCashReferenceId driverId campaignKey)
             amount
     IJ.SubscriptionWaiveOff ->
       awardJourneySubscriptionWaiveOff driverId ("streak-end " <> journey.name <> " campaignKey=" <> campaignKey) spec
@@ -414,92 +408,88 @@ dispatchDriverStreakEndReward driverId merchantId merchantOpCityId transporterCo
       logInfo $ show otherKind <> " streak-end reward deferred journey=" <> journey.id.getId
       pure IJ.AwardSkipped
 
--- | Bank payout (same PG path as coin→direct payout) without burning coins.
--- Returns Awarded only when createPayoutService succeeds; otherwise AwardSkipped.
+-- | Credit journey cash onto the driver wallet.
+-- Returns Awarded only when the ledger credit exists; otherwise AwardSkipped so the milestone stays InProgress.
+-- One lock per referenceId so two ride endings cannot both pass the ledger check and credit twice.
 awardJourneyCashPayout ::
   JourneyRewardDispatchFlow m r =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   DTC.TransporterConfig ->
-  DTV.VehicleCategory ->
   Text ->
   Int ->
   m IJ.AwardResult
-awardJourneyCashPayout driverId merchantId merchantOpCityId transporterConfig vehCategory remark amountRupees = do
-  result <-
-    withTryCatch "IncentiveJourney:cashPayout" $ do
-      driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      payoutConfig <-
-        getOneConfig
-          ( PayoutConfigDimensions
-              { merchantOperatingCityId = merchantOpCityId.getId,
-                vehicleCategory = Just vehCategory,
-                isPayoutEnabled = Nothing
-              }
-          )
-          Nothing
-          >>= fromMaybeM (PayoutConfigNotFound (show vehCategory) merchantOpCityId.getId)
-      unless payoutConfig.isPayoutEnabled $
-        throwError $ InvalidRequest "Payout is not enabled for this vehicle category"
-      uid <- generateGUID
-      phoneNo <- mapM decrypt driver.mobileNumber
-      driverInformation <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
-      (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <-
-        Payout.getCreatePayoutServiceFlow
-          Payout.MerchantServiceUsageConfigOption
-          DEMSC.PayoutService
-          driver.clientSdkVersion
-          merchantOpCityId
-          driver.id
-      vpa <- case payoutServiceFlow of
-        IPayout.JuspayFlow -> Just <$> (driverInformation.payoutVpa & fromMaybeM (InvalidRequest "Driver has no payout VPA"))
-        IPayout.StripeFlow -> pure Nothing
-        IPayout.BulkFlow -> pure Nothing -- no VPA on the bulk/HDFC path; Tools.Payout.getCreatePayoutServiceFlow already required a bank account row
-      merchantOperatingCity <-
-        CQMOC.findById (cast merchantOpCityId)
-          >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-      let amount = fromIntegral amountRupees :: HighPrecMoney
-          createPayoutOrderReq =
-            DPayment.mkCreatePayoutServiceReq
-              uid
-              amount
-              transporterConfig.currency
-              phoneNo
-              driver.email
-              driverId.getId
-              remark
-              (Just driver.firstName)
-              vpa
-              payoutConfig.orderType
-              payoutServiceFlow
-              Nothing
-              Nothing
-          entityName = DPayment.INCENTIVE_JOURNEY_CASHBACK
-          createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchantOpCityId driver.id mbPersonBankAccount
-      void $
-        DPayment.createPayoutService
-          (cast merchantId)
-          (Just $ cast merchantOpCityId)
-          (cast driverId)
-          (Just [driverId.getId])
-          (Just entityName)
-          (show merchantOperatingCity.city)
-          createPayoutOrderReq
-          createPayoutOrderCall
-          Nothing
-          afterPayoutOrderCreated
+awardJourneyCashPayout driverId merchantId merchantOpCityId transporterConfig referenceId amountRupees =
+  Redis.withLockRedisAndReturnValue ("IncentiveJourneyCashLock:" <> referenceId) 10 $
+    awardJourneyCashPayoutLocked driverId merchantId merchantOpCityId transporterConfig referenceId amountRupees
+
+awardJourneyCashPayoutLocked ::
+  JourneyRewardDispatchFlow m r =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  Text ->
+  Int ->
+  m IJ.AwardResult
+awardJourneyCashPayoutLocked driverId merchantId merchantOpCityId transporterConfig referenceId amountRupees = do
+  existing <- LedgerService.getEntriesByReference SLFW.walletReferenceIncentiveJourneyCash referenceId
+  if not (null existing)
+    then do
       logInfo $
-        "Created incentive journey cash payout order="
-          <> uid
-          <> " amount="
-          <> show amountRupees
+        "Incentive journey cash already in wallet referenceId="
+          <> referenceId
           <> " driver="
           <> driverId.getId
-      pure amountRupees
-  case result of
-    Right awarded -> pure (IJ.Awarded awarded)
-    Left _ -> pure IJ.AwardSkipped
+      pure (IJ.Awarded amountRupees)
+    else do
+      let amount = fromIntegral amountRupees :: HighPrecMoney
+      result <-
+        SLFW.createWalletEntryDelta
+          counterpartyDriver
+          driverId.getId
+          amount
+          transporterConfig.currency
+          merchantId.getId
+          merchantOpCityId.getId
+          SLFW.walletReferenceIncentiveJourneyCash
+          referenceId
+          Nothing
+      case result of
+        Right (_ :: HighPrecMoney) -> do
+          logInfo $
+            "Credited incentive journey cash to wallet referenceId="
+              <> referenceId
+              <> " amount="
+              <> show amountRupees
+              <> " driver="
+              <> driverId.getId
+          pure (IJ.Awarded amountRupees)
+        Left (err :: FinanceError) -> do
+          logError $
+            "Incentive journey cash wallet credit failed referenceId="
+              <> referenceId
+              <> " driver="
+              <> driverId.getId
+              <> " error="
+              <> show err
+          pure IJ.AwardSkipped
+
+milestoneCashReferenceId :: Id DP.Person -> IJ.RewardDispatchCtx -> Text
+milestoneCashReferenceId driverId ctx =
+  "milestone:"
+    <> driverId.getId
+    <> ":"
+    <> ctx.cohortJourneyMappingId
+    <> ":"
+    <> ctx.milestoneId
+    <> ":"
+    <> ctx.periodKey
+
+streakCashReferenceId :: Id DP.Person -> Text -> Text
+streakCashReferenceId driverId campaignKey =
+  "streak:" <> driverId.getId <> ":" <> campaignKey
 
 -- | Applies dashboard subscription waive config. Missing config keeps the previous
 -- hardcoded default (100%, 1 day, YATRI_SUBSCRIPTION, WITHOUT_OFFER).

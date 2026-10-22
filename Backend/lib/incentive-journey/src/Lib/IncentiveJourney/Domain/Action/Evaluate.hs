@@ -160,7 +160,8 @@ evaluateSingleJourney ijHandle input localTime journey cjm = do
           { personId = input.personId.getId,
             journeyName = journey.name,
             cohortJourneyMappingId = cjm.id.getId,
-            milestoneId = ""
+            milestoneId = "",
+            periodKey = periodKey
           }
       store = mkMilestoneStore ijHandle input journey cjm periodKey milestones
   Eval.evaluateMilestonesInOrderWith

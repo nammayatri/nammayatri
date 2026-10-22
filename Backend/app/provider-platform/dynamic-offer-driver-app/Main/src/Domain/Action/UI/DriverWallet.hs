@@ -441,6 +441,7 @@ referenceTypeToItemName isVat ref
   | ref == walletReferenceAirportCashWithdrawal = "Airport cash withdrawal (booth)"
   | ref == walletReferenceDiscountsOnline = "Discounts Incl. " <> taxLabel <> " (Online)"
   | ref == walletReferenceDiscountsCash = "Discounts Incl. " <> taxLabel <> " (Cash)"
+  | ref == walletReferenceIncentiveJourneyCash = "Journey Reward"
   | ref == walletReferenceCustomerCancellationCharges = "Cancellation Fee"
   | ref == walletReferenceCustomerCancellationGST = "Cancellation Fee " <> taxLabel
   | ref == walletReferenceCommissionOnline = "Commission (Online)"

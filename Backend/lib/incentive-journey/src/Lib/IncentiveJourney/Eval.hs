@@ -56,22 +56,42 @@ evaluateMilestonesInOrderWith ::
 evaluateMilestonesInOrderWith _ _ _ _ _ _ _ _ _ [] = pure ()
 evaluateMilestonesInOrderWith localTime dispatch ctx deltas mbPickup mbDrop mbVehCat mbServiceTier store (milestone : rest) = do
   mbExisting <- store.loadStats milestone
+  let prevValue = maybe 0 (.currentValue) mbExisting
+      rewardRetry =
+        case mbExisting of
+          Just stats ->
+            stats.status == InProgress
+              && evaluateCondition milestone.conditionOperator prevValue milestone.conditionValue
+          Nothing -> False
   if maybe False (isTerminalStatus . (.status)) mbExisting
     then continueRest
-    else -- Outside peak / vehicle / location: no delta and do not advance sequential chain.
+    else
+      if rewardRetry
+        then retryAwaitingReward prevValue
+        else -- Outside peak / vehicle / location: no delta and do not advance sequential chain.
 
-      if not (Window.isWithinTimeBound localTime milestone.timeBounds)
-        || not (rideMatchesVehicleFilter milestone mbVehCat mbServiceTier)
-        || not (rideMatchesLocationFilter milestone mbPickup mbDrop)
-        then pure ()
-        else evaluateMatchingMilestone mbExisting
+          if not (Window.isWithinTimeBound localTime milestone.timeBounds)
+            || not (rideMatchesVehicleFilter milestone mbVehCat mbServiceTier)
+            || not (rideMatchesLocationFilter milestone mbPickup mbDrop)
+            then pure ()
+            else applyRide prevValue
   where
     continueRest =
       evaluateMilestonesInOrderWith localTime dispatch ctx deltas mbPickup mbDrop mbVehCat mbServiceTier store rest
 
-    evaluateMatchingMilestone mbExisting = do
+    -- Target was already reached on an earlier ride. Do not add this ride to that milestone.
+    -- On Awarded, this ride continues to the next milestone. On AwardSkipped, it stops here.
+    retryAwaitingReward prevValue = do
+      awardedResult <- awardMilestone
+      case awardedResult of
+        AwardSkipped -> store.persistProgress milestone prevValue
+        Awarded awarded -> do
+          store.persistCompleted milestone prevValue awarded
+          store.onCompleted milestone awarded
+          continueRest
+
+    applyRide prevValue = do
       let delta = deltaForCondition milestone.conditionType deltas
-          prevValue = maybe 0 (.currentValue) mbExisting
           currentValue = prevValue + delta
           conditionMet =
             evaluateCondition
@@ -81,12 +101,13 @@ evaluateMilestonesInOrderWith localTime dispatch ctx deltas mbPickup mbDrop mbVe
       if not conditionMet
         then store.persistProgress milestone currentValue
         else do
-          let ctx' :: RewardDispatchCtx
-              ctx' = ctx {milestoneId = milestone.milestoneId}
-          awardedResult <- dispatch ctx' milestone.rewardSpec
-          -- AwardSkipped keeps InProgress (retry). Awarded n (incl. 0 for NoReward) completes.
+          awardedResult <- awardMilestone
+          -- AwardSkipped keeps InProgress (retry). Awarded completes and does not spill:
+          -- this ride is the one that met the target.
           case awardedResult of
             AwardSkipped -> store.persistProgress milestone currentValue
             Awarded awarded -> do
               store.persistCompleted milestone currentValue awarded
               store.onCompleted milestone awarded
+
+    awardMilestone = dispatch ctx {milestoneId = milestone.milestoneId} milestone.rewardSpec
