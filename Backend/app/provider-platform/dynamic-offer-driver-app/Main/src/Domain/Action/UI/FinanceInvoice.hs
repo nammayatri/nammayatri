@@ -6,13 +6,14 @@ module Domain.Action.UI.FinanceInvoice
 where
 
 import qualified API.Types.UI.FinanceInvoice as API
+import qualified Data.List.NonEmpty as NE
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person (Person)
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
-import Kernel.Prelude (head, listToMaybe)
+import Kernel.Prelude (listToMaybe)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -190,10 +191,11 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
   -- Hide Voided/Cancelled (incl. 0-amount AggregatedCommission markers).
   let invoices = filter (\i -> i.status `notElem` [FinanceInvoice.Voided, FinanceInvoice.Cancelled]) invoicesAll
 
-  when (null invoices) $
-    throwError $ InvalidRequest "No invoices found for the given criteria"
+  invoicesNE <-
+    NE.nonEmpty invoices
+      & fromMaybeM (InvalidRequest "No invoices found for the given criteria")
 
-  let inv = head invoices
+  let inv = NE.head invoicesNE
   -- Read path: return the stored artifact if present, else render on demand.
   -- Write-through: when the merchant opts into PDF storage, persist the freshly
   -- rendered PDF so subsequent reads (and ONDC sharing) are served from S3.

@@ -161,7 +161,7 @@ assertDestinationAllowed :: BS.ByteString -> Int -> IO ()
 assertDestinationAllowed hostBs port = do
   let host = T.unpack $ TE.decodeUtf8With (\_ _ -> Just '?') hostBs
       hints = NS.defaultHints {NS.addrSocketType = NS.Stream}
-  addrs <- NS.getAddrInfo (Just hints) (Just host) (Just (show port))
+  addrs <- NS.getAddrInfo (Just hints) (Just host) (Just (show port)) :: IO [NS.AddrInfo]
   when (any (isInternal . NS.addrAddress) addrs) $
     ioError . userError $ "refusing to fetch internal address for host " <> host
 

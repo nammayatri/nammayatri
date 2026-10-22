@@ -53,8 +53,13 @@
           rev = "${version}";
           hash = "sha256-PsGENVqSelmpXkVtMy9MdJALFAv2mTW7A11QzuZ/E8w=";
         };
+
+        # Apply the locally generated patch
+        patches = [ ./gtfstidy/fix-go-mod.patch ];
+
         doCheck = false;
         vendorHash = "sha256-TH8oCyZ5ZThKwwraa/qgr0Jf4kQNOz2PZxvv1dn/yVA=";
+
         meta = {
           description = "A tool for checking, sanitizing and minimizing GTFS feeds";
           homepage = "https://github.com/patrickbr/gtfstidy";
@@ -104,13 +109,16 @@
             ]);
         };
         packages = {
-          amazonka.source = inputs.amazonka-git + /lib/amazonka;
-          amazonka-core.source = inputs.amazonka-git + /lib/amazonka-core;
-          amazonka-test.source = inputs.amazonka-git + /lib/amazonka-test;
-          amazonka-sso.source = inputs.amazonka-git + /lib/services/amazonka-sso;
-          amazonka-sts.source = inputs.amazonka-git + /lib/services/amazonka-sts;
-          amazonka-ses.source = inputs.amazonka-git + /lib/services/amazonka-ses;
-          streamly.source = "0.8.3";
+          # amazonka.source = inputs.amazonka-git + /lib/amazonka;
+          # amazonka-core.source = inputs.amazonka-git + /lib/amazonka-core;
+          # amazonka-s3.source  = inputs.amazonka-git + /lib/services/amazonka-s3;
+          # amazonka-test.source = inputs.amazonka-git + /lib/amazonka-test;
+          # amazonka-sso.source = inputs.amazonka-git + /lib/services/amazonka-sso;
+          # amazonka-sts.source = inputs.amazonka-git + /lib/services/amazonka-sts;
+          # amazonka-ses.source = inputs.amazonka-git + /lib/services/amazonka-ses;
+          # amazonka-sns.source = inputs.amazonka-git + /lib/services/amazonka-sns;
+
+          streamly.source = "0.10.1";
           unicode-data.source = "0.3.1";
           zip-archive.source = inputs.zip-archive-hs;
           namma-dsl.source = inputs.namma-dsl + /lib/namma-dsl;
@@ -140,12 +148,26 @@
             jailbreak = true;
           };
           base32.jailbreak = true;
-          amazonka-core.check = false;
+          amazonka-core = {
+            jailbreak = true;
+            check = false;
+          };
+
+          amazonka-s3.check = false;
+          amazonka-ses.check = false;
+          amazonka-sns.check = false;
+          amazonka-sso.check = false;
+          amazonka-sts.check = false;
+
           cryptostore.check = false;
+          cryptostore.jailbreak = true;
           # Test suite shells out to `which` / infozip; not on PATH in darwin Nix sandbox.
           zip-archive.check = false;
           google-cloud-pubsub.check = false;
           google-cloud-common.check = false;
+          unicode-data.jailbreak = true;
+          rust-docs.broken = false;
+          unicode-data.check = false;
         };
       };
 
@@ -201,7 +223,7 @@
           sshpass # For password-based SFTP authentication
           jq
           gdal
-          postgis
+          postgresqlPackages.postgis
           zbar
           qrencode # QR-code PNG generation for invoice documents (Utils.QRCode.Encoder)
           newman
@@ -219,9 +241,7 @@
           self'.packages.run-mobility-stack-dev
           self'.packages.run-mobility-stack-dev-on-available-ports
         ] ++ (lib.optionals pkgs.stdenv.isLinux [
-          # TODO: Use wkhtmltopdf  (with macOS support) after updating common/nixpkgs-latest
-          # common/nixpkgs-latest update requires https://github.com/NixOS/nixpkgs/pull/465567
-          pkgs.wkhtmltopdf-bin
+          pkgs.wkhtmltopdf
         ]);
         # cf. https://haskell.flake.page/devshell#composing-devshells
         inputsFrom = [

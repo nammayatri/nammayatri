@@ -1,6 +1,5 @@
 module Storage.Queries.DriverOperatorAssociationExtra where
 
-import Control.Applicative (liftA2)
 import Data.Text (toLower)
 import qualified Database.Beam as B
 import qualified Domain.Types.Common as DC

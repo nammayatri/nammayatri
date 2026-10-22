@@ -26,13 +26,13 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     SpecialLocationPriorityT sql=special_location_priority
-      id Text
+      uuid Text sql=id
       merchantId Text
       merchantOperatingCityId Text
       category Text
       pickupPriority Int
       dropPriority Int
-      Primary id
+      Primary uuid
       deriving Generic
     |]
 
@@ -45,13 +45,13 @@ instance FromTType SpecialLocationPriorityT Domain.SpecialLocationPriority where
   fromTType SpecialLocationPriorityT {..} =
     return $
       Domain.SpecialLocationPriority
-        { id = Id id,
+        { id = Id uuid,
           ..
         }
 
 instance ToTType SpecialLocationPriorityT Domain.SpecialLocationPriority where
   toTType Domain.SpecialLocationPriority {..} =
     SpecialLocationPriorityT
-      { id = getId id,
+      { uuid = getId id,
         ..
       }

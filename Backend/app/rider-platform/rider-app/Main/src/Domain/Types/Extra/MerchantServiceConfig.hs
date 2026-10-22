@@ -265,7 +265,7 @@ data ServiceConfigD (s :: UsageSafety)
   | EventTrackingServiceConfig !EventTrackingInterface.EventTrackingServiceConfig
   | FleetEngineServiceConfig !FleetEngineCfg
   | PartnerSdkServiceConfig !PartnerSdk.PartnerSdkConfig
-  deriving (Generic, Eq)
+  deriving (Generic)
 
 type ServiceConfig = ServiceConfigD 'Safe
 

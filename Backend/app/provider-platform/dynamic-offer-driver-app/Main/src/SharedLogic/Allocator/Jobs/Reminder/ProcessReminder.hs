@@ -17,7 +17,6 @@ module SharedLogic.Allocator.Jobs.Reminder.ProcessReminder
   )
 where
 
-import Control.Applicative (liftA2)
 import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
 import qualified Data.Time as Time
