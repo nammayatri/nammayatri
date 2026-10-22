@@ -22,6 +22,7 @@ import qualified Kernel.External.Maps.Google.MobilityBilling as GoogleBilling
 import qualified Kernel.External.Maps.Interface.Types as MapsIface
 import qualified Kernel.External.Maps.Types as MapsTypes
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
@@ -37,7 +38,8 @@ reportNavBillableEvent ::
     CacheFlow m r,
     EsqDBFlow m r,
     CoreMetrics m,
-    HasRequestId r
+    HasRequestId r,
+    HasKafkaProducer r
   ) =>
   DB.Booking ->
   DRide.Ride ->
@@ -52,7 +54,7 @@ reportNavBillableEvent booking ride = do
       merchantOpCity <-
         CQMOC.findById booking.merchantOperatingCityId
           >>= fromMaybeM (InternalError $ "MerchantOperatingCity not found: " <> booking.merchantOperatingCityId.getId)
-      GoogleBilling.reportBillableEvent googleCfg.mobilityBillingUrl (toRegionCode merchantOpCity.country) apiKey ride.id.getId
+      GoogleBilling.reportBillableEvent googleCfg.mobilityBillingUrl (toRegionCode merchantOpCity.country) apiKey (Just booking.merchantOperatingCityId.getId) ride.id.getId
 
 getMerchantGoogleMapsCfg ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
