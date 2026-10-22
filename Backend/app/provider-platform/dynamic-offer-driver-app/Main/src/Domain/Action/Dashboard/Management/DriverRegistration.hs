@@ -3468,33 +3468,33 @@ postDriverRegistrationAddVehicles merchantShortId opCity driverId mbAutoApprove 
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (driver.role == DP.DRIVER && driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCityId) $
     throwError (PersonDoesNotExist personId.getId)
+  -- Without a photo an RC can only be created from the row's details, which the register door honours only where the city allows it.
+  unless (transporterConfig.allowDashboardToPassVehicleDetails == Just True) $
+    throwError (InvalidRequest "Vehicle details from the dashboard are not enabled for this city")
   rows <- BulkUpload.readVehiclesCsv transporterConfig merchantOpCity req.file
-  let registerRow rcReq = do
+  -- The driver in the path owns every row, so the file's driver phone column is ignored.
+  let registerRow (rcReq, mbFleetNo) = do
+        whenJust mbFleetNo $ \_ -> throwError (InvalidRequest "Fleet phone number is not applicable for adding vehicles under a driver")
+        when (isNothing rcReq.vehicleDetails) $ throwError (InvalidRequest "Manufacturer, model and colour are required")
         -- Bulk only creates vehicles; an existing plate is linked through the dashboard, as the single add does.
         mbExistingRC <- QRC.findLastVehicleRCWrapper rcReq.vehicleRegistrationCertNumber
         whenJust mbExistingRC $ \_ -> throwError (InvalidRequest "RC already exists for this vehicle number")
-        -- As in the fleet bulk add, only a row with details the city accepts gets the shared placeholder image.
-        mbPlaceholderImageId <-
-          if isJust rcReq.vehicleDetails && transporterConfig.allowDashboardToPassVehicleDetails == Just True
-            then Just <$> createBulkRcPlaceholderImage personId merchant.id merchantOpCityId
-            else pure Nothing
-        let rcReqWithImage = maybe rcReq (\imageId -> (rcReq :: Common.RegisterRCReq) {Common.imageId = cast imageId}) mbPlaceholderImageId
+        imageId <- createBulkRcPlaceholderImage personId merchant.id merchantOpCityId
         registered <-
           withTryCatch "register:postDriverRegistrationAddVehicles" $
             postDriverRegistrationDocumentRegisterWithVerifiedBy DPan.DASHBOARD merchantShortId opCity driverId mbAutoApprove $
-              Common.DocumentRegisterReq {metadata = Common.RCData rcReqWithImage}
+              Common.DocumentRegisterReq {metadata = Common.RCData ((rcReq :: Common.RegisterRCReq) {Common.imageId = cast imageId})}
         case registered of
           Right _ -> pure ()
           Left err -> do
             -- A row refused before its RC existed leaves no image behind; an image an RC already holds stays, as after a failed approve.
-            whenJust mbPlaceholderImageId $ \imageId -> do
-              mbRc <- QRC.findByAnyImageId imageId
-              when (isNothing mbRc) $ QImage.deleteByIdAndPerson imageId personId
+            mbRc <- QRC.findByAnyImageId imageId
+            when (isNothing mbRc) $ QImage.deleteByIdAndPerson imageId personId
             throwM err
   unprocessedEntities <-
     foldlM
-      ( \unprocessed (rcReq, _, _, _, _, _) ->
-          withTryCatch "process:postDriverRegistrationAddVehicles" (registerRow rcReq) <&> \case
+      ( \unprocessed (rcReq, _, _, _, mbFleetNo, _) ->
+          withTryCatch "process:postDriverRegistrationAddVehicles" (registerRow (rcReq, mbFleetNo)) <&> \case
             Left err -> unprocessed <> ["Unable to add Vehicle (" <> rcReq.vehicleRegistrationCertNumber <> "): " <> T.pack (displayException err)]
             Right () -> unprocessed
       )

@@ -122,8 +122,8 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
-import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import Domain.Action.Dashboard.Common.BulkUpload (DriverDetails (..), castCommonOnboardingAsToDomain, checkAndUpdateAddDriverLimit, fetchOrCreatePerson, processDriverRows, readDriversCsv, readVehiclesCsv, validateDriverName)
+import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegV2
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.Dashboard.Management.DriverRegistration as DRegistration
@@ -365,24 +365,34 @@ postDriverFleetAddVehicleHelper isBulkUpload callerMayAutoApprove merchantShortI
   let vehicleReq = maybe req (\imageId -> (req :: Common.AddVehicleReq) {Common.imageId = Just (cast imageId)}) mbPlaceholderImageId
   -- An admin's add is approved on the spot only where the city allows it and there is an image to approve through, as for a single document register.
   let autoApproved = callerMayAutoApprove && transporterConfig.autoApproveOnAdminUpload == Just True && isJust vehicleReq.imageId
-  case (getEntityData.role, getMbFleetOwnerId) of
-    (DP.DRIVER, Nothing) -> do
-      -- DCO case
-      void $ checkRCAssociationForDriver getEntityData.id rc True
-      void $ DCommon.runVerifyRCFlow False getEntityData.id merchant merchantOpCityId opCity transporterConfig vehicleReq True isBulkUpload autoApproved Nothing -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
-      logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
-    (_, Just fleetOwnerId) -> do
-      -- fleet and fleetDriver case
-      let skipFleetChecks = fromMaybe False req.skipFleetChecks
-      whenJust rc $ \rcert -> do
-        unless skipFleetChecks $ checkRCAssociationForFleet fleetOwnerId rcert
-      void $ DCommon.runVerifyRCFlow skipFleetChecks getEntityData.id merchant merchantOpCityId opCity transporterConfig vehicleReq True isBulkUpload autoApproved (Just $ Id @DP.Person fleetOwnerId) -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
-      let logTag = case getEntityData.role of
-            role | DCommon.checkFleetOwnerRole role -> "dashboard -> addVehicleUnderFleet"
-            DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
-            _ -> "dashboard -> addVehicleUnderUnknown"
-      logTagInfo logTag (show getEntityData.id)
-    _ -> throwError (InvalidRequest "Invalid Data")
+  let register = case (getEntityData.role, getMbFleetOwnerId) of
+        (DP.DRIVER, Nothing) -> do
+          -- DCO case
+          void $ checkRCAssociationForDriver getEntityData.id rc True
+          void $ DCommon.runVerifyRCFlow False getEntityData.id merchant merchantOpCityId opCity transporterConfig vehicleReq True isBulkUpload autoApproved Nothing -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+          logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
+        (_, Just fleetOwnerId) -> do
+          -- fleet and fleetDriver case
+          let skipFleetChecks = fromMaybe False req.skipFleetChecks
+          whenJust rc $ \rcert -> do
+            unless skipFleetChecks $ checkRCAssociationForFleet fleetOwnerId rcert
+          void $ DCommon.runVerifyRCFlow skipFleetChecks getEntityData.id merchant merchantOpCityId opCity transporterConfig vehicleReq True isBulkUpload autoApproved (Just $ Id @DP.Person fleetOwnerId) -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+          let logTag = case getEntityData.role of
+                role | DCommon.checkFleetOwnerRole role -> "dashboard -> addVehicleUnderFleet"
+                DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
+                _ -> "dashboard -> addVehicleUnderUnknown"
+          logTagInfo logTag (show getEntityData.id)
+        _ -> throwError (InvalidRequest "Invalid Data")
+  case mbPlaceholderImageId of
+    Nothing -> register
+    Just imageId ->
+      withTryCatch "register:postDriverFleetAddVehicleHelper" register >>= \case
+        Right () -> pure ()
+        Left err -> do
+          -- A row refused before its RC existed leaves no image behind; an image an RC already holds stays.
+          mbRc <- VRCQuery.findByAnyImageId imageId
+          when (isNothing mbRc) $ QImage.deleteByIdAndPerson imageId getEntityData.id
+          throwM err
   when autoApproved $
     whenJust (fmap cast mbPlaceholderImageId <|> req.imageId) $ \imageId ->
       void $
