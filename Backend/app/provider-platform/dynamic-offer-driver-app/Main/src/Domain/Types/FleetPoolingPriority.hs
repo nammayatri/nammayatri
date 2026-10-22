@@ -22,6 +22,7 @@ module Domain.Types.FleetPoolingPriority
   )
 where
 
+import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
@@ -45,13 +46,14 @@ isSupportedPoolingPriorityArea = \case
   SL.Drop _ -> True
   _ -> False
 
--- | Highest level among the search's pickup and drop special-location entries, else the Default entry.
-resolvePoolingPriority :: Maybe SL.Area -> FleetPoolingPriority -> Maybe PoolingPriorityLevel
-resolvePoolingPriority mbArea (FleetPoolingPriority priorities) =
+-- | Highest level among the pickup and drop special-location entries of the search's areas, else the Default entry.
+resolvePoolingPriority :: [SL.Area] -> FleetPoolingPriority -> Maybe PoolingPriorityLevel
+resolvePoolingPriority areas (FleetPoolingPriority priorities) =
   case mapMaybe (`Map.lookup` priorities) candidates of
     [] -> Map.lookup SL.Default priorities
     levels -> Just (maximum levels)
   where
     candidates =
-      maybeToList ((\pickupId -> SL.Pickup (Id pickupId) Nothing) <$> (mbArea >>= SL.pickupSpecialZoneIdFromArea))
-        <> maybeToList (SL.Drop . Id <$> (mbArea >>= SL.dropSpecialZoneIdFromArea))
+      DL.nub $
+        mapMaybe (fmap (\pickupId -> SL.Pickup (Id pickupId) Nothing) . SL.pickupSpecialZoneIdFromArea) areas
+          <> mapMaybe (fmap (SL.Drop . Id) . SL.dropSpecialZoneIdFromArea) areas

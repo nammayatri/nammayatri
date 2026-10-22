@@ -59,6 +59,7 @@ import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
+import qualified SharedLogic.FleetDriverSettings as FDS
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.DashboardAlert ()
@@ -525,6 +526,7 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
     mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId driverId
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
     FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
+    fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver driverId merchantOperatingCityId
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig

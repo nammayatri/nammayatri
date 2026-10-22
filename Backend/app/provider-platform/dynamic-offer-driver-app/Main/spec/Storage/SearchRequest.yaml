@@ -47,6 +47,8 @@ SearchRequest:
     toLocGeohash: Maybe Text
     stops: "[Location]"
     area: Maybe Area
+    pickupArea: Maybe Area
+    dropArea: Maybe Area
     bapId: Text
     bapUri: BaseUrl
     bapCity: Maybe City

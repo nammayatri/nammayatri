@@ -59,6 +59,9 @@ postDriverAreaPreferenceUpdateInfo ::
   )
 postDriverAreaPreferenceUpdateInfo (mbPersonId, _, merchantOpCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  fleetDisablesPreference <- isAreaPreferenceDisabledByFleet merchantOpCityId personId
+  when (fleetDisablesPreference && req.enabled == Just True) $
+    throwError AreaPreferenceDisabledByFleet
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   minCells <- getMinCells merchantOpCityId
   mbPref <- mapM (validateSelection merchantOpCityId minCells) req.selection
@@ -72,7 +75,6 @@ postDriverAreaPreferenceUpdateInfo (mbPersonId, _, merchantOpCityId) req = do
            in retained <> newTags
       updatedTags = maybe tagsAfterSelection (`setEnabledTag` tagsAfterSelection) req.enabled
   QPerson.updateDriverTag (if null updatedTags then Nothing else Just updatedTags) personId
-  fleetDisablesPreference <- isAreaPreferenceDisabledByFleet merchantOpCityId personId
   pure $ buildInfoRes fleetDisablesPreference minCells (Just updatedTags)
   where
     tagNameOf (LYT.TagNameValueExpiry txt) = case T.splitOn "#" txt of
@@ -152,4 +154,4 @@ buildInfoRes fleetDisablesPreference minCells mbTags =
           lockedByFleet = Just fleetDisablesPreference
         }
   where
-    enabled = AreaPref.isAreaPreferenceEnabled (fromMaybe [] mbTags)
+    enabled = not fleetDisablesPreference && AreaPref.isAreaPreferenceEnabled (fromMaybe [] mbTags)
