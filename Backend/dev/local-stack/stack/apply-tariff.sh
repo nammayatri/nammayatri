@@ -28,23 +28,46 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SQL="${1:-$HERE/db/algeria-tariff.sql}"
+# Both countries unless one file is named (2026-10-22, the owner: « never change
+# one country without the other »). Each file is keyed to its own merchant, so
+# applying both is what keeps the two tariffs moving together.
+if [ $# -gt 0 ]; then
+  SQLS=("$1")
+else
+  SQLS=("$HERE/db/algeria-tariff.sql" "$HERE/db/mauritania-tariff.sql")
+fi
 
 say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()  { printf '   \033[1;32mok  \033[0m%s\n' "$*"; }
 bad() { printf '   \033[1;31mBAD \033[0m%s\n' "$*"; }
 
-[ -f "$SQL" ] || { bad "no tariff at $SQL"; exit 1; }
+for SQL in "${SQLS[@]}"; do
+  [ -f "$SQL" ] || { bad "no tariff at $SQL"; exit 1; }
+done
 
-say "applying $(basename "$SQL")"
+# ONE transaction for every file: the countries change together or not at all.
+# Each file wraps itself in BEGIN/COMMIT; those lines are taken out and the
+# whole is wrapped once, so a failure in the second file rolls back the first.
+COMBINED="$(mktemp)"
+trap 'rm -f "$COMBINED"' EXIT
+{
+  echo 'BEGIN;'
+  for SQL in "${SQLS[@]}"; do
+    echo "-- ── $(basename "$SQL") ──"
+    grep -vE '^[[:space:]]*(BEGIN|COMMIT)[[:space:]]*;[[:space:]]*$' "$SQL"
+  done
+  echo 'COMMIT;'
+} > "$COMBINED"
+
+say "applying $(for SQL in "${SQLS[@]}"; do basename "$SQL"; done | paste -sd' ' -), in one transaction"
 # docker cp then -f, never `docker exec -i psql < file`: when this script is
 # itself piped to a remote shell, -i makes docker eat the rest of it.
-docker cp "$SQL" ny-postgres:/tmp/tariff.sql >/dev/null
+docker cp "$COMBINED" ny-postgres:/tmp/tariff.sql >/dev/null
 if docker exec ny-postgres psql -U postgres -d atlas_dev \
      -v ON_ERROR_STOP=1 -f /tmp/tariff.sql; then
   ok "applied"
 else
-  bad "SQL failed — nothing cleared, the old tariff is still live"
+  bad "SQL failed — rolled back, nothing cleared: the old tariff is still live in every country"
   exit 1
 fi
 
