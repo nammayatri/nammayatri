@@ -108,6 +108,7 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.CancellationConsequenceMatrix as CQCCM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import Tools.Error
@@ -284,8 +285,13 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     applyDriverMoneyConsequence driver =
       whenJust ((\r -> CancellationConsequence.driverMoneyDeduction r (FC.netRideFare ctx.booking.fareParams ctx.booking.estimatedFare)) =<< row) $ \signedAmount ->
         fork "cancellationConsequenceDriverMoney" $ do
+          -- read off the search request, not the booking: reallocating near pickup books the
+          -- next driver with booking.isScheduled = False (SharedLogic.Cancel). booking.isScheduled
+          -- is only the fallback for a missing search request — it is never True for an instant search.
+          isScheduledSearch <- maybe ctx.booking.isScheduled (.isScheduled) <$> QSRLite.findByTransactionIdAndMerchantIdLite ctx.booking.transactionId ctx.booking.providerId
           let isWalletEnabled = fromMaybe False ctx.merchant.prepaidSubscriptionAndWalletEnabled || ctx.transporterConfig.driverWalletConfig.enableDriverWallet
-          DCP.accumulateCancellationPenalty isWalletEnabled ctx.booking ctx.ride (Just signedAmount) ctx.transporterConfig driver
+              isScheduledRidePenaltyOrRewardApplicable = isScheduledSearch && fromMaybe False ctx.transporterConfig.scheduledRideConfig.enableScheduledRidePenaltyOrReward
+          DCP.accumulateCancellationPenalty (isWalletEnabled || isScheduledRidePenaltyOrRewardApplicable) ctx.booking ctx.ride (Just signedAmount) ctx.transporterConfig driver
 
     applyAvailableForRidesRevocation =
       when (CancellationFault.isDriverAtFault ctx.decision.faultVerdict) $ do
