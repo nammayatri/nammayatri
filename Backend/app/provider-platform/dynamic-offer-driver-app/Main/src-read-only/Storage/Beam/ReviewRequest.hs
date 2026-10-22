@@ -34,6 +34,6 @@ instance B.Table ReviewRequestT where
 
 type ReviewRequest = ReviewRequestT Identity
 
-$(enableKVPG ''ReviewRequestT ['id] [])
+$(enableKVPG ''ReviewRequestT ['id] [['entityId]])
 
 $(mkTableInstances ''ReviewRequestT "review_request")

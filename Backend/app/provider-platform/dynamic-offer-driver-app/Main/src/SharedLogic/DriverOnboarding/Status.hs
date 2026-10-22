@@ -22,6 +22,13 @@ module SharedLogic.DriverOnboarding.Status
     findFleetDocVerificationConfig,
     hasActiveFleetAssociation,
     botApproveAndReconcile,
+    botApproveDriver,
+    botApproveFleetOwner,
+    botApproveVehicle,
+    botEnableDriver,
+    botRejectDriver,
+    botRejectFleetOwner,
+    botRejectVehicle,
     activateRCAutomatically,
     mkCommonDocumentItem,
     mkDLMetadata,
@@ -65,6 +72,7 @@ import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.DriverUdyam as DUdyam
 import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OperationHubRequests as DOHR
@@ -84,8 +92,10 @@ import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (HasField)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.ApprovalComms as ApprovalComms
 import SharedLogic.DriverOnboarding.Common
 import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import SharedLogic.DriverOnboarding.OnboardingFlags.Flow
@@ -445,11 +455,13 @@ refreshVehicleByRcNo :: OnboardingFlow m r => Maybe DTC.TransporterConfig -> May
 refreshVehicleByRcNo mbTransporterConfig makeSelfieAadhaarPanMandatory mbRcNo =
   whenJust mbRcNo $ \rcNo -> do
     mbRc <- RCQuery.findLastVehicleRCWrapper rcNo
-    whenJust mbRc $ \rc -> void $ refreshVehicleOnboardingFlags mbTransporterConfig makeSelfieAadhaarPanMandatory False True rc.id
+    whenJust mbRc $ \rc -> void $ refreshVehicleOnboardingFlags mbTransporterConfig makeSelfieAadhaarPanMandatory False False rc.id
 
 runRefreshOnboardingFlagsVehicle :: OnboardingFlow m r => Maybe DTC.TransporterConfig -> Id RC.VehicleRegistrationCertificate -> m (Maybe Bool)
-runRefreshOnboardingFlagsVehicle mbTransporterConfig = refreshVehicleOnboardingFlags mbTransporterConfig Nothing False True
+runRefreshOnboardingFlagsVehicle mbTransporterConfig = refreshVehicleOnboardingFlags mbTransporterConfig Nothing False False
 
+-- | InspectionHub is forced VALID only by the operator's inspection approval (its request isn't APPROVED yet when
+--   the recompute is forked); every other recompute reads the real inspection status.
 runRefreshOnboardingFlagsVehicleWithBotApproval :: OnboardingFlow m r => Maybe DTC.TransporterConfig -> Bool -> Bool -> Id RC.VehicleRegistrationCertificate -> m (Maybe Bool)
 runRefreshOnboardingFlagsVehicleWithBotApproval mbTransporterConfig = refreshVehicleOnboardingFlags mbTransporterConfig Nothing
 
@@ -478,7 +490,8 @@ refreshVehicleOnboardingFlags mbTransporterConfig makeSelfieAadhaarPanMandatory 
                   { vdeRegistrationNo = registrationNo,
                     vdeItem = vehicleDocItem',
                     vdeConfigs = allDocumentVerificationConfigs,
-                    vdeMakeSelfieAadhaarPanMandatory = makeSelfieAadhaarPanMandatory
+                    vdeMakeSelfieAadhaarPanMandatory = makeSelfieAadhaarPanMandatory,
+                    vdeEnableBotFlow = transporterConfig.enableBotFlow == Just True
                   }
               ]
           }
@@ -744,11 +757,11 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         -- `approved` and RC activation are BOT-owned (suppressed below).
         let enableBotFlow = entityImagesInfo.transporterConfig.enableBotFlow == Just True || entityImagesInfo.transporterConfig.unifiedOnboardingFlagsRecompute == Just True
         -- Routed through the common entry point. Documents are passed through as-is: this site
-        -- does NOT waive the InspectionHub gate (the full vehicle recompute does).
+        -- does NOT waive the InspectionHub gate (only the operator's inspection approval does).
         when enableBotFlow $ do
           mbRcForRefresh <- RCQuery.findLastVehicleRCWrapper vehicleDoc.registrationNo
           whenJust mbRcForRefresh $ \rcForRefresh ->
-            void $ refreshVehicleOnboardingFlags (Just entityImagesInfo.transporterConfig) makeSelfieAadhaarPanMandatory False True rcForRefresh.id
+            void $ refreshVehicleOnboardingFlags (Just entityImagesInfo.transporterConfig) makeSelfieAadhaarPanMandatory False False rcForRefresh.id
         mbVehicle <- QVehicle.findById personId
         let firstTimeOnboarding = maybe False (isNothing . (.enabledAt)) mbDriverInfo
             allowAutoActivate =
@@ -958,15 +971,16 @@ checkAllVehicleDocsValidForEnabling ::
 checkAllVehicleDocsValidForEnabling = checkAllVehicleDocsValid' ForEnabling
 
 -- | BOT approve: throws (naming the offending docs) if any BotApproval dependency doc is NOT VALID;
---   otherwise forks the verified/enabled recompute. Throwing before the fork guarantees we never
---   force-enable a fleet/driver whose deps haven't passed.
+--   otherwise runs @writeApproval@ (botEnableDriver / botApproveFleetOwner) and forks the verified/enabled
+--   recompute. Throwing first guarantees we never force-enable a fleet/driver whose deps haven't passed.
 botApproveAndReconcile ::
   OnboardingFlow m r =>
   DMOC.MerchantOperatingCity ->
   DP.Person ->
   DTC.TransporterConfig ->
+  m () ->
   m ()
-botApproveAndReconcile merchantOperatingCity person transporterConfig = do
+botApproveAndReconcile merchantOperatingCity person transporterConfig writeApproval = do
   let language = fromMaybe merchantOperatingCity.language person.language
   (allDocVerificationConfigs, driverDocuments, _vehicleCategory, _vehicleDocuments) <- fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig language (Just True)
   -- BotApproval's dependency docs must be VALID. On the DVC (driver) side a dep counts only if it applies per
@@ -983,8 +997,76 @@ botApproveAndReconcile merchantOperatingCity person transporterConfig = do
   -- Block approval (and the fork below) when any dependency doc isn't VALID — surface which docs failed.
   unless (null invalidDeps) $
     throwError (InvalidRequest $ "Cannot approve: BotApproval dependency documents not valid: " <> T.intercalate ", " (map show invalidDeps))
+  -- Write the flags now so they show immediately; the forked recompute below is slow.
+  writeApproval
   fork "botApproveAndReconcile: recompute verified/enabled" $
     void $ runRefreshOnboardingFlagsDriverWithBotApproval (Just person) (Just transporterConfig) True person.id
+
+-- BOT review writes. Each takes the entity as the review handler read it, writes under the recompute's lock with
+-- the flag writers that stamp the onboarding lists' date, and moves the onboarding counters by the delta the
+-- recompute would have, so a write the recompute never sees stays counted.
+
+-- | BOT phase 1 for a driver: `approved = True`, with the approval notification.
+botApproveDriver :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> DI.DriverInformation -> m ()
+botApproveDriver transporterConfig person driverInfo =
+  withPersonDocsLock person.id $ do
+    DIQuery.updateVerifiedAndApprovedState (cast person.id) driverInfo.verified (Just True)
+    adjustDriverOnboardingCounters transporterConfig person driverInfo driverInfo {DI.approved = Just True}
+    unless (driverInfo.approved == Just True) $
+      ApprovalComms.notifyPersonApproved person.merchantOperatingCityId person
+
+-- | BOT phase 2 for a driver: `enabled = True` with operator analytics. `disabledReasonFlag` is left to its
+--   owners and no RC is auto-activated.
+botEnableDriver :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> DI.DriverInformation -> m ()
+botEnableDriver transporterConfig person driverInfo =
+  withPersonDocsLock person.id $ do
+    Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig person.id True Nothing
+    adjustDriverOnboardingCounters transporterConfig person driverInfo driverInfo {DI.enabled = True}
+
+-- | BOT reject for a driver: `verified = False`, `approved = False` (as the old flow), whichever doc was rejected,
+--   so re-approval is needed even when the rejected doc's status doesn't change (e.g. NomineeDetails).
+botRejectDriver :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> DI.DriverInformation -> m ()
+botRejectDriver transporterConfig person driverInfo =
+  withPersonDocsLock person.id $ do
+    DIQuery.updateVerifiedAndApprovedState (cast person.id) False (Just False)
+    adjustDriverOnboardingCounters transporterConfig person driverInfo driverInfo {DI.verified = False, DI.approved = Just False}
+
+-- | BOT approve for a fleet owner (single phase): `approved = True` and `enabled = True`, with the approval notification.
+botApproveFleetOwner :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> DFOI.FleetOwnerInformation -> m ()
+botApproveFleetOwner transporterConfig person fleetOwnerInfo =
+  withPersonDocsLock person.id $ do
+    QFOI.updateFleetOwnerVerifiedApprovedAndEnabledStatus fleetOwnerInfo.verified (Just True) True person.id
+    adjustFleetOnboardingCounters transporterConfig person fleetOwnerInfo fleetOwnerInfo {DFOI.approved = Just True, DFOI.enabled = True}
+    unless (fleetOwnerInfo.approved == Just True) $
+      ApprovalComms.notifyPersonApproved person.merchantOperatingCityId person
+
+-- | BOT reject for a fleet owner: `verified`, `approved` and `enabled` False (as the old flow), whichever doc was
+--   rejected.
+botRejectFleetOwner :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> DFOI.FleetOwnerInformation -> m ()
+botRejectFleetOwner transporterConfig person fleetOwnerInfo =
+  withPersonDocsLock person.id $ do
+    QFOI.updateFleetOwnerVerifiedApprovedAndEnabledStatus False (Just False) False person.id
+    adjustFleetOnboardingCounters transporterConfig person fleetOwnerInfo fleetOwnerInfo {DFOI.verified = False, DFOI.approved = Just False, DFOI.enabled = False}
+
+-- | BOT approve for a vehicle: `approved = True`, with the approval notification. No RC auto-activation.
+botApproveVehicle :: OnboardingFlow m r => DTC.TransporterConfig -> RC.VehicleRegistrationCertificate -> m ()
+botApproveVehicle transporterConfig rc =
+  Hedis.withWaitAndLockRedis (mkRCDocsStatusKey rc.id) onboardingLockTTLSeconds onboardingLockRetryMicros $
+    unless (rc.approved == Just True) $ do
+      RCQuery.updateApprovedAndVerifiedById (Just True) rc.verified rc.id
+      adjustVehicleOnboardingCounters transporterConfig rc rc {RC.approved = Just True}
+      registrationNo <- decrypt rc.certificateNumber
+      ApprovalComms.notifyVehicleApproved rc registrationNo
+
+-- | BOT reject for a vehicle: `verified` and `approved` False (as the old flow), whichever doc was rejected.
+botRejectVehicle :: OnboardingFlow m r => DTC.TransporterConfig -> RC.VehicleRegistrationCertificate -> m ()
+botRejectVehicle transporterConfig rc =
+  Hedis.withWaitAndLockRedis (mkRCDocsStatusKey rc.id) onboardingLockTTLSeconds onboardingLockRetryMicros $ do
+    RCQuery.updateApprovedAndVerifiedById (Just False) (Just False) rc.id
+    adjustVehicleOnboardingCounters transporterConfig rc rc {RC.verified = Just False, RC.approved = Just False}
+
+withPersonDocsLock :: OnboardingFlow m r => Id DP.Person -> m a -> m a
+withPersonDocsLock personId = Hedis.withWaitAndLockRedis (mkPersonDocsStatusKey personId) onboardingLockTTLSeconds onboardingLockRetryMicros
 
 -- | Throw InvalidRequest if any driver under the fleet has a NEW or
 --   INPROGRESS ride. Used as a guard before flipping fleet enabled to false.
