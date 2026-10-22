@@ -344,6 +344,7 @@ data JourneyMilestoneStatus
   | Completed
   | Rewarded
   | WaivedOff
+  | RewardPending
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
