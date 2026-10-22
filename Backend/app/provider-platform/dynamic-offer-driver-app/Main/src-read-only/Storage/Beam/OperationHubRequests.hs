@@ -37,6 +37,6 @@ instance B.Table OperationHubRequestsT where
 
 type OperationHubRequests = OperationHubRequestsT Identity
 
-$(enableKVPG ''OperationHubRequestsT ['id] [])
+$(enableKVPG ''OperationHubRequestsT ['id] [['driverId], ['registrationNo]])
 
 $(mkTableInstances ''OperationHubRequestsT "operation_hub_requests")

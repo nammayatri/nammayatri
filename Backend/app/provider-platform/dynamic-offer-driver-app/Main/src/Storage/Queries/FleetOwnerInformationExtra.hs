@@ -371,6 +371,26 @@ updateFleetOwnerVerifiedAndApprovedStatus verified approved fleetOwnerPersonId =
     )
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
+-- | Set `verified`, `approved` and `enabled` in a single write (the BOT review's approve and reject).
+--   Stamps `docsVerificationStatusUpdatedAt` (the onboarding lists' sort key) like every onboarding-flag write.
+updateFleetOwnerVerifiedApprovedAndEnabledStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Bool ->
+  Maybe Bool ->
+  Bool ->
+  Kernel.Types.Id.Id DP.Person ->
+  m ()
+updateFleetOwnerVerifiedApprovedAndEnabledStatus verified approved enabled fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.verified verified,
+      Se.Set Beam.approved approved,
+      Se.Set Beam.enabled enabled,
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.docsVerificationStatusUpdatedAt (Just _now)
+    ]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
 -- | Set `enabled`, stamping `docsVerificationStatusUpdatedAt` (the onboarding lists' sort key) like every
 --   onboarding-flag write.
 updateFleetOwnerEnabledStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Kernel.Types.Id.Id DP.Person -> m ()
@@ -378,26 +398,6 @@ updateFleetOwnerEnabledStatus enabled fleetOwnerPersonId = do
   _now <- getCurrentTime
   updateOneWithKV
     [Se.Set Beam.enabled enabled, Se.Set Beam.docsVerificationStatusUpdatedAt (Just _now), Se.Set Beam.updatedAt _now]
-    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
-
--- | Set `approved` and `enabled` in a single targeted write. Used by the BOT-review approve path:
---   a single `updateOneWithKV` patches just these two fields (not a full-row updateByPrimaryKey), so it
---   never rebuilds the row from a stale snapshot and can't clobber concurrent field writes from the
---   forked recompute.
-updateFleetOwnerApprovedAndEnabledStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Maybe Bool ->
-  Bool ->
-  Kernel.Types.Id.Id DP.Person ->
-  m ()
-updateFleetOwnerApprovedAndEnabledStatus approved enabled fleetOwnerPersonId = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    ( [ Se.Set Beam.enabled enabled,
-        Se.Set Beam.updatedAt _now
-      ]
-        <> [Se.Set Beam.approved approved | isJust approved]
-    )
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
 -- | Downgrade-only: set `enabled`/`verified` to False only when the corresponding flag is True,
