@@ -155,6 +155,30 @@ Two more things the table alone does not tell you:
   covering the first 3 km. If the client meant the start to include some
   distance, that is the one value to change.
 
+### The price shown when no driver is near — `maps-shim/fare-preview.js`
+
+The provider prices a search only for the vehicle types it found a driver for
+(the binary's `Search.hs` keeps the fare policies whose variant is in the driver
+pool), so with nobody of that type online the estimate is **absent**, not zero.
+The boss asked on 2026-10-22 for the price to show anyway. The newer upstream
+switch for it (`transporter_config.consider_drivers_for_search`) is not in our
+binary, so `GET /fleet/fare-preview?lat=&lon=&distance=&variant=` computes it
+from the same two tables, for the route distance of the search:
+
+    min = dead_km_fare + round(base_distance_fare)
+          + round((distance - base_distance_meters) / 1000 * per_extra_km_fare)
+    max = min + the restricted_extra_fare band with the greatest
+          min_trip_distance <= distance (else driver_max_extra_fee)
+
+`round` is Haskell's (half to even). Proved against the live server's own
+quotes in Algiers (371–486, 571, 899–1184 DA) in `tests/fare-preview.test.js`,
+which applies both tariff files for real. The country comes from the pickup's
+geofence, so each country prices with its own merchant. It is a **preview**:
+nothing can be ordered from it, and it declines (404) rather than guess when a
+night multiplier other than 1 is set. A tariff change needs no change here --
+the rows are read on every call -- but a change to how the binary prices
+(a rebuild) must be checked against this formula.
+
 ## The search radius — how "a car is near" is decided
 
 The client's other question of 2026-08-24. Read out of the deployed Dhall

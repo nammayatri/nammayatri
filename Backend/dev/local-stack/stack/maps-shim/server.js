@@ -14,6 +14,7 @@
 
 const http = require('http');
 const fleet = require('./fleet');
+const farePreview = require('./fare-preview');
 const avatars = require('./avatars');
 const rating = require('./rating');
 const wallet = require('./wallet');
@@ -172,6 +173,22 @@ http.createServer((req, res) => {
       pool,
       riderUrl: RIDER_URL,
       token: req.headers.token || '',
+    });
+  }
+
+  // What the ride would cost when no driver of that type is near: the
+  // provider then sends no estimate at all, so the shim prices it from the
+  // same tariff rows (the boss, 2026-10-22). Under /fleet/ because nginx
+  // already sends that prefix here, with the same rate limit and no guard.
+  // A preview only: there is nothing to order from it. See fare-preview.js.
+  if (url.pathname === '/fleet/fare-preview') {
+    if (req.method !== 'GET') return send(res, 405, { error: 'method not allowed' });
+    return farePreview.farePreview({
+      url,
+      res,
+      pool,
+      isSignedIn: () =>
+        identity.riderFromToken(RIDER_URL, req.headers.token || '').then((me) => Boolean(me)),
     });
   }
 
