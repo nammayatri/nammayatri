@@ -572,15 +572,7 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbHasPasses mbIntegratedBPPConfig
           ]
         (blacklistedServiceTiers, blacklistedFareQuoteTypes) = JMU.getBlacklistedFilters Nothing mbNewServiceTiers
 
-    -- A metro journey needing a change of line is several seated rides, and the hopper index in
-    -- the in-memory GTFS server plans them from the feed's service calendar. Each ride becomes
-    -- its own route detail; the rest of the search flow already handles a multi-element list and
-    -- quotes them as one journey carrying several route stations.
-    --
-    -- Only for a search that names no route: one that does has already chosen it, and passes it
-    -- down to have its fare refreshed. Anything that stops the hopper answering -- disabled,
-    -- unknown stop, or nothing connecting the two today -- falls back to the request's own
-    -- single route detail, so behaviour is exactly as before.
+    -- if metro hopper is enabled via enableMetroFrfsSearch config then call the Metro Hopper (swithc planner) for metro
     frfsRouteDetails <-
       if vehicleType_ == Spec.METRO && isNothing req.routeCode
         then do
@@ -588,24 +580,26 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbHasPasses mbIntegratedBPPConfig
           if fromMaybe False (mbRiderConfig >>= (.enableMetroFrfsSearch))
             then do
               eHopLegs <- try @_ @SomeException $ OTPRest.getMetroHop integratedBPPConfig req.fromStationCode req.toStationCode
-              case eHopLegs of
-                Right (Just hopLegs@(_ : _)) -> do
-                  logInfo $ "Metro hop legs for " <> req.fromStationCode <> " -> " <> req.toStationCode <> ": " <> show (map (.routeCode) hopLegs)
+              case fmap (filter (not . null)) <$> eHopLegs of
+                Right (Just hopJourneys@(_ : _)) -> do
+                  logInfo $ "Metro hop journeys for " <> req.fromStationCode <> " -> " <> req.toStationCode <> ": " <> show (map (map (.routeCode)) hopJourneys)
                   pure
-                    [ FRFSRouteDetails
-                        { routeCode = Just hopLeg.routeCode,
-                          startStationCode = hopLeg.srcStopCode,
-                          endStationCode = hopLeg.destStopCode,
-                          serviceTier = finalServiceTier
-                        }
-                      | hopLeg <- hopLegs
+                    [ [ FRFSRouteDetails
+                          { routeCode = Just hopLeg.routeCode,
+                            startStationCode = hopLeg.srcStopCode,
+                            endStationCode = hopLeg.destStopCode,
+                            serviceTier = finalServiceTier
+                          }
+                        | hopLeg <- hopLegs
+                      ]
+                      | hopLegs <- hopJourneys
                     ]
-                Right _ -> pure requestedRouteDetails
+                Right _ -> pure [requestedRouteDetails]
                 Left err -> do
                   logError $ "Metro hop lookup failed for " <> req.fromStationCode <> " -> " <> req.toStationCode <> ", falling back to the requested route: " <> show err
-                  pure requestedRouteDetails
-            else pure requestedRouteDetails
-        else pure requestedRouteDetails
+                  pure [requestedRouteDetails]
+            else pure [requestedRouteDetails]
+        else pure [requestedRouteDetails]
     logInfo $
       "FRFS Search params → "
         <> "vehicleNumber="
@@ -680,7 +674,7 @@ postFrfsSearchHandler ::
   DIBC.IntegratedBPPConfig ->
   Spec.VehicleCategory ->
   API.Types.UI.FRFSTicketService.FRFSSearchAPIReq ->
-  [FRFSRouteDetails] ->
+  [[FRFSRouteDetails]] ->
   Maybe (Id DPO.PartnerOrgTransaction) ->
   Maybe (Id DPO.PartnerOrganization) ->
   Maybe HighPrecMoney ->
@@ -1386,7 +1380,7 @@ postFrfsBookingReschedule (mbPersonId, merchantId) oldBookingId req = do
               -- Direct search (Flow.search + onSearch) persists the quote+categories synchronously.
               let (blSt, blFqt) = JMU.getBlacklistedFilters (Just False) (Just [serviceTierType])
                   routeDetails = [FRFSRouteDetails {startStationCode = newFromCode, endStationCode = newToCode, routeCode = Just newRouteCode, serviceTier = Just serviceTierType}]
-              CallExternalBPP.search merchant merchantOperatingCity bapConfig freshSearch Nothing routeDetails integratedBppConfig blSt blFqt (fromMaybe True oldBooking.isSingleMode) Nothing
+              CallExternalBPP.search merchant merchantOperatingCity bapConfig freshSearch Nothing [routeDetails] integratedBppConfig blSt blFqt (fromMaybe True oldBooking.isSingleMode) Nothing
               newQuotes <- QFRFSQuote.findAllBySearchId freshSearch.id
               newQuote <-
                 find (\q -> FRFSUtils.getServiceTierTypeFromRouteStationsJson q.routeStationsJson == Just serviceTierType) newQuotes
