@@ -114,6 +114,7 @@ import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.OTP as SOTP
 import qualified SharedLogic.PassRestore as PassRestore
 import qualified SharedLogic.Person as SLP
+import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -125,6 +126,7 @@ import qualified Storage.Queries.DepotManager as QDepotManager
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonExtra as PersonExtra
+import qualified Storage.Queries.PersonPTStats as QPersonPTStats
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import qualified System.Environment as SE
@@ -1066,7 +1068,16 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
   createPersonStats <- makePersonStats person
   Person.create person
   QPS.create createPersonStats
-  addNammaTags person (Y.LoginTagData {id = person.id, gender = req.gender, clientSdkVersion = mbClientVersion, clientBundleVersion = mbBundleVersion, clientReactNativeVersion = mbRnVersion, clientConfigVersion = mbClientConfigVersion, clientDevice = mbDevice})
+  hasPreviousPTBookings <- case req.mobileNumber of
+    Just mobileNumber ->
+      withTryCatch "createPerson:findPTStats" (QPersonPTStats.findAllByStaticPersonId (SLUtils.getPureStaticCustomerId person mobileNumber))
+        >>= \case
+          Left err -> do
+            logError $ "createPerson: person_pt_stats lookup failed for personId=" <> person.id.getId <> " error=" <> show err
+            pure False
+          Right rows -> pure (not $ null rows)
+    Nothing -> pure False
+  addNammaTags hasPreviousPTBookings person (Y.LoginTagData {id = person.id, gender = req.gender, clientSdkVersion = mbClientVersion, clientBundleVersion = mbBundleVersion, clientReactNativeVersion = mbRnVersion, clientConfigVersion = mbClientConfigVersion, clientDevice = mbDevice})
   fork "event_tracking: user_onboarded" $
     ET.trackEvent merchant.id merchantOperatingCityId (ET.UserOnboarded person.id.getId (show identifierType) (show currentCity))
   fork "update emergency contact id" $
@@ -1078,12 +1089,13 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
         CacheFlow m r,
         ClickhouseFlow m r
       ) =>
+      Bool ->
       SP.Person ->
       Y.LoginTagData ->
       m ()
-    addNammaTags person tagData = do
+    addNammaTags hasPreviousPTBookings person tagData = do
       newPersonTags <- withTryCatch "computeNammaTagsWithExpiry:Login" (LYDL.computeNammaTagsWithExpiryAndDebugLog LYDL.Rider (cast person.merchantOperatingCityId) Yudhishthira.Login Nothing tagData)
-      let tags = nub (fromMaybe [] person.customerNammaTags <> fromMaybe [] (eitherToMaybe newPersonTags))
+      let tags = nub (fromMaybe [] person.customerNammaTags <> fromMaybe [] (eitherToMaybe newPersonTags) <> [CQP.newUserTag | not hasPreviousPTBookings])
       CQP.updateCustomerTags (Just tags) tagData.id
 
     makePersonStats :: MonadTime m => SP.Person -> m DPS.PersonStats
