@@ -8,6 +8,7 @@ module Storage.Queries.Transformers.TransporterConfig
     parseSubscriptionConfig,
     parseTaxConfig,
     parseKnowledgeCenterSopTypesConfig,
+    parseFareRecomputePolicy,
   )
 where
 
@@ -136,3 +137,6 @@ parseKnowledgeCenterSopTypesConfig _mocId = \case
   Just v -> case A.fromJSON v of
     A.Success cfg -> pure cfg
     A.Error _ -> pure (Extra.KnowledgeCenterSopTypesConfig [])
+
+parseFareRecomputePolicy :: (Monad m, Log m) => Text -> Maybe A.Value -> m (Maybe Extra.RecomputePolicy)
+parseFareRecomputePolicy = parseFieldM "transporterConfig" "fareRecomputePolicy"
