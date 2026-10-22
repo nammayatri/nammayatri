@@ -444,7 +444,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
               sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Vehicle not allowed for toll route."
               throwError $ InvalidRequest "Vehicle not allowed for toll route."
             -- TODO: Currently isDashboard flagged is passed as False here, but fix it properly once we have edit destination from dashboard too
-            farePolicy <- getFarePolicyOnEndRide (Just booking.createdAt) (Just srcPt) (Just dropLatLong) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) dropLatLong merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just False) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
+            let pricingTime = Just $ if booking.isScheduled then booking.startTime else booking.createdAt
+            farePolicy <- getFarePolicyOnEndRide pricingTime (Just srcPt) (Just dropLatLong) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) dropLatLong merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just False) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
             logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "farePolicy: " <> show farePolicy
             mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.businessEmailDomain booking.billingCategory farePolicy.vehicleServiceTier
             let farePolicy' =
