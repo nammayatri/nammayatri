@@ -9,6 +9,7 @@ imports:
   Ride: Domain.Types.Ride
   PlanSubscribeRes: Domain.Action.UI.Plan
   PayoutRequestStatus: Lib.Payment.Domain.Types.PayoutRequest
+  PayoutType: Lib.Payment.Domain.Types.PayoutRequest
   EntityName: Lib.Payment.Domain.Types.Common
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   WalletTransactionStatus: Domain.Types.WalletTransaction
@@ -63,6 +64,11 @@ types:
     payoutVpa: Maybe Text
     bankName: Maybe Text
     bankAccountLast4: Maybe Text
+    payoutType: Maybe PayoutType  # INSTANT, SCHEDULED or ADHOC; unset for cash
+    transactionId: Maybe Text  # Payout order short id
+    bankReference: Maybe Text  # Bank reference once paid (UTR, RRN, ...)
+    bankReferenceType: Maybe Text  # UTR, RRN, FT_NUMBER or PARTNER_REF
+    statusUpdatedAt: Maybe UTCTime  # Last status change
   PayoutHistoryResponse:
     totalPaidOut: HighPrecMoney
     lastPayout: Maybe PayoutHistoryItem

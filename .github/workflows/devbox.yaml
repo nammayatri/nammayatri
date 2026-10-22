@@ -63,7 +63,7 @@ concurrency:
 
 jobs:
   devbox:
-    runs-on: x86_64_main_push
+    runs-on: x86_64_main_pull
     timeout-minutes: 120
     env:
       ACTION: ${{ inputs.action || 'ping' }}

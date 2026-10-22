@@ -303,6 +303,7 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
       onOrderCreated = case payoutServiceFlow of
         IPayout.BulkFlow -> \_ -> pure ()
         _ -> afterOrderCreated
+      (payoutBankName, payoutBankAccountLast4) = bankLabel payoutServiceFlow mbPersonBankAccount
       submission =
         PayoutRequest.PayoutSubmission
           { batchId = mbBatchId,
@@ -320,8 +321,8 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
             vpa = vpa,
             -- mbPersonBankAccount is the account the payout is actually sent to. For a fleet driver
             -- that is the fleet owner's on Stripe, and their own on the bulk rail.
-            bankName = mbPersonBankAccount >>= (.bankName),
-            bankAccountLast4 = mbPersonBankAccount >>= (.bankAccountLast4),
+            bankName = payoutBankName,
+            bankAccountLast4 = payoutBankAccountLast4,
             customerName = Just ctx.person.firstName,
             customerPhone = phoneNo,
             customerEmail = ctx.person.email,
@@ -431,3 +432,14 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
       if payoutServiceFlow == IPayout.BulkFlow
         then holdThenSend
         else sendThenHold
+  where
+    -- HDFC CBX gives no bank name: use the IFSC bank code and the account's last 4 digits.
+    bankLabel :: IPayout.PayoutServiceFlow -> Maybe DDBA.DriverBankAccount -> (Maybe Text, Maybe Text)
+    bankLabel IPayout.BulkFlow mbAccount =
+      ( T.toUpper . T.take 4 <$> nonBlank (mbAccount >>= (.ifscCode)),
+        T.takeEnd 4 <$> nonBlank ((.accountId) <$> mbAccount)
+      )
+    bankLabel _ mbAccount = (mbAccount >>= (.bankName), mbAccount >>= (.bankAccountLast4))
+
+    nonBlank :: Maybe Text -> Maybe Text
+    nonBlank = mfilter (not . T.null) . fmap T.strip

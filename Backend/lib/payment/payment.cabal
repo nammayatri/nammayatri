@@ -213,6 +213,7 @@ test-suite payment-tests
       BulkPayoutTests
       OfferCountersTests
       OfferFrequencyTests
+      PayoutItemsTests
       Paths_payment
   hs-source-dirs:
       test/app

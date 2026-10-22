@@ -164,7 +164,7 @@ def cmd_data(args: argparse.Namespace) -> int:
                 raise RuntimeError(f"no usable {args.source} version published")
             version = f"v{pick['version']}"
             print(f"[data] latest safe {args.source}: {version}")
-        ws = f"http://{t.host}:{stack.FRONTDESK_PORT}/{args.name}"
+        ws = stack.office_base(t.host, args.name)
         res = data.sync_and_wait(ws, args.source, version, force=args.force)
     except (ValueError, RuntimeError) as e:
         print(json.dumps({"error": str(e)}))

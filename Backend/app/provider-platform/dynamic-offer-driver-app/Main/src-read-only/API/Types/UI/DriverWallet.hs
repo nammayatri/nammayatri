@@ -33,12 +33,17 @@ data PayoutHistoryItem = PayoutHistoryItem
   { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     bankAccountLast4 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bankName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bankReference :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bankReferenceType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     entityName :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName,
     payoutFee :: Kernel.Types.Common.HighPrecMoney,
     payoutMethod :: Kernel.Prelude.Text,
+    payoutType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutRequest.PayoutType,
     payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus,
-    timestamp :: Data.Time.UTCTime
+    statusUpdatedAt :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    timestamp :: Data.Time.UTCTime,
+    transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
