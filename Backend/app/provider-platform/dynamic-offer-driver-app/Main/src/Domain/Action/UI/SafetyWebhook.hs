@@ -109,5 +109,6 @@ safetyWebhookHandler merchantShortId mbOpCity secret val = do
           xyneChannelId = Nothing,
           xyneTicketBody = Nothing,
           xyneSenderName = Nothing,
-          xyneExternalId = Nothing
+          xyneExternalId = Nothing,
+          xyneBotLabel = Nothing
         }
