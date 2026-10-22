@@ -96,7 +96,8 @@ enforceMerchantCityAccessForUser ::
   City.City ->
   m ()
 enforceMerchantCityAccessForUser dashboardUser merchantSid city =
-  DashboardScope.enforceMerchantCityAccess dashboardUser.personId (getShortId merchantSid) city
+  runInDashboardDb $
+    DashboardScope.enforceMerchantCityAccess dashboardUser.personId (getShortId merchantSid) city
 
 -- | @verifyDashboardUser serverName endpointId token@ resolves the session,
 -- enforces the capability registered for @endpointId@, and checks merchant and
