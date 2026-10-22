@@ -295,6 +295,7 @@ library
       Domain.Action.Dashboard.RideBooking.Ride
       Domain.Action.Dashboard.RideBooking.SearchRequest
       Domain.Action.Dashboard.RideBooking.Volunteer
+      Domain.Action.Dashboard.RideEstimatedRoute
       Domain.Action.Dashboard.RideFlowDebug
       Domain.Action.DashboardAuth.AppManagement.SubscriptionTransaction
       Domain.Action.DashboardAuth.Fleet.Driver
@@ -929,6 +930,7 @@ library
       Storage.Clickhouse.DriverOperatorAssociation
       Storage.Clickhouse.DriverPlan
       Storage.Clickhouse.Estimate
+      Storage.Clickhouse.ExternalApiCallLogs
       Storage.Clickhouse.FleetDriverAssociation
       Storage.Clickhouse.FleetOperatorAssociation
       Storage.Clickhouse.FleetOperatorDailyStats

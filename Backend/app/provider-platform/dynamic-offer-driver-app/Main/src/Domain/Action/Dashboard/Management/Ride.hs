@@ -23,6 +23,7 @@ module Domain.Action.Dashboard.Management.Ride
     postRideSync,
     postRideSyncMultiple,
     postRideRoute,
+    getRideEstimatedRoute,
     getRideKaptureList,
     getRideFareBreakUp,
     postRideWaiverRideCancellationPenalty,
@@ -42,6 +43,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Ride as DRide
+import qualified Domain.Action.Dashboard.RideEstimatedRoute as RideEstimatedRoute
 import qualified Domain.Action.Dashboard.RideFlowDebug as RideFlowDebug
 import qualified Domain.Action.UI.Ride.CancelRide as CHandler
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
@@ -174,6 +176,10 @@ postRideSyncMultiple = DRide.multipleRideSync
 
 postRideRoute :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.RideRouteRes
 postRideRoute = DRide.rideRoute
+
+getRideEstimatedRoute :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.RideEstimatedRouteRes
+getRideEstimatedRoute merchantShortId opCity rideId =
+  findRideInMerchantCity merchantShortId opCity rideId >>= RideEstimatedRoute.getRideEstimatedRoute
 
 getRideKaptureList :: ShortId DM.Merchant -> Context.City -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
 getRideKaptureList = DRide.ticketRideList
