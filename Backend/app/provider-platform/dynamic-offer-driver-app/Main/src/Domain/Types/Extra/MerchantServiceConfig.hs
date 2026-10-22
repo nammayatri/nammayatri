@@ -53,7 +53,7 @@ data IffcoTokioConfig = IffcoTokioConfig
     fcmNotificationTitle :: Text,
     fcmNotificationMessage :: Text
   }
-  deriving (Eq, Generic, Show)
+  deriving stock (Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 data InsuranceProvider = IffcoTokio
@@ -326,7 +326,7 @@ data ServiceConfigD (s :: UsageSafety)
   | AirportReachargeServiceConfig !PaymentServiceConfig
   | ChallanSearchServiceConfig !ChallanSearchInterface.ChallanSearchServiceConfig
   | FleetEngineServiceConfig !FleetEngineCfg
-  deriving (Generic, Eq, Show)
+  deriving (Show, Generic)
 
 type ServiceConfig = ServiceConfigD 'Safe
 

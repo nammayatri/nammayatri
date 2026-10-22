@@ -3,12 +3,12 @@
     # Workaround https://github.com/nammayatri/nammayatri/pull/9493#issuecomment-2506672419
     max-call-depth = "1000000";
     # Nix cache
-    extra-substituters = "https://cache.nixos.asia/oss";
-    extra-trusted-public-keys = "oss:KO872wNJkCDgmGN3xy9dT89WAhvv13EiKncTtHDItVU=";
+    # extra-substituters = "https://cache.nixos.asia/oss";
+    # extra-trusted-public-keys = "oss:KO872wNJkCDgmGN3xy9dT89WAhvv13EiKncTtHDItVU=";
   };
 
   inputs = {
-    common.url = "github:nammayatri/common";
+    common.url = "github:nammayatri/common?ref=ghc-98-upgrade";
     nixpkgs.follows = "common/nixpkgs";
     haskell-flake.follows = "common/haskell-flake";
 
@@ -21,16 +21,16 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel?ref=ghc-98-upgrade";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     namma-dsl = {
-      url = "github:nammayatri/namma-dsl";
+      url = "github:nammayatri/namma-dsl?ref=ghc-98-upgrade";
     };
 
     haskell-cac = {
-      url = "github:piyushKumar-1/haskell_cac_client/Testing";
+      url = "github:roman-bodavskiy/haskell_cac_client/?ref=ghc-98-upgrade";
       inputs = {
         common.follows = "common";
         nixpkgs.follows = "common/nixpkgs"; # nix eval is failing in pipeline without giving proper error message #36 for nix update https://github.com/srid/nixci/issues/36
@@ -38,7 +38,7 @@
     };
 
     beckn-gateway = {
-      url = "github:nammayatri/beckn-gateway";
+      url = "github:nammayatri/beckn-gateway?ref=ghc-98-upgrade";
       inputs = {
         common.follows = "common";
         haskell-flake.follows = "haskell-flake";

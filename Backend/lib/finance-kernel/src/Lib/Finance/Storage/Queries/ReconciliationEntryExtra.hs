@@ -167,12 +167,11 @@ upsertReconEntries ::
   [Domain.ReconciliationEntry] ->
   m ()
 upsertReconEntries [] = pure ()
-upsertReconEntries newEntries = do
+upsertReconEntries newEntries@(e0 : _es) = do
   now <- getCurrentTime
   -- Assume all entries in one call share the same (spec, scope) — the
   -- runner always passes a single chunk's worth. Cheap to enforce.
-  let e0 = head newEntries
-      merchantId = fromMaybe "" e0.merchantId
+  let merchantId = fromMaybe "" e0.merchantId
       opCityId = fromMaybe "" e0.merchantOperatingCityId
       keys = map (.entryKey) newEntries
   existing <-

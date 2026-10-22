@@ -5,6 +5,7 @@ import qualified Beckn.ACL.Cancel as ACL
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Data.HashMap.Strict as HM
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
@@ -1250,7 +1251,7 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
   charged <- DPayment.chargePaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput useDomainOffers applyOfferCall ride.createdAt
   -- Find all unsettled ledger entries (PENDING or DUE) for this ride
   unsettledEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId.getId
-  unless (null unsettledEntries) $ do
+  whenJust (NE.nonEmpty unsettledEntries) $ \unsettledEntriesNE -> do
     let entryIds = map (.id) unsettledEntries
     if charged
       then do
@@ -1260,7 +1261,7 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
               RidePaymentFinance.buildRiderFinanceCtx
                 merchantId.getId
                 merchantOpCityId.getId
-                (Kernel.Prelude.head unsettledEntries).currency
+                (NE.head unsettledEntriesNE).currency
                 True
                 personId.getId
                 rideId.getId
@@ -1484,11 +1485,11 @@ getDuesForPerson person = do
     Just (ride, _) -> do
       pendingEntries <- RidePaymentFinance.findDueRidePaymentEntries ride.id.getId
       let filteredEntries = filterPendingDuesEntries pendingEntries excludedPurposes
-      if null filteredEntries
-        then pure noDues
-        else do
+      case NE.nonEmpty filteredEntries of
+        Nothing -> pure noDues
+        Just filteredEntriesNE -> do
           let totalAmount = sum $ map (.amount) filteredEntries
-              currency = Kernel.Prelude.head filteredEntries & (.currency)
+              currency = NE.head filteredEntriesNE & (.currency)
           logInfo $
             "AUDIT: Get Dues - person_id: " <> person.id.getId
               <> ", ride_id: "

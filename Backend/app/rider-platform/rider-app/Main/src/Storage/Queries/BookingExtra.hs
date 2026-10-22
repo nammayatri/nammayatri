@@ -529,7 +529,7 @@ fetchRidesCount personId = do
             )
             do
               B.all_ (BeamCommon.booking BeamCommon.atlasDB)
-  pure $ either (const Nothing) (\r -> if null r then Nothing else Just (head r)) res
+  pure $ either (const Nothing) listToMaybe res
 
 -- | Find bookings for invoice generation with optional filters
 -- Note: Filtering by ride types and billing categories is done in Haskell after fetching

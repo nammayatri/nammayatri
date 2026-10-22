@@ -1,6 +1,7 @@
 module Domain.Action.UI.FinanceInvoice (getFinanceInvoicePdf, renderFinanceInvoicePdf) where
 
 import qualified API.Types.UI.FinanceInvoice as API
+import Data.List.NonEmpty as NE
 import qualified Data.Time as DT
 import Domain.Types.Invoice (InvoiceType (..))
 import qualified Domain.Types.Merchant as DM
@@ -8,7 +9,7 @@ import qualified Domain.Types.Person as DP
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Types (Language (ENGLISH))
-import Kernel.Prelude (head, listToMaybe, showBaseUrl)
+import Kernel.Prelude (listToMaybe, showBaseUrl)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
@@ -116,12 +117,13 @@ renderFinanceInvoicePdf merchantOperatingCityId lang invoices = do
         logError $ "Skipping invoice " <> inv.invoiceNumber <> " (render failed): " <> show err
         pure Nothing
   let pdfDatas = catMaybes results
-  when (null pdfDatas) $
-    throwError $ InvalidRequest "No invoices could be rendered (all failed)"
+  pdfDatasNE <- case NE.nonEmpty pdfDatas of
+    Nothing -> throwError $ InvalidRequest "No invoices could be rendered (all failed)"
+    Just ne -> pure ne
 
   -- Always render a single invoice PDF; never aggregate. If multiple invoices
   -- match the filters, the first (newest by issuedAt DESC) is rendered.
-  let chosenPdfData = head pdfDatas
+  let chosenPdfData = NE.head pdfDatasNE
       chosenInv = chosenPdfData.financeInvoice
       ctx =
         FRT.buildInvoiceContext
