@@ -630,6 +630,7 @@ data ScheduledRideConfig = ScheduledRideConfig
   { avgSpeedKmph :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     driverActivationWindow :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     enableScheduledRideActivationChecks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableScheduledRidePenaltyOrReward :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     maxHoldsPerDriver :: Kernel.Prelude.Int,
     maxLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     minLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
