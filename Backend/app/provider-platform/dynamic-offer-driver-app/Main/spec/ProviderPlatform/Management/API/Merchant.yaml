@@ -467,6 +467,15 @@ apis:
       auth: ApiAuthV2
       response:
         type: APISuccess
+  - GET: # GetTollAPI
+      endpoint: /toll/{tollId}
+      params:
+        tollId: Id Toll
+      auth: ApiAuthV2
+      response:
+        type: TollAPIEntity
+      migrate:
+        capability: city-config.geo.read
   - POST:
       endpoint: /config/clearCache/subscription
       auth: ApiAuthV2
