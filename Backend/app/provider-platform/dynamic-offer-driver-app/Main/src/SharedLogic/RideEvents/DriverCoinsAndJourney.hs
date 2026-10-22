@@ -43,6 +43,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Types.SpecialLocation as SL
@@ -68,6 +69,7 @@ processRideEndedCoinsAndJourney ::
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     PaymentBeamFlow.BeamFlow m r,
+    BeamFlow m r,
     MonadReader r m,
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text]

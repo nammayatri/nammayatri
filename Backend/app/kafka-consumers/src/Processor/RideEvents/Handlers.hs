@@ -74,6 +74,7 @@ import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
 import "config-pilot" Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.LocationUpdates.Internal as LU
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import Lib.Scheduler.Environment (JobCreator)
@@ -595,6 +596,7 @@ handleDriverCoinsAndJourney ::
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     PaymentBeamFlow.BeamFlow m r,
+    BeamFlow m r,
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text]
   ) =>

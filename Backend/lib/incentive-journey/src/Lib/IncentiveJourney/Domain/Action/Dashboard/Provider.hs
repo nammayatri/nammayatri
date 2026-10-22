@@ -775,6 +775,7 @@ toApiStatus = \case
   DIJS.Completed -> Common.Completed
   DIJS.Rewarded -> Common.Rewarded
   DIJS.WaivedOff -> Common.WaivedOff
+  DIJS.RewardPending -> Common.RewardPending
 
 toDomainConditionType :: Common.MilestoneConditionType -> DIJM.MilestoneConditionType
 toDomainConditionType = \case

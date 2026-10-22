@@ -107,6 +107,43 @@ mkLocalDayUtcBounds day timeDiffFromUtc =
         addUTCTime offset dayEndLocal
       )
 
+-- | Cash rows from the last few days that reached the target but were not paid.
+-- InProgress is included so rows stuck before RewardPending existed are picked up.
+-- Caller must still check the condition; a short InProgress row is not payable.
+findAwaitingCashByPersonSince ::
+  (BeamFlow m r) =>
+  Id Common.Person ->
+  UTCTime ->
+  m [DIJS.IncentiveJourneyStats]
+findAwaitingCashByPersonSince personId since =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.personId $ Se.Eq (getId personId),
+          Se.Is Beam.rewardType $ Se.Eq Common.Cash,
+          Se.Is Beam.updatedAt $ Se.GreaterThanOrEq since,
+          Se.Is Beam.status $ Se.In [DIJS.RewardPending, DIJS.InProgress]
+        ]
+    ]
+
+-- | Complete a cash row only while it is still unpaid. A second call does not rewrite a Completed row.
+markJourneyCashPaid ::
+  (BeamFlow m r) =>
+  Id DIJS.IncentiveJourneyStats ->
+  Int ->
+  m ()
+markJourneyCashPaid statsId rewardValue = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.status DIJS.Completed,
+      Se.Set Beam.rewardValue (Just rewardValue),
+      Se.Set Beam.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq (getId statsId),
+          Se.Is Beam.status $ Se.In [DIJS.RewardPending, DIJS.InProgress]
+        ]
+    ]
+
 findStatsByPersonCjmAndPeriod ::
   (BeamFlow m r) =>
   Id Common.Person ->

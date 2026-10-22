@@ -91,6 +91,7 @@ import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding (isFleetRole)
 import SharedLogic.Finance.Wallet
+import qualified SharedLogic.IncentiveJourney as SLIJ
 import SharedLogic.Merchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
@@ -703,6 +704,8 @@ callPayoutServiceActionForRefresh _merchantId merchantOpCityId mbEntityName payo
 
 processPreviousPayoutAmount :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl], HasKafkaProducer r, Finance.HasActorInfo m r, SchedulerFlow r, HasField "blackListedJobs" r [Text]) => Id Person.Person -> Maybe Text -> Id DMOC.MerchantOperatingCity -> m ()
 processPreviousPayoutAmount personId mbVpa merchOpCity = do
+  when (isJust mbVpa) $
+    void $ SLIJ.retryVerifiedVpaJourneyCashPayouts personId
   mbVehicle <- QV.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchOpCity.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchOpCity.getId)

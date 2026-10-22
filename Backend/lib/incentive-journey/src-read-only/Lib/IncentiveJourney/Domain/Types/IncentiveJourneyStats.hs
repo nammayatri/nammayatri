@@ -37,7 +37,14 @@ data IncentiveJourneyStats = IncentiveJourneyStats
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data JourneyMilestoneStatus = NotStarted | InProgress | Completed | Rewarded | WaivedOff deriving (Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data JourneyMilestoneStatus
+  = NotStarted
+  | InProgress
+  | Completed
+  | Rewarded
+  | WaivedOff
+  | RewardPending
+  deriving (Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''JourneyMilestoneStatus)
 

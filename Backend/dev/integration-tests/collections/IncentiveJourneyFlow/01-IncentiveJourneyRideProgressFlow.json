@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Incentive Journey Ride Progress Flow",
-    "description": "Provider E2E: Daily journey with two RideCompleted milestones (each GTE 1, progress resets) and one Earnings milestone the driver does not finish. The same cohort has a second journey (one RideCompleted GTE 2, 200 coins) via a second cohort-journey mapping and a second driver assign. A separate cohort and journey are auto-applied for AUTO_CATEGORY, the same category set when the driver vehicle is added, with no user mapping (allowIfNoMapping false, so it still applies when the driver has other mappings). Two AUTO cash rides complete journey 1's ride milestones, journey 2's 2-ride target, and the auto-apply ride milestone. Dashboard waive-off marks the earnings milestone WaivedOff for that periodKey, and the first cohort mapping streak-end reward pays cash ₹1. Milestone 1 pays a YATRI_SUBSCRIPTION waive-off instead of coins. Cleanup unassigns both user mappings, disables those cohort-journey mappings, and disables the auto-apply row.\n\nRequires kafka-consumers (DriverCoinsAndJourney / RIDE_EVENTS). Dashboard peer path: .../incentiveJourney/...\n\nSee IncentiveJourneyFlow/Rules.md.",
+    "description": "Provider E2E: Daily journey with two RideCompleted milestones (each GTE 1, progress resets) and one Earnings milestone the driver does not finish. The same cohort has a second journey (one RideCompleted GTE 2, 200 coins) via a second cohort-journey mapping and a second driver assign. A separate cohort and journey are auto-applied for AUTO_CATEGORY, the same category set when the driver vehicle is added, with no user mapping (allowIfNoMapping false, so it still applies when the driver has other mappings). Two AUTO cash rides complete journey 1's ride milestones, journey 2's 2-ride target, and the auto-apply ride milestone. Dashboard waive-off marks the earnings milestone WaivedOff for that periodKey, and the first cohort mapping streak-end reward pays cash ₹1. Milestone 1 pays a YATRI_SUBSCRIPTION waive-off instead of coins. Milestone 2 pays cash ₹10. The driver VPA is stored as VERIFIED_BY_USER so that cash payout is allowed. Cleanup unassigns both user mappings, disables those cohort-journey mappings, and disables the auto-apply row.\n\nRequires kafka-consumers (DriverCoinsAndJourney / RIDE_EVENTS). Dashboard peer path: .../incentiveJourney/...\n\nSee IncentiveJourneyFlow/Rules.md.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -42,10 +42,12 @@
           "  var validTill = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);",
           "  pm.collectionVariables.set('_test_valid_till', validTill.toISOString());",
           "  // Ride eval period keys use the city local day (IST). Streak keys use utctDay(startDate).",
-          "  // Noon UTC on today's IST calendar day keeps Day:YYYY-MM-DD the same for both.",
+          "  // Midnight UTC on today's IST calendar day keeps Day:YYYY-MM-DD the same for both,",
+          "  // and is already <= local time, including runs between midnight and 5:30 PM IST.",
+          "  // Noon UTC is still in the future during that span, so the list hides every journey.",
           "  var ist = new Date(now.getTime() + (5 * 60 + 30) * 60 * 1000);",
           "  var istDay = ist.getUTCFullYear() + '-' + String(ist.getUTCMonth() + 1).padStart(2, '0') + '-' + String(ist.getUTCDate()).padStart(2, '0');",
-          "  pm.collectionVariables.set('_test_start_date', istDay + 'T12:00:00.000Z');",
+          "  pm.collectionVariables.set('_test_start_date', istDay + 'T00:00:00.000Z');",
           "  pm.collectionVariables.set('_test_from_date', istDay);",
           "  var to = new Date(istDay + 'T12:00:00.000Z');",
           "  to.setUTCDate(to.getUTCDate() + 1);",
@@ -276,6 +278,7 @@
     {
       "name": "Set Driver Payout VPA (Dashboard)",
       "request": {
+        "description": "vpaStatus MANUALLY_ADDED does not start a cash payout. To test cash payout, set vpaStatus to VERIFIED_BY_USER. Leave verify false so Juspay is not called.",
         "method": "POST",
         "header": [
           {
@@ -420,7 +423,7 @@
       ]
     },
     {
-      "name": "Create Milestone 2 RideCompleted GTE 1 Coins 10 (Dashboard)",
+      "name": "Create Milestone 2 RideCompleted GTE 1 Cash 10 (Dashboard)",
       "request": {
         "method": "POST",
         "header": [
@@ -438,7 +441,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"journeyId\": \"{{ij_journey_id}}\",\n  \"name\": \"Complete 1 more ride\",\n  \"description\": \"Second ride; currentValue starts fresh after milestone 1\",\n  \"order\": 2,\n  \"conditionType\": \"RideCompleted\",\n  \"conditionOperator\": \"GTE\",\n  \"conditionValue\": 1,\n  \"areaType\": \"Default\",\n  \"specialLocationIds\": null,\n  \"vehicleCategory\": null,\n  \"serviceTierType\": null,\n  \"rewardType\": \"Coins\",\n  \"rewardValue\": 10,\n  \"rewardExpirationAt\": null,\n  \"subscriptionWaiveOff\": null,\n  \"timeBounds\": null\n}"
+          "raw": "{\n  \"journeyId\": \"{{ij_journey_id}}\",\n  \"name\": \"Complete 1 more ride\",\n  \"description\": \"Second ride; pays cash 10\",\n  \"order\": 2,\n  \"conditionType\": \"RideCompleted\",\n  \"conditionOperator\": \"GTE\",\n  \"conditionValue\": 1,\n  \"areaType\": \"Default\",\n  \"specialLocationIds\": null,\n  \"vehicleCategory\": null,\n  \"serviceTierType\": null,\n  \"rewardType\": \"Cash\",\n  \"rewardValue\": 10,\n  \"rewardExpirationAt\": null,\n  \"subscriptionWaiveOff\": null,\n  \"timeBounds\": null\n}"
         }
       },
       "event": [
@@ -2359,6 +2362,9 @@
               "function isDone(m) {",
               "  return m && ['Completed', 'Rewarded'].indexOf(m.status) >= 0;",
               "}",
+              "function cashReached(m) {",
+              "  return m && ['Completed', 'Rewarded', 'RewardPending'].indexOf(m.status) >= 0;",
+              "}",
               "function poll() {",
               "  pm.sendRequest({",
               "    url: url,",
@@ -2371,7 +2377,7 @@
               "      var journeys = d.journeys || [];",
               "      var hit = journeys.find(function (j) { return j.journeyId === journeyId; });",
               "      var hit2 = journeys.find(function (j) { return j.journeyId === journey2Id; });",
-              "      if (hit && ((function () { var m1 = byName(hit, 'Complete 1 ride'); var m2 = byName(hit, 'Complete 1 more ride'); var earn = byName(hit, 'Earn target'); var two = hit2 && byName(hit2, 'Complete 2 rides'); if (!(isDone(m1) && isDone(m2) && earn && !isDone(earn) && hit2 && isDone(two) && two.currentValue === 2)) return false; pm.test('Milestone 1 still completed', function () { pm.expect(isDone(m1)).to.be.true; }); pm.test('Milestone 2 completed after second ride', function () { pm.expect(isDone(m2)).to.be.true; pm.expect(m2.currentValue).to.eql(1); }); pm.test('Earnings milestone not completed', function () { pm.expect(['Completed', 'Rewarded', 'WaivedOff'].indexOf(earn.status)).to.eql(-1); }); pm.test('Journey 2 completed on second ride for 200 coins', function () { pm.expect(isDone(two)).to.be.true; pm.expect(two.currentValue).to.eql(2); pm.expect(two.rewardValue).to.eql(200); }); console.log('IJ ride2 m2', m2.status, m2.currentValue, 'earn', earn.status, earn.currentValue, 'j2', two.status, two.currentValue); return true;})())) {",
+              "      if (hit && ((function () { var m1 = byName(hit, 'Complete 1 ride'); var m2 = byName(hit, 'Complete 1 more ride'); var earn = byName(hit, 'Earn target'); var two = hit2 && byName(hit2, 'Complete 2 rides'); if (!(isDone(m1) && cashReached(m2) && earn && !isDone(earn) && hit2 && isDone(two) && two.currentValue === 2)) return false; pm.test('Milestone 1 still completed', function () { pm.expect(isDone(m1)).to.be.true; }); pm.test('Milestone 2 cash reward after second ride', function () { pm.expect(cashReached(m2)).to.be.true; pm.expect(m2.currentValue).to.eql(1); pm.expect(m2.rewardType).to.eql('Cash'); pm.expect(m2.rewardValue).to.eql(10); }); pm.test('Earnings milestone not completed', function () { pm.expect(['Completed', 'Rewarded', 'WaivedOff'].indexOf(earn.status)).to.eql(-1); }); pm.test('Journey 2 completed on second ride for 200 coins', function () { pm.expect(isDone(two)).to.be.true; pm.expect(two.currentValue).to.eql(2); pm.expect(two.rewardValue).to.eql(200); }); console.log('IJ ride2 m2', m2.status, m2.currentValue, 'earn', earn.status, earn.currentValue, 'j2', two.status, two.currentValue); return true;})())) {",
               "        return;",
               "      }",
               "    }",
@@ -2603,8 +2609,8 @@
             }
           ]
         }
-      }
-    },
+        }
+      },
     {
       "name": "GET coins balance after streak-end cash",
       "event": [

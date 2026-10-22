@@ -116,6 +116,7 @@ module SharedLogic.Finance.Wallet
     walletReferenceCustomerCancellationCharges,
     walletReferenceCustomerCancellationGST,
     walletReferenceWalletIncentive,
+    walletReferenceIncentiveJourneyCash,
     walletCreditRefs,
     alwaysRedeemableWalletRefs,
     counterpartyFromRole,
@@ -395,6 +396,9 @@ walletReferenceGateDriverFee = "GateDriverFee"
 walletReferenceWalletIncentive :: Text
 walletReferenceWalletIncentive = "WalletIncentive"
 
+walletReferenceIncentiveJourneyCash :: Text
+walletReferenceIncentiveJourneyCash = "IncentiveJourneyCash"
+
 -- Per-component refund refTypes. Same string values as the BAP side
 -- (SharedLogic.Finance.RidePayment) so cap/settlement reconcile across BAP+BPP.
 -- All-caps VAT matches the ride-side 'TollVAT'.
@@ -479,6 +483,7 @@ walletCreditRefs =
     walletReferenceCancellationCommission,
     walletReferenceCancellationCommissionVAT,
     walletReferenceWalletIncentive,
+    walletReferenceIncentiveJourneyCash,
     walletReferenceVATOnline,
     walletReferenceVATCash,
     walletReferenceVATInput,

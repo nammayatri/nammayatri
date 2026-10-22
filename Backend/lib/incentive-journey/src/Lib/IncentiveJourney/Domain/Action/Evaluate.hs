@@ -160,7 +160,8 @@ evaluateSingleJourney ijHandle input localTime journey cjm = do
           { personId = input.personId.getId,
             journeyName = journey.name,
             cohortJourneyMappingId = cjm.id.getId,
-            milestoneId = ""
+            milestoneId = "",
+            periodKey = periodKey
           }
       store = mkMilestoneStore ijHandle input journey cjm periodKey milestones
   Eval.evaluateMilestonesInOrderWith
@@ -360,6 +361,8 @@ mkMilestoneStore ijHandle input journey cjm periodKey milestones =
             pure $ fmap Convert.toEvalStats mbStats,
       persistProgress = \evalMilestone currentValue ->
         void $ upsertStats evalMilestone currentValue DIJS.InProgress Nothing,
+      persistAwaitingReward = \evalMilestone currentValue ->
+        void $ upsertStats evalMilestone currentValue DIJS.RewardPending Nothing,
       persistCompleted = \evalMilestone currentValue awarded ->
         void $ upsertStats evalMilestone currentValue DIJS.Completed (Just awarded),
       onCompleted = \evalMilestone awarded ->
