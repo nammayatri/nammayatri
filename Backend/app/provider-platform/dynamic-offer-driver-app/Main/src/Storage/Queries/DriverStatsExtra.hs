@@ -1,6 +1,5 @@
 module Storage.Queries.DriverStatsExtra where
 
-import Control.Applicative (liftA2)
 import Domain.Types.DriverInformation
 import Domain.Types.DriverStats as Domain
 import Domain.Types.Merchant

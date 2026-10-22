@@ -1,6 +1,6 @@
 module Storage.Queries.FleetDriverAssociationExtra where
 
-import Control.Applicative (liftA2, liftA3)
+import Control.Applicative (liftA3)
 import Data.List.Split (chunksOf)
 import qualified Data.Map as M
 import Data.Text (takeEnd, toLower)

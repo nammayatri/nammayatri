@@ -1,5 +1,6 @@
 module Storage.Clickhouse.FRFSLiveAlerts where
 
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Time
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -56,11 +57,13 @@ getHourlyBookingCounts merchantOpCityId modes fromTime toTime = do
     ]
   where
     effectiveModes =
-      if null modes then ["BUS", "METRO", "SUBWAY"] else modes
+      case NE.nonEmpty modes of
+        Just ne -> ne
+        Nothing -> "BUS" NE.:| ["METRO", "SUBWAY"]
 
     modeFilter booking =
-      let base = booking.vehicleType CH.==. head effectiveModes
-          rest = tail effectiveModes
+      let base = booking.vehicleType CH.==. NE.head effectiveModes
+          rest = NE.tail effectiveModes
        in foldr
             (\v acc -> booking.vehicleType CH.==. v CH.||. acc)
             base
@@ -89,12 +92,15 @@ getCurrentHourCounts merchantOpCityId modes fromTime = do
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE TB.fRFSTicketBookingTTable)
   pure results
   where
+    -- TODO avoid duplication
     effectiveModes =
-      if null modes then ["BUS", "METRO", "SUBWAY"] else modes
+      case NE.nonEmpty modes of
+        Just ne -> ne
+        Nothing -> "BUS" NE.:| ["METRO", "SUBWAY"]
 
     modeFilter booking =
-      let base = booking.vehicleType CH.==. head effectiveModes
-          rest = tail effectiveModes
+      let base = booking.vehicleType CH.==. NE.head effectiveModes
+          rest = NE.tail effectiveModes
        in foldr
             (\v acc -> booking.vehicleType CH.==. v CH.||. acc)
             base
