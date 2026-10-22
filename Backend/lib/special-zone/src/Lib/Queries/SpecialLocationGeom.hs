@@ -45,4 +45,4 @@ updateSpecialLocation D.SpecialLocation {..} = Esq.update $ \tbl -> do
       SpecialLocationGeomBoothSpecificFleet =. val boothSpecificFleet
     ]
   where_ $
-    tbl ^. SpecialLocationGeomId ==. val id.getId
+    tbl ^. SpecialLocationGeomUuid ==. val id.getId

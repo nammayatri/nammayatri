@@ -27,7 +27,7 @@ findById' (KTI.Id fareParametersId') = findOneWithKV [Se.Is fareParametersId $ S
 
 findDeadKmFareEarnings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [KTI.Id Domain.FareParameters] -> m HighPrecMoney
 findDeadKmFareEarnings fareParamIds = do
-  deadKmFareEarnings <- findAllWithKV [Se.Is BeamFPRD.fareParametersId $ Se.In $ KTI.getId <$> fareParamIds] <&> ((Domain.deadKmFare :: Domain.FParamsRentalDetails -> HighPrecMoney) . snd <$>)
+  deadKmFareEarnings <- findAllWithKV [Se.Is BeamFPRD.fareParametersId $ Se.In $ KTI.getId <$> fareParamIds] <&> ((.deadKmFare) . snd <$>)
   pure $ sum deadKmFareEarnings
 
 instance FromTType' BeamFPRD.FareParametersRentalDetails Domain.FullFareParametersRentalDetails where
@@ -52,13 +52,13 @@ instance ToTType' FareParametersRentalDetails Domain.FullFareParametersRentalDet
     FareParametersRentalDetailsT
       { fareParametersId = fareParametersId,
         timeBasedFare = roundToIntegral $ Domain.timeBasedFare fParamsRentalDetails,
-        distBasedFare = roundToIntegral $ (Domain.distBasedFare :: Domain.FParamsRentalDetails -> HighPrecMoney) fParamsRentalDetails,
+        distBasedFare = roundToIntegral fParamsRentalDetails.distBasedFare,
         timeBasedFareAmount = Just $ Domain.timeBasedFare fParamsRentalDetails,
-        distBasedFareAmount = Just $ (Domain.distBasedFare :: Domain.FParamsRentalDetails -> HighPrecMoney) fParamsRentalDetails,
-        currency = Just $ (Domain.currency :: Domain.FParamsRentalDetails -> Currency) fParamsRentalDetails,
+        distBasedFareAmount = Just fParamsRentalDetails.distBasedFare,
+        currency = Just fParamsRentalDetails.currency,
         extraDistance = Just $ Domain.extraDistance fParamsRentalDetails,
         extraDuration = Just $ Domain.extraDuration fParamsRentalDetails,
-        deadKmFare = Just $ (Domain.deadKmFare :: Domain.FParamsRentalDetails -> HighPrecMoney) fParamsRentalDetails,
+        deadKmFare = Just fParamsRentalDetails.deadKmFare,
         distanceUnit = Just $ Domain.distanceUnit fParamsRentalDetails,
         ..
       }

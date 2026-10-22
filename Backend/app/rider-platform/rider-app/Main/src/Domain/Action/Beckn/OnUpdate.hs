@@ -480,7 +480,8 @@ onUpdate ::
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds,
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    m ~ Kernel.Types.Flow.FlowR AppEnv
+    m ~ Kernel.Types.Flow.FlowR AppEnv,
+    r ~ AppEnv
   ) =>
   ValidatedOnUpdateReq ->
   m ()

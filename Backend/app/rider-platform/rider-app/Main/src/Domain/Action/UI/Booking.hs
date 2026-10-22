@@ -563,7 +563,7 @@ buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings jour
           passEntity <- DPass.buildPurchasedPassAPIEntity Nothing person Nothing today pass'
           go riderId' ls (acc Seq.|> MultiModalPass passEntity)
 
-    buildJourneyApiEntity :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJ.Journey -> m (Maybe APITypes.JourneyInfoResp)
+    buildJourneyApiEntity :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) => DJ.Journey -> m (Maybe APITypes.JourneyInfoResp)
     buildJourneyApiEntity journey = do
       legsInfo <-
         withTryCatch "getAllLegsInfo:buildJourneyApiEntity" (JMU.measureLatency (getAllLegsInfo journey.riderId journey.id) (show journey.id <> " getAllLegsInfo journey myrides measureLatency: "))

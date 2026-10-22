@@ -263,7 +263,7 @@ calculateDistanceAlongRoute driverLoc pickupLoc routePoints =
       sumDistances points = case points of
         [] -> 0
         [_] -> 0
-        _ -> sum $ zipWith distanceBetween points (tail points)
+        p : ps -> sum $ zipWith distanceBetween points (NE.tail (p NE.:| ps))
    in sumDistances routeSegment
   where
     distanceBetween :: MapSearch.LatLong -> MapSearch.LatLong -> Double

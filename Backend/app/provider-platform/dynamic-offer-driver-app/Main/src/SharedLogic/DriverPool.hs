@@ -111,7 +111,7 @@ import Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (find, id, length)
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Types
-import Kernel.Prelude (head, listToMaybe)
+import Kernel.Prelude (listToMaybe)
 import qualified Kernel.Prelude as KP
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -922,7 +922,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
                     mode = Just Maps.CAR,
                     calcPoints = True
                   }
-            let route = if null routes then defRouteInfo else head routes
+            let route = fromMaybe defRouteInfo $ listToMaybe routes
             return (driver, route, ghReq.id, mbPreferredSpecialLocId, driverGoHomePoolWithActualDistance)
         )
 

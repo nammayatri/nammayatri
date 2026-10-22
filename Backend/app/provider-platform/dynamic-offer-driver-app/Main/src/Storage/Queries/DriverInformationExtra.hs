@@ -555,7 +555,7 @@ countEnabledByDriverIds driverIds =
                         B.&&?. driverInfo.enabled B.==?. B.val_ True
                   )
                   $ B.all_ (SBC.driverInformation SBC.atlasDB)
-      pure $ either (const 0) (\r -> if null r then 0 else head r) res
+      pure $ either (const 0) (fromMaybe 0 . listToMaybe) res
 
 updateMerchantIdAndCityIdByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 updateMerchantIdAndCityIdByDriverId driverId merchantId merchantOperatingCityId = do
