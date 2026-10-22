@@ -323,7 +323,8 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
           xyneChannelId = Nothing,
           xyneTicketBody = Nothing,
           xyneSenderName = Nothing,
-          xyneExternalId = Nothing
+          xyneExternalId = Nothing,
+          xyneBotLabel = Nothing
         }
 
     makeVerifyDLHitsCountKey :: Text -> Text

@@ -193,7 +193,8 @@ executeAction env action = case action.actionType of
                 xyneChannelId = Nothing,
                 xyneTicketBody = Nothing,
                 xyneSenderName = Nothing,
-                xyneExternalId = Nothing
+                xyneExternalId = Nothing,
+                xyneBotLabel = Nothing
               }
       (resp, _) <- TTicket.createTicket env.booking.merchantId env.booking.merchantOperatingCityId req
       pure resp.ticketId

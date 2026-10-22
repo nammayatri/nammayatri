@@ -48,7 +48,8 @@ data IssueReportReq = IssueReportReq
     categoryName :: Maybe Text,
     -- | The deeper choices the customer made in a pre-ticket bot (e.g. "Threatened me"),
     -- shown as the ticket's sub category when no backend option applies.
-    subCategoryName :: Maybe Text
+    subCategoryName :: Maybe Text,
+    botLabel :: Maybe Text
   }
   deriving (Generic, FromJSON, ToSchema, Show)
 
