@@ -141,7 +141,6 @@ addIndividualOrFleetSeekerDrivers merchantShortId opCity onboardingAs file = do
       (person, isNew) <- fetchOrCreatePerson merchantOpCity req_
       -- Only the OTP flow may change an existing driver's type, so bulk leaves existing numbers untouched.
       unless isNew $ throwError (InvalidRequest "Driver already exists")
-      checkAndUpdateAddDriverLimit merchantOpCity.id transporterConfig person.id
       SOnboardingComms.setOnboardingAs transporterConfig person (castCommonOnboardingAsToDomain onboardingAs)
       fork "Sending onboarding link SMS to Driver" $
         SOnbCommon.sendOnboardingLinkSms merchantOpCity transporterConfig person Nothing
