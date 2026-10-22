@@ -16,7 +16,7 @@
       # derivation, so a dropped connection retries one package instead of
       # restarting the whole prefetch.
       pkgsNpm = import inputs.nixpkgs-unstable { inherit system; };
-      nodejs = pkgsNpm.nodejs_20;
+      nodejs = pkgsNpm.nodejs_22;
       srcOf = sub: inputs.db-manager-src + "/${sub}";
       # npmRoot is where package-lock.json lives; importNpmLock reads the
       # integrity hashes from it and turns each entry into a fetch.

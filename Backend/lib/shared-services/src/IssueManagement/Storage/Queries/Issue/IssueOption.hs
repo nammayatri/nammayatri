@@ -72,13 +72,12 @@ findByIdAndLanguage :: BeamFlow m r => Id IssueOption -> Language -> m (Maybe (I
 findByIdAndLanguage issueOptionId language = do
   iOptions <- findAllWithKV [Is BeamIO.id $ Eq (getId issueOptionId)]
   iTranslations <- findAllIssueTranslationWithSeCondition [And [Is BeamIT.language $ Eq language, Is BeamIT.sentence $ In (DomainIO.option <$> iOptions)]]
-  let dInfosWithTranslations' = headMaybe $ foldl' (getIssueOptionsWithTranslations iTranslations) [] iOptions
+  let dInfosWithTranslations' = listToMaybe $ foldl' (getIssueOptionsWithTranslations iTranslations) [] iOptions
   pure dInfosWithTranslations'
   where
     getIssueOptionsWithTranslations iTranslations dInfosWithTranslations iOption =
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iOption.option) iTranslations
        in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iOption, Just iTranslation'')) <$> iTranslations' else [(iOption, Nothing)]
-    headMaybe dInfosWithTranslations' = if null dInfosWithTranslations' then Nothing else Just (head dInfosWithTranslations')
 
 findById :: BeamFlow m r => Id IssueOption -> m (Maybe IssueOption)
 findById (Id issueOptionId) = findOneWithKV [Is BeamIO.id $ Eq issueOptionId]

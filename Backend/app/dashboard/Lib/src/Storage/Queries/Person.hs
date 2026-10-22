@@ -502,7 +502,7 @@ findAllPTWithLimitOffset callerMerchantId mbSearchString mbSearchStrDBHash mbRol
           else
             countRes >>= \case
               Left err -> throwError (InternalError $ "findAllPTWithLimitOffset count failed: " <> T.pack (show err))
-              Right countRows -> pure $ if null countRows then 0 else head countRows
+              Right countRows -> pure $ fromMaybe 0 $ listToMaybe countRows
       pure (page, totalCount)
   where
     limitVal = fromMaybe 100 mbLimit

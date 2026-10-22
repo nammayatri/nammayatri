@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wwarn=x-partial #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Domain.Action.UI.MultimodalConfirm
@@ -61,9 +62,11 @@ import qualified BecknV2.FRFS.Utils as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Concurrent (modifyMVar)
 import Control.Monad.Extra (mapMaybeM)
+import Data.Aeson (defaultOptions)
 import qualified Data.HashMap.Strict as HashMap
 import Data.Int ()
 import Data.List (nub, nubBy, partition)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -2654,11 +2657,11 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
       Environment.Flow (Maybe ApiTypes.EffectiveStops, [ResolvedLeg])
     resolveLegsViaOtp srcCode destCode ctx = do
       validatedRoute <- JMU.measureLatency (getValidSingleModeRoute ctx srcCode destCode) ("getValidSingleModeRoute src=" <> srcCode <> " dest=" <> destCode)
-      case validatedRoute.legs of
-        [] -> pure (Nothing, [])
-        legs -> do
-          let firstLeg = head legs
-              lastLeg = last legs
+      case NE.nonEmpty validatedRoute.legs of
+        Nothing -> pure (Nothing, [])
+        Just legsNE -> do
+          let firstLeg = NE.head legsNE
+              lastLeg = NE.last legsNE
           (effSrc, effDest) <-
             fromMaybeM
               (InvalidRequest "OTP returned legs without stop codes")
@@ -2680,7 +2683,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
                         rlStopsByRoute = []
                       }
               )
-              (zip [0 ..] legs)
+              (zip [0 ..] validatedRoute.legs)
           effectiveStops <- JMU.measureLatency (calculateEffectiveStops srcCode destCode effSrc effDest ctx.integratedBPPConfig) ("calculateEffectiveStops src=" <> srcCode <> " dest=" <> destCode <> " effSrc=" <> effSrc <> " effDest=" <> effDest)
           pure
             (Just effectiveStops, resolvedLegs)

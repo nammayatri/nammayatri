@@ -34,7 +34,7 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     SpecialLocationT sql=special_location
-      id Text
+      uuid Text sql=id
       locationName Text
       category Text
       gates (PostgresList Domain.GatesInfo)
@@ -57,7 +57,7 @@ mkPersist
       geomGeoJson Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
-      Primary id
+      Primary uuid
       deriving Generic
     |]
 
@@ -70,7 +70,7 @@ instance FromTType SpecialLocationT Domain.SpecialLocation where
   fromTType SpecialLocationT {..} = do
     return $
       Domain.SpecialLocation
-        { id = Id id,
+        { id = Id uuid,
           gates = unPostgresList gates,
           geom = Nothing,
           linkedLocationsIds = map Id (unPostgresList linkedLocationsIds),

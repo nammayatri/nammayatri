@@ -48,13 +48,13 @@ in
                 bash
                 nammayatriBinaries
                 gdal
-                postgis
+                postgresqlPackages.postgis
                 curl
                 htop
                 wget
                 zbar
                 qrencode # QR-code PNG generation for invoice documents (Utils.QRCode.Encoder)
-                wkhtmltopdf-bin
+                wkhtmltopdf
                 openssh # For SFTP CLI support
                 sshpass # For password-based SFTP authentication
               ];

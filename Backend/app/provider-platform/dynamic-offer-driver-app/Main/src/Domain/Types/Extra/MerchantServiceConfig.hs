@@ -53,7 +53,7 @@ data IffcoTokioConfig = IffcoTokioConfig
     fcmNotificationTitle :: Text,
     fcmNotificationMessage :: Text
   }
-  deriving (Eq, Generic, Show)
+  deriving stock (Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 data InsuranceProvider = IffcoTokio
@@ -72,7 +72,7 @@ data LiwipStoreCfg = LiwipStoreCfg
   { url :: BaseUrl,
     apiKey :: EncryptedField 'AsEncrypted Text
   }
-  deriving (Eq, Generic, Show)
+  deriving (Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
 
 data SAPProvider = Journal
@@ -326,7 +326,7 @@ data ServiceConfigD (s :: UsageSafety)
   | AirportReachargeServiceConfig !PaymentServiceConfig
   | ChallanSearchServiceConfig !ChallanSearchInterface.ChallanSearchServiceConfig
   | FleetEngineServiceConfig !FleetEngineCfg
-  deriving (Generic, Eq, Show)
+  deriving (Show, Generic)
 
 type ServiceConfig = ServiceConfigD 'Safe
 

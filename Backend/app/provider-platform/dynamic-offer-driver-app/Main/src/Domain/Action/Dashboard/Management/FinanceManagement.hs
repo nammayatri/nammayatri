@@ -34,6 +34,7 @@ import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.Aeson.Types as AT
 import qualified Data.HashMap.Strict as HM
 import Data.List (nub, partition)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime (..), addDays, addUTCTime, diffUTCTime, timeOfDayToTime, utctDay)
@@ -1842,12 +1843,13 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
         logError $ "Skipping invoice " <> inv.invoiceNumber <> " (render failed): " <> show err
         pure Nothing
   let pdfDatas = catMaybes results
-  when (Kernel.Prelude.null pdfDatas) $
-    throwError $ InvalidRequest "No invoices could be rendered (all failed)"
+  pdfDatasNE <-
+    NE.nonEmpty pdfDatas
+      & fromMaybeM (InvalidRequest "No invoices could be rendered (all failed)")
 
   -- Always render a single invoice PDF; never aggregate (have seperate handling for commission aggregation).
   -- If multiple invoices match the filters, the first (newest by issuedAt DESC) is rendered.
-  let chosenPdfData = Kernel.Prelude.head pdfDatas
+  let chosenPdfData = NE.head pdfDatasNE
       chosenInv = chosenPdfData.financeInvoice
   mbQrDataUri <- InvoiceDocument.mkInvoiceQrDataUri chosenInv
   let ctx =

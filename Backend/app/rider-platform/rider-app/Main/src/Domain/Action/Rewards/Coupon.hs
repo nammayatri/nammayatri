@@ -72,7 +72,7 @@ finalizeClaim campaign cohort code =
 
 reconcileInflight ::
   ( MonadFlow m,
-    HedisFlow m env,
+    HedisFlow m r,
     MonadTime m,
     EsqDBFlow m r,
     CacheFlow m r
