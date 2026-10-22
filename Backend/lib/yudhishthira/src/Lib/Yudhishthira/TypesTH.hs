@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wwarn=x-partial #-}
 
 module Lib.Yudhishthira.TypesTH (generateGenericDefault, generateGenericDefaultWithOverrides, GenericDefaults (..)) where
 

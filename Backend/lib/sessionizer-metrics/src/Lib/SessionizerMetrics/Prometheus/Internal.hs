@@ -20,8 +20,7 @@ import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import Prometheus as P
 
 incrementCounter ::
-  ( MonadReader r1 m,
-    MonadGuid m,
+  ( MonadGuid m,
     MonadTime m,
     MonadIO m,
     EventStreamFlow m r

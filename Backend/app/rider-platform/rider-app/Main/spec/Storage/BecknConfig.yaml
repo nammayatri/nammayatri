@@ -148,7 +148,7 @@ IntegratedBPPConfig:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
     ProviderConfig:
       enum: "EBIX EBIXConfig, DIRECT DIRECTConfig, CMRL CMRLConfig, CMRLV2 CMRLV2Config, ONDC ONDCBecknConfig, CRIS CRISConfig, KMRL KMRLConfig"
-      derive': "Generic, FromJSON, ToJSON, Eq, Show"
+      derive': "Generic, FromJSON, ToJSON, Show"
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PlatformType>

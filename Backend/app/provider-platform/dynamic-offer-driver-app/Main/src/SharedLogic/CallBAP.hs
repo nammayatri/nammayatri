@@ -80,6 +80,7 @@ import qualified Data.Aeson as A
 import Data.Default.Class
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.List as DL
+import qualified Data.List.NonEmpty as NE
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Data.Text as Text
@@ -460,9 +461,9 @@ splitOn :: Char -> String -> [String]
 splitOn _ "" = [""]
 splitOn delim str =
   let (firstV, remainder) = DL.break (== delim) str
-   in firstV : case remainder of
-        [] -> []
-        _ -> splitOn delim (DL.tail remainder)
+   in firstV : case NE.nonEmpty remainder of
+        Nothing -> []
+        Just remainderNE -> splitOn delim (NE.tail remainderNE)
 
 -- | Pre-loaded context for rideAssignedCommon. The one-shot assign flow already holds
 -- all of these from the accept request, so re-reading them here is wasted round trips —

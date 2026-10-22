@@ -196,7 +196,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
         searchReq <- QSearchRequestLite.findByIdLite legData.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.searchRequestId.getId)
         case legData.journeyLeg.legPricingId of
           Just pricingId -> do
-            withTryCatch "cancelSearch:TaxiCancel" (cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId))
+            withTryCatch "cancelSearch:TaxiCancel" (cancelSearch' @m (searchReq.riderId, searchReq.merchantId) (Id pricingId))
               >>= \case
                 Left err -> do
                   logTagInfo "Failed to cancel estimate search: " $ show err

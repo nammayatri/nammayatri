@@ -26,7 +26,6 @@ streamUpdates ::
   ( MonadFlow m,
     Monad m,
     Log m,
-    MonadReader r0 m,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     ToJSON p
   ) =>

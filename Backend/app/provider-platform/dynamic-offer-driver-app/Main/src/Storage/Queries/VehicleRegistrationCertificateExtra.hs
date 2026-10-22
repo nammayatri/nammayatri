@@ -448,7 +448,7 @@ countAllActiveRCForFleet fleetOwnerId (Id merchantId') = do
                 rc <- B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
                 driverRcAssociation <- B.join_ (BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\driverRcAssociation -> BeamVRC.id rc B.==. BeamDRA.rcId driverRcAssociation)
                 pure (rc, driverRcAssociation)
-  pure $ either (const 0) (\r -> if null r then 0 else head r) res
+  pure $ either (const 0) (fromMaybe 0 . listToMaybe) res
 
 countAllRCForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Merchant.Merchant -> m Int
 countAllRCForFleet fleetOwnerId (Id merchantId') = do
@@ -465,7 +465,7 @@ countAllRCForFleet fleetOwnerId (Id merchantId') = do
               )
               do
                 B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
-  pure $ either (const 0) (\r -> if null r then 0 else head r) res
+  pure $ either (const 0) (fromMaybe 0 . listToMaybe) res
 
 updateVerificationStatusAndRejectReason ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

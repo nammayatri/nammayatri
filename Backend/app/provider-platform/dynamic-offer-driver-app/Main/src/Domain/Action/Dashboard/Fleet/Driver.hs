@@ -101,7 +101,7 @@ import "this" API.Types.ProviderPlatform.Management.Ride (CancellationReasonCode
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified API.Types.UI.FleetOwnerList as FleetOwnerListAPI
 import qualified Beckn.Types.Core.Taxi.Common.PaymentInstrument as BecknPI
-import Control.Applicative (liftA2, optional)
+import Control.Applicative (optional)
 import qualified "lib-dashboard" Dashboard.Common as DC
 import qualified "lib-dashboard" Dashboard.Common as DCommonRole (Role (..))
 import qualified "lib-dashboard" Dashboard.Common.Driver
@@ -1796,13 +1796,13 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
         let (fleetOwnerName, fleetName) = fromMaybe ("", Nothing) (Map.lookup fleetOwnerId fleetOwnerNameMap)
         driverRCAssociation <- QRCAssociation.findAllActiveAndInactiveAssociationsByDriverId driver.id
         let rcAssociatedWithFleet = filter (\(_, rc) -> rc.fleetOwnerId == Just fleetOwnerId) driverRCAssociation
-        (vehicleNo, vehicleType, rcId, vehicleColor, vehicleMake, vehicleModel, vehicleYear, failedRules, isRcActive) <- case rcAssociatedWithFleet of ---- so the logic is if it have active association with the fleet vehicle return that otherwise return the latest one
-          [] -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, False)
-          associations -> do
-            let activeAssociation = find (\(assoc, _) -> assoc.isRcActive) associations
+        (vehicleNo, vehicleType, rcId, vehicleColor, vehicleMake, vehicleModel, vehicleYear, failedRules, isRcActive) <- case NE.nonEmpty rcAssociatedWithFleet of ---- so the logic is if it have active association with the fleet vehicle return that otherwise return the latest one
+          Nothing -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, False)
+          Just associationsNE -> do
+            let activeAssociation = find (\(assoc, _) -> assoc.isRcActive) rcAssociatedWithFleet
             case activeAssociation of
               Just (_, rc) -> getVehicleDetails True rc ------- if driver is using fleet vehicle
-              Nothing -> getVehicleDetails False $ snd $ head associations -------- otherwise give the latest active association
+              Nothing -> getVehicleDetails False $ snd $ NE.head associationsNE -------- otherwise give the latest active association
         let driverName = Just driver.firstName
             firstName = Just driver.firstName
             middleName = driver.middleName

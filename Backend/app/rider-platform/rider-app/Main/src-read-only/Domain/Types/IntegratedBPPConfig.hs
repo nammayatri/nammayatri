@@ -39,7 +39,11 @@ data IntegratedBPPConfig = IntegratedBPPConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PlatformType
+  = MULTIMODAL
+  | PARTNERORG
+  | APPLICATION
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data ProviderConfig
   = EBIX Domain.Types.Extra.IntegratedBPPConfig.EBIXConfig
@@ -49,7 +53,7 @@ data ProviderConfig
   | ONDC Domain.Types.Extra.IntegratedBPPConfig.ONDCBecknConfig
   | CRIS Domain.Types.Extra.IntegratedBPPConfig.CRISConfig
   | KMRL Domain.Types.Extra.IntegratedBPPConfig.KMRLConfig
-  deriving (Generic, FromJSON, ToJSON, Eq, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PlatformType)
 

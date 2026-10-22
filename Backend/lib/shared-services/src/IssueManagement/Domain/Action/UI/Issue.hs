@@ -1610,9 +1610,12 @@ transformText getCfgValue mediaFileUrls text =
     replaceFirstImage :: Text -> [Text] -> Text -> Text
     replaceFirstImage pattern_ urls txt =
       let (before, after) = T.breakOn pattern_ txt
-       in if T.null after || null urls
-            then txt
-            else before <> (" {SUBPART}{IMAGE}{!!!} " <> head urls <> " ") <> T.drop (T.length pattern_) after
+       in case urls of
+            [] -> txt
+            (u0 : _)
+              | T.null after -> txt
+              | otherwise ->
+                before <> (" {SUBPART}{IMAGE}{!!!} " <> u0 <> " ") <> T.drop (T.length pattern_) after
 
     replaceImageGroup :: T.Text -> [T.Text] -> T.Text -> (T.Text, [T.Text])
     replaceImageGroup pattern_ urls txt
