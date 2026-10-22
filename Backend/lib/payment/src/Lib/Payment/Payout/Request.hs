@@ -50,7 +50,9 @@ import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import Lib.Payment.Domain.Types.PayoutRequest
 import Lib.Payment.Payout.RequestStatus (getStatusMessage, recordHistory, toPaymentState, updatePayoutRequestStatusWithHistory)
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
+import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPRE
 import Servant.Client (ClientError (..))
 
 -- | Flat data record supplied by the domain to request a payout.
@@ -375,29 +377,59 @@ executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutR
       result <- try $ DPayment.createPayoutService merchantId mbMocId personId (Just [payoutRequest.id.getId]) (Just entityName) city createPayoutOrderReq payoutCall Nothing afterPayoutOrderCreated
       case result of
         Left (err :: SomeException)
-          -- Only bulk splits a confirmed rejection from an ambiguous one. Other rails fail the
-          -- request, since leaving it PROCESSING would strand a Juspay payout. No ledger write
-          -- here: settlement handles the caller's hold.
-          | payoutServiceFlow /= Payout.BulkFlow -> do
-            let msg = "Payout service error: " <> show err
-            logError $ "Payout service call failed for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err
-            updateStatusWithHistoryById AUTO_PAY_FAILED (Just msg) payoutRequest
-            pure $ ConfirmedFailure msg
-          | isConfirmedRejection err -> do
+          -- Bulk splits a confirmed rejection from an ambiguous one.
+          | payoutServiceFlow == Payout.BulkFlow && isConfirmedRejection err -> do
             let msg = "Payout service error: " <> show err
             logError $ "Payout service call rejected for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err
             updateStatusWithHistoryById AUTO_PAY_FAILED (Just msg) payoutRequest
             pure $ ConfirmedFailure msg
-          | otherwise -> do
+          | payoutServiceFlow == Payout.BulkFlow -> do
             let msg = "Payout service call outcome unknown: " <> show err
             logError $ "Payout service call for PayoutRequest " <> payoutRequest.id.getId <> " errored ambiguously (may have reached the bank): " <> show err <> " -- leaving request PROCESSING, needs manual reconciliation"
             updateStatusWithHistoryById PROCESSING (Just msg) payoutRequest
             pure $ AmbiguousFailure msg
+          | otherwise -> do
+            let msg = "Payout service error: " <> show err
+            logError $ "Payout service call failed for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err
+            -- An order row means Juspay may have the order. Rider cashback stays PROCESSING for the
+            -- status check, which handles E09; other rails have no E09 handling, so they fail as before.
+            mbPayoutOrder <-
+              if entityName == DCommon.RIDE_OFFER_CASHBACK
+                then QPayoutOrder.findByOrderId orderId
+                else pure Nothing
+            case mbPayoutOrder of
+              Nothing -> do
+                updateStatusWithHistoryById AUTO_PAY_FAILED (Just msg) payoutRequest
+                pure $ ConfirmedFailure msg
+              Just payoutOrder -> do
+                QPR.updatePayoutTransactionIdById (Just payoutOrder.id.getId) payoutRequest.id
+                requestStatus <- moveToProcessingIfInitiated ("Payout outcome unknown after service error, awaiting status check: " <> show err) payoutRequest
+                scheduled <- try $ afterPayoutOrderCreated payoutOrder
+                case scheduled of
+                  Left (scheduleErr :: SomeException) -> logError $ "Failed to schedule status check for orderId " <> orderId <> ": " <> show scheduleErr
+                  Right () -> pure ()
+                pure $ NotExecutable requestStatus
         Right (_mbResp, mbPayoutOrder) -> do
           let payoutOrderIdText = maybe "unknown" (\po -> po.id.getId) mbPayoutOrder
           QPR.updatePayoutTransactionIdById (Just payoutOrderIdText) payoutRequest.id
-          updateStatusWithHistoryById PROCESSING (Just $ "Payout request sent to Bank. OrderId: " <> payoutOrderIdText) payoutRequest
-          pure $ maybe (NotExecutable PROCESSING) Executed mbPayoutOrder
+          requestStatus <- moveToProcessingIfInitiated ("Payout request sent to Bank. OrderId: " <> payoutOrderIdText) payoutRequest
+          -- the order was sent even if a webhook already moved the request on: callers must not give the hold back
+          pure $ maybe (NotExecutable requestStatus) Executed mbPayoutOrder
+
+-- | INITIATED -> PROCESSING after the create call, keeping a status a fast webhook already set.
+moveToProcessingIfInitiated ::
+  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
+  Text ->
+  PayoutRequest ->
+  m PayoutRequestStatus
+moveToProcessingIfInitiated message payoutRequest = do
+  QPRE.updateStatusIfInitiated PROCESSING payoutRequest.id
+  currentStatus <- maybe payoutRequest.status (.status) <$> QPR.findById payoutRequest.id
+  -- the webhook never writes PROCESSING
+  if currentStatus == PROCESSING
+    then recordHistory (Just payoutRequest.status) PROCESSING (Just message) payoutRequest
+    else logInfo $ "PayoutRequest " <> payoutRequest.id.getId <> " already " <> show currentStatus <> " when the create call finished"
+  pure currentStatus
 
 -- | Build a CreatePayoutOrderReq from the stored PayoutRequest fields.
 --   Throws if VPA is missing — VPA must be populated at PayoutRequest creation time.

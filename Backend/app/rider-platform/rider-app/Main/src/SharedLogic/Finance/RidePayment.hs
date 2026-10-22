@@ -90,6 +90,8 @@ module SharedLogic.Finance.RidePayment
     ridePaymentRefCashbackPayoutTransfer,
     ridePaymentRefCashbackPayoutSettlement,
     postCashbackOwnerPayoutLiability,
+    payoutSettlementLockKey,
+    withPayoutSettlementLock,
     releaseCashbackEntriesReservation,
     reserveCashbackEntriesForPayout,
     cashbackPayoutLedgerRefs,
@@ -174,15 +176,16 @@ import qualified Domain.Types.Invoice as DInvType
 import qualified Domain.Types.Person
 import qualified "this" Domain.Types.RefundRequest as DRefundRequest
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id (Id (..))
-import Kernel.Utils.Common (MonadFlow, getCurrentTime, logDebug, logError, logInfo)
+import Kernel.Utils.Common (CacheFlow, MonadFlow, getCurrentTime, logDebug, logError, logInfo)
 import Lib.Finance hiding (PayoutEligibility (..), getPayoutEligibilityData)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Service as FInvoiceService
-import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..), PayoutOutcome (..), settlePayoutLedger)
+import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..), PayoutOutcome (..), postOnceByReference, settlePayoutLedger)
 import qualified Lib.Finance.Ledger.Service
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
@@ -803,13 +806,23 @@ releaseCashbackEntriesReservation = Lib.Finance.Ledger.Service.markEntriesAsUnse
 -- | PayoutInitiated: move the cashback amount out of the rider's wallet into the merchant's
 --   OwnerPayoutLiability liability account (PROCESSING) until the PG confirms or fails the payout.
 --   Keyed by ctx.referenceId (the PayoutRequest id), like every other leg of the payout.
+--   Posted once per payout; settlement posts it only if it is missing.
 postCashbackOwnerPayoutLiability ::
   (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney ->
   m (Either FinanceError [Id LE.LedgerEntry])
 postCashbackOwnerPayoutLiability ctx amount =
-  fmap snd <$> runFinance ctx (void $ transferInProcessing OwnerLiability OwnerPayoutLiability amount ridePaymentRefCashbackPayoutTransfer Nothing)
+  postOnceByReference ridePaymentRefCashbackPayoutTransfer ctx $
+    fmap snd <$> runFinance ctx (void $ transferInProcessing OwnerLiability OwnerPayoutLiability amount ridePaymentRefCashbackPayoutTransfer Nothing)
+
+payoutSettlementLockKey :: Text -> Text
+payoutSettlementLockKey payoutRequestId = "Payout:Settlement:payoutRequestId:" <> payoutRequestId
+
+-- | Lock per payout request, so the hold at initiate and the webhook/status check never post legs at once.
+withPayoutSettlementLock :: (CacheFlow m r, MonadFlow m) => Text -> m a -> m a
+withPayoutSettlementLock payoutRequestId =
+  Redis.withWaitAndLockMasterCloudCrossAppRedis "payout" "waitForSettlementLock" (payoutSettlementLockKey payoutRequestId) 60 100
 
 cashbackPayoutLedgerRefs :: PayoutLedgerRefs
 cashbackPayoutLedgerRefs =
