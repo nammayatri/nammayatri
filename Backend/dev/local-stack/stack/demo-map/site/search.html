@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recherche de lieux — Algérie</title>
+
+<!--
+  A demo of the place search, for showing rather than describing.
+
+  It deliberately goes through the *public rider API* -- the same
+  /v2/maps/autoComplete, /v2/maps/getPlaceDetails and /v2/maps/getPlaceName the
+  phone will call -- not straight to the search index. Anything faked at this
+  layer would prove nothing about whether the app can do it.
+
+  nginx serves this page and proxies /v2/* to rider-app from the same origin,
+  which is why there is no CORS problem here. Tiles come from the tile server on
+  :8035, which sends Access-Control-Allow-Origin: *.
+
+  It signs itself in on load with the demo number and the fixed OTP. That is
+  fine on a stack reachable only through an SSH tunnel, and nowhere else.
+-->
+
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+  :root {
+    --bg:#0f1115; --panel:#171a21; --panel-2:#1d212a; --line:#262b36;
+    --fg:#e8ecf2; --muted:#9aa4b2; --dim:#6b7482;
+    --brand:#60a5fa; --brand-dim:#1b2a45;
+    --yes:#22c55e; --no:#ef4444; --warn:#f59e0b;
+  }
+  * { box-sizing:border-box; }
+  html,body { height:100%; margin:0; }
+  body {
+    background:var(--bg); color:var(--fg);
+    font:16px/1.5 "Segoe UI", system-ui, sans-serif;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+
+  header {
+    padding:13px 22px; border-bottom:1px solid var(--line);
+    display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; flex:none;
+  }
+  header h1 { margin:0; font-size:20px; font-weight:600; letter-spacing:.2px; }
+  header .sub { color:var(--muted); font-size:13.5px; }
+  .pill {
+    margin-left:auto; font-size:12.5px; padding:5px 12px; border-radius:999px;
+    border:1px solid var(--line); color:var(--muted); white-space:nowrap;
+  }
+  .pill.ok  { color:var(--yes); border-color:rgba(34,197,94,.45); }
+  .pill.err { color:var(--no);  border-color:rgba(239,68,68,.45); }
+
+  main { flex:1; display:flex; min-height:0; }
+  #map { flex:1; background:#0b0d11; }
+
+  aside {
+    width:410px; flex:none; background:var(--panel);
+    border-right:1px solid var(--line);
+    display:flex; flex-direction:column; min-height:0;
+  }
+
+  .searchbox { padding:16px 18px 12px; border-bottom:1px solid var(--line); }
+  .searchbox label {
+    display:block; font-size:11px; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--dim); margin-bottom:8px; font-weight:600;
+  }
+  #q {
+    width:100%; padding:13px 14px; font-size:17px;
+    background:var(--panel-2); color:var(--fg);
+    border:1.5px solid var(--line); border-radius:11px; outline:none;
+  }
+  #q:focus { border-color:var(--brand); }
+  #q::placeholder { color:var(--dim); }
+
+  .meta {
+    display:flex; align-items:center; gap:8px; margin-top:10px;
+    font-size:12.5px; color:var(--dim); min-height:20px;
+  }
+  .ms { color:var(--brand); font-variant-numeric:tabular-nums; font-weight:600; }
+  .endpoint { font-family:ui-monospace,Consolas,monospace; font-size:11.5px; color:var(--dim); }
+
+  #results { flex:1; overflow:auto; }
+  .row {
+    display:flex; gap:12px; align-items:flex-start;
+    padding:12px 18px; cursor:pointer; border-bottom:1px solid rgba(38,43,54,.55);
+  }
+  .row:hover { background:var(--panel-2); }
+  .row.on { background:var(--brand-dim); }
+  .ico {
+    flex:none; width:30px; height:30px; border-radius:50%;
+    background:var(--panel-2); display:flex; align-items:center; justify-content:center;
+  }
+  .ico svg { width:12px; height:16px; }
+  .r1 { font-size:15px; line-height:1.3; }
+  .r2 { font-size:12.5px; color:var(--muted); margin-top:1px; }
+  .hit { color:var(--brand); font-weight:650; }
+
+  .note { padding:26px 22px; color:var(--dim); font-size:13.5px; line-height:1.6; }
+  .note b { display:block; color:var(--muted); font-size:14.5px; margin-bottom:6px; }
+
+  .tips { border-top:1px solid var(--line); padding:12px 18px; flex:none; }
+  .tips .lbl { font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--dim); font-weight:600; }
+  .chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
+  .chip {
+    font-size:12.5px; padding:5px 11px; border-radius:999px; cursor:pointer;
+    background:var(--panel-2); border:1px solid var(--line); color:var(--muted);
+  }
+  .chip:hover { border-color:var(--brand); color:var(--fg); }
+  .chip small { color:var(--dim); }
+
+  /* what the pin is called, over the map */
+  #here {
+    position:absolute; left:50%; transform:translateX(-50%);
+    bottom:22px; z-index:5; max-width:min(560px,80%);
+    background:rgba(23,26,33,.94); border:1px solid var(--line);
+    border-radius:12px; padding:11px 16px; backdrop-filter:blur(6px);
+    font-size:14.5px; text-align:center; pointer-events:none;
+  }
+  #here .lbl { font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--dim); font-weight:600; }
+  #here .val { margin-top:3px; }
+  #here .val.wait { color:var(--dim); }
+
+  .maplibregl-ctrl-attrib { font-size:11px !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Recherche de lieux</h1>
+  <span class="sub">111 555 lieux · nos propres données · aucune clé d'API</span>
+  <span class="pill" id="status">connexion…</span>
+</header>
+
+<main>
+  <aside>
+    <div class="searchbox">
+      <label for="q">Où allez-vous&nbsp;?</label>
+      <input id="q" autocomplete="off" spellcheck="false" placeholder="une rue, un quartier, une mairie…">
+      <div class="meta">
+        <span class="endpoint">POST /v2/maps/autoComplete</span>
+        <span id="timing"></span>
+      </div>
+    </div>
+
+    <div id="results">
+      <div class="note">
+        <b>Tapez pour chercher</b>
+        Les résultats sont classés par proximité du centre de la carte —
+        déplacez la carte et cherchez à nouveau pour le voir.
+      </div>
+    </div>
+
+    <div class="tips">
+      <div class="lbl">À essayer</div>
+      <div class="chips">
+        <span class="chip" data-q="didou">didou</span>
+        <span class="chip" data-q="aeroport">aeroport <small>· sans accent</small></span>
+        <span class="chip" data-q="bab ezouar">bab ezouar <small>· mal écrit</small></span>
+        <span class="chip" data-q="mairie">mairie</span>
+        <span class="chip" data-q="constantine">constantine <small>· 400 km</small></span>
+        <span class="chip" data-q="جامعة">جامعة <small>· en arabe</small></span>
+      </div>
+    </div>
+  </aside>
+
+  <div id="map"></div>
+</main>
+
+<div id="here">
+  <div class="lbl">Ce point s'appelle</div>
+  <div class="val wait" id="hereval">cliquez sur la carte…</div>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+'use strict';
+
+// ── config ────────────────────────────────────────────────────────────────
+const TILES  = 'http://localhost:8035/styles/basic-preview/style.json';
+const ALGIERS = [3.0588, 36.7538];          // MapLibre order: lon, lat
+const DEMO_PHONE = '0550990011';
+const DEMO_OTP   = '7891';
+const MERCHANT   = 'YATRI';
+const DEBOUNCE_MS = 250;
+
+const $ = (id) => document.getElementById(id);
+const statusEl = $('status'), resultsEl = $('results'), timingEl = $('timing');
+
+let token = null;
+let seq = 0;          // discards replies that arrive out of order
+let debounce = null;
+let marker = null;
+
+// ── the API, exactly as the phone will call it ────────────────────────────
+async function post(path, body, withToken = true) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (withToken && token) headers.token = token;
+  const res = await fetch(path, { method:'POST', headers, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error(`${path} -> ${res.status}`);
+  return res.json();
+}
+
+async function signIn() {
+  const { authId } = await post('/v2/auth', {
+    mobileCountryCode: '+213', mobileNumber: DEMO_PHONE, merchantId: MERCHANT,
+  }, false);
+  const out = await post(`/v2/auth/${encodeURIComponent(authId)}/verify`, {
+    otp: DEMO_OTP, deviceToken: 'demo0000000000000000000000000000',
+  }, false);
+  token = out.token;
+  statusEl.textContent = 'connecté';
+  statusEl.className = 'pill ok';
+}
+
+// ── map ───────────────────────────────────────────────────────────────────
+const map = new maplibregl.Map({
+  container: 'map', style: TILES, center: ALGIERS, zoom: 12.4, attributionControl: true,
+});
+map.addControl(new maplibregl.NavigationControl({ showCompass:false }), 'top-right');
+
+function drop(lon, lat) {
+  if (marker) marker.remove();
+  marker = new maplibregl.Marker({ color:'#60a5fa' }).setLngLat([lon, lat]).addTo(map);
+}
+
+// ── autocomplete ──────────────────────────────────────────────────────────
+function render(list, typed) {
+  if (!list.length) {
+    resultsEl.innerHTML = `<div class="note"><b>Aucun résultat</b>
+      Essayez le nom de la rue ou d'un lieu connu — sans le numéro.</div>`;
+    return;
+  }
+  const needle = typed.trim().toLowerCase();
+  resultsEl.innerHTML = '';
+  list.forEach((p) => {
+    // The API sends one string. Splitting at the last comma is what gives the
+    // two lines -- there is no second field to read.
+    const cut  = p.description.lastIndexOf(',');
+    const name = cut > 0 ? p.description.slice(0, cut) : p.description;
+    const area = cut > 0 ? p.description.slice(cut + 1).trim() : '';
+
+    // Mark the typed text only where it literally appears; on a fuzzy match
+    // there is nothing to mark, because nothing matched.
+    let shown = name.replace(/[&<>]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    const at = name.toLowerCase().indexOf(needle);
+    if (needle && at >= 0) {
+      const raw = name.slice(at, at + needle.length);
+      shown = shown.replace(raw, `<span class="hit">${raw}</span>`);
+    }
+
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <span class="ico"><svg viewBox="0 0 24 34" aria-hidden="true"><path fill="#9aa4b2" fill-rule="evenodd"
+        d="M12 33.5S23.2 20.3 23.2 12.9C23.2 6.1 18.2 0.8 12 0.8S0.8 6.1 0.8 12.9C0.8 20.3 12 33.5 12 33.5ZM12 17.6A4.75 4.75 0 1 0 12 8.1A4.75 4.75 0 0 0 12 17.6Z"/></svg></span>
+      <div><div class="r1">${shown}</div>${area ? `<div class="r2">${area}</div>` : ''}</div>`;
+    row.onclick = () => choose(p, row);
+    resultsEl.appendChild(row);
+  });
+}
+
+async function search(text) {
+  const mine = ++seq;
+  const c = map.getCenter();
+  const t0 = performance.now();
+  try {
+    const out = await post('/v2/maps/autoComplete', {
+      input: text,
+      location: `${c.lat.toFixed(6)},${c.lng.toFixed(6)}`,
+      radius: 10000,
+      language: 'ENGLISH',        // the backend has no FRENCH; results are French anyway
+      sessionToken: 'demo-session',
+    });
+    if (mine !== seq) return;     // a newer keystroke already went out
+    const ms = Math.round(performance.now() - t0);
+    const list = out.predictions || [];
+    timingEl.innerHTML = `<span class="ms">${ms} ms</span> · ${list.length} résultats`;
+    render(list, text);
+  } catch (err) {
+    if (mine !== seq) return;
+    timingEl.textContent = '';
+    resultsEl.innerHTML = `<div class="note"><b>Recherche indisponible</b>${err.message}</div>`;
+  }
+}
+
+// ── picking one, and naming a point ───────────────────────────────────────
+async function choose(pred, row) {
+  document.querySelectorAll('.row.on').forEach((r) => r.classList.remove('on'));
+  row.classList.add('on');
+  const out = await post('/v2/maps/getPlaceDetails', {
+    sessionToken: 'demo-session', placeId: pred.placeId,
+  });
+  const { lat, lon } = out.location;
+  drop(lon, lat);
+  map.flyTo({ center:[lon, lat], zoom: 15.5, speed: 1.1 });
+  setHere(pred.description);
+}
+
+function setHere(text, waiting) {
+  const el = $('hereval');
+  el.textContent = text;
+  el.className = waiting ? 'val wait' : 'val';
+}
+
+async function nameOf(lat, lon) {
+  setHere('…', true);
+  try {
+    const out = await post('/v2/maps/getPlaceName', {
+      sessionToken: 'demo-session', language: 'ENGLISH',
+      getBy: { tag:'ByLatLong', contents:{ lat, lon } },
+    });
+    setHere(Array.isArray(out) && out.length ? out[0].formattedAddress : 'inconnu');
+  } catch (err) {
+    setHere('erreur', true);
+  }
+}
+
+map.on('click', (e) => {
+  drop(e.lngLat.lng, e.lngLat.lat);
+  nameOf(e.lngLat.lat, e.lngLat.lng);
+});
+
+// ── wiring ────────────────────────────────────────────────────────────────
+$('q').addEventListener('input', (e) => {
+  const text = e.target.value;
+  clearTimeout(debounce);
+  if (text.trim().length < 2) {
+    seq++; timingEl.textContent = '';
+    resultsEl.innerHTML = `<div class="note"><b>Tapez pour chercher</b>
+      Les résultats sont classés par proximité du centre de la carte.</div>`;
+    return;
+  }
+  debounce = setTimeout(() => search(text), DEBOUNCE_MS);
+});
+
+document.querySelectorAll('.chip').forEach((chip) => {
+  chip.onclick = () => {
+    const text = chip.dataset.q;
+    const box = $('q');
+    box.value = '';
+    box.focus();
+    // Typed out rather than pasted, so a recording shows the list narrowing.
+    let i = 0;
+    (function type() {
+      if (i >= text.length) return;
+      box.value += text[i++];
+      box.dispatchEvent(new Event('input'));
+      setTimeout(type, 90);
+    })();
+  };
+});
+
+signIn()
+  .then(() => $('q').focus())
+  .catch((err) => {
+    statusEl.textContent = 'hors ligne';
+    statusEl.className = 'pill err';
+    resultsEl.innerHTML = `<div class="note"><b>Impossible de se connecter à l'API</b>
+      ${err.message}<br><br>Le tunnel SSH est-il ouvert&nbsp;?</div>`;
+  });
+</script>
+</body>
+</html>

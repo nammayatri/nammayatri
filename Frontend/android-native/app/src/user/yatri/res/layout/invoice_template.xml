@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="960px"
+    android:layout_height="1338px"
+    tools:ignore="UnusedAttribute">
+
+    <LinearLayout
+        android:layout_width="960px"
+        android:layout_height="1338px"
+        android:orientation="vertical"
+        android:id="@+id/invoice"
+        android:padding="80px">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3px"
+                    android:fontFamily="@font/plus_jakartasans_medium"
+                    android:lineHeight="3px"
+                    android:text="Hey "
+                    android:textColor="@color/Black800"
+                    android:textFontWeight="500"
+                    android:textSize="24px" />
+                <TextView
+                    android:id="@+id/userName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3px"
+                    android:fontFamily="@font/plus_jakartasans_medium"
+                    android:lineHeight="28px"
+                    android:text="Aman Maurya"
+                    android:textColor="@color/Black800"
+                    android:textFontWeight="500"
+                    android:textSize="24px" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3px"
+                    android:fontFamily="@font/plus_jakartasans_medium"
+                    android:lineHeight="28px"
+                    android:id="@+id/headingText"
+                    android:text=", here’s your driver receipt"
+                    android:textColor="@color/Black800"
+                    android:textFontWeight="500"
+                    android:textSize="24px" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.0" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="right"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/plus_jakartasans_regular"
+                    android:lineHeight="20px"
+                    android:text="For ride taken on"
+                    android:textColor="@color/Black700"
+                    android:textFontWeight="400"
+                    android:textSize="16px" />
+
+                <TextView
+                    android:id="@+id/rideDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/plus_jakartasans_semibold"
+                    android:lineHeight="20px"
+                    android:text="Wed, 8th Nov 2022"
+                    android:textColor="@color/Black800"
+                    android:textFontWeight="400"
+                    android:textSize="16px"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="1px"
+            android:layout_marginTop="27px"
+            android:background="@color/Black500" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="45px">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/plus_jakartasans_semibold"
+                android:lineHeight="24px"
+                android:text="Payment Details"
+                android:textColor="@color/green"
+                android:textFontWeight="600"
+                android:textSize="20px"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="0px"
+                android:layout_height="0px"
+                android:layout_weight="1.0" />
+
+            <TextView
+                android:id="@+id/paymentDetail"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/plus_jakartasans_semibold"
+                android:lineHeight="24px"
+                android:text="₹220"
+                android:textColor="@color/green"
+                android:textFontWeight="600"
+                android:textSize="20px"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24px"
+            android:background="@drawable/ic_invoice_border"
+            android:paddingHorizontal="24px"
+            android:paddingVertical="20px"
+            android:orientation="vertical"
+            android:id="@+id/fareBreakupContainer">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/fareBreakupElements"></LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="1px"
+                android:layout_marginVertical="18px"
+                android:background="@color/Black500" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/plus_jakartasans_regular"
+                    android:lineHeight="20px"
+                    android:text="Final Amount Paid"
+                    android:textColor="@color/Black800"
+                    android:textFontWeight="400"
+                    android:textSize="18px" />
+
+                <LinearLayout
+                    android:layout_width="0px"
+                    android:layout_height="0px"
+                    android:layout_weight="1.0" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/plus_jakartasans_regular"
+                    android:lineHeight="20px"
+                    android:text="₹180"
+                    android:textColor="@color/Black800"
+                    android:textFontWeight="400"
+                    android:id="@+id/finalAmount"
+                    android:textSize="18px" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="60px">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/plus_jakartasans_semibold"
+                android:lineHeight="24px"
+                android:text="Ride Details"
+                android:textColor="@color/green"
+                android:textFontWeight="600"
+                android:textSize="20px"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="0px"
+                android:layout_height="0px"
+                android:layout_weight="1.0" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/plus_jakartasans_semibold"
+                android:lineHeight="24px"
+                android:text="Ride ID: "
+                android:textColor="@color/green"
+                android:textFontWeight="600"
+                android:textSize="20px"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/rideId"
+                android:fontFamily="@font/plus_jakartasans_semibold"
+                android:lineHeight="24px"
+                android:text="475DGBC589"
+                android:textColor="@color/green"
+                android:textFontWeight="600"
+                android:textSize="20px"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24px"
+            android:background="@drawable/ic_invoice_border"
+            android:orientation="vertical"
+            android:paddingHorizontal="24px"
+            android:paddingVertical="40px">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10px">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/plus_jakartasans_regular"
+                    android:lineHeight="20px"
+                    android:text="Driver Name"
+                    android:textColor="@color/Black700"
+                    android:textFontWeight="400"
+                    android:textSize="18px" />
+
+                <LinearLayout
+                    android:layout_width="0px"
+                    android:layout_height="0px"
+                    android:layout_weight="1.0" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/plus_jakartasans_regular"
+                    android:lineHeight="20px"
+                    android:id="@+id/driverName"
+                    android:text="Rajiv Kumar"
+                    android:textColor="@color/Black700"
+                    android:textFontWeight="400"
+                    android:textSize="18px" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/plus_jakartasans_regular"
+                    android:lineHeight="20px"
+                    android:text="License Plate"
+                    android:textColor="@color/Black700"
+                    android:textFontWeight="400"
+                    android:textSize="18px" />
+
+                <LinearLayout
+                    android:layout_width="0px"
+                    android:layout_height="0px"
+                    android:layout_weight="1.0" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/lincensePlate"
+                    android:fontFamily="@font/plus_jakartasans_regular"
+                    android:lineHeight="20px"
+                    android:text="KA05AG1110"
+                    android:textColor="@color/Black700"
+                    android:textFontWeight="400"
+                    android:textSize="18px" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="1px"
+                android:layout_marginTop="18px"
+                android:background="@color/Black500" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="18px">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8px"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:layout_width="12px"
+                        android:layout_height="12px"
+                        android:src="@drawable/ny_ic_green_circle" />
+
+                    <ImageView
+                        android:layout_width="1px"
+                        android:layout_height="80px"
+                        android:layout_margin="6px"
+                        android:id="@+id/dashedLine"
+                        android:src="@drawable/ic_line" />
+
+                    <ImageView
+                        android:layout_width="12px"
+                        android:layout_height="12px"
+                        android:id="@+id/destRedCircle"
+                        android:src="@drawable/ny_ic_red_circle" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="12px"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/plus_jakartasans_regular"
+                        android:lineHeight="20px"
+                        android:text="8:41 AM"
+                        android:textColor="@color/Black800"
+                        android:textFontWeight="400"
+                        android:id="@+id/rideStartTime"
+                        android:textSize="16px" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/plus_jakartasans_regular"
+                        android:id="@+id/source"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:lineHeight="20px"
+                        android:text="Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102"
+                        android:textColor="@color/Black800"
+                        android:textFontWeight="400"
+                        android:textSize="16px" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/plus_jakartasans_regular"
+                        android:lineHeight="20px"
+                        android:text="9:21 AM"
+                        android:id="@+id/rideEndTime"
+                        android:textColor="@color/Black800"
+                        android:textFontWeight="400"
+                        android:layout_marginTop="38px"
+                        android:textSize="16px" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/plus_jakartasans_regular"
+                        android:lineHeight="20px"
+                        android:id="@+id/destination"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:text="J444, 3rd and 4th Floor, Stallion Business Center, 18th Main Road, 6th Block, Koramangala, Bengaluru, Karnataka 560095"
+                        android:textColor="@color/Black800"
+                        android:textFontWeight="400"
+                        android:textSize="16px" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+        <TextView
+            android:id="@+id/referenceText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/plus_jakartasans_medium_italic"
+            android:lineHeight="16px"
+            android:text=""
+            android:textColor="@color/Black700"
+            android:textFontWeight="400"
+            android:textStyle="italic"
+            android:textSize="16px" />
+    </LinearLayout>
+</LinearLayout>

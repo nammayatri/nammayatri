@@ -1,0 +1,25 @@
+<html>
+<head>
+    <title>MOBILITY-RELEASE</title>
+</head>
+<body>
+</body>
+<script type="text/javascript">
+    window.__OS = "ANDROID";
+    window.JBridge = top.JBridge;
+    window.Android = top.Android;
+    window.DUIGatekeeper = JBridge;
+    window.JBridge.setAnalyticsHeader(JSON.stringify({"x-client-id": "mobility"}));
+
+</script>
+
+<script type="text/javascript">
+        let headID = document.getElementsByTagName("head")[0];
+        let jsFile = JBridge.loadFileInDUI('v1-assets_downloader.jsa'); // update index_bundle.js to share apk
+        let newScript = document.createElement('script');
+        newScript.type = 'text/javascript';
+        newScript.id = 'mystique';
+        newScript.innerHTML = jsFile;
+        headID.appendChild(newScript);
+</script>
+</html>

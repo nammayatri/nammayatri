@@ -1,0 +1,20 @@
+{
+  "InterCity": {
+    "primaryBackground": "#167DDD",
+    "primaryText": "#FFFFFF",
+    "secondaryText": "#B2FFFFFF",
+    "secondaryBackground": "#2194FF"
+  },
+  "Rental": {
+    "primaryBackground": "#019698",
+    "primaryText": "#FFFFFF",
+    "secondaryText": "#B2FFFFFF",
+    "secondaryBackground": "#42B8BA"
+  },
+  "Default": {
+    "primaryBackground": "#FFFFFF",
+    "primaryText": "#454545",
+    "secondaryText": "#868B98",
+    "secondaryBackground": "#E5E7EB"
+  }
+}
