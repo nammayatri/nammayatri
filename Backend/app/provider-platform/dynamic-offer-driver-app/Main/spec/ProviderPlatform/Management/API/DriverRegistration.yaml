@@ -21,6 +21,7 @@ imports:
   OnboardingAs: Dashboard.Common.Driver
   DisabledReasonFlag: Dashboard.Common.Driver
   DriverAssociationInfo: Dashboard.Common.Driver
+  APISuccessWithUnprocessedEntities: Dashboard.Common.Merchant
 
 module: DriverRegistration
 apiPrefix: driver
@@ -76,6 +77,29 @@ apis:
               - requestorId: Text
             response:
               type: OnboardingLinkRes
+      migrate:
+        capability: city-operations.onboarding.write
+  - POST: # BulkAddDriversAPI
+      endpoint: /addDrivers
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - onboardingAs: OnboardingAs
+      multipart:
+        type: AddDriversReq
+      response:
+        type: AddDriversResp
+      migrate:
+        capability: city-operations.onboarding.write
+  - POST: # BulkAddVehiclesAPI
+      endpoint: /{driverId}/addVehicles
+      appServerHandler: custom
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      multipart:
+        type: AddVehiclesReq
+      response:
+        type: APISuccessWithUnprocessedEntities
       migrate:
         capability: city-operations.onboarding.write
   - POST: # UploadDocumentAPI
@@ -403,6 +427,18 @@ types:
   OnboardingLinkRes:
     - link: Text
     - expiresAt: UTCTime
+  AddDriversReq:
+    - file: FilePath
+    - derive: "'HideSecrets"
+  ProcessedDriverInfo:
+    - driverId: Id Driver
+    - phoneNo: Text
+  AddDriversResp:
+    - processedDrivers: [ProcessedDriverInfo]
+    - unprocessedEntities: [Text]
+  AddVehiclesReq:
+    - file: FilePath
+    - derive: "'HideSecrets"
   GetDocumentResponse:
     - imageBase64: Maybe Text
     - status: Maybe VerificationStatus
