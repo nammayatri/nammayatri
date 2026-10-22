@@ -513,6 +513,7 @@ data JobName
   | AggregatedCommissionInvoiceCreationTrigger
   | RetryAutopayCollectionTrigger
   | SendLegalPolicyNotificationTrigger
+  | RegistrySyncTrigger
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -205,7 +205,7 @@ import qualified MerchantDocuments.Domain.Action.UI.MerchantDocument as SMD
 import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SendLegalPolicyNotificationJobData (..), SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RegistrySyncJobData (..), RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SendLegalPolicyNotificationJobData (..), SupplyDemandRequestJobData)
 import SharedLogic.Allocator.Jobs.FarePolicy.DeleteUnreferencedFarePolicies (scheduleDeleteUnreferencedFarePolicies)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DashboardAlert as SDA
@@ -665,6 +665,10 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
               createJobIn @_ @'SendLegalPolicyNotification (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: SendLegalPolicyNotificationJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.RegistrySyncTrigger -> do
+          -- Global, not merchant/city-scoped.
+          createJobIn @_ @'RegistrySync Nothing Nothing diffTimeS RegistrySyncJobData
+          pure Success
         _ -> throwError $ InternalError "invalid job name"
 
 postMerchantSchedulerRevive :: ShortId DM.Merchant -> Context.City -> Common.ReviveSchedulerJobsReq -> Flow Common.ReviveSchedulerJobsRes
