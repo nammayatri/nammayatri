@@ -98,3 +98,61 @@ SELECT event_id, occurred_at, merchant_id, merchant_operating_city_id, policy_do
        policy_type, entity_type, policy_version, person_id, channel,
        status, error_code, error_message, batch_id
 FROM atlas_kafka.LegalNotificationEvents_queue;
+
+-- Behaviour metrics: one row per nudge / warn / block / communication a behaviour
+-- rulebook decides on. Produced by Lib.BehaviorEngine.EventLog (topic
+-- behaviour-consequence-events); read by the control center's Behaviour Programmes metrics.
+CREATE TABLE IF NOT EXISTS atlas_kafka.behaviour_consequence_events (
+    `event_id`                   String,
+    `occurred_at`                DateTime64(3, 'UTC'),
+    `merchant_operating_city_id` LowCardinality(String),
+    `caller_app`                 LowCardinality(String),
+    `entity_type`                LowCardinality(String),
+    `entity_id`                  String,
+    `behaviour`                  LowCardinality(String),
+    `rulebook_version`           Nullable(Int32),
+    `action_type`                LowCardinality(String),
+    `kind`                       LowCardinality(String),
+    `consequence_type`           LowCardinality(String),
+    `reason_tag`                 Nullable(String),
+    `template_key`               Nullable(String),
+    `block_hours`                Nullable(Int32),
+    `source`                     LowCardinality(String),
+    `extra`                      String
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(occurred_at)
+ORDER BY (merchant_operating_city_id, behaviour, consequence_type, occurred_at)
+TTL toDateTime(occurred_at) + INTERVAL 2 YEAR;
+
+CREATE TABLE IF NOT EXISTS atlas_kafka.behaviour_consequence_events_queue (
+    `event_id`                   String,
+    `occurred_at`                DateTime64(3, 'UTC'),
+    `merchant_operating_city_id` String,
+    `caller_app`                 String,
+    `entity_type`                String,
+    `entity_id`                  String,
+    `behaviour`                  String,
+    `rulebook_version`           Nullable(Int32),
+    `action_type`                String,
+    `kind`                       String,
+    `consequence_type`           String,
+    `reason_tag`                 Nullable(String),
+    `template_key`               Nullable(String),
+    `block_hours`                Nullable(Int32),
+    `source`                     String,
+    `extra`                      String
+) ENGINE = Kafka
+SETTINGS
+    kafka_broker_list     = 'localhost:29092',
+    kafka_topic_list      = 'behaviour-consequence-events',
+    kafka_group_name      = 'ch-atlas_kafka-behaviour_consequence_events',
+    kafka_format          = 'JSONEachRow',
+    kafka_num_consumers   = 1,
+    kafka_skip_broken_messages = 100;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS atlas_kafka.behaviour_consequence_events_mv
+TO atlas_kafka.behaviour_consequence_events AS
+SELECT event_id, occurred_at, merchant_operating_city_id, caller_app, entity_type, entity_id,
+       behaviour, rulebook_version, action_type, kind, consequence_type, reason_tag,
+       template_key, block_hours, source, extra
+FROM atlas_kafka.behaviour_consequence_events_queue;
