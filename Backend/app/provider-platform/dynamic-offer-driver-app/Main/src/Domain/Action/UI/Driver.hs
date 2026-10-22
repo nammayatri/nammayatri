@@ -299,6 +299,7 @@ import qualified SharedLogic.Payment as SPayment
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import SharedLogic.Ride
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
+import SharedLogic.ScheduledRideVisibility (BookingVisibilityFacts (..), DriverVisibilityFacts (..), VisibilityFactNeeds (..), factsNeededBy, isVisibleUnderRules, resolveVisibilityStage)
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.Subscription.BillingModel (isPrepaidDriverWithCatalogueFallback)
@@ -342,12 +343,12 @@ import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.MetaData as QMeta
 import qualified Storage.Queries.OperationHubRequests as QOHR
 import qualified Storage.Queries.Person as QPerson
-import Storage.Queries.Person.GetNearestDrivers (scheduledTierEligibleForDriver)
 import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.RegistrationToken as QRegister
 import Storage.Queries.Ride as Ride
+import qualified Storage.Queries.RiderDriverCorrelation as QRDC
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
@@ -3413,34 +3414,25 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
               let availableServiceTierItems = map fst $ filter (not . snd) serviceTierItems
               let availableServiceTiers = (.serviceTierType) <$> availableServiceTierItems
               now <- getCurrentTime
-              cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing
-              let cityServiceTierByType = HM.fromList $ (\serviceTier -> (serviceTier.serviceTierType, serviceTier)) <$> cityServiceTiers
-                  driverActiveTags = LYT.getTagNameValue . Yudhishthira.removeTagExpiry <$> Yudhishthira.filterExpiredTags' now (fromMaybe [] driver.driverTag)
+              let driverActiveTags = LYT.getTagNameValue . Yudhishthira.removeTagExpiry <$> Yudhishthira.filterExpiredTags' now (fromMaybe [] driver.driverTag)
                   tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
                   limit = fromMaybe 10 mbLimit
                   offset = fromMaybe 0 mbOffset
                   safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
-                  -- R4: still-unassigned scheduled bookings within the open-to-all threshold are shown to everyone.
-                  isWithinOpenToAllWindow scheduledBooking =
-                    DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes scheduledBooking.startTime now
-                  -- Driver's tags must match the eligibility tags configured on this booking's service tier.
-                  isDriverTagEligibleForTier scheduledBooking =
-                    scheduledTierEligibleForDriver True False driverActiveTags cityServiceTierByType scheduledBooking.vehicleServiceTier
-                  isBookingVisibleToDriver scheduledBooking =
-                    isDriverTagEligibleForTier scheduledBooking
-                      || isWithinOpenToAllWindow scheduledBooking
-              scheduledBookings <- getScheduledBookings from cityId availableServiceTiers (Just dLoc) transporterConfig (Just availableServiceTiers) tripCategory limit offset safelimit
+              scheduledBookings <- getReachableScheduledBookingsInPickupOrder from cityId availableServiceTiers dLoc transporterConfig tripCategory safelimit
+              stageVisibleBookings <- filterBookingsByVisibilityStages driver transporterConfig now driverActiveTags dLoc (catMaybes scheduledBookings)
               -- Board feasibility: drop candidates that overlap the driver's already-committed intervals.
               feasibleBookings <-
                 if null committed
-                  then pure (catMaybes scheduledBookings)
+                  then pure stageVisibleBookings
                   else do
                     let committedIntervals = SBOC.mkCommittedIntervals now Nothing committed
                         isBookingFeasibleForBoard scheduledBooking =
                           either (const False) identity
                             <$> withTryCatch "boardScheduledOverlap" (SBOC.isCandidateFeasible driver.merchantId cityId transporterConfig (SBOC.mkCandidateFromBooking scheduledBooking) committedIntervals)
-                    filterM isBookingFeasibleForBoard (catMaybes scheduledBookings)
-              bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (filter isBookingVisibleToDriver feasibleBookings)
+                    filterM isBookingFeasibleForBoard stageVisibleBookings
+              -- Offset and limit count the bookings that pass every filter.
+              bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (take (fromIntegral limit) (drop (fromIntegral offset) feasibleBookings))
               let sortedBookings = sortBookingsByDistance (catMaybes bookings)
               return $ ScheduledBookingRes sortedBookings
         _ -> pure $ ScheduledBookingRes []
@@ -3535,6 +3527,76 @@ mkBreakupItem currency title valueInText = do
         priceWithCurrency = mkPriceAPIEntity priceObject
       }
 
+-- | Keeps the bookings whose visibility stage, chosen from the time left to pickup, admits this driver.
+-- A booking inside the open-to-all window is kept whatever the stages say.
+-- Facts are loaded only for the rules that the stages in play use.
+filterBookingsByVisibilityStages :: SP.Person -> TransporterConfig -> UTCTime -> [Text] -> LatLong -> [DRB.Booking] -> Flow [DRB.Booking]
+filterBookingsByVisibilityStages driver transporterConfig now activeTagTexts boardLocation bookings =
+  case transporterConfig.scheduledRideConfig.scheduledRideVisibilityStages of
+    Just configuredStages@(_ : _) -> do
+      let rulesForBooking booking
+            | DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime now = Nothing
+            | otherwise = (.rules) <$> resolveVisibilityStage configuredStages (diffUTCTime booking.startTime now)
+          bookingsWithRules = [(booking, rulesForBooking booking) | booking <- bookings]
+          needsDriverStatsForBoard = any (needsDriverStats . factsNeededBy) (mapMaybe snd bookingsWithRules)
+      mbDriverStats <- if needsDriverStatsForBoard then QDriverStats.findById (cast driver.id) else pure Nothing
+      let driverFacts =
+            DriverVisibilityFacts
+              { driverRating = mbDriverStats >>= \ratedStats -> if fromMaybe 0 ratedStats.totalRatings > 0 then ratedStats.rating <&> (\(Centesimal ratingValue) -> realToFrac ratingValue) else Nothing,
+                driverCompletedRides = (.totalRides) <$> mbDriverStats,
+                driverCancellationRatePct = mbDriverStats >>= cancellationRatePctOf,
+                driverActiveTags = activeTagTexts,
+                driverLocation = Just boardLocation
+              }
+      map fst <$> filterM (isBookingVisible driverFacts) bookingsWithRules
+    _ -> pure bookings
+  where
+    cancellationRatePctOf :: DStats.DriverStats -> Maybe Double
+    cancellationRatePctOf driverStats = case driverStats.totalRidesAssigned of
+      Just assigned | assigned > 0 -> Just (fromIntegral (fromMaybe 0 driverStats.ridesCancelled) * 100 / fromIntegral assigned :: Double)
+      _ -> Nothing
+
+    isBookingVisible driverFacts (booking, mbVisibilityRules) = case mbVisibilityRules of
+      Nothing -> pure True
+      Just visibilityRules -> do
+        let factNeeds = factsNeededBy visibilityRules
+        walletFact <- if needsWalletBalance factNeeds then Just <$> driverMeetsMinWalletFor booking else pure Nothing
+        favouriteFact <- if needsFavouriteLookup factNeeds then Just <$> driverIsFavouriteOf booking else pure Nothing
+        let bookingFacts =
+              BookingVisibilityFacts
+                { bookingPickup = LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon},
+                  walletMeetsMinimum = walletFact,
+                  isFavouriteOfRider = favouriteFact
+                }
+        pure $ isVisibleUnderRules driverFacts bookingFacts visibilityRules
+
+    driverMeetsMinWalletFor booking =
+      QQuote.findById (Id booking.quoteId) >>= \case
+        Nothing -> pure False
+        Just quote -> do
+          minBalance <- getScheduledRideMinWalletBalance quote transporterConfig
+          FWallet.hasMinWalletBalance counterpartyDriver minBalance driver.id.getId
+
+    driverIsFavouriteOf booking = case booking.riderId of
+      Nothing -> pure False
+      Just favouriteRiderId -> isJust <$> QRDC.checkRiderFavDriver favouriteRiderId driver.id True
+
+-- | Reads the open scheduled bookings in pickup order, up to the safe limit, with no offset.
+-- For today the window runs from now to the end of the local day. For a later day it covers that day.
+getReachableScheduledBookingsInPickupOrder :: Day -> Id DMOC.MerchantOperatingCity -> [ServiceTierType] -> LatLong -> TransporterConfig -> [DTC.TripCategory] -> Integer -> Flow [Maybe DRB.Booking]
+getReachableScheduledBookingsInPickupOrder from mocCityId serviceTiers dLoc transporterConfig tripCategories safelimit = do
+  now <- getCurrentTime
+  let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
+      localNow = addUTCTime timeDiff now
+      isToday = utctDay now >= from
+      referenceTime = if isToday then localNow else addUTCTime timeDiff (UTCTime from 0)
+      redisKeys = createRedisKeysForCombinations referenceTime mocCityId tripCategories serviceTiers
+      redisKeyForHset = createRedisKeyForHset referenceTime mocCityId
+      windowEnd = if isToday then UTCTime (addDays 1 (utctDay localNow)) 0 else addUTCTime 86400 referenceTime
+  res <- concat <$> mapM (\key -> Redis.zRangeByScoreByCount key (calculateSortedSetScore referenceTime) (calculateSortedSetScore windowEnd) 0 safelimit) redisKeys
+  let inPickupOrder = sortOn (fmap (\(_, _, _, pickupTime, _) -> pickupTime) . parseMember . decodeUtf8) res
+  returnFilteredBookings now inPickupOrder (Just dLoc) (Just serviceTiers) redisKeyForHset safelimit
+
 -- Retrieves scheduled bookings for a specified day from Redis.
 -- Gets current time and local time internally, then determines query strategy based on day comparison.
 -- For today: queries two windows (30min-2hrs with safelimit, 2hrs-midnight with limit), skips next 30min.
@@ -3576,16 +3638,6 @@ acceptScheduledBookingWithPreFetched ::
   Flow APISuccess
 acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId mbBooking mbForcedAcceptanceMode = do
   -- overlap enforced by the shared accept guard (ensureNoScheduledOverlap) inside acceptStaticOfferDriverRequest
-  nowT <- getCurrentTime
-  let scheduledOpenToAll = DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime nowT
-  unless scheduledOpenToAll $ do
-    -- Schedule-tag eligibility gate: reuse the same predicate the dispatch path applies, so a
-    -- tag-excluded driver can't accept directly what they'd never be offered.
-    cityServiceTiers <- CQVST.findAllByMerchantOpCityId booking.merchantOperatingCityId Nothing
-    let cityServiceTiersHashMap = HM.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
-        driverTagTexts = LYT.getTagNameValue . Yudhishthira.removeTagExpiry <$> Yudhishthira.filterExpiredTags' nowT (fromMaybe [] driver.driverTag)
-    unless (scheduledTierEligibleForDriver True scheduledOpenToAll driverTagTexts cityServiceTiersHashMap booking.vehicleServiceTier) $
-      throwError (InvalidRequest "Driver is not eligible for this scheduled booking")
   -- Prepaid credits valid today can still be swept before pickup, so mirror the dispatch-side gate
   -- on the direct-accept path. Solvency is not relaxed inside the R4 open-to-all window.
   when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled) $ do
