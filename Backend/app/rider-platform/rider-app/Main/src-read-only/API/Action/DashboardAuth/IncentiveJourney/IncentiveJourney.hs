@@ -8,10 +8,12 @@ module API.Action.DashboardAuth.IncentiveJourney.IncentiveJourney
 where
 
 import qualified API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney
+import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Data.Time
 import qualified Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude

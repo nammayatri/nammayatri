@@ -56,6 +56,7 @@ import SharedLogic.Allocator
   )
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.Merchant as SMerchant
+import Storage.Beam.Finance ()
 import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
