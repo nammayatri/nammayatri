@@ -92,6 +92,7 @@ import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as SStatus
+import qualified SharedLogic.FleetDriverSettings as FDS
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -713,6 +714,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                     when (updatedVehicle.category /= vehicle.category) $
                       forceDriverOffline vehicle.driverId
                     VQuery.upsert updatedVehicle
+                    fork "applyFleetSettings" $ FDS.applyFleetSettings False vehicleServiceTiers driver updatedVehicle
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey transporterConfig num
         Nothing -> pure ()
 
@@ -938,6 +940,7 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
       -- driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
       let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing
       VQuery.create vehicle
+      fork "applyFleetSettings" $ FDS.applyFleetSettings False cityVehicleServiceTiers person vehicle
       pure vehicle
 
 deactivateCurrentRC :: OnboardingFlow m r => DTC.TransporterConfig -> Id Person.Person -> m ()

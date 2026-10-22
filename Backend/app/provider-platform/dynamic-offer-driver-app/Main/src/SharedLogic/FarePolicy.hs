@@ -85,6 +85,8 @@ data FarePoliciesProduct = FarePoliciesProduct
     specialLocationSupportNumber :: Maybe Text,
     fareSettlementType :: Maybe SL.FareSettlementType,
     mbPickupDropArea :: Maybe SL.Area,
+    pickupArea :: Maybe SL.Area,
+    dropArea :: Maybe SL.Area,
     -- Vehicle-service-tier rows already resolved while building 'farePolicies' above
     -- (one CQVST lookup per distinct tier, cached), keyed by tier so callers like
     -- 'addSpotRidePolicies' can reuse them instead of looking the tier up again.
@@ -280,6 +282,8 @@ getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mb
         specialLocationSupportNumber = allFareProducts.specialLocationSupportNumber,
         fareSettlementType = allFareProducts.fareSettlementType,
         mbPickupDropArea = allFareProducts.mbPickupDropArea,
+        pickupArea = allFareProducts.pickupArea,
+        dropArea = allFareProducts.dropArea,
         vehicleServiceTierMap
       }
 

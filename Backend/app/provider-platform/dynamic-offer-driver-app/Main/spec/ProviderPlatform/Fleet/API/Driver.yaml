@@ -457,6 +457,56 @@ apis:
             response:
               type: APISuccess
 
+  - GET: # FleetDriverAutoAssignStatusAPI
+      endpoint: /fleet/driver/{driverId}/autoAssign
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      query:
+        - fleetOwnerId: Text
+      response:
+        type: DriverAutoAssignStatusRes
+      migrate:
+        capability: fleet.driver.read
+      helperApi:
+        - GET:
+            endpoint: /{requestorId}/fleet/driver/{driverId}/autoAssign
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+              driverId: Id Driver
+            query:
+              - fleetOwnerId: Text
+            response:
+              type: DriverAutoAssignStatusRes
+
+  - POST: # FleetDriverAutoAssignUpdateAPI
+      endpoint: /fleet/driver/{driverId}/autoAssign
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      query:
+        - fleetOwnerId: Text
+      request:
+        type: FleetDriverAutoAssignReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: fleet.driver.write
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/fleet/driver/{driverId}/autoAssign
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+              driverId: Id Driver
+            query:
+              - fleetOwnerId: Text
+            request:
+              type: FleetDriverAutoAssignReq
+            response:
+              type: APISuccess
+
   - POST: # FleetRemoveDriverAPI
       endpoint: /{driverId}/fleet/remove/driver
       appServerHandler: custom
@@ -2275,6 +2325,17 @@ types:
     - allowCancellationByDriver: Maybe Bool
     - ignoreDriverAreaAndDistancePreference: Maybe Bool
     - fleetPoolingPriority: Maybe FleetPoolingPriority
+    - derive: "'HideSecrets"
+  DriverAutoAssignStatusRes:
+    - enabled: Bool
+    - enabledTiers: "[ServiceTierType]"
+    - eligibleTiers: "[ServiceTierType]"
+    - autoAcceptOnlyTiers: "[ServiceTierType]"
+    - hasAutoAssignTag: Bool
+    - allowDriverToToggle: Bool
+    - derive: "'HideSecrets"
+  FleetDriverAutoAssignReq:
+    - enable: Bool
     - derive: "'HideSecrets"
   VerifyFleetJoiningOtpReq:
     - mobileCountryCode: Text
