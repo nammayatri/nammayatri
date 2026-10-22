@@ -22,6 +22,7 @@ import Servant hiding (throwError)
 import qualified SharedLogic.RSFLedger as RSFLedger
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 
 -- Mounted beside the other Beckn callbacks: the registry advertises this BPP as
@@ -53,7 +54,7 @@ receiverRecon merchantId authResult rawBody = withFlowHandlerAPI $ do
 -- Phase 1 (sync, steps 1-3): decides ACK / NACK and writes nothing.
 --   E1 schema + context + the signing subscriber is the context's bap_id, E2 the merchant in the path exists
 --   (bpp_id is only cross-checked against it: collectors address us by the id they registered), E3 message_id unseen,
---   E4 every orders[].id resolves to one of our rides (one unknown id NACKs the whole message),
+--   E4 every orders[].id is an online (non-cash) booking this BAP made with us and has a ride (one unknown id NACKs the whole message),
 --   E5 an order already funded from some UTRs repeats every funded leg unchanged (same UTR, same amount).
 -- On ACK the Phase 2 pass is forked with the ride rows already in memory.
 receiverReconHandler :: Id DM.Merchant -> SignatureAuthResult -> A.Value -> Spec.ReceiverReconReq -> Flow Spec.RSFAckResponse
@@ -94,7 +95,9 @@ receiverReconHandler merchantId authResult rawBody req = do
                   pure $ RSFUtils.buildNackForCode RSFUtils.RSFDuplicateMessage
                 else do
                   let orderIds = nub $ map (.orderId) domainReq.orders
-                  rideByOrderId <- RSFLedger.latestRideByBooking <$> B.runInReplica (QRide.findRidesByBookingId (map Id orderIds))
+                  -- E4 only knows online orders this BAP booked with us: a cash ride or another BAP's booking is unknown here
+                  ownBookingIds <- map (.id) <$> B.runInReplica (QBooking.findAllOnlineByIdsAndBapId (map Id orderIds) domainReq.bapId)
+                  rideByOrderId <- RSFLedger.latestRideByBooking <$> B.runInReplica (QRide.findRidesByBookingId ownBookingIds)
                   let unknownOrderIds = filter (`Map.notMember` rideByOrderId) orderIds
                   if not (null unknownOrderIds)
                     then do

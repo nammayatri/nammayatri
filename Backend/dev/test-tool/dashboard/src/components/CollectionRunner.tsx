@@ -190,12 +190,13 @@ function parseDropLocations(raw: string | undefined): DropLocation[] {
   }
 }
 
-// ui_selects in the env file: JSON [{label, var, options: [{name, value}]}]. Each becomes a dropdown that
-// overrides env variable `var` for the run; anything malformed is skipped.
+// ui_selects in the env file: JSON [{label, var, options: [{name, value, vars?}]}]. Each becomes a dropdown that
+// overrides env variable `var` for the run, plus any `vars` of the chosen option (values that belong together,
+// e.g. a BAP id and its key id); anything malformed is skipped.
 interface UiSelect {
   label: string;
   var: string;
-  options: { name: string; value: string }[];
+  options: { name: string; value: string; vars?: Record<string, string> }[];
 }
 
 function parseUiSelects(raw: string | undefined): UiSelect[] {
@@ -405,9 +406,12 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const currentEnv = useMemo(() => {
     if (!baseEnv) return baseEnv;
     const drop = dropLocations.find(d => d.name === selectedDrop);
-    const chosen = Object.fromEntries(
-      uiSelects.filter(sel => selectValues[sel.var] !== undefined).map(sel => [sel.var, selectValues[sel.var]]),
-    );
+    const chosen: Record<string, string> = {};
+    for (const sel of uiSelects) {
+      const value = selectValues[sel.var];
+      if (value === undefined) continue;
+      Object.assign(chosen, sel.options.find(o => o.value === value)?.vars ?? {}, { [sel.var]: value });
+    }
     if (!drop && Object.keys(chosen).length === 0) return baseEnv;
     return {
       ...baseEnv,

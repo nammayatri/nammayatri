@@ -218,8 +218,13 @@ postRSFReconciliationRsfSend :: Kernel.Types.Id.ShortId M.Merchant -> Kernel.Typ
 postRSFReconciliationRsfSend merchantShortId _opCity mbDate = do
   merchantId <- findMerchantId merchantShortId
   day <- fromMaybeM (InvalidRequest "Missing 'date'") mbDate
-  (sent, alreadySent) <- CallRSF.sendOnReceiverReconForDate (Id merchantId) day
-  pure $ Res.SendForDateRes {messagesSent = sent, messagesAlreadySent = alreadySent}
+  (sent, alreadySent, failed) <- CallRSF.sendOnReceiverReconForDate (Id merchantId) day
+  pure $
+    Res.SendForDateRes
+      { messagesSent = sent,
+        messagesAlreadySent = alreadySent,
+        messagesFailed = [Res.SendFailure {messageId = m, reason = r} | (m, r) <- failed]
+      }
 
 getRSFReconciliationRsfReconUnmatched :: Kernel.Types.Id.ShortId M.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow Res.ReconGridListRes
 getRSFReconciliationRsfReconUnmatched merchantShortId _opCity mbFrom mbLimit mbOffset mbTo = do

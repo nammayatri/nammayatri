@@ -110,8 +110,9 @@ apis:
       response:
         type: APISuccess
 
-  # Phase 4: skips messages of the day already answered, checks every remaining one (gates 1-3)
-  # and, only when all of them pass, sends their on_receiver_recon responses one by one.
+  # Phase 4: skips messages of the day already answered, then checks (gates 1-3) and sends each remaining
+  # one on its own: a message that fails a check or is NACKed is listed in messagesFailed with the reason,
+  # and the others are still sent.
   - POST: # SendForDateAPI
       endpoint: /rsf/send
       migrate:
@@ -225,6 +226,11 @@ types:
   SendForDateRes:
     - messagesSent: [Text]
     - messagesAlreadySent: [Text]               # answered earlier; skipped this run
+    - messagesFailed: [SendFailure]             # not sent this run (a check failed or the collector NACKed); retried on the next send
+
+  SendFailure:
+    - messageId: Text
+    - reason: Text
 
   AutoAllocationRes:
     - ordersConsidered: Int

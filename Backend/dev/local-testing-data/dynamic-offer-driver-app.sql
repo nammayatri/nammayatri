@@ -599,3 +599,23 @@ FROM atlas_driver_offer_bpp.merchant_operating_city c
 WHERE tc.merchant_operating_city_id = c.id
   AND c.merchant_id IN (SELECT id FROM atlas_driver_offer_bpp.merchant WHERE short_id = 'MSIL_PARTNER')
   AND coalesce(tc.enable_ondc_scheduled_ride_support, false) = false;
+
+-- 10b. Whitelist the local collector BAP too (OndcRideFlow "BAP" dropdown, RSF receiver_recon by hand),
+-- in the same cities as the workbench.
+INSERT INTO atlas_driver_offer_bpp.white_list_org
+  ( id, subscriber_id, domain, merchant_id, merchant_operating_city_id, created_at, updated_at )
+SELECT
+    md5(w.merchant_operating_city_id || ':seed-local-collector-whitelist')::uuid::text
+  , 'local.collector'
+  , 'MOBILITY'
+  , w.merchant_id
+  , w.merchant_operating_city_id
+  , now()
+  , now()
+FROM atlas_driver_offer_bpp.white_list_org w
+WHERE w.subscriber_id = 'workbench.ondc.tech' AND w.domain = 'MOBILITY'
+  AND NOT EXISTS (
+    SELECT 1 FROM atlas_driver_offer_bpp.white_list_org x
+    WHERE x.merchant_operating_city_id = w.merchant_operating_city_id
+      AND x.subscriber_id = 'local.collector' AND x.domain = 'MOBILITY'
+  );

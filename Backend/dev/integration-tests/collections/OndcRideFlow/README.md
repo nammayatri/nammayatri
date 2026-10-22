@@ -38,6 +38,15 @@ resolved config in memory for an hour, and the Redis copies (`driver-offer:Cache
   from pickup. A drop outside the geometry makes search ACK and then fail silently with
   `RIDE_NOT_SERVICEABLE`, so verify new points with `ST_Contains` against `atlas_driver_offer_bpp.geometry`.
 
+## Runner dropdowns (env `ui_selects`)
+
+- **BAP**: `workbench.ondc.tech` or `local.collector`; each option also sets `ondc_bap_key_id`. Both are in
+  `noSignatureSubscribers`, `mock-registry.sql` and the city whitelist. A ride booked through one BAP can only be
+  reconciled by that BAP (RSF E4 checks the booking's `bap_id`).
+- **Collected by**: BPP (cash, the default) or BAP (online; init sends a `PAYMENT_INSTRUMENT` tag from
+  `bap_payment_instrument`, which must match a BAP-collected payment method of the city).
+- **Drop**: a named drop from `drop_locations`, or Random.
+
 ## Setup group, in order
 
 1. Switch dashboard merchant/city; point route search at the Google Maps mock.

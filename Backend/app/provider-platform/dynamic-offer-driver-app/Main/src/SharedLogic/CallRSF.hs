@@ -7,6 +7,7 @@ import qualified BecknV2.RSF.APIs as RSFAPIs
 import qualified BecknV2.RSF.Types as Spec
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BSL
+import Data.Either (lefts, rights)
 import qualified Data.HashMap.Strict as HMS
 import Data.List (nub, sortOn)
 import qualified Data.Map.Strict as Map
@@ -63,7 +64,10 @@ data PreparedMessage = PreparedMessage
 -- Every message whose receiver_recon arrived on the IST day. Messages already answered (they
 -- have VARIANCE rows) are skipped; every remaining message passes every gate before any of
 -- them is sent, then they are sent one by one. Returns (sent, already sent).
-sendOnReceiverReconForDate :: SendFlow m r => Id DM.Merchant -> Day -> m ([Text], [Text])
+-- Returns (sent, already sent, failed with reason). Each unanswered message is checked and sent on its
+-- own: one that fails a check or is NACKed is reported and stays unanswered (retried by the next send),
+-- and the others still go out.
+sendOnReceiverReconForDate :: SendFlow m r => Id DM.Merchant -> Day -> m ([Text], [Text], [(Text, Text)])
 sendOnReceiverReconForDate merchantId day = do
   let mid = merchantId.getId
       (from, to) = RSFLedger.istDayRange day
@@ -75,9 +79,15 @@ sendOnReceiverReconForDate merchantId day = do
       msgEntries <- QLedger.findAllByMerchantAndMessageId mid messageId
       pure (messageId, msgEntries, alreadyAnswered msgEntries)
     let alreadySent = [m | (m, _, True) <- tagged]
-    prepared <- forM [(m, e) | (m, e, False) <- tagged] (uncurry (checkMessage mid))
-    forM_ prepared (dispatchMessage merchantId)
-    pure (map (.messageId) prepared, alreadySent)
+    results <- forM [(m, e) | (m, e, False) <- tagged] $ \(messageId, msgEntries) -> do
+      res <- try @_ @SomeException (checkMessage mid messageId msgEntries >>= dispatchMessage merchantId)
+      case res of
+        Right () -> pure (Right messageId)
+        Left exc -> do
+          let reason = failureReason exc
+          logError $ "RSF send failed: messageId=" <> messageId <> " reason=" <> reason
+          pure (Left (messageId, reason))
+    pure (rights results, alreadySent, lefts results)
   where
     alreadyAnswered entries = not (null (RSFLedger.ofType L.ORDER_VARIANCE entries <> RSFLedger.ofType L.UTR_VARIANCE entries))
 
@@ -149,8 +159,11 @@ dispatchMessage merchantId prepared = do
         internalEndPointHashMap
         payload
   -- nothing below is recorded unless the collector ACKed
-  unless (ackRes.rsfAckResponseMessage.rsfAckMessageAck.rsfAckStatus == Just "ACK") $
-    throwError $ InvalidRequest ("Collector NACKed on_receiver_recon: " <> show ackRes.rsfAckResponseError)
+  unless (ackRes.rsfAckResponseMessage.rsfAckMessageAck.rsfAckStatus == Just "ACK") $ do
+    let collectorError = case ackRes.rsfAckResponseError of
+          Just e -> fromMaybe "" e.rsfErrorCode <> " " <> fromMaybe "" e.rsfErrorMessage
+          Nothing -> "no error in the response"
+    throwError $ InvalidRequest ("Collector NACKed on_receiver_recon: " <> collectorError)
   logInfo $ "RSF outbound ACKed: messageId=" <> messageId <> " orders=" <> show (length orderReports) <> " utrs=" <> show (length utrReports)
 
   varianceRows <- forM (orderReports <> utrReports) $ \report -> do
@@ -171,3 +184,10 @@ dispatchMessage merchantId prepared = do
       QOrderState.upsertReported mid orderId report.verdict.status report.verdict.diff report.verdict.code messageId now
   forM_ utrReports $ \report ->
     QUtrState.upsertReported mid report.utr report.verdict.status report.verdict.diff messageId now
+
+-- The human-readable reason of a failed check or send, as the API error would show it.
+failureReason :: SomeException -> Text
+failureReason exc
+  | Just (HTTPException err) <- fromException exc = fromMaybe (toErrorCode err) (toMessage err)
+  | Just (BaseException err) <- fromException exc = fromMaybe (show err) (toMessage err)
+  | otherwise = show exc

@@ -122,7 +122,11 @@ data ReconTabStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-data SendForDateRes = SendForDateRes {messagesSent :: [Kernel.Prelude.Text], messagesAlreadySent :: [Kernel.Prelude.Text]}
+data SendFailure = SendFailure {messageId :: Kernel.Prelude.Text, reason :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SendForDateRes = SendForDateRes {messagesSent :: [Kernel.Prelude.Text], messagesAlreadySent :: [Kernel.Prelude.Text], messagesFailed :: [SendFailure]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
