@@ -147,8 +147,10 @@ acceptDynamicOfferDriverRequest ::
   -- yields the driver ride response for the ride it created.
   -- Server-side replay paths (silent-assign) pass Nothing and keep the legacy on_select.
   Maybe (DDrQuote.DriverQuote -> m (Maybe RideCommon.DriverRideRes)) ->
+  -- | "Find a better driver" swap action; used only when this try is a BETTER_DRIVER_SEARCH.
+  Maybe (DDrQuote.DriverQuote -> m (Maybe RideCommon.DriverRideRes)) ->
   m ([SearchRequestForDriver], Maybe RideCommon.DriverRideRes)
-acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue driverStats transporterConfig mbOneShotAssign = do
+acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue driverStats transporterConfig mbOneShotAssign mbBetterDriverSwapAssign = do
   let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
   logDebug $ "offered fare: " <> show reqOfferedValue
   quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq (fromMaybe SL.Default searchReq.area) searchTry.searchRepeatType searchTry.searchRepeatCounter
@@ -254,8 +256,13 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
           then CQVAN.isOneShotAssignEnabled searchReq.bapId
           else pure False
       pure $ if eligible then Just action else Nothing
+  -- A swap has no eligibility gate of its own: this path is the only way it can complete,
+  -- since the on_select relay dead-ends (see SharedLogic.BetterDriverSwap).
+  let mbBetterDriverSwapAction =
+        if searchTry.searchRepeatType == DST.BETTER_DRIVER_SEARCH then mbBetterDriverSwapAssign else Nothing
+      mbLocalAssignAction = mbBetterDriverSwapAction <|> mbOneShotAction
   -- One-shot builds the winning quote directly in its terminal state: no Active -> Inactive flip
-  driverQuote <- buildDriverQuote (if isJust mbOneShotAction then DDrQuote.Inactive else DDrQuote.Active) clientId driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice'
+  driverQuote <- buildDriverQuote (if isJust mbLocalAssignAction then DDrQuote.Inactive else DDrQuote.Active) clientId driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice'
   void $
     if searchTry.isScheduled
       then cacheFarePolicyByScheduledEstOrQuoteId driverQuote.id.getId searchReq.startTime searchReq.returnTime farePolicy
@@ -274,9 +281,9 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
           else pure []
       -- One-shot pulls the losers via deactivateExistingQuotes inside its own action; pulling
       -- here too would double-notify them now that the pull loop runs forked.
-      when (isNothing mbOneShotAction) $
+      when (isNothing mbLocalAssignAction) $
         pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) transporterConfig
-      mbOneShotRideRes <- case mbOneShotAction of
+      mbOneShotRideRes <- case mbLocalAssignAction of
         Just action -> action driverQuote
         Nothing -> do
           sendDriverOffer merchant searchReq sReqFD searchTry driverQuote

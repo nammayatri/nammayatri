@@ -82,3 +82,54 @@ cancelActiveTriesByRequestId (Id searchId) = do
           Se.Is BeamST.status $ Se.Eq ACTIVE
         ]
     ]
+
+-- | No-op if there's no live "find a better driver" stand-by search for this booking -
+-- the common case on almost every GPS ping. Used by the proximity-abort hook: cancel
+-- the stand-by search the moment the real, currently-assigned driver gets close enough
+-- to pickup that searching for someone better no longer makes sense.
+cancelBetterDriverSearchByBookingId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Text ->
+  m ()
+cancelBetterDriverSearchByBookingId bookingId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamST.status CANCELLED,
+      Se.Set BeamST.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamST.standInForBookingId $ Se.Eq (Just bookingId),
+          Se.Is BeamST.status $ Se.Eq ACTIVE,
+          Se.Is BeamST.searchRepeatType $ Se.Eq BETTER_DRIVER_SEARCH
+        ]
+    ]
+
+-- | Used at driver-cancellation time to decide promote-vs-cancel, and by the trigger's
+-- one-attempt check.
+findActiveBetterDriverSearchByBookingId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Text ->
+  m (Maybe SearchTry)
+findActiveBetterDriverSearchByBookingId bookingId =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamST.standInForBookingId $ Se.Eq (Just bookingId),
+          Se.Is BeamST.status $ Se.Eq ACTIVE,
+          Se.Is BeamST.searchRepeatType $ Se.Eq BETTER_DRIVER_SEARCH
+        ]
+    ]
+
+-- | Lets an already-running stand-by search serve as the driver-cancel reallocation
+-- instead of starting a duplicate. Re-tagging also restores on-expiry notification and
+-- stops the proximity watchdog.
+promoteBetterDriverSearchToReallocation ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id SearchTry ->
+  m ()
+promoteBetterDriverSearchToReallocation (Id searchTryId) = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamST.searchRepeatType REALLOCATION,
+      Se.Set BeamST.updatedAt now
+    ]
+    [Se.Is BeamST.id $ Se.Eq searchTryId]

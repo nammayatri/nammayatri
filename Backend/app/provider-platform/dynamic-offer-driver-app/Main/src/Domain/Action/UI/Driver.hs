@@ -267,6 +267,7 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers as SSRD
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
+import qualified SharedLogic.BetterDriverSwap as BetterDriverSwap
 import SharedLogic.Booking
 import SharedLogic.Cac
 import SharedLogic.CallBAP (sendRideAssignedUpdateToBAP)
@@ -2068,7 +2069,20 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                             clientId = clientId,
                             transporterConfig = transporterConfig
                           }
-                acceptDynamicOfferDriverRequest (Just (assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver transporterConfig)) clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig (Just oneShotAssignAction)
+                    betterDriverSwapAction driverQuote =
+                      BetterDriverSwap.betterDriverSwapAssign
+                        BetterDriverSwap.BetterDriverSwapReq
+                          { merchant = merchant,
+                            searchReq = searchReq,
+                            searchTry = searchTry,
+                            driverQuote = driverQuote,
+                            driver = driver,
+                            driverStats = driverStats,
+                            driverInfo = driverInfo,
+                            clientId = clientId,
+                            transporterConfig = transporterConfig
+                          }
+                acceptDynamicOfferDriverRequest (Just (assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver transporterConfig)) clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig (Just oneShotAssignAction) (Just betterDriverSwapAction)
               -- Static-offer: the booking already exists (created at confirm) and the ride is
               -- initialized inside the accept, so it returns the assigned-ride payload too.
               DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig Nothing Nothing

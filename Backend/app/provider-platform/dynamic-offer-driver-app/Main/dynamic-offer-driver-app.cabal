@@ -54,6 +54,7 @@ library
       API.IGM
       API.Internal
       API.Internal.Auth
+      API.Internal.BetterDriverSearch
       API.Internal.BlackListedDrivers
       API.Internal.BulkLocPickupUpdate
       API.Internal.BulkLocUpdate
@@ -317,6 +318,7 @@ library
       Domain.Action.DashboardAuth.RideBooking.DriverRegistration
       Domain.Action.External.LiveEKD
       Domain.Action.Internal.Auth
+      Domain.Action.Internal.BetterDriverSearch
       Domain.Action.Internal.BlackListedDrivers
       Domain.Action.Internal.BulkLocPickupUpdate
       Domain.Action.Internal.BulkLocUpdate
@@ -571,6 +573,7 @@ library
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation
       SharedLogic.Allocator.Jobs.Cautio.InstallationStatus
+      SharedLogic.Allocator.Jobs.CheckBetterDriverSearchProximity
       SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
       SharedLogic.Allocator.Jobs.Document.VerificationRetry
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
@@ -640,6 +643,8 @@ library
       SharedLogic.BehaviourManagement.PickupStall
       SharedLogic.BehaviourManagement.PickupStallState
       SharedLogic.BehaviourManagement.Visibility
+      SharedLogic.BetterDriverSearch
+      SharedLogic.BetterDriverSwap
       SharedLogic.BlockedRouteDetector
       SharedLogic.Booking
       SharedLogic.Cac
