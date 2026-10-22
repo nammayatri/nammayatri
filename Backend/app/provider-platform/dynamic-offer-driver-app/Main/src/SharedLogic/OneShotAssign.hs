@@ -21,6 +21,7 @@
 module SharedLogic.OneShotAssign
   ( OneShotAssignReq (..),
     oneShotAssign,
+    buildOneShotAssignPayload,
     buildAssignedDriverRideRes,
   )
 where
@@ -254,7 +255,8 @@ buildOneShotAssignPayload prefetch booking ride driver vehicle driverQuote = do
         specialLocationTag = booking.specialLocationTag,
         isTierUpgrade = rideAssignedReq.isTierUpgrade,
         assignedServiceTierName = rideAssignedReq.assignedServiceTierName,
-        billingCategory = booking.billingCategory
+        billingCategory = booking.billingCategory,
+        oldBppBookingId = Nothing
       }
 
 -- | The same payload getDriverRideById serves for this ride, built from the entities

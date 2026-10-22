@@ -80,6 +80,8 @@ data TransporterConfig = TransporterConfig
     badDebtSchedulerTime :: Kernel.Prelude.NominalDiffTime,
     badDebtTimeThreshold :: Kernel.Prelude.Int,
     bankErrorExpiry :: Kernel.Prelude.NominalDiffTime,
+    betterDriverProximityAbortRadiusMeters :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+    betterDriverSearchMaxRadiusMeters :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     blockDriverOwnRCForFleetDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     bookAnyVehicleDowngradeLevel :: Kernel.Prelude.Int,
     bulkWaiveOffLimit :: Kernel.Prelude.Int,

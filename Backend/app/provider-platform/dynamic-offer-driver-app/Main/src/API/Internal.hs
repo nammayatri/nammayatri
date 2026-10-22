@@ -5,6 +5,7 @@ module API.Internal
 where
 
 import qualified API.Internal.Auth as Auth
+import qualified API.Internal.BetterDriverSearch as BetterDriverSearch
 import qualified API.Internal.BlackListedDrivers as BlackListedDrivers
 import qualified API.Internal.BulkLocPickupUpdate as BulkLocPickupUpdate
 import qualified API.Internal.BulkLocUpdate as BulkLocUpdate
@@ -112,6 +113,7 @@ type API =
            :<|> NotificationWebhook.API
            :<|> SearchTryPoolStats.API
            :<|> VehicleServiceTierList.API
+           :<|> BetterDriverSearch.API
        )
 
 handler :: AppEnv -> FlowServer API
@@ -168,3 +170,4 @@ handler env =
     :<|> NotificationWebhook.handler
     :<|> SearchTryPoolStats.handler
     :<|> VehicleServiceTierList.handler
+    :<|> BetterDriverSearch.handler

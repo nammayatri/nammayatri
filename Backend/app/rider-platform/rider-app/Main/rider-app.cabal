@@ -101,6 +101,7 @@ library
       API.UI.Aarokya
       API.UI.AddBaggage
       API.UI.AppInstalls
+      API.UI.BetterDriverSearch
       API.UI.Booking
       API.UI.Call
       API.UI.CallEvent
@@ -323,6 +324,7 @@ library
       Domain.Action.UI.AssetReleaseInternal
       Domain.Action.UI.AttractionRecommend
       Domain.Action.UI.BBPS
+      Domain.Action.UI.BetterDriverSearch
       Domain.Action.UI.BlackListDriver
       Domain.Action.UI.Booking
       Domain.Action.UI.BookingDeposit
