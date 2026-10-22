@@ -8,8 +8,7 @@ let driverStateRedisCfg =
 in      base
     //  { transport = common.transportKind.Kafka
         , kafkaConsumerCfg =
-          { topicNames =
-            [ "location-updates", "dynamic-offer-driver-events-updates" ]
+          { topicNames = [ "location-updates" ]
           , consumerProperties =
                   base.kafkaConsumerCfg.consumerProperties
               //  { groupId = "sessionizer" }

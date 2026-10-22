@@ -157,3 +157,4 @@ getConfigNameFromConsumertype = \case
   FLEET_ANALYTICS_REALTIME -> pure "fleet-analytics-realtime"
   DRIVER_POOL_STATE -> pure "driver-pool-state-writer"
   SESSIONIZER -> pure "sessionizer"
+  DRIVER_PERFORMANCE -> pure "driver-performance"

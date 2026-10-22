@@ -3,7 +3,8 @@
 --
 --   * driver_state:current:<id>  hash of DriverPoolData fields, merged event by event
 --   * driver_state:history:<id>  sorted set of DriverStateSnapshot, one entry per
---                                change to the fields the sessionizer uses
+--                                change to the fields the sessionizer uses or to
+--                                a state column (lastUpdatedAt aside)
 --
 -- A driver seen for the first time is seeded from the DB, so the first change
 -- lands on a complete record.
@@ -24,9 +25,10 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Processor.DriverPoolState.Types
+import Processor.StateColumns (stateColumnKeys)
 import qualified "dynamic-offer-driver-app" SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 
--- | History kept per driver until the sessionizer publishes its watermark.
+-- | History kept per driver until the sessionizer or DRIVER_PERFORMANCE publishes its mark.
 historyCapWithoutSessionizer :: Int
 historyCapWithoutSessionizer = 100
 
@@ -52,7 +54,7 @@ processDriverPoolState ev = do
   inStateRedis $ do
     writeFields ck ev.changes
     current :: [(Text, A.Value)] <- Hedis.hGetAll ck
-    let snapshot = snapshotFromFields (HM.fromList current)
+    let snapshot = snapshotFromFields stateColumnKeys (HM.fromList current)
     latest <- Hedis.zRange hk (-1) (-1)
     unless ((snd <$> (listToMaybe latest >>= decodeMember)) == Just snapshot) $ do
       Hedis.zAdd hk [(fromIntegral ev.ts, encodeMember ev.ts snapshot)]
@@ -63,18 +65,20 @@ processDriverPoolState ev = do
 publishWriterWatermark :: Integer -> Flow ()
 publishWriterWatermark ms = inStateRedis $ Hedis.set writerWatermarkKey ms
 
--- | Keep the newest entry at or before the sessionizer's watermark T plus every
--- entry after T. Before the sessionizer exists, keep the newest
+-- | Keep the newest entry at or before T plus every entry after T, where T is
+-- the earlier of the sessionizer's watermark and DRIVER_PERFORMANCE's state
+-- horizon (whichever exist). Before either exists, keep the newest
 -- 'historyCapWithoutSessionizer' entries.
 trimHistory :: Text -> Flow ()
 trimHistory hk = do
-  mbT :: Maybe Integer <- Hedis.get sessionizerWatermarkKey
-  case mbT of
-    Just t -> do
-      atOrBefore <- Hedis.zRangeByScore hk negInf (fromIntegral t)
+  mbSessionizerT :: Maybe Integer <- Hedis.get sessionizerWatermarkKey
+  mbHorizon :: Maybe Integer <- Hedis.get stateHorizonKey
+  case catMaybes [mbSessionizerT, mbHorizon] of
+    marks@(_ : _) -> do
+      atOrBefore <- Hedis.zRangeByScore hk negInf (fromIntegral (minimum marks))
       whenJust (lastMaybe atOrBefore >>= decodeMember) $ \(keepFrom, _) ->
         void $ Hedis.zRemRangeByScore hk negInf (fromIntegral keepFrom - 0.5)
-    Nothing -> do
+    [] -> do
       older <- Hedis.zRangeWithScores hk 0 (negate (fromIntegral historyCapWithoutSessionizer) - 1)
       whenJust (lastMaybe older) $ \(_, score) ->
         void $ Hedis.zRemRangeByScore hk negInf score

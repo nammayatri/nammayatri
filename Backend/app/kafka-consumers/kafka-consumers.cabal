@@ -33,6 +33,10 @@ library
       Environment
       Processor.BroadcastMessage.Processor
       Processor.FleetAnalytics.Realtime
+      Processor.ClickhouseText
+      Processor.DriverPerformance.Contribution
+      Processor.DriverPerformance.Processor
+      Processor.DriverPerformance.Types
       Processor.DriverPoolState.Processor
       Processor.DriverPoolState.Types
       Processor.FleetCommunication.Processor
@@ -43,6 +47,7 @@ library
       Processor.RideEvents.InternalHelpers
       Processor.RideEvents.Processor
       Processor.Sessionizer.Processor
+      Processor.StateColumns
       SystemConfigsOverride
       Transporter.Kafka.Committing
       Transporter.Kafka.Flow
