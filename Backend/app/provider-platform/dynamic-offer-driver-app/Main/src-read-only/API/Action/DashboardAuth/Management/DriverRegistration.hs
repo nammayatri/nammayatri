@@ -9,6 +9,8 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration
 import qualified Dashboard.Common
+import qualified Dashboard.Common.Driver
+import qualified Dashboard.Common.Merchant
 import qualified Domain.Action.Dashboard.Management.DriverRegistration
 import qualified Domain.Action.DashboardAuth.Management.DriverRegistration
 import qualified Domain.Types.Merchant
@@ -27,7 +29,7 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("driver" :> (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationGenerateTempAppCode :<|> PostDriverRegistrationOnboardingLink :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationVerifyBankAccount :<|> GetDriverRegistrationInfoBankAccount :<|> GetDriverRegistrationPayoutRegistration :<|> PostDriverRegistrationDeleteBankAccount :<|> GetDriverRegistrationPayoutOrderStatus :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> GetDriverRegistrationVerificationStatus :<|> GetDriverRegistrationDocumentsCommonList :<|> PostDriverRegistrationDocumentsUpdate :<|> PostDriverRegistrationDocumentsCommon :<|> PostDriverRegistrationDocumentRegister :<|> PostDriverRegistrationUnlinkDocument :<|> PostDriverRegistrationTriggerReminder))
+type API = ("driver" :> (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationGenerateTempAppCode :<|> PostDriverRegistrationOnboardingLink :<|> PostDriverRegistrationAddDrivers :<|> PostDriverRegistrationAddVehicles :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationVerifyBankAccount :<|> GetDriverRegistrationInfoBankAccount :<|> GetDriverRegistrationPayoutRegistration :<|> PostDriverRegistrationDeleteBankAccount :<|> GetDriverRegistrationPayoutOrderStatus :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> GetDriverRegistrationVerificationStatus :<|> GetDriverRegistrationDocumentsCommonList :<|> PostDriverRegistrationDocumentsUpdate :<|> PostDriverRegistrationDocumentsCommon :<|> PostDriverRegistrationDocumentRegister :<|> PostDriverRegistrationUnlinkDocument :<|> PostDriverRegistrationTriggerReminder))
 
 type GetDriverRegistrationDocumentsList =
   ( DashboardUserAuth
@@ -55,6 +57,20 @@ type PostDriverRegistrationOnboardingLink =
       'DRIVER_OFFER_BPP_MANAGEMENT
       "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_ONBOARDING_LINK"
       :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationOnboardingLink
+  )
+
+type PostDriverRegistrationAddDrivers =
+  ( DashboardUserAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_ADD_DRIVERS"
+      :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationAddDrivers
+  )
+
+type PostDriverRegistrationAddVehicles =
+  ( DashboardUserAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_ADD_VEHICLES"
+      :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationAddVehicles
   )
 
 type PostDriverRegistrationDocumentUpload =
@@ -198,7 +214,7 @@ type PostDriverRegistrationTriggerReminder =
   )
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getDriverRegistrationDocumentsList merchantId city :<|> getDriverRegistrationGetDocument merchantId city :<|> postDriverRegistrationGenerateTempAppCode merchantId city :<|> postDriverRegistrationOnboardingLink merchantId city :<|> postDriverRegistrationDocumentUpload merchantId city :<|> postDriverRegistrationRegisterDl merchantId city :<|> postDriverRegistrationVerifyBankAccount merchantId city :<|> getDriverRegistrationInfoBankAccount merchantId city :<|> getDriverRegistrationPayoutRegistration merchantId city :<|> postDriverRegistrationDeleteBankAccount merchantId city :<|> getDriverRegistrationPayoutOrderStatus merchantId city :<|> postDriverRegistrationRegisterRc merchantId city :<|> postDriverRegistrationRegisterAadhaar merchantId city :<|> postDriverRegistrationRegisterGenerateAadhaarOtp merchantId city :<|> postDriverRegistrationRegisterVerifyAadhaarOtp merchantId city :<|> getDriverRegistrationUnderReviewDrivers merchantId city :<|> getDriverRegistrationDocumentsInfo merchantId city :<|> getDriverRegistrationVerificationStatus merchantId city :<|> getDriverRegistrationDocumentsCommonList merchantId city :<|> postDriverRegistrationDocumentsUpdate merchantId city :<|> postDriverRegistrationDocumentsCommon merchantId city :<|> postDriverRegistrationDocumentRegister merchantId city :<|> postDriverRegistrationUnlinkDocument merchantId city :<|> postDriverRegistrationTriggerReminder merchantId city
+handler merchantId city = getDriverRegistrationDocumentsList merchantId city :<|> getDriverRegistrationGetDocument merchantId city :<|> postDriverRegistrationGenerateTempAppCode merchantId city :<|> postDriverRegistrationOnboardingLink merchantId city :<|> postDriverRegistrationAddDrivers merchantId city :<|> postDriverRegistrationAddVehicles merchantId city :<|> postDriverRegistrationDocumentUpload merchantId city :<|> postDriverRegistrationRegisterDl merchantId city :<|> postDriverRegistrationVerifyBankAccount merchantId city :<|> getDriverRegistrationInfoBankAccount merchantId city :<|> getDriverRegistrationPayoutRegistration merchantId city :<|> postDriverRegistrationDeleteBankAccount merchantId city :<|> getDriverRegistrationPayoutOrderStatus merchantId city :<|> postDriverRegistrationRegisterRc merchantId city :<|> postDriverRegistrationRegisterAadhaar merchantId city :<|> postDriverRegistrationRegisterGenerateAadhaarOtp merchantId city :<|> postDriverRegistrationRegisterVerifyAadhaarOtp merchantId city :<|> getDriverRegistrationUnderReviewDrivers merchantId city :<|> getDriverRegistrationDocumentsInfo merchantId city :<|> getDriverRegistrationVerificationStatus merchantId city :<|> getDriverRegistrationDocumentsCommonList merchantId city :<|> postDriverRegistrationDocumentsUpdate merchantId city :<|> postDriverRegistrationDocumentsCommon merchantId city :<|> postDriverRegistrationDocumentRegister merchantId city :<|> postDriverRegistrationUnlinkDocument merchantId city :<|> postDriverRegistrationTriggerReminder merchantId city
 
 getDriverRegistrationDocumentsList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.DriverRegistration.DocumentType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.DocumentsListResponse)
 getDriverRegistrationDocumentsList a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationDocumentsList a6 a5 a3 a2 a1
@@ -220,6 +236,22 @@ postDriverRegistrationOnboardingLink a4 a3 a2 a1 =
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_ONBOARDING_LINK" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationOnboardingLink a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)
+    )
+
+postDriverRegistrationAddDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Driver.OnboardingAs -> API.Types.ProviderPlatform.Management.DriverRegistration.AddDriversReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.AddDriversResp)
+postDriverRegistrationAddDrivers a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_ADD_DRIVERS" a3 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationAddDrivers a5 a4 a2 a1
+    )
+
+postDriverRegistrationAddVehicles :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.AddVehiclesReq -> Environment.FlowHandler Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities)
+postDriverRegistrationAddVehicles a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_ADD_VEHICLES" a3 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.Management.DriverRegistration.postDriverRegistrationAddVehicles a5 a4 a3 a2 a1
     )
 
 postDriverRegistrationDocumentUpload :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.UploadDocumentReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.UploadDocumentResp)

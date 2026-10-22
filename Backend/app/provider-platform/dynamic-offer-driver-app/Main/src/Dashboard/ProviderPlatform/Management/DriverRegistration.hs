@@ -28,6 +28,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.Prelude
+import Kernel.ServantMultipart
 import Kernel.Types.Predicate
 import Kernel.Utils.Validation
 import Servant
@@ -35,6 +36,26 @@ import Servant
 instance HideSecrets UploadDocumentReq where
   type ReqWithoutSecrets UploadDocumentReq = UploadDocumentTReq
   hideSecrets UploadDocumentReq {..} = UploadDocumentTReq {..}
+
+-- Add Drivers using csv --
+
+instance FromMultipart Tmp AddDriversReq where
+  fromMultipart form = do
+    fileData <- lookupFile "file" form
+    pure $ AddDriversReq {file = fdPayload fileData}
+
+instance ToMultipart Tmp AddDriversReq where
+  toMultipart form = MultipartData [] [FileData "file" (T.pack form.file) "" form.file]
+
+-- Add Vehicles using csv --
+
+instance FromMultipart Tmp AddVehiclesReq where
+  fromMultipart form = do
+    fileData <- lookupFile "file" form
+    pure $ AddVehiclesReq {file = fdPayload fileData}
+
+instance ToMultipart Tmp AddVehiclesReq where
+  toMultipart form = MultipartData [] [FileData "file" (T.pack form.file) "" form.file]
 
 instance FromHttpApiData [DocumentType] where
   parseUrlPiece = parseHeader . DT.encodeUtf8

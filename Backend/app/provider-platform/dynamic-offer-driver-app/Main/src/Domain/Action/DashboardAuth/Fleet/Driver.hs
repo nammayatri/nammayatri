@@ -67,6 +67,7 @@ import qualified Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.Alert.AlertRequestType
 import qualified Domain.Types.FleetBadgeType
 import qualified Domain.Types.Merchant
+import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Maps
@@ -93,7 +94,9 @@ postDriverFleetAddVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merc
 postDriverFleetAddVehicle a8 a7 a6 a5 a4 a3 a2 a1 = do
   Tools.Auth.DashboardUserAuth.checkFleetOwnerVerification a6
   (mbFleetOwnerId, requestorId) <- SharedLogic.Fleet.getMbFleetOwnerAndRequestorIdMerchantBased (Tools.Auth.DashboardUserAuth.requestorHasFleetMemberHierarchy a6) (Tools.Auth.DashboardUserAuth.requestorIsFleetOwner a6) (Tools.Auth.DashboardUserAuth.dashboardRequestorId a6) a3
-  Domain.Action.Dashboard.Fleet.Driver.postDriverFleetAddVehicle a8 a7 a5 requestorId mbFleetOwnerId a4 a2 a1
+  -- Auto-approve comes from the caller's access type, as for a single document register.
+  let autoApprove = a6.person.dashboardAccessType == Kernel.Prelude.Just DDashboardRole.DASHBOARD_ADMIN
+  Domain.Action.Dashboard.Fleet.Driver.postDriverFleetAddVehicle autoApprove a8 a7 a5 requestorId mbFleetOwnerId a4 a2 a1
 
 postDriverFleetRespondDriverRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.ProviderPlatform.Fleet.Driver.RequestRespondReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postDriverFleetRespondDriverRequest a5 a4 a3 a2 a1 = do

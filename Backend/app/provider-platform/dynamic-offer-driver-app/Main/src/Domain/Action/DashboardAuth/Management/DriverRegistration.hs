@@ -13,6 +13,7 @@ module Domain.Action.DashboardAuth.Management.DriverRegistration
   ( postDriverRegistrationDocumentUpload,
     postDriverRegistrationDocumentsUpdate,
     postDriverRegistrationDocumentRegister,
+    postDriverRegistrationAddVehicles,
     postDriverRegistrationUnlinkDocument,
     postDriverRegistrationTriggerReminder,
   )
@@ -20,6 +21,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration
 import qualified Dashboard.Common
+import qualified Dashboard.Common.Merchant
 import qualified Domain.Action.Dashboard.Management.DriverRegistration
 import qualified Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
@@ -51,6 +53,12 @@ postDriverRegistrationDocumentRegister :: (Kernel.Types.Id.ShortId Domain.Types.
 postDriverRegistrationDocumentRegister a6 a5 a4 a3 _clientAutoApprove a1 = do
   let autoApprove = a4.person.dashboardAccessType == Kernel.Prelude.Just DDashboardRole.DASHBOARD_ADMIN
   Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationDocumentRegister a6 a5 a3 (Kernel.Prelude.Just autoApprove) a1
+
+-- | Auto-approve comes from the caller's access type, as for a single document register.
+postDriverRegistrationAddVehicles :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.AddVehiclesReq -> Environment.Flow Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities)
+postDriverRegistrationAddVehicles a5 a4 a3 a2 a1 = do
+  let autoApprove = a3.person.dashboardAccessType == Kernel.Prelude.Just DDashboardRole.DASHBOARD_ADMIN
+  Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationAddVehicles a5 a4 a2 (Kernel.Prelude.Just autoApprove) a1
 
 postDriverRegistrationUnlinkDocument :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.DocumentType -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postDriverRegistrationUnlinkDocument a5 a4 a3 a2 a1 = do

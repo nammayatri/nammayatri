@@ -231,6 +231,7 @@ library
       Domain.Action.Dashboard.AppManagement.SubscriptionTransaction
       Domain.Action.Dashboard.Common
       Domain.Action.Dashboard.Common.AddressDocumentType
+      Domain.Action.Dashboard.Common.BulkUpload
       Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Fleet.Access

@@ -21,6 +21,7 @@ module Domain.Action.UI.DriverOnboarding.Image
     validateImageFile,
     getImage,
     getImageWithAccessCheck,
+    createBulkRcPlaceholderImage,
     imageS3Lock,
     throwValidationError,
     convertHVStatusToValidationStatus,
@@ -649,6 +650,15 @@ mkImage personId_ merchantId mbMerchantOpCityId s3Path documentType_ mbRcId veri
         updatedAt = now,
         merchantOperatingCityId = mbMerchantOpCityId
       }
+
+-- | Shared placeholder picture for an RC added without a photo, filed under the owner so review and approval work.
+createBulkRcPlaceholderImage :: Id Person.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (Id Domain.Image)
+createBulkRcPlaceholderImage personId merchantId merchantOpCityId = do
+  pathPrefix <- asks (.s3Env.pathPrefix)
+  let s3Path = pathPrefix <> "/driver-onboarding/bulk-upload/rc-placeholder.jpg"
+  image <- mkImage personId merchantId (Just merchantOpCityId) s3Path DVC.VehicleRegistrationCertificate Nothing (Just Documents.MANUAL_VERIFICATION_REQUIRED) Nothing Nothing
+  Query.create image
+  pure image.id
 
 getImage :: Id DM.Merchant -> Id Domain.Image -> Flow Text
 getImage merchantId imageId = do
