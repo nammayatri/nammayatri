@@ -11,6 +11,7 @@ where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
+import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person as DP
 import qualified Domain.Types.ServerName as DTServer
 import Kernel.External.Encryption (encrypt)
@@ -18,6 +19,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.Beckn.City (City)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -74,7 +76,7 @@ sendEmailVerificationOtp tokenInfo req = do
   let email = T.toLower req.email
   loginRateLimitOptions <- asks (.loginRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeEmailOtpHitsCountKey tokenInfo.personId email) loginRateLimitOptions
-  merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
+  (merchant, routingCity) <- resolveRoutingMerchant tokenInfo.personId
   -- Route by the merchant's own short id, not serverNames: post-unification the
   -- BPP row (`X_PARTNER`) advertises APP_BACKEND too, so a serverNames test
   -- always chose BAP and handed rider-app a `_PARTNER` short id it does not
@@ -85,7 +87,7 @@ sendEmailVerificationOtp tokenInfo req = do
         if "_PARTNER" `T.isSuffixOf` getShortId merchant.shortId
           then InternalClient.callBPPInternalSendEmailOTP
           else InternalClient.callBAPInternalSendEmailOTP
-  emailRes <- callInternalSendEmailOTP (getShortId merchant.shortId) tokenInfo.city (InternalClient.SendEmailOTPReq {email = email})
+  emailRes <- callInternalSendEmailOTP (getShortId merchant.shortId) routingCity (InternalClient.SendEmailOTPReq {email = email})
   otpCode <- emailRes.otp & fromMaybeM (InternalError "OTP not returned from internal email service")
   envOtpTTL <- asks (.twoFaOtpTTLInSecs)
   let otpTTL = fromMaybe 300 envOtpTTL
@@ -107,7 +109,7 @@ verifyEmailOtp ::
   m APISuccess
 verifyEmailOtp tokenInfo req = do
   runRequestValidation validateEmailOtpVerifyReq req
-  merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
+  (merchant, _routingCity) <- resolveRoutingMerchant tokenInfo.personId
   let requesteeId = fromMaybe tokenInfo.personId req.requesteeId
   envMaxAttempts <- asks (.twoFaMaxOtpVerifyAttempts)
   envOtpTTL <- asks (.twoFaOtpTTLInSecs)
@@ -147,6 +149,19 @@ verifyEmailOtp tokenInfo req = do
     else do
       Redis.setExp attemptsKey (attempts + 1) otpTTL
       throwError (InvalidRequest "Invalid OTP")
+
+-- | One token per person: email verification is about the caller's own email,
+-- so the merchant used to route the internal OTP (BAP vs BPP) and its city come
+-- from the person's home merchant, not a session the token no longer carries.
+resolveRoutingMerchant ::
+  (BeamFlow m r) =>
+  Id DP.Person ->
+  m (DMerchant.Merchant, City)
+resolveRoutingMerchant personId = do
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
+  mId <- person.merchantId & fromMaybeM (InvalidRequest "Person has no home merchant to route email verification")
+  merchant <- QMerchant.findById mId >>= fromMaybeM (MerchantDoesNotExist mId.getId)
+  pure (merchant, merchant.defaultOperatingCity)
 
 makeEmailOtpKey :: Id DP.Person -> Text -> Text
 makeEmailOtpKey personId email = "Dashboard:EmailVerification:" <> personId.getId <> ":" <> email

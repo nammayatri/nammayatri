@@ -895,6 +895,7 @@ postDriverMembershipFeeCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.
 postDriverMembershipFeeCreate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_MEMBERSHIP_FEE_CREATE" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Driver.postDriverMembershipFeeCreate a4 a3 a1
     )

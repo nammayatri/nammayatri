@@ -899,7 +899,12 @@ deleteMerchantTollDelete a4 a3 a2 a1 =
     )
 
 getMerchantToll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll -> Environment.FlowHandler Dashboard.Common.Merchant.TollAPIEntity)
-getMerchantToll a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.getMerchantToll a4 a3 a1
+getMerchantToll a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.getMerchantToll a4 a3 a1
+    )
 
 postMerchantConfigClearCacheSubscription :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.ClearCacheSubscriptionReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantConfigClearCacheSubscription a4 a3 a2 a1 =

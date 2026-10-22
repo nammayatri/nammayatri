@@ -102,7 +102,7 @@ issueFleetOwnerAuthToken merchantShortId opCity mobileNumber mobileCountryCode =
   merchant <- merchantByShortId merchantShortId
   unless (opCity `elem` merchant.supportedOperatingCities) $
     throwError (InvalidRequest "Invalid request city is not supported by Merchant")
-  token <- DRegistration.generateToken person.id merchant opCity
+  token <- DRegistration.generateToken person.id
   when
     ( person.verified /= Just True
         && merchant.verifyFleetWhileLogin == Just True

@@ -9,7 +9,6 @@
 module Tools.Auth.Verify
   ( VerifiedUser (..),
     verifyDashboardUser,
-    verifySession,
     verifyPersonCredentials,
     verifyAccessLevel,
     verifyServerWithPair,
@@ -59,16 +58,16 @@ verifyDashboardUser ::
   RegToken ->
   m VerifiedUser
 verifyDashboardUser requiredServerAccess endpointId pathSegments token = do
-  session <- verifySession requiredServerAccess token
-  -- One token per person: the token lands on a single merchant/city, but a single
-  -- token addresses every MOC the person is provisioned for. Re-scope the session
-  -- to the URL's merchant/city when the person holds merchant_access for it, so
-  -- Layer C (resource scope), the audit trail and the DashboardUser handed to the
-  -- handler all reflect the MOC actually being acted on -- not the token's landing
-  -- MOC. Layer B (deny when the person has no access for the URL MOC) is enforced
-  -- at handler entry by Tools.Auth.Scope.enforceMerchantCityAccess; the old
-  -- verifyUrlScope URL-vs-token check is gone.
-  verified <- resolveScopeFromUrl requiredServerAccess session pathSegments
+  personId <- Common.verifyPerson token
+  person <- verifyPersonCredentials personId
+  -- One token per person: the token is identity-only, so the merchant and city
+  -- being acted on come from the URL, not the token. resolveScopeFromUrl reads
+  -- them from the fixed @direct-dashboard/{merchant}/{city}@ positions and
+  -- validates that the merchant serves this platform and supports the city.
+  -- Whether the person may act on that merchant/city is the handler-entry gate
+  -- 'Tools.Auth.Scope.enforceMerchantCityAccess' (with SUPER_ADMIN bypass); Layer
+  -- C below keys off the same URL merchant/city.
+  verified <- resolveScopeFromUrl requiredServerAccess personId person pathSegments
   access <- Capability.resolveAccess verified.person.id verified.person.roleId
   endpoints <- Capability.endpointCapabilities endpointId
   Capability.enforce access endpoints verified.person endpointId -- Layer A -- may this operator call this endpoint at all
@@ -82,77 +81,36 @@ verifyDashboardUser requiredServerAccess endpointId pathSegments token = do
     pathSegments
   pure verified
 
--- | Authentication only: who is this, and may they act on this server, merchant
--- and city. Deliberately does NOT check a capability, so it can be used where
--- the endpoint id is not yet known -- during cutover, when a route is still
--- authorized upstream by provider-dashboard.
---
--- Anything using this is authenticated but not authorized; pair it with
--- 'Capability.enforce' as 'verifyDashboardUser' does before it becomes the only
--- gate on a mutating endpoint.
-verifySession ::
-  ( Common.AuthFlow m r,
-    Redis.HedisFlow m r,
-    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
-  ) =>
-  DSN.ServerName ->
-  RegToken ->
-  m VerifiedUser
-verifySession requiredServerAccess token = do
-  (personId, merchantId, city) <- Common.verifyPerson token
-  verifiedPerson <- verifyPersonCredentials personId
-  verifiedMerchant <- verifyServerWithPair requiredServerAccess personId merchantId city
-  verifyCity verifiedMerchant city
-  pure VerifiedUser {personId = verifiedPerson.id, merchant = verifiedMerchant, city = city, person = verifiedPerson}
-
--- | One session, many scopes. A token lands on a single merchant and city (at
--- 'login'), but the permission itself lives in @merchant_access@, one row per
--- person, merchant and city. When the URL names a merchant and city the caller
--- holds such a row for, serve the request under that scope instead of the
--- token's landing scope. This is what lets an operator, or an integrator with
--- one token, address every merchant and city they are provisioned for -- and it
--- is what keeps Layer C (resource scope), the audit trail and the DashboardUser
--- aligned with the MOC actually being acted on, not the MOC the token happened
--- to be issued for.
---
--- Every route reaching here is mounted as
+-- | Resolve the merchant and city a direct-dashboard request acts on from its
+-- URL. Every route reaching here is mounted as
 -- @direct-dashboard\/{merchantShortId}\/{city}\/…@ (API.DirectDashboard in
--- rider-app and driver-app), so the scope is read from fixed path positions,
--- parsed exactly as the handler's Capture parses them.
+-- rider-app and driver-app), parsed here exactly as the handler's Capture parses
+-- it, so Layer C (resource scope), the audit trail and the DashboardUser all
+-- reflect the MOC actually being addressed.
 --
--- The guards are the ones 'switchMerchantAndCity' applies: the merchant serves
--- this platform and the person holds access for that exact merchant and city.
--- When either fails the session is returned untouched and the handler-entry
--- 'Tools.Auth.Scope.enforceMerchantCityAccess' denies the call. So this is
--- strictly a re-scope: it never grants access a switch would not already grant.
---
--- Costs nothing when the URL already matches the token; one merchant read and
--- one @merchant_access@ read otherwise.
+-- This validates only that the merchant exists, serves this platform, and
+-- supports the city -- it does NOT check the person's access. That gate is
+-- 'Tools.Auth.Scope.enforceMerchantCityAccess' at handler entry (which has the
+-- SUPER_ADMIN bypass); a caller without access reaches the handler's first
+-- statement and is denied there, before any domain action runs.
 resolveScopeFromUrl ::
   BeamFlow m r =>
   DSN.ServerName ->
-  VerifiedUser ->
+  Id DP.Person ->
+  DP.Person ->
   [Text] ->
   m VerifiedUser
-resolveScopeFromUrl requiredServerAccess verified pathSegments =
+resolveScopeFromUrl requiredServerAccess personId person pathSegments =
   case pathSegments of
     ("direct-dashboard" : merchantSeg : citySeg : _)
-      | Right urlCity <- parseUrlPiece citySeg,
-        merchantSeg /= tokenMerchantShortId || urlCity /= verified.city -> do
-        mbMerchant <-
-          if merchantSeg == tokenMerchantShortId
-            then pure (Just verified.merchant)
-            else QM.findByShortId (ShortId merchantSeg)
-        case mbMerchant of
-          Just merchant | requiredServerAccess `elem` merchant.serverNames -> do
-            mbAccess <- QAccess.findByPersonIdAndMerchantIdAndCity verified.personId merchant.id urlCity
-            pure $ case mbAccess of
-              Just _ -> VerifiedUser {personId = verified.personId, merchant = merchant, city = urlCity, person = verified.person}
-              Nothing -> verified
-          _ -> pure verified
-    _ -> pure verified
-  where
-    tokenMerchantShortId = verified.merchant.shortId.getShortId
+      | Right urlCity <- parseUrlPiece citySeg -> do
+        merchant <- QM.findByShortId (ShortId merchantSeg) >>= fromMaybeM AccessDenied
+        unless (requiredServerAccess `elem` merchant.serverNames) $ throwError AccessDenied
+        verifyCity merchant urlCity
+        pure VerifiedUser {personId, merchant, city = urlCity, person}
+    -- DashboardUserAuth is only ever mounted under direct-dashboard/{m}/{city};
+    -- anything else cannot name a merchant/city to authorize against.
+    _ -> throwError AccessDenied
 
 -- | Single-login across platforms (dashboard unification): a token is bound
 -- to ONE merchant row, but BAP and BPP merchants are separate rows (e.g.

@@ -103,23 +103,26 @@ audit tokenInfo action targetId beforeValue afterValue = do
         createdAt = now
       }
 
+-- | An admin may manage resource scope for a (merchant, city) only if they
+-- themselves hold access to it -- or are SUPER_ADMIN. One token per person: this
+-- replaces the old "must equal the session's merchant/city" check (the token no
+-- longer carries one) with a direct merchant_access lookup for the caller.
 assertAdminMayManageMOC :: BeamFlow m r => TokenInfo -> Id DMerchant.Merchant -> City.City -> m ()
 assertAdminMayManageMOC tokenInfo mId city =
-  unless (mId == tokenInfo.merchantId && city == tokenInfo.city) $
-    unlessM (isSuperAdmin tokenInfo.personId) $
-      throwError AccessDenied
+  unlessM (isSuperAdmin tokenInfo.personId) $
+    void $ QAccess.findByPersonIdAndMerchantIdAndCity tokenInfo.personId mId city >>= fromMaybeM AccessDenied
 
 ------------------------------------------------------------------ handlers
 
 getUserResourceScope :: BeamFlow m r => TokenInfo -> m UserResourceScopeRes
 getUserResourceScope tokenInfo = do
   rows <- QPRA.findAllByPersonId tokenInfo.personId
-  -- Resource scope is per (merchant, city); narrow to the session's MOC, then
-  -- group by whatever resource types are present (no hardcoded type list, so a
+  -- Identity token: there is no single session MOC, so the caller sees their
+  -- full resource scope across every (merchant, city) they hold rows for,
+  -- grouped by whatever resource types are present (no hardcoded type list, so a
   -- new resource kind appears with no code change).
-  let mine = filter (\r -> r.merchantId == tokenInfo.merchantId && r.operatingCity == tokenInfo.city) rows
-      types = nub (map (.resourceType) mine)
-      entryFor rt = UserResourceScopeEntry rt [r.resourceId | r <- mine, r.resourceType == rt]
+  let types = nub (map (.resourceType) rows)
+      entryFor rt = UserResourceScopeEntry rt (nub [r.resourceId | r <- rows, r.resourceType == rt])
   pure $ UserResourceScopeRes $ map entryFor types
 
 getPersonResourceAccess :: BeamFlow m r => TokenInfo -> Id DP.Person -> m PersonResourceAccessRes
@@ -127,10 +130,15 @@ getPersonResourceAccess tokenInfo personId = do
   void $ QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   rows <- QPRA.findAllByPersonId personId
   sa <- isSuperAdmin tokenInfo.personId
-  let visible =
-        if sa
-          then rows
-          else filter (\r -> r.merchantId == tokenInfo.merchantId && r.operatingCity == tokenInfo.city) rows
+  -- Identity token: a non-super-admin sees the target's rows only for the
+  -- (merchant, city) pairs the caller themselves can administer (their own
+  -- merchant_access), not a single session MOC.
+  visible <-
+    if sa
+      then pure rows
+      else do
+        callerAccess <- QAccess.findAllMerchantAccessByPersonId tokenInfo.personId
+        pure $ filter (\r -> any (\a -> a.merchantId == r.merchantId && a.operatingCity == r.operatingCity) callerAccess) rows
   -- Resolve each merchant's short id once (one findById per DISTINCT merchant,
   -- not per row) — a person can hold many rows across few merchants. Falls back
   -- to the raw id only for an orphaned row whose merchant was deleted.

@@ -29,7 +29,7 @@ module API.DashboardDriverInfoByPhoneNumber
 where
 
 import qualified API.Types.Dashboard.RideBooking.Driver as Common
-import Data.List (nub, partition)
+import Data.List (nub)
 import qualified Domain.Action.Dashboard.RideBooking.Driver as RBDriver
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.MerchantAccess as DAccess
@@ -69,21 +69,14 @@ handler = getDriverInfoByPhoneNumber
 driverMissErrorCodes :: [Text]
 driverMissErrorCodes = ["PERSON_DOES_NOT_EXIST", "MERCHANT_OPERATING_CITY_NOT_FOUND"]
 
--- | Deduplicate, then put the caller's token city first; the remaining cities
--- keep their original relative order. The token city is overwhelmingly the
--- likely match, so trying it first makes the typical request a single hop.
-orderCitiesForSearch :: Context.City -> [Context.City] -> [Context.City]
-orderCitiesForSearch tokenCity cities =
-  let (tokenCityMatches, otherCities) = partition (== tokenCity) (nub cities)
-   in tokenCityMatches <> otherCities
-
 -- | The cities this request may search: the caller's own MerchantAccess grants
--- for the token's merchant, and nothing else. Widening this to the merchant's
+-- for the URL merchant, and nothing else. Widening this to the merchant's
 -- supported cities would let a single-city user read driver PII in cities they
--- were never granted.
-selectSearchCities :: Id DM.Merchant -> Context.City -> [DAccess.MerchantAccess] -> [Context.City]
-selectSearchCities tokenMerchantId tokenCity accesses =
-  orderCitiesForSearch tokenCity [access.operatingCity | access <- accesses, access.merchantId == tokenMerchantId]
+-- were never granted. One token per person: there is no session city to try
+-- first, so the accessible cities are searched in grant order (deduplicated).
+selectSearchCities :: Id DM.Merchant -> [DAccess.MerchantAccess] -> [Context.City]
+selectSearchCities merchantId accesses =
+  nub [access.operatingCity | access <- accesses, access.merchantId == merchantId]
 
 getDriverInfoByPhoneNumber ::
   ShortId DM.Merchant ->
@@ -94,24 +87,26 @@ getDriverInfoByPhoneNumber ::
 getDriverInfoByPhoneNumber merchantShortId tokenInfo mbMobileNumber mbMobileCountryCode = withFlowHandlerAPI' $ do
   -- Same authorization the proxy applied, keyed on the capability id.
   void $ runInDashboardDb $ Verify.verifyAccessLevel "PROVIDER_RIDE_BOOKING/DRIVER/GET_DRIVER_INFO" tokenInfo.personId
-  (tokenMerchant, isFleetOwner, accesses) <- runInDashboardDb $ do
+  (merchant, isFleetOwner, accesses) <- runInDashboardDb $ do
     person <- QP.findById tokenInfo.personId >>= fromMaybeM (E.PersonNotFound tokenInfo.personId.getId)
     role <- QRole.findById person.roleId >>= fromMaybeM (E.RoleNotFound person.roleId.getId)
-    merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (E.MerchantDoesNotExist tokenInfo.merchantId.getId)
+    -- One token per person: the merchant comes from the URL capture, not the token.
+    merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (E.MerchantDoesNotExist merchantShortId.getShortId)
     accesses <- QMerchantAccess.findAllMerchantAccessByPersonId tokenInfo.personId
     pure
       ( merchant,
         role.dashboardAccessType == DRole.FLEET_OWNER || role.dashboardAccessType == DRole.RENTAL_FLEET_OWNER,
         accesses
       )
-  -- The city half of a merchant/city access check cannot apply here (there is no
-  -- single city), so the merchant half is enforced by hand.
-  unless (merchantShortId == tokenMerchant.shortId) $ throwError E.AccessDenied
+  -- The caller must hold access to the URL merchant. The city half of a
+  -- merchant/city check cannot apply here (there is no single city), so the
+  -- merchant half is enforced by hand against merchant_access.
+  unless (any (\a -> a.merchantId == merchant.id) accesses) $ throwError E.AccessDenied
   mobileNumber <- fromMaybeM (InvalidRequest "\"mobileNumber\" is required") mbMobileNumber
   -- This server forbids fleet owners from searching by phone. Failing here
   -- preserves that behaviour and avoids one pointless lookup per city.
   when isFleetOwner $ throwError (InvalidRequest "Fleet Owner can only search with vehicle Number, personId or walletId")
-  let cities = selectSearchCities tokenInfo.merchantId tokenInfo.city accesses
+  let cities = selectSearchCities merchant.id accesses
   logInfo $ "getDriverInfoByPhoneNumber: searching " <> show (length cities) <> " accessible cities of merchant " <> merchantShortId.getShortId
   searchCities mobileNumber cities Nothing
   where

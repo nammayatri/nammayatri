@@ -15,13 +15,11 @@
 module Tools.Auth.Dashboard (DashboardAuth, VerifyDashboard, verifyDashboardAction, TokenInfo (..), module Reexport) where
 
 import Data.Singletons.TH
-import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import Domain.Types.Role as Reexport (DashboardAccessType (..))
 import qualified Domain.Types.Role as DRole
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -48,10 +46,11 @@ data VerifyDashboard
 
 data DashboardPayload (at :: DRole.DashboardAccessType)
 
-data TokenInfo = TokenInfo
-  { personId :: Id DP.Person,
-    merchantId :: Id DMerchant.Merchant,
-    city :: City.City
+-- | One token per person: identity only. Any merchant/city the caller operates
+-- on arrives with the request (body/param for the legacy management endpoints)
+-- and is authorized against the person's merchant_access there, not carried here.
+newtype TokenInfo = TokenInfo
+  { personId :: Id DP.Person
   }
 
 instance VerificationMethod VerifyDashboard where
@@ -82,10 +81,10 @@ verifyDashboard ::
   m TokenInfo
 verifyDashboard requiredAccessType _pathSegments token = do
   logInfo "[Auth.verifyDashboard] START - Servant parsed request, beginning auth"
-  (personId, merchantId, city) <- Common.verifyPerson token
+  personId <- Common.verifyPerson token
   logInfo "[Auth.verifyDashboard] verifyPerson done"
   void $ verifyDashboardAccess requiredAccessType personId
-  pure TokenInfo {personId, merchantId, city}
+  pure TokenInfo {personId}
 
 instance
   forall (at :: DRole.DashboardAccessType).

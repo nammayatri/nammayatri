@@ -48,6 +48,13 @@ findAllByPersonIdsAndMerchantId personIds merchantId =
           ]
       ]
 
+-- | All of a person's entity grants across every merchant. One token per person:
+-- profile has no single session merchant to scope to, so it shows the full set.
+findAllByPersonId :: BeamFlow m r => Id DP.Person -> m [DEA.EntityAccess]
+findAllByPersonId personId =
+  sortOn grantOrder
+    <$> findAllWithKV [Se.Is BeamEA.personId $ Se.Eq $ getId personId]
+
 -- Scoped to one merchant so a revoke can never reach a grant the caller does not own, even if
 -- the same person holds entities under another merchant.
 -- One delete per person rather than an Or over all of them: personId is the KV secondary key, and
