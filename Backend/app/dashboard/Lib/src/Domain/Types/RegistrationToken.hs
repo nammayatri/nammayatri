@@ -14,19 +14,19 @@
 
 module Domain.Types.RegistrationToken where
 
-import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person.Type as DP
 import Kernel.Prelude
-import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 
+-- | One token per person: identity only. Merchant and city are no longer bound
+-- to the token -- authorization keys off the person's merchant_access set
+-- against the merchant/city named in each request (URL for direct-dashboard,
+-- request body/param for the legacy management endpoints).
 data RegistrationToken = RegistrationToken
   { id :: Id RegistrationToken,
     token :: Text,
     personId :: Id DP.Person,
     createdAt :: UTCTime,
-    merchantId :: Id DMerchant.Merchant,
-    operatingCity :: City.City,
     enabled :: Bool
   }
   deriving (Generic, Show)

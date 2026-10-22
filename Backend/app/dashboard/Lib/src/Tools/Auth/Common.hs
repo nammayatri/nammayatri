@@ -12,22 +12,18 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, cleanCachedTokensByMerchantIdAndCity, cleanCachedTokensOfMerchantAndCity, AuthFlow, authTokenCacheKey, tokenActivityCacheKey, checkPasswordExpiry, checkForcedPasswordChange) where
+module Tools.Auth.Common (verifyPerson, cleanCachedTokens, AuthFlow, authTokenCacheKey, tokenActivityCacheKey, checkPasswordExpiry, checkForcedPasswordChange) where
 
-import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.App
-import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Common as Utils
 import Storage.Beam.BeamFlow
-import qualified Storage.Queries.Merchant as QMerchant
-import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Error
@@ -38,65 +34,56 @@ type AuthFlow m r =
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   )
 
+-- | One token per person: the token resolves to a person id only. Merchant and
+-- city are no longer carried by the token -- they arrive with each request (URL
+-- for direct-dashboard, body/param for the legacy management endpoints) and are
+-- authorized against the person's merchant_access set there.
+--
+-- The auth cache now stores just the person id. Entries written by the previous
+-- (personId, merchantId, city) format simply fail to decode as an 'Id Person'
+-- and fall through to a DB verify -- one extra read per stale entry during
+-- rollout, no incorrect result.
 verifyPerson ::
   (AuthFlow m r, Redis.HedisFlow m r) =>
   RegToken ->
-  m (Id DP.Person, Id DMerchant.Merchant, City.City)
+  m (Id DP.Person)
 verifyPerson token = do
   key <- authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   currentTime <- getCurrentTime
 
   -- First check if token exists in cache
-  mbTuple <- getKeyRedis key
-  (personId, merchantId, city) <- case mbTuple of
-    Just (personId, merchantId, city) -> do
+  mbPersonId <- getKeyRedis key
+  case mbPersonId of
+    Just personId -> do
       -- For cached tokens, check activity in Redis
       checkTokenActivityInRedis token currentTime
-      return (personId, merchantId, city)
+      return personId
     Nothing -> do
-      mbTupleOld <- getKeyRedisOld key
-      case mbTupleOld of
-        Just (personId, merchantId) -> do
-          -- For old cache format, check activity in Redis
-          checkTokenActivityInRedis token currentTime
-          city <- getCity merchantId
-          return (personId, merchantId, city)
-        Nothing -> do
-          -- For tokens not in cache, verify from DB
-          -- Use catchAny to handle errors and clean up activity keys
-          sr <-
-            catchAny
-              (verifyToken token)
-              ( \e -> do
-                  -- Clean up any activity keys if verification fails
-                  mbInactivityTimeout <- asks (.registrationTokenInactivityTimeout)
-                  whenJust mbInactivityTimeout $ \_ -> do
-                    activityKey <- tokenActivityCacheKey token
-                    Redis.del activityKey
-                  throwM e
-              )
-          let personId = sr.personId
-          let merchantId = sr.merchantId
-          let city = sr.operatingCity
-          checkTokenActivityInRedis token currentTime
-          -- Add token back to Redis with fresh expiry
-          setExRedis key (personId, merchantId, city) authTokenCacheExpiry
-          return (personId, merchantId, city)
-
-  return (personId, merchantId, city)
+      -- For tokens not in cache, verify from DB
+      -- Use catchAny to handle errors and clean up activity keys
+      sr <-
+        catchAny
+          (verifyToken token)
+          ( \e -> do
+              -- Clean up any activity keys if verification fails
+              mbInactivityTimeout <- asks (.registrationTokenInactivityTimeout)
+              whenJust mbInactivityTimeout $ \_ -> do
+                activityKey <- tokenActivityCacheKey token
+                Redis.del activityKey
+              throwM e
+          )
+      let personId = sr.personId
+      checkTokenActivityInRedis token currentTime
+      -- Add token back to Redis with fresh expiry
+      setExRedis key personId authTokenCacheExpiry
+      return personId
   where
-    getKeyRedisOld :: Redis.HedisFlow m r => Text -> m (Maybe (Id DP.Person, Id DMerchant.Merchant))
-    getKeyRedisOld = Redis.get
-
-    getKeyRedis :: Redis.HedisFlow m r => Text -> m (Maybe (Id DP.Person, Id DMerchant.Merchant, City.City))
+    getKeyRedis :: Redis.HedisFlow m r => Text -> m (Maybe (Id DP.Person))
     getKeyRedis = Redis.get
 
-    setExRedis :: Redis.HedisFlow m r => Text -> (Id DP.Person, Id DMerchant.Merchant, City.City) -> Int -> m ()
+    setExRedis :: Redis.HedisFlow m r => Text -> Id DP.Person -> Int -> m ()
     setExRedis = Redis.setExp
-
-    getCity :: AuthFlow m r => Id DMerchant.Merchant -> m City.City
-    getCity merchantId' = QMerchant.findById merchantId' >>= fmap (.defaultOperatingCity) . fromMaybeM (MerchantNotFound merchantId'.getId)
 
 authTokenCacheKey ::
   HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text] =>
@@ -184,10 +171,10 @@ validateToken sr = do
   when expired $ do
     QR.deleteById sr.id
     Utils.throwError TokenExpired
-  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity sr.personId sr.merchantId sr.operatingCity
-  when (isNothing mbMerchantAccess) $ do
-    QR.deleteById sr.id
-    Utils.throwError AccessDenied
+  -- No merchant/city check here any more: the token is identity-only. Whether
+  -- the person may act on a given merchant/city is decided per request against
+  -- merchant_access (handler entry for direct-dashboard; verifyDashboard and the
+  -- management handlers for the legacy tree).
   return sr
 
 cleanCachedTokens ::
@@ -199,55 +186,6 @@ cleanCachedTokens ::
   m ()
 cleanCachedTokens personId = do
   regTokens <- QR.findAllByPersonId personId
-  for_ regTokens $ \regToken -> do
-    key <- authTokenCacheKey regToken.token
-    void $ Redis.del key
-    activityKey <- tokenActivityCacheKey regToken.token
-    void $ Redis.del activityKey
-
-cleanCachedTokensByMerchantId ::
-  ( BeamFlow m r,
-    Redis.HedisFlow m r,
-    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
-  ) =>
-  Id DP.Person ->
-  Id DMerchant.Merchant ->
-  m ()
-cleanCachedTokensByMerchantId personId merchantId = do
-  regTokens <- QR.findAllByPersonIdAndMerchantId personId merchantId
-  for_ regTokens $ \regToken -> do
-    key <- authTokenCacheKey regToken.token
-    void $ Redis.del key
-    activityKey <- tokenActivityCacheKey regToken.token
-    void $ Redis.del activityKey
-
-cleanCachedTokensOfMerchantAndCity ::
-  ( BeamFlow m r,
-    Redis.HedisFlow m r,
-    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
-  ) =>
-  Id DMerchant.Merchant ->
-  City.City ->
-  m ()
-cleanCachedTokensOfMerchantAndCity merchantId city = do
-  regTokens <- QR.findAllByMerchantIdAndCity merchantId city
-  for_ regTokens $ \regToken -> do
-    key <- authTokenCacheKey regToken.token
-    void $ Redis.del key
-    activityKey <- tokenActivityCacheKey regToken.token
-    void $ Redis.del activityKey
-
-cleanCachedTokensByMerchantIdAndCity ::
-  ( BeamFlow m r,
-    Redis.HedisFlow m r,
-    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
-  ) =>
-  Id DP.Person ->
-  Id DMerchant.Merchant ->
-  City.City ->
-  m ()
-cleanCachedTokensByMerchantIdAndCity personId merchantId city = do
-  regTokens <- QR.findAllByPersonIdAndMerchantIdAndCity personId merchantId city
   for_ regTokens $ \regToken -> do
     key <- authTokenCacheKey regToken.token
     void $ Redis.del key
