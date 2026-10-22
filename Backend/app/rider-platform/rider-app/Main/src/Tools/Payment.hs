@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DerivingVia #-}
+{-# OPTIONS_GHC -Wwarn=x-partial #-}
 
 module Tools.Payment
   ( module Reexport,

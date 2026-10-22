@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.38.3.
 --
 -- see: https://github.com/sol/hpack
 
@@ -1954,9 +1954,12 @@ library
     , cereal
     , communication-engine
     , config-pilot
-    , connection
     , containers
-    , cryptonite
+    , crypton
+    , crypton-connection
+    , crypton-x509
+    , crypton-x509-store
+    , crypton-x509-system
     , cryptostore >=0.2.3.0
     , data-default-class
     , directory
@@ -2036,9 +2039,6 @@ library
     , wai-middleware-prometheus
     , warp
     , whatsapp-bot
-    , x509
-    , x509-store
-    , x509-system
     , xml-conduit
     , xmlbf
     , yudhishthira
@@ -2108,9 +2108,12 @@ executable rider-app-exe
     , cassava
     , cereal
     , config-pilot
-    , connection
     , containers
-    , cryptonite
+    , crypton
+    , crypton-connection
+    , crypton-x509
+    , crypton-x509-store
+    , crypton-x509-system
     , cryptostore >=0.2.3.0
     , data-default-class
     , directory
@@ -2182,9 +2185,6 @@ executable rider-app-exe
     , wai-middleware-prometheus
     , warp
     , whatsapp-bot
-    , x509
-    , x509-store
-    , x509-system
     , xml-conduit
     , xmlbf
     , yudhishthira
@@ -2255,8 +2255,12 @@ test-suite rider-app-test
     , cassava
     , cereal
     , config-pilot
-    , connection
     , containers
+    , crypton
+    , crypton-connection
+    , crypton-x509
+    , crypton-x509-store
+    , crypton-x509-system
     , cryptonite
     , cryptostore >=0.2.3.0
     , data-default-class
@@ -2333,9 +2337,6 @@ test-suite rider-app-test
     , wai-middleware-prometheus
     , warp
     , whatsapp-bot
-    , x509
-    , x509-store
-    , x509-system
     , xml-conduit
     , xmlbf
     , yudhishthira

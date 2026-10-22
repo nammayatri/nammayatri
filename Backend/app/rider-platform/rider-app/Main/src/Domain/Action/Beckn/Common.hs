@@ -1499,6 +1499,7 @@ driverArrivedReqHandler ValidatedDriverArrivedReq {..} = do
 
 bookingCancelledReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     EsqDBFlow m r,
     ClickhouseFlow m r,
@@ -1513,7 +1514,9 @@ bookingCancelledReqHandler ::
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    m ~ Kernel.Types.Flow.FlowR AppEnv
+    Finance.HasActorInfo m r,
+    m ~ Kernel.Types.Flow.FlowR AppEnv,
+    r ~ AppEnv
   ) =>
   ValidatedBookingCancelledReq ->
   m ()

@@ -27,7 +27,7 @@ data EBIXConfig = EBIXConfig
     password :: EncryptedField 'AsEncrypted Text,
     networkHostUrl :: BaseUrl
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 instance Show EBIXConfig where
@@ -57,7 +57,7 @@ data CMRLConfig = CMRLConfig
     password :: EncryptedField 'AsEncrypted Text,
     appType :: Maybe Text
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 instance Show CMRLConfig where
@@ -75,7 +75,7 @@ data CMRLV2Config = CMRLV2Config
     encKeyIndex :: Int,
     encryptionKey :: EncryptedField 'AsEncrypted Text
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 instance Show CMRLV2Config where
@@ -107,7 +107,7 @@ data KMRLConfig = KMRLConfig
     defaultTransactionIdPrefix :: Text,
     metroType :: Int
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 instance Show KMRLConfig where
@@ -160,7 +160,7 @@ data CRISConfig = CRISConfig
     corridorStations :: Maybe [Text],
     enableCorridorDeprioritization :: Maybe Bool
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 instance Show CRISConfig where

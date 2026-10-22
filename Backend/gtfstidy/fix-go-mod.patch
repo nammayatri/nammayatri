@@ -1,0 +1,26 @@
+diff --git a/go.mod b/go.mod
+index 7012f34..cf33c60 100644
+--- a/go.mod
++++ b/go.mod
+@@ -1,6 +1,6 @@
+ module github.com/patrickbr/gtfstidy
+
+-go 1.18
++go 1.21
+
+ require (
+ 	github.com/patrickbr/gtfsparser v0.0.0-20250109120112-0f616022f79d
+diff --git a/go.sum b/go.sum
+index 7f0d613..75a88f4 100644
+--- a/go.sum
++++ b/go.sum
+@@ -1,9 +1,5 @@
+-github.com/klauspost/compress v1.17.7 h1:ehO88t2UGzQK66LMdE8tibEd1ErmzZjNEqWkjLAKQQg=
+-github.com/klauspost/compress v1.17.7/go.mod h1:Di0epgTjJY877eYKx5yC51cX2A2Vl2ibi7bDH9ttBbw=
+ github.com/klauspost/compress v1.17.11 h1:In6xLpyWOi1+C7tXUUWv2ot1QvBjxevKAaI6IXrJmUc=
+ github.com/klauspost/compress v1.17.11/go.mod h1:pMDklpSncoRMuLFrf1W9Ss9KT+0rH90U12bZKk7uwG0=
+-github.com/patrickbr/gtfsparser v0.0.0-20241229200251-82ac2dbeb5c3 h1:PcEcAb2UZOOCx4pVHPx4aWNhPGUfKCUThULdeT2yAI8=
+-github.com/patrickbr/gtfsparser v0.0.0-20241229200251-82ac2dbeb5c3/go.mod h1:WsjXLsxSQc+KfBJ7APQhk3yz+4DztzMYARQ+EfxKYSQ=
+ github.com/patrickbr/gtfsparser v0.0.0-20250109120112-0f616022f79d h1:Ebhf1XhABZWZLRxtwTPP4NpYN/rz2hR1VQ0omG0WGBI=
+ github.com/patrickbr/gtfsparser v0.0.0-20250109120112-0f616022f79d/go.mod h1:WsjXLsxSQc+KfBJ7APQhk3yz+4DztzMYARQ+EfxKYSQ=
+ github.com/patrickbr/gtfswriter v0.0.0-20240919073412-98e3602c6cd8 h1:xEQhft28izewbL3fnF10Yj8zSNu2r+lW157GQq+eaaY=

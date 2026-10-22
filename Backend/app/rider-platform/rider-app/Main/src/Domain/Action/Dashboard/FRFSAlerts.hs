@@ -45,13 +45,13 @@ getFRFSAlertsFrfsLiveMetrics merchantShortId opCity mbFrom mbTo mbModes = do
     convertHourlyBooking hb =
       Common.HourlyBooking
         { time = LiveMetrics.time hb,
-          mode = LiveMetrics.mode (hb :: LiveMetrics.HourlyBooking),
+          mode = hb.mode,
           count = LiveMetrics.count hb
         }
 
     convertModeStatus ms =
       Common.ModeStatus
-        { mode = LiveMetrics.mode (ms :: LiveMetrics.ModeStatus),
+        { mode = ms.mode,
           status = LiveMetrics.status ms
         }
 

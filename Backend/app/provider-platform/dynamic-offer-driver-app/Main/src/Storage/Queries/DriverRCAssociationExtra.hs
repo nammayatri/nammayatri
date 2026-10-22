@@ -1,6 +1,5 @@
 module Storage.Queries.DriverRCAssociationExtra where
 
-import Control.Applicative (liftA2)
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text (toLower)
 import qualified Database.Beam as B

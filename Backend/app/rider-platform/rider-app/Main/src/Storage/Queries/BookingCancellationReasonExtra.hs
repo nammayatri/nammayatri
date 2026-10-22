@@ -43,4 +43,4 @@ countCancelledBookingsByBookingIds bookingIds cancellationSource = do
             (\BeamBCR.BookingCancellationReasonT {..} -> bookingId `B.in_` (B.val_ . getId <$> bookingIds) B.&&. (source B.==. B.val_ cancellationSource))
             do
               B.all_ (BeamCommon.bookingCancellationReason BeamCommon.atlasDB)
-  pure $ either (const 0) (\r -> if null r then 0 else head r) res
+  pure $ either (const 0) (fromMaybe 0 . listToMaybe) res
