@@ -304,8 +304,8 @@ tables it touches).
 
 ### The tariffs are keyed by merchant now — both files
 
-    ./apply-tariff.sh mauritania-tariff.sql     # favorit0 only
-    ./apply-tariff.sh algeria-tariff.sql        # algeria0 only
+    ./apply-tariff.sh                           # BOTH files, one transaction (the default)
+    ./apply-tariff.sh db/algeria-tariff.sql     # algeria0 only, when that is truly meant
 
 Both files used to match on `vehicle_variant` alone and rebuild
 `restricted_extra_fare` for **every** merchant. With two countries that is a
