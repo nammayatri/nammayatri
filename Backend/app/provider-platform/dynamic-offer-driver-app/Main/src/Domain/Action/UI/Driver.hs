@@ -281,6 +281,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardi
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import SharedLogic.DriverPool as DP
+import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
@@ -1679,8 +1680,15 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
         let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry petTag (mbNammTag >>= (.validity)) now
         return $ Yudhishthira.replaceTagNameValue person.driverTag reqDriverTagWithExpiry
       else return $ Yudhishthira.removeTagName person.driverTag petTag
-  unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
-    QPerson.updateDriverTag (Just tag) personId
+  -- Saving a trip distance brings the driver's limit back after a fleet that ignored it, unless they are still in one.
+  let distanceTag = LYT.TagNameValue AreaPref.distancePreferenceEnabledTagName
+  clearDistanceTag <-
+    if (isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold) && Yudhishthira.elemTagName distanceTag tag
+      then not . maybe False (.disableDriverAreaAndDistancePreference) <$> QFDA.getDriverFleetAutoAssignConfig personId merchantOpCityId
+      else pure False
+  let updatedTag = if clearDistanceTag then Yudhishthira.removeTagName (Just tag) distanceTag else tag
+  unless (Just (Yudhishthira.showRawTags updatedTag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
+    QPerson.updateDriverTag (Just updatedTag) personId
 
   updatedDriverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId

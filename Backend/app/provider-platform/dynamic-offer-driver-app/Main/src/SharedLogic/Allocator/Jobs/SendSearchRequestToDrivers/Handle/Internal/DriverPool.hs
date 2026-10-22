@@ -211,7 +211,7 @@ mkDriverPreferenceChecks searchReq driver =
     dpr = driver.driverPoolResult
     rideDistanceCheck =
       binaryCheck
-        (isJust dpr.minRideDistance || isJust dpr.maxRideDistance)
+        (AreaPref.isDistancePreferenceEnabledJson dpr.driverTags && (isJust dpr.minRideDistance || isJust dpr.maxRideDistance))
         ( case driver.tripDistance of
             Nothing -> True -- ride distance unknown yet, don't penalize
             Just rideDistance -> maybe True (rideDistance >=) dpr.minRideDistance && maybe True (rideDistance <=) dpr.maxRideDistance
@@ -295,6 +295,8 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
     if null allLogics
       then pure Map.empty
       else withTimeAPI "driverPooling" "fetchingFleetPoolingPriority" $ getFleetPoolingPriorities mOCityId onlyNewDriversWithCustomerInfo
+  -- The search's area plus its pickup and drop special locations, so the fleet's Pickup_ and Drop_ entries both count.
+  let priorityAreas = catMaybes [searchReq.area, searchReq.pickupArea, searchReq.dropArea]
   -- Enrich drivers with their per-driver SRD sliding-window counters and idle time so the POOLING
   -- dynamic-logic rules can reference them. Batched: pipelined cross-slot MGETs for the whole batch
   -- (counters + idle) instead of a Redis read pass per driver.
@@ -314,7 +316,7 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
                     idleTimeSeconds = Map.lookup personId idleMap,
                     preferenceMatchScore = computePreferenceMatchScore preferenceChecks,
                     hasApplicablePreferences = any (.isApplicable) preferenceChecks,
-                    fleetPoolingPriorityLevel = Map.lookup driver.driverPoolResult.driverId fleetPriorities >>= resolvePoolingPriority searchReq.area
+                    fleetPoolingPriorityLevel = Map.lookup driver.driverPoolResult.driverId fleetPriorities >>= resolvePoolingPriority priorityAreas
                   }
         )
         onlyNewDriversWithCustomerInfo

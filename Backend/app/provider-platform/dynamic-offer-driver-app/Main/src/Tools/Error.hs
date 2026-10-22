@@ -537,6 +537,28 @@ instance IsHTTPError RideCancellationError where
 
 instance IsAPIError RideCancellationError
 
+data FleetDriverSettingsError
+  = AreaPreferenceDisabledByFleet
+  | NoAutoAcceptTierForVehicle
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FleetDriverSettingsError
+
+instance IsBaseError FleetDriverSettingsError where
+  toMessage = \case
+    AreaPreferenceDisabledByFleet -> Just "Area preference is disabled by your fleet"
+    NoAutoAcceptTierForVehicle -> Just "The driver's vehicle serves no tier with auto-accept in this city"
+
+instance IsHTTPError FleetDriverSettingsError where
+  toErrorCode = \case
+    AreaPreferenceDisabledByFleet -> "AREA_PREFERENCE_DISABLED_BY_FLEET"
+    NoAutoAcceptTierForVehicle -> "NO_AUTO_ACCEPT_TIER_FOR_VEHICLE"
+  toHttpCode = \case
+    AreaPreferenceDisabledByFleet -> E400
+    NoAutoAcceptTierForVehicle -> E400
+
+instance IsAPIError FleetDriverSettingsError
+
 data FareParametersError
   = FareParametersNotFound Text
   | FareParametersDoNotExist Text

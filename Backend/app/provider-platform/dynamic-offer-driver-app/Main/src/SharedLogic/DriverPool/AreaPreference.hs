@@ -44,6 +44,8 @@ module SharedLogic.DriverPool.AreaPreference
     matchesRadius,
     isAreaPreferenceEnabled,
     isAreaPreferenceEnabledJson,
+    distancePreferenceEnabledTagName,
+    isDistancePreferenceEnabledJson,
   )
 where
 
@@ -56,6 +58,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Types.Common
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 
 -- | A driver's preferred area, in exactly one of the two supported forms. The two
@@ -182,6 +185,17 @@ isAreaPreferenceEnabledJson (A.Object tagsObj) =
       KM.member (A.fromText areaPreferenceRadiusTagName) tagsObj
         || any (T.isPrefixOf areaPreferenceCellTagPrefix . A.toText) (KM.keys tagsObj)
 isAreaPreferenceEnabledJson _ = False
+
+-- | Set to "false" by a fleet that disables its drivers' trip-distance preference.
+distancePreferenceEnabledTagName :: Text
+distancePreferenceEnabledTagName = "DistancePreferenceEnabled"
+
+isDistancePreferenceEnabledJson :: A.Value -> Bool
+isDistancePreferenceEnabledJson tags =
+  case Yudhishthira.accessTagKey (LYT.TagName distancePreferenceEnabledTagName) tags of
+    Just (A.Bool enabled) -> enabled
+    Just (A.String value) -> fromMaybe True (parseEnabledTagValue value)
+    _ -> True
 
 -- | Every tag name that must be cleared before writing a new selection --
 -- both the radius tag and every existing cell tag, regardless of which
