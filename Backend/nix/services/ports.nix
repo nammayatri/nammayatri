@@ -68,6 +68,7 @@
   kafka-ride-events-consumer-metrics = 9995;
   kafka-driver-pool-state-writer-metrics = 9989;
   kafka-sessionizer-metrics = 9988;
+  kafka-driver-performance-metrics = 9987;
 
   # Dev tools
   caddy-reverse-proxy = 9090;
