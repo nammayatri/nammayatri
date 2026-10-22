@@ -17,6 +17,7 @@ import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types as DTC
 import GHC.Generics (Generic)
 import Kernel.Types.Common (HighPrecMeters, HighPrecMoney, Meters, Seconds)
+import Lib.Yudhishthira.TypesTH (GenericDefaults (..))
 import Sequelize.SQLObject (SQLObject (..), ToSQLObject (..))
 import Prelude
 
@@ -239,3 +240,22 @@ data RecomputeBand = RecomputeBand
     minThresholdDistance :: Meters
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+-- | One node of the driver earnings fare breakup shown under "Fare paid by
+-- customer". A leaf lists 'fareTags' (FareParameters charge field names) and
+-- shows their sum; a group lists 'subItems' and shows the sum of its children.
+-- 'key' is the translation key for the label. Shape rules (exactly one of
+-- fareTags / subItems, no tag in two leaves, known tags only) are enforced by
+-- the dashboard update API, not by this decoder.
+data FareBreakupNode = FareBreakupNode
+  { key :: Text,
+    fareTags :: Maybe [Text],
+    subItems :: Maybe [FareBreakupNode]
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+-- | Hand-written so the 'generateGenericDefault' splice over TransporterConfig
+-- reuses it: deriving one would follow 'subItems' back into FareBreakupNode
+-- and never terminate (compile-time stack overflow).
+instance GenericDefaults FareBreakupNode where
+  genDef _ = [FareBreakupNode {key = "defaultText", fareTags = Just ["baseFare"], subItems = Nothing}]

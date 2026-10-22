@@ -6,6 +6,7 @@ module Storage.Queries.TransporterConfig (module Storage.Queries.TransporterConf
 
 import qualified Data.Aeson
 import qualified Data.Text
+import qualified Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TransporterConfig
 import Kernel.Beam.Functions
@@ -105,6 +106,17 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.manualTollChargeConfig (Kernel.Prelude.toJSON <$> manualTollChargeConfig),
       Se.Set Beam.rideEvidenceConfig (Kernel.Prelude.toJSON <$> rideEvidenceConfig),
       Se.Set Beam.showRoutePerRequest showRoutePerRequest,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
+updateFareBreakupConfig ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.FareBreakupNode -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+updateFareBreakupConfig fareBreakupConfig merchantOperatingCityId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.fareBreakupConfig (Kernel.Prelude.toJSON <$> fareBreakupConfig),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
@@ -291,6 +303,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.exotelStatusCheckSchedulerDelay (Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay),
       Se.Set Beam.fakeOtpEmails fakeOtpEmails,
       Se.Set Beam.fakeOtpMobileNumbers fakeOtpMobileNumbers,
+      Se.Set Beam.fareBreakupConfig (Kernel.Prelude.toJSON <$> fareBreakupConfig),
       Se.Set Beam.fareRecomputePolicy (Kernel.Prelude.toJSON <$> fareRecomputePolicy),
       Se.Set Beam.favouriteDriverDailyCoinRideThreshold (Just favouriteDriverDailyCoinRideThreshold),
       Se.Set Beam.fcmServiceAccount ((.fcmServiceAccount) fcmConfig),

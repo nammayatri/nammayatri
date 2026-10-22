@@ -19,6 +19,8 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantUpdate,
     postMerchantCloudUpdate,
     postMerchantCloudCityUpdate,
+    getMerchantConfigFareBreakup,
+    postMerchantConfigFareBreakupUpdate,
     getMerchantServiceUsageConfig,
     postMerchantServiceConfigSmsUpdate,
     postMerchantServiceUsageConfigSmsUpdate,
@@ -125,6 +127,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverIntelligentPoolConfig as DDIPC
 import qualified Domain.Types.DriverPoolConfig as DDPC
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.Extra.TransporterConfig as DTCExtra
 import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.FarePolicy.Common as FarePolicy
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
@@ -210,6 +213,7 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import qualified SharedLogic.DashboardAlert as SDA
 import qualified SharedLogic.DriverFee as SDF
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.FareBreakup as SFB
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
@@ -5778,3 +5782,33 @@ verifyCloudSwitchPassword given = do
     asks (.cloudSwitchPassword)
       >>= fromMaybeM (InvalidRequest "Cloud switch is disabled: cloudSwitchPassword is not configured for this app")
   unless (given == expected) $ throwError AccessDenied
+
+getMerchantConfigFareBreakup :: ShortId DM.Merchant -> Context.City -> Flow Common.FareBreakupConfigRes
+getMerchantConfigFareBreakup merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  pure Common.FareBreakupConfigRes {config = A.toJSON <$> config.fareBreakupConfig}
+
+-- | Validates the city's fare breakup config and saves it only if it passes;
+-- any error rejects the whole request with every problem listed. config = null
+-- removes it.
+postMerchantConfigFareBreakupUpdate :: ShortId DM.Merchant -> Context.City -> Common.FareBreakupConfigUpdateReq -> Flow APISuccess
+postMerchantConfigFareBreakupUpdate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  mbFareBreakupConfig <- forM req.config $ \val ->
+    either (throwError . InvalidRequest . T.intercalate "; ") pure (decodeFareBreakupConfig val)
+  -- A dedicated query: CQTC.update only sets the common-config fields.
+  QTC.updateFareBreakupConfig mbFareBreakupConfig merchantOpCityId
+  CQTC.clearCache merchantOpCityId
+  invalidateConfigInMem LYT.TransporterConfig
+  logTagInfo "dashboard -> postMerchantConfigFareBreakupUpdate : " (show merchantOpCityId)
+  pure Success
+
+decodeFareBreakupConfig :: A.Value -> Either [Text] DTCExtra.FareBreakupNode
+decodeFareBreakupConfig val = case DAT.ifromJSON val of
+  DAT.IError path err -> Left ["config does not match the fare breakup shape: " <> T.pack (DAT.formatError path err)]
+  DAT.ISuccess cfg -> case SFB.validateFareBreakupConfig cfg of
+    [] -> Right cfg
+    errors -> Left errors
