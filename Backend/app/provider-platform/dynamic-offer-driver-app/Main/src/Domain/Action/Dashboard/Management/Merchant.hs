@@ -39,6 +39,7 @@ module Domain.Action.Dashboard.Management.Merchant
     getMerchantConfigTollList,
     postMerchantTollUpsert,
     deleteMerchantTollDelete,
+    getMerchantToll,
     getMerchantConfigCommon,
     postMerchantConfigCommonUpdate,
     getMerchantConfigDriverPool,
@@ -3685,6 +3686,15 @@ deleteMerchantTollDelete merchantShortId opCity tollId = do
   QTollExtra.deleteById tollId
   invalidateTollCache merchantOpCity.id.getId
   pure Success
+
+getMerchantToll :: ShortId DM.Merchant -> Context.City -> Id Toll.Toll -> Flow Common.TollAPIEntity
+getMerchantToll merchantShortId opCity tollId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  toll <- QToll.findByPrimaryKey tollId >>= fromMaybeM (InvalidRequest "Toll with given id not found")
+  when (toll.merchantOperatingCityId /= Just merchantOpCity.id.getId) $
+    throwError $ InvalidRequest "Toll with given id not found"
+  pure $ tollToAPIEntity toll
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 postMerchantSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Flow APISuccess
