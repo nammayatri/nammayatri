@@ -27,7 +27,7 @@ where
 
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as DO
-import Control.Applicative (liftA2, (<|>))
+import Control.Applicative ((<|>))
 import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import qualified Control.Monad.Extra as CME
 import Data.Aeson hiding (Success)

@@ -1,5 +1,11 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# OPTIONS_GHC -Wwarn=deprecations #-}
+
+-- TODO(streamly-migration): IsStream deprecated; migrate to
+-- Streamly.Data.Stream.* + Streamly.Internal.Data.Stream.Concurrent.
+-- Requires rewriting concurrency (S.parallel has no direct equivalent),
+-- not a mechanical import swap.
 
 -- | Streamly-based Redis-Stream consumer.
 --
@@ -36,6 +42,7 @@ module Transporter.RedisStream.Flow
 where
 
 import Control.Concurrent.Async (mapConcurrently_)
+import Control.Monad (replicateM_)
 import qualified Data.Aeson as A
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS

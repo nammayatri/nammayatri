@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.38.3.
 --
 -- see: https://github.com/sol/hpack
 
@@ -95,8 +95,8 @@ library
     , bytestring
     , casing
     , cereal
-    , connection
     , containers
+    , crypton-connection
     , directory
     , errors
     , euler-events-hs >=2.0.0 && <2.1
@@ -188,8 +188,8 @@ executable rider-app-drainer-exe
     , bytestring
     , casing
     , cereal
-    , connection
     , containers
+    , crypton-connection
     , directory
     , errors
     , euler-events-hs >=2.0.0 && <2.1

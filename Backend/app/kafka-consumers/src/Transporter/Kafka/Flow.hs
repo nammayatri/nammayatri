@@ -1,4 +1,10 @@
 {-# LANGUAGE BangPatterns #-}
+{-# OPTIONS_GHC -Wwarn=deprecations #-}
+
+-- TODO(streamly-migration): IsStream deprecated; migrate to
+-- Streamly.Data.Stream.* + Streamly.Internal.Data.Stream.Concurrent.
+-- Requires rewriting concurrency (S.parallel has no direct equivalent),
+-- not a mechanical import swap.
 
 -- | Kafka transport. Two entry points:
 --
@@ -91,7 +97,7 @@ runBatch flowRt appEnv kafkaConsumer batchSize handler = do
     & S.mapM (runFlowWithFreshLocalOptions flowRt appEnv . withTaggedFlow "kafka-batch" . handler)
     & S.drain
   where
-    dedupByKey = SF.mkFold step start extract
+    dedupByKey = SF.foldt' step start extract
       where
         step !acc (!val, !key, _) = SF.Partial ((val, key) : acc)
         start = SF.Partial []

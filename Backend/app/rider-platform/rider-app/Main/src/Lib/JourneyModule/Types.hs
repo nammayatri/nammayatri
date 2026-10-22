@@ -69,6 +69,7 @@ import Kernel.Types.Version (CloudType)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
@@ -152,7 +153,12 @@ type ConfirmFlow m r c =
     ServiceFlow m r,
     HasField "isMetroTestTransaction" r Bool,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    m ~ Kernel.Types.Flow.FlowR AppEnv
+    Finance.HasActorInfo m r,
+    HasMasterCloudForwarder r,
+    ClickhouseFlow m r,
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
+    m ~ Kernel.Types.Flow.FlowR AppEnv,
+    r ~ AppEnv
   )
 
 type CancelFlow m r c =
@@ -170,7 +176,10 @@ type CancelFlow m r c =
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    m ~ Kernel.Types.Flow.FlowR AppEnv
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
+    Hedis.HedisLTSFlowEnv r,
+    m ~ Kernel.Types.Flow.FlowR AppEnv,
+    r ~ AppEnv
   )
 
 type GetFareFlow m r =
@@ -206,7 +215,8 @@ type GetStateFlow m r c =
     HasLongDurationRetryCfg r c,
     HasShortDurationRetryCfg r c,
     HasBAPMetrics m r,
-    m ~ Kernel.Types.Flow.FlowR AppEnv
+    m ~ Kernel.Types.Flow.FlowR AppEnv,
+    r ~ AppEnv
   )
 
 type SearchJourneyLeg leg m = leg -> m SearchResponse

@@ -74,6 +74,7 @@ dependencies:
   - servant-server
   - bytestring
   - streamly
+  - streamly-core
   - openapi3
   - servant-openapi3
   - hw-kafka-client

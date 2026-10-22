@@ -64,14 +64,14 @@ dependencies:
   - base >= 4.7 && < 5
   - base64-bytestring
   - bytestring
-  - cryptonite
+  - crypton
   - zlib
-  - x509-store
-  - x509-system
+  - crypton-x509-store
+  - crypton-x509-system
   - tls
-  - connection
+  - crypton-connection
   - cryptostore >= 0.2.3.0
-  - x509
+  - crypton-x509
   - euler-hs
   - lens
   - memory

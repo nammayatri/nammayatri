@@ -20,6 +20,7 @@ module SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
   )
 where
 
+import Control.Monad (replicateM)
 import qualified Control.Monad.Catch as C
 import Control.Monad.Extra (mapMaybeM)
 import Data.Fixed (mod')

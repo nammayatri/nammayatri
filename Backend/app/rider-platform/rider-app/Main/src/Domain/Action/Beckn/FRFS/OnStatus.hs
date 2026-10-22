@@ -17,7 +17,7 @@ module Domain.Action.Beckn.FRFS.OnStatus where
 
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
-import Control.Applicative (liftA2, (<|>))
+import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HashMap
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
