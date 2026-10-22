@@ -109,3 +109,4 @@ toLibStatus = \case
   DIJS.Completed -> IJ.Completed
   DIJS.Rewarded -> IJ.Rewarded
   DIJS.WaivedOff -> IJ.WaivedOff
+  DIJS.RewardPending -> IJ.RewardPending

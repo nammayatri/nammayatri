@@ -68,6 +68,7 @@ satisfiedStatus :: DIJS.JourneyMilestoneStatus -> Bool
 satisfiedStatus DIJS.Completed = True
 satisfiedStatus DIJS.Rewarded = True
 satisfiedStatus DIJS.WaivedOff = True
+satisfiedStatus DIJS.RewardPending = True
 satisfiedStatus _ = False
 
 hasSatisfied ::

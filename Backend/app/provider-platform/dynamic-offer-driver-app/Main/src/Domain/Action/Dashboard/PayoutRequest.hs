@@ -42,6 +42,7 @@ import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Payout.Registration as Registration
 import qualified Lib.Yudhishthira.Types.ConfigPilot as CP
 import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (computeNextRunTime)
+import qualified SharedLogic.IncentiveJourney as SLIJ
 import SharedLogic.Payout.RetimeScheduledBatchPayout (RetimeDecision (..), previewResume, previewRetime, resumeSweepJob, retimeQueuedPayoutJob, scheduleChanged)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QM
@@ -66,6 +67,8 @@ updateVpa req = do
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let resolvedStatus = fromMaybe (defaultStatus req.verify) (parseVpaStatus req.vpaStatus)
   QDI.updatePayoutVpaAndStatus (Just req.vpa) (Just resolvedStatus) person.id
+  when (resolvedStatus == DI.VERIFIED_BY_USER || resolvedStatus == DI.VIA_WEBHOOK) $
+    void $ SLIJ.retryVerifiedVpaJourneyCashPayouts person.id
   pure Success
   where
     defaultStatus shouldVerify =
