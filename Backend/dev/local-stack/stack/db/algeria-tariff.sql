@@ -13,10 +13,18 @@
 -- produced it on 2026-09-03) and rounded to the nearest 5.
 --
 --   App name          Variant         Start   Per km   Pickup
---   Voiture           SEDAN             150       50       65
---   Scooter           AUTO_RICKSHAW     100       35       50
---   Herbin            HATCHBACK         100       35       50
---   Fourgon           SUV               200       65      100
+--   Voiture           SEDAN              25       50       65
+--   Scooter           AUTO_RICKSHAW      25       35       50
+--   Herbin            HATCHBACK          25       35       50
+--   Fourgon           SUV                25       65      100
+--
+-- ── 2026-10-22: the start is 25 DA for every vehicle (the boss) ────────────
+-- « Our prices are a bit high, can we reduce them. Specially the base fare,
+-- let's make it just 25 dinars. » The start only: the approach (« pickup ») and
+-- the per-km prices are unchanged, so the receipt's « Prise en charge » is now
+-- 25 + the approach (Voiture 90 DA, was 215). It was 150 / 100 / 100 / 200.
+-- Mauritania moved the same day by the same rule (mauritania-tariff.sql, 8 MRU):
+-- the two files change together, and apply-tariff.sh applies both.
 --
 -- That is close to, NOT the same as, the table the client set for Algeria on
 -- 2026-08-13 (Voiture 150/45/70, Fourgon 200/60/100). The Mauritanian figures
@@ -34,7 +42,7 @@ BEGIN;
 
 -- ── Voiture ────────────────────────────────────────────────────────────────
 UPDATE atlas_driver_offer_bpp.fare_policy
-   SET base_distance_fare   = 150,
+   SET base_distance_fare   = 25,
        base_distance_meters = 0,
        per_extra_km_fare    = 50,
        dead_km_fare         = 65,
@@ -46,7 +54,7 @@ UPDATE atlas_driver_offer_bpp.fare_policy
 
 -- ── Herbin ─────────────────────────────────────────────────────────────────
 UPDATE atlas_driver_offer_bpp.fare_policy
-   SET base_distance_fare   = 100,
+   SET base_distance_fare   = 25,
        base_distance_meters = 0,
        per_extra_km_fare    = 35,
        dead_km_fare         = 50,
@@ -58,7 +66,7 @@ UPDATE atlas_driver_offer_bpp.fare_policy
 
 -- ── Fourgon ────────────────────────────────────────────────────────────────
 UPDATE atlas_driver_offer_bpp.fare_policy
-   SET base_distance_fare   = 200,
+   SET base_distance_fare   = 25,
        base_distance_meters = 0,
        per_extra_km_fare    = 65,
        dead_km_fare         = 100,
@@ -70,7 +78,7 @@ UPDATE atlas_driver_offer_bpp.fare_policy
 
 -- ── Scooter ────────────────────────────────────────────────────────────────
 UPDATE atlas_driver_offer_bpp.fare_policy
-   SET base_distance_fare   = 100,
+   SET base_distance_fare   = 25,
        base_distance_meters = 0,
        per_extra_km_fare    = 35,
        dead_km_fare         = 50,

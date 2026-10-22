@@ -81,12 +81,20 @@ const VARIANTS = ['SEDAN', 'SUV', 'HATCHBACK', 'AUTO_RICKSHAW'];
   const nouakchott = 'lat=18.08&lon=-15.97';
 
   // ── the live server's own quotes, Algiers, Voiture ───────────────────────
+  // Measured under the tariff of before 2026-10-22, when the Voiture started at
+  // 150 DA: that start is put back for these three, then the file again.
+  await db.sql(`UPDATE atlas_driver_offer_bpp.fare_policy SET base_distance_fare = 150 WHERE merchant_id = $1 AND vehicle_variant = 'SEDAN'`, [DZ]);
   let r = await ask(`${algiers}&distance=3120&variant=SEDAN`);
   t.check('3.12 km: 371-486 DA, as the server quoted it', r.status === 200 && r.body.min === 371 && r.body.max === 486, r);
   r = await ask(`${algiers}&distance=7120&variant=SEDAN`);
   t.check('7.12 km: 571 DA, the receipt (215 start + 356)', r.status === 200 && r.body.min === 571, r);
   r = await ask(`${algiers}&distance=13680&variant=SEDAN`);
   t.check('13.68 km: 899-1184 DA, as the server quoted it', r.status === 200 && r.body.min === 899 && r.body.max === 1184, r);
+
+  // ── the tariff of 2026-10-22: the start is 25 DA (the boss) ──────────────
+  await db.exec(fs.readFileSync(path.join(STACK, 'db', 'algeria-tariff.sql'), 'utf8'));
+  r = await ask(`${algiers}&distance=7120&variant=SEDAN`);
+  t.check('since 2026-10-22, 7.12 km Voiture: 25 + 65 + 356 = 446 DA, up to 631', r.status === 200 && r.body.min === 446 && r.body.max === 631, r);
 
   // ── the bands step at their lower bound, and the cap is the band's ───────
   r = await ask(`${algiers}&distance=1999&variant=SEDAN`);
@@ -101,7 +109,7 @@ const VARIANTS = ['SEDAN', 'SUV', 'HATCHBACK', 'AUTO_RICKSHAW'];
   const expected = Number(mrRow.dead) + roundHalfEven(Number(mrRow.base)) + roundHalfEven(5 * Number(mrRow.per_km));
   t.check(`Nouakchott prices from the Mauritanian rows (${expected} MRU), not the Algerian`, r.status === 200 && r.body.min === expected, [r, mrRow]);
   r = await ask(`${algiers}&distance=5000&variant=HATCHBACK`);
-  t.check('another vehicle, its own row: Herbin 5 km = 50 + 100 + 175 = 325 DA', r.status === 200 && r.body.min === 325, r);
+  t.check('another vehicle, its own row: Herbin 5 km = 25 + 50 + 175 = 250 DA', r.status === 200 && r.body.min === 250, r);
 
   // ── what it refuses ──────────────────────────────────────────────────────
   t.check('not signed in -> 401', (await ask(`${algiers}&distance=5000&variant=SEDAN`, { signedIn: false })).status === 401);

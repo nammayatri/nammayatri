@@ -7,8 +7,21 @@ What a ride costs in each country, how "a car is near" is decided, and how a dri
 ## The tariff — `./apply-tariff.sh`
 
 ```bash
-./apply-tariff.sh          # applies algeria-tariff.sql AND clears the caches
+./apply-tariff.sh          # applies BOTH countries' files, in one transaction, AND clears the caches
+./apply-tariff.sh db/algeria-tariff.sql   # one file, only when that is truly meant
 ```
+
+**Both countries move together** (the owner, 2026-10-22: « never change one
+country without the other »). With no argument the script applies
+`algeria-tariff.sql` and `mauritania-tariff.sql` as one transaction, so a
+failure in either leaves both as they were (`tests/apply-tariff.test.js` runs
+the real script and breaks the second file to prove it).
+
+**2026-10-22, the boss: the start is 25 DA for every vehicle**, 8 MRU in
+Mauritania (25 × 0.30 = 7.5, written 8). Only `base_distance_fare` moved; the
+approach (`dead_km_fare`) and the per-km are unchanged, so the receipt's
+« Prise en charge » is now 25 + the approach — Voiture 90 DA (was 215), 28 MRU
+(was 65). The tables below are the measurements of their day.
 
 Re-measured 2026-08-24, on both merchants, all four variants:
 
