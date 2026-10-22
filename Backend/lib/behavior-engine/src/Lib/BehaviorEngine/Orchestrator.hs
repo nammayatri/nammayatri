@@ -24,6 +24,7 @@ import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.BehaviorEngine.EventLog as EventLog
 import Lib.BehaviorEngine.RuleEvaluator (RuleFetcher, evaluateRules)
 import Lib.BehaviorEngine.Types
 import Lib.BehaviorTracker.Recorder (recordAndSnapshot)
@@ -81,4 +82,6 @@ orchestrate ::
 orchestrate snapshot callerApp mocId domain fetchRules = do
   let snapshotJson = A.toJSON snapshot
   logDebug $ "Orchestrating behavior evaluation for action " <> snapshot.actionType
-  evaluateRules callerApp mocId domain fetchRules snapshotJson
+  (output, mbVersion) <- evaluateRules callerApp mocId domain fetchRules snapshotJson
+  EventLog.emitBehaviourEvents (EventLog.snapshotEventContext callerApp mocId domain mbVersion snapshot) (EventLog.outputEventDetails output)
+  pure output
