@@ -149,6 +149,7 @@ import SharedLogic.CancellationFault (FaultVerdict, FaultVerdictData)
 import SharedLogic.DriverPool.Config (Config (..))
 import SharedLogic.DriverPool.Types
 import SharedLogic.DynamicPricing
+import qualified SharedLogic.Finance.WalletAccount as WalletAccount
 import qualified SharedLogic.KaalChakra.Chakras as Chakras
 import SharedLogic.Merchant
 import qualified SharedLogic.RideFeedback.Context as SRFC
@@ -160,6 +161,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMPN
 import qualified Storage.CachedQueries.Merchant.Overlay as CQOverlay
 import qualified Storage.CachedQueries.UiDriverConfig as QUiConfig
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.DriverPoolConfig (DriverPoolConfigDimensions (..))
@@ -533,10 +535,16 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       logicData :: (LYT.Config DTPN.MerchantPushNotification) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DTPN.MerchantPushNotification)) req logicData
     LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
+      -- The generic check only parses the patch output on a default row. A change to the city's wallet
+      -- settings must also leave them consistent on its stored row (base patch, then this patch).
+      walletErrors <- transporterConfigWalletErrors merchantOpCityId req.rules
+      when (fromMaybe False req.shouldUpdateRule && not (null walletErrors)) $
+        throwError $ InvalidRequest $ Text.intercalate "; " walletErrors
       defaultConfig <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTT.TransporterConfig)) >>= fromMaybeM (InvalidRequest "Transporter config not found")
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DTT.TransporterConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DTT.TransporterConfig)) req logicData
+      verified <- YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DTT.TransporterConfig)) req logicData
+      pure (verified :: LYT.AppDynamicLogicResp) {LYT.errors = verified.errors <> map Text.unpack walletErrors}
     LYT.INVOICE_TEMPLATE _scope -> do
       logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy A.Value) req logicData
@@ -1330,6 +1338,31 @@ patchRideFeedbackCity merchantOpCityId rules = do
       A.Success (cfg :: LYT.Config DRFCfg.RideFeedbackConfig) -> Right cfg.config
       A.Error err -> Left (row.questionKey <> ": " <> Text.pack err)
   pure (rows, case partitionEithers patched of ([], ok) -> Right ok; (errs, _) -> Left errs)
+
+-- | What is wrong with a city's wallet settings (driver wallet config, ride GST) once @rules@ are
+-- applied to its stored TransporterConfig on top of the base patch. Checked only when @rules@ change
+-- those settings, so an unrelated patch is never blocked by settings that were already inconsistent.
+transporterConfigWalletErrors :: Id DMOC.MerchantOperatingCity -> [A.Value] -> Environment.Flow [Text]
+transporterConfigWalletErrors merchantOpCityId rules = do
+  mbRow <- SQTC.findByMerchantOpCityId merchantOpCityId
+  case mbRow of
+    Nothing -> pure []
+    Just row -> do
+      let domain = LYT.DRIVER_CONFIG LYT.TransporterConfig
+      mbBase <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) domain
+      baseLogics <- maybe (pure []) (\base -> map (.logic) <$> CADLE.findByDomainAndVersion domain base.version) mbBase
+      let applyLogics logics = do
+            resp <- LYTU.runLogics logics (LYT.Config row Nothing 0)
+            pure $ case A.fromJSON resp.result of
+              A.Success (cfg :: LYT.Config DTT.TransporterConfig) -> Just cfg.config
+              A.Error _ -> Nothing -- a patch that does not parse is reported by the generic check
+      mbCurrent <- applyLogics baseLogics
+      mbPatched <- applyLogics (baseLogics <> rules)
+      case (mbCurrent, mbPatched) of
+        (Just current, Just patched)
+          | patched.driverWalletConfig /= current.driverWalletConfig || patched.taxConfig.rideGst /= current.taxConfig.rideGst ->
+            WalletAccount.driverWalletConfigErrors patched <$> CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+        _ -> pure []
 
 -- { os :: DeviceType,
 --     language :: Language,

@@ -623,6 +623,10 @@ library
       SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
       SharedLogic.Allocator.Jobs.TDSDistribution.ScheduledTDSDistribution
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
+      SharedLogic.Allocator.Jobs.Wallet.ChargeWalletPenalty
+      SharedLogic.Allocator.Jobs.Wallet.MigratePendingDues
+      SharedLogic.Allocator.Jobs.Wallet.ProcessEndRideFinance
+      SharedLogic.Allocator.Jobs.Wallet.WalletIntegrityCheck
       SharedLogic.Allocator.Jobs.Webhook.Webhook
       SharedLogic.Analytics
       SharedLogic.AnalyticsExtra
@@ -730,7 +734,11 @@ library
       SharedLogic.Finance.TdsReimbursement
       SharedLogic.Finance.Wallet
       SharedLogic.Finance.WalletAccount
+      SharedLogic.Finance.WalletAutopay
+      SharedLogic.Finance.WalletBalanceCache
+      SharedLogic.Finance.WalletFloor
       SharedLogic.Finance.WalletPayout
+      SharedLogic.Finance.WalletSubscription
       SharedLogic.Fleet
       SharedLogic.FleetEngine
       SharedLogic.FleetOperatorStats

@@ -332,7 +332,7 @@ findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus merchantId mercha
     [ Se.And
         [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
           Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
-          Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE,
+          Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, WALLET_TOPUP], -- WALLET_TOPUP: Autopay wallet recharge
           Se.Is BeamDF.autopayPaymentStage $ Se.Eq (Just NOTIFICATION_SCHEDULED),
           Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
           Se.Is BeamDF.status $ Se.Eq status,
@@ -363,7 +363,7 @@ findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatusByDriverIds mercha
       [ Se.And
           [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
             Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
-            Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE,
+            Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, WALLET_TOPUP], -- WALLET_TOPUP: Autopay wallet recharge
             Se.Is BeamDF.autopayPaymentStage $ Se.Eq (Just NOTIFICATION_SCHEDULED),
             Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
             Se.Is BeamDF.status $ Se.Eq status,
@@ -390,7 +390,7 @@ findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceName merchantId merch
     [ Se.And
         [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
           Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
-          Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE,
+          Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, WALLET_TOPUP], -- WALLET_TOPUP: Autopay wallet recharge
           Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING,
           Se.Is BeamDF.autopayPaymentStage $ Se.Eq (Just EXECUTION_SCHEDULED),
           Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
@@ -418,7 +418,7 @@ findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceNameByDriverIds merch
       [ Se.And
           [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
             Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
-            Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE,
+            Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, WALLET_TOPUP], -- WALLET_TOPUP: Autopay wallet recharge
             Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING,
             Se.Is BeamDF.autopayPaymentStage $ Se.Eq (Just EXECUTION_SCHEDULED),
             Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
@@ -676,6 +676,7 @@ updateDriverFeeOverlayScheduledByServiceName driverIds val from to serviceName =
 updateToManualFeeByDriverFeeIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DriverFee] -> m ()
 updateToManualFeeByDriverFeeIds driverFeeIds = do
   now <- getCurrentTime
+  inactivateFailedWalletRecharges driverFeeIds now
   updateWithKV
     [ Se.Set BeamDF.feeType Domain.RECURRING_INVOICE,
       Se.Set BeamDF.status Domain.PAYMENT_OVERDUE,
@@ -811,6 +812,7 @@ updateStatus status (Id driverFeeId) now = do
 updateAutoPayToManual :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m ()
 updateAutoPayToManual driverFeeId = do
   now <- getCurrentTime
+  inactivateFailedWalletRecharges [driverFeeId] now
   updateOneWithKV
     [ Se.Set BeamDF.feeType RECURRING_INVOICE,
       Se.Set BeamDF.status PAYMENT_OVERDUE,
@@ -822,6 +824,22 @@ updateAutoPayToManual driverFeeId = do
           Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE
         ]
     ]
+
+-- | Every Autopay failure path moves the fee to a manual payment link. A wallet recharge
+--   (WALLET_TOPUP) has no manual fallback -- the driver tops up instead -- so it goes INACTIVE.
+inactivateFailedWalletRecharges :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DriverFee] -> UTCTime -> m ()
+inactivateFailedWalletRecharges driverFeeIds now =
+  unless (null driverFeeIds) $
+    updateWithKV
+      [ Se.Set BeamDF.status Domain.INACTIVE,
+        Se.Set BeamDF.updatedAt now
+      ]
+      [ Se.And
+          [ Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds),
+            Se.Is BeamDF.status $ Se.Eq Domain.PAYMENT_PENDING,
+            Se.Is BeamDF.feeType $ Se.Eq Domain.WALLET_TOPUP
+          ]
+      ]
 
 updateDriverFeeToManual :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DriverFee] -> m ()
 updateDriverFeeToManual driverFeeIds = do
@@ -1230,3 +1248,102 @@ findAllCancellationPenaltiesInDisputeWindow serviceName merchantId merchantOpera
           Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId)
         ]
     ]
+
+-- | Autopay stages during which a charge is in flight or already went through: a due in one of these
+--   must not be moved into the wallet, or it could be collected twice. EXECUTION_SUCCESS is set just
+--   before the paid fee is marked CLEARED, and can stay on a fee that is still pending when that second
+--   step is skipped (payout lock held); the payment, not the wallet, settles such a fee.
+walletMigrationInFlightStages :: [AutopayPaymentStage]
+walletMigrationInFlightStages = [NOTIFICATION_ATTEMPTING, EXECUTION_SCHEDULED, EXECUTION_ATTEMPTING, EXECUTION_SUCCESS]
+
+-- | Unpaid subscription dues of a city that can move into the wallet now (charge not in flight).
+findPendingDuesForWalletMigration ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  ServiceNames ->
+  Int ->
+  m [DriverFee]
+findPendingDuesForWalletMigration merchantOperatingCityId serviceName limit =
+  findAllWithOptionsKV'
+    [ Se.And
+        [ Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE],
+          Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE, CANCELLATION_PENALTY],
+          Se.Or
+            [ Se.Is BeamDF.autopayPaymentStage $ Se.Eq Nothing,
+              Se.Is BeamDF.autopayPaymentStage $ Se.Not $ Se.In (Just <$> walletMigrationInFlightStages)
+            ]
+        ]
+    ]
+    (Just limit)
+    Nothing
+
+-- | Dues of a city still waiting on an in-flight Autopay charge (picked up once it settles).
+findInFlightDuesForWalletMigration ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  ServiceNames ->
+  Int ->
+  m [DriverFee]
+findInFlightDuesForWalletMigration merchantOperatingCityId serviceName limit =
+  findAllWithOptionsKV'
+    [ Se.And
+        [ Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE],
+          Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE, CANCELLATION_PENALTY],
+          Se.Is BeamDF.autopayPaymentStage $ Se.In (Just <$> walletMigrationInFlightStages)
+        ]
+    ]
+    (Just limit)
+    Nothing
+
+-- | Day fees of a wallet city that the nightly run left PAYMENT_PENDING because their wallet debit
+--   failed (the wallet integrity check retries them), starting from the given time.
+findPendingWalletDayFeesInCity ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  ServiceNames ->
+  UTCTime ->
+  Int ->
+  m [DriverFee]
+findPendingWalletDayFeesInCity merchantOperatingCityId serviceName fromTime limit =
+  findAllWithOptionsKV'
+    [ Se.And
+        [ Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE,
+          Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING,
+          Se.Is BeamDF.autopayPaymentStage $ Se.Eq Nothing,
+          Se.Is BeamDF.startTime $ Se.GreaterThanOrEq fromTime
+        ]
+    ]
+    (Just limit)
+    Nothing
+
+-- | Fees of a city marked collected from the wallet in a time range (wallet integrity check), one page
+--   of ids after the last one seen (keyset).
+findWalletCollectedInRange ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  Int ->
+  Maybe (Id DriverFee) ->
+  m [DriverFee]
+findWalletCollectedInRange merchantOperatingCityId collectedBy from to limit mbLastId =
+  findAllWithOptionsKV
+    [ Se.And $
+        [ Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+          Se.Is BeamDF.collectedBy $ Se.Eq (Just collectedBy),
+          Se.Is BeamDF.status $ Se.Eq CLEARED,
+          Se.Is BeamDF.collectedAt $ Se.GreaterThanOrEq (Just from),
+          Se.Is BeamDF.collectedAt $ Se.LessThan (Just to)
+        ]
+          <> [Se.Is BeamDF.id $ Se.GreaterThan lastId.getId | Just lastId <- [mbLastId]]
+    ]
+    (Se.Asc BeamDF.id)
+    (Just limit)
+    Nothing

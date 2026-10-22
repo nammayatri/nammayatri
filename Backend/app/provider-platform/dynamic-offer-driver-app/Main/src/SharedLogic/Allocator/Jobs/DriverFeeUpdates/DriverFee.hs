@@ -50,6 +50,7 @@ import qualified Kernel.External.Payment.Interface as PaymentInterface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -59,12 +60,16 @@ import Kernel.Types.Id (Id (Id), cast)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.ActiveDriversList as ADL
 import SharedLogic.Allocator
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as SLOSO
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, jobDuplicationPreventionKey, roundToHalf, setCoinToCashUsedAmount, setCreateDriverFeeForServiceInSchedulerKey, toCreateDriverFeeForService)
+import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
+import qualified SharedLogic.Finance.WalletFloor as WalletFloor
+import qualified SharedLogic.Finance.WalletSubscription as WalletSubscription
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -98,6 +103,11 @@ calculateDriverFeeForDrivers ::
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "blackListedJobs" r [Text],
     Redis.HedisLTSFlowEnv r,
+    Redis.HedisFlow m r,
+    BeamFlow m r,
+    Finance.HasActorInfo m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasKafkaProducer r
   ) =>
   Job 'CalculateDriverFees ->
@@ -189,7 +199,11 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                       cancellationPenaltyAmount = Just totalCancellationPenalty
                     }
             --------------------------------------------------
-            let paymentMode = maybe MANUAL (.planType) mbDriverPlan
+            -- Wallet cities: the fee is debited from the wallet, so it is never split per mandate
+            -- limit and never goes to Autopay or a payment link.
+            let walletCity = serviceName == YATRI_SUBSCRIPTION && isWalletSubscriptionCity transporterConfig.driverWalletConfig
+                paymentMode = if walletCity then MANUAL else maybe MANUAL (.planType) mbDriverPlan
+                splitMandateId = if walletCity then Nothing else mandateId
             let nonEmptyDriverId = NE.fromList [driverFee.driverId]
             ------------- process driver fee based on payment mode ----------------
             -- only subscription processing here; guard on totalFee > 0 so a zero-fee (free-ride) day with a
@@ -202,7 +216,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                   setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer totalFee
                   -- clear by coins and zero the cancellation in one write (it goes on a separate fee below)
                   QDF.updateStatusAndCancellationPenaltyByIds CLEARED_BY_YATRI_COINS 0 [driverFeeUpdateWithPlanAndOffer.id] now
-                  driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId Nothing subscriptionConfigs transporterConfig now
+                  driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer splitMandateId Nothing subscriptionConfigs transporterConfig now
                   invoice <- mkInvoiceAgainstDriverFee driverFeeUpdateWithPlanAndOffer (True, paymentMode == AUTOPAY)
                   updateAmountPaidByCoins (Just totalFee) driverFeeUpdateWithPlanAndOffer.id
                   QINV.create invoice
@@ -210,10 +224,11 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                   when (coinCashLeft > 0) $ do
                     QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1.0 * coinCashLeft)
                     setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer coinCashLeft
-                  driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId (Just coinCashLeft) subscriptionConfigs transporterConfig now
-                  updatePendingPayment True (cast driverFeeUpdateWithPlanAndOffer.driverId)
-                  SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "PaymentOverdueGreaterThan") nonEmptyDriverId
-                  SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "PaymentOverdueBetween") nonEmptyDriverId
+                  driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer splitMandateId (Just coinCashLeft) subscriptionConfigs transporterConfig now
+                  unless walletCity $ do
+                    updatePendingPayment True (cast driverFeeUpdateWithPlanAndOffer.driverId)
+                    SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "PaymentOverdueGreaterThan") nonEmptyDriverId
+                    SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "PaymentOverdueBetween") nonEmptyDriverId
             -------------------------------------------------------------------------------
             -- blocking
             dueDriverFees <- QDF.findAllFeeByTypeServiceStatusAndDriver serviceName (cast driverFee.driverId) [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE]
@@ -228,19 +243,40 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             -- consume the source penalties only after placement, so a failure above keeps them re-billable
             when (totalCancellationPenalty > 0) $
               QDF.updateStatusAndAddedToFeeId ADDED_TO_INVOICE (Just driverFee.id) (map (.id) cancellationPenalties) now
-            if isBlocked
+            if walletCity
               then do
-                -- driverFeeIds was queried before the cancellation children existed, so add cancellationChildIds
-                -- (from handleCancellationPenalty, no re-query) to also convert them to manual for a blocked driver.
-                updateDriverFeeToManual $ driverFeeIds <> [driverFee.id] <> cancellationChildIds
-                when (fromMaybe plan.subscribedFlagToggleAllowed isPlanToggleAllowedAtPlanLevel) $ do
-                  updateSubscription False (cast driverFee.driverId)
-                  SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "BlockedDrivers") nonEmptyDriverId
-              else -- bill the parent only if it has a subscription fee coins didn't cover; otherwise it's CLEARED
-              -- and the penalty is already on a child (above).
+                -- Debit what is still payable (the parent unless coins cleared it, plus any
+                -- cancellation child) from the wallet, even into negative; the wallet floor and
+                -- Autopay take over from here instead of today's dues blocking.
+                let parentPayable = totalFee > 0 && coinCashLeft < totalFee
+                -- The coins above are already spent and the parent's amounts already reset. Take the parent
+                -- out of ONGOING before debiting, so a failed debit is retried by WalletIntegrityCheck as
+                -- just the debit, and not recalculated (with no coins left) by the next batch.
+                when parentPayable $ QDF.updateStatus PAYMENT_PENDING driverFee.id now
+                feesToDebit <- QDF.findAllByDriverFeeIds ([driverFee.id | parentPayable] <> cancellationChildIds)
+                forM_ feesToDebit $ \feeToDebit ->
+                  withTryCatch "debitDriverFeeFromWallet:nightly" (WalletSubscription.debitDriverFeeFromWallet transporterConfig WalletSubscription.DailySubscription feeToDebit) >>= \case
+                    Left err -> logError $ "Nightly wallet debit failed for driver fee " <> feeToDebit.id.getId <> ", WalletIntegrityCheck will retry: " <> show err
+                    Right () -> pure ()
+                -- Floor, recharge and nudge are follow-ups: one driver's failure here must not stop the
+                -- rest of the batch (the next debit, ride end or go-online check runs them again).
+                withTryCatch "afterWalletDebit:nightly" (WalletFloor.afterWalletDebit transporterConfig driver) >>= \case
+                  Left err -> logError $ "Wallet floor follow-up failed for driver " <> driver.id.getId <> " after the nightly debit: " <> show err
+                  Right () -> pure ()
+              else
+                if isBlocked
+                  then do
+                    -- driverFeeIds was queried before the cancellation children existed, so add cancellationChildIds
+                    -- (from handleCancellationPenalty, no re-query) to also convert them to manual for a blocked driver.
+                    updateDriverFeeToManual $ driverFeeIds <> [driverFee.id] <> cancellationChildIds
+                    when (fromMaybe plan.subscribedFlagToggleAllowed isPlanToggleAllowedAtPlanLevel) $ do
+                      updateSubscription False (cast driverFee.driverId)
+                      SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "BlockedDrivers") nonEmptyDriverId
+                  else -- bill the parent only if it has a subscription fee coins didn't cover; otherwise it's CLEARED
+                  -- and the penalty is already on a child (above).
 
-                when (totalFee > 0 && coinCashLeft < totalFee) $
-                  processDriverFee paymentMode driverFeeWithPenalties subscriptionConfigs transporterConfig
+                    when (totalFee > 0 && coinCashLeft < totalFee) $
+                      processDriverFee paymentMode driverFeeWithPenalties subscriptionConfigs transporterConfig
             updateSerialOrderForInvoicesInWindow driverFee.id merchantOpCityId startTime endTime serviceName transporterConfig.timeDiffFromUtc
 
     let closeOutWindow =
@@ -248,6 +284,10 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             >>= \duplicationKey ->
               when duplicationKey do
                 scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName subscriptionConfigs jobData
+                -- Wallet cities: check the window's wallet postings once the nightly debits are done.
+                when (serviceName == YATRI_SUBSCRIPTION && isWalletSubscriptionCity transporterConfig.driverWalletConfig) $ do
+                  createJobIn @_ @'WalletIntegrityCheck (Just merchantId) (Just merchantOpCityId) 3600 $
+                    WalletIntegrityCheckJobData {merchantId = merchantId, merchantOperatingCityId = merchantOpCityId, startTime = startTime, endTime = endTime}
     case listToMaybe driverFees of
       Nothing -> case jobData.shardNum of
         Nothing -> do
@@ -972,6 +1012,11 @@ sendManualPaymentLink Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let nowLocalTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) now
       timeDiffSinceEndTime = diffUTCTime nowLocalTime endTime
   case subscriptionConfigs.sendManualPaymentLinkJobMaxDelay of
+    _
+      | isWalletSubscriptionCity transporterConfig.driverWalletConfig && serviceName == YATRI_SUBSCRIPTION ->
+        -- Wallet cities have no dues to collect by link: the fee comes from the wallet, and a
+        -- pending Autopay recharge must never be turned into a manual payment link.
+        return Complete
     Just maxDelay
       | timeDiffSinceEndTime > maxDelay ->
         return $ Terminate $ "Job scheduled too late. Time since endTime: " <> show (timeDiffSinceEndTime / 3600) <> " hours, Maximum allowed delay: " <> show (maxDelay / 3600) <> " hours. Marking as Failed."

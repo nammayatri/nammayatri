@@ -63,6 +63,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, getStartTimeAndEndTimeRange, mkCachedKeyTotalRidesByDriverId, roundToHalf)
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidBalanceByOwner, handleSubscriptionExpiry)
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
+import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Payment
 import qualified SharedLogic.Payment as SPayment
@@ -124,7 +125,9 @@ data PlanEntity = PlanEntity
     airportRideSubscriptionByTier :: Maybe [ServiceTierRideSubscription],
     mahilaShaktiRideSubscription :: Maybe HighPrecMoney,
     remainingPlanCreditLimit :: Maybe HighPrecMoney,
-    planBaseAmount :: HighPrecMoney
+    planBaseAmount :: HighPrecMoney,
+    -- | Payments and dues live on the Wallet page (the subscription is collected from the wallet).
+    isSubscriptionWalletManaged :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1455,6 +1458,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
         remainingPlanCreditLimit = Nothing,
         planBaseAmount = getPlanAmount plan.planBaseAmount,
         airportRideSubscriptionByTier = driverTierAirportCharges,
+        isSubscriptionWalletManaged = Just (serviceNameParam == YATRI_SUBSCRIPTION && isWalletSubscriptionCity transporterConfig_.driverWalletConfig),
         ..
       }
   where

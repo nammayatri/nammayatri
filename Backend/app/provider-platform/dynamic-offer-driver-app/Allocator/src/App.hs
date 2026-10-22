@@ -92,6 +92,10 @@ import SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase (expir
 import SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
 import SharedLogic.Allocator.Jobs.TDSDistribution.ScheduledTDSDistribution (scheduledTDSDistribution)
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
+import SharedLogic.Allocator.Jobs.Wallet.ChargeWalletPenalty (chargeWalletPenaltyJob)
+import SharedLogic.Allocator.Jobs.Wallet.MigratePendingDues (migratePendingDuesToWallet)
+import SharedLogic.Allocator.Jobs.Wallet.ProcessEndRideFinance (processEndRideFinanceJob)
+import SharedLogic.Allocator.Jobs.Wallet.WalletIntegrityCheck (walletIntegrityCheck)
 import SharedLogic.Allocator.Jobs.Webhook.Webhook
 import SharedLogic.KaalChakra.Chakras
 import SharedLogic.MediaFileDocument (mediaFileDocumentComplete)
@@ -210,6 +214,10 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env deleteUnreferencedFarePolicies
           & putJobHandlerInListWrapper flowRt env runGenerateInvoicePdfJob
           & putJobHandlerInListWrapper flowRt env handleSendLegalPolicyNotification
+          & putJobHandlerInListWrapper flowRt env migratePendingDuesToWallet
+          & putJobHandlerInListWrapper flowRt env processEndRideFinanceJob
+          & putJobHandlerInListWrapper flowRt env walletIntegrityCheck
+          & putJobHandlerInListWrapper flowRt env chargeWalletPenaltyJob
     }
 
 runDriverOfferAllocator ::

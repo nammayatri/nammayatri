@@ -18,6 +18,7 @@ import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingStatus as DB
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude as P
 import Kernel.Storage.ClickhouseV2 as CH
@@ -31,6 +32,7 @@ data BookingT f = BookingT
     fromLocationId :: C f (Maybe (Id DL.Location)),
     toLocationId :: C f (Maybe (Id DL.Location)),
     merchantId :: C f (Id DM.Merchant),
+    merchantOperatingCityId :: C f (Maybe (Id DMOC.MerchantOperatingCity)),
     createdAt :: C f UTCTime
   }
   deriving (Generic)
@@ -47,6 +49,7 @@ bookingTTable =
       fromLocationId = "from_location_id",
       toLocationId = "to_location_id",
       merchantId = "merchant_id",
+      merchantOperatingCityId = "merchant_operating_city_id",
       createdAt = "created_at"
     }
 

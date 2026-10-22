@@ -290,6 +290,7 @@ import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidAvailableBalanceByOwner, hasPrepaidCreditsValidAt)
 import qualified SharedLogic.Finance.Wallet as FWallet
+import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -1121,6 +1122,8 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
           unless (driverInfo.enabled) $ throwError DriverAccountDisabled
           unless isPrepaidDriver $
             unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
+          unless isPrepaidDriver $
+            WalletFloor.checkWalletGoOnlineEligibility transporterConfig person (mbVehicle <&> (.variant))
           when isPrepaidEnabled $ do
             unless (isJust mbVehicle) $
               throwError $ InvalidRequest "Cannot go online: no active vehicle linked"
