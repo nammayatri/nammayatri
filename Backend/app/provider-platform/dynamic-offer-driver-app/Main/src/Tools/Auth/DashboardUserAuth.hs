@@ -53,6 +53,7 @@ module Tools.Auth.DashboardUserAuth
     beginFleetOwnerRegistration,
     completeFleetOwnerRegistration,
     requestorCityAccess,
+    requestorHasCapability,
     module Reexport,
   )
 where
@@ -66,7 +67,7 @@ import Kernel.Prelude
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
 import Kernel.Utils.Servant.HeaderAuth (VerificationMethod (..))
 import Servant
-import Tools.Auth.DashboardUser (DashboardAccountVerification, DashboardAuthFlow, DashboardUser, FleetOwnerRegistration (..), applyDashboardAccountVerification, auditDashboardAction, beginFleetOwnerRegistration, checkFleetOwnerVerification, completeFleetOwnerRegistration, dashboardRequestorEmail, dashboardRequestorId, dashboardRequestorIdForDriver, dashboardRequestorName, requestorCityAccess, requestorFleetFlag, requestorHasFleetMemberHierarchy, requestorIsFleetOwner, resolveRequestorTopic, syncDashboardPersonVerified, updateDashboardPersonRole, updateDashboardPersonVerified, validateDashboardAccountVerification)
+import Tools.Auth.DashboardUser (DashboardAccountVerification, DashboardAuthFlow, DashboardUser, FleetOwnerRegistration (..), applyDashboardAccountVerification, auditDashboardAction, beginFleetOwnerRegistration, checkFleetOwnerVerification, completeFleetOwnerRegistration, dashboardRequestorEmail, dashboardRequestorId, dashboardRequestorIdForDriver, dashboardRequestorName, requestorCityAccess, requestorFleetFlag, requestorHasCapability, requestorHasFleetMemberHierarchy, requestorIsFleetOwner, resolveRequestorTopic, syncDashboardPersonVerified, updateDashboardPersonRole, updateDashboardPersonVerified, validateDashboardAccountVerification)
 import qualified Tools.Auth.DashboardUser as DashboardUser
 import "lib-dashboard" Tools.Servant.HeaderAuth
 
