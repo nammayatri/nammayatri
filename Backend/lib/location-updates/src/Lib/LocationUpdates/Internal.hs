@@ -26,6 +26,7 @@ module Lib.LocationUpdates.Internal
     clearLocationUpdatesImplementation,
     addInterpolatedPointsImplementation,
     clearInterpolatedPointsImplementation,
+    clearAccumulatedDistanceState,
     expireInterpolatedPointsImplementation,
     getInterpolatedPointsImplementation,
     isDistanceCalculationFailedImplementation,
@@ -476,6 +477,16 @@ clearInterpolatedPointsImplementation driverId = do
   clearList key
   redisOnRideKeysCleanup driverId
   logInfo $ mconcat ["cleared interpolated location updates for driverId = ", driverId.getId]
+
+-- | Drops every Redis key the distance accumulator keeps for @driverId@: the raw waypoint
+-- buffer, the interpolated points, the last-two-points carry-over and the cumulative
+-- 'SnapToRoadState' (whose @distanceTravelled@ is what each batch adds onto). Callers pass
+-- the id of the leg they are resetting — the pickup leg uses a distinct suffixed id, so
+-- resetting it never touches the on-ride buffers. Safe to call when nothing is buffered.
+clearAccumulatedDistanceState :: HedisFlow m env => Id person -> m ()
+clearAccumulatedDistanceState driverId = do
+  clearLocationUpdatesImplementation driverId
+  clearInterpolatedPointsImplementation driverId
 
 getInterpolatedPointsImplementation :: HedisFlow m env => Id person -> m [LatLong]
 getInterpolatedPointsImplementation = Hedis.getList . makeInterpolatedPointsRedisKey

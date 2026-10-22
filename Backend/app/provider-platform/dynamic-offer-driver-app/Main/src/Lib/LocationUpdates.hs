@@ -18,7 +18,6 @@ module Lib.LocationUpdates
     whenWithLocationUpdatesLock,
     buildRideInterpolationHandler,
     buildRidePickupInterpolationHandler,
-    pickupLocationUpdatesDriverId,
   )
 where
 
@@ -112,9 +111,6 @@ type LocationUpdateFlow m r c =
     HasField "rideEventsPublisherCfg" r (Maybe RideEventsPublisherCfg),
     Finance.HasActorInfo m r
   )
-
-pickupLocationUpdatesDriverId :: Id Person -> Id Person
-pickupLocationUpdatesDriverId driverId = Id (driverId.getId <> ":pickup")
 
 getDeviationForPoint :: LatLong -> [LatLong] -> Meters
 getDeviationForPoint pt estimatedRoute =
@@ -353,7 +349,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
 
 -- | Pickup-leg variant of 'buildRideInterpolationHandler' used to compute
 -- @distanceToPickup@. Redis state is kept fully separate from the on-ride buffers by
--- callers passing a 'pickupLocationUpdatesDriverId' (":pickup"-suffixed) id.
+-- callers passing a 'pickupLegDriverId' (":pickup"-suffixed) id.
 buildRidePickupInterpolationHandler :: LocationUpdateFlow m r c => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id Ride) -> Bool -> Maybe Integer -> m (RideInterpolationHandler Person m)
 buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRide mbBatchSize = do
   transportConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -367,7 +363,7 @@ buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRid
       (fromMaybe transportConfig.normalRideBulkLocUpdateBatchSize mbBatchSize)
       98
       isEndRide
-      (\_driverId dist _googleSnapCalls _osrmSnapCalls _numberOfSelfTuned isDistCalcFailed -> whenJust rideId $ \rid -> QRide.updateDistanceToPickup rid dist isDistCalcFailed)
+      (\_driverId dist _googleSnapCalls _osrmSnapCalls _numberOfSelfTuned isDistCalcFailed -> whenJust rideId $ \rid -> updatePickupDistance rid dist isDistCalcFailed)
       (\_driverId _tollCharges _tollNames _tollIds -> pure ()) -- no toll accounting on the pickup leg
       (\_driverId _accurateWaypoints _allWaypoints _mbPreviousRouteSegment -> pure (False, False, False)) -- no route-deviation / safety checks on the pickup leg
       (\_mbDriverId _mbPreviousRouteSegment -> const (pure Nothing)) -- no toll detection on the pickup leg
@@ -376,6 +372,46 @@ buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRid
       snapToRoad'
       (\_driverId -> pure ())
       (\_driverId -> pure ())
+
+-- | Ratio of measured-to-estimated pickup distance past which the measurement is treated
+-- as a snap-to-road artefact rather than a real detour. The pickup leg runs OSRM-only and
+-- never rectifies distant points (see 'buildRidePickupInterpolationHandler'), so GPS noise
+-- inflates it with nothing to bound it. Driving three times the road distance the pool
+-- measured at assignment is not a plausible detour on a leg a couple of kilometres long.
+implausiblePickupDistanceRatio :: HighPrecMeters
+implausiblePickupDistanceRatio = 3
+
+-- | Floor below which the ratio check is not applied, so short legs — where the estimate
+-- is small and a few hundred metres of circling for a gate or a U-turn is normal — are
+-- never flagged.
+implausiblePickupDistanceFloor :: HighPrecMeters
+implausiblePickupDistanceFloor = 1000
+
+-- | Persists the measured pickup distance, treating a measurement far above what the
+-- driver pool measured at assignment as a failed calculation.
+--
+-- Flagging follows the same contract as an OSRM failure: no value is written and
+-- @pickupDistanceCalculationFailed@ is set, so pickup-distance reporting and the
+-- @completed@ stage of @BPP_pickup_distance_meters@ skip the ride instead of averaging in
+-- a number the driver never drove. The rejected value is logged for diagnosis.
+updatePickupDistance :: LocationUpdateFlow m r c => Id Ride -> HighPrecMeters -> Bool -> m ()
+updatePickupDistance rideId measured isDistCalcFailed
+  | isDistCalcFailed = QRide.updateDistanceToPickup rideId measured True
+  | otherwise = do
+    mbRide <- QRide.findById rideId
+    mbBooking <- maybe (return Nothing) (QBooking.findById . (.bookingId)) mbRide
+    let mbEstimated = metersToHighPrecMeters <$> (mbBooking >>= (.distanceToPickup))
+        implausible = maybe False (\estimated -> measured > max implausiblePickupDistanceFloor (implausiblePickupDistanceRatio * estimated)) mbEstimated
+    when implausible $
+      whenJust mbEstimated $ \estimated ->
+        logWarning $
+          "Discarding implausible pickup distance for rideId="
+            <> rideId.getId
+            <> " measured="
+            <> show measured
+            <> " estimatedAtAssignment="
+            <> show estimated
+    QRide.updateDistanceToPickup rideId measured implausible
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m a -> m a
 whenWithLocationUpdatesLock driverId f = do

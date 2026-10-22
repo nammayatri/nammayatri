@@ -66,6 +66,7 @@ import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfi
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
+import qualified "location-updates" Lib.LocationUpdates as LocUpd
 import Lib.Scheduler (SchedulerType)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
@@ -291,6 +292,10 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy transport
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
   Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCReason.source) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
   void $ QRB.updateStatus booking.id SRB.CANCELLED
+  -- This ride's pickup leg will never be finalized, so nothing else clears its buffers.
+  -- Leaving them would make the driver's next assignment measure its pickup distance from
+  -- wherever this one left off.
+  LocUpd.resetPickupLegState ride.driverId
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
 
 -- | Create BPP-side finance ledger entries + invoice for a customer cancellation charge.

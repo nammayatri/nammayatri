@@ -55,6 +55,7 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified "location-updates" Lib.LocationUpdates as LocUpd
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
@@ -213,8 +214,11 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
   Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
+  -- The assignment-time value lives on the booking (copied from the accepted driver
+  -- quote); ride.distanceToPickup is only filled in once the pickup leg is measured at
+  -- ride start, so reading it here would leave the pre_ride stage permanently empty.
   fork "BPP pre_ride pickup-distance histogram" $
-    whenJust ride.distanceToPickup $ \pickupDistanceVal ->
+    whenJust booking.distanceToPickup $ \pickupDistanceVal ->
       Metrics.observePickupDistanceMeters merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) "pre_ride" (realToFrac pickupDistanceVal)
   QRideD.create rideDetails
   whenJust booking.riderId (QRiderD.updateTotalBookingsCount . getId)
@@ -226,6 +230,11 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
     when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)
+  -- Start this ride's pickup leg from a clean slate: the leg is only finalized (and its
+  -- buffers cleared) when a ride starts, so an earlier assignment that was cancelled or
+  -- reallocated before start would otherwise leave waypoints and a cumulative distance
+  -- behind for the keys' TTL, and this ride's distanceToPickup would include them.
+  LocUpd.resetPickupLegState ride.driverId
   unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
   -- Monitoring is opted in by the caller: remote-driver assignments (Beckn confirm) monitor;
   -- OTP/meter rides (customer is already with the driver) and scheduled-booking accepts don't.

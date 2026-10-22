@@ -23,6 +23,8 @@ module Lib.LocationUpdates
     addIntermediatePickupPoints,
     getInterpolatedPoints,
     clearInterpolatedPoints,
+    pickupLegDriverId,
+    resetPickupLegState,
     isPassedThroughDrop,
   )
 where
@@ -31,9 +33,10 @@ import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Kernel.External.Maps.Interface.Types (MapsServiceConfig)
 import Kernel.External.Maps.Types
+import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
-import Kernel.Types.Id (Id)
+import Kernel.Types.Id (Id (..))
 import qualified Lib.LocationUpdates.Internal as I
 
 withRideIdLogTag :: (Log m) => Id ride -> m a -> m a
@@ -73,6 +76,22 @@ addIntermediateRoutePoints ih rectifyDistantPointsFailureUsing isTollApplicable 
 addIntermediatePickupPoints :: (CacheFlow m r, Log m, MonadThrow m, MonadFlow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> [(LatLong, Int64)] -> NonEmpty (LatLong, Int64) -> m ()
 addIntermediatePickupPoints ih rideId driverId accWaypointsWithTime allWaypointsWithTime = withRideIdLogTag rideId $ do
   I.processWaypointsPickup ih driverId False accWaypointsWithTime allWaypointsWithTime
+
+-- | The pickup leg keeps its Redis state under a ":pickup"-suffixed driver id, so it never
+-- shares buffers with the on-ride leg.
+pickupLegDriverId :: Id person -> Id person
+pickupLegDriverId driverId = Id (driverId.getId <> ":pickup")
+
+-- | Drops any pickup-leg distance state left in Redis for this driver.
+--
+-- The pickup leg is only finalized when a ride starts; an assignment that is cancelled or
+-- reallocated before start leaves its waypoints and its cumulative @distanceTravelled@
+-- behind for the keys' TTL (6-24h). The next assignment for the same driver then appends
+-- to that leftover state, so its @distanceToPickup@ comes out as the sum of every pickup
+-- leg since the last ride that actually started. Call this at assignment and on
+-- cancellation to keep each leg self-contained.
+resetPickupLegState :: (HedisFlow m env) => Id person -> m ()
+resetPickupLegState = I.clearAccumulatedDistanceState . pickupLegDriverId
 
 isDistanceCalculationFailed :: I.RideInterpolationHandler person m -> Id person -> m Bool
 isDistanceCalculationFailed ih = ih.isDistanceCalculationFailed
