@@ -20,7 +20,11 @@ data DriverProfileQuestions = DriverProfileQuestions
     imageIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     pledges :: [Kernel.Prelude.Text],
+    selfDeclarations :: Kernel.Prelude.Maybe [Domain.Types.DriverProfileQuestions.SelfDeclarationValueReq],
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
   }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data SelfDeclarationValueReq = SelfDeclarationValueReq {answer :: [Kernel.Prelude.Text], answerId :: [Kernel.Prelude.Text], question :: Kernel.Prelude.Text, questionId :: Kernel.Prelude.Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

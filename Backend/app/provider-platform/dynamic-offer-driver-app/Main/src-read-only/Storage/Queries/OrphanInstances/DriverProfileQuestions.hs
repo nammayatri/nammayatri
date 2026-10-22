@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.DriverProfileQuestions where
 
+import qualified Data.Aeson
 import qualified Domain.Types.DriverProfileQuestions
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -10,6 +11,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.DriverProfileQuestions as Beam
 
 instance FromTType' Beam.DriverProfileQuestions Domain.Types.DriverProfileQuestions.DriverProfileQuestions where
@@ -26,6 +28,7 @@ instance FromTType' Beam.DriverProfileQuestions Domain.Types.DriverProfileQuesti
             imageIds = imageIds,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             pledges = pledges,
+            selfDeclarations = Kernel.Utils.JSON.valueToMaybe =<< selfDeclarations,
             updatedAt = updatedAt,
             vehicleTags = vehicleTags
           }
@@ -42,6 +45,7 @@ instance ToTType' Beam.DriverProfileQuestions Domain.Types.DriverProfileQuestion
         Beam.imageIds = imageIds,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.pledges = pledges,
+        Beam.selfDeclarations = Data.Aeson.toJSON <$> selfDeclarations,
         Beam.updatedAt = updatedAt,
         Beam.vehicleTags = vehicleTags
       }
