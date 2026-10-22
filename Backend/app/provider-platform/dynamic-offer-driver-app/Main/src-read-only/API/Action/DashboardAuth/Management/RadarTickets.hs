@@ -106,22 +106,22 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getRadarTicketsList merchantId city :<|> getRadarTicketsSummary merchantId city :<|> getRadarTicketsReporters merchantId city :<|> getRadarTicketsTicket merchantId city :<|> getRadarTicketsTicketConversation merchantId city :<|> getRadarTicketsTicketAttachment merchantId city :<|> postRadarTicketsTicketReply merchantId city :<|> postRadarTicketsUpload merchantId city :<|> postRadarTicketsCreate merchantId city :<|> postRadarTicketsTicketUpdateStatus merchantId city :<|> postRadarTicketsTicketCsat merchantId city
 
 getRadarTicketsList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.RadarTickets.RadarTicketListRes)
-getRadarTicketsList a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.Dashboard.Management.RadarTickets.getRadarTicketsList a8 a7 a5 a4 a3 a2 a1
+getRadarTicketsList a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.DashboardAuth.Management.RadarTickets.getRadarTicketsList a8 a7 a6 a5 a4 a3 a2 a1
 
 getRadarTicketsSummary :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler API.Types.ProviderPlatform.Management.RadarTickets.RadarSummaryRes)
-getRadarTicketsSummary a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.RadarTickets.getRadarTicketsSummary a3 a2
+getRadarTicketsSummary a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.DashboardAuth.Management.RadarTickets.getRadarTicketsSummary a3 a2 a1
 
 getRadarTicketsReporters :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler API.Types.ProviderPlatform.Management.RadarTickets.RadarReportersRes)
-getRadarTicketsReporters a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.RadarTickets.getRadarTicketsReporters a3 a2
+getRadarTicketsReporters a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.DashboardAuth.Management.RadarTickets.getRadarTicketsReporters a3 a2 a1
 
 getRadarTicketsTicket :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.RadarTickets.RadarTicketDetailRes)
-getRadarTicketsTicket a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.RadarTickets.getRadarTicketsTicket a4 a3 a1
+getRadarTicketsTicket a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Management.RadarTickets.getRadarTicketsTicket a4 a3 a2 a1
 
 getRadarTicketsTicketConversation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.RadarTickets.RadarConversationRes)
-getRadarTicketsTicketConversation a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.RadarTickets.getRadarTicketsTicketConversation a4 a3 a1
+getRadarTicketsTicketConversation a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Management.RadarTickets.getRadarTicketsTicketConversation a4 a3 a2 a1
 
 getRadarTicketsTicketAttachment :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.RadarTickets.RadarAttachmentUrlRes)
-getRadarTicketsTicketAttachment a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.RadarTickets.getRadarTicketsTicketAttachment a5 a4 a2 a1
+getRadarTicketsTicketAttachment a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.Management.RadarTickets.getRadarTicketsTicketAttachment a5 a4 a3 a2 a1
 
 postRadarTicketsTicketReply :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.RadarTickets.RadarReplyReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRadarTicketsTicketReply a5 a4 a3 a2 a1 =
@@ -152,7 +152,7 @@ postRadarTicketsTicketUpdateStatus a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RADAR_TICKETS/POST_RADAR_TICKETS_TICKET_UPDATE_STATUS" a3 (Kernel.Prelude.Just a1)
-        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.RadarTickets.postRadarTicketsTicketUpdateStatus a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.Management.RadarTickets.postRadarTicketsTicketUpdateStatus a5 a4 a3 a2 a1
     )
 
 postRadarTicketsTicketCsat :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.RadarTickets.RadarCsatReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -160,5 +160,5 @@ postRadarTicketsTicketCsat a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RADAR_TICKETS/POST_RADAR_TICKETS_TICKET_CSAT" a3 (Kernel.Prelude.Just a1)
-        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.RadarTickets.postRadarTicketsTicketCsat a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.Management.RadarTickets.postRadarTicketsTicketCsat a5 a4 a3 a2 a1
     )

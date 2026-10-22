@@ -20,7 +20,8 @@
 -- parsing, Redis reporter cache, S3-rehosted attachments served as presigned
 -- URLs, reply thread-key recovery with the isNew forked-thread guard.
 module Domain.Action.Dashboard.Management.RadarTickets
-  ( getRadarTicketsList,
+  ( TicketScope (..),
+    getRadarTicketsList,
     getRadarTicketsSummary,
     getRadarTicketsReporters,
     getRadarTicketsTicket,
@@ -178,13 +179,45 @@ translateNotFound msg action = do
     Left err -> throwM err
     Right a -> pure a
 
-getRadarTicketsList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Environment.Flow Common.RadarTicketListRes
-getRadarTicketsList merchantShortId opCity mbPageSize mbCursor mbPriority mbStageName mbReporterEmail = do
+-- | Whose tickets the caller may see, resolved from the session by the
+-- DashboardAuth handlers.
+data TicketScope
+  = -- | The whole desk: @support.radar.read_all@ holders and SUPER_ADMIN.
+    AllTickets
+  | -- | Only tickets this email reported.
+    OwnTickets Text
+
+scopeSenderEmail :: TicketScope -> Maybe Text
+scopeSenderEmail AllTickets = Nothing
+scopeSenderEmail (OwnTickets email) = Just email
+
+-- | Someone else's ticket answers exactly like an unknown id, so ticket ids
+-- cannot be probed.
+ensureVisible :: TicketScope -> XyneTypes.XyneTicketDetail -> Environment.Flow ()
+ensureVisible AllTickets _ = pure ()
+ensureVisible (OwnTickets email) detail =
+  unless ((normalizeEmail <$> reporterFromDetail detail) == Just (normalizeEmail email)) $
+    throwError (InvalidRequest "Ticket not found.")
+  where
+    normalizeEmail = T.toLower . T.strip
+
+-- | 'ensureVisible' for handlers that have not fetched the ticket themselves.
+-- No upstream call for 'AllTickets'.
+ensureTicketVisible :: TicketScope -> XyneCfg.XyneSpacesCfg -> Text -> Environment.Flow ()
+ensureTicketVisible AllTickets _ _ = pure ()
+ensureTicketVisible scope cfg ticketId =
+  translateNotFound "Ticket not found." (XyneIf.getTicket cfg ticketId) >>= ensureVisible scope
+
+getRadarTicketsList :: ShortId DM.Merchant -> Context.City -> TicketScope -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Environment.Flow Common.RadarTicketListRes
+getRadarTicketsList merchantShortId opCity scope mbPageSize mbCursor mbPriority mbStageName mbReporterEmail = do
   cfg <- resolveRadarCfg merchantShortId opCity
   mbPriorityEnum <- mapM parsePriority (nonBlank =<< mbPriority)
   let pageSize = min maxPageSize (max 1 (fromMaybe 25 mbPageSize))
       mbFilters = mkFilters mbPriorityEnum (nonBlank =<< mbStageName)
-  resp <- XyneIf.listTickets cfg (mkListReq cfg pageSize (nonBlank =<< mbCursor) mbFilters (nonBlank =<< mbReporterEmail))
+      -- Own-tickets callers are pinned to their own email; the reporter
+      -- filter is only theirs to choose when they can see the whole desk.
+      senderEmail = scopeSenderEmail scope <|> (nonBlank =<< mbReporterEmail)
+  resp <- XyneIf.listTickets cfg (mkListReq cfg pageSize (nonBlank =<< mbCursor) mbFilters senderEmail)
   nowIso <- nowIsoText
   pure
     Common.RadarTicketListRes
@@ -193,10 +226,10 @@ getRadarTicketsList merchantShortId opCity mbPageSize mbCursor mbPriority mbStag
         nextCursor = resp.nextCursor
       }
 
-getRadarTicketsSummary :: ShortId DM.Merchant -> Context.City -> Environment.Flow Common.RadarSummaryRes
-getRadarTicketsSummary merchantShortId opCity = do
+getRadarTicketsSummary :: ShortId DM.Merchant -> Context.City -> TicketScope -> Environment.Flow Common.RadarSummaryRes
+getRadarTicketsSummary merchantShortId opCity scope = do
   cfg <- resolveRadarCfg merchantShortId opCity
-  rawItems <- sweepTickets cfg
+  rawItems <- sweepTickets cfg (scopeSenderEmail scope)
   nowIso <- nowIsoText
   let allTickets = map (mkTicketItem nowIso) rawItems
       inStage stage = length (filter (\t -> maybe "" T.toUpper t.stageName == stage) allTickets)
@@ -212,10 +245,12 @@ getRadarTicketsSummary merchantShortId opCity = do
       byCategory = map (\(cat, cnt) -> Common.RadarCategoryCount {category = cat, count = cnt}) (List.sortOn (negate . snd) counts)
   pure Common.RadarSummaryRes {tiles = tiles, recent = take 8 allTickets, byCategory = byCategory}
 
-getRadarTicketsReporters :: ShortId DM.Merchant -> Context.City -> Environment.Flow Common.RadarReportersRes
-getRadarTicketsReporters merchantShortId opCity = do
+getRadarTicketsReporters :: ShortId DM.Merchant -> Context.City -> TicketScope -> Environment.Flow Common.RadarReportersRes
+getRadarTicketsReporters _ _ (OwnTickets email) =
+  pure Common.RadarReportersRes {reporters = [Common.RadarReporter {email = email, name = nameFromEmail email}]}
+getRadarTicketsReporters merchantShortId opCity AllTickets = do
   (mocId, cfg) <- resolveRadarCfgWithMoc merchantShortId opCity
-  rawItems <- sweepTickets cfg
+  rawItems <- sweepTickets cfg Nothing
   let ticketIds = List.nub (mapMaybe (\item -> nonBlank =<< item.ticketId) rawItems)
   -- The list response carries no sender, so each uncached reporter costs a
   -- detail fetch. Batched concurrency keeps a cold cache from serialising
@@ -227,10 +262,11 @@ getRadarTicketsReporters merchantShortId opCity = do
   let reporters = List.sortOn (.name) [Common.RadarReporter {email = e, name = nameFromEmail e} | e <- List.nub emails]
   pure Common.RadarReportersRes {reporters = reporters}
 
-getRadarTicketsTicket :: ShortId DM.Merchant -> Context.City -> Text -> Environment.Flow Common.RadarTicketDetailRes
-getRadarTicketsTicket merchantShortId opCity ticketId = do
+getRadarTicketsTicket :: ShortId DM.Merchant -> Context.City -> TicketScope -> Text -> Environment.Flow Common.RadarTicketDetailRes
+getRadarTicketsTicket merchantShortId opCity scope ticketId = do
   cfg <- resolveRadarCfg merchantShortId opCity
   detail <- translateNotFound "Ticket not found." $ XyneIf.getTicket cfg ticketId
+  ensureVisible scope detail
   -- Conversation failure degrades to an empty thread rather than failing the
   -- whole detail view (matches the Express behaviour).
   convRes <- try @_ @SomeException (XyneIf.getTicketConversation cfg ticketId)
@@ -257,15 +293,23 @@ getRadarTicketsTicket merchantShortId opCity ticketId = do
         messages = map mkMessage conv.items
       }
 
-getRadarTicketsTicketConversation :: ShortId DM.Merchant -> Context.City -> Text -> Environment.Flow Common.RadarConversationRes
-getRadarTicketsTicketConversation merchantShortId opCity ticketId = do
+getRadarTicketsTicketConversation :: ShortId DM.Merchant -> Context.City -> TicketScope -> Text -> Environment.Flow Common.RadarConversationRes
+getRadarTicketsTicketConversation merchantShortId opCity scope ticketId = do
   cfg <- resolveRadarCfg merchantShortId opCity
+  ensureTicketVisible scope cfg ticketId
   conv <- translateNotFound "Ticket not found." $ XyneIf.getTicketConversation cfg ticketId
   pure Common.RadarConversationRes {messages = map mkMessage conv.items, hasMore = fromMaybe False conv.hasMore}
 
-getRadarTicketsTicketAttachment :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Environment.Flow Common.RadarAttachmentUrlRes
-getRadarTicketsTicketAttachment merchantShortId opCity _ticketId attachmentId = do
+getRadarTicketsTicketAttachment :: ShortId DM.Merchant -> Context.City -> TicketScope -> Text -> Text -> Environment.Flow Common.RadarAttachmentUrlRes
+getRadarTicketsTicketAttachment merchantShortId opCity scope ticketId attachmentId = do
   (mocId, cfg) <- resolveRadarCfgWithMoc merchantShortId opCity
+  ensureTicketVisible scope cfg ticketId
+  -- The attachment id must belong to this ticket's thread; otherwise any
+  -- attachment id would open through any visible ticket.
+  conv <- translateNotFound "Ticket not found." $ XyneIf.getTicketConversation cfg ticketId
+  let threadAttachmentIds = mapMaybe (\a -> nonBlank =<< a.id) (concatMap (fromMaybe [] . (.attachments)) conv.items)
+  unless (attachmentId `elem` threadAttachmentIds) $
+    throwError (InvalidRequest "Attachment not found.")
   (mbCachedPath :: Maybe Text) <- Redis.safeGet (attachmentCacheKey mocId attachmentId)
   filePath <- case mbCachedPath of
     Just p -> pure p
@@ -281,8 +325,8 @@ getRadarTicketsTicketAttachment merchantShortId opCity _ticketId attachmentId = 
   url <- S3.generateDownloadUrl (T.unpack filePath) attachmentUrlExpiry
   pure Common.RadarAttachmentUrlRes {url = url}
 
-postRadarTicketsTicketReply :: ShortId DM.Merchant -> Context.City -> Text -> Common.RadarReplyByUserReq -> Environment.Flow APISuccess.APISuccess
-postRadarTicketsTicketReply merchantShortId opCity ticketId req = do
+postRadarTicketsTicketReply :: ShortId DM.Merchant -> Context.City -> TicketScope -> Text -> Common.RadarReplyByUserReq -> Environment.Flow APISuccess.APISuccess
+postRadarTicketsTicketReply merchantShortId opCity scope ticketId req = do
   cfg <- resolveRadarCfg merchantShortId opCity
   let senderEmail = req.senderEmail
       body' = T.strip req.body
@@ -290,6 +334,7 @@ postRadarTicketsTicketReply merchantShortId opCity ticketId req = do
   when (T.length body' > maxReplyChars) $ throwError $ InvalidRequest ("Keep the message under " <> show maxReplyChars <> " characters.")
   checkSlidingWindowLimitWithOptions ("radar:reply:rateLimit:" <> senderEmail) writeRateLimitOptions
   detail <- translateNotFound "Ticket not found." $ XyneIf.getTicket cfg ticketId
+  ensureVisible scope detail
   conv <- translateNotFound "Ticket not found." $ XyneIf.getTicketConversation cfg ticketId
   -- The reply thread key is the externalThreadId of the FIRST message; only
   -- tickets filed from Control Center carry one.
@@ -385,8 +430,12 @@ postRadarTicketsCreate merchantShortId opCity req = do
       else withStagedTempFiles staged $ \parts -> XF.appDeskInboundMultipartAPI cfg.url token inboundReq parts
   pure Common.RadarCreateTicketRes {ticketId = resp.ticketId, xyneId = resp.xyneId}
 
-postRadarTicketsTicketUpdateStatus :: ShortId DM.Merchant -> Context.City -> Text -> Common.RadarUpdateStatusReq -> Environment.Flow APISuccess.APISuccess
-postRadarTicketsTicketUpdateStatus merchantShortId opCity ticketId req = do
+postRadarTicketsTicketUpdateStatus :: ShortId DM.Merchant -> Context.City -> TicketScope -> Text -> Common.RadarUpdateStatusReq -> Environment.Flow APISuccess.APISuccess
+postRadarTicketsTicketUpdateStatus merchantShortId opCity scope ticketId req = do
+  -- Moving a ticket across board stages is triage work: whole-desk callers only.
+  case scope of
+    AllTickets -> pure ()
+    OwnTickets _ -> throwError AccessDenied
   cfg <- resolveRadarCfg merchantShortId opCity
   stageName <- fromMaybeM (InvalidRequest "stageName is required.") (nonBlank req.stageName)
   token <- decrypt cfg.token
@@ -400,9 +449,10 @@ postRadarTicketsTicketUpdateStatus merchantShortId opCity ticketId req = do
       XyneTypes.XyneUpdateTicketReq {ticketId = ticketId, channelId = cfg.channelId, stageName = stageName}
   pure APISuccess.Success
 
-postRadarTicketsTicketCsat :: ShortId DM.Merchant -> Context.City -> Text -> Common.RadarCsatReq -> Environment.Flow APISuccess.APISuccess
-postRadarTicketsTicketCsat merchantShortId opCity ticketId req = do
+postRadarTicketsTicketCsat :: ShortId DM.Merchant -> Context.City -> TicketScope -> Text -> Common.RadarCsatReq -> Environment.Flow APISuccess.APISuccess
+postRadarTicketsTicketCsat merchantShortId opCity scope ticketId req = do
   cfg <- resolveRadarCfg merchantShortId opCity
+  ensureTicketVisible scope cfg ticketId
   -- Uses the row's own csatApiKey; absent key = logged no-op inside.
   XyneIf.updateTicketCsat cfg (Ticket.UpdateTicketCsatReq {xyneTicketId = ticketId, rating = req.rating, score = req.score, comment = req.comment})
   pure APISuccess.Success
@@ -463,13 +513,14 @@ mkFilters mbPriority mbStageName
           createdBefore = Nothing
         }
 
--- | Cursor loop shared by summary and reporters: page through the channel,
--- hard-capped so one endpoint cannot spend unbounded upstream calls.
-sweepTickets :: XyneCfg.XyneSpacesCfg -> Environment.Flow [XyneTypes.XyneTicketSummaryItem]
-sweepTickets cfg = go Nothing [] 0 []
+-- | Cursor loop shared by summary and reporters: page through the channel
+-- (optionally one reporter's tickets), hard-capped so one endpoint cannot
+-- spend unbounded upstream calls.
+sweepTickets :: XyneCfg.XyneSpacesCfg -> Maybe Text -> Environment.Flow [XyneTypes.XyneTicketSummaryItem]
+sweepTickets cfg mbSenderEmail = go Nothing [] 0 []
   where
     go cursor acc fetched seenCursors = do
-      resp <- XyneIf.listTickets cfg (mkListReq cfg sweepPageSize cursor Nothing Nothing)
+      resp <- XyneIf.listTickets cfg (mkListReq cfg sweepPageSize cursor Nothing mbSenderEmail)
       let acc' = acc <> resp.items
           fetched' = fetched + length resp.items
           more = fromMaybe False resp.hasMore && isJust resp.nextCursor && not (null resp.items)
