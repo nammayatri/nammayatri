@@ -1,0 +1,20 @@
+imports:
+  Booking: Domain.Types.Booking
+  APISuccess: Kernel.Types.APISuccess
+
+module: AutoAcceptRide
+
+types:
+  AutoAcceptRideReq:
+    acknowledged: Bool
+
+apis:
+  - POST:
+      endpoint: /driver/autoAcceptRide/{bookingId}/acknowledge
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        bookingId: Id Booking
+      request:
+        type: AutoAcceptRideReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

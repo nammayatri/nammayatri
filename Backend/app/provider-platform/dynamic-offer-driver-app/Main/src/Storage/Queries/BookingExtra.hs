@@ -412,3 +412,10 @@ updateFinanceInvoiceId bookingId financeInvoiceId = do
   updateOneWithKV
     [Se.Set BeamB.financeInvoiceId financeInvoiceId, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+updateAutoAcceptCtaData :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Maybe AutoAcceptCtaData -> m ()
+updateAutoAcceptCtaData bookingId ctaData = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamB.autoAcceptCtaData (A.toJSON <$> ctaData), Se.Set BeamB.updatedAt now]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]

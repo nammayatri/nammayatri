@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.Booking where
 
+import qualified Data.Aeson
 import qualified Domain.Types.Booking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -37,6 +38,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
         Domain.Types.Booking.Booking
           { addOnData = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< addOnData),
             area = area,
+            autoAcceptCtaData = Kernel.Utils.JSON.valueToMaybe =<< autoAcceptCtaData,
             bapCity = bapCity,
             bapCountry = bapCountry,
             bapId = bapId,
@@ -137,6 +139,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
     Beam.BookingT
       { Beam.addOnData = Just $ toJSON addOnData,
         Beam.area = area,
+        Beam.autoAcceptCtaData = Data.Aeson.toJSON <$> autoAcceptCtaData,
         Beam.bapCity = bapCity,
         Beam.bapCountry = bapCountry,
         Beam.bapId = bapId,

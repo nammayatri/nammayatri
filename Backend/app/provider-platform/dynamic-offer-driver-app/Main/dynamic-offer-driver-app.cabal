@@ -357,6 +357,7 @@ library
       Domain.Action.Internal.VerifyEmailUpdate
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.Aarokya
+      Domain.Action.UI.AutoAcceptRide
       Domain.Action.UI.AvailableForRides
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
@@ -569,6 +570,7 @@ library
       SharedLogic.AirportEntryFee
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation
+      SharedLogic.Allocator.Jobs.AutoAccept.SendAutoAcceptOverlay
       SharedLogic.Allocator.Jobs.Cautio.InstallationStatus
       SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
       SharedLogic.Allocator.Jobs.Document.VerificationRetry
@@ -1275,6 +1277,7 @@ library
       API.Action.DashboardAuth.RideBooking.Ride
       API.Action.DashboardAuth.RideBooking.SearchRequest
       API.Action.DashboardAuth.RideBooking.Volunteer
+      API.Action.UI.AutoAcceptRide
       API.Action.UI.AvailableForRides
       API.Action.UI.Cac
       API.Action.UI.CallFeedback
@@ -1472,6 +1475,7 @@ library
       API.Types.ProviderPlatform.Operator.Endpoints.Registration
       API.Types.ProviderPlatform.Operator.FleetManagement
       API.Types.ProviderPlatform.Operator.Registration
+      API.Types.UI.AutoAcceptRide
       API.Types.UI.AvailableForRides
       API.Types.UI.CallFeedback
       API.Types.UI.CancellationReasonLookup

@@ -35,6 +35,10 @@ Booking:
       derive: "HttpInstance"
     BookingType:
       enum: "SpecialZoneBooking,NormalBooking"
+    AutoAcceptCtaData:
+      overlaySentAt: Maybe UTCTime
+      acknowledged: Maybe Bool
+      derive: "Eq"
 
   fields:
     id: Id Booking
@@ -132,6 +136,7 @@ Booking:
     businessEmailDomain: Maybe Text
     customerLanguage: Maybe Language
     addOnData: "[AddOnData]"
+    autoAcceptCtaData: Maybe AutoAcceptCtaData
 
   excludedFields:
     - merchantId
@@ -156,6 +161,7 @@ Booking:
     isPetRide: Maybe Bool
     billingCategory: Maybe BillingCategory
     searchTryId: Maybe Text
+    autoAcceptCtaData: Maybe Value
 
   beamFields:
     tripCategory:
@@ -208,6 +214,7 @@ Booking:
     billingCategory: Just billingCategory|E
     searchTryId: (Kernel.Types.Id.getId <$> searchTryId)|E
     pickupGateId: pickupGateId|E
+    autoAcceptCtaData: Data.Aeson.toJSON <$> autoAcceptCtaData|E
 
   intermediateTransformers:
     fromTType:
@@ -240,6 +247,7 @@ Booking:
     billingCategory: fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
     searchTryId: Kernel.Types.Id.Id <$> searchTryId|E
     pickupGateId: pickupGateId|E
+    autoAcceptCtaData: (Kernel.Utils.JSON.valueToMaybe =<< autoAcceptCtaData)|E
 
   sqlType:
     status: character varying(255)
@@ -269,6 +277,7 @@ Booking:
     searchTryId: character varying(36)
     dqDurationToPickup: bigint
     pickupGateId: character varying(36)
+    autoAcceptCtaData: jsonb
 
   default:
     bookingType: "'NormalBooking'"

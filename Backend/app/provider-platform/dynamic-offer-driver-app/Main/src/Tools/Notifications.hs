@@ -1333,6 +1333,36 @@ driverStopDetectionAlert merchantOpCityId category title body driver mbDeviceTok
           overlayNotificationData = Nothing
         }
 
+sendAutoAcceptRideCTAOverlay ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Person ->
+  FCM.FCMOverlayReq ->
+  m ()
+sendAutoAcceptRideCTAOverlay person req = do
+  let newCityId = cityFallback person.clientBundleVersion person.merchantOperatingCityId
+  let notifReq =
+        Notification.NotificationReq
+          { category = Notification.DRIVER_NOTIFY,
+            subCategory = Nothing,
+            showNotification = if isJust req.title then Notification.SHOW else Notification.DO_NOT_SHOW,
+            messagePriority = Just Notification.HIGH,
+            entity = Notification.Entity Notification.Person person.id.getId EmptyDynamicParam,
+            dynamicParams = EmptyDynamicParam,
+            body = fromMaybe "Description" req.description,
+            title = fromMaybe "Title" req.title,
+            auth = Notification.Auth person.id.getId ((.getFCMRecipientToken) <$> person.deviceToken) Nothing,
+            ttl = Nothing,
+            sound = Nothing,
+            overlayNotificationData = Just $ buildOverlayNotificationData req
+          }
+  runWithServiceConfigForProviders newCityId person.clientId person.clientDevice notifReq EulerHS.Prelude.id (clearDeviceToken person.id)
+
 mkOverlayReq :: DTMO.Overlay -> FCM.FCMOverlayReq -- handle mod Title
 mkOverlayReq _overlay@DTMO.Overlay {..} =
   FCM.FCMOverlayReq

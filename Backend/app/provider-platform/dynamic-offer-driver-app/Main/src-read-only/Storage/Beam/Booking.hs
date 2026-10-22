@@ -25,6 +25,7 @@ import qualified Tools.Maps
 data BookingT f = BookingT
   { addOnData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     area :: B.C f (Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area),
+    autoAcceptCtaData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     bapCity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City),
     bapCountry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country),
     bapId :: B.C f Kernel.Prelude.Text,
