@@ -104,7 +104,7 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
       case personStatus' of
         Just personStatus -> do
           case personStatus of
-            DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId _ -> do
+            DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId _ _ -> do
               -- inside a silent reallocation window the app must keep its tracking screen,
               -- so report the reallocated booking as active instead of the pooling status
               mbSilentCtx <- SilentRealloc.getSilentReallocation personId
