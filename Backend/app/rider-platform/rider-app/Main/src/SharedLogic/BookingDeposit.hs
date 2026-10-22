@@ -418,11 +418,29 @@ refundBookingDeposit ::
   DRB.Booking ->
   m ()
 refundBookingDeposit booking = do
+  refreshUnrecordedPayments
   toSettle <- prepareDepositRefundLedger booking
   forM_ toSettle $ \pair@(_, order) -> do
     withDepositRefundCallLock order.id $ do
       mbReq <- withDepositRefundLock order.id $ claimDepositRefundAttempt booking pair
       forM_ mbReq $ \reqRow -> executeDepositRefundGateway booking reqRow pair
+  where
+    refreshUnrecordedPayments =
+      when (isJust booking.bookingDepositAmount) $ do
+        rows <- QBookingPayment.findAllByBookingIdAndServiceType booking.id DOrder.BookingDeposit
+        forM_ rows $ \row -> do
+          credited <- hasCreditForOrder row.paymentOrderId.getId
+          when credited $ do
+            mbOrder <- QPaymentOrder.findById row.paymentOrderId
+            whenJust mbOrder $ \order -> do
+              hasTxn <- not . null <$> QPaymentTransaction.findAllByOrderId order.id
+              when (not hasTxn || order.status /= Payment.CHARGED) $ do
+                logWarning $
+                  "Deposit refund: credited order " <> order.id.getId <> " is not recorded as paid ("
+                    <> (if hasTxn then "status " <> show order.status else "no payment transaction")
+                    <> "); refreshing it from the gateway"
+                void . withTryCatch "refundBookingDeposit:refreshOrderTransactions" $
+                  SPayment.refreshOrderTransactions booking.merchantId order
 
 -- | Ledger half of refundBookingDeposit. Refuse if the deposit was already captured (fee-bearing cancellation), void the holds, post the refund legs per paid order
 prepareDepositRefundLedger ::
@@ -447,9 +465,32 @@ prepareDepositRefundLedger booking
             else do
               when (length rows > 1) $
                 logError $ "Booking " <> booking.id.getId <> " has " <> show (length rows) <> " payable deposit orders; refunding all"
-              forM_ holds $ \e -> Ledger.voidEntry e.id "booking deposit refunded to source"
-              catMaybes <$> mapM postRefundLegs rows
+              -- Releasing the holds first would leave an unfileable refund as spendable balance; keep them until every credited order can be refunded.
+              unrecorded <- catMaybes <$> mapM unrecordedPaidOrder rows
+              if not (null unrecorded)
+                then
+                  []
+                    <$ logError
+                      ( "Booking deposit refund deferred for booking " <> booking.id.getId <> ": credited order(s) "
+                          <> show unrecorded
+                          <> " not recorded as paid even after a gateway refresh; holds kept, retry the refund once they are"
+                      )
+                else do
+                  forM_ holds $ \e -> Ledger.voidEntry e.id "booking deposit refunded to source"
+                  catMaybes <$> mapM postRefundLegs rows
   where
+    -- A credited order with no refund legs yet whose refund can't be filed (needs a transaction) or sent (needs a CHARGED order).
+    unrecordedPaidOrder row =
+      QPaymentOrder.findById row.paymentOrderId >>= \case
+        Nothing -> pure Nothing
+        Just order -> do
+          hasLegs <- not . null <$> Ledger.getEntriesByReference bookingDepositRefundRefType order.id.getId
+          credited <- hasCreditForOrder order.id.getId
+          if hasLegs || not credited
+            then pure Nothing
+            else do
+              hasTxn <- not . null <$> QPaymentTransaction.findAllByOrderId order.id
+              pure $ if hasTxn && order.status == Payment.CHARGED then Nothing else Just order.id.getId
     postRefundLegs row = do
       mbOrder <- QPaymentOrder.findById row.paymentOrderId
       case mbOrder of
@@ -546,7 +587,7 @@ claimDepositRefundAttempt ::
   DRB.Booking ->
   (DBP.BookingPayment, DOrder.PaymentOrder) ->
   m (Maybe DRefundRequest.RefundRequest)
-claimDepositRefundAttempt booking pair = do
+claimDepositRefundAttempt booking pair@(_, order) = do
   mbReq <- findOrCreateDepositRefundRequest booking pair
   case mbReq of
     Nothing -> pure Nothing
@@ -555,7 +596,12 @@ claimDepositRefundAttempt booking pair = do
       | otherwise -> do
         claimed <- claimDepositRefundCall req.id.getId
         if claimed
-          then pure (Just req)
+          then
+            HQRefunds.findLatestByOrderId order.shortId >>= \case
+              Nothing -> pure (Just req)
+              Just attempt -> do
+                logError $ "Deposit refund request " <> req.id.getId <> " adopting unlinked refund attempt " <> attempt.id.getId <> " (" <> show attempt.status <> ") on order " <> order.id.getId
+                Nothing <$ applyDepositRefundResult booking req pair attempt.id.getId (if unknownRefundOutcome attempt then Payment.REFUND_PENDING else attempt.status) attempt.errorCode
           else Nothing <$ logInfo ("Deposit refund for request " <> req.id.getId <> " is being sent elsewhere; skipping")
 
 -- | Calls the gateway without the deposit refund lock, then records the verdict under it unless someone already did.
@@ -606,7 +652,10 @@ executeDepositRefundGateway booking refundReq pair@(row, order) = do
       | resp.status /= Payment.REFUND_FAILURE = pure resp.status
       | otherwise =
         HQRefunds.findById (Id resp.refundId) <&> \case
-          Just attempt | unknownRefundOutcome attempt -> Payment.REFUND_PENDING
+          Just attempt
+            | unknownRefundOutcome attempt -> Payment.REFUND_PENDING
+            -- A webhook upsert landed after the failure write: the gateway's answer wins over the thrown call.
+            | attempt.status /= Payment.REFUND_FAILURE -> attempt.status
           _ -> resp.status
 
 -- | Settles or voids the refund legs and records the attempt on the refund request and the booking_payment row.
@@ -639,11 +688,11 @@ applyDepositRefundResult booking refundReq (row, order) refundId refundStatus er
         Payment.REFUND_FAILURE -> DBP.REFUND_FAILED
         Payment.REFUND_CANCELED -> DBP.REFUND_FAILED
         _ -> DBP.REFUND_INITIATED
-  QRefundRequest.updateRefundIdAndStatus (Just (Id refundId)) reqStatus refundReq.id
   QBookingPayment.updateStatusById bpStatus row.id
   createJobIn @_ @'CheckRefundStatus (Just booking.merchantId) (Just booking.merchantOperatingCityId) riderConfig.refundStatusUpdateInterval $
     CheckRefundStatusJobData {refundId = refundId, numberOfRetries = 0}
   logInfo $ "Scheduled CheckRefundStatus for deposit refund " <> refundId <> " order " <> order.id.getId
+  QRefundRequest.updateRefundIdAndStatus (Just (Id refundId)) reqStatus refundReq.id
   when (reqStatus == DRefundRequest.FAILED) $
     logError $
       "Booking deposit gateway refund FAILED for booking " <> booking.id.getId <> " order " <> order.id.getId

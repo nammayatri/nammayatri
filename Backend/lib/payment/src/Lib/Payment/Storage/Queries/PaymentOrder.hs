@@ -270,6 +270,22 @@ updatePaymentFulfillmentStatus orderId paymentFulfillmentStatus domainEntityId d
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
 
+-- | Fulfilment write-back that never moves an order already linked to an entity: the link is only filled when empty,
+--   so a handler holding a stale link cannot undo a repoint (updateDomainEntityId) made while it ran.
+updatePaymentFulfillmentStatusKeepLink :: BeamFlow m r => Id DOrder.PaymentOrder -> Maybe DPayment.PaymentFulfillmentStatus -> Maybe Text -> Maybe Text -> m ()
+updatePaymentFulfillmentStatusKeepLink orderId paymentFulfillmentStatus mbDomainEntityId domainTransactionId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPO.paymentFulfillmentStatus paymentFulfillmentStatus,
+      Se.Set BeamPO.domainTransactionId domainTransactionId,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
+  whenJust mbDomainEntityId $ \domainEntityId ->
+    updateWithKV
+      [Se.Set BeamPO.domainEntityId (Just domainEntityId)]
+      [Se.And [Se.Is BeamPO.id $ Se.Eq $ getId orderId, Se.Is BeamPO.domainEntityId $ Se.Eq Nothing]]
+
 updateDomainEntityId :: BeamFlow m r => Id DOrder.PaymentOrder -> Text -> m ()
 updateDomainEntityId orderId domainEntityId = do
   now <- getCurrentTime

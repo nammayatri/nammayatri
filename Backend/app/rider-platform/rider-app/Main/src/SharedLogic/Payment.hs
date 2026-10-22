@@ -316,7 +316,8 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
   -- Update the Payment Order with the new payment fulfillment status, domain entity id and domain transaction id
   case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
     Right (_, _, domainTransactionId) -> do
-      QPaymentOrder.updatePaymentFulfillmentStatus paymentOrder.id finalPaymentStatusResponse.paymentFulfillmentStatus finalPaymentStatusResponse.domainEntityId domainTransactionId
+      let update = if paymentService == DOrder.BookingDeposit then QPaymentOrder.updatePaymentFulfillmentStatusKeepLink else QPaymentOrder.updatePaymentFulfillmentStatus
+      update paymentOrder.id finalPaymentStatusResponse.paymentFulfillmentStatus finalPaymentStatusResponse.domainEntityId domainTransactionId
     _ -> pure ()
 
   case (finalPaymentStatusResponse, updatedPaymentOrder.merchantOperatingCityId) of
@@ -602,7 +603,7 @@ refundStatusHandler paymentOrder paymentServiceType = do
       DRefunds.Refunds ->
       m ()
     bookingDepositRefundStatusHandler refund = do
-      let newStatus = refundStatusToBookingPaymentStatus refund
+      let newStatus = if BookingDepositLedger.unknownRefundOutcome refund then DBP.REFUND_INITIATED else refundStatusToBookingPaymentStatus refund
       depositReqs <- filter (\r -> r.refundPurpose == DRefundRequest.BOOKING_DEPOSIT) <$> QRefundRequest.findAllByOrderId paymentOrder.id
       case depositReqs of
         [] -> pure ()
@@ -812,6 +813,26 @@ syncOrderStatus fulfillmentHandler merchantId personId paymentOrder = do
       _ -> return Nothing
   let orderStatusCall = TPayment.orderStatus merchantId mocId ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
   orderStatusHandler mocId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+
+-- | Records the order's gateway transactions and status, no fulfilment; lock-free since callers may hold orderStatusHandler's lock.
+refreshOrderTransactions ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r,
+    ServiceFlow m r,
+    Finance.HasActorInfo m r
+  ) =>
+  Id Merchant.Merchant ->
+  DOrder.PaymentOrder ->
+  m ()
+refreshOrderTransactions merchantId paymentOrder = do
+  person <- QPerson.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
+  commonMerchantOperatingCityId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
+  let paymentServiceType = fromMaybe DOrder.Normal paymentOrder.paymentServiceType
+      mocId = cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity commonMerchantOperatingCityId
+      orderStatusCall = TPayment.orderStatus merchantId mocId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
+  void $ DPayment.orderStatusService commonMerchantOperatingCityId paymentOrder.personId paymentOrder.id orderStatusCall
 
 -------------------------------------------------------------------------------------------------------
 ------------------------------------- Payment Utility Functions ---------------------------------------

@@ -138,8 +138,10 @@ processRefundStatus ::
 processRefundStatus refundEntry person paymentOrder = do
   let nonTerminalStatuses = [Payment.REFUND_PENDING, Payment.MANUAL_REVIEW]
       paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
-      -- A deposit refund call that threw is recorded FAILURE but may have reached the gateway: keep asking it.
-      unknownDepositOutcome = paymentServiceType == Payment.BookingDeposit && BookingDepositLedger.unknownRefundOutcome refundEntry
+      -- A deposit refund call that threw, or never recorded an answer, may have reached the gateway: keep asking it.
+      unknownDepositOutcome =
+        paymentServiceType == Payment.BookingDeposit
+          && (BookingDepositLedger.unknownRefundOutcome refundEntry || BookingDepositLedger.neverRecordedRefund refundEntry)
   if refundEntry.status `elem` nonTerminalStatuses || unknownDepositOutcome
     then do
       let orderStatusCall = Payment.orderStatus person.merchantId person.merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
