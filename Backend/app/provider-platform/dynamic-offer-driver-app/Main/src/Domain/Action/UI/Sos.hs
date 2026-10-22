@@ -190,7 +190,8 @@ mkTicket person phoneNumber mediaLinks info flow disposition queue =
       xyneChannelId = Nothing,
       xyneTicketBody = Nothing,
       xyneSenderName = Nothing,
-      xyneExternalId = Nothing
+      xyneExternalId = Nothing,
+      xyneBotLabel = Nothing
     }
   where
     sosIssueDescription = \case

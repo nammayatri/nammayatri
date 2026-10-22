@@ -154,7 +154,8 @@ safetyCheckSupport (personId, _merchantId) req = do
             xyneChannelId = Nothing,
             xyneTicketBody = Nothing,
             xyneSenderName = Nothing,
-            xyneExternalId = Nothing
+            xyneExternalId = Nothing,
+            xyneBotLabel = Nothing
           }
 
 buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> Id Merchant.Merchant -> m DIssue.Issue
@@ -199,7 +200,8 @@ mkTicket issue person phoneNumber disposition queue deleteAccountCategory = do
         xyneChannelId = Nothing,
         xyneTicketBody = Nothing,
         xyneSenderName = Nothing,
-        xyneExternalId = Nothing
+        xyneExternalId = Nothing,
+        xyneBotLabel = Nothing
       }
 
 mkRideInfo :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Ride.Ride -> Person.Person -> Maybe Text -> m Ticket.RideInfo

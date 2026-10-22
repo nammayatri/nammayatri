@@ -183,7 +183,8 @@ notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
           xyneChannelId = Nothing,
           xyneTicketBody = Nothing,
           xyneSenderName = Nothing,
-          xyneExternalId = Nothing
+          xyneExternalId = Nothing,
+          xyneBotLabel = Nothing
         }
 
 throwImageError :: OnboardingFlow m r => Id Domain.Image -> DriverOnboardingError -> m b
