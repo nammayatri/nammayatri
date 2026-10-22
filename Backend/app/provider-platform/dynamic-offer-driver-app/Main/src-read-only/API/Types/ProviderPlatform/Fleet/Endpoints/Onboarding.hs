@@ -63,6 +63,7 @@ data DocumentCategory
   | Permission
   | Training
   | Fleet
+  | SelfDeclaration
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -212,7 +212,7 @@ types:
     doNotValidateDuringOnboarding: Maybe Bool
     doStrictVerification: Bool
   DocumentCategory:
-    enum: "Driver,Vehicle,Permission,Training,Fleet"
+    enum: "Driver,Vehicle,Permission,Training,Fleet,SelfDeclaration"
   DocumentFlowGrouping:
     enum: "COMMON,STANDARD"
   # FieldObject: children in `fields` become a nested object under `requestKey`.
