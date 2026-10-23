@@ -991,6 +991,7 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.LegalEntityTAXDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LegalEntityTAXDetails
   Domain.Types.DocumentVerificationConfig.LegalEntityCompanyDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LegalEntityCompanyDetails
   Domain.Types.DocumentVerificationConfig.TermsAndConditions -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.TermsAndConditions
+  Domain.Types.DocumentVerificationConfig.LedgerAdjustmentProof -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LedgerAdjustmentProof
 
 -- Shared document-onboarding helpers (moved from Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate):
 -- these are used across RC, PAN, Aadhaar, DL, GST and Idfy webhook flows.

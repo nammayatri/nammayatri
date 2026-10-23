@@ -17,7 +17,6 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
-import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
 import qualified Lib.Finance.Core.Types
@@ -474,13 +473,26 @@ data SubmitLedgerAdjustmentReq = SubmitLedgerAdjustmentReq
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referenceType :: Kernel.Prelude.Text,
     referenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    documentId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image)
+    documentId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
+    documentBase64 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    documentFileExtension :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-instance Kernel.Types.HideSecrets.HideSecrets SubmitLedgerAdjustmentReq where
-  hideSecrets = Kernel.Prelude.identity
+data SubmitLedgerAdjustmentTReq = SubmitLedgerAdjustmentTReq
+  { personId :: Kernel.Types.Id.Id Dashboard.Common.Person,
+    category :: AdjustmentCategory,
+    direction :: AdjustmentDirection,
+    amount :: Kernel.Types.Common.PriceAPIEntity,
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    referenceType :: Kernel.Prelude.Text,
+    referenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    documentId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
+    documentFileExtension :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SubscriptionPurchaseListItem = SubscriptionPurchaseListItem
   { subscriptionPurchaseId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

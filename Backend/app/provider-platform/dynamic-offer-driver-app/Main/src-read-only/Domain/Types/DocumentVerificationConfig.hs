@@ -136,6 +136,7 @@ data DocumentType
   | LegalEntityTAXDetails
   | LegalEntityCompanyDetails
   | TermsAndConditions
+  | LedgerAdjustmentProof
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data FieldInfo = FieldInfo
