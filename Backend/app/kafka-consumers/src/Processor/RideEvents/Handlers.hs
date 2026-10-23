@@ -38,7 +38,7 @@ import qualified "dynamic-offer-driver-app" Domain.Types.Ride as Ride
 import qualified "dynamic-offer-driver-app" Domain.Types.RideRelatedNotificationConfig as DRN
 import "dynamic-offer-driver-app" Domain.Types.TransporterConfig (TransporterConfig)
 import qualified "beckn-spec" Domain.Types.Trip as DTrip
-import qualified "dynamic-offer-driver-app" Domain.Types.VehicleCategory as DVC
+import qualified "beckn-spec" Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption (EncFlow)
 import qualified Kernel.External.Encryption as EncFlow
@@ -60,6 +60,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
   ( CacheFlow,
     HasFlowEnv,
+    HasRequestId,
     HasShortDurationRetryCfg,
     Hours,
     fromMaybeM,
@@ -676,7 +677,8 @@ handleGoogleMobilityBilling ::
     MonadFlow m,
     EncFlow.EncFlow m r,
     CoreMetrics.CoreMetrics m,
-    HasRequestId r
+    HasRequestId r,
+    HasKafkaProducer r
   ) =>
   RideEndedEvent ->
   m ()
