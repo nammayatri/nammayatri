@@ -3752,6 +3752,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
             parkingFeeExemptionEnabled = request.parkingFeeExemptionEnabled <|> (mbExistingSpLoc >>= (.parkingFeeExemptionEnabled)),
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
+            enableOneWayScheduledRides = request.enableOneWayScheduledRides <|> (mbExistingSpLoc >>= (.enableOneWayScheduledRides)),
             render = request.render <|> (mbExistingSpLoc >>= (.render)),
             fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
             supportNumber = request.supportNumber,

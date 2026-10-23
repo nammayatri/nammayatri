@@ -440,6 +440,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
             parkingFeeExemptionEnabled = request.parkingFeeExemptionEnabled <|> (mbExistingSpLoc >>= (.parkingFeeExemptionEnabled)),
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
+            enableOneWayScheduledRides = request.enableOneWayScheduledRides <|> (mbExistingSpLoc >>= (.enableOneWayScheduledRides)),
             render = request.render,
             fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
             supportNumber = request.supportNumber,
@@ -1753,6 +1754,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     specialLocationId :: Text,
     isQueueEnabled :: Maybe Text,
     parkingFeeExemptionEnabled :: Maybe Text,
+    enableOneWayScheduledRides :: Maybe Text,
     supportNumber :: Maybe Text,
     gateInfoEntryFeeAmount :: Maybe Text,
     gateInfoMinDriverThreshold :: Maybe Text,
@@ -1806,6 +1808,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
     specialLocationId <- r .: "special_location_id"
     isQueueEnabled <- optional (r .: "is_queue_enabled")
     parkingFeeExemptionEnabled <- optional (r .: "parking_fee_exemption_enabled")
+    enableOneWayScheduledRides <- optional (r .: "enable_one_way_scheduled_rides")
     supportNumber <- optional (r .: "support_number")
     gateInfoEntryFeeAmount <- optional (r .: "gate_info_entry_fee_amount")
     gateInfoMinDriverThreshold <- optional (r .: "gate_info_min_driver_threshold")
@@ -1882,6 +1885,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           mbSpecialLocationId :: Maybe Text = cleanField row.specialLocationId
           mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
           mbParkingFeeExemptionEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.parkingFeeExemptionEnabled) "Parking Fee Exemption Enabled"
+          mbEnableOneWayScheduledRides :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.enableOneWayScheduledRides) "Enable One Way Scheduled Rides"
           supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
           mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
           mbFareSettlementType :: Maybe DSL.FareSettlementType = readMaybeCSVField idx (fromMaybe "" row.fareSettlementType) "Payment Collection Mode"
@@ -1929,6 +1933,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 isQueueEnabled = mbIsQueueEnabled,
                 parkingFeeExemptionEnabled = mbParkingFeeExemptionEnabled,
                 enforceTollRoute = mbEnforceTollRoute,
+                enableOneWayScheduledRides = mbEnableOneWayScheduledRides,
                 render = mbRender,
                 fetchAllGateFareProduct = mbFetchAllGateFareProduct,
                 supportNumber = supportNumber,
@@ -2033,6 +2038,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
     mergeSpecialLocationWithExisting new (Just old) =
       new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
           DSL.parkingFeeExemptionEnabled = new.parkingFeeExemptionEnabled <|> old.parkingFeeExemptionEnabled,
+          DSL.enableOneWayScheduledRides = new.enableOneWayScheduledRides <|> old.enableOneWayScheduledRides,
           DSL.paymentModes = new.paymentModes <|> old.paymentModes
          }
 

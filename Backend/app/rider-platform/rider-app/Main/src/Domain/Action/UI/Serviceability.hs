@@ -26,6 +26,7 @@ module Domain.Action.UI.Serviceability
 where
 
 import API.UI.HotSpot
+import Control.Applicative ((<|>))
 import Data.List (sortBy)
 import Data.Ord
 import qualified Domain.Types.HotSpot as DHotSpot
@@ -78,7 +79,8 @@ data ServiceabilityRes = ServiceabilityRes
     isMetroServiceable :: Maybe Bool, -- deprecated
     isSubwayServiceable :: Maybe Bool, -- deprecated
     ptRestrictedHours :: Maybe PTRestrictedHours,
-    enforceTollRoute :: Maybe Bool
+    enforceTollRoute :: Maybe Bool,
+    isOneWayScheduledRideEnabled :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -110,6 +112,9 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
         Just True -> Redis.setExp (enforceTollRouteRedisKey personId) True enforceTollRouteRedisTtlSec
         _ -> Redis.del (enforceTollRouteRedisKey personId)
       riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+      let oneWaySchedulingEnabled =
+            fromMaybe False $
+              (filteredSpecialLocationBody >>= (.enableOneWayScheduledRides)) <|> riderConfig.enableOneWayScheduledRides
       now <- getCurrentTime
       let isOutsideMetroBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.qrTicketRestrictionStartTime riderConfig.qrTicketRestrictionEndTime now riderConfig.timeDiffFromUtc
       let isOutsideSubwayBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.subwayRestrictionStartTime riderConfig.subwayRestrictionEndTime now riderConfig.timeDiffFromUtc
@@ -137,6 +142,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
             isSubwayServiceable = Just (not isOutsideSubwayBusinessHours),
             ptRestrictedHours = Just ptRestrictedHours,
             enforceTollRoute = if isOrigin then filteredSpecialLocationBody >>= (.enforceTollRoute) else Nothing,
+            isOneWayScheduledRideEnabled = if isOrigin then Just oneWaySchedulingEnabled else Nothing,
             ..
           }
     Nothing ->
@@ -153,6 +159,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
             isSubwayServiceable = Nothing,
             ptRestrictedHours = Nothing,
             enforceTollRoute = Nothing,
+            isOneWayScheduledRideEnabled = Nothing,
             ..
           }
 

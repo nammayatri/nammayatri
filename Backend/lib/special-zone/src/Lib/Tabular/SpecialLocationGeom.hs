@@ -52,6 +52,7 @@ mkPersist
       isQueueEnabled Bool Maybe
       parkingFeeExemptionEnabled Bool Maybe
       enforceTollRoute Bool Maybe
+      enableOneWayScheduledRides Bool Maybe
       supportNumber Text Maybe
       paymentModes (PostgresList Domain.PaymentMode) Maybe
       fareSettlementType Domain.FareSettlementType Maybe
