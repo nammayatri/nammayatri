@@ -18,10 +18,14 @@
 -- which backs the Behaviour Programmes metrics in the control center.
 --
 -- Emission is fire-and-forget: it runs in a fork and never fails the caller's flow.
--- Ops kill switch: set the Redis key 'BehaviourEvents:Disabled' to "1" (picked up within a minute).
+-- Ops kill switch: set the Redis key to 1 (picked up within a minute), delete it to resume.
+-- Each app adds its own key prefix, so set both:
+--   dynamic-offer-driver-app:BehaviourEvents:Disabled  (driver app)
+--   BehaviourEvents:Disabled                           (kafka-consumers, e.g. GPS toll)
 module Lib.BehaviorEngine.EventLog
   ( BehaviourEventSource (..),
     BehaviourEventContext (..),
+    BehaviourEventCity (..),
     BehaviourEventDetail (..),
     emitBehaviourEvents,
     snapshotEventContext,
@@ -71,6 +75,13 @@ data BehaviourEventContext = BehaviourEventContext
     eventSource :: BehaviourEventSource
   }
 
+-- | Merchant short id and city name of the event's operating city. The control
+-- center filters on these names, so it needs no city-id lookup of its own.
+data BehaviourEventCity = BehaviourEventCity
+  { merchantShortId :: Text,
+    city :: Text
+  }
+
 -- | One outcome for the entity.
 data BehaviourEventDetail = BehaviourEventDetail
   { detailKind :: Text, -- CONSEQUENCE | COMMUNICATION
@@ -86,6 +97,8 @@ data BehaviourConsequenceEvent = BehaviourConsequenceEvent
   { event_id :: Text,
     occurred_at :: Text,
     merchant_operating_city_id :: Text,
+    merchant_short_id :: Text,
+    city :: Text,
     caller_app :: Text,
     entity_type :: Text,
     entity_id :: Text,
@@ -102,23 +115,27 @@ data BehaviourConsequenceEvent = BehaviourConsequenceEvent
   }
   deriving (Generic, Show, ToJSON)
 
-emitBehaviourEvents :: (MonadFlow m, CacheFlow m r) => BehaviourEventContext -> [BehaviourEventDetail] -> m ()
-emitBehaviourEvents _ [] = pure ()
-emitBehaviourEvents ctx details =
+-- | The city lookup runs inside the fork, so it adds no time to the caller's flow.
+-- If the city can't be found, the names are left empty and the event still goes out.
+emitBehaviourEvents :: (MonadFlow m, CacheFlow m r) => m (Maybe BehaviourEventCity) -> BehaviourEventContext -> [BehaviourEventDetail] -> m ()
+emitBehaviourEvents _ _ [] = pure ()
+emitBehaviourEvents lookupCity ctx details =
   fork "behaviourConsequenceEvents" $ do
     disabled <- isEmissionDisabled
     unless disabled $ do
+      eventCity <- fromMaybe (BehaviourEventCity "" "") <$> lookupCity
       now <- getCurrentTime
       forM_ details $ \detail -> do
         eventId <- generateGUID
-        pushToKafka (mkEvent ctx eventId now detail) behaviourEventsTopic ctx.entityId
+        pushToKafka (mkEvent ctx eventCity eventId now detail) behaviourEventsTopic ctx.entityId
 
 isEmissionDisabled :: (MonadFlow m, CacheFlow m r) => m Bool
 isEmissionDisabled = do
-  mbFlag :: Maybe Text <-
+  -- Read as JSON: `SET <key> 1` stores the number 1, `SET <key> '"1"'` the text "1"; both disable.
+  mbFlag :: Maybe A.Value <-
     IM.withInMemCache [behaviourEventsDisabledKey] 60 $
       Hedis.runInMultiCloudRedisMaybeResult $ Hedis.get behaviourEventsDisabledKey
-  pure $ mbFlag == Just "1"
+  pure $ mbFlag `elem` [Just (A.Number 1), Just (A.String "1")]
 
 snapshotEventContext :: LYDL.CallerApp -> Id LYT.MerchantOperatingCity -> LYT.LogicDomain -> Maybe Int -> BehaviorSnapshot -> BehaviourEventContext
 snapshotEventContext caller mocId logicDomain version snapshot =
@@ -188,12 +205,14 @@ communicationDetail directive
   where
     channel = T.toUpper directive.channel
 
-mkEvent :: BehaviourEventContext -> Text -> UTCTime -> BehaviourEventDetail -> BehaviourConsequenceEvent
-mkEvent ctx eventId now detail =
+mkEvent :: BehaviourEventContext -> BehaviourEventCity -> Text -> UTCTime -> BehaviourEventDetail -> BehaviourConsequenceEvent
+mkEvent ctx eventCity eventId now detail =
   BehaviourConsequenceEvent
     { event_id = eventId,
       occurred_at = clickhouseTimestamp now,
       merchant_operating_city_id = ctx.merchantOperatingCityId,
+      merchant_short_id = eventCity.merchantShortId,
+      city = eventCity.city,
       caller_app = T.toUpper (show ctx.callerApp),
       entity_type = ctx.entityType,
       entity_id = ctx.entityId,

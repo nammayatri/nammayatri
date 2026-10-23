@@ -285,6 +285,7 @@ handleGpsTollBehavior ev = withRideAndBooking ev $ \ride booking -> do
           snapshot
           LYDL.Driver
           (cast booking.merchantOperatingCityId)
+          (BehaviorDispatch.behaviourEventCity booking.merchantOperatingCityId)
           LYT.GPS_TOLL_BEHAVIOR
           fetchRules
       logInfo $
