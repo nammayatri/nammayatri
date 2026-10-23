@@ -71,6 +71,7 @@ import Lib.Scheduler (SchedulerType)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator (AllocatorJobType (..), GenerateInvoicePdfJobData (..))
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
@@ -170,7 +171,8 @@ cancelRideImpl ::
     ServiceFlow m r,
     HasField "quoteRespondCoolDown" r Int,
     HasField "driverUnlockDelay" r Seconds,
-    C.MonadCatch m
+    C.MonadCatch m,
+    Analytics.PublishesFleetAnalytics m
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->
