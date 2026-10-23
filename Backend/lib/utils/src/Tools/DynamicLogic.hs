@@ -5,7 +5,7 @@ module Tools.DynamicLogic where
 
 import Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KM
-import Data.List (nub)
+import Data.List (nub, sortOn)
 import qualified EulerHS.Language as L
 import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
@@ -18,6 +18,7 @@ import Kernel.Utils.Common
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as DALE
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as DALR
+import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout as QADLR
 import qualified Lib.Yudhishthira.Tools.DynamicLogicGroup as LYG
 import qualified Lib.Yudhishthira.Tools.TimeBoundRollout as LYTB
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
@@ -168,11 +169,8 @@ selectVersionForConfigs ::
   m (Maybe Int)
 selectVersionForConfigs merchantOpCityId domain mbToss =
   selectWithTxnStickiness domain $ do
-    mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
-    -- Behaviour domains are opt-in per city: never inherit the "default"-city rollout
-    -- (its 0% row is only a canonical-version marker for the enablement APIs).
-    configs <- if null mbConfigs && not (isBehaviourDomain domain) then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
-    applicapleConfigs <- LYTB.filterByActiveTimeBound (cast merchantOpCityId) domain (filterActiveRollouts configs) -- Windows are looked up for mocid, so rollout falling back to "default" city can only match "Unbounded".
+    configs <- resolveRolloutsWithFallback merchantOpCityId domain
+    applicapleConfigs <- LYTB.filterByActiveTimeBound (cast merchantOpCityId) domain (filterActiveRollouts configs) -- Windows are looked up for mocid, so rollouts falling back to the "default" or a sibling city can only match "Unbounded".
     mbSelectedConfig <- chooseLogicWithGroups (ungroupBaseRollouts applicapleConfigs) mbToss
     return $ mbSelectedConfig <&> (.version)
 
@@ -219,15 +217,74 @@ selectAppDynamicLogicVersion ::
   m (Maybe Int)
 selectAppDynamicLogicVersion merchantOpCityId domain localTime mbToss =
   selectWithTxnStickiness domain $ do
-    mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
-    -- Behaviour domains are opt-in per city: never inherit the "default"-city rollout
-    -- (its 0% row is only a canonical-version marker for the enablement APIs).
-    configs <- if null mbConfigs && not (isBehaviourDomain domain) then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
+    configs <- resolveRolloutsWithFallback merchantOpCityId domain
     let activeConfigs = filterActiveRollouts configs
     mbWindowName <- LYTB.activeTimeBoundName (cast merchantOpCityId) domain localTime
     let applicapleConfigs = LYTB.applicableForTimeBound mbWindowName activeConfigs
     mbSelectedConfig <- chooseLogicWithGroups (ungroupBaseRollouts applicapleConfigs) mbToss
     return $ mbSelectedConfig <&> (.version)
+
+-- | Resolve the rollout rows to use for a (city, domain), applying the default fallback chain:
+--
+--   1. the city's own rollouts;
+--   2. else the reserved "default"-city rollouts;
+--   3. else a sibling city under the same merchant — the full rollout set of the city that
+--      owns the oldest rollout for this domain (deterministic tie-break).
+--
+-- Behaviour domains are opt-in per city and never fall back (neither the "default" city nor
+-- the merchant-wide tier): their "default"-city row is only a canonical-version marker for
+-- the enablement APIs, and enforcement must be deliberately enabled per city.
+resolveRolloutsWithFallback ::
+  BeamFlow m r =>
+  Id MerchantOperatingCity ->
+  LogicDomain ->
+  m [AppDynamicLogicRollout]
+resolveRolloutsWithFallback merchantOpCityId domain = do
+  cityConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
+  if not (null cityConfigs) || isBehaviourDomain domain
+    then return cityConfigs
+    else do
+      defaultCityConfigs <- DALR.findByMerchantOpCityAndDomain (Id "default") domain
+      if not (null defaultCityConfigs)
+        then return defaultCityConfigs
+        else resolveMerchantWideRollouts merchantOpCityId domain
+
+-- | Tier-3 of the fallback chain: borrow a sibling city's rollouts for this domain from the
+-- same merchant. The merchant is discovered from any rollout the city already owns (rollouts
+-- carry @merchantId@), so no cross-schema merchant lookup is needed; a city with no rollouts
+-- at all yields nothing. Among the merchant's rollouts for the domain we pick the city owning
+-- the oldest one and return that city's complete rollout set, keeping base/experiment rows
+-- coherent for downstream selection.
+resolveMerchantWideRollouts ::
+  BeamFlow m r =>
+  Id MerchantOperatingCity ->
+  LogicDomain ->
+  m [AppDynamicLogicRollout]
+resolveMerchantWideRollouts merchantOpCityId domain = do
+  mbMerchantId <- resolveMerchantIdFromCity merchantOpCityId
+  case mbMerchantId of
+    Nothing -> do
+      logWarning $ "No merchantId resolvable for city: " <> show merchantOpCityId <> " and domain: " <> show domain <> "; skipping merchant-wide default fallback"
+      return []
+    Just merchantId -> do
+      merchantRollouts <- QADLR.findAllByMerchantIdAndDomain merchantId domain
+      case listToMaybe (sortOn (.createdAt) merchantRollouts) of
+        Nothing -> return []
+        Just oldest -> do
+          let pickedCity = oldest.merchantOperatingCityId
+          logInfo $ "Applying merchant-wide default dynamic logic from city: " <> show pickedCity <> " for city: " <> show merchantOpCityId <> " and domain: " <> show domain
+          return $ filter (\r -> r.merchantOperatingCityId == pickedCity) merchantRollouts
+
+-- | Discover the merchant a city belongs to from any rollout it already owns (across domains).
+-- Rollouts created via the dashboard carry @merchantId = Just <merchant>@, so this avoids a
+-- cross-schema MerchantOperatingCity lookup (unavailable in this shared library).
+resolveMerchantIdFromCity ::
+  BeamFlow m r =>
+  Id MerchantOperatingCity ->
+  m (Maybe (Id Merchant))
+resolveMerchantIdFromCity merchantOpCityId = do
+  rows <- QADLR.findAllByMerchantOpCityId (cast merchantOpCityId)
+  return $ listToMaybe (mapMaybe (.merchantId) rows)
 
 -- | Filter out rollouts that are no longer active (DISCARDED, REVERTED).
 filterActiveRollouts :: [AppDynamicLogicRollout] -> [AppDynamicLogicRollout]

@@ -79,6 +79,23 @@ updateExperimentGroup cityId domain timeBounds version mbGroup =
         ]
     ]
 
+-- | All rollout rows for a given merchant (across every operating city it owns) and domain.
+-- Used by the merchant-wide default fallback when a city has neither its own rollouts
+-- nor a "default"-city rollout for the domain. @merchantId@ is stored nullable, so the
+-- filter matches the @Just (getId ...)@ encoding written by the create/update setters.
+findAllByMerchantIdAndDomain ::
+  (BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Yudhishthira.Types.Merchant ->
+  Lib.Yudhishthira.Types.LogicDomain ->
+  m [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout]
+findAllByMerchantIdAndDomain merchantId domain =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq (Just (Kernel.Types.Id.getId merchantId)),
+          Se.Is Beam.domain $ Se.Eq domain
+        ]
+    ]
+
 findByCityAndDomainAndIsBase ::
   (BeamFlow.BeamFlow m r) =>
   ( Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
