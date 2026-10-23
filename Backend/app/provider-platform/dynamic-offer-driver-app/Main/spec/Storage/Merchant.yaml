@@ -119,6 +119,7 @@ Merchant:
     cipherText: Maybe Base64
     cloudType: Maybe CloudType
     cloudBaseUrl: Maybe BaseUrl
+    socialIdentityValidityInDays: Maybe Int
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -1238,6 +1239,10 @@ TransporterConfig:
     authPhoneNumberCountWindow1: Maybe SlidingWindowOptions
     authPhoneNumberCountThreshold2: Maybe Int
     authPhoneNumberCountWindow2: Maybe SlidingWindowOptions
+    authEmailCountThreshold1: Maybe Int
+    authEmailCountWindow1: Maybe SlidingWindowOptions
+    authEmailCountThreshold2: Maybe Int
+    authEmailCountWindow2: Maybe SlidingWindowOptions
     fraudAuthCountThreshold: Maybe Int
     fraudAuthCountWindow: Maybe SlidingWindowOptions
     stripeStatusRefreshCountThreshold: Maybe Int
@@ -1942,6 +1947,8 @@ TransporterConfig:
     exotelAppIdMapping: json
     authPhoneNumberCountWindow1: json
     authPhoneNumberCountWindow2: json
+    authEmailCountWindow1: json
+    authEmailCountWindow2: json
     fraudAuthCountWindow: json
     stripeStatusRefreshCountWindow: json
     addDriverCountWindow: json

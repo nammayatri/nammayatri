@@ -71,6 +71,7 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             signatureExpiry = signatureExpiry,
             signingPrivateKey = signingPrivateKey,
             signingPublicKey = signingPublicKey,
+            socialIdentityValidityInDays = socialIdentityValidityInDays,
             stuckRideAutoCancellationBuffer = stuckRideAutoCancellationBuffer,
             subscriberId = Kernel.Types.Id.ShortId subscriberId,
             updatedAt = updatedAt
@@ -128,6 +129,7 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.signatureExpiry = signatureExpiry,
         Beam.signingPrivateKey = signingPrivateKey,
         Beam.signingPublicKey = signingPublicKey,
+        Beam.socialIdentityValidityInDays = socialIdentityValidityInDays,
         Beam.stuckRideAutoCancellationBuffer = stuckRideAutoCancellationBuffer,
         Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId,
         Beam.updatedAt = updatedAt

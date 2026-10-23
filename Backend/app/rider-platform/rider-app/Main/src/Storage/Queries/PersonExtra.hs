@@ -113,7 +113,33 @@ updateEmailByPersonId (Id personId) encEmail = do
   updateOneWithKV
     [ Se.Set BeamP.updatedAt now,
       Se.Set BeamP.emailEncrypted (Just encVal),
-      Se.Set BeamP.emailHash (Just emailHash)
+      Se.Set BeamP.emailHash (Just emailHash),
+      Se.Set BeamP.emailVerified (Just False),
+      Se.Set BeamP.emailSource Nothing
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateVerifiedEmail :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Kernel.External.Encryption.EncryptedHashedField 'AsEncrypted Text -> EmailSource -> m ()
+updateVerifiedEmail (Id personId) encEmail emailSource = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.emailEncrypted (Just $ unEncrypted encEmail.encrypted),
+      Se.Set BeamP.emailHash (Just encEmail.hash),
+      Se.Set BeamP.emailVerified (Just True),
+      Se.Set BeamP.emailSource (Just emailSource)
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+clearEmail :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> m ()
+clearEmail (Id personId) = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.emailEncrypted Nothing,
+      Se.Set BeamP.emailHash Nothing,
+      Se.Set BeamP.emailVerified Nothing,
+      Se.Set BeamP.emailSource Nothing
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
@@ -189,6 +215,10 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
         (Just newEmail, Just oldEmail) -> newEmail.hash /= oldEmail.hash
         (Just _, Nothing) -> True -- New business email being added
         _ -> False
+      isEmailChanging = case (mbEncEmail, person.email) of
+        (Just newEmail, Just oldEmail) -> newEmail.hash /= oldEmail.hash
+        (Just _, Nothing) -> True
+        _ -> False
 
   updateOneWithKV
     ( [Se.Set BeamP.updatedAt now]
@@ -197,6 +227,8 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
         <> [Se.Set BeamP.lastName mbLastName | isJust mbLastName]
         <> [Se.Set BeamP.emailEncrypted mbEmailEncrypted | isJust mbEmailEncrypted]
         <> [Se.Set BeamP.emailHash mbEmailHash | isJust mbEmailHash]
+        <> [Se.Set BeamP.emailVerified (Just False) | isEmailChanging]
+        <> [Se.Set BeamP.emailSource Nothing | isEmailChanging]
         <> [Se.Set BeamP.deviceToken mbDeviceToken | isJust mbDeviceToken]
         <> [Se.Set BeamP.notificationToken mbNotificationToken | isJust mbNotificationToken]
         <> [Se.Set BeamP.language mbLanguage | isJust mbLanguage]

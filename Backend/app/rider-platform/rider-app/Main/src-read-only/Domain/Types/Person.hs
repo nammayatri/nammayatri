@@ -59,6 +59,8 @@ data PersonE e = Person
     deviceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     deviceToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     email :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
+    emailSource :: Kernel.Prelude.Maybe Domain.Types.Person.EmailSource,
+    emailVerified :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableOtpLessRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enabled :: Kernel.Prelude.Bool,
     falseSafetyAlarmCount :: Kernel.Prelude.Int,
@@ -163,6 +165,8 @@ instance EncryptedItem Person where
           deviceId = deviceId entity,
           deviceToken = deviceToken entity,
           email = email_,
+          emailSource = emailSource entity,
+          emailVerified = emailVerified entity,
           enableOtpLessRide = enableOtpLessRide entity,
           enabled = enabled entity,
           falseSafetyAlarmCount = falseSafetyAlarmCount entity,
@@ -259,6 +263,8 @@ instance EncryptedItem Person where
             deviceId = deviceId entity,
             deviceToken = deviceToken entity,
             email = email_,
+            emailSource = emailSource entity,
+            emailVerified = emailVerified entity,
             enableOtpLessRide = enableOtpLessRide entity,
             enabled = enabled entity,
             falseSafetyAlarmCount = falseSafetyAlarmCount entity,
@@ -326,6 +332,8 @@ instance EncryptedItem' Person where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
+data EmailSource = SOCIAL_GOOGLE | SOCIAL_APPLE | SOCIAL_APPLE_PRIVATE_RELAY | OTP deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY | NON_BINARY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL | CONDUCTORTOKEN deriving (Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
@@ -349,3 +357,5 @@ $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''Gender)
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''RideShareOptions)
 
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''RideShareOptions)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''EmailSource)

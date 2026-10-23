@@ -720,6 +720,27 @@ def _expand_patched_data_inplace(patched_base):
         print(f"[import] resolved env-templates in {count} patched JSON file(s)")
 
 
+_MOCK_SERVER_BASE_PORT = "8080"
+_MOCK_SERVER_URL_RE = re.compile(r"localhost:8080(?!\d)")
+
+
+def _resolved_mock_server_port():
+    port = os.environ.get("MOCK_SERVER_PORT", "").strip()
+    if port.isdigit() and port != _MOCK_SERVER_BASE_PORT:
+        return port
+    return None
+
+
+def _rewrite_mock_server_port(node, port):
+    if isinstance(node, dict):
+        return {k: _rewrite_mock_server_port(v, port) for k, v in node.items()}
+    if isinstance(node, list):
+        return [_rewrite_mock_server_port(v, port) for v in node]
+    if isinstance(node, str):
+        return _MOCK_SERVER_URL_RE.sub(f"localhost:{port}", node)
+    return node
+
+
 def list_table_files(base_dir, env_name, schema):
     d = base_dir / env_name / schema
     if not d.exists():
@@ -1907,6 +1928,10 @@ def cmd_import(args):
     # against this user's nix-shell env. Idempotent — safe to re-run.
     _expand_patched_data_inplace(patched_base)
 
+    mock_server_port = _resolved_mock_server_port() if to_env == "local" else None
+    if mock_server_port:
+        print(f"[import] rewriting localhost:{_MOCK_SERVER_BASE_PORT} -> localhost:{mock_server_port} (MOCK_SERVER_PORT)")
+
     # SQL output directory
     sql_dir = SCRIPT_DIR / f"{direction}_sql"
     if sql_dir.exists():
@@ -2009,6 +2034,8 @@ def cmd_import(args):
             # ── Second pass: write INSERT SQL files batch by batch (data already patched) ──
             batch_idx = 0
             for _, batch_rows in iter_table_rows(base, "", schema, table):
+                if mock_server_port:
+                    batch_rows = _rewrite_mock_server_port(batch_rows, mock_server_port)
                 insert_sql = generate_insert_sql(
                     target_db_schema, table, batch_rows, columns,
                     tgt_cols, head_row, not_null_cols=not_null_cols, col_types=col_types,

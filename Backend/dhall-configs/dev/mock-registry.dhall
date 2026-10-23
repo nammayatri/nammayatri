@@ -15,7 +15,8 @@ let esqDBCfg =
 in  { port = Natural/toInteger (env:SERVICE_PORT ? 8020)
     , graceTerminationPeriod = +90
     , loggerConfig =
-        common.loggerConfig // { logFilePath = "/tmp/mock-registry.log" }
+            common.loggerConfig
+        //  { logFilePath = "${common.logDir}/mock-registry.log" }
     , esqDBCfg
     , autoMigrate = True
     , migrationPath = Some

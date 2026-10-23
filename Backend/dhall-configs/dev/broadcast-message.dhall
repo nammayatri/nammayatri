@@ -9,7 +9,8 @@ in      base
         , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9994)
         , loggerConfig =
                 base.loggerConfig
-            //  { logFilePath = "/tmp/kafka-consumers-broadcast-messages.log"
+            //  { logFilePath =
+                    "${common.logDir}/kafka-consumers-broadcast-messages.log"
                 , logRawSql = True
                 }
         }

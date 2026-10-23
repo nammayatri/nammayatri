@@ -14,6 +14,8 @@ let uiDevPort = Natural/show (env:UI_DEV_PORT ? 3000)
 
 let urlShortnerPort = Natural/show (env:URL_SHORTNER_PORT ? 9023)
 
+let logDir = env:NY_LOG_DIR as Text ? "/tmp"
+
 let nsdlRegistryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/"
 
 let becknOneRegistryUrl = "https://beckn-one.succinct.in/subscribers"
@@ -80,6 +82,19 @@ let fabricGatewayBaseUrl = "http://localhost:${becknGatewayPort}/v1"
 let nammayatriRegistryConfig =
       { apiKey = sec.nammayatriRegistryApiKey, url = nyRegistryUrl }
 
+let socialLoginConfig =
+      { google = None { clientIds : List Text }
+      , apple =
+          [] : List
+                 { clientIds : List Text
+                 , teamId : Text
+                 , keyId : Text
+                 , encryptedPrivateKey : Text
+                 }
+      , jwksCacheExpiry = +3600
+      , clockSkew = +60
+      }
+
 in  { smsSessionConfig = globalCommon.smsSessionConfig
     , autoMigrate = globalCommon.autoMigrate
     , loggerConfig =
@@ -117,4 +132,6 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , nyRegistryUrl
     , nyGatewayUrl
     , fabricGatewayBaseUrl
+    , socialLoginConfig
+    , logDir
     }

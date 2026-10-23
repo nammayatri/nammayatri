@@ -59,6 +59,8 @@ data PersonT f = PersonT
     deviceToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     emailEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     emailHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    emailSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.Person.EmailSource),
+    emailVerified :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOtpLessRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enabled :: B.C f Kernel.Prelude.Bool,
     falseSafetyAlarmCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

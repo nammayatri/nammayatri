@@ -694,7 +694,8 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
           DReg.AuthVerifyReq
             { otp = req.otp,
               deviceToken = deviceToken,
-              whatsappNotificationEnroll = Nothing
+              whatsappNotificationEnroll = Nothing,
+              socialLinkToken = Nothing
             }
           Nothing
 

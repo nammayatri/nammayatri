@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m ([Domain.Types.MerchantConfig.MerchantConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.MerchantConfig.MerchantConfig])
 findAllByMerchantOperatingCityId merchantOperatingCityId enabled = do
   findAllWithKV
     [ Se.And
@@ -40,7 +40,11 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.MerchantConfig.MerchantConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.authPhoneNumberCountThreshold1 authPhoneNumberCountThreshold1,
+    [ Se.Set Beam.authEmailCountThreshold1 authEmailCountThreshold1,
+      Se.Set Beam.authEmailCountThreshold2 authEmailCountThreshold2,
+      Se.Set Beam.authEmailCountWindow1 authEmailCountWindow1,
+      Se.Set Beam.authEmailCountWindow2 authEmailCountWindow2,
+      Se.Set Beam.authPhoneNumberCountThreshold1 authPhoneNumberCountThreshold1,
       Se.Set Beam.authPhoneNumberCountThreshold2 authPhoneNumberCountThreshold2,
       Se.Set Beam.authPhoneNumberCountWindow1 authPhoneNumberCountWindow1,
       Se.Set Beam.authPhoneNumberCountWindow2 authPhoneNumberCountWindow2,
@@ -67,7 +71,11 @@ instance FromTType' Beam.MerchantConfig Domain.Types.MerchantConfig.MerchantConf
     pure $
       Just
         Domain.Types.MerchantConfig.MerchantConfig
-          { authPhoneNumberCountThreshold1 = authPhoneNumberCountThreshold1,
+          { authEmailCountThreshold1 = authEmailCountThreshold1,
+            authEmailCountThreshold2 = authEmailCountThreshold2,
+            authEmailCountWindow1 = authEmailCountWindow1,
+            authEmailCountWindow2 = authEmailCountWindow2,
+            authPhoneNumberCountThreshold1 = authPhoneNumberCountThreshold1,
             authPhoneNumberCountThreshold2 = authPhoneNumberCountThreshold2,
             authPhoneNumberCountWindow1 = authPhoneNumberCountWindow1,
             authPhoneNumberCountWindow2 = authPhoneNumberCountWindow2,
@@ -93,7 +101,11 @@ instance FromTType' Beam.MerchantConfig Domain.Types.MerchantConfig.MerchantConf
 instance ToTType' Beam.MerchantConfig Domain.Types.MerchantConfig.MerchantConfig where
   toTType' (Domain.Types.MerchantConfig.MerchantConfig {..}) = do
     Beam.MerchantConfigT
-      { Beam.authPhoneNumberCountThreshold1 = authPhoneNumberCountThreshold1,
+      { Beam.authEmailCountThreshold1 = authEmailCountThreshold1,
+        Beam.authEmailCountThreshold2 = authEmailCountThreshold2,
+        Beam.authEmailCountWindow1 = authEmailCountWindow1,
+        Beam.authEmailCountWindow2 = authEmailCountWindow2,
+        Beam.authPhoneNumberCountThreshold1 = authPhoneNumberCountThreshold1,
         Beam.authPhoneNumberCountThreshold2 = authPhoneNumberCountThreshold2,
         Beam.authPhoneNumberCountWindow1 = authPhoneNumberCountWindow1,
         Beam.authPhoneNumberCountWindow2 = authPhoneNumberCountWindow2,

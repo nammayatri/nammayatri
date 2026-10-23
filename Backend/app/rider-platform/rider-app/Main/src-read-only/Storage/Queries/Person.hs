@@ -223,6 +223,8 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.deviceToken deviceToken,
       Se.Set Beam.emailEncrypted (email <&> unEncrypted . (.encrypted)),
       Se.Set Beam.emailHash (email <&> (.hash)),
+      Se.Set Beam.emailSource emailSource,
+      Se.Set Beam.emailVerified emailVerified,
       Se.Set Beam.enableOtpLessRide enableOtpLessRide,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.falseSafetyAlarmCount (Just falseSafetyAlarmCount),
