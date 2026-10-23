@@ -22,6 +22,7 @@ import qualified Lib.Finance.Storage.Beam.Account as BeamAccount
 import qualified Lib.Finance.Storage.Beam.AuditEntry as BeamAudit
 import qualified Lib.Finance.Storage.Beam.CurrentState as BeamCurrentState
 import qualified Lib.Finance.Storage.Beam.DirectTaxTransaction as BeamDirectTax
+import qualified Lib.Finance.Storage.Beam.FinanceAccountConfig as BeamFinanceAccountConfig
 import qualified Lib.Finance.Storage.Beam.FinanceTdsReimbursementInvoiceMapping as BeamTdsMap
 import qualified Lib.Finance.Storage.Beam.FinanceTdsReimbursementRequest as BeamTdsReq
 import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamIndirectTax
@@ -36,8 +37,10 @@ import qualified Lib.Finance.Storage.Beam.PgSettlementBatch as BeamPgSettlementB
 import qualified Lib.Finance.Storage.Beam.ReconciliationEntry as BeamReconciliationEntry
 import qualified Lib.Finance.Storage.Beam.ReconciliationSummary as BeamReconciliationSummary
 import qualified Lib.Finance.Storage.Beam.SapJournalEntry as BeamSapJournal
+import qualified Lib.Finance.Storage.Beam.ScheduledTransferRule as BeamScheduledTransferRule
 import qualified Lib.Finance.Storage.Beam.SettlementFileInfo as BeamSettlementFileInfo
 import qualified Lib.Finance.Storage.Beam.StateTransition as BeamStateTransition
+import qualified Lib.Finance.Storage.Beam.Transfer as BeamTransfer
 import qualified Lib.Payment.Storage.Beam.Offer as BeamOF
 import qualified Lib.Payment.Storage.Beam.OfferFrequencyStatsHistory as BeamOFSH
 import qualified Lib.Payment.Storage.Beam.OfferStats as BeamOfferStats
@@ -104,6 +107,15 @@ instance HasSchemaName BeamWH.WalletHistoryT where
 
 -- Finance-kernel beam orphan instances
 instance HasSchemaName BeamAccount.AccountT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamFinanceAccountConfig.FinanceAccountConfigT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamTransfer.TransferT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamScheduledTransferRule.ScheduledTransferRuleT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamAudit.AuditEntryT where

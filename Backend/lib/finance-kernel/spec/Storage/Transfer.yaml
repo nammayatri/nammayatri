@@ -1,0 +1,115 @@
+# Finance Kernel - Transfer table
+# Namma-DSL YAML specification
+#
+# One row per money-movement PROCESS: an internal FA->FA move, an outbound transfer to a
+# real account (payout), or an inbound transfer from a real account (topup/recharge).
+# The ledger stays the immutable record of FACTS (double-entry postings); this table is
+# the mutable record of the process driving them — canonical status, opaque rail status,
+# retry/attempt state, and the idempotency anchor (referenceType, referenceId).
+# Design: docs/backend/design/finance-kernel-unification-plan.md §5.
+
+imports:
+  UTCTime: Kernel.Prelude
+  Currency: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Value: Data.Aeson
+  Account: Lib.Finance.Domain.Types.Account
+  LedgerEntry: Lib.Finance.Domain.Types.LedgerEntry
+  TransferMetadata: Lib.Finance.Domain.Types.Extra.Transfer
+
+Transfer:
+  tableName: finance_transfer
+  derives: "Generic,Show"
+
+  types:
+    TransferDirection:
+      enum: "INTERNAL,OUTBOUND,INBOUND"
+      derive: "HttpInstance"
+
+    # The ONE canonical money lifecycle. Raw rail statuses (Juspay's 24-ctor enum etc.)
+    # are never interpreted outside a rail's classifyStatus; they ride along verbatim
+    # in railStatus. CREATED also covers scheduled-but-not-yet-due.
+    TransferStatus:
+      enum: "CREATED,SUBMITTED,IN_FLIGHT,NEEDS_REVIEW,SUCCEEDED,FAILED,REVERSED"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id Transfer
+    direction: TransferDirection
+    status: TransferStatus
+    railKey: Maybe Text # registry key, e.g. "JUSPAY_PAYOUT"; Nothing for INTERNAL
+    railStatus: Maybe Text # opaque passthrough, e.g. "FULFILLMENTS_SUCCESSFUL"
+    railOrderId: Maybe Text # the rail layer's order id (PayoutOrder / PaymentOrder)
+    accountId: Id Account # the finance account this transfer is about
+    counterAccountId: Maybe (Id Account) # INTERNAL only
+    requestedAmount: Maybe HighPrecMoney # Nothing = AllAvailable was requested
+    amount: HighPrecMoney # resolved gross debit/credit
+    feeAmount: HighPrecMoney
+    currency: Currency
+    referenceType: Text # domain ref vocabulary ("WalletPayout", "WalletTopup", ...)
+    referenceId: Text # domain request id; (referenceType, referenceId) is unique
+    holdEntryId: Maybe (Id LedgerEntry)
+    entryIds: Maybe [Text] # every ledger leg this transfer posted
+    coveredEntryIds: Maybe [Text] # the earning entries this transfer settles (PROCESSING->PAID_OUT)
+    metadata: Maybe TransferMetadata # flow artifacts only — never domain data
+    scheduledFor: Maybe UTCTime
+    attemptCount: Int
+    lastError: Maybe Text
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    amount: numeric(30,2)
+    feeAmount: numeric(30,2)
+    requestedAmount: numeric(30,2)
+    metadata: "json"
+
+  default:
+    attemptCount: "0"
+    feeAmount: "0"
+
+  beamType:
+    metadata: Maybe Value
+
+  fromTType:
+    metadata: metadata >>= Kernel.Utils.JSON.valueToMaybe|E
+
+  toTType:
+    metadata: Data.Aeson.toJSON <$> metadata|E
+
+  constraints:
+    id: PrimaryKey
+    referenceId: "!SecondaryKey"
+    accountId: "!SecondaryKey"
+    railOrderId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByReference:
+      kvFunction: findOneWithKV
+      where:
+        and: [referenceType, referenceId]
+
+    findByRailOrderId:
+      kvFunction: findOneWithKV
+      where: railOrderId
+
+    findAllByAccountId:
+      kvFunction: findAllWithKV
+      where: accountId
+
+  extraIndexes:
+    - columns: [accountId, createdAt]
+
+  extraOperations:
+    - GENERATE_INDEXES
+    - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

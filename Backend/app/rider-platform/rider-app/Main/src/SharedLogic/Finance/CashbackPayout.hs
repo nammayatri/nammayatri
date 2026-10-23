@@ -13,13 +13,18 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Balance as FinanceBalance
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as DA
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
+import qualified Lib.Finance.Domain.Types.Transfer as DT
+import Lib.Finance.FinanceM (runFinance)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
+import Lib.Finance.Transfer.Outbound (OutboundSpec (..), initiateTransferOut)
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Payout.Request as PayoutRequest
+import qualified SharedLogic.Finance.Rails as Rails
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import Storage.Beam.Payment ()
@@ -133,54 +138,59 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
             ledgerEntryIds = map (.getId) originalEntryIds, -- TODO :: Can be made empty in next release `[]` as now using Redis for storing ids for not bloating DB rows with ids in a row.
             payoutServiceFlow = Payout.JuspayFlow -- StripeFlow not supported currently in rider-app
           }
-  -- Reserve the entries before calling Juspay, so no other run picks them while the order is in flight.
-  -- They become PAID_OUT on a success status and UNSETTLED again on a failure status.
-  RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds Nothing
-  result <-
-    PayoutRequest.submitPayoutRequest submission payoutCall afterPayoutOrderCreated
-      `catch` \(e :: SomeException) -> do
-        RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
-        throwM e
-  case result of
-    PayoutRequest.PayoutInitiated pr _ -> do
-      RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds (Just pr.id.getId)
-      let ownerPayoutCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId payoutConfig.currency True person.id.getId pr.id.getId Nothing Nothing Nothing
-      RidePaymentFinance.postCashbackOwnerPayoutLiability ownerPayoutCtx totalAmount
-        >>= either (\err -> logError $ "Failed to move cashback payout amount to owner payout liability for payoutRequest " <> pr.id.getId <> ": " <> show err) (const (pure ()))
-      PayoutRequest.stashPayoutLedgerEntryIds pr.id.getId (map (.getId) originalEntryIds)
-      logInfo $
-        "Cashback payout initiated person="
-          <> person.id.getId
-          <> " payoutRequestId="
-          <> pr.id.getId
-          <> " entries="
-          <> show (length originalEntryIds)
-          <> " amount="
-          <> show totalAmount
-      Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_INITIATED" totalAmount
-    PayoutRequest.PayoutProcessing pr status -> do
-      -- Also returned when Juspay accepted the order but it could not be read back, so an order may be
-      -- in flight: keep the entries reserved under this request until a status check resolves it.
-      RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds (Just pr.id.getId)
-      logInfo $
-        "Cashback payout already in flight. person="
-          <> person.id.getId
-          <> " payoutRequestId="
-          <> pr.id.getId
-          <> " status="
-          <> show status
-    PayoutRequest.PayoutFailed _ err -> do
-      RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
-      logError $ "Cashback payout submission failed for person=" <> person.id.getId <> ": " <> err
-      Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" totalAmount
-    -- Only the bulk (HDFC CBX) rail returns this. Handled anyway (hold kept, no failure push) so a
-    -- future rail that returns it is not treated as a failure.
-    PayoutRequest.PayoutAmbiguous pr err ->
-      logError $
-        "Cashback payout outcome unknown for person="
-          <> person.id.getId
-          <> " payoutRequestId="
-          <> pr.id.getId
-          <> ": "
-          <> err
-          <> " -- hold left in place, needs manual reconciliation"
+  -- Create the PayoutRequest first (its id anchors every ledger leg and the kernel
+  -- transfer), then hand the whole reserve/hold/submit/compensate dance to
+  -- initiateTransferOut: the kernel marks the covered entries PROCESSING, posts the
+  -- OwnerPayoutLiability hold, and records the outcome on the finance_transfer row.
+  payoutRequest <- PayoutRequest.buildPayoutRequest submission
+  PayoutRequest.createPayoutRequest payoutRequest
+  mbAccount <- RidePaymentFinance.getWalletAccountByOwner DA.RIDER person.id.getId
+  case mbAccount of
+    Nothing ->
+      -- cashbackEntries exist, so the wallet account must too; never submit unledgered
+      logError $ "Cashback payout skipped — no wallet account for person=" <> person.id.getId <> " payoutRequestId=" <> payoutRequest.id.getId
+    Just account -> do
+      let ctx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId payoutConfig.currency True person.id.getId payoutRequest.id.getId Nothing Nothing Nothing
+          rail = Rails.cashbackSubmitRail submission payoutRequest payoutCall afterPayoutOrderCreated
+      res <-
+        initiateTransferOut
+          runFinance
+          rail
+          OutboundSpec
+            { ctx = ctx,
+              account = account,
+              amount = FinanceBalance.Exact totalAmount,
+              referenceType = RidePaymentFinance.ridePaymentRefCashbackPayoutTransfer,
+              referenceId = payoutRequest.id.getId,
+              ledgerRefs = RidePaymentFinance.cashbackPayoutLedgerRefs,
+              instant = True,
+              legacyOfferHoldKeys = [],
+              coveredEntryIds = Just originalEntryIds,
+              holdLedgerMetadata = Nothing,
+              metadata =
+                DT.emptyTransferMetadata
+                  { DT.coveredRefs = Just [DT.CoveredRef {refType = RidePaymentFinance.ridePaymentRefCashbackPayout, amount = totalAmount}]
+                  }
+            }
+      case res of
+        Left err ->
+          logError $ "Cashback payout rejected before submission for person=" <> person.id.getId <> " payoutRequestId=" <> payoutRequest.id.getId <> ": " <> show err
+        Right transfer -> case transfer.status of
+          DT.FAILED -> do
+            logError $ "Cashback payout failed for person=" <> person.id.getId <> " payoutRequestId=" <> payoutRequest.id.getId <> ": " <> fromMaybe "-" transfer.lastError
+            Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" totalAmount
+          DT.NEEDS_REVIEW ->
+            logError $ "Cashback payout outcome unknown for person=" <> person.id.getId <> " payoutRequestId=" <> payoutRequest.id.getId <> ": " <> fromMaybe "-" transfer.lastError <> " -- hold kept, needs manual review"
+          _ -> do
+            logInfo $
+              "Cashback payout initiated person="
+                <> person.id.getId
+                <> " payoutRequestId="
+                <> payoutRequest.id.getId
+                <> " transferId="
+                <> transfer.id.getId
+                <> " entries="
+                <> show (length originalEntryIds)
+                <> " amount="
+                <> show totalAmount
+            Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_INITIATED" totalAmount

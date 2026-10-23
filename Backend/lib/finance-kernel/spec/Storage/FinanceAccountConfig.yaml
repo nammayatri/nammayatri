@@ -1,0 +1,89 @@
+# Finance Kernel - Account-class config table
+# Namma-DSL YAML specification
+#
+# One row per account CLASS — (merchantOperatingCityId, accountType, counterpartyType,
+# subLedger) — not per account. merchantOperatingCityId '*' plus Nothing in
+# counterpartyType / subLedger act as wildcards; resolution is a most-specific-wins
+# ladder implemented in Lib.Finance.AccountConfig (reads go through that module's
+# cache, never these queries directly).
+# Design: docs/backend/design/finance-kernel-unification-plan.md §3.
+
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  Value: Data.Aeson
+  AccountType: Lib.Finance.Domain.Types.Account
+  CounterpartyType: Lib.Finance.Domain.Types.Account
+  CutoffSpec: Lib.Finance.Domain.Types.Extra.FinanceAccountConfig
+  FeeSpec: Lib.Finance.Domain.Types.Extra.FinanceAccountConfig
+
+FinanceAccountConfig:
+  tableName: finance_account_config
+  derives: "Generic,Show,ToJSON,FromJSON" # JSON: rows are Redis-cached per merchant by Lib.Finance.AccountConfig
+
+  fields:
+    id: Id FinanceAccountConfig
+    merchantId: Text
+    merchantOperatingCityId: Text # '*' = merchant-wide wildcard row
+    accountType: AccountType
+    counterpartyType: Maybe CounterpartyType # Nothing = wildcard
+    subLedger: Maybe Text # Nothing = wildcard
+    # --- posting rules ---
+    allowNegativeBalance: Bool # may this class's balance be driven below zero
+    # --- balance semantics ---
+    minRetainedBalance: HighPrecMoney # subtracted when resolving AllAvailable
+    redeemableCutoff: Maybe CutoffSpec # Nothing = everything is redeemable immediately
+    # --- outbound transfer (payout) ---
+    transferOutEnabled: Bool
+    instantTransferOutEnabled: Bool
+    minTransferOutAmount: HighPrecMoney
+    maxTransferOutPerDay: Maybe Int
+    transferOutFee: Maybe FeeSpec
+    # --- inbound transfer (recharge / topup) ---
+    transferInEnabled: Bool
+    # --- scheduling hook (names a scheduled_transfer_rule; Nothing = manual only) ---
+    autoTransferOut: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    minRetainedBalance: numeric(30,2)
+    minTransferOutAmount: numeric(30,2)
+    redeemableCutoff: "json"
+    transferOutFee: "json"
+
+  default:
+    allowNegativeBalance: "true" # today's kernel behaviour; flip per class, never globally
+    minRetainedBalance: "0"
+    transferOutEnabled: "false"
+    instantTransferOutEnabled: "false"
+    minTransferOutAmount: "0"
+    transferInEnabled: "false"
+
+  beamType:
+    redeemableCutoff: Maybe Value
+    transferOutFee: Maybe Value
+
+  fromTType:
+    redeemableCutoff: redeemableCutoff >>= Kernel.Utils.JSON.valueToMaybe|E
+    transferOutFee: transferOutFee >>= Kernel.Utils.JSON.valueToMaybe|E
+
+  toTType:
+    redeemableCutoff: Data.Aeson.toJSON <$> redeemableCutoff|E
+    transferOutFee: Data.Aeson.toJSON <$> transferOutFee|E
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    # Small config table: AccountConfig caches the full merchant row set in Redis and
+    # resolves the wildcard ladder in memory, so one coarse read is all we need.
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where: merchantId
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
