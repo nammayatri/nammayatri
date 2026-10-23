@@ -44,6 +44,7 @@ buildRatingReqV2 subscriber req = do
   ratingValueText <- rating.ratingValue & fromMaybeM (InvalidRequest "Missing ratingValue")
   let mbRatingValue = readMaybe $ T.unpack ratingValueText
       mbShouldFavDriver = getShouldFavouriteDriver rating
+      mbShouldBlacklistDriver = getShouldBlacklistDriver rating
       mbRiderPhoneNum = getRiderPhoneNumber rating
       mbFilePath = getFilePath rating
       mbRiderName = getRiderName rating
@@ -56,6 +57,7 @@ buildRatingReqV2 subscriber req = do
         ratingValue = ratingValue,
         feedbackDetails = tfFeedbackDetails rating,
         shouldFavDriver = mbShouldFavDriver,
+        shouldBlacklistDriver = mbShouldBlacklistDriver,
         riderPhoneNum = mbRiderPhoneNum,
         filePath = mbFilePath,
         riderName = mbRiderName
