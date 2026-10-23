@@ -177,7 +177,8 @@ runSAPDispatchShell jobId cfg params scheduleNext runDomain = withLogTag ("JobId
       lockKey = cfg.lockKeyPrefix <> ":" <> merchantId.getId <> ":" <> merchantOperatingCityId.getId
       fromTime = params.startTime
       toTime = params.endTime
-      idempotencyKey = mkIdempotencyKey cfg.idempotencyJobType merchantOperatingCityId.getId (show $ utctDay fromTime)
+      localFromTime = addUTCTime (secondsToNominalDiffTime params.timeDiffFromUtc) fromTime
+      idempotencyKey = mkIdempotencyKey cfg.idempotencyJobType merchantOperatingCityId.getId (show $ utctDay localFromTime)
       shouldScheduleNext = fromMaybe True params.scheduleNextJob
       scheduleNext' = do
         jobParams <- buildNextSAPDispatchJobParams merchantId merchantOperatingCityId params.scheduledTime params.timeDiffFromUtc params.maxApiRetries
@@ -395,13 +396,15 @@ buildJournalRequestFromItems ::
   SAPConfig.SAPServiceConfig ->
   Text ->
   UTCTime ->
+  Seconds ->
   [SAPJournalItem] ->
   m SAPJournalRequest
-buildJournalRequestFromItems sapCfg headerDesc fromTime items = do
+buildJournalRequestFromItems sapCfg headerDesc fromTime utcOffset items = do
   now <- getCurrentTime
   let reqDate = formatSAPDate now
       reqTime = formatSAPTime now
-      postingDate = formatSAPDate fromTime
+      localFromTime = addUTCTime (secondsToNominalDiffTime utcOffset) fromTime
+      postingDate = formatSAPDate localFromTime
       filteredItems = filterZeroItems items
       (debit, credit) = computeDebitCreditTotals filteredItems
   bId <-
@@ -733,7 +736,7 @@ postJV sapCfg token params currency spec = do
               mkItem bId (show itemNum) leg.accountKey sapCfg.accountMapping leg.direction leg.amount currency
           let filtered = filterZeroItems items
           logInfo $ "Dispatching " <> spec.label <> " to SAP, txnCount=" <> show spec.txnCount
-          req <- buildJournalRequestFromItems sapCfg spec.label fromTime filtered
+          req <- buildJournalRequestFromItems sapCfg spec.label fromTime params.timeDiffFromUtc filtered
           logInfo $ "SAP journal entry request body = " <> show req
           result <- callSAPWithRetry sapCfg token req spec.label maxRetries
           handleSAPResponse spec.label req result txnType spec.txnCount mId mocid fromTime toTime currency spec.saveRows
