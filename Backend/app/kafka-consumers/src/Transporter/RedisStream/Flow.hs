@@ -146,13 +146,13 @@ runShard flowRt appEnv cfg instanceName deliver (shardId, streamName) =
     tagClaim = "rs-claim-shard-" <> show shardId
     readChunkStream tag =
       S.repeatM $
-        runFlowR flowRt appEnv $
+        runFlowWithFreshLocalOptions flowRt appEnv $
           withLogTag tag $ readNewEntries cfg instanceName streamName
     -- 'S.delay' spaces consecutive emissions by claimIntervalSeconds.
     claimChunkStream tag =
       S.delay (fromIntegral (getSeconds cfg.claimIntervalSeconds)) $
         S.repeatM $
-          runFlowR flowRt appEnv $
+          runFlowWithFreshLocalOptions flowRt appEnv $
             withLogTag tag $ claimEligibleEntries cfg shardId instanceName streamName
 
 -- | Drain one chunk through 'deliver' and XACK whatever it returns.
@@ -166,7 +166,7 @@ deliverAndAck ::
   IO ()
 deliverAndAck flowRt appEnv cfg streamName deliver records
   | null records = pure ()
-  | otherwise = runFlowR flowRt appEnv $ do
+  | otherwise = runFlowWithFreshLocalOptions flowRt appEnv $ do
     DeliverResult {toAck, toDelete} <- deliver records
     unless (null toAck) $
       void $ Hedis.xAck streamName cfg.consumerGroupName toAck
