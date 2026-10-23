@@ -109,6 +109,7 @@ import qualified Storage.Queries.DriverInformation.Internal as DIIQuery
 import qualified Storage.Queries.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverPanCard as QDPC
+import qualified Storage.Queries.DriverProfileQuestions as QDPQ
 import qualified Storage.Queries.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverSSN as QDSSN
 import qualified Storage.Queries.DriverUdyam as QUDYAM
@@ -1082,6 +1083,14 @@ getProcessedDriverDocuments role driverId entityImagesInfo mbCommonDoc docType u
         if (mbBackgroundVerification <&> (.reportStatus)) == Just Documents.VALID
           then return (Just VALID, Nothing, Nothing, mbBackgroundVerification <&> (.expiresAt), mbS3Path, mbImageId, Nothing, Nothing, Nothing)
           else return (Nothing, Nothing, Nothing, mbBackgroundVerification <&> (.expiresAt), mbS3Path, mbImageId, Nothing, Nothing, Nothing)
+      DVC.ProfileDetails -> do
+        mbProfile <- QDPQ.findByPersonId driverId
+        case mbProfile of
+          Just profile
+            | maybe False (not . null) profile.selfDeclarations ->
+              return (Just VALID, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
+          _ ->
+            return (Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
       DVC.LocalResidenceProof -> do
         let (status, reason, url) = checkImageValidity entityImagesInfo DVC.LocalResidenceProof
         -- Fleet owners store the local address triplet in fleet_owner_information; drivers in driver_identity_info.
