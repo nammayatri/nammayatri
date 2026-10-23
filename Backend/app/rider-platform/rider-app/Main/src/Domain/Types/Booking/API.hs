@@ -17,6 +17,7 @@ module Domain.Types.Booking.API where
 
 -- TODO:Move api entity of booking to UI
 
+import qualified API.Types.UI.BookingDeposit as DepositAPI
 import qualified BecknV2.OnDemand.Enums as VehicleCategory
 import Data.Aeson (eitherDecode, encode)
 import qualified Data.HashMap.Strict as HM
@@ -180,6 +181,7 @@ data BookingAPIEntity = BookingAPIEntity
     specialLocationSupportNumber :: Maybe Text,
     commissionCharge :: Maybe HighPrecMoney,
     bookingDepositAmount :: Maybe HighPrecMoney,
+    bookingDeposit :: Maybe BookingDepositInfo,
     refunds :: [RideRefundInfo],
     fareSettlementType :: Maybe SL.FareSettlementType,
     cardInfo :: Maybe RideCardInfo,
@@ -188,6 +190,13 @@ data BookingAPIEntity = BookingAPIEntity
     isSilentReallocation :: Maybe Bool,
     parentSearchRequestLocationInfo :: Maybe ParentSearchRequestLocationInfo,
     fleetEngineEnabled :: Maybe Bool
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data BookingDepositInfo = BookingDepositInfo
+  { amount :: HighPrecMoney,
+    status :: DepositAPI.BookingDepositStatus,
+    refunds :: [RideRefundInfo]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -488,6 +497,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         specialLocationSupportNumber = booking.specialLocationSupportNumber,
         commissionCharge = booking.commission,
         bookingDepositAmount = booking.bookingDepositAmount,
+        bookingDeposit = Nothing,
         refunds = refunds,
         fareSettlementType = booking.fareSettlementType,
         cardInfo = cardInfo,

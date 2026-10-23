@@ -657,7 +657,7 @@ applyDepositRefundResult booking refundReq (row, order) refundId refundStatus er
   createJobIn @_ @'CheckRefundStatus (Just booking.merchantId) (Just booking.merchantOperatingCityId) riderConfig.refundStatusUpdateInterval $
     CheckRefundStatusJobData {refundId = refundId, numberOfRetries = 0}
   logInfo $ "Scheduled CheckRefundStatus for deposit refund " <> refundId <> " order " <> order.id.getId
-  when (refundStatus `notElem` [Payment.REFUND_FAILURE, Payment.REFUND_CANCELED]) $
+  unless (refundStatus `elem` [Payment.REFUND_FAILURE, Payment.REFUND_CANCELED]) $
     fork "bookingDeposit:refundInitiatedPN" $
       Notify.notifyPaymentFulfillment Notification.REFUND_PENDING order.id booking.riderId DOrder.BookingDeposit
   when (reqStatus == DRefundRequest.FAILED) $
