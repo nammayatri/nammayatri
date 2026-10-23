@@ -139,6 +139,7 @@ data HandlerEnv = HandlerEnv
     kafkaClickhouseCfg :: ClickhouseCfg,
     broadcastMessageTopic :: KafkaTopic,
     selfBaseUrl :: BaseUrl,
+    selfUIUrl :: BaseUrl,
     appBackendBapInternal :: AppBackendBapInternal,
     inMemEnv :: CF.InMemEnv,
     bppMetrics :: BPPMetricsContainer,

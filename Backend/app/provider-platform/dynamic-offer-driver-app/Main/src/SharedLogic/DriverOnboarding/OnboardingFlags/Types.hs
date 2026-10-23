@@ -36,7 +36,7 @@ type OnboardingFlow m r =
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     ServiceFlow m r,
-    HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int, "selfUIUrl" ::: BaseUrl],
     HasField "broadcastMessageTopic" r KafkaTopic,
     HasField "authTokenCacheExpiry" r Seconds,
     HasField "s3Env" r (S3.S3Env m),

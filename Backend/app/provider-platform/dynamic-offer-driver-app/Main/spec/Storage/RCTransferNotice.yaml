@@ -1,0 +1,43 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  VehicleRegistrationCertificate: Domain.Types.VehicleRegistrationCertificate
+
+# One row per RC transfer: the RC was activated by newDriverId and taken away from previousDriverId.
+# Drives the "vehicle linked to another account" overlay for the previous driver until they
+# acknowledge it or activate a vehicle, and doubles as the audit trail for RC hijack disputes.
+RCTransferNotice:
+  tableName: rc_transfer_notice
+
+  fields:
+    id: Id RCTransferNotice
+    rcId: Id VehicleRegistrationCertificate
+    previousDriverId: Id Person
+    newDriverId: Id Person
+    hasOtherVehicles: Bool # previous driver still had another linked RC at transfer time
+    acknowledged: Bool
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity # previous driver's city
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    previousDriverId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByPreviousDriverIdAndAcknowledged:
+      kvFunction: findAllWithKV
+      where:
+        and: [previousDriverId, acknowledged]
+    updateAcknowledgedByPreviousDriverId:
+      kvFunction: updateWithKV
+      params: [acknowledged]
+      where: previousDriverId
+
+  default:
+    acknowledged: "false"
