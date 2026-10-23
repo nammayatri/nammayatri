@@ -504,7 +504,10 @@ let driverFleetLocationListAPIRateLimitOptions =
       { limit = +5, limitResetTimeInSec = +30 }
 
 let noSignatureSubscribers =
-      [ "pre-prod-ondc-ticketing-api-delhi.transportstack.in" ]
+      [ "pre-prod-ondc-ticketing-api-delhi.transportstack.in"
+      , "workbench.ondc.tech"
+      , "local.collector"
+      ]
 
 let bapHostRedirectMap =
       [ { mapKey = "staging.localhost"
@@ -616,7 +619,7 @@ in  { esqDBCfg
     , port = Natural/toInteger (env:SERVICE_PORT ? 8116)
     , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9997)
     , hostName = "localhost"
-    , nwAddress = "http://localhost:${driverAppPort}/beckn"
+    , nwAddress = "https://plenty-draw-commuting.ngrok-free.dev/beckn"
     , selfUIUrl = "http://localhost:${driverAppPort}/ui/"
     , selfBaseUrl = "http://localhost:${driverAppPort}/"
     , signingKey = sec.signingKey

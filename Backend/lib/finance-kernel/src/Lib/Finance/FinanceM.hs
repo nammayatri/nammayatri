@@ -647,7 +647,7 @@ transferWithEntryType entryType mbSettlementStatus fromRole toRole amount refTyp
                 metadata = mbMetadata,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = mbSettlementStatus
+                settlementStatus = mbSettlementStatus <|> ctx.initialSettlementStatus
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectAffectedAccount fromAcc

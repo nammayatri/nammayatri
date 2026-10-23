@@ -68,7 +68,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Finance.Prepaid
-import SharedLogic.Finance.Wallet (getPrepaidOfferHoldTotalExcluding, makeWalletRunningBalanceLockKey, removePrepaidOfferHold, reserveWalletForCashRide, voidWalletHoldByReference)
+import SharedLogic.Finance.Wallet (getPrepaidOfferHoldTotalExcluding, makeWalletRunningBalanceLockKey, removePrepaidOfferHold, reserveWalletForCashRide, resolveIsOnlineFromBooking, voidWalletHoldByReference)
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.ScheduledNotifications as SN
@@ -576,6 +576,9 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
   shortId <- generateShortId
   envCloudType <- asks (.cloudType)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+  -- an online ride's fare is settled to us through RSF: False until on_receiver_recon reports its
+  -- order 01 Paid; a cash ride never goes through RSF and stays Nothing
+  isOnlinePayment <- resolveIsOnlineFromBooking booking
   let cloudType =
         if isValueAddNP
           then envCloudType
@@ -702,7 +705,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         pickupFaultSeconds = Nothing,
         cancelledBy = Nothing,
         cancellationReasonCode = Nothing,
-        cancellationAdditionalInfo = Nothing
+        cancellationAdditionalInfo = Nothing,
+        bapSettled = if isOnlinePayment then Just False else Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

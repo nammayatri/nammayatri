@@ -24,7 +24,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.SignatureAuth (getHttpManagerKey)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.RsfReconLedgerEntry as L
+import qualified Lib.Finance.Ledger.Service as LedgerService
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.RsfOrderState as QOrderState
 import qualified Lib.Finance.Storage.Queries.RsfReconLedgerEntry as QLedger
@@ -48,6 +50,7 @@ import qualified Storage.Queries.Ride as QRide
 
 type SendFlow m r =
   ( BeamFlow m r,
+    Finance.HasActorInfo m r,
     Hedis.HedisFlow m r,
     HasField "internalEndPointHashMap" r (HMS.HashMap BaseUrl BaseUrl),
     HasField "shortDurationRetryCfg" r RetryCfg
@@ -178,12 +181,31 @@ dispatchMessage merchantId prepared = do
           L.reportedAt = Just now,
           L.reportedInMessageId = Just messageId
          }
+  -- the VARIANCE rows mark the message answered, so they stay inline: a failed write here leaves
+  -- the message unanswered and the next send retries it
   QLedger.createMany varianceRows
+  fork "rsf-on-receiver-recon-settlement" $ do
+    res <- withTryCatch "recordReconOutcome" $ recordReconOutcome mid messageId now orderReports utrReports
+    case res of
+      Left exc -> logError $ "RSF: recording the on_receiver_recon outcome failed for messageId=" <> messageId <> ": " <> show exc
+      Right () -> pure ()
+
+-- Everything the ACKed on_receiver_recon settles, apart from the VARIANCE rows: the
+-- rsf_order_state / rsf_utr_state stamps and, for each order reported 01 Paid, its ride marked
+-- bapSettled and its ride-end wallet entries held as EXTERNAL_PENDING released to UNSETTLED
+-- (order id = booking id = ledger reference id).
+recordReconOutcome :: SendFlow m r => Text -> Text -> UTCTime -> [ACL.ReconReport] -> [ACL.ReconReport] -> m ()
+recordReconOutcome mid messageId now orderReports utrReports = do
   forM_ orderReports $ \report ->
     whenJust report.orderId $ \orderId ->
       QOrderState.upsertReported mid orderId report.verdict.status report.verdict.diff report.verdict.code messageId now
   forM_ utrReports $ \report ->
     QUtrState.upsertReported mid report.utr report.verdict.status report.verdict.diff messageId now
+  let paidOrderIds = [orderId | report <- orderReports, report.verdict.status == "01", Just orderId <- [report.orderId]]
+  unless (null paidOrderIds) $ do
+    rideByOrderId <- RSFLedger.latestRideByBooking <$> QRide.findRidesByBookingId (map Id paidOrderIds)
+    forM_ (Map.elems rideByOrderId) $ \ride -> QRide.updateBapSettled (Just True) ride.id
+    LedgerService.releaseExternalPendingByReferenceIds paidOrderIds
 
 -- The human-readable reason of a failed check or send, as the API error would show it.
 failureReason :: SomeException -> Text

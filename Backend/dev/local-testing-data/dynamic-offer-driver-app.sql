@@ -619,3 +619,27 @@ WHERE w.subscriber_id = 'workbench.ondc.tech' AND w.domain = 'MOBILITY'
     WHERE x.merchant_operating_city_id = w.merchant_operating_city_id
       AND x.subscriber_id = 'local.collector' AND x.domain = 'MOBILITY'
   );
+
+-- ────────────────────────────────────────────────────────────────────────
+-- 12. BAP-collected fares wait for BAP settlement confirmation (RSF): end ride posts the buyer
+-- asset as EXTERNAL_PENDING only when driver_wallet_config.requireBapSettlementConfirmation is on.
+-- ────────────────────────────────────────────────────────────────────────
+UPDATE atlas_driver_offer_bpp.transporter_config tc
+SET driver_wallet_config = jsonb_set(tc.driver_wallet_config::jsonb, '{requireBapSettlementConfirmation}', 'true'::jsonb)::json
+  , updated_at = now()
+FROM atlas_driver_offer_bpp.merchant_operating_city c
+WHERE tc.merchant_operating_city_id = c.id
+  AND c.merchant_id IN (SELECT id FROM atlas_driver_offer_bpp.merchant WHERE short_id = 'MSIL_PARTNER')
+  AND coalesce((tc.driver_wallet_config::jsonb ->> 'requireBapSettlementConfirmation')::boolean, false) = false;
+
+-- ────────────────────────────────────────────────────────────────────────
+-- 13. No payout cut-off window for local testing: earnings become redeemable as soon as they are
+-- UNSETTLED (e.g. right after an RSF 01 Paid releases the EXTERNAL_PENDING hold), not after 7 days.
+-- ────────────────────────────────────────────────────────────────────────
+UPDATE atlas_driver_offer_bpp.transporter_config tc
+SET driver_wallet_config = jsonb_set(tc.driver_wallet_config::jsonb, '{payoutCutOffDays}', '0'::jsonb)::json
+  , updated_at = now()
+FROM atlas_driver_offer_bpp.merchant_operating_city c
+WHERE tc.merchant_operating_city_id = c.id
+  AND c.merchant_id IN (SELECT id FROM atlas_driver_offer_bpp.merchant WHERE short_id = 'MSIL_PARTNER')
+  AND coalesce((tc.driver_wallet_config::jsonb ->> 'payoutCutOffDays')::int, 7) <> 0;

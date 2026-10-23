@@ -167,6 +167,7 @@ Ride:
     cancelledBy: Maybe Text
     cancellationReasonCode: Maybe CancellationReasonCode
     cancellationAdditionalInfo: Maybe Text
+    bapSettled: Maybe Bool # online ride: False at creation, True once RSF settles its order (on_receiver_recon ACKed with 01 Paid); cash ride: always Nothing
 
   sqlType:
     id: character(36)
@@ -430,6 +431,10 @@ Ride:
     updateCancellationDetails:
       kvFunction: updateOneWithKV
       params: [cancelledBy, cancellationReasonCode, cancellationAdditionalInfo]
+      where: id
+    updateBapSettled:
+      kvFunction: updateOneWithKV
+      params: [bapSettled]
       where: id
 
   excludedDefaultQueries:

@@ -15,6 +15,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as SQ
+import qualified Storage.Queries.PayoutConfig as QPC
 
 data PayoutConfigDimensions = PayoutConfigDimensions
   { merchantOperatingCityId :: Text,

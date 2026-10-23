@@ -897,6 +897,7 @@ buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId
       fromLocationAddress = Nothing,
       issuedToName = Nothing,
       enableWalletGatedTierCheck = walletGateEnabled,
+      initialSettlementStatus = Nothing,
       buyerCounterpartyId = Nothing
     }
 

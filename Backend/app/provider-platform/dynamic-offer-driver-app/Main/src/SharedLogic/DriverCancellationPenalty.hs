@@ -180,7 +180,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride mbPenaltyAmount trans
         then do
           mbPanCard <- QPanCard.findByDriverId ride.driverId
           mbDriverInfo <- QDI.findById (cast ride.driverId)
-          ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
+          ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True Nothing
           creditResult <- runFinance ctx $ void $ transfer OwnerExpense OwnerLiability (abs signedAmount) walletReferenceDriverCancellationCharges Nothing
           case creditResult of
             Left err -> logError $ "Failed to credit driver cancellation compensation: " <> show err <> " bookingId: " <> booking.id.getId

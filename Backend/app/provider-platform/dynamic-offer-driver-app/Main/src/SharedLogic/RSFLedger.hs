@@ -290,9 +290,11 @@ data OrderData = OrderData
     allocated :: HighPrecMoney
   }
 
--- Money the bank credited on a UTR vs what allocation has already handed out from it.
+-- Money the bank credited on a UTR, what the collector claims on it, and what allocation has
+-- already handed out from it.
 data UtrData = UtrData
   { received :: HighPrecMoney,
+    claimed :: HighPrecMoney,
     allocated :: HighPrecMoney
   }
 
@@ -317,16 +319,18 @@ giveOrder merchantId dayClaims orderIds = do
         | o <- orderIds
       ]
 
--- utr -> UtrData from one GROUP BY (utr, entry_type). A UTR with no BANK_RECEIPT is unverified.
-giveUtr :: (BeamFlow m r) => Text -> [Text] -> m (Map.Map Text UtrData)
-giveUtr merchantId utrs = do
+-- utr -> UtrData: received and allocated from one GROUP BY (utr, entry_type), claimed from the day's
+-- latest accepted claims. A UTR with no BANK_RECEIPT is unverified.
+giveUtr :: (BeamFlow m r) => Text -> [Entry] -> [Text] -> m (Map.Map Text UtrData)
+giveUtr merchantId dayClaims utrs = do
   sums <- QAgg.sumByUtrAndEntryType merchantId [L.BANK_RECEIPT, L.MANUAL_ADJUSTMENT, L.BANK_ALLOCATION] utrs
   let amount u t = Map.lookup (u, t) sums
+      claimedByUtr = Map.fromListWith (+) [(u, c.amount) | ((_, u), c) <- Map.toList (acceptedClaims dayClaims)]
       unverified = [u | u <- utrs, isNothing (amount u L.BANK_RECEIPT)]
   unless (null unverified) $ throwError $ InvalidRequest ("UTRs not bank-verified yet: " <> show unverified)
   pure $
     Map.fromList
-      [ (u, UtrData {received = fromMaybe 0 (amount u L.BANK_RECEIPT) + fromMaybe 0 (amount u L.MANUAL_ADJUSTMENT), allocated = fromMaybe 0 (amount u L.BANK_ALLOCATION)})
+      [ (u, UtrData {received = fromMaybe 0 (amount u L.BANK_RECEIPT) + fromMaybe 0 (amount u L.MANUAL_ADJUSTMENT), claimed = Map.findWithDefault 0 u claimedByUtr, allocated = fromMaybe 0 (amount u L.BANK_ALLOCATION)})
         | u <- utrs
       ]
 
@@ -334,19 +338,21 @@ giveUtr merchantId utrs = do
 giveDegreeUtr :: [Entry] -> Map.Map Text Int
 giveDegreeUtr dayClaims = Map.map HS.size $ Map.fromListWith HS.union [(u, HS.singleton o) | c <- dayClaims, Just u <- [c.utr], Just o <- [c.orderId]]
 
--- Orders in increasing order of what they are still owed, each with its UTRs ordered by
--- degree (least shared first).
-getLinker :: (BeamFlow m r) => Text -> [Entry] -> [Text] -> m [(OrderData, Set.Set (Int, Text))]
-getLinker merchantId dayClaims orderIds = do
+-- Orders in increasing order of what they are still owed, each with its UTRs ordered settled
+-- first (bank received = claimed, so it can be used up in full), then least shared, then smallest.
+getLinker :: (BeamFlow m r) => Text -> [Entry] -> [Text] -> Map.Map Text UtrData -> m [(OrderData, Set.Set ((Bool, Int, HighPrecMoney), Text))]
+getLinker merchantId dayClaims orderIds utrMap = do
   orderMap <- giveOrder merchantId dayClaims orderIds
   let degUtr = giveDegreeUtr dayClaims
-      utrsByOrder = Map.fromListWith Set.union [(o, Set.singleton (Map.findWithDefault 0 u degUtr, u)) | c <- dayClaims, Just o <- [c.orderId], Just u <- [c.utr]]
+      utrKey u = let utr = Map.findWithDefault (UtrData 0 0 0) u utrMap in (utr.received /= utr.claimed, Map.findWithDefault 0 u degUtr, utr.received)
+      utrsByOrder = Map.fromListWith Set.union [(o, Set.singleton (utrKey u, u)) | c <- dayClaims, Just o <- [c.orderId], Just u <- [c.utr]]
   pure $
     sortOn (\(o, _) -> o.claimed - o.allocated) [(o, Map.findWithDefault Set.empty o.orderId utrsByOrder) | o <- Map.elems orderMap]
 
 -- Phase 3 (step 11): pooled allocation over one IST day's accepted claims. A UTR's money is
 -- fungible across the orders linked to it: orders are filled whole, smallest outstanding first,
--- draining each order's UTRs least-shared first. Every UTR of the day must be bank-verified.
+-- draining each order's UTRs settled first, then least shared, then smallest. Every UTR of the
+-- day must be bank-verified.
 -- Reported orders are frozen; re-runs only top up. An order that gets nothing is given a
 -- 0-amount row so Phase 4 can tell "allocated nothing" from "never allocated".
 autoAllocate ::
@@ -358,18 +364,18 @@ autoAllocate merchantId day = withFinanceLock merchantId $ do
   let (from, to) = istDayRange day
   dayClaims <- QLedger.findClaimsByMerchantStatusAndCreatedAtRange merchantId L.ACCEPTED from to
   when (null dayClaims) $ throwError $ InvalidRequest "No accepted receiver_recon claims on this date"
-  utrMap0 <- giveUtr merchantId (nub (mapMaybe (.utr) dayClaims))
+  utrMap0 <- giveUtr merchantId dayClaims (nub (mapMaybe (.utr) dayClaims))
   orderIds <- unprocessedOrderIds merchantId dayClaims
   let processable = filter (\c -> maybe False (`elem` orderIds) c.orderId) dayClaims
-  linker <- getLinker merchantId processable orderIds
+  linker <- getLinker merchantId processable orderIds utrMap0
   let fillOrder (utrMap, acc) (order, utrs) =
         let owed0 = order.claimed - order.allocated
             step (pool, owed, taken) (_, u) =
-              let utr = Map.findWithDefault (UtrData 0 0) u pool
+              let utr = Map.findWithDefault (UtrData 0 0 0) u pool
                   give = min owed (utr.received - utr.allocated)
                in if owed <= 0 || give <= 0
                     then (pool, owed, taken)
-                    else (Map.insert u (UtrData utr.received (utr.allocated + give)) pool, owed - give, taken <> [(order.orderId, u, give)])
+                    else (Map.insert u (UtrData utr.received utr.claimed (utr.allocated + give)) pool, owed - give, taken <> [(order.orderId, u, give)])
             (utrMap', owed', taken') = foldl' step (utrMap, owed0, []) (Set.toAscList utrs)
             taken'' = if null taken' then [(order.orderId, maybe "" snd (Set.lookupMin utrs), 0)] else taken'
          in (utrMap', acc <> [(owed0, owed', taken'')])

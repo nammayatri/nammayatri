@@ -29,22 +29,13 @@ import Storage.Queries.Transformers.Ride
 findByShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Ride.Ride))
 findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]
 
+updateBapSettled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateBapSettled bapSettled id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.bapSettled bapSettled, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateCancellationChargesOnCancel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateCancellationChargesOnCancel cancellationChargesOnCancel id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.cancellationChargesOnCancel cancellationChargesOnCancel, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-updateCancellationFaultVerdict ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
-updateCancellationFaultVerdict cancellationFaultVerdict cancellationFaultRule id = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.cancellationFaultVerdict cancellationFaultVerdict,
-      Se.Set Beam.cancellationFaultRule cancellationFaultRule,
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateCancellationDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -55,6 +46,18 @@ updateCancellationDetails cancelledBy cancellationReasonCode cancellationAdditio
     [ Se.Set Beam.cancelledBy cancelledBy,
       Se.Set Beam.cancellationReasonCode ((\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> cancellationReasonCode),
       Se.Set Beam.cancellationAdditionalInfo cancellationAdditionalInfo,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateCancellationFaultVerdict ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateCancellationFaultVerdict cancellationFaultVerdict cancellationFaultRule id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.cancellationFaultVerdict cancellationFaultVerdict,
+      Se.Set Beam.cancellationFaultRule cancellationFaultRule,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
