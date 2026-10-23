@@ -207,7 +207,7 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
               DTC.OneWay DTC.OneWayOnDemandDynamicOffer
             ]
           tryCategory eligibleTier tripCategory = do
-            res <- SharedFareProduct.getAllFareProducts merchantId merchantOpCityId searchSources gateLatLong Nothing Nothing Nothing tripCategory
+            res <- SharedFareProduct.getAllFareProducts Nothing merchantId merchantOpCityId searchSources gateLatLong Nothing Nothing Nothing tripCategory
             pure $ find (\fp -> fp.vehicleServiceTier == eligibleTier) res.fareProducts
       fareProducts <- mapMaybeM (\eligibleTier -> firstJustM (tryCategory eligibleTier) preferenceOrder) eligibleServiceTiers
       if null fareProducts

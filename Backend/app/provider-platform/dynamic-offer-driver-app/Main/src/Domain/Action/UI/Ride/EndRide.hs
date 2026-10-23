@@ -898,7 +898,8 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
         rideDetail <- QRD.findById ride.id -- replica?
         pure $ (.vehicleAge) =<< rideDetail
       else pure Nothing
-  let pricingTime = Just booking.createdAt
+  -- A scheduled booking prices against its requested pickup, not when it was created, so the fare product timeBounds window matches the estimate
+  let pricingTime = Just $ if booking.isScheduled then booking.startTime else booking.createdAt
   farePolicy <-
     if recomputeWithLatestPricing
       then getFarePolicyOnEndRide pricingTime (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
