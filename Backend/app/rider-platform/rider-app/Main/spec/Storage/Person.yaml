@@ -109,6 +109,8 @@ Person:
     clientDevice : Maybe Device
     backendAppVersion : Maybe Text
     totalRidesCount: Maybe Int
+    lastRideEndTime: Maybe UTCTime
+    lastRideRating: Maybe Int
     blockedCount : Maybe Int
     registeredViaPartnerOrgId : Maybe (Id PartnerOrganization)
     juspayCustomerPaymentID: Maybe CustomerId

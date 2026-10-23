@@ -149,6 +149,11 @@ feedback request personId = do
   let merchantOperatingCityId = booking.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- a late rating of an older ride must not replace the latest ride's rating
+  let isLatestRide = case (ride.rideEndTime, person.lastRideEndTime) of
+        (Just endTime, Just lastEndTime) -> abs (diffUTCTime endTime lastEndTime) < 1
+        _ -> False
+  when isLatestRide $ fork "updating last ride rating" $ QPerson.updateLastRideRating person.id ratingValue
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
   let isLOFeedback = ratingValue <= riderConfig.feedbackAlertRatingThreshold && IC.checkForLOFeedback riderConfig.sensitiveWords riderConfig.sensitiveWordsForExactMatch feedbackDetails

@@ -83,6 +83,8 @@ data PersonT f = PersonT
     juspayCustomerPaymentID :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId),
     language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language),
     lastName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    lastRideEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    lastRideRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     lastUsedVehicleCategories :: B.C f (Kernel.Prelude.Maybe [BecknV2.OnDemand.Enums.VehicleCategory]),
     lastUsedVehicleServiceTiers :: B.C f (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType]),
     latestLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

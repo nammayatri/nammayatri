@@ -12,7 +12,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Storage.Queries.Offer as QOffer
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified SharedLogic.Offer as SOffer
 import Storage.Beam.Payment ()
@@ -67,6 +69,11 @@ getOfferDiscount _token bppBookingId req = do
         Just resp -> do
           let filteredOffers = filter (\o -> o.offerId == offerId) resp.offerResp
           case listToMaybe filteredOffers of
-            Nothing -> throwError $ InternalError "No filtered offer found"
+            Nothing -> do
+              -- below minimumAmount: no discount, not an error (BPP would fall back to the booking's discount)
+              mbOffer <- QOffer.findById (Id offerId)
+              case mbOffer of
+                Just selectedOffer | not (DPayment.meetsMinimumAmount offerBase selectedOffer) -> pure $ OfferDiscountResp {discountAmount = Just 0}
+                _ -> throwError $ InternalError "No filtered offer found"
             Just offer -> pure $ OfferDiscountResp {discountAmount = Just offer.discountAmount}
     _ -> throwError $ InternalError "No offer found"

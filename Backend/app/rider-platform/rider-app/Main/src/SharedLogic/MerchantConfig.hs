@@ -103,11 +103,13 @@ decrementCustomerAuthCountersByIP clientIP merchantConfigs = Redis.withNonCritic
   where
     decrementCount ind = SWC.decrementWindowCount (mkAuthCounterKey ind clientIP)
 
-updateTotalRidesCounters :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Person.Person -> m ()
-updateTotalRidesCounters rider = do
+-- also records the ride's end time as the rider's last ride, in the same person update
+updateTotalRidesCounters :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Person.Person -> Maybe UTCTime -> m ()
+updateTotalRidesCounters rider mbRideEndTime = do
   totalRidesCount <- getTotalRidesCountForEndRide rider
-  whenJust totalRidesCount $ \count' -> do
-    QP.updateTotalRidesCount rider.id (Just (count' + 1))
+  -- an older ride's completion arriving late must not replace the latest ride
+  let mbLastRideEndTime = mbRideEndTime >>= \endTime -> if maybe True (< endTime) rider.lastRideEndTime then Just endTime else Nothing
+  QP.updateRideCompletion rider.id ((+ 1) <$> totalRidesCount) mbLastRideEndTime
 
 updateTotalRidesInWindowCounters :: (CacheFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
 updateTotalRidesInWindowCounters riderId merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
