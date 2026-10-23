@@ -20,6 +20,7 @@ import qualified Client.Main as CM
 import qualified Data.Aeson as DA
 import qualified Domain.Types.Cac as DTC
 import Domain.Types.FarePolicy as Domain
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Beam.Functions (FromCacType (..))
 import Kernel.Prelude
 import Kernel.Storage.Hedis
@@ -65,6 +66,11 @@ findById stickeyKey id = do
                 SCQF.findFarePolicyFromDB id
             )
   setConfigInMemory id config
+
+-- | 'findById' as one city prices with the policy: conditional charges scoped to another
+-- city are dropped. Without a city every charge is kept.
+findByIdForCity :: (CacheFlow m r, EsqDBFlow m r) => Maybe CacKey -> Maybe (Id DMOC.MerchantOperatingCity) -> Id FarePolicy -> m (Maybe FarePolicy)
+findByIdForCity stickeyKey mbCityId id = fmap (maybe identity farePolicyForCity mbCityId) <$> findById stickeyKey id
 
 -- Call it after any update
 clearCache :: HedisFlow m r => FarePolicy -> m ()

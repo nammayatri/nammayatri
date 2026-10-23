@@ -333,8 +333,9 @@ writeAmbulanceSlabs policy = case policy.farePolicyDetails of
   _ -> pure ()
 
 -- Reconcile by category: update rows whose category persists (preserving
--- createdAt), create new ones, delete the ones dropped from the request —
--- replace semantics, matching how every other policy field clears on omission.
+-- createdAt and the city the charge is scoped to), create new ones, delete the
+-- ones dropped from the request — replace semantics, matching how every other
+-- policy field clears on omission. A new charge applies in every city using the policy.
 replaceConditionalCharges :: FarePolicyD.FarePolicy -> UTCTime -> Common.FPV2Policy -> Flow ()
 replaceConditionalCharges policy now apiPolicy = do
   existing <- QCC.findAllByFp policy.id.getId
@@ -351,12 +352,13 @@ replaceConditionalCharges policy now apiPolicy = do
               charge = r.charge,
               chargeCategory = category,
               farePolicyId = policy.id.getId,
+              merchantOperatingCityId = Nothing,
               sgstPercentage = r.sgstPercentage,
               createdAt = now,
               updatedAt = now
             }
     case find (\e -> e.chargeCategory == category) existing of
-      Just e -> QCC.updateByPrimaryKey row {DTAC.createdAt = e.createdAt}
+      Just e -> QCC.updateByPrimaryKey row {DTAC.createdAt = e.createdAt, DTAC.merchantOperatingCityId = e.merchantOperatingCityId}
       Nothing -> QCC.create row
 
 --------------------------------------------------------------------------------
@@ -370,7 +372,7 @@ postFarePolicyV2Preview merchantShortId opCity req = do
   now <- getCurrentTime
   (domainPolicy, mbCancellation, serviceTier, tripCategory) <- case (req.farePolicyId, req.policy) of
     (Just fpId, _) -> do
-      policy <- CQFP.findById Nothing (cast fpId) >>= fromMaybeM (InvalidRequest $ "Fare policy not found: " <> fpId.getId)
+      policy <- CQFP.findByIdForCity Nothing (Just merchantOpCity.id) (cast fpId) >>= fromMaybeM (InvalidRequest $ "Fare policy not found: " <> fpId.getId)
       checkCityScope merchantOpCity.id policy
       mbCanc <- maybe (pure Nothing) CQCFP.findById policy.cancellationFarePolicyId
       refs <- CQFProduct.findAllFareProductByFarePolicyId policy.id
@@ -513,11 +515,12 @@ postFarePolicyV2ProductCreate merchantShortId opCity req = do
   writeAmbulanceSlabs newPolicy
   whenJust req.policy $ \apiPolicy -> replaceConditionalCharges newPolicy now apiPolicy
   -- conditional charges live in their own table keyed by policy id, so a clone
-  -- must copy them explicitly or the new combo silently loses them
+  -- must copy them explicitly or the new combo silently loses them. The clone
+  -- prices this city only, so charges scoped to another city stay behind.
   whenJust req.sourceFarePolicyId $ \sourceId ->
     when (isNothing req.policy) $ do
       sourceCharges <- QCC.findAllByFp sourceId.getId
-      forM_ sourceCharges $ \c ->
+      forM_ (FarePolicyD.conditionalChargesForCity merchantOpCity.id sourceCharges) $ \c ->
         QCC.create c {DTAC.farePolicyId = newPolicy.id.getId, DTAC.createdAt = now, DTAC.updatedAt = now}
   newProductId <- generateGUID
   let fareProduct =
@@ -568,8 +571,9 @@ postFarePolicyV2ProductUpdate merchantShortId opCity reqFareProductId req = do
         throwError (InvalidRequest $ "A fare product for this combo already exists: " <> fp.id.getId)
   -- detach: legacy data binds one policy to many combos, so an in-place edit
   -- reprices all of them. detachFarePolicy forks this combo onto its own deep
-  -- copy (policy row + ambulance slabs + conditional charges) so later edits
-  -- stop affecting the others. No-op when the combo already owns its policy.
+  -- copy (policy row + ambulance slabs + the conditional charges that apply in
+  -- this city) so later edits stop affecting the others. No-op when the combo
+  -- already owns its policy.
   mbDetachedPolicyId <-
     if req.detachFarePolicy == Just True
       then do
@@ -584,7 +588,7 @@ postFarePolicyV2ProductUpdate merchantShortId opCity reqFareProductId req = do
             CQFP.create clone
             writeAmbulanceSlabs clone
             sourceCharges <- QCC.findAllByFp source.id.getId
-            forM_ sourceCharges $ \c ->
+            forM_ (FarePolicyD.conditionalChargesForCity merchantOpCity.id sourceCharges) $ \c ->
               QCC.create c {DTAC.farePolicyId = clonePolicyId.getId, DTAC.createdAt = now, DTAC.updatedAt = now}
             pure (Just clonePolicyId)
       else pure Nothing
@@ -1168,6 +1172,7 @@ fromApiPolicy ctx mbCancellationId now p = do
                     charge = c.charge,
                     chargeCategory = fromApiChargeCategory c.chargeCategory,
                     farePolicyId = policyId.getId,
+                    merchantOperatingCityId = Nothing,
                     sgstPercentage = c.sgstPercentage,
                     createdAt,
                     updatedAt = now
