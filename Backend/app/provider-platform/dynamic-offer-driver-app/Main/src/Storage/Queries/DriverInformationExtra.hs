@@ -28,9 +28,11 @@ import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
+import qualified Storage.Beam.FleetDriverAssociation as BeamFDA
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import Storage.Queries.OrphanInstances.DriverInformation ()
+import Storage.Queries.OrphanInstances.FleetDriverAssociation ()
 import Storage.Queries.OrphanInstances.Person ()
 import qualified Storage.Queries.Transformers.FleetOwnerInformation as Transformers
 import Tools.Error
@@ -129,6 +131,14 @@ updateVerifiedState driverId isVerified = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId.getId)]
 
+-- | Mirrors the stamp onto all the driver's fleet associations (pending ones too: they can be approved
+--   later), which a fleet's driver list without other filters sorts by.
+updateFleetDriverAssociationDocsVerificationStatusUpdatedAtByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> UTCTime -> m ()
+updateFleetDriverAssociationDocsVerificationStatusUpdatedAtByDriverId driverId now =
+  updateWithKV
+    [Se.Set BeamFDA.docsVerificationStatusUpdatedAt (Just now)]
+    [Se.Is BeamFDA.driverId (Se.Eq driverId.getId)]
+
 -- | Set `verified` and `approved` in a single write (`approved` only when given). Leaves `enabled` untouched.
 --   On transition to verified, stamps `firstVerifiedAt` once (race-free).
 --   Stamps `docsVerificationStatusUpdatedAt` (the onboarding lists' sort key) like every onboarding-flag write.
@@ -143,6 +153,7 @@ updateVerifiedAndApprovedState driverId isVerified isApproved = do
       ]
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId.getId)]
+  updateFleetDriverAssociationDocsVerificationStatusUpdatedAtByDriverId driverId now
   when isVerified $ stampFirstVerifiedAtIfNull driverId
 
 updateDisabledReasonFlag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe DriverInfo.DisabledReasonFlag -> Id Person.Driver -> m ()
@@ -220,6 +231,7 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified isApproved = do
         <> ([Se.Set BeamDI.enabledAt (Just now) | isEnabled && isNothing enabledAt])
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
+  updateFleetDriverAssociationDocsVerificationStatusUpdatedAtByDriverId (Id driverId) now
   LTSSync.syncDriverPoolDataToLTS (Id driverId) $
     LTSSync.emptyUpdate {LTSSync.enabled = LTSSync.Set isEnabled}
 
@@ -292,6 +304,7 @@ updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime d
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+  updateFleetDriverAssociationDocsVerificationStatusUpdatedAtByDriverId driverId now
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate
       { LTSSync.blocked = LTSSync.Set isBlocked,
@@ -339,6 +352,7 @@ updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOper
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+  updateFleetDriverAssociationDocsVerificationStatusUpdatedAtByDriverId driverId now
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.blocked = LTSSync.Set isBlocked}
 
