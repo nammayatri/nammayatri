@@ -16,6 +16,7 @@
 module App where
 
 import qualified Client.Main as CM
+import qualified Control.Concurrent.MVar as MVar
 import qualified Data.Bool as B
 import Data.Singletons (SingI)
 import qualified Data.Text as T
@@ -98,7 +99,10 @@ putJobHandlerInListWrapper ::
   JobHandlersList t ->
   JobHandlersList t
 putJobHandlerInListWrapper flowRt env jobHandler =
-  putJobHandlerInList (liftIO . runFlowR flowRt env . ActorInfo.withJobIdActorInfoWrapper jobHandler)
+  putJobHandlerInList $ \job -> liftIO $ do
+    optionsLocal <- MVar.newMVar mempty
+    runFlowR flowRt {R._optionsLocal = optionsLocal} env $
+      ActorInfo.withJobIdActorInfoWrapper jobHandler job
 
 schedulerHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle RiderJobType
 schedulerHandle flowRt env =
