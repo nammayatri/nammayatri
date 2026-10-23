@@ -9,14 +9,18 @@ module SharedLogic.Finance.LedgerAdjustment
 where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement as API
+import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Dashboard.Common
+import qualified Data.ByteString as BS
 import Data.List (sortOn)
 import qualified Data.Ord
 import qualified Data.Text as T
 import Data.Time.Clock (utctDay)
+import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.FinancialYear (financialYearOf)
 import qualified Domain.Types.Image as DImage
@@ -27,6 +31,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import Environment
+import EulerHS.Types (base64Decode)
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -75,6 +80,52 @@ mkAdminName requestorName = \case
     person.firstName
       <> maybe "" (" " <>) person.middleName
       <> maybe "" (" " <>) person.lastName
+
+--------------------------------------------------------------------------------
+-- Supporting document (maker)
+--------------------------------------------------------------------------------
+
+-- | Largest supporting document a maker can send with an adjustment.
+maxLedgerAdjustmentDocumentBytes :: Int
+maxLedgerAdjustmentDocumentBytes = 2 * 1024 * 1024
+
+-- | A supporting document that passed the checks and is ready to be stored.
+data LedgerAdjustmentDocument = LedgerAdjustmentDocument
+  { base64Content :: Text,
+    storedExtension :: Text
+  }
+
+hasSupportingDocument :: API.SubmitLedgerAdjustmentReq -> Bool
+hasSupportingDocument req = isJust req.documentId || isJust req.documentBase64
+
+validateLedgerAdjustmentDocument :: DTC.TransporterConfig -> Text -> Maybe Text -> Flow LedgerAdjustmentDocument
+validateLedgerAdjustmentDocument transporterConfig documentBase64 mbFileExtension = do
+  content <- base64Decode documentBase64 & fromMaybeM (InvalidRequest "Failed to decode the supporting document")
+  when (BS.length content > maxLedgerAdjustmentDocumentBytes) $
+    throwError (InvalidRequest "The supporting document must be 2 MB or smaller")
+  let enforceFileTypeCheck = fromMaybe False transporterConfig.enforceUploadFileTypeCheck
+  mbFileType <- Image.validateUploadedFileType enforceFileTypeCheck DVC.LedgerAdjustmentProof content mbFileExtension
+  pure
+    LedgerAdjustmentDocument
+      { base64Content = documentBase64,
+        storedExtension = Image.resolveStoredExtension enforceFileTypeCheck mbFileType mbFileExtension
+      }
+
+storeLedgerAdjustmentDocument :: DMOC.MerchantOperatingCity -> Id DP.Person -> LedgerAdjustmentDocument -> Flow (Id DImage.Image)
+storeLedgerAdjustmentDocument merchantOpCity personId document = do
+  documentPath <- Image.createPath personId.getId merchantOpCity.merchantId.getId DVC.LedgerAdjustmentProof document.storedExtension
+  s3Result <-
+    withTryCatch "S3:put:ledgerAdjustmentDocument" $
+      Redis.withLockRedis (Image.imageS3Lock documentPath) 5 $
+        S3.put (T.unpack documentPath) document.base64Content
+  case s3Result of
+    Left err -> do
+      logError $ "Ledger adjustment document upload to S3 failed: " <> show err
+      throwError $ InternalError "Document upload failed. Please try again"
+    Right _ -> pure ()
+  image <- Image.mkImage personId merchantOpCity.merchantId (Just merchantOpCity.id) documentPath DVC.LedgerAdjustmentProof Nothing Nothing Nothing Nothing
+  QImage.create image
+  pure image.id
 
 --------------------------------------------------------------------------------
 -- Submit (maker)
@@ -135,10 +186,15 @@ ledgerAdjustmentSubmit merchantShortId opCity requestorId requestorName req = do
       unless (image.merchantId == merchant.id) $ throwError (ImageNotFound documentId.getId)
       whenJust image.merchantOperatingCityId \imageMerchantOperatingCityId -> do
         unless (imageMerchantOperatingCityId == merchantOpCity.id) $ throwError (ImageNotFound documentId.getId)
+    when (isJust req.documentId && isJust req.documentBase64) $
+      throwError (InvalidRequest "Send either documentId or documentBase64, not both")
+    mbDocument <- forM req.documentBase64 $ \documentBase64 ->
+      validateLedgerAdjustmentDocument transporterConfig documentBase64 req.documentFileExtension
 
     -- Per-category domain validation (ride/payout/TDS/etc.).
     h.validateCategory merchantOpCity transporterConfig personId direction req
 
+    mbStoredDocumentId <- forM mbDocument $ storeLedgerAdjustmentDocument merchantOpCity personId
     mbAdminMaker <- QP.findById (Id @DP.Person requestorId)
     let adminMakerName = mkAdminName requestorName mbAdminMaker
     adjustmentRequest <-
@@ -150,6 +206,7 @@ ledgerAdjustmentSubmit merchantShortId opCity requestorId requestorName req = do
         direction
         (Id @DP.Person requestorId)
         adminMakerName
+        (mbStoredDocumentId <|> mbDocumentId)
         req
     QLedgerAdjustmentRequest.create adjustmentRequest
     h.submitSideEffect adjustmentRequest
@@ -434,8 +491,7 @@ validateMiscellaneousAdjustment personId direction req = do
     throwError (InvalidRequest "Reference type required for Miscellaneous adjustments")
 
   let hasDescription = maybe False (not . T.null . T.strip) req.description
-      hasDocument = isJust req.documentId
-  unless (hasDescription || hasDocument) $
+  unless (hasDescription || hasSupportingDocument req) $
     throwError (InvalidRequest "Miscellaneous adjustments require a description or a supporting document")
 
   when (direction == DLA.Debit) $
@@ -473,9 +529,8 @@ validateTdsReimbursementAdjustment merchantOpCity personId direction req = do
   unless (tdsRequest.fleetOwnerId == personId.getId) $
     throwError (InvalidRequest "Invalid personId for TDS reimbursement request")
 
-  whenJust req.documentId $ \docId ->
-    unless (docId.getId == tdsRequest.documentId.getId) $
-      throwError (InvalidRequest "Document id does not match the TDS reimbursement request document")
+  unless (hasSupportingDocument req) $
+    throwError (InvalidRequest "A supporting document is required for TDS reimbursement adjustments")
 
   void $
     assertTdsReimbursementClaimable tdsRequest referenceId $ \mappings -> do
@@ -651,9 +706,10 @@ buildLedgerAdjustmentRequest ::
   DLA.AdjustmentDirection ->
   Id DP.Person ->
   Text ->
+  Maybe (Id DImage.Image) -> -- supporting document (stored from the request, or the documentId sent)
   API.SubmitLedgerAdjustmentReq ->
   m DLA.LedgerAdjustmentRequest
-buildLedgerAdjustmentRequest adjustmentRequestId merchantOpCity personId category direction requestorId adminMakerName req = do
+buildLedgerAdjustmentRequest adjustmentRequestId merchantOpCity personId category direction requestorId adminMakerName mbDocumentId req = do
   now <- getCurrentTime
   pure
     DLA.LedgerAdjustmentRequest
@@ -666,7 +722,7 @@ buildLedgerAdjustmentRequest adjustmentRequestId merchantOpCity personId categor
         description = req.description,
         referenceType = req.referenceType,
         referenceId = req.referenceId,
-        documentId = cast @Dashboard.Common.Image @DImage.Image <$> req.documentId,
+        documentId = mbDocumentId,
         adminMakerId = requestorId,
         adminMakerName,
         adminCheckerId = Nothing,

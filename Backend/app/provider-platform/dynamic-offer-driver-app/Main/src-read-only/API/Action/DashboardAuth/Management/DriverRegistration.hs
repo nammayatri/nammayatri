@@ -8,10 +8,12 @@ module API.Action.DashboardAuth.Management.DriverRegistration
 where
 
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration
+import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.Management.DriverRegistration
 import qualified Domain.Action.DashboardAuth.Management.DriverRegistration
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Payout.Interface.Types

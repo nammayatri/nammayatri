@@ -25,6 +25,10 @@ module Domain.Action.UI.DriverOnboarding.Image
     throwValidationError,
     convertHVStatusToValidationStatus,
     convertValidationStatusToVerificationStatus,
+    -- For uploads stored without document verification (ledger adjustment proofs).
+    createPath,
+    mkImage,
+    validateUploadedFileType,
     -- Exported for unit tests: pure classification helpers with no Flow dependency.
     UploadedFileType (..),
     detectUploadedFileType,

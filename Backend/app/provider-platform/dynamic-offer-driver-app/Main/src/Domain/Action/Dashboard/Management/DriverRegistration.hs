@@ -719,6 +719,7 @@ mapDocumentType Common.LegalEntityLegalEntityId = DVC.LegalEntityLegalEntityId
 mapDocumentType Common.LegalEntityTAXDetails = DVC.LegalEntityTAXDetails
 mapDocumentType Common.LegalEntityCompanyDetails = DVC.LegalEntityCompanyDetails
 mapDocumentType Common.TermsAndConditions = DVC.TermsAndConditions
+mapDocumentType Common.LedgerAdjustmentProof = DVC.LedgerAdjustmentProof
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do

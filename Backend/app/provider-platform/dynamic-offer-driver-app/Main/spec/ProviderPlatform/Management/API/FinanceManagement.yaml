@@ -688,7 +688,20 @@ types:
     - referenceType: Text
     - referenceId: Maybe Text
     - documentId: Maybe (Id Image)
-    - derive: "'HideSecrets"
+    # Maker's supporting document sent with the request (at most 2 MB); stored and used as documentId.
+    - documentBase64: Maybe Text
+    - documentFileExtension: Maybe Text
+  # SubmitLedgerAdjustmentReq without the document content, for the dashboard's transaction log.
+  SubmitLedgerAdjustmentTReq:
+    - personId: Id Person
+    - category: AdjustmentCategory
+    - direction: AdjustmentDirection
+    - amount: PriceAPIEntity
+    - description: Maybe Text
+    - referenceType: Text
+    - referenceId: Maybe Text
+    - documentId: Maybe (Id Image)
+    - documentFileExtension: Maybe Text
   LedgerAdjustmentListRes:
     - summary: Summary
     - adjustmentRequests: [LedgerAdjustmentItem]
