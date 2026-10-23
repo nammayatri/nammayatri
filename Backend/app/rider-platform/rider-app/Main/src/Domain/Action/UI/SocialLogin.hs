@@ -102,7 +102,8 @@ postSocialLogin req = do
           reuseToken = Nothing,
           operatorBadgeToken = Nothing,
           deviceSerialNumber = Nothing,
-          vehicleType = Nothing
+          vehicleType = Nothing,
+          commsConsent = Nothing
         }
 
 makeSession ::

@@ -324,7 +324,8 @@ createPersonViaPartner req merchant mbRegCoordinates partnerOrgId = do
           reuseToken = Nothing,
           operatorBadgeToken = Nothing,
           deviceSerialNumber = Nothing,
-          vehicleType = Nothing
+          vehicleType = Nothing,
+          commsConsent = Nothing
         }
 
 makeSessionViaPartner ::
