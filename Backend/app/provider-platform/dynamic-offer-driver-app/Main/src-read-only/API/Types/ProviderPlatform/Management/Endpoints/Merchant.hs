@@ -200,6 +200,7 @@ data DocumentType
   | LegalEntityTAXDetails
   | LegalEntityCompanyDetails
   | TermsAndConditions
+  | LedgerAdjustmentProof
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

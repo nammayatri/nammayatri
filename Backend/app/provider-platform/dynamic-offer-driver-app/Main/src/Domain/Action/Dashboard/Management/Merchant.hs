@@ -1276,6 +1276,7 @@ castDDocumentType = \case
   DVC.LegalEntityTAXDetails -> Common.LegalEntityTAXDetails
   DVC.LegalEntityCompanyDetails -> Common.LegalEntityCompanyDetails
   DVC.TermsAndConditions -> Common.TermsAndConditions
+  DVC.LedgerAdjustmentProof -> Common.LedgerAdjustmentProof
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1396,6 +1397,7 @@ castDocumentType = \case
   Common.LegalEntityTAXDetails -> DVC.LegalEntityTAXDetails
   Common.LegalEntityCompanyDetails -> DVC.LegalEntityCompanyDetails
   Common.TermsAndConditions -> DVC.TermsAndConditions
+  Common.LedgerAdjustmentProof -> DVC.LedgerAdjustmentProof
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::

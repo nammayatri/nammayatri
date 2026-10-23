@@ -2085,9 +2085,13 @@ postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity reques
     requestId <- generateGUID
     now <- getCurrentTime
 
-    mappingRows <- forM invoicesWithLines $ \(line, invoice) -> do
+    -- Each line's TDS is rounded on its own, so the lines can add up to slightly more or less than the
+    -- certificate. The certificate is what was deposited with the government, so the stored lines (and
+    -- the credit later posted from them) are made to add up to it exactly.
+    let allocatedTdsAmounts = allocateTdsToCertificate req.certAmount (map ((.tdsAmount) . fst) invoicesWithLines)
+    mappingRows <- forM (zip invoicesWithLines allocatedTdsAmounts) $ \((line, invoice), allocatedTdsAmount) -> do
       revenueRecognised <- getInvoiceRecognizedRevenueForTds invoice
-      let tdsCreditReceivable = computeTdsCreditReceivable line.tdsAmount revenueRecognised invoice.subtotal
+      let tdsCreditReceivable = computeTdsCreditReceivable allocatedTdsAmount revenueRecognised invoice.subtotal
       mappingId <- generateGUID
       pure
         DTdsMap.FinanceTdsReimbursementInvoiceMapping
@@ -2095,7 +2099,7 @@ postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity reques
             requestId = requestId,
             invoiceId = line.invoiceId,
             revenueRecognisedSnapshot = revenueRecognised,
-            tdsAmount = line.tdsAmount,
+            tdsAmount = allocatedTdsAmount,
             tdsCreditReceivable = tdsCreditReceivable,
             createdAt = now
           }
@@ -2162,6 +2166,18 @@ getInvoiceRecognizedRevenueForTds invoice = case invoice.invoiceType of
       DSP.EXPIRED -> pure invoice.subtotal
       otherStatus -> throwError $ InvalidRequest $ "Subscription " <> subId.getId <> " is " <> show otherStatus <> ", not eligible for TDS reimbursement"
   otherType -> throwError $ InvalidRequest $ "Invoice " <> invoice.id.getId <> " is of type " <> show otherType <> "; TDS reimbursement only supports SubscriptionPurchase invoices"
+
+-- | Moves the difference between the certificate amount and the sum of the line amounts onto the
+--   largest line (the first one on a tie), so the lines add up to the certificate exactly.
+--   The fleet portal's review step shows the same allocation (allocateTdsToCertificate in tds-reimbursement/calc.ts).
+allocateTdsToCertificate :: HighPrecMoney -> [HighPrecMoney] -> [HighPrecMoney]
+allocateTdsToCertificate certificateAmount lineAmounts =
+  case nonEmpty (zip [0 :: Int ..] lineAmounts) of
+    Nothing -> lineAmounts
+    Just indexedAmounts ->
+      let largestPosition = fst $ maximumBy (comparing (\(position, lineAmount) -> (lineAmount, Down position))) indexedAmounts
+          roundingDifference = certificateAmount - sum lineAmounts
+       in zipWith (\position lineAmount -> if position == largestPosition then lineAmount + roundingDifference else lineAmount) [0 ..] lineAmounts
 
 computeTdsCreditReceivable :: HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney
 computeTdsCreditReceivable tdsAmount revenueRecognised invoiceSubtotal =
