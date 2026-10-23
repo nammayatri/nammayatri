@@ -119,6 +119,7 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJL
 import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.RouteTripMapping as QRouteTripMapping
@@ -1922,6 +1923,13 @@ markFRFSBookingStatus status reason booking = do
   void $ QFRFSTicketBooking.updateStatusById status booking.id
   unless (booking.status == status) $
     Metrics.incrementFRFSBookingCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (show status) reason
+  when (status == DFRFSTicketBooking.FAILED) $ do
+    mbJourneyLeg <- QJL.findByLegSearchId (Just booking.searchId.getId)
+    whenJust mbJourneyLeg $ \journeyLeg -> do
+      mbJourney <- QJourney.findByPrimaryKey journeyLeg.journeyId
+      whenJust mbJourney $ \journey ->
+        when (journey.status <= DJourney.CONFIRMED) $
+          QJourney.updateStatus DJourney.FAILED journey.id
 
 countFRFSBookingPaymentStatus ::
   ( MonadFlow m,

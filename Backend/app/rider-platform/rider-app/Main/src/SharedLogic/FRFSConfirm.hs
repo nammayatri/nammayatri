@@ -849,7 +849,8 @@ data SubLegInput = SubLegInput
     toName :: Maybe Text,
     toPlatform :: Maybe Text,
     toLat :: Double,
-    toLon :: Double
+    toLon :: Double,
+    subLegDuration :: Maybe Seconds
   }
 
 legBoundaries :: [FRFSTicketService.FRFSStationAPI] -> [(FRFSTicketService.FRFSStationAPI, FRFSTicketService.FRFSStationAPI)]
@@ -885,8 +886,15 @@ buildJourneyAndLeg booking fareParameters = do
           logError $ "Failed to fetch distance/duration from OSRM, defaulting distance to 0: " <> show err
           pure Nothing
         Right r -> pure r
-    let distance = fromMaybe (Distance 0 Meter) (fst <$> distanceAndDuration)
-        duration = snd <$> distanceAndDuration
+    (_, mbScheduledEndTime) <-
+      case (booking.tripId, booking.routeCode) of
+        (Just tripId, Just routeCode) -> FRFSUtils.getScheduledTripWindow tripId routeCode booking.fromStationCode booking.toStationCode integratedBppConfig
+        _ -> pure (Nothing, Nothing)
+    let tripStart = fromMaybe booking.createdAt booking.startTime
+        mbScheduledDuration = mfilter (> 0) $ mbScheduledEndTime <&> \scheduledEnd -> Seconds . round $ diffUTCTime scheduledEnd tripStart
+        distance = fromMaybe (Distance 0 Meter) (fst <$> distanceAndDuration)
+        duration = mbScheduledDuration <|> (snd <$> distanceAndDuration)
+        tripEnd = duration <&> \duration' -> addUTCTime (fromIntegral $ getSeconds duration') tripStart
 
     fromLocationId <- generateGUID
     let fromLocation =
@@ -968,8 +976,8 @@ buildJourneyAndLeg booking fareParameters = do
               merchantId = booking.merchantId,
               status = DJ.CONFIRMED,
               riderId = booking.riderId,
-              startTime = Just booking.createdAt,
-              endTime = Nothing,
+              startTime = Just tripStart,
+              endTime = tripEnd,
               merchantOperatingCityId = booking.merchantOperatingCityId,
               createdAt = now,
               updatedAt = now,
@@ -1050,7 +1058,9 @@ buildJourneyAndLeg booking fareParameters = do
                   mbSubLegTrip <- OTPRest.getExampleTrip integratedBppConfig routeStation.code
                   boardingStopCodes <- OTPRest.getEquivalentStopCodes boardingStop.code integratedBppConfig
                   alightingStopCodes <- OTPRest.getEquivalentStopCodes alightingStop.code integratedBppConfig
-                  let platformAt stopCodes = mbSubLegTrip >>= \trip -> OTPRest.findTripStopByStopCode trip stopCodes >>= (.platformCode)
+                  let tripStopAt stopCodes = mbSubLegTrip >>= \trip -> OTPRest.findTripStopByStopCode trip stopCodes
+                      mbBoardingTripStop = tripStopAt boardingStopCodes
+                      mbAlightingTripStop = tripStopAt alightingStopCodes
                   pure
                     SubLegInput
                       { subLegId = subLegGuid,
@@ -1058,14 +1068,15 @@ buildJourneyAndLeg booking fareParameters = do
                         mbStation = Just routeStation,
                         fromCode = boardingStop.code,
                         fromName = boardingStop.name,
-                        fromPlatform = platformAt boardingStopCodes,
+                        fromPlatform = mbBoardingTripStop >>= (.platformCode),
                         fromLat = fromMaybe fromLocation.lat boardingStop.lat,
                         fromLon = fromMaybe fromLocation.lon boardingStop.lon,
                         toCode = alightingStop.code,
                         toName = alightingStop.name,
-                        toPlatform = platformAt alightingStopCodes,
+                        toPlatform = mbAlightingTripStop >>= (.platformCode),
                         toLat = fromMaybe toLocation.lat alightingStop.lat,
-                        toLon = fromMaybe toLocation.lon alightingStop.lon
+                        toLon = fromMaybe toLocation.lon alightingStop.lon,
+                        subLegDuration = mfilter (> 0) $ (\boardingTripStop alightingTripStop -> Seconds (alightingTripStop.scheduledArrival - boardingTripStop.scheduledDeparture)) <$> mbBoardingTripStop <*> mbAlightingTripStop
                       }
               )
               (zip3 [1 ..] routeStations boundaries)
@@ -1084,9 +1095,25 @@ buildJourneyAndLeg booking fareParameters = do
                   toName = booking.toStationName,
                   toPlatform = toStopPlatformCode,
                   toLat = toLocation.lat,
-                  toLon = toLocation.lon
+                  toLon = toLocation.lon,
+                  subLegDuration = duration
                 }
             ]
+
+    let subLegWindows =
+          snd $
+            mapAccumL
+              ( \subLegStart subLeg ->
+                  let subLegEnd = subLeg.subLegDuration <&> \subLegDuration' -> addUTCTime (fromIntegral $ getSeconds subLegDuration') subLegStart
+                   in (fromMaybe subLegStart subLegEnd, (subLeg, subLegStart, subLegEnd))
+              )
+              tripStart
+              subLegInputs
+        legEnd =
+          if all (isJust . (.subLegDuration)) subLegInputs
+            then listToMaybe (reverse subLegWindows) >>= \(_, _, subLegEnd) -> subLegEnd
+            else tripEnd
+        legDuration = (legEnd <&> \end -> Seconds . round $ diffUTCTime end tripStart) <|> duration
 
     let journeyLeg =
           DJL.JourneyLeg
@@ -1096,19 +1123,17 @@ buildJourneyAndLeg booking fareParameters = do
               startLocation = LatLngV2 fromLocation.lat fromLocation.lon,
               endLocation = LatLngV2 toLocation.lat toLocation.lon,
               distance = Just distance,
-              duration = duration,
+              duration = legDuration,
               agency = Just $ MultiModalAgency {name = integratedBppConfig.agencyKey, gtfsId = Just integratedBppConfig.feedKey},
-              fromArrivalTime = Nothing,
-              fromDepartureTime = Just booking.createdAt,
-              toArrivalTime =
-                duration >>= \duration' ->
-                  Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
-              toDepartureTime = Nothing,
+              fromArrivalTime = Just tripStart,
+              fromDepartureTime = Just tripStart,
+              toArrivalTime = legEnd,
+              toDepartureTime = legEnd,
               fromStopDetails = Just fromStopDetail,
               toStopDetails = Just toStopDetail,
               routeDetails =
                 map
-                  ( \subLeg ->
+                  ( \(subLeg, subLegStart, subLegEnd) ->
                       DRD.RouteDetails
                         { agencyGtfsId = Just integratedBppConfig.feedKey,
                           agencyName = Just integratedBppConfig.agencyKey,
@@ -1117,18 +1142,16 @@ buildJourneyAndLeg booking fareParameters = do
                           endLocationLat = subLeg.toLat,
                           endLocationLon = subLeg.toLon,
                           frequency = Nothing,
-                          fromArrivalTime = Nothing,
-                          fromDepartureTime = Just booking.createdAt,
+                          fromArrivalTime = Just subLegStart,
+                          fromDepartureTime = Just subLegStart,
                           fromStopCode = Just subLeg.fromCode,
                           fromStopGtfsId = Just subLeg.fromCode,
                           fromStopName = subLeg.fromName,
                           fromStopPlatformCode = subLeg.fromPlatform,
                           id = subLeg.subLegId,
                           journeyLegId = journeyLegGuid.getId,
-                          legStartTime = Just booking.createdAt,
-                          legEndTime =
-                            duration >>= \duration' ->
-                              Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
+                          legStartTime = Just subLegStart,
+                          legEndTime = subLegEnd,
                           routeCode = subLeg.mbStation <&> (.code),
                           routeColorCode = subLeg.mbStation >>= (.color),
                           routeColorName = subLeg.mbStation >>= (.color),
@@ -1139,10 +1162,8 @@ buildJourneyAndLeg booking fareParameters = do
                           startLocationLat = subLeg.fromLat,
                           startLocationLon = subLeg.fromLon,
                           subLegOrder = Just subLeg.sequenceNo,
-                          toArrivalTime =
-                            duration >>= \duration' ->
-                              Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
-                          toDepartureTime = Nothing,
+                          toArrivalTime = subLegEnd,
+                          toDepartureTime = subLegEnd,
                           toStopCode = Just subLeg.toCode,
                           toStopGtfsId = Just subLeg.toCode,
                           toStopName = subLeg.toName,
@@ -1155,7 +1176,7 @@ buildJourneyAndLeg booking fareParameters = do
                           updatedAt = now
                         }
                   )
-                  subLegInputs,
+                  subLegWindows,
               liveVehicleAvailableServiceTypes = Nothing,
               estimatedMinFare = estimatedPrice <&> (.amount),
               estimatedMaxFare = estimatedPrice <&> (.amount),
