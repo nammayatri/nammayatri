@@ -54,6 +54,42 @@ withCallback' doWithCallback transporter action api cbUrl internalEndPointHashMa
       authKey = getHttpManagerKey bppSubscriberId
   withBecknCallback doWithCallback (Just $ ET.ManagerSelector authKey) transporter.id.getId action api cbUrl internalEndPointHashMap fromError f
 
+-- | Like 'withCallback', but the callback is delivered before the Ack is returned, so the caller's request
+-- completes only after the receiver has handled the callback. A failed delivery is retried in the background.
+withCallbackInline ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions],
+    HasShortDurationRetryCfg r c,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl]
+  ) =>
+  DM.Merchant ->
+  WithBecknCallback api callback_success m
+withCallbackInline transporter action api cbUrl internalEndPointHashMap fromError cbHandler = do
+  let authKey = getHttpManagerKey (getShortId transporter.subscriberId)
+      send result = do
+        fork ("sending " <> show action <> ", pushing ondc logs") do
+          void $ pushLogs action (toJSON result) transporter.id.getId "MOBILITY"
+        void $ callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing action api cbUrl internalEndPointHashMap result
+  result <-
+    try cbHandler >>= \case
+      Right success -> pure success
+      Left err -> do
+        logError $ "Error executing callback action " <> action <> ": " <> show err
+        pure $ fromError (someExceptionToBecknApiError err)
+  try @_ @SomeException (send result) >>= \case
+    Right () -> pure ()
+    Left exc
+      | Just (BecknAPICallError _ err) <- fromException @BecknAPICallError exc,
+        err.code `elem` [toErrorCode (BookingInvalidStatus ""), toErrorCode (RideInvalidStatus "")] ->
+        logInfo $ "Callback " <> action <> " rejected by BAP (expected state mismatch), code=" <> err.code
+      | otherwise -> do
+        logError $ "Inline " <> action <> " callback failed, retrying in background: " <> show exc
+        fork ("retrying " <> action) $ withShortRetry (send result)
+  pure Ack
+
 type Action = Text
 
 type WithBecknCallback api callback_result m =
