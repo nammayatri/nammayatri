@@ -12,6 +12,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
+import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.ConditionalCharges as Beam
@@ -39,6 +40,7 @@ updateByPrimaryKey (Domain.Types.ConditionalCharges.ConditionalCharges {..}) = d
   updateWithKV
     [ Se.Set Beam.cgstPercentage (Kernel.Prelude.Just cgstPercentage),
       Se.Set Beam.charge charge,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.sgstPercentage (Kernel.Prelude.Just sgstPercentage),
       Se.Set Beam.updatedAt _now
     ]
@@ -53,6 +55,7 @@ instance FromTType' Beam.ConditionalCharges Domain.Types.ConditionalCharges.Cond
             charge = charge,
             chargeCategory = chargeCategory,
             farePolicyId = farePolicyId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             sgstPercentage = Kernel.Prelude.fromMaybe 0 sgstPercentage,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -65,6 +68,7 @@ instance ToTType' Beam.ConditionalCharges Domain.Types.ConditionalCharges.Condit
         Beam.charge = charge,
         Beam.chargeCategory = chargeCategory,
         Beam.farePolicyId = farePolicyId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.sgstPercentage = Kernel.Prelude.Just sgstPercentage,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

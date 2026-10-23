@@ -1408,7 +1408,7 @@ dedupCI = go []
 
 transformReserveRideEsttoEst :: (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) => DBppEstimate.BppEstimate -> m DEst.Estimate
 transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
-  farePolicy <- QFPolicy.findById Nothing (fromMaybe "" farePolicyId)
+  farePolicy <- QFPolicy.findByIdForCity Nothing merchantOperatingCityId (fromMaybe "" farePolicyId)
   fareParams <- QFP.findById (fromMaybe "" fareParamsId)
   let businessDiscount = case (farePolicy, fareParams) of
         (Just farePolicy', Just params) -> if isJust farePolicy'.businessDiscountPercentage then farePolicy'.businessDiscountPercentage >>= computeRideDiscount params.fareParametersDetails params.baseFare params.congestionCharge params.nightShiftCharge params.stopCharges else Nothing

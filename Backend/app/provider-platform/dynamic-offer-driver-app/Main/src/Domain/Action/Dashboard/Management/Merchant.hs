@@ -4503,11 +4503,15 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           return (Nothing, farePolicyId)
         Just sourcePolicy -> do
           newFpId <- generateGUID
-          let cloned =
+          -- price the new city like the base city (the source product's city): keep the
+          -- conditional charges that apply there, and move the ones scoped to it to the new city
+          let baseCityCharges = FarePolicy.conditionalChargesForCity merchantOperatingCityId sourcePolicy.conditionalCharges
+              cloned =
                 (sourcePolicy :: FarePolicy.FarePolicy)
                   { FarePolicy.id = newFpId,
                     FarePolicy.merchantId = Just mId,
                     FarePolicy.merchantOperatingCityId = Just newCityId,
+                    FarePolicy.conditionalCharges = map (\c -> c {DAC.merchantOperatingCityId = newCityId <$ c.merchantOperatingCityId}) baseCityCharges,
                     FarePolicy.createdAt = currentTime,
                     FarePolicy.updatedAt = currentTime
                   }
