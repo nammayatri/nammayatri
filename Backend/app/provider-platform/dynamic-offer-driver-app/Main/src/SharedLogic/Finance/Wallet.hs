@@ -567,8 +567,9 @@ buildFinanceCtx ::
   Maybe DDI.DriverInformation ->
   DTC.TransporterConfig ->
   Bool -> -- isOnline (True = online/card/platform-wallet, False = cash)
+  Maybe Lib.Finance.Domain.Types.LedgerEntry.SettlementStatus ->
   m FinanceCtx
-buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig isOnline = do
+buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig isOnline initialSettlementStatus = do
   let merchantId = fromMaybe booking.providerId ride.merchantId
       mid = merchantId.getId
       mocid = booking.merchantOperatingCityId.getId
@@ -643,6 +644,7 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         emitLedgerEntries = maybe True (\DTC.InvoiceConfig {emitLedgerEntries = e} -> e) transporterConfig.invoiceConfig,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
         issuedToName = Nothing,
+        initialSettlementStatus = initialSettlementStatus,
         enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck,
         buyerCounterpartyId = Just (normaliseBuyerCounterpartyId booking.bapId)
       }
@@ -719,6 +721,7 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         emitLedgerEntries = True,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
         issuedToName = Nothing,
+        initialSettlementStatus = Nothing,
         enableWalletGatedTierCheck = False, -- no transporterConfig in scope here; this function has no real callers today
         buyerCounterpartyId = Nothing
       }

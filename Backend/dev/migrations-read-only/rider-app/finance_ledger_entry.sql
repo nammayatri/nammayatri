@@ -90,3 +90,14 @@ ALTER TABLE atlas_app.finance_ledger_entry ALTER COLUMN amount TYPE numeric(30,1
 ------- SQL updates -------
 
 CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_settlement_id ON atlas_app.finance_ledger_entry USING btree (settlement_id);
+
+
+
+------- SQL updates -------
+
+DROP INDEX finance_ledger_entry_idx_to_account_id_timestamp;
+CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_timestamp_to_account_id ON atlas_app.finance_ledger_entry USING btree (timestamp, to_account_id);
+
+
+------- SQL updates -------
+

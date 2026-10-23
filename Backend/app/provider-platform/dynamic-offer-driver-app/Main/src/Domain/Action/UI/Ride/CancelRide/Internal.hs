@@ -393,7 +393,7 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
               Just paymentMethod -> case paymentMethod.paymentInstrument of
                 DMPM.Cash -> pure False
                 _ -> pure True
-      ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
+      ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True Nothing
       rideGstBreakdown <-
         computeGstBreakdownForRideOwner
           rideGst
@@ -491,7 +491,7 @@ buildCancellationFinanceCtx booking ride transporterConfig = do
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   mbPanCard <- QPanCard.findByDriverId ride.driverId
   mbDriverInfo <- QDI.findById (cast ride.driverId)
-  buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
+  buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True Nothing
 
 cancellationLedgerRefs :: [Text]
 cancellationLedgerRefs =
