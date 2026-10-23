@@ -26,7 +26,6 @@ import Environment
 import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
 import Kernel.Prelude
-import Kernel.Types.Flow
 import Kernel.Utils.Common hiding (id)
 import qualified Streamly.Internal.Data.Fold as SF
 import qualified Streamly.Internal.Data.Stream.IsStream as S
@@ -47,7 +46,7 @@ runPerEvent ::
   IO ()
 runPerEvent flowRt appEnv kafkaConsumer handler =
   readMessages kafkaConsumer
-    & S.mapM (\(value, key, _cr) -> runFlowR flowRt appEnv $ withTaggedFlow key $ handler value key)
+    & S.mapM (\(value, key, _cr) -> runFlowWithFreshLocalOptions flowRt appEnv $ withTaggedFlow key $ handler value key)
     & S.drain
 
 ------------------------------------------------------------
@@ -68,7 +67,7 @@ runBatch flowRt appEnv kafkaConsumer batchSize handler = do
   let effectiveBatch = if batchSize > 0 then batchSize else appEnv.kafkaReadBatchSize
   readMessages kafkaConsumer
     & S.chunksOf effectiveBatch dedupByKey
-    & S.mapM (runFlowR flowRt appEnv . withTaggedFlow "kafka-batch" . handler)
+    & S.mapM (runFlowWithFreshLocalOptions flowRt appEnv . withTaggedFlow "kafka-batch" . handler)
     & S.drain
   where
     dedupByKey = SF.mkFold step start extract

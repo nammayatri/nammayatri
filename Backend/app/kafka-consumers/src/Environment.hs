@@ -14,9 +14,11 @@
 
 module Environment where
 
+import qualified Control.Concurrent.MVar as MVar
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
+import qualified EulerHS.Runtime as R
 import Kafka.Consumer
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Types (SchedulerType)
@@ -31,7 +33,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerCfg, KafkaProducerToo
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common (Microseconds, Seconds)
-import Kernel.Types.Flow (FlowR)
+import Kernel.Types.Flow (FlowR, runFlowR)
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Common (CacConfig, CacheConfig)
@@ -94,6 +96,11 @@ instance Show ConsumerType where
 data TransportKind = Kafka | RedisStream deriving (Generic, FromDhall, Read, Eq, Show)
 
 type Flow = FlowR AppEnv
+
+runFlowWithFreshLocalOptions :: R.FlowRuntime -> AppEnv -> Flow a -> IO a
+runFlowWithFreshLocalOptions flowRt appEnv flow = do
+  optionsLocal <- MVar.newMVar mempty
+  runFlowR flowRt {R._optionsLocal = optionsLocal} appEnv flow
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
