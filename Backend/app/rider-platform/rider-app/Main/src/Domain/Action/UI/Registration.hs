@@ -164,7 +164,8 @@ data AuthReq = AuthReq
     operatorBadgeToken :: Maybe Text,
     deviceSerialNumber :: Maybe Text,
     -- | The vehicle type (e.g. "BUS") used to resolve the IBC config
-    vehicleType :: Maybe BecknSpec.VehicleCategory
+    vehicleType :: Maybe BecknSpec.VehicleCategory,
+    commsConsent :: Maybe Bool
   }
   deriving (Generic, ToJSON, Show, ToSchema)
 
@@ -195,6 +196,7 @@ instance A.FromJSON AuthReq where
         <*> obj .:? "operatorBadgeToken"
         <*> obj .:? "deviceSerialNumber"
         <*> obj .:? "vehicleType"
+        <*> obj .:? "commsConsent"
     A.String s ->
       case A.eitherDecodeStrict (TE.encodeUtf8 s) of
         Left err -> fail err
@@ -872,7 +874,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         cloudType = mbCloudType,
         operatorBadgeToken = mbOperatorBadgeToken,
         clientId = Nothing,
-        acceptedPolicies = Nothing
+        acceptedPolicies = Nothing,
+        commsConsent = Just (fromMaybe False req.commsConsent)
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -1248,7 +1251,8 @@ createPersonWithPhoneNumber merchantId phoneNumber countryCode' = do
                 reuseToken = Nothing,
                 operatorBadgeToken = Nothing,
                 deviceSerialNumber = Nothing,
-                vehicleType = Nothing
+                vehicleType = Nothing,
+                commsConsent = Nothing
               }
       cloudType <- asks (.cloudType)
       createdPerson <-

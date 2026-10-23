@@ -82,5 +82,6 @@ buildAuthReq merchantShortId req =
       reuseToken = Nothing,
       operatorBadgeToken = Nothing,
       deviceSerialNumber = Nothing,
-      vehicleType = Nothing
+      vehicleType = Nothing,
+      commsConsent = Nothing
     }

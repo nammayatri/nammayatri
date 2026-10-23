@@ -1431,7 +1431,8 @@ buildAuthReqForDirectBooking req countryCode merchant =
       reuseToken = Nothing,
       operatorBadgeToken = Nothing,
       deviceSerialNumber = Nothing,
-      vehicleType = Nothing
+      vehicleType = Nothing,
+      commsConsent = Nothing
     }
 
 -- Create a direct booking for cash payment, bypassing the normal payment flow
@@ -2206,7 +2207,8 @@ postTicketDashboardRegister merchant req = do
                 reuseToken = Nothing,
                 operatorBadgeToken = Nothing,
                 deviceSerialNumber = Nothing,
-                vehicleType = Nothing
+                vehicleType = Nothing,
+                commsConsent = Nothing
               }
       merchantOperatingCityId <-
         CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
