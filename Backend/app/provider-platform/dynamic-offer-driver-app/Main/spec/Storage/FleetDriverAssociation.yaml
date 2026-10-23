@@ -19,6 +19,7 @@ FleetDriverAssociation:
     requestReason: Maybe Text
     enableCashRide: Maybe Bool
     responseReason: Maybe Text
+    docsVerificationStatusUpdatedAt: Maybe UTCTime # Copy of driver_information's, kept in step by its flag writers; a fleet's driver list without other filters sorts by it.
     merchantId: Maybe (Id Merchant)
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     createdAt: UTCTime

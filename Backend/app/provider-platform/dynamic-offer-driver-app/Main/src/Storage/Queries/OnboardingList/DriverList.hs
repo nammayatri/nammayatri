@@ -21,11 +21,11 @@
 --   >   + approval                     Vehicle ⋈ DI : Person, FDA
 --   > approval                         DI     : Person, FDA, Vehicle
 --   >   + fleetOwnerId                 DI . FDA : Person, Vehicle
---   > fleetOwnerId                     FDA ⋈ DI : Person, Vehicle
+--   > fleetOwnerId                     FDA    : Person, DI, Vehicle
 --
 --   The merchant / operating-city scope is applied to whichever table drives, which is what lets
---   the per-table (city, ...) indexes be used. Ordering is driver_information's
---   docsVerificationStatusUpdatedAt (newest first, NULLs last), then the driving table's createdAt.
+--   the per-table (city, ...) indexes be used. Ordering is docsVerificationStatusUpdatedAt (newest first,
+--   NULLs last; fleet_driver_association carries a copy), then the driving table's createdAt.
 module Storage.Queries.OnboardingList.DriverList
   ( DriverListFilters (..),
     emptyDriverListFilters,
@@ -209,9 +209,8 @@ driverIdsQuery now merchant opCity f = case drivingTable f of
     pure (driverInfo.driverId, driverInfo.docsVerificationStatusUpdatedAt, driverInfo.createdAt)
   DriveFleetAssoc -> do
     fda <- B.filter_ (fleetAssocMatches now f) $ B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)
-    driverInfo <- joinDriverInfo fda.driverId
     whenFilter (isJust f.dlfVehicleNumber) $ existsVehicle fda.driverId
-    pure (fda.driverId, driverInfo.docsVerificationStatusUpdatedAt, fda.createdAt)
+    pure (fda.driverId, fda.docsVerificationStatusUpdatedAt, fda.createdAt)
   where
     whenFilter cond q = when cond (B.guard_' (B.sqlBool_ q))
     joinDriverInfo driverId =
