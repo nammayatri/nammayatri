@@ -1526,6 +1526,12 @@ getShouldFavouriteDriver req = do
       tagValue = Utils.getTag Tags.SHOULD_FAVOURITE_DRIVER tagGroups
    in readMaybe . T.unpack =<< tagValue
 
+getShouldBlacklistDriver :: Spec.Rating -> Maybe Bool
+getShouldBlacklistDriver req = do
+  let tagGroups = req.ratingTag
+      tagValue = Utils.getTag Tags.SHOULD_BLACKLIST_DRIVER tagGroups
+   in readMaybe . T.unpack =<< tagValue
+
 getRiderPhoneNumber :: Spec.Rating -> Maybe Text
 getRiderPhoneNumber req = do
   let tagGroups = req.ratingTag

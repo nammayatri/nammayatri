@@ -263,6 +263,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.editLocDriverPermissionNeeded editLocDriverPermissionNeeded,
       Se.Set Beam.editLocTimeThreshold editLocTimeThreshold,
       Se.Set Beam.emailOtpConfig emailOtpConfig,
+      Se.Set Beam.enableBlacklistDriverOnRating enableBlacklistDriverOnRating,
       Se.Set Beam.enableBotFlow enableBotFlow,
       Se.Set Beam.enableBppReallocation enableBppReallocation,
       Se.Set Beam.enableCoinsToDirectPayout enableCoinsToDirectPayout,

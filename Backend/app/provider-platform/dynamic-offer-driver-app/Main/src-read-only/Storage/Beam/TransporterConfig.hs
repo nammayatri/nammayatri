@@ -174,6 +174,7 @@ data TransporterConfigT f = TransporterConfigT
     editLocDriverPermissionNeeded :: B.C f Kernel.Prelude.Bool,
     editLocTimeThreshold :: B.C f Kernel.Types.Common.Seconds,
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
+    enableBlacklistDriverOnRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableBotFlow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableBppReallocation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableCoinsToDirectPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

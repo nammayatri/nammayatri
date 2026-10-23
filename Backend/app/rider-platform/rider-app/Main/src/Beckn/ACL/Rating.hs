@@ -66,7 +66,7 @@ tfRating res@DFeedback.FeedbackRes {..} = do
       ratingValue = Just $ show ratingValue,
       ratingRatingCategory = Nothing,
       ratingFeedbackForm = Just $ tfFeedbackForm res,
-      ratingTag = guard isValueAddNP >> mkRatingTags res.shouldFavDriver res.riderPhoneNum res.filePath res.riderName,
+      ratingTag = guard isValueAddNP >> mkRatingTags res.shouldFavDriver res.shouldBlacklistDriver res.riderPhoneNum res.filePath res.riderName,
       ratingRefType = Nothing,
       ratingRefId = Nothing
     }
@@ -90,10 +90,11 @@ tfFeedbackForm DFeedback.FeedbackRes {..} = do
       }
     ]
 
-mkRatingTags :: Maybe Bool -> Maybe Text -> Maybe Text -> Text -> Maybe [Spec.TagGroup]
-mkRatingTags mbShouldFavDriver mbPhoneNum mbFilePath riderName =
+mkRatingTags :: Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Text -> Maybe [Spec.TagGroup]
+mkRatingTags mbShouldFavDriver mbShouldBlacklistDriver mbPhoneNum mbFilePath riderName =
   Tags.buildTagGroups
     [ Tags.SHOULD_FAVOURITE_DRIVER Tags.~=? (show <$> mbShouldFavDriver),
+      Tags.SHOULD_BLACKLIST_DRIVER Tags.~=? (show <$> mbShouldBlacklistDriver),
       Tags.RIDER_PHONE_NUMBER Tags.~=? mbPhoneNum,
       Tags.MEDIA_FILE_PATH Tags.~=? mbFilePath,
       Tags.RIDER_NAME Tags.~= riderName
