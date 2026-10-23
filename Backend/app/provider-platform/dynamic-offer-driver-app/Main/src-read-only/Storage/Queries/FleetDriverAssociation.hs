@@ -43,6 +43,7 @@ updateByPrimaryKey (Domain.Types.FleetDriverAssociation.FleetDriverAssociation {
   updateWithKV
     [ Se.Set Beam.associatedOn associatedOn,
       Se.Set Beam.associatedTill associatedTill,
+      Se.Set Beam.docsVerificationStatusUpdatedAt docsVerificationStatusUpdatedAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.enableCashRide enableCashRide,
       Se.Set Beam.fleetOwnerId fleetOwnerId,

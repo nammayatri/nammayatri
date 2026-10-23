@@ -15,6 +15,7 @@ data FleetDriverAssociationT f = FleetDriverAssociationT
   { associatedOn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     associatedTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    docsVerificationStatusUpdatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverId :: B.C f Kernel.Prelude.Text,
     enableCashRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     fleetOwnerId :: B.C f Kernel.Prelude.Text,

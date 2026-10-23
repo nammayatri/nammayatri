@@ -93,6 +93,7 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
             [Se.And [Se.Is BeamFDVA.id $ Se.Eq fleetDriverAssociation.id.getId]]
       Nothing -> do
         id <- generateGUID
+        mbDriverInfo <- QDIE.findById driverId
         let newAssociation =
               FleetDriverAssociation
                 { associatedTill = defaultAssociationEnd,
@@ -102,6 +103,7 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
                   onboardingVehicleCategory = Just onboardingVehicleCategory,
                   enableCashRide = Nothing,
                   onboardedOperatorId,
+                  docsVerificationStatusUpdatedAt = mbDriverInfo >>= (.docsVerificationStatusUpdatedAt),
                   createdAt = now,
                   updatedAt = now,
                   responseReason = Nothing,
@@ -110,7 +112,7 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
         createWithKV newAssociation
         (mbFleetBa :: Maybe DDBA.DriverBankAccount) <- findOneWithKV [Se.Is BeamDBA.driverId $ Se.Eq fleetOwnerId.getId]
         mbFleetOwnerInfo <- FOI.findByPrimaryKey fleetOwnerId
-        mbDriverCashRide <- if isActive then pure Nothing else (>>= (.enableCashRide)) <$> QDIE.findById driverId
+        let mbDriverCashRide = if isActive then Nothing else mbDriverInfo >>= (.enableCashRide)
         let cashRideEffective = effectiveEnableCashRide now mbDriverCashRide (Just newAssociation) (mbFleetOwnerInfo >>= (.enableCashRide))
         LTSSync.syncDriverPoolDataToLTS (cast driverId) $
           LTSSync.emptyUpdate
