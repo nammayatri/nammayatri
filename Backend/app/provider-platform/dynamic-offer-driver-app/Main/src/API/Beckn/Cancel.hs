@@ -33,6 +33,7 @@ import qualified Domain.Types.CancellationReason as DTCR
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OnCancel as OC
+import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -53,6 +54,7 @@ import SharedLogic.SyncRide (rideSync)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
@@ -147,24 +149,32 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI subscriber.subsc
               mbChargesOutcome <- maybe (return Nothing) (\ride -> DCancel.getCancellationCharges booking ride DBCR.ByUser (DTCR.CancellationReasonCode <$> resolvedReasonCode)) mbRide
               -- getCancellationCharges returns the base (tax-exclusive); add tax to get the total fee
               let cancellationCharges = (\base -> PriceAPIEntity {amount = base + fromMaybe 0 (mbChargesOutcome >>= (.tax)), currency = booking.currency}) <$> (mbChargesOutcome >>= (.fee))
-              void $ case (cancellationCharges, mbRide) of
-                (Just priceEntity, Just ride) ->
-                  QRide.updateCancellationQuoteIfCancelled (Just priceEntity.amount) (mbChargesOutcome >>= (.tax)) (mbChargesOutcome >>= (.consequenceRowId)) ride.id
-                _ -> return ()
+              let mbQuotedRide =
+                    mbRide <&> \ride ->
+                      ride
+                        { DRide.cancellationFeeIfCancelled = (.amount) <$> cancellationCharges,
+                          DRide.cancellationFeeTaxIfCancelled = mbChargesOutcome >>= (.tax),
+                          DRide.cancellationConsequenceRowIdIfCancelled = mbChargesOutcome >>= (.consequenceRowId)
+                        }
+              whenJust mbQuotedRide $ \ride ->
+                QRide.updateCancellationQuoteIfCancelled ride.cancellationFeeIfCancelled ride.cancellationFeeTaxIfCancelled ride.cancellationConsequenceRowIdIfCancelled ride.id
               let onCancelBuildReq =
                     OC.DBookingCancelledReqV2
                       { booking = booking,
                         cancellationSource = DBCR.ByUser,
                         cancellationFee = cancellationCharges,
                         cancellationReasonCode = resolvedReasonCode,
-                        mbRide = mbRide,
+                        mbRide = mbQuotedRide,
                         -- soft-cancel is a pre-cancel fee preview; no invoice exists yet
                         mbInvoiceDocumentUrl = Nothing
                       }
               buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
+              -- Our own BAP waits on this callback to return the fee in its soft-cancel response
+              isOwnBap <- CQVAN.isValueAddNP booking.bapId
               void $
-                Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
-                  pure buildOnCancelMessageV2
+                if isOwnBap
+                  then Callback.withCallbackInline merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) (pure buildOnCancelMessageV2)
+                  else Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) (pure buildOnCancelMessageV2)
             _ -> throwError $ InvalidRequest "Invalid cancel status"
           return Ack
     DCancel.CancelSearch cancelSearchReq -> do

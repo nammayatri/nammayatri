@@ -56,25 +56,27 @@ onCancel authResult req = withFlowHandlerBecknAPI authResult.subscriber.subscrib
     logDebug $ "cancelStatus in bpp " <> cancelStatus'
     cancelStatus <- readMaybe (T.unpack cancelStatus') & fromMaybeM (InvalidBecknSchema $ "Invalid order.status:-" <> cancelStatus')
     case cancelStatus of
-      Enums.CANCELLED -> processCancellationRequest DOnCancel.onCancel
-      Enums.SOFT_CANCEL -> processCancellationRequest DOnCancel.onSoftCancel
+      Enums.CANCELLED -> processCancellationRequest True (const DOnCancel.onCancel)
+      Enums.SOFT_CANCEL -> processCancellationRequest False DOnCancel.onSoftCancel
       _ -> throwError . InvalidBecknSchema $ "on_cancel order.status expected:-CANCELLED|SOFT_CANCEL, received:-" <> cancelStatus'
   pure Ack
   where
     processCancellationRequest ::
-      (DOnCancel.ValidatedOnCancelReq -> Flow ()) ->
+      Bool ->
+      (Text -> DOnCancel.ValidatedOnCancelReq -> Flow ()) ->
       Flow ()
-    processCancellationRequest domainOnCancelAction = do
+    processCancellationRequest inBackground domainOnCancelAction = do
       mbDOnCancelReq <- ACL.buildOnCancelReq req
       messageId <- Utils.getMessageIdText req.onCancelReqContext
       whenJust mbDOnCancelReq $ \onCancelReq ->
         Redis.whenWithLockRedis (onCancelLockKey messageId) 60 $ do
           validatedOnCancelReq <- DOnCancel.validateRequest onCancelReq
-          fork "on cancel processing" $ do
-            Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $ do
-              domainOnCancelAction validatedOnCancelReq
-              fork "on cancel received pushing ondc logs" do
-                void $ pushLogs "on_cancel" (toJSON req) validatedOnCancelReq.booking.merchantId.getId "MOBILITY"
+          let process =
+                Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $ do
+                  domainOnCancelAction messageId validatedOnCancelReq
+                  fork "on cancel received pushing ondc logs" do
+                    void $ pushLogs "on_cancel" (toJSON req) validatedOnCancelReq.booking.merchantId.getId "MOBILITY"
+          if inBackground then fork "on cancel processing" process else process
 
 onCancelLockKey :: Text -> Text
 onCancelLockKey id = "Customer:OnCancel:MessageId-" <> id

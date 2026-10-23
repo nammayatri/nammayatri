@@ -119,7 +119,11 @@ data CancelSearch = CancelSearch
 
 data SoftCancelRes = SoftCancelRes
   { result :: Text,
-    cancellationReasons :: [CancellationReasons.CancellationReasonEntity]
+    cancellationReasons :: [CancellationReasons.CancellationReasonEntity],
+    cancellationFee :: Maybe PriceAPIEntity,
+    cancellationFeeImmediateCapture :: Maybe Bool,
+    -- Just True when the provider's quote arrived before this response; otherwise the app falls back to polling
+    isQuoteAvailable :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
