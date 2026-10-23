@@ -9,6 +9,7 @@ module Lib.Yudhishthira.Event.KaalChakra.Internal
     resetRetryCounter,
     updateUserTagsHandler,
     runQueryRequestTemplate,
+    validateChakraQueryForSave,
     ChakraEvent,
   )
 where
@@ -143,7 +144,7 @@ kaalChakraEventInternal h eventId req = withLogTag ("EventId-" <> eventId.getId)
   let durationInSeconds = Time.nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
   logInfo $ "User data fetched successfully: batches number: " <> show batchesNumber <> "; users number: " <> show usersNumber
   logDebug $ "took time: " <> show durationInSeconds
-  pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = batchedUserData.chakraBatchState, failedQueryName = Nothing, failureReason = Nothing, batchUsersCount = Just usersNumber}
+  pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = batchedUserData.chakraBatchState, failedQueryName = Nothing, failureReason = batchedUserData.stopReason, batchUsersCount = Just usersNumber}
 
 updateUserTagsHandler ::
   forall m r action.
@@ -204,7 +205,7 @@ updateUserTagsHandlerInternal h req = withLogTag ("EventId-" <> req.eventId.getI
             then do
               void $ decrChakraBatchNumber False h.merchantId h.merchantOperatingCityId req.chakra
               logError $ "Reached max batch size: " <> show batchNumber <> "; for updateTags job."
-              pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Completed, failedQueryName = Nothing, failureReason = Nothing, batchUsersCount = Just 0}
+              pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Completed, failedQueryName = Nothing, failureReason = Just ("Stopped at maxBatches = " <> show req.maxBatches <> "; users from this batch onward were not tagged"), batchUsersCount = Just 0}
             else do
               forM_ batchedUserData $
                 kaalChakraEventUser h filteredTags mbAllTags eventId defaultUserDataMap now . (.userId)
@@ -221,7 +222,8 @@ updateUserTagsHandlerInternal h req = withLogTag ("EventId-" <> req.eventId.getI
 
 data ChakraBatchedUserData = ChakraBatchedUserData
   { userIds :: S.Set (Id Yudhishthira.User),
-    chakraBatchState :: Yudhishthira.ChakraBatchState
+    chakraBatchState :: Yudhishthira.ChakraBatchState,
+    stopReason :: Maybe Text
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -258,7 +260,7 @@ fetchUserDataBatch h req eventId chakraQueries batchNumber = do
       if req.parseQueryResults
         then do
           let notParsedObjects = queryResults.queryResultObjects
-          parsedObjects <- Parse.parseQueryResult chakraQuery notParsedObjects
+          parsedObjects <- parseQueryResultOrFail chakraQuery notParsedObjects
           pure $ queryResults{queryResultObjects = parsedObjects}
         else pure queryResults
 
@@ -273,7 +275,7 @@ fetchUserDataBatch h req eventId chakraQueries batchNumber = do
       redisObjects <- runRedisQueryRequest chakraQuery userIds
       if req.parseQueryResults
         then do
-          parsedObjects <- Parse.parseQueryResult chakraQuery redisObjects
+          parsedObjects <- parseQueryResultOrFail chakraQuery redisObjects
           pure
             ChakraQueryResult
               { queryName = chakraQuery.queryName,
@@ -296,18 +298,26 @@ fetchUserDataBatch h req eventId chakraQueries batchNumber = do
   case notEmptyResults of
     [] -> do
       logError $ "Got empty result for the batchNumber:" <> show batchNumber <> ", chakra successfully finished, rescheduling for the next chakra"
-      pure $ ChakraBatchedUserData S.empty Yudhishthira.Completed
+      pure $ ChakraBatchedUserData S.empty Yudhishthira.Completed Nothing
     _ -> do
       if batchNumber > req.maxBatches
         then do
           logError $ "Exceeded number of batched, reached:" <> show batchNumber <> ", finishing job"
           void $ decrChakraBatchNumber (isTestRunAction req.action) h.merchantId h.merchantOperatingCityId req.chakra
-          pure $ ChakraBatchedUserData S.empty Yudhishthira.Completed
+          pure $ ChakraBatchedUserData S.empty Yudhishthira.Completed (Just $ "Stopped at maxBatches = " <> show req.maxBatches <> "; users from this batch onward were not fetched")
         else do
           userDataList <- buildUserDataList req.chakra eventId batchNumber notEmptyResults
           QUserData.createMany userDataList
           let newUserIds = S.fromList $ userDataList <&> (.userId)
-          pure $ ChakraBatchedUserData newUserIds (Yudhishthira.Continue req.batchDelayInSec)
+          pure $ ChakraBatchedUserData newUserIds (Yudhishthira.Continue req.batchDelayInSec) Nothing
+
+-- Rows came back but none matched the declared results; failing here keeps a broken query from looking like the end of the data
+parseQueryResultOrFail :: (MonadThrow m, Log m) => Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries -> [A.Object] -> m [A.Object]
+parseQueryResultOrFail chakraQuery objects = do
+  parsedObjects <- Parse.parseQueryResult chakraQuery objects
+  when (null parsedObjects && not (null objects)) $
+    throwError $ InvalidRequest $ "All " <> show (length objects) <> " rows of query " <> chakraQuery.queryName <> " failed to parse against its declared results; check the result names and types"
+  pure parsedObjects
 
 kaalChakraEventUser ::
   forall m r action.
@@ -606,6 +616,18 @@ data ChakraQueryResult = ChakraQueryResult
 
 isEmptyQueryResult :: ChakraQueryResult -> Bool
 isEmptyQueryResult queryResult = null queryResult.queryResultObjects
+
+-- Runs the query the way the job would and rejects it when a returned row does not fit the declared results
+validateChakraQueryForSave ::
+  (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, CacheFlow m r) =>
+  Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries ->
+  Template.Template ->
+  m ()
+validateChakraQueryForSave chakraQuery template = do
+  queryResult <- runQueryRequestTemplate chakraQuery template
+  case mapM (Parse.parseQueryResultObject chakraQuery) queryResult.queryResultObjects of
+    Left err -> throwError $ InvalidRequest err
+    Right _ -> pure ()
 
 runQueryRequestTemplate ::
   (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, CacheFlow m r) =>

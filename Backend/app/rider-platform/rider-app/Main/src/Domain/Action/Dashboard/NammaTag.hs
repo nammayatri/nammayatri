@@ -337,10 +337,14 @@ getNammaTagQueryDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchan
 getNammaTagQueryDetails _merchantShortId _opCity chakra queryName = YudhishthiraFlow.getChakraQueryDetails chakra queryName
 
 postNammaTagQueryCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ChakraQueriesAPIEntity -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postNammaTagQueryCreate _merchantShortId _opCity req = YudhishthiraFlow.postQueryCreate req
+postNammaTagQueryCreate merchantShortId opCity req = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  YudhishthiraFlow.postQueryCreate (cast merchantOperatingCity.id) req
 
 postNammaTagQueryUpdate :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ChakraQueryUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
-postNammaTagQueryUpdate _merchantShortId _opCity = YudhishthiraFlow.postQueryUpdate
+postNammaTagQueryUpdate merchantShortId opCity req = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  YudhishthiraFlow.postQueryUpdate (cast merchantOperatingCity.id) req
 
 deleteNammaTagQueryDelete :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ChakraQueryDeleteReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 deleteNammaTagQueryDelete _merchantShortId _opCity = YudhishthiraFlow.queryDelete
