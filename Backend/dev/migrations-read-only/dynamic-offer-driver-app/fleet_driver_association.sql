@@ -36,3 +36,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN merchant_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN enable_cash_ride boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN docs_verification_status_updated_at timestamp with time zone ;
