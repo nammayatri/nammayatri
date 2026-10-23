@@ -1553,6 +1553,7 @@ TransporterConfig:
     enableScheduleReallocation: Maybe Bool
     enableBppReallocation: Maybe Bool # when True, the BPP owns reallocation for ALL rides (ad-hoc + scheduled) regardless of the BAP's isReallocationEnabled flag; Nothing/False = today's BAP-gated behaviour
     enableCoinsToDirectPayout: Maybe Bool
+    enableBlacklistDriverOnRating: Maybe Bool # when True, a rating submission flagged shouldBlacklistDriver actually blacklists the driver for that rider; Nothing/False = flag is ignored
     airportEntryFeeEnabled: Maybe Bool
     airportEntryFeeCheckAtStartRide: Maybe Bool
     minBaseFare: Maybe HighPrecMoney

@@ -1282,6 +1282,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN ride_evidence_c
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_blacklist_driver_on_rating boolean ;
 
 
 
