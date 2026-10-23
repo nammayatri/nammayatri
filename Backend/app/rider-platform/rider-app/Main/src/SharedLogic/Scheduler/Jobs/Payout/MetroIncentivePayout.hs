@@ -33,10 +33,13 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
+import Lib.Finance.Transfer.Rail (RailSubmitResult (..))
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified SharedLogic.Finance.Rails as FinanceRails
+import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import Storage.Beam.Payment ()
@@ -139,38 +142,43 @@ callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
                 createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId config.remark person.firstName (Just payoutVpa) config.orderType payoutServiceFlow Nothing Nothing
             logDebug $ "calling create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show booking.eventDiscountAmount <> " | orderId: " <> show uid
             let createPayoutOrderCall = TP.createPayoutOrder person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just person.id.getId)
-            mbPayoutOrderResp <- withTryCatch "createPayoutService:metroIncentivePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
-            errorCatchAndHandle booking.id person.id.getId uid mbPayoutOrderResp config statusForRetry (\_ -> pure ())
-            pure ()
+            -- Metro cashback accrues into the rider's ledger wallet and pays out through a
+            -- kernel transfer — the only money path. The accrual is anchored on the
+            -- booking id, so a retried payout never grants the amount twice. When nothing
+            -- was submitted (confirmed rejection / kernel gate), the booking keeps its
+            -- bounded retry accounting so the next batch can try again.
+            let submitViaKernel =
+                  Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated <&> \case
+                    (_, Just payoutOrder) -> RailAccepted {railOrderId = payoutOrder.orderId, railStatus = show payoutOrder.status}
+                    (Just _, Nothing) -> RailAmbiguous "payout order missing after create"
+                    (Nothing, Nothing) -> RailAmbiguous "no response from payout service"
+                onNotSubmitted reason = do
+                  logError $ "metro cashback payout not submitted, bookingId: " <> booking.id.getId <> " orderId: " <> uid <> " reason: " <> reason
+                  eligibleForRetryInNextBatch <- isEligibleForRetryInNextBatch (mkMetroCashbackManualTrackingKey booking.id.getId) config.maxRetryCount
+                  let newStatus =
+                        if eligibleForRetryInNextBatch
+                          then statusForRetry
+                          else if statusForRetry == MANUAL_VERIFICATION then PROCESSING else MANUAL_VERIFICATION
+                  Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey booking.id.getId) 3 3 $
+                    QFTB.updatePayoutStatusById (Just newStatus) booking.id
+            FinanceRails.runAwardPayoutTransfer
+              merchantId.getId
+              merchantOpCityId.getId
+              currency
+              person.id.getId
+              uid
+              booking.id.getId
+              amount
+              RidePaymentFinance.ridePaymentRefMetroCashback
+              RidePaymentFinance.ridePaymentRefMetroCashbackPayout
+              RidePaymentFinance.metroCashbackPayoutLedgerRefs
+              submitViaKernel
+              onNotSubmitted
         Nothing -> do
           Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey booking.id.getId) 3 3 $ do
             QFTB.updatePayoutStatusById (Just MANUAL_VERIFICATION) booking.id
           pure ()
     Nothing -> pure ()
-
-errorCatchAndHandle ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
-  Id FRFSTicketBooking ->
-  Text ->
-  Text ->
-  Either SomeException a ->
-  PayoutConfig ->
-  CashbackStatus ->
-  (a -> m ()) ->
-  m ()
-errorCatchAndHandle bookingId riderId orderId resp' payoutConfig statusForRetry function = do
-  case resp' of
-    Left _ -> do
-      logDebug $ "Error in calling create payout riderId: " <> riderId <> " | orderId: " <> orderId
-      eligibleForRetryInNextBatch <- isEligibleForRetryInNextBatch (mkMetroCashbackManualTrackingKey bookingId.getId) payoutConfig.maxRetryCount
-      if eligibleForRetryInNextBatch
-        then Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey bookingId.getId) 3 3 $ do
-          QFTB.updatePayoutStatusById (Just statusForRetry) bookingId
-        else do
-          let status = if statusForRetry == MANUAL_VERIFICATION then PROCESSING else MANUAL_VERIFICATION
-          Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey bookingId.getId) 3 3 $ do
-            QFTB.updatePayoutStatusById (Just status) bookingId
-    Right resp -> function resp
 
 isEligibleForRetryInNextBatch :: (MonadFlow m, CacheFlow m r) => Text -> Int -> m Bool
 isEligibleForRetryInNextBatch key maxCount = do

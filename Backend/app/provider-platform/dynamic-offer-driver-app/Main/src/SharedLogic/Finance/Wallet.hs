@@ -170,11 +170,7 @@ module SharedLogic.Finance.Wallet
     walletReferenceCancellationOverdueBenefitRefundTax,
     splitGrossByVatPct,
     getRedeemableEntryIds,
-    releaseWalletEntriesReservation,
-    settleWalletEntries,
-    postOwnerPayoutLiability,
     walletPayoutLedgerRefs,
-    settleWalletPayoutLedger,
     WalletPayoutEligibility (..),
     emptyWalletPayoutEligibility,
     PayoutableBalance (..),
@@ -231,9 +227,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance hiding (PayoutEligibility (..), getPayoutEligibilityData, runFinance)
+import qualified Lib.Finance.Balance as FinanceBalance
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
-import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..), PayoutOutcome, settlePayoutLedger)
+import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..))
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Finance.TempBalanceHold (addOfferHoldAtKey, getOfferHoldTotalAtKey, removeOfferHoldAtKey)
@@ -1161,58 +1158,57 @@ data PayoutableBalance = PayoutableBalance
     eligibility :: WalletPayoutEligibility
   }
 
--- | Payable amount shared by instant, adhoc and bulk payouts so they cannot drift: redeemable
---   balance minus PENDING ride holds and offer holds, neither of which reduces the wallet balance.
+-- | Payable amount shared by instant, adhoc and bulk payouts so they cannot drift.
+--   The breakdown (redeemable cutoff, holds, minimum retained) comes from
+--   'FinanceBalance.getBalanceBreakdown' under the account's finance_account_config.
+--   A class with no redeemableCutoff row reports everything redeemable, which is safe:
+--   payout INITIATION in such a city is already blocked by transferOutEnabled = False
+--   (the kernel's default), so this value only ever reaches displays there.
 computePayoutableBalance ::
   (BeamFlow m r, CacheFlow m r) =>
   CounterpartyType ->
   Text -> -- owner id
-  UTCTime -> -- payout cutoff time
-  UTCTime -> -- current time
   m PayoutableBalance
-computePayoutableBalance counterparty ownerId cutoff now = do
+computePayoutableBalance counterparty ownerId = do
   mbAccount <- getWalletAccountByOwner counterparty ownerId
-  let mbAccountId = (.id) <$> mbAccount
-  walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ownerId
-  eligibility <- case mbAccountId of
-    Nothing -> pure emptyWalletPayoutEligibility
-    Just accountId -> getPayoutEligibilityData counterparty ownerId accountId walletBalance cutoff now
-  rideHoldBalance <- getWalletHoldBalanceByOwner counterparty ownerId
-  offerHoldBalance <- getWalletOfferHoldTotal ownerId
-  pure
-    PayoutableBalance
-      { payoutableBalance = max 0 (eligibility.redeemableBalance - rideHoldBalance - offerHoldBalance),
-        ..
-      }
-
--- | TODO: remove post release, kept only for backward compatibility with payouts initiated before OwnerPayoutLiability: legacy payouts reserved
---   wallet entries as PROCESSING, so a failed one must flip them back to UNSETTLED.
-releaseWalletEntriesReservation ::
-  (BeamFlow m r, Finance.HasActorInfo m r) =>
-  [Id LedgerEntry] ->
-  m ()
-releaseWalletEntriesReservation = markEntriesAsUnsettled
-
--- | Mark the redeemable wallet ledger entries covered by a payout as PAID_OUT under the
---   PayoutRequest id. Called by the payout webhook handler after successful disbursement.
-settleWalletEntries ::
-  (BeamFlow m r, Finance.HasActorInfo m r) =>
-  [Id LedgerEntry] -> -- entry IDs to settle
-  Text -> -- PayoutRequest ID
-  m ()
-settleWalletEntries = markEntriesAsPaidOut
-
--- | PayoutInitiated: move the disbursed amount out of the payee's wallet into their
---   OwnerPayoutLiability account, stamped PROCESSING until the PG confirms or fails it.
---   Keyed by ctx.referenceId (the PayoutRequest id), like every other leg of the payout.
-postOwnerPayoutLiability ::
-  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
-  FinanceCtx ->
-  HighPrecMoney ->
-  Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
-  m (Either FinanceError [Id LedgerEntry])
-postOwnerPayoutLiability ctx amount metadata =
-  fmap snd <$> runFinance ctx (void $ transferInProcessing OwnerLiability OwnerPayoutLiability amount walletReferencePayout metadata)
+  case mbAccount of
+    Nothing ->
+      pure
+        PayoutableBalance
+          { payoutableBalance = 0,
+            walletBalance = 0,
+            rideHoldBalance = 0,
+            offerHoldBalance = 0,
+            mbAccountId = Nothing,
+            eligibility = emptyWalletPayoutEligibility
+          }
+    Just account -> do
+      breakdown <- FinanceBalance.getBalanceBreakdown account [makeWalletOfferHoldsKey ownerId]
+      when (isNothing breakdown.config.redeemableCutoff) $
+        logWarning $ "finance_account_config has no redeemableCutoff for wallet account " <> account.id.getId <> " (owner " <> ownerId <> "); payouts stay gated by transferOutEnabled"
+      let merchantTransferAmount =
+            sum
+              [ e.amount
+                | e <- breakdown.redeemableEntries,
+                  e.toAccountId == account.id,
+                  e.referenceType `elem` walletTransferFromMerchantRefs
+              ]
+      pure
+        PayoutableBalance
+          { payoutableBalance = breakdown.available,
+            walletBalance = breakdown.ledgerBalance,
+            rideHoldBalance = breakdown.pendingHolds,
+            offerHoldBalance = breakdown.offerHolds,
+            mbAccountId = Just account.id,
+            eligibility =
+              WalletPayoutEligibility
+                { nonRedeemableBalance = breakdown.nonRedeemable,
+                  redeemableBalance = breakdown.redeemable,
+                  processingPayoutBalance = breakdown.processingOut,
+                  redeemableEntryIds = map (.id) breakdown.redeemableEntries,
+                  merchantTransferAmount
+                }
+          }
 
 walletPayoutLedgerRefs :: PayoutLedgerRefs
 walletPayoutLedgerRefs =
@@ -1221,16 +1217,6 @@ walletPayoutLedgerRefs =
       settlementReferenceType = walletReferencePayoutSettlement,
       settlementToRole = PlatformAsset
     }
-
--- | Apply a payout outcome to the driver wallet ledger; re-runnable, see 'settlePayoutLedger'.
-settleWalletPayoutLedger ::
-  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
-  FinanceCtx ->
-  HighPrecMoney ->
-  Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
-  PayoutOutcome ->
-  m (Either FinanceError [Id LedgerEntry])
-settleWalletPayoutLedger = settlePayoutLedger runFinance walletPayoutLedgerRefs
 
 -- | True when the merchant has enabled PAN-Aadhaar-link based TDS (the cohort
 -- model). Keyed off the cohort config being present (individualNotLinked).

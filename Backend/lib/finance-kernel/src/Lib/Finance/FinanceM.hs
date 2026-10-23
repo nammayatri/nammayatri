@@ -47,6 +47,7 @@ module Lib.Finance.FinanceM
     transfer,
     transfer_,
     transferInProcessing,
+    transferWithEntryType,
     adjustment,
     transferPending,
     transferPendingWithEntryType,
