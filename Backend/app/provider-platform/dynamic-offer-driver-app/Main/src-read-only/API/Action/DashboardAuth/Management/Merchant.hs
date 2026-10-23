@@ -8,11 +8,13 @@ module API.Action.DashboardAuth.Management.Merchant
 where
 
 import qualified API.Types.ProviderPlatform.Management.Merchant
+import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Merchant
 import qualified Domain.Action.Dashboard.Management.Merchant
 import qualified Domain.Action.DashboardAuth.Management.Merchant
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Types
