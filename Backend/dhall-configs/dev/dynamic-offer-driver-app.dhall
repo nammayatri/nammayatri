@@ -726,6 +726,8 @@ in  { esqDBCfg
     , storagePublicServiceConfig
     , ttenTokenCacheExpiry = +86390
     , imageExtractionTimeoutSec = +20
+    , bulkRcPlaceholderImagePath =
+        "driver-onboarding/bulk-upload/rc-placeholder.jpg"
     , masterCloudProxyConfig =
       { masterUrl = None Text, masterSecret = Some "123" }
     , enableLtsPoolDataForPooling = True

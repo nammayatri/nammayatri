@@ -361,7 +361,8 @@ parseVehicleInfo moc idx row = do
           oxygen = Nothing,
           ventilator = Nothing,
           operatingCity = show moc.city,
-          imageId = Id "bulkVehicleUpload",
+          -- Set before registration to a placeholder image row created under the fleet owner or driver the vehicle is added to.
+          imageId = Id "",
           imageId2 = Nothing,
           vehicleDetails = mbVehicleDetails,
           vehicleClass = mbVehicleClass,
