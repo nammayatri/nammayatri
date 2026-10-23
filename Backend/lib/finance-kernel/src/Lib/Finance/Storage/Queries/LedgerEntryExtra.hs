@@ -2,6 +2,7 @@ module Lib.Finance.Storage.Queries.LedgerEntryExtra where
 
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 import qualified Kernel.Types.Id
 import qualified Lib.Finance.Domain.Types.Account
 import qualified Lib.Finance.Domain.Types.LedgerEntry as Domain
@@ -17,6 +18,23 @@ findByIds ::
 findByIds [] = pure []
 findByIds entryIds =
   findAllWithKV [Se.Is Beam.id $ Se.In (map Kernel.Types.Id.getId entryIds)]
+
+-- | Sum of PENDING entries debiting an account — its live ledger holds (statutory,
+--   booking-deposit, prepaid). Relies on the invariant that a PENDING entry whose
+--   from-side is a balance-bearing account is always a hold; see Lib.Finance.Balance.
+sumPendingByFromAccount ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  m HighPrecMoney
+sumPendingByFromAccount accountId = do
+  entries <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.fromAccountId $ Se.Eq (Kernel.Types.Id.getId accountId),
+            Se.Is Beam.status $ Se.Eq Domain.PENDING
+          ]
+      ]
+  pure $ sum $ map (.amount) entries
 
 -- | Find ledger entries by reference type (IN list) and reference ID
 findByReferenceIn ::

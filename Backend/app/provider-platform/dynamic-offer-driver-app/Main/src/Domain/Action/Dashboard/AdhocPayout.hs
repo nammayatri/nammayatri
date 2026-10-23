@@ -169,7 +169,7 @@ lookupPayoutEligibility merchantShortId opCity mbPersonId mbMobileNumber mbMobil
   let timeDiff = secondsToNominalDiffTime rp.transporterConfig.timeDiffFromUtc
       cutoff = payoutCutoffTimeUTC timeDiff rp.transporterConfig.driverWalletConfig.payoutCutOffDays now
   -- Same amount the initiate path pays. Money held for in-flight payouts is already excluded.
-  pb <- computePayoutableBalance counterparty personId.getId cutoff now
+  pb <- computePayoutableBalance counterparty personId.getId
   let eligibility = pb.eligibility
       walletBalance = pb.walletBalance
       payoutableBalance = pb.payoutableBalance

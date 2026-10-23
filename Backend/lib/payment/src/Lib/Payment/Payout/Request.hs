@@ -24,7 +24,6 @@ module Lib.Payment.Payout.Request
     toPaymentState,
     getStatusMessage,
     runPayoutUnderLock,
-    stashPayoutLedgerEntryIds,
     getPayoutLedgerEntryIds,
     clearPayoutLedgerEntryIds,
   )
@@ -224,18 +223,12 @@ runPayoutUnderLock lockKey lockTtl findPayoutAmount initiatePayout =
 makePayoutEntryIdsKey :: Text -> Text
 makePayoutEntryIdsKey payoutRequestId = "payout-entry-ids:" <> payoutRequestId
 
-payoutEntryIdsTtl :: Int
-payoutEntryIdsTtl = 30 * 86400
-
--- | Stash the ledger entry ids reserved for a payout so the webhook can settle or
---   release them once the payout reaches a terminal status.
-stashPayoutLedgerEntryIds :: (CacheFlow m r) => Text -> [Text] -> m ()
-stashPayoutLedgerEntryIds payoutRequestId entryIds =
-  unless (null entryIds) $ Redis.setExp (makePayoutEntryIdsKey payoutRequestId) entryIds payoutEntryIdsTtl
-
--- | Redis first, then the ids persisted on the PayoutRequest (payouts created before the
---   stash flow), and finally the ledger rows stamped with this PayoutRequest id as settlementId
---   (reserved as PROCESSING at initiate), so a lost stash can still be settled or released.
+-- | PRE-MIGRATION READ ONLY. Covered entry ids now live on finance_transfer rows; this
+--   accessor exists solely so the kernel backfill (Lib.Finance.Transfer.Backfill) can
+--   reconstruct payouts initiated before the kernel owned the flow. Nothing writes the
+--   Redis stash anymore — delete this (and the key helpers) once pre-migration payouts
+--   have drained. Reads: the PayoutRequest's persisted ids, the legacy Redis stash, and
+--   finally the ledger rows stamped with this PayoutRequest id as settlementId.
 getPayoutLedgerEntryIds :: (CacheFlow m r, FinanceBeamFlow.BeamFlow m r) => PayoutRequest -> m [Text]
 getPayoutLedgerEntryIds payoutRequest = do
   mbStashed <- Redis.get (makePayoutEntryIdsKey payoutRequest.id.getId)

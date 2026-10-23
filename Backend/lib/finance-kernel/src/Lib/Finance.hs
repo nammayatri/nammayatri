@@ -23,6 +23,23 @@ module Lib.Finance
     module Lib.Finance.Account.Interface,
     module Lib.Finance.Account.Service,
 
+    -- * Account-class config & balance
+    module Lib.Finance.Domain.Types.FinanceAccountConfig,
+    module Lib.Finance.AccountConfig,
+    module Lib.Finance.Balance,
+
+    -- * Transfers (the money-movement process primitive)
+    module Lib.Finance.Domain.Types.Transfer,
+    module Lib.Finance.Domain.Types.ScheduledTransferRule,
+    module Lib.Finance.Transfer.Rail,
+    module Lib.Finance.Transfer.Backfill,
+    module Lib.Finance.Transfer.Internal,
+    module Lib.Finance.Transfer.Outbound,
+    module Lib.Finance.Transfer.Inbound,
+    module Lib.Finance.Transfer.Outcome,
+    module Lib.Finance.Transfer.Scheduled,
+    module Lib.Finance.Transfer.History,
+
     -- * Ledger
     module Lib.Finance.Domain.Types.LedgerEntry,
     module Lib.Finance.Ledger.Interface,
@@ -65,8 +82,10 @@ where
 import Lib.Finance.Account.Interface
 -- Services (concrete implementations)
 import Lib.Finance.Account.Service
+import Lib.Finance.AccountConfig
 import Lib.Finance.Audit.Interface
 import Lib.Finance.Audit.Service
+import Lib.Finance.Balance
 -- Core modules
 import Lib.Finance.Core.Money
 import Lib.Finance.Core.Types
@@ -74,9 +93,12 @@ import Lib.Finance.Core.Types
 import Lib.Finance.Domain.Types.Account
 import Lib.Finance.Domain.Types.AuditEntry hiding (AuditEntityType (..)) -- avoid conflicts
 import Lib.Finance.Domain.Types.CurrentState
+import Lib.Finance.Domain.Types.FinanceAccountConfig
 import Lib.Finance.Domain.Types.Invoice
 import Lib.Finance.Domain.Types.LedgerEntry hiding (Adjustment, Expense, Revenue)
 import Lib.Finance.Domain.Types.SapJournalEntry
+import Lib.Finance.Domain.Types.ScheduledTransferRule
+import Lib.Finance.Domain.Types.Transfer
 import Lib.Finance.Error.Types
 import Lib.Finance.FinanceM
 import Lib.Finance.Invoice.Interface
@@ -90,3 +112,11 @@ import Lib.Finance.StateMachine.Interface
 import Lib.Finance.StateMachine.Service
 import Lib.Finance.Tax.Interface
 import Lib.Finance.Tax.Types
+import Lib.Finance.Transfer.Backfill
+import Lib.Finance.Transfer.History
+import Lib.Finance.Transfer.Inbound
+import Lib.Finance.Transfer.Internal
+import Lib.Finance.Transfer.Outbound
+import Lib.Finance.Transfer.Outcome
+import Lib.Finance.Transfer.Rail
+import Lib.Finance.Transfer.Scheduled
