@@ -9,6 +9,7 @@ where
 
 import qualified API.Types.Dashboard.AppManagement.DriverWallet
 import qualified "this" API.Types.UI.DriverWallet
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.AppManagement.DriverWallet
 import qualified "this" Domain.Action.UI.Plan
 import qualified Domain.Types.Merchant
@@ -81,15 +82,26 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getDriverWalletWalletBalance merchantId city :<|> getDriverWalletWalletTransactions merchantId city :<|> postDriverWalletWalletPayout merchantId city :<|> postDriverWalletWalletTopup merchantId city :<|> postDriverWalletWalletAirportCashRecharge merchantId city :<|> getDriverWalletWalletPayoutHistory merchantId city :<|> getDriverWalletWalletTransactionHistory merchantId city
 
 getDriverWalletWalletBalance :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Environment.FlowHandler API.Types.UI.DriverWallet.WalletBalanceResponse)
-getDriverWalletWalletBalance a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletBalance a4 a3 a1
+getDriverWalletWalletBalance a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletBalance a4 a3 a1
+    )
 
 getDriverWalletWalletTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe API.Types.UI.DriverWallet.AggregationLevel -> Environment.FlowHandler API.Types.UI.DriverWallet.WalletSummaryResponse)
-getDriverWalletWalletTransactions a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletTransactions a7 a6 a4 a3 a2 a1
+getDriverWalletWalletTransactions a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a5 a7 a6
+        Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletTransactions a7 a6 a4 a3 a2 a1
+    )
 
 postDriverWalletWalletPayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverWalletWalletPayout a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_APP_MANAGEMENT/DRIVER_WALLET/POST_DRIVER_WALLET_WALLET_PAYOUT" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.DriverWallet.postDriverWalletWalletPayout a4 a3 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2))
     )
@@ -98,6 +110,7 @@ postDriverWalletWalletTopup :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Me
 postDriverWalletWalletTopup a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_APP_MANAGEMENT/DRIVER_WALLET/POST_DRIVER_WALLET_WALLET_TOPUP" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.DriverWallet.postDriverWalletWalletTopup a5 a4 a2 a1
     )
@@ -106,12 +119,23 @@ postDriverWalletWalletAirportCashRecharge :: (Kernel.Types.Id.ShortId Domain.Typ
 postDriverWalletWalletAirportCashRecharge a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_APP_MANAGEMENT/DRIVER_WALLET/POST_DRIVER_WALLET_WALLET_AIRPORT_CASH_RECHARGE" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.DriverWallet.postDriverWalletWalletAirportCashRecharge a5 a4 a2 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3)) a1
     )
 
 getDriverWalletWalletPayoutHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe [Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus] -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.UI.DriverWallet.PayoutHistoryResponse)
-getDriverWalletWalletPayoutHistory a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletPayoutHistory a9 a8 a6 a5 a4 a3 a2 a1
+getDriverWalletWalletPayoutHistory a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a7 a9 a8
+        Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletPayoutHistory a9 a8 a6 a5 a4 a3 a2 a1
+    )
 
 getDriverWalletWalletTransactionHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.UI.DriverWallet.WalletTransactionHistoryResponse)
-getDriverWalletWalletTransactionHistory a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletTransactionHistory a8 a7 a5 a4 a3 a2 a1
+getDriverWalletWalletTransactionHistory a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a6 a8 a7
+        Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletTransactionHistory a8 a7 a5 a4 a3 a2 a1
+    )

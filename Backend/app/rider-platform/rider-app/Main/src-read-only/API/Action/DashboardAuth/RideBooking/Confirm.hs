@@ -9,6 +9,7 @@ where
 
 import qualified API.Types.Dashboard.RideBooking.Confirm
 import qualified "this" API.UI.Confirm
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.RideBooking.Confirm
 import qualified "this" Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Merchant
@@ -42,6 +43,7 @@ postConfirmRideSearchQuotes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Me
 postConfirmRideSearchQuotes a8 a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a6 a8 a7
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND "RIDER_RIDE_BOOKING/CONFIRM/POST_CONFIRM_RIDE_SEARCH_QUOTES" a6 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.Dashboard.RideBooking.Confirm.postConfirmRideSearchQuotes a8 a7 a5 a4 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a6)) a3 a2 a1
     )

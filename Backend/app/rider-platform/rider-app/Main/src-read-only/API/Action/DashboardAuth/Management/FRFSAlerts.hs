@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.Management.FRFSAlerts
 where
 
 import qualified API.Types.RiderPlatform.Management.FRFSAlerts
+import qualified Control.Lens
 import qualified Data.Text
 import qualified Domain.Action.Dashboard.FRFSAlerts
 import qualified Domain.Types.Merchant
@@ -35,4 +36,9 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getFRFSAlertsFrfsLiveMetrics merchantId city
 
 getFRFSAlertsFrfsLiveMetrics :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Data.Text.Text -> Environment.FlowHandler API.Types.RiderPlatform.Management.FRFSAlerts.LiveMetricsResponse)
-getFRFSAlertsFrfsLiveMetrics a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.FRFSAlerts.getFRFSAlertsFrfsLiveMetrics a6 a5 a3 a2 a1
+getFRFSAlertsFrfsLiveMetrics a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.FRFSAlerts.getFRFSAlertsFrfsLiveMetrics a6 a5 a3 a2 a1
+    )

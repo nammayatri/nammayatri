@@ -8,9 +8,11 @@ module API.Action.DashboardAuth.IssueManagement.IssueList
 where
 
 import qualified API.Types.RiderPlatform.IssueManagement.IssueList
+import qualified Control.Lens
 import qualified Data.Aeson
 import qualified Domain.Action.Dashboard.IssueManagement.IssueList
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -38,12 +40,18 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getIssueListV1 merchantId city :<|> postIssueListTicketStatusCallBack merchantId city
 
 getIssueListV1 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.RiderPlatform.IssueManagement.IssueList.IssueListRes)
-getIssueListV1 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.Dashboard.IssueManagement.IssueList.getIssueListV1 a9 a8 a6 a5 a4 a3 a2 a1
+getIssueListV1 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a7 a9 a8
+        Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.Dashboard.IssueManagement.IssueList.getIssueListV1 a9 a8 a6 a5 a4 a3 a2 a1
+    )
 
 postIssueListTicketStatusCallBack :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Data.Aeson.Value -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postIssueListTicketStatusCallBack a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_ISSUE_MANAGEMENT/ISSUE_LIST/POST_ISSUE_LIST_TICKET_STATUS_CALL_BACK" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.IssueList.postIssueListTicketStatusCallBack a4 a3 a1
     )

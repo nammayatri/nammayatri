@@ -15,20 +15,19 @@
 
 module Storage.Queries.RegistrationToken where
 
-import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.RegistrationToken
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.BeamFlow
 import qualified Storage.Beam.RegistrationToken as BeamRT
 
-{-# DEPRECATED findByPersonIdAndMerchantId "Use `findByPersonIdAndMerchantIdAndCity` instead of this function" #-}
-
+-- | One token per person: the token is identity-only, so it is addressed by
+-- token string or by person id. The former per-(merchant,city) lookups and
+-- deletes are gone -- scope lives in merchant_access, not on the token.
 create :: BeamFlow m r => RegistrationToken -> m ()
 create = createWithKV
 
@@ -40,94 +39,14 @@ findAllByPersonId :: BeamFlow m r => Id Person -> m [RegistrationToken]
 findAllByPersonId personId =
   findAllWithKV [Se.Is BeamRT.personId $ Se.Eq $ getId personId]
 
-findAllByPersonIdAndMerchantId :: BeamFlow m r => Id Person -> Id Merchant -> m [RegistrationToken]
-findAllByPersonIdAndMerchantId personId merchantId =
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
-          Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId
-        ]
-    ]
-
-findAllByMerchantIdAndCity :: BeamFlow m r => Id Merchant -> City.City -> m [RegistrationToken]
-findAllByMerchantIdAndCity merchantId city =
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId,
-          Se.Is BeamRT.operatingCity $ Se.Eq city
-        ]
-    ]
-
-findAllByPersonIdAndMerchantIdAndCity :: BeamFlow m r => Id Person -> Id Merchant -> City.City -> m [RegistrationToken]
-findAllByPersonIdAndMerchantIdAndCity personId merchantId city =
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
-          Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId,
-          Se.Is BeamRT.operatingCity $ Se.Eq city
-        ]
-    ]
-
-findByPersonIdAndMerchantId :: BeamFlow m r => Id Person -> Id Merchant -> m (Maybe RegistrationToken)
-findByPersonIdAndMerchantId personId merchantId =
-  findOneWithKV
-    [ Se.And
-        [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
-          Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId
-        ]
-    ]
-
-findByPersonIdAndMerchantIdAndCity :: BeamFlow m r => Id Person -> Id Merchant -> City.City -> m (Maybe RegistrationToken)
-findByPersonIdAndMerchantIdAndCity personId merchantId city =
-  findOneWithKV
-    [ Se.And
-        [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
-          Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId,
-          Se.Is BeamRT.operatingCity $ Se.Eq city
-        ]
-    ]
-
-updateEnabledStatusByPersonIdAndMerchantIdAndCity :: BeamFlow m r => Id Person -> Id Merchant -> City.City -> Bool -> m ()
-updateEnabledStatusByPersonIdAndMerchantIdAndCity personId merchantId city enabled =
-  updateWithKV
-    [Se.Set BeamRT.enabled enabled]
-    [ Se.And
-        [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
-          Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId,
-          Se.Is BeamRT.operatingCity $ Se.Eq city
-        ]
-    ]
-
 deleteAllByPersonId :: BeamFlow m r => Id Person -> m ()
 deleteAllByPersonId personId = deleteWithKV [Se.Is BeamRT.personId $ Se.Eq $ getId personId]
 
-deleteAllByPersonIdAndMerchantId :: BeamFlow m r => Id Person -> Id Merchant -> m ()
-deleteAllByPersonIdAndMerchantId personId merchantId =
-  deleteWithKV
-    [ Se.And
-        [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
-          Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId
-        ]
-    ]
-
-deleteAllByMerchantIdAndCity :: BeamFlow m r => Id Merchant -> City.City -> m ()
-deleteAllByMerchantIdAndCity merchantId city =
-  deleteWithKV
-    [ Se.And
-        [ Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId,
-          Se.Is BeamRT.operatingCity $ Se.Eq city
-        ]
-    ]
-
-deleteAllByPersonIdAndMerchantIdAndCity :: BeamFlow m r => Id Person -> Id Merchant -> City.City -> m ()
-deleteAllByPersonIdAndMerchantIdAndCity personId merchantId city =
-  deleteWithKV
-    [ Se.And
-        [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
-          Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId,
-          Se.Is BeamRT.operatingCity $ Se.Eq city
-        ]
-    ]
+updateEnabledStatusByPersonId :: BeamFlow m r => Id Person -> Bool -> m ()
+updateEnabledStatusByPersonId personId enabled =
+  updateWithKV
+    [Se.Set BeamRT.enabled enabled]
+    [Se.Is BeamRT.personId $ Se.Eq $ getId personId]
 
 deleteById :: BeamFlow m r => Id RegistrationToken -> m ()
 deleteById registrationTokenId = deleteWithKV [Se.Is BeamRT.id $ Se.Eq $ getId registrationTokenId]
@@ -139,7 +58,6 @@ instance FromTType' BeamRT.RegistrationToken RegistrationToken where
         RegistrationToken
           { id = Id id,
             personId = Id personId,
-            merchantId = Id merchantId,
             ..
           }
 
@@ -148,6 +66,5 @@ instance ToTType' BeamRT.RegistrationToken RegistrationToken where
     BeamRT.RegistrationTokenT
       { id = getId id,
         personId = getId personId,
-        merchantId = getId merchantId,
         ..
       }

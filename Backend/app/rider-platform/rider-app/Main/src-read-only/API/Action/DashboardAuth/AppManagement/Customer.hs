@@ -10,6 +10,7 @@ where
 import qualified API.Types.Dashboard.AppManagement.Customer
 import qualified "this" API.Types.UI.DeletedPerson
 import qualified "this" API.Types.UI.Sos
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.AppManagement.Customer
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
@@ -64,6 +65,7 @@ postCustomerSosCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant
 postCustomerSosCreate a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/CUSTOMER/POST_CUSTOMER_SOS_CREATE" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.Customer.postCustomerSosCreate a5 a4 a2 a1
     )
@@ -72,17 +74,24 @@ postCustomerDeletedPerson :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merc
 postCustomerDeletedPerson a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/CUSTOMER/POST_CUSTOMER_DELETED_PERSON" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.Customer.postCustomerDeletedPerson a5 a4 a2 a1
     )
 
 getCustomerSavedLocations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Customer.SavedReqLocationsListRes)
-getCustomerSavedLocations a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.Customer.getCustomerSavedLocations a4 a3 a1
+getCustomerSavedLocations a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.Customer.getCustomerSavedLocations a4 a3 a1
+    )
 
 postCustomerSavedLocations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.Dashboard.AppManagement.Customer.CreateSavedReqLocationReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postCustomerSavedLocations a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/CUSTOMER/POST_CUSTOMER_SAVED_LOCATIONS" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.Customer.postCustomerSavedLocations a5 a4 a2 a1
     )
@@ -91,6 +100,7 @@ deleteCustomerSavedLocations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.M
 deleteCustomerSavedLocations a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/CUSTOMER/DELETE_CUSTOMER_SAVED_LOCATIONS" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.Customer.deleteCustomerSavedLocations a5 a4 a2 a1
     )

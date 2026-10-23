@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.RideBooking.SearchRequest
 where
 
 import qualified API.Types.Dashboard.RideBooking.SearchRequest
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.RideBooking.SearchRequest
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
@@ -42,12 +43,23 @@ postSearchRequestSearchrequests :: (Kernel.Types.Id.ShortId Domain.Types.Merchan
 postSearchRequestSearchrequests a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/SEARCH_REQUEST/POST_SEARCH_REQUEST_SEARCHREQUESTS" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.RideBooking.SearchRequest.postSearchRequestSearchrequests a4 a3 a1
     )
 
 getSearchRequestList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> Environment.FlowHandler API.Types.Dashboard.RideBooking.SearchRequest.SearchRequestsRes)
-getSearchRequestList a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.Dashboard.RideBooking.SearchRequest.getSearchRequestList a8 a7 a5 a4 a3 a2 a1
+getSearchRequestList a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a6 a8 a7
+        Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.Dashboard.RideBooking.SearchRequest.getSearchRequestList a8 a7 a5 a4 a3 a2 a1
+    )
 
 getSearchRequestInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler API.Types.Dashboard.RideBooking.SearchRequest.SearchReqInfoRes)
-getSearchRequestInfo a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.RideBooking.SearchRequest.getSearchRequestInfo a6 a5 a3 a2 a1
+getSearchRequestInfo a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.RideBooking.SearchRequest.getSearchRequestInfo a6 a5 a3 a2 a1
+    )

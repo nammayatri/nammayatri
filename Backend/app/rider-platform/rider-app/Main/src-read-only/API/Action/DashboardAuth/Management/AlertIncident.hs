@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.Management.AlertIncident
 where
 
 import qualified API.Types.RiderPlatform.Management.AlertIncident
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.AlertIncident
 import qualified Domain.Types.Merchant
 import qualified Environment
@@ -34,4 +35,9 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getAlertIncidentAlertsIncidents merchantId city
 
 getAlertIncidentAlertsIncidents :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.RiderPlatform.Management.AlertIncident.AlertIncidentsResponse)
-getAlertIncidentAlertsIncidents a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AlertIncident.getAlertIncidentAlertsIncidents a5 a4 a2 a1
+getAlertIncidentAlertsIncidents a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AlertIncident.getAlertIncidentAlertsIncidents a5 a4 a2 a1
+    )

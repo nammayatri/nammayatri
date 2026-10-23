@@ -38,9 +38,7 @@ import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.MerchantAccess as QMerchantAccess
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.RegistrationToken as QRT
 import qualified Storage.Queries.Role as QRole
-import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Dashboard
 import Tools.Error
 
@@ -86,7 +84,7 @@ createMerchantWithAdmin ::
   TokenInfo ->
   CreateMerchantWithAdminReq ->
   m AP.PersonAPIEntity
-createMerchantWithAdmin tokenInfo req = do
+createMerchantWithAdmin _tokenInfo req = do
   let shortId = ShortId req.shortId :: ShortId DMerchant.Merchant
   mbExistingMerchant <- QMerchant.findByShortId shortId
   whenJust mbExistingMerchant $ \_ -> throwError (MerchantAlreadyExist req.shortId)
@@ -106,7 +104,9 @@ createMerchantWithAdmin tokenInfo req = do
   -- fails the constraint.
   QMerchant.create merchant
   QP.create person
-  merchantAccess <- DPerson.buildMerchantAccess person.id merchant.id merchant.shortId tokenInfo.city
+  -- The new admin's access row is for the merchant being created, at that
+  -- merchant's own default operating city (the token no longer carries a city).
+  merchantAccess <- DPerson.buildMerchantAccess person.id merchant.id merchant.shortId merchant.defaultOperatingCity
   QAccess.create merchantAccess
   pure $ AP.makePersonAPIEntity decPerson role [merchant.shortId] (Just [AP.AvailableCitiesForMerchant {merchantShortId = merchant.shortId, operatingCity = [req.defaultOperatingCity]}]) [] Nothing
 
@@ -159,12 +159,13 @@ changeMerchantEnableState ::
   TokenInfo ->
   ChangeMerchantEnableStateReq ->
   m APISuccess
-changeMerchantEnableState tokenInfo req = do
+changeMerchantEnableState _tokenInfo req = do
   let shortId = ShortId req.merchantShortId :: ShortId DMerchant.Merchant
   merchant <- QMerchant.findByShortId shortId >>= fromMaybeM (MerchantNotFound req.merchantShortId)
   when (merchant.enabled == Just req.enable) $ throwError (InvalidRequest "Merchant already in the requested state")
-  Auth.cleanCachedTokensOfMerchantAndCity merchant.id tokenInfo.city
-  QRT.deleteAllByMerchantIdAndCity merchant.id tokenInfo.city
+  -- One token per person: tokens are identity-only, so there is no per-merchant
+  -- session token to drop here. Login already gates on merchant.enabled, and
+  -- per-request access is governed by merchant_access.
   QMerchant.updateEnableStatus merchant.shortId req.enable
   pure Success
 
@@ -204,12 +205,14 @@ createUserForMerchant ::
   DPerson.CreatePersonReq ->
   m DPerson.CreatePersonRes
 createUserForMerchant tokenInfo req = do
-  merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
+  -- One token per person: the target merchant/city comes from the request, not a
+  -- session merchant. createPerson enforces the caller's access to it.
+  merchant <- QMerchant.findByShortId req.merchantId >>= fromMaybeM (MerchantNotFound req.merchantId.getShortId)
   merchantAssociatedAccount <- QMerchantAccess.findAllUserAccountForMerchant merchant.id
   merchantUserAccountLimit <- asks (.merchantUserAccountNumber)
   when (length merchantAssociatedAccount >= merchantUserAccountLimit) $ throwError (MerchantAccountLimitExceeded (merchant.shortId.getShortId))
   personEntity <- DPerson.createPerson tokenInfo req
-  _ <- DPerson.assignMerchantCityAccess tokenInfo personEntity.person.id DPerson.MerchantCityAccessReq {operatingCity = tokenInfo.city, merchantId = merchant.shortId}
+  _ <- DPerson.assignMerchantCityAccess tokenInfo personEntity.person.id DPerson.MerchantCityAccessReq {operatingCity = req.operatingCity, merchantId = merchant.shortId}
   pure personEntity
 
 buildPersonCreateReq :: (BeamFlow m r, EncFlow m r) => CreateMerchantWithAdminReq -> DRole.Role -> Id DMerchant.Merchant -> m SP.Person

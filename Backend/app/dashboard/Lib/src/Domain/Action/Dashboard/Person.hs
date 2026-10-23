@@ -74,6 +74,7 @@ import Tools.Auth.Capability (isSuperAdmin)
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Dashboard
 import Tools.Auth.Merchant
+import qualified Tools.Auth.Scope as DashboardScope
 import qualified Tools.Auth.Verify as Verify
 import Tools.Error
 import qualified Tools.InternalClient as InternalClient
@@ -118,7 +119,13 @@ data CreatePersonReq = CreatePersonReq
     mobileNumber :: Text,
     mobileCountryCode :: Text,
     password :: Text,
-    dashboardType :: Maybe DPT.DashboardType
+    dashboardType :: Maybe DPT.DashboardType,
+    -- One token per person: the new person is created under this merchant/city,
+    -- supplied by the request rather than inherited from a session the token no
+    -- longer carries. The caller must themselves hold access to it (or be
+    -- SUPER_ADMIN), enforced in 'createPerson'.
+    merchantId :: ShortId DMerchant.Merchant,
+    operatingCity :: City.City
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -276,13 +283,15 @@ policyMerchantsForPerson ::
   TokenInfo ->
   SP.Person ->
   m [Id DMerchant.Merchant]
-policyMerchantsForPerson tokenInfo person = do
+policyMerchantsForPerson _tokenInfo person = do
+  -- One token per person: the caller has no single session merchant to add, so
+  -- the policy set is exactly the merchants the subject person is provisioned on
+  -- (their merchant_access, or their home merchant when they have no access yet).
   allAccess <- QAccess.findAllMerchantAccessByPersonId person.id
-  let reachable =
-        if null allAccess
-          then maybe [] (: []) person.merchantId
-          else map (.merchantId) allAccess
-  pure . nub $ tokenInfo.merchantId : reachable
+  pure . nub $
+    if null allAccess
+      then maybe [] (: []) person.merchantId
+      else map (.merchantId) allAccess
 
 -- | 'assertAdminEmailDomain' against every merchant the person is subject to, not just the
 -- caller's. Use this for mutations on an existing person; 'assertAdminEmailDomain' alone is right
@@ -307,12 +316,16 @@ assertAdminEmailDomainForPerson tokenInfo person role mbEmail =
 -- Unconditional, matching DCap.guardAdminMutation: the SUPER_ADMIN tier is seeded (seed-migration
 -- 0018), so the existence guard that once kept these rules dormant no longer has anything to wait
 -- for.
+-- One token per person: a caller may grant access to a merchant only if they
+-- themselves hold access to it (any city) -- or are SUPER_ADMIN. This replaces
+-- the old "must equal my session merchant" check, since the token no longer
+-- names one; the authority is the same (you can only provision merchants you are
+-- a user of), minus the need to be "logged into" that merchant.
 assertMayGrantAccessToMerchant :: BeamFlow m r => TokenInfo -> Id DMerchant.Merchant -> m ()
-assertMayGrantAccessToMerchant tokenInfo targetMerchantId
-  | targetMerchantId == tokenInfo.merchantId = pure ()
-  | otherwise =
-    unlessM (isSuperAdmin tokenInfo.personId) $
-      throwError AccessDenied
+assertMayGrantAccessToMerchant tokenInfo targetMerchantId =
+  unlessM (isSuperAdmin tokenInfo.personId) $ do
+    callerAccess <- QAccess.findByPersonIdAndMerchantId tokenInfo.personId targetMerchantId
+    when (null callerAccess) $ throwError AccessDenied
 
 -- | Record an admin-initiated mutation against another person. Mirrors the shape deletePerson
 -- already uses: who did it (requestorId), to whom (request), and when. The target's id is the
@@ -324,7 +337,10 @@ recordAdminActionOnPerson ::
   Id DP.Person ->
   m ()
 recordAdminActionOnPerson endpoint tokenInfo personId = do
-  transaction <- STransaction.buildDashboardAuthTransaction endpoint tokenInfo.personId tokenInfo.merchantId
+  -- Identity token carries no merchant; attribute the action to the admin's home
+  -- merchant when it is set.
+  mbRequestor <- QP.findById tokenInfo.personId
+  transaction <- STransaction.buildDashboardAuthTransaction endpoint tokenInfo.personId (mbRequestor >>= (.merchantId))
   QT.createDashboardTransaction transaction {DT.request = Just personId.getId}
 
 validateChangeMobileNumberReq :: Validate ChangeMobileNumberByAdminReq
@@ -367,14 +383,17 @@ createPerson tokenInfo personEntity = do
     $ throwError (InvalidRequest "Phone already registered")
   let roleId = personEntity.roleId
   role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  assertAdminEmailDomain tokenInfo.merchantId role (Just personEntity.email)
+  -- The new person is created under the merchant/city named in the request; the
+  -- caller must hold access to it (or be SUPER_ADMIN).
+  merchant <- QMerchant.findByShortId personEntity.merchantId >>= fromMaybeM (MerchantDoesNotExist personEntity.merchantId.getShortId)
+  assertMayGrantAccessToMerchant tokenInfo merchant.id
+  assertAdminEmailDomain merchant.id role (Just personEntity.email)
   -- Admin tiering (existence-guarded): once a SUPER_ADMIN is seeded, only a
   -- SUPER_ADMIN can create admin-tier persons. Legacy behavior until then.
   DCap.guardAdminMutation tokenInfo.personId role.dashboardAccessType
   personId <-
     if DRole.isBppSyncRole role
       then do
-        merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
         roleName <- driverRoleName role.dashboardAccessType
         let createReq =
               InternalClient.CreatePersonReq
@@ -386,10 +405,10 @@ createPerson tokenInfo personEntity = do
                   password = Nothing,
                   roleName = roleName
                 }
-        res <- InternalClient.callBPPInternalCreatePerson (getShortId merchant.shortId) tokenInfo.city createReq
+        res <- InternalClient.callBPPInternalCreatePerson (getShortId merchant.shortId) personEntity.operatingCity createReq
         pure $ cast res.personId
       else generateGUID
-  person <- buildPerson personId personEntity (role.dashboardAccessType) tokenInfo.merchantId
+  person <- buildPerson personId personEntity (role.dashboardAccessType) merchant.id
   decPerson <- decrypt person
   let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing [] Nothing
   QP.create person
@@ -536,6 +555,7 @@ assignRole tokenInfo personId roleId = do
 assignMerchantCityAccess ::
   ( BeamFlow m r,
     EncFlow m r,
+    Redis.HedisFlow m r,
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
   ) =>
   TokenInfo ->
@@ -567,6 +587,8 @@ assignMerchantCityAccess tokenInfo personId req = do
     throwError $ InvalidRequest "Merchant access already assigned."
   merchantAccess <- buildMerchantAccess personId merchant.id merchant.shortId req.operatingCity
   QAccess.create merchantAccess
+  -- Drop the person's cached merchant_access set so the newly granted MOC is usable immediately.
+  DashboardScope.invalidateMerchantAccess personId
   pure Success
 
 resetMerchantAccess ::
@@ -590,10 +612,11 @@ resetMerchantAccess tokenInfo personId req = do
   case merchantAccesses of
     [] -> throwError $ InvalidRequest "Server access already denied."
     (x : _) -> do
-      -- this function uses tokens from db, so should be called before transaction
-      Auth.cleanCachedTokensByMerchantId personId merchant.id
+      -- One token per person: revoking one merchant's access does not drop the
+      -- person's identity session. Removing the merchant_access row and dropping
+      -- the cached set makes the next request deny this merchant at once.
       QAccess.deleteById x.id
-      QReg.deleteAllByPersonIdAndMerchantId personId merchant.id
+      DashboardScope.invalidateMerchantAccess personId
       pure Success
 
 resetMerchantCityAccess ::
@@ -618,9 +641,11 @@ resetMerchantCityAccess tokenInfo personId req = do
     Nothing -> throwError $ InvalidRequest "Server access already denied."
     Just merchantAccess -> do
       -- this function uses tokens from db, so should be called before transaction
-      Auth.cleanCachedTokensByMerchantIdAndCity personId merchant.id req.operatingCity
+      -- One token per person: revoking one city does not drop the identity
+      -- session; invalidating the cached merchant_access set makes the next
+      -- request deny this merchant/city.
       QAccess.deleteById merchantAccess.id
-      QReg.deleteAllByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
+      DashboardScope.invalidateMerchantAccess personId
       pure Success
 
 changePassword ::
@@ -644,9 +669,10 @@ changePassword tokenInfo req = do
   oldProvided <- getDbHash req.oldPassword
   unless (oldActual == Just oldProvided) . throwError $ InvalidRequest "Old password is incorrect."
   QP.updatePersonPassword tokenInfo.personId newHash
-  -- Cleanup: delete auth token from cache and db to enforce re-authentication after password change
-  Auth.cleanCachedTokensByMerchantIdAndCity tokenInfo.personId tokenInfo.merchantId tokenInfo.city
-  QReg.deleteAllByPersonIdAndMerchantIdAndCity tokenInfo.personId tokenInfo.merchantId tokenInfo.city
+  -- Cleanup: delete the person's (single, identity) auth token from cache and db
+  -- to enforce re-authentication after a password change.
+  Auth.cleanCachedTokens tokenInfo.personId
+  QReg.deleteAllByPersonId tokenInfo.personId
   pure Success
 
 -- | Rate-limit bucket keyed on email. Deliberately shared with login (Registration.login) so an
@@ -728,7 +754,9 @@ profile tokenInfo = do
   role <- B.runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
   merchantAccessList <- B.runInReplica $ QAccess.findAllMerchantAccessByPersonId tokenInfo.personId
   decPerson <- decrypt encPerson
-  entityGrants <- B.runInReplica $ QEntityAccess.findAllByPersonIdsAndMerchantId [tokenInfo.personId] tokenInfo.merchantId
+  -- One token per person: no single session merchant, so show the person's
+  -- entity grants across every merchant they hold them under.
+  entityGrants <- B.runInReplica $ QEntityAccess.findAllByPersonId tokenInfo.personId
   let grantedEntityIds = entityGrants <&> (.entityId)
   personEntities <- B.runInReplica $ QEntity.findAllByIdsOrdered grantedEntityIds
   -- entity_access carries no FK, so a deleted depot leaves a dangling grant. Profile is a
@@ -763,11 +791,16 @@ getCurrentMerchant ::
   TokenInfo ->
   m MerchantAccessRes
 getCurrentMerchant tokenInfo = do
+  -- One token per person: the token names no merchant. Report the person's home
+  -- merchant and its default city as the session's starting point; the frontend
+  -- tracks the actually-selected merchant/city itself.
+  person <- B.runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  mId <- person.merchantId & fromMaybeM (InvalidRequest "Person has no home merchant")
   merchant <-
     B.runInReplica $
-      QMerchant.findById tokenInfo.merchantId
-        >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
-  pure $ MerchantCityAccessReq merchant.shortId tokenInfo.city
+      QMerchant.findById mId
+        >>= fromMaybeM (MerchantNotFound mId.getId)
+  pure $ MerchantCityAccessReq merchant.shortId merchant.defaultOperatingCity
 
 changePasswordByAdmin ::
   ( BeamFlow m r,
@@ -822,12 +855,14 @@ changeEnabledStatus ::
   ChangeEnabledStatusReq ->
   m APISuccess
 changeEnabledStatus tokenInfo personId req = do
-  -- Writes here are already merchant+city scoped, so a cross-merchant call is inert rather than
-  -- harmful. Guarding anyway turns a silent no-op into an explicit error and keeps every
-  -- person-id-addressed admin endpoint consistent.
-  void $ B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Auth.cleanCachedTokensByMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city
-  QReg.updateEnabledStatusByPersonIdAndMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city req.enabled
+  -- One token per person: enabling/disabling is person-scoped (the token no
+  -- longer has a merchant/city dimension)
+  targetPerson <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  case targetPerson.merchantId of
+    Just targetMerchantId -> assertMayGrantAccessToMerchant tokenInfo targetMerchantId
+    Nothing -> unlessM (isSuperAdmin tokenInfo.personId) $ throwError AccessDenied
+  Auth.cleanCachedTokens personId
+  QReg.updateEnabledStatusByPersonId personId req.enabled
   pure Success
 
 changeEmailByAdmin ::
@@ -893,6 +928,8 @@ deletePerson tokenInfo personId mbDeleteReason = do
   QAccess.deleteAllByPersonId personId
   QEntityAccess.deleteAllByPersonId personId
   Auth.cleanCachedTokens personId
+  -- Drop the deleted person's cached merchant_access set so nothing authorizes past the delete.
+  DashboardScope.invalidateMerchantAccess personId
   QReg.deleteAllByPersonId personId
   -- person_capability.person_id (subject) is a NOT NULL FK to person, so delete the
   -- user's own overrides before the person delete. granted_by rows (capabilities this
@@ -1152,7 +1189,10 @@ bulkUpsert tokenInfo merchantShortId req = do
             UpdateExistingPerson pers accAction _ -> do
               QP.updatePersonUpsertableFields pers
               case accAction of
-                AccessCreate acc -> QAccess.create acc
+                AccessCreate acc -> do
+                  QAccess.create acc
+                  -- Existing person gaining a new MOC: drop their cached merchant_access set.
+                  DashboardScope.invalidateMerchantAccess pers.id
                 AccessUnchanged -> pure ()
           syncEntityGrants merchant.id now heldByPerson builtOps
           pure builtOps

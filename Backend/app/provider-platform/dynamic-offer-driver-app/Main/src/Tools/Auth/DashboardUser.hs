@@ -25,6 +25,7 @@
 module Tools.Auth.DashboardUser
   ( verifyDashboardUser,
     auditDashboardAction,
+    enforceMerchantCityAccessForUser,
     DashboardUser (..),
     DashboardAuthFlow,
     requestorFleetFlag,
@@ -79,6 +80,7 @@ import qualified "lib-dashboard" Storage.Queries.Role as QDashboardRole
 import "lib-dashboard" Tools.Auth.ApiAuth (dashboardApiHitsCountKey)
 import qualified "lib-dashboard" Tools.Auth.Capability as DashboardCapability
 import qualified "lib-dashboard" Tools.Auth.Common as DashboardCommon
+import qualified "lib-dashboard" Tools.Auth.Scope as DashboardScope
 import qualified "lib-dashboard" Tools.Auth.Verify as Verify
 import qualified "lib-dashboard" Tools.DashboardTopic as DTopic
 import qualified "lib-dashboard" Tools.Error as DashboardError
@@ -101,6 +103,21 @@ data DashboardUser = DashboardUser
     city :: City.City,
     person :: DDashboardPerson.Person
   }
+
+-- | Handler-entry merchant/city authorization. The generated handler calls this
+-- first with the verified operator and its own typed merchant/city `Capture`
+-- args. Polymorphic in the merchant phantom (@b@) because the application
+-- server's `Merchant` type differs from lib-dashboard's; only the short-id text
+-- is needed for the merchant_access match.
+enforceMerchantCityAccessForUser ::
+  DashboardAuthFlow m r =>
+  DashboardUser ->
+  ShortId b ->
+  City.City ->
+  m ()
+enforceMerchantCityAccessForUser dashboardUser merchantSid city =
+  runInDashboardDb $
+    DashboardScope.enforceMerchantCityAccess dashboardUser.personId (getShortId merchantSid) city
 
 -- | @verifyDashboardUser serverName endpointId token@ resolves the session,
 -- enforces the capability registered for @endpointId@, and checks merchant and

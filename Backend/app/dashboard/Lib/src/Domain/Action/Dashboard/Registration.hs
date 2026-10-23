@@ -326,7 +326,7 @@ generateLoginRes person merchant otp city = do
   (isToken, msg) <- check2FA person twoFaRequired otp
   token <-
     if isToken
-      then generateToken person.id merchant city
+      then generateToken person.id
       else pure ""
   (mbRoleName, personEntities) <- lookupRoleAndEntities person merchant.id
   pure
@@ -359,7 +359,7 @@ generateLoginResWithoutOtp ::
   m LoginRes
 generateLoginResWithoutOtp person merchant city = do
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
-  token <- generateToken person.id merchant city
+  token <- generateToken person.id
   twoFaRequired <- is2FARequired person
   deadline <- asks (.twoFaEnforcementDeadline)
   (mbRoleName, personEntities) <- lookupRoleAndEntities person merchant.id
@@ -545,32 +545,29 @@ initiate2FASetup ::
   Initiate2FASetupReq ->
   m Initiate2FASetupRes
 initiate2FASetup Initiate2FASetupReq {..} = do
-  -- Resolve person + (merchantId, city) hint from token or credentials.
-  (person, tokenMerchantId, tokenCity) <- case token of
+  -- Resolve the person from the token (identity-only) or from credentials.
+  person <- case token of
     Just authToken -> do
-      (personId, tokMerchId, tokCity) <- Auth.verifyPerson authToken
-      p <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      pure (p, Just tokMerchId, Just tokCity)
+      personId <- Auth.verifyPerson authToken
+      QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     Nothing -> do
       email_ <- email & fromMaybeM (InvalidRequest "Email is required when token is not provided")
       password_ <- password & fromMaybeM (InvalidRequest "Password is required when token is not provided")
       loginRateLimitOptions <- asks (.loginRateLimitOptions)
       checkSlidingWindowLimitWithOptions (DP.makeEmailHitsCountKey (Just email_)) loginRateLimitOptions
-      p <- QP.findByEmailAndPassword email_ password_ >>= fromMaybeM (PersonDoesNotExist email_)
-      pure (p, Nothing, Nothing)
+      QP.findByEmailAndPassword email_ password_ >>= fromMaybeM (PersonDoesNotExist email_)
   personEmail <- case email of
     Just e -> pure e
     Nothing -> do
       encEmail <- person.email & fromMaybeM (InvalidRequest "Person does not have an email set")
       decrypt encEmail
-  -- Resolve merchant only for BAP-vs-BPP routing hint on internal email OTP call;
-  -- 2FA state itself lives on Person (deployment-wide, not per-merchant).
+  -- Resolve merchant only for BAP-vs-BPP routing of the internal email OTP call;
+  -- 2FA state itself lives on Person (deployment-wide, not per-merchant). The
+  -- token no longer carries a merchant, so the request must name one.
   merchant <- case merchantId of
     Just msid -> QMerchant.findByShortId msid >>= fromMaybeM (MerchantDoesNotExist msid.getShortId)
-    Nothing -> case tokenMerchantId of
-      Just mid -> QMerchant.findById mid >>= fromMaybeM (MerchantDoesNotExist mid.getId)
-      Nothing -> throwError $ InvalidRequest "merchantId is required when token is not provided"
-  let city' = fromMaybe merchant.defaultOperatingCity (maybe tokenCity Just city)
+    Nothing -> throwError $ InvalidRequest "merchantId is required"
+  let city' = fromMaybe merchant.defaultOperatingCity city
   stepSize <- asks (.totpStepSize)
   clockSkew <- asks (.totpClockSkew)
   -- If user has existing authenticator and provides valid TOTP, re-setup directly
@@ -663,37 +660,21 @@ verify2FASetup Verify2FASetupReq {..} = do
       Redis.setExp attemptsKey (attempts + 1) otpTTL
       throwError (InvalidRequest "Invalid OTP")
 
+-- | One token per person, identity-only. Wipes any existing tokens for the
+-- person and mints exactly one, so @merchant.singleActiveSessionOnly@ is moot --
+-- every login is single-session. The token carries no merchant/city; URL +
+-- merchant_access govern access on every request.
 generateToken ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   Id DP.Person ->
-  DMerchant.Merchant ->
-  City.City ->
   m Text
-generateToken personId merchant city = do
-  case merchant.singleActiveSessionOnly of
-    Just True -> generateNewToken personId merchant.id city
-    _ -> do
-      findPreviousToken <- QR.findByPersonIdAndMerchantIdAndCity personId merchant.id city
-      case findPreviousToken of
-        Just token -> pure token.token
-        Nothing -> generateNewToken personId merchant.id city
-
-generateNewToken ::
-  ( BeamFlow m r,
-    Redis.HedisFlow m r,
-    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
-  ) =>
-  Id DP.Person ->
-  Id DMerchant.Merchant ->
-  City.City ->
-  m Text
-generateNewToken personId merchantId city = do
-  regToken <- buildRegistrationToken personId merchantId city
-  Auth.cleanCachedTokensByMerchantIdAndCity personId merchantId city
-  QR.deleteAllByPersonIdAndMerchantIdAndCity personId merchantId city
+generateToken personId = do
+  regToken <- buildRegistrationToken personId
+  Auth.cleanCachedTokens personId
+  QR.deleteAllByPersonId personId
   QR.create regToken
   pure $ regToken.token
 
@@ -707,11 +688,14 @@ logout ::
 logout tokenInfo = do
   let personId = tokenInfo.personId
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
+  -- Identity token: one token per person, so logging out drops that single
+  -- session wholesale (there is no per-merchant/city token to target).
   -- this function uses tokens from db, so should be called before transaction
-  Auth.cleanCachedTokensByMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city
-  QR.deleteAllByPersonIdAndMerchantIdAndCity person.id tokenInfo.merchantId tokenInfo.city
-  buildAndCreateAuthTransaction DT.DashboardUserLogout person merchant
+  Auth.cleanCachedTokens personId
+  QR.deleteAllByPersonId personId
+  -- The token no longer names a merchant; audit the logout against the person's
+  -- home merchant when it is set and configured to track login/logout.
+  auditPersonHomeMerchant DT.DashboardUserLogout person
   pure $ LogoutRes "Logged out successfully"
 
 logoutAllMerchants ::
@@ -724,15 +708,29 @@ logoutAllMerchants ::
 logoutAllMerchants tokenInfo = do
   let personId = tokenInfo.personId
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
   -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokens personId
   QR.deleteAllByPersonId person.id
-  buildAndCreateAuthTransaction DT.DashboardUserLogout person merchant
+  auditPersonHomeMerchant DT.DashboardUserLogout person
   pure $ LogoutRes "Logged out successfully from all servers"
 
-buildRegistrationToken :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> City.City -> m DR.RegistrationToken
-buildRegistrationToken personId merchantId city = do
+-- | Write a login/logout audit transaction against the person's home merchant,
+-- when it is set. One token per person means there is no session merchant to
+-- attribute to; the home merchant (person.merchantId) is the stable stand-in,
+-- and the per-merchant trackLoginLogoutForRoles gate still applies via
+-- 'buildAndCreateAuthTransaction'.
+auditPersonHomeMerchant ::
+  BeamFlow m r =>
+  DT.Endpoint DashAuth.DashboardActionType ->
+  DP.Person ->
+  m ()
+auditPersonHomeMerchant endpoint person =
+  whenJust person.merchantId $ \mId -> do
+    mbMerchant <- QMerchant.findById mId
+    whenJust mbMerchant $ \merchant -> buildAndCreateAuthTransaction endpoint person merchant
+
+buildRegistrationToken :: MonadFlow m => Id DP.Person -> m DR.RegistrationToken
+buildRegistrationToken personId = do
   rtid <- generateGUID
   token <- generateGUID
   now <- getCurrentTime
@@ -741,9 +739,7 @@ buildRegistrationToken personId merchantId city = do
       { id = Id rtid,
         token = token,
         personId = personId,
-        merchantId = merchantId,
         createdAt = now,
-        operatingCity = city,
         enabled = True
       }
 
@@ -756,7 +752,7 @@ buildAndCreateAuthTransaction ::
 buildAndCreateAuthTransaction endpoint person merchant =
   whenJust person.dashboardAccessType $ \dashboardAccessType ->
     when (dashboardAccessType `elem` merchant.trackLoginLogoutForRoles) $ do
-      transaction <- STransaction.buildDashboardAuthTransaction endpoint person.id merchant.id
+      transaction <- STransaction.buildDashboardAuthTransaction endpoint person.id (Just merchant.id)
       QT.createDashboardTransaction transaction
 
 registerFleetOwner ::
@@ -1047,7 +1043,10 @@ setTwoFaExempt tokenInfo req = do
   pure Success
   where
     recordExemptChange audit = do
-      transaction <- STransaction.buildDashboardAuthTransaction (DT.DashboardTwoFactorExemptChange :: DT.Endpoint DashAuth.DashboardActionType) tokenInfo.personId tokenInfo.merchantId
+      -- Identity token: attribute the super-admin's exempt change to their home
+      -- merchant when set (the token no longer names one).
+      mbRequestor <- QP.findById tokenInfo.personId
+      transaction <- STransaction.buildDashboardAuthTransaction (DT.DashboardTwoFactorExemptChange :: DT.Endpoint DashAuth.DashboardActionType) tokenInfo.personId (mbRequestor >>= (.merchantId))
       QT.createDashboardTransaction transaction {DT.request = Just $ encodeToText audit}
 
 validateTwoFaExemptEmail :: Validate Text
@@ -1072,14 +1071,13 @@ adminResetTwoFa tokenInfo TwoFaAdminResetReq {..} = do
   unless (requestor.dashboardAccessType == Just DRole.DASHBOARD_ADMIN) $
     throwError AccessDenied
   target <- QP.findById targetPersonId >>= fromMaybeM (PersonNotFound targetPersonId.getId)
-  merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
   -- Clear TOTP secret and disable 2FA on the Person row
   QP.clearPerson2Fa target.id
   -- Force logout across all sessions
   Auth.cleanCachedTokens target.id
   QR.deleteAllByPersonId target.id
-  -- Audit log
-  STransaction.buildDashboardAuthTransaction (DT.DashboardTwoFactorAdminReset :: DT.Endpoint DashAuth.DashboardActionType) requestor.id merchant.id >>= QT.createDashboardTransaction
+  -- Audit log. Identity token carries no merchant; attribute to the admin's home merchant when set.
+  STransaction.buildDashboardAuthTransaction (DT.DashboardTwoFactorAdminReset :: DT.Endpoint DashAuth.DashboardActionType) requestor.id requestor.merchantId >>= QT.createDashboardTransaction
   logInfo $ "2FA admin reset: requestor=" <> requestor.id.getId <> " target=" <> target.id.getId
   pure $ TwoFaAdminResetRes "2FA reset for target user. They must re-enroll on next login."
 

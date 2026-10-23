@@ -69,7 +69,7 @@ internalAuthHandler apiKey token = withFlowHandlerAPI' $ do
   internalAuthAPIKey <- asks (.internalAuthAPIKey)
   unless (apiKey == Just internalAuthAPIKey) $
     throwError $ InvalidRequest "Invalid API key"
-  (personId, _, _) <- runInDashboardDb $ Auth.verifyPerson (fromMaybe "" token)
+  personId <- runInDashboardDb $ Auth.verifyPerson (fromMaybe "" token)
   (topic, fleetOwnerIds) <- runInDashboardDb $ DTopic.resolveTopicForPerson fleetOwnerLookup personId
   pure $ InternalAuthResp {topic = topic.getTopic, personIds = Id <$> fleetOwnerIds}
 

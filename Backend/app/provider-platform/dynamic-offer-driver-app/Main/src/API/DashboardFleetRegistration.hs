@@ -104,7 +104,7 @@ fleetOwnerVerify req = withFlowHandlerAPI' $ do
         >>= fromMaybeM (PersonDoesNotExist req.mobileNumber)
   merchant <- resolveDashboardMerchant req.merchantId req.city
   void $ DP.fleetOwnerVerify req
-  token <- runInDashboardDb $ DashboardReg.generateToken person.id merchant req.city
+  token <- runInDashboardDb $ DashboardReg.generateToken person.id
   when (person.verified /= Just True && (merchant.verifyFleetWhileLogin == Just True) && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $
     runInDashboardDb $
       QP.updatePersonVerifiedStatus person.id True
@@ -120,7 +120,7 @@ fleetOwnerRegister req = withFlowHandlerAPI' $ do
   (dashboardMerchant, fleetOwnerRole) <- runInDashboardDb $ DashboardReg.validateFleetOwnerRegistration req'
   res <- DP.fleetOwnerRegister req (Just enabled)
   runInDashboardDb $ DashboardReg.createFleetOwnerDashboardOnly fleetOwnerRole dashboardMerchant req' (Id res.personId)
-  token <- runInDashboardDb $ DashboardReg.generateToken (Id res.personId) merchant req.city
+  token <- runInDashboardDb $ DashboardReg.generateToken (Id res.personId)
   pure $ FleetOwnerRegisterResp "Success" (Just token)
 
 buildFleetOwnerRegisterReq :: DP.FleetOwnerRegisterReq -> DashboardReg.FleetRegisterReq
