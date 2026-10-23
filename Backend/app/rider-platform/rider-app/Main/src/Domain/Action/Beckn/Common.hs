@@ -1085,6 +1085,12 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
   mbOfferStatsInput <- if onlinePayment then pure Nothing else Just <$> SPayment.buildOfferStatsInput person
   mbRideOfferEntity <- SOffer.processRideOffer mbOfferStatsInput booking person updRide offerBasePrice fareCtx
+  -- appliedCount already includes this ride when the coupon saved money
+  whenJust mbRideOfferEntity $ \rideOffer ->
+    when (rideOffer.amountSaved > 0) $
+      fork "event_tracking: coupon_ride_completed" $
+        ET.trackEvent booking.merchantId booking.merchantOperatingCityId $
+          ET.CouponRideCompleted (getId booking.riderId) rideOffer.offerCode rideOffer.appliedCount (show updRide.vehicleVariant) (isJust person.payoutVpa)
   let rideDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity
       -- What Stripe must take off is larger than the offer's face value:
       -- discounting the fare also removes the payment charge that sat on it.

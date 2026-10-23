@@ -40,6 +40,8 @@ data TrackingEvent
   | PTBookingUsed Text Text (Maybe Text) Int HighPrecMoney -- riderId, vehicleType, serviceTierType, purchaseCount, fare
   | PTFirstBookingUsed Text Text (Maybe Text) HighPrecMoney -- riderId, vehicleType, serviceTierType, fare
   | OfferCashbackCredited Text Text HighPrecMoney -- riderId, payoutRequestId, amount
+  | CouponRideCompleted Text Text (Maybe Int) Text Bool -- riderId, couponCode, couponRidesCompleted, vehicleVariant, hasUPI
+  | UpiIdAdded Text -- riderId
 
 trackEvent ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
@@ -158,6 +160,13 @@ eventToAction = \case
     (riderId, "ny_" <> slug <> "_user_5_ride_completed", object ["fare" .= fare])
   OfferCashbackCredited riderId payoutRequestId amount ->
     (riderId, "ny_user_offer_cashback_credited", object ["payout_request_id" .= payoutRequestId, "amount" .= amount])
+  CouponRideCompleted riderId couponCode couponRidesCompleted vehicleVariant hasUpi ->
+    ( riderId,
+      "ny_coupon_ride_completed",
+      object (["couponCode" .= couponCode, "vehicleVariant" .= vehicleVariant, "hasUPI" .= hasUpi] <> maybe [] (\count -> ["couponRidesCompleted" .= count]) couponRidesCompleted)
+    )
+  UpiIdAdded riderId ->
+    (riderId, "ny_upi_id_added", object [])
   PTBookingConfirmed riderId vehicleType tier purchaseCount fare ->
     (riderId, "pt_booking_confirmed", object (["vehicleType" .= vehicleType, "purchaseCount" .= purchaseCount, "fare" .= fare] <> serviceTier tier))
   PTFirstBookingConfirmed riderId vehicleType tier fare ->
