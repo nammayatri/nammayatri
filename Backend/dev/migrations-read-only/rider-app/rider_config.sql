@@ -940,3 +940,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_dynamic_pickup_eta boolean 
 ALTER TABLE atlas_app.rider_config ADD COLUMN min_trip_distance_for_better_driver_search integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_driver_search_enabled boolean ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_driver_search_eligibility_probability double precision ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_email_config json ;

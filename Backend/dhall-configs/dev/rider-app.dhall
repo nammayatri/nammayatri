@@ -333,6 +333,7 @@ let RiderJobType =
       | BookingDepositExpiry
       | SilentReallocationExpiry
       | SendLegalPolicyNotification
+      | SendRideInvoiceEmail
       >
 
 let jobRetryOnExceptionMapx =
@@ -386,6 +387,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.BookingDepositExpiry, mapValue = True }
       , { mapKey = RiderJobType.SilentReallocationExpiry, mapValue = True }
       , { mapKey = RiderJobType.SendLegalPolicyNotification, mapValue = True }
+      , { mapKey = RiderJobType.SendRideInvoiceEmail, mapValue = False }
       ]
 
 let cacConfig =

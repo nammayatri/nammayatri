@@ -18,6 +18,7 @@ import qualified Amazonka as AWS
 import Amazonka.SES
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64
+import Data.Char (isAscii)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Email.Types as Email
@@ -179,15 +180,15 @@ buildMultiAttachmentRawEmail from to subject body bodyFormat attachments =
             "",
             "--" <> altBoundary,
             "Content-Type: text/plain; charset=UTF-8",
-            "Content-Transfer-Encoding: 7bit",
+            "Content-Transfer-Encoding: base64",
             "",
-            htmlToPlaintext body,
+            base64Lines (TE.encodeUtf8 (htmlToPlaintext body)),
             "",
             "--" <> altBoundary,
             "Content-Type: text/html; charset=UTF-8",
-            "Content-Transfer-Encoding: 7bit",
+            "Content-Transfer-Encoding: base64",
             "",
-            body,
+            base64Lines (TE.encodeUtf8 body),
             "",
             "--" <> altBoundary <> "--",
             ""
@@ -195,13 +196,13 @@ buildMultiAttachmentRawEmail from to subject body bodyFormat attachments =
         Email.Text ->
           [ "--" <> outerBoundary,
             "Content-Type: text/plain; charset=UTF-8",
-            "Content-Transfer-Encoding: 7bit",
+            "Content-Transfer-Encoding: base64",
             "",
-            body,
+            base64Lines (TE.encodeUtf8 body),
             ""
           ]
       attachmentPart att =
-        let b64 = TE.decodeUtf8 . B64.encode $ att.content
+        let b64 = base64Lines att.content
          in [ "--" <> outerBoundary,
               "Content-Type: " <> att.contentType <> "; name=\"" <> att.filename <> "\"",
               "Content-Description: " <> att.filename,
@@ -214,10 +215,20 @@ buildMultiAttachmentRawEmail from to subject body bodyFormat attachments =
       headerPart =
         [ "From: " <> from,
           "To: " <> toAddressList,
-          "Subject: " <> subject,
+          "Subject: " <> encodeHeaderValue subject,
           "MIME-Version: 1.0",
           "Content-Type: multipart/mixed; boundary=\"" <> outerBoundary <> "\"",
           ""
         ]
       closing = ["--" <> outerBoundary <> "--"]
    in T.unlines $ headerPart <> bodyPart <> concatMap attachmentPart attachments <> closing
+
+base64Lines :: BS.ByteString -> Text
+base64Lines = T.intercalate "\n" . T.chunksOf 76 . TE.decodeUtf8 . B64.encode
+
+encodeHeaderValue :: Text -> Text
+encodeHeaderValue value
+  | T.all isAscii value = value
+  | otherwise = T.intercalate "\n " (map encodedWord (T.chunksOf 10 value))
+  where
+    encodedWord chunk = "=?UTF-8?B?" <> TE.decodeUtf8 (B64.encode (TE.encodeUtf8 chunk)) <> "?="

@@ -14,6 +14,7 @@ module Lib.Finance.Invoice.RenderTemplate
     buildInvoiceContext,
     buildTemplateChecked,
     cleanJson,
+    escHtml,
     renderLineItemsHtml,
     flatten,
   )

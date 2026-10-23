@@ -81,6 +81,7 @@ data RiderJobType
   | BookingDepositExpiry
   | SilentReallocationExpiry
   | SendLegalPolicyNotification
+  | SendRideInvoiceEmail
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -131,6 +132,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SReconcileRewardInflight jobData = AnyJobInfo <$> restoreJobInfo SReconcileRewardInflight jobData
   restoreAnyJobInfo SSilentReallocationExpiry jobData = AnyJobInfo <$> restoreJobInfo SSilentReallocationExpiry jobData
   restoreAnyJobInfo SSendLegalPolicyNotification jobData = AnyJobInfo <$> restoreJobInfo SSendLegalPolicyNotification jobData
+  restoreAnyJobInfo SSendRideInvoiceEmail jobData = AnyJobInfo <$> restoreJobInfo SSendRideInvoiceEmail jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -516,3 +518,14 @@ data SendLegalPolicyNotificationJobData = SendLegalPolicyNotificationJobData
 instance JobInfoProcessor 'SendLegalPolicyNotification
 
 type instance JobContent 'SendLegalPolicyNotification = SendLegalPolicyNotificationJobData
+
+data SendRideInvoiceEmailJobData = SendRideInvoiceEmailJobData
+  { bookingId :: Id Booking,
+    rideId :: Id DRide.Ride,
+    attempt :: Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SendRideInvoiceEmail
+
+type instance JobContent 'SendRideInvoiceEmail = SendRideInvoiceEmailJobData

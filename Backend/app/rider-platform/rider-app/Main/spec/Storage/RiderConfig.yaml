@@ -4,6 +4,7 @@ imports:
   EmailOTPConfig: Email.Types
   EmailMagicLinkConfig: Email.Types
   EmailBusinessVerificationConfig: Email.Types
+  InvoiceEmailConfig: Lib.Finance.Invoice.Email
   KaptureConfig: IssueManagement.Common
   ExotelMapping: Domain.Types.Extra.RiderConfig
   VehicleServiceTierOrderConfig: Domain.Types.Extra.RiderConfig
@@ -297,6 +298,7 @@ RiderConfig:
     maxAlternateRouteVehicles: Int
     includeVehiclesWithNoEta: Maybe Bool
     invoiceConfig: Maybe RiderInvoiceConfig
+    invoiceEmailConfig: Maybe InvoiceEmailConfig
     # Better route point suggestion: detect a point already on the search route that
     # is a short walk from the customer's pickup/drop but cuts a large detour out of
     # the ride (one-ways, dividers, lanes). Suggested as an extra estimate, the
@@ -421,6 +423,7 @@ RiderConfig:
     duesExcludedPaymentPurposes: "Maybe [Text]"
     externalSOSConfig: Maybe Value
     invoiceConfig: Maybe Value
+    invoiceEmailConfig: Maybe Value
     syncSearchDispatchConfig: Maybe Value
     alwaysAllowedNotificationCategories: "Maybe [Text]"
   constraints:
@@ -492,6 +495,7 @@ RiderConfig:
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: externalSOSConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     invoiceConfig: invoiceConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    invoiceEmailConfig: invoiceEmailConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     syncSearchDispatchConfig: syncSearchDispatchConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     alwaysAllowedNotificationCategories: fromMaybe [Domain.Types.Extra.RiderPreferences.RIDE_RELATED, Domain.Types.Extra.RiderPreferences.SAFETY] (alwaysAllowedNotificationCategories >>= traverse (readMaybe . Data.Text.unpack))|E
 
@@ -556,6 +560,7 @@ RiderConfig:
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: (externalSOSConfig >>= Just . Data.Aeson.toJSON)|E
     invoiceConfig: (invoiceConfig >>= Just . Data.Aeson.toJSON)|E
+    invoiceEmailConfig: (invoiceEmailConfig >>= Just . Data.Aeson.toJSON)|E
     syncSearchDispatchConfig: (syncSearchDispatchConfig >>= Just . Data.Aeson.toJSON)|E
     alwaysAllowedNotificationCategories: Just (map show alwaysAllowedNotificationCategories)|E
 
@@ -675,6 +680,7 @@ RiderConfig:
     duesExcludedPaymentPurposes: text []
     externalSOSConfig: "json"
     invoiceConfig: "json"
+    invoiceEmailConfig: "json"
     syncSearchDispatchConfig: "jsonb"
 
 #   configPilot:
