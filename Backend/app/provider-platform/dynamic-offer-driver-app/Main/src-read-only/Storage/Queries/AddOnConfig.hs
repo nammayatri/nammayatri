@@ -24,12 +24,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.AddOnConfig.AddOnConfig] -> m ())
 createMany = traverse_ create
 
-findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.AddOnConfig.AddOnConfig] -> m [Domain.Types.AddOnConfig.AddOnConfig])
+findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.AddOnConfig.AddOnConfig] -> m ([Domain.Types.AddOnConfig.AddOnConfig]))
 findAllByIds ids = do findAllWithKV [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> ids)]
 
 findAllByMerchantOpCityIdAndEnabled ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.AddOnConfig.AddOnConfig])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m ([Domain.Types.AddOnConfig.AddOnConfig]))
 findAllByMerchantOpCityIdAndEnabled merchantOperatingCityId enabled = do
   findAllWithKV
     [ Se.And
