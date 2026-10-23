@@ -108,7 +108,7 @@ recordPickupStall transporterConfig driverId merchantOpCityId rideId stallCase s
   let fetchRules = \dom -> do
         localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
         getAppDynamicLogic (cast merchantOpCityId) dom localTime Nothing Nothing
-  output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) LYT.PICKUP_STALL_BEHAVIOR fetchRules
+  output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) (BehaviorDispatch.behaviourEventCity (cast merchantOpCityId)) LYT.PICKUP_STALL_BEHAVIOR fetchRules
   logInfo $ "PickupStallBehavior for driver " <> driverId.getId <> " (" <> stallCase <> ", " <> show source <> "): consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
   when (not (null output.consequences) || not (null output.communications)) $ do
     let dispatchCtx =

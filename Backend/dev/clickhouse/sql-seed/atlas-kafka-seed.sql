@@ -143,6 +143,8 @@ CREATE TABLE IF NOT EXISTS atlas_kafka.behaviour_consequence_events (
     `event_id`                   String,
     `occurred_at`                DateTime64(3, 'UTC'),
     `merchant_operating_city_id` LowCardinality(String),
+    `merchant_short_id`          LowCardinality(String),
+    `city`                       LowCardinality(String),
     `caller_app`                 LowCardinality(String),
     `entity_type`                LowCardinality(String),
     `entity_id`                  String,
@@ -158,13 +160,15 @@ CREATE TABLE IF NOT EXISTS atlas_kafka.behaviour_consequence_events (
     `extra`                      String
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(occurred_at)
-ORDER BY (merchant_operating_city_id, behaviour, consequence_type, occurred_at)
+ORDER BY (city, merchant_short_id, behaviour, consequence_type, occurred_at)
 TTL toDateTime(occurred_at) + INTERVAL 2 YEAR;
 
 CREATE TABLE IF NOT EXISTS atlas_kafka.behaviour_consequence_events_queue (
     `event_id`                   String,
     `occurred_at`                DateTime64(3, 'UTC'),
     `merchant_operating_city_id` String,
+    `merchant_short_id`          String,
+    `city`                       String,
     `caller_app`                 String,
     `entity_type`                String,
     `entity_id`                  String,
@@ -189,7 +193,7 @@ SETTINGS
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS atlas_kafka.behaviour_consequence_events_mv
 TO atlas_kafka.behaviour_consequence_events AS
-SELECT event_id, occurred_at, merchant_operating_city_id, caller_app, entity_type, entity_id,
+SELECT event_id, occurred_at, merchant_operating_city_id, merchant_short_id, city, caller_app, entity_type, entity_id,
        behaviour, rulebook_version, action_type, kind, consequence_type, reason_tag,
        template_key, block_hours, source, extra
 FROM atlas_kafka.behaviour_consequence_events_queue;
