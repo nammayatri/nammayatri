@@ -2,8 +2,10 @@
 
 The workspace's control-center/ (rsynced with the backend: it sits inside the
 repo dir, gitignored) runs as a Vite dev server: its /api/bap|bpp proxy reaches
-the workspace's rider-app / driver-app as localhost, and anyone on the office
-network can open http://<devbox>:<port>. Started detached (setsid) so it does
+the workspace's rider-app / driver-app as localhost. It is served under the
+workspace's public path (CC_BASE), so testers open it through hopper's gateway
+on any network; the office network can also use http://<devbox>:<port><base>.
+Started detached (setsid) so it does
 not die with the SSH session; its pid/port live in <workspace>/data/, which
 rsync never touches.
 
@@ -16,6 +18,8 @@ import shlex
 import time
 
 from . import ssh
+from .stack import PUBLIC_PORT
+from .workspace import REGISTRY_FILE as REGISTRY
 
 PORTS = range(5300, 5320)   # clear of the stack's own resolved 5xxx ports
 STATE = "data/control-center.json"
@@ -65,7 +69,7 @@ def status(t: ssh.Target, wdir: str) -> dict:
     except Exception as e:  # noqa: BLE001
         st = {"state": "unknown", "error": str(e)}
     if st.get("port"):
-        st["url"] = f"http://{t.host}:{st['port']}"
+        st["url"] = f"http://{t.host}:{st['port']}{st.get('base') or ''}"
     return st
 
 
@@ -93,14 +97,27 @@ for p in {' '.join(str(p) for p in PORTS)}; do
 done
 [ -n "$PORT" ] || {{ echo "no free port in {PORTS.start}-{PORTS.stop - 1}" >&2; exit 4; }}
 cd control-center
+# Serve under the workspace's public path, so hopper's gateway can forward it
+# like rider-app: /api/<devbox>/{PUBLIC_PORT}/<workspace>/control-centre/. Only
+# when this checkout understands CC_BASE and the workspace is in the registry;
+# otherwise it is served at / as before (office network only).
+CC_BASE=""
+if grep -q CC_BASE vite.config.ts 2>/dev/null; then
+  NAME=$(python3 -c 'import json, sys
+u = json.load(open(sys.argv[1])).get("users") or {{}}
+print(next((k for k, v in u.items() if isinstance(v, dict) and v.get("dir") == sys.argv[2]), ""))' \\
+    {REGISTRY} {d} 2>/dev/null || true)
+  [ -n "$NAME" ] && CC_BASE="/api/$(hostname)/{PUBLIC_PORT}/$NAME/control-centre/"
+fi
+export CC_BASE
 VITE_BAP_URL=http://localhost:{int(rider_port)} VITE_BPP_URL=http://localhost:{int(driver_port)} CC_PORT=$PORT \\
   setsid nohup nix shell --inputs-from {d} nixpkgs-unstable#nodejs_22 --command bash -c \\
     'npm install --no-audit --no-fund && exec npm run dev -- --host 0.0.0.0 --port "$CC_PORT" --strictPort' \\
   > ../{LOG} 2>&1 < /dev/null &
 PID=$!
 cd ..
-printf '{{"pid": %s, "port": %s, "startedAt": %s, "riderPort": {int(rider_port)}, "driverPort": {int(driver_port)}, "branch": %s, "commit": %s, "dirty": {json.dumps(bool(info.get('dirty')))}, "deployHash": %s}}\\n' \\
-  "$PID" "$PORT" "$(date +%s)" {shlex.quote(json.dumps(info.get('branch') or ''))} \\
+printf '{{"pid": %s, "port": %s, "base": "%s", "startedAt": %s, "riderPort": {int(rider_port)}, "driverPort": {int(driver_port)}, "branch": %s, "commit": %s, "dirty": {json.dumps(bool(info.get('dirty')))}, "deployHash": %s}}\\n' \\
+  "$PID" "$PORT" "$CC_BASE" "$(date +%s)" {shlex.quote(json.dumps(info.get('branch') or ''))} \\
   {shlex.quote(json.dumps(info.get('commit') or ''))} \\
   {shlex.quote(json.dumps(info.get('deployHash') or ''))} > {STATE}
 echo "$PORT"

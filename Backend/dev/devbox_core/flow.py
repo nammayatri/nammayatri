@@ -64,8 +64,14 @@ def pick_target(user: str | None, host: str | None,
             m["name"], m.get("localIp") or m["bestIp"])
 
 
-def _cc_url(c: dict, url_host: str) -> str:
-    return f"http://{url_host}:{c['port']}" if c.get("state") == "running" and c.get("port") else ""
+def _cc_url(c: dict, url_host: str, public: str) -> str:
+    """Through hopper's gateway when the control centre runs under its public
+    path (cc.py CC_BASE); else its office address, as before."""
+    if c.get("state") != "running" or not c.get("port"):
+        return ""
+    if c.get("base"):
+        return f"{public}/control-centre/"
+    return f"http://{url_host}:{c['port']}"
 
 
 def result_fields(t: ssh.Target, name: str, devbox: str = "", url_host: str = "") -> dict:
@@ -93,7 +99,7 @@ def result_fields(t: ssh.Target, name: str, devbox: str = "", url_host: str = ""
         "backend_url": public,
         "rider_url": rider, "driver_url": driver,
         "office_url": stack.office_base(url_host, name),
-        "cc_url": _cc_url(c, url_host),
+        "cc_url": _cc_url(c, url_host, public),
         "data": f"{held.get('from')} {held.get('version')}" if held.get("from") else "",
         "cache_commit": commit,
     }
@@ -162,7 +168,8 @@ def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
         elif r.get("error"):
             raise RuntimeError(r["error"])
         else:
-            cc_url = _cc_url(cc.wait_running(t, wdir, timeout=CC_READY_TIMEOUT), url_host)
+            cc_url = _cc_url(cc.wait_running(t, wdir, timeout=CC_READY_TIMEOUT), url_host,
+                             stack.public_base(devbox, name))
 
     public = stack.public_base(devbox, name)
     rider, driver = stack.ready_urls(public)
