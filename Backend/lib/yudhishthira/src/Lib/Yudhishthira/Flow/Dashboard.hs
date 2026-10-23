@@ -180,9 +180,10 @@ deleteTag merchantOpCityId tagName = do
 
 postQueryCreate ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, CacheFlow m r) =>
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
   Lib.Yudhishthira.Types.ChakraQueriesAPIEntity ->
   m Kernel.Types.APISuccess.APISuccess
-postQueryCreate queryRequest = do
+postQueryCreate merchantOpCityId queryRequest = do
   validateQueryResults queryRequest.queryResults
   -- Validate Redis query config if queryType is REDIS
   when (queryRequest.queryType == Lib.Yudhishthira.Types.REDIS) $ do
@@ -195,7 +196,7 @@ postQueryCreate queryRequest = do
   -- TODO find a better way to validate query than run it
   -- Skip template validation for Redis queries as they don't use templates
   when (queryRequest.queryType == Lib.Yudhishthira.Types.CLICKHOUSE) $ do
-    void $ KaalChakraEvent.runQueryRequestTemplate chakraQuery defaultTemplate
+    KaalChakraInternal.validateChakraQueryForSave chakraQuery (validationTemplate merchantOpCityId)
   SQCQ.create chakraQuery
 
   pure Kernel.Types.APISuccess.Success
@@ -207,9 +208,10 @@ postQueryCreate queryRequest = do
 
 postQueryUpdate ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, CacheFlow m r) =>
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
   Lib.Yudhishthira.Types.ChakraQueryUpdateReq ->
   m Kernel.Types.APISuccess.APISuccess
-postQueryUpdate queryRequest = do
+postQueryUpdate merchantOpCityId queryRequest = do
   whenJust queryRequest.queryResults validateQueryResults
   existingChakraQuery <-
     SQCQ.findByPrimaryKey queryRequest.chakra queryRequest.queryName >>= fromMaybeM (ChakraQueriesDoesNotExist (show queryRequest.chakra) queryRequest.queryName)
@@ -222,7 +224,7 @@ postQueryUpdate queryRequest = do
 
   -- Skip template validation for Redis queries as they don't use templates
   when (finalQueryType == Lib.Yudhishthira.Types.CLICKHOUSE) $ do
-    void $ KaalChakraEvent.runQueryRequestTemplate chakraQuery defaultTemplate
+    KaalChakraInternal.validateChakraQueryForSave chakraQuery (validationTemplate merchantOpCityId)
   SQCQ.updateByPrimaryKey chakraQuery
 
   pure Kernel.Types.APISuccess.Success
@@ -291,14 +293,14 @@ validateRedisQueryConfig queryText = do
   when (T.length redisConfig.key < 3) $
     throwError $ InvalidRequest "Redis key template is too short"
 
--- Dummy city so queries using {merchantOperatingCityId} still get validated by running them
-defaultTemplate :: KaalChakraEvent.Template
-defaultTemplate =
+-- The caller's city, so queries using {merchantOperatingCityId} are checked against real rows
+validationTemplate :: Id Lib.Yudhishthira.Types.MerchantOperatingCity -> KaalChakraEvent.Template
+validationTemplate merchantOpCityId =
   KaalChakraEvent.Template
     { limit = Lib.Yudhishthira.Types.QLimit 10,
       offset = Lib.Yudhishthira.Types.QOffset 0,
       usersSet = Lib.Yudhishthira.Types.ALL_USERS,
-      merchantOperatingCityId = Just (Id "00000000-0000-0000-0000-000000000000")
+      merchantOperatingCityId = Just merchantOpCityId
     }
 
 queryDelete ::
