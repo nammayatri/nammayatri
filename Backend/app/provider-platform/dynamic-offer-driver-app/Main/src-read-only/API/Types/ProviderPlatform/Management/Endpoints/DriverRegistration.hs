@@ -6,8 +6,10 @@ module API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration where
 import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
+import qualified Dashboard.Common.Merchant
 import Data.Aeson
 import qualified Data.Aeson
+import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
@@ -17,6 +19,7 @@ import qualified Kernel.External.Payout.Interface.Types
 import qualified Kernel.External.Verification.Interface.Types
 import qualified Kernel.External.Verification.Types
 import qualified Kernel.Prelude
+import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
@@ -53,6 +56,24 @@ data AadhaarCardReq = AadhaarCardReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance Kernel.Types.HideSecrets.HideSecrets AadhaarCardReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data AddDriversReq = AddDriversReq {file :: Kernel.Prelude.FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets AddDriversReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data AddDriversResp = AddDriversResp {processedDrivers :: [ProcessedDriverInfo], unprocessedEntities :: [Kernel.Prelude.Text]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data AddVehiclesReq = AddVehiclesReq {file :: Kernel.Prelude.FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets AddVehiclesReq where
   hideSecrets = Kernel.Prelude.identity
 
 data ApproveDetails
@@ -452,6 +473,10 @@ data PayoutRegistrationRes = PayoutRegistrationRes {orderId :: Kernel.Prelude.Te
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data ProcessedDriverInfo = ProcessedDriverInfo {driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver, phoneNo :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RCApproveDetails = RCApproveDetails
   { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
     vehicleVariant :: Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant,
@@ -794,7 +819,7 @@ data VerifyBankAccountReq = VerifyBankAccountReq {bankAccountNo :: Kernel.Prelud
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationGenerateTempAppCodeHelper :<|> PostDriverRegistrationOnboardingLinkHelper :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationVerifyBankAccount :<|> GetDriverRegistrationInfoBankAccount :<|> GetDriverRegistrationPayoutRegistrationHelper :<|> PostDriverRegistrationDeleteBankAccount :<|> GetDriverRegistrationPayoutOrderStatus :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> GetDriverRegistrationVerificationStatus :<|> GetDriverRegistrationDocumentsCommonList :<|> PostDriverRegistrationDocumentsUpdate :<|> PostDriverRegistrationDocumentsCommon :<|> PostDriverRegistrationDocumentRegister :<|> PostDriverRegistrationUnlinkDocumentHelper :<|> PostDriverRegistrationTriggerReminderHelper)
+type API = (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationGenerateTempAppCodeHelper :<|> PostDriverRegistrationOnboardingLinkHelper :<|> PostDriverRegistrationAddDrivers :<|> PostDriverRegistrationAddVehicles :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationVerifyBankAccount :<|> GetDriverRegistrationInfoBankAccount :<|> GetDriverRegistrationPayoutRegistrationHelper :<|> PostDriverRegistrationDeleteBankAccount :<|> GetDriverRegistrationPayoutOrderStatus :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> GetDriverRegistrationVerificationStatus :<|> GetDriverRegistrationDocumentsCommonList :<|> PostDriverRegistrationDocumentsUpdate :<|> PostDriverRegistrationDocumentsCommon :<|> PostDriverRegistrationDocumentRegister :<|> PostDriverRegistrationUnlinkDocumentHelper :<|> PostDriverRegistrationTriggerReminderHelper)
 
 type GetDriverRegistrationDocumentsList =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "documents" :> "list" :> QueryParam "docType" DocumentType
@@ -829,6 +854,22 @@ type PostDriverRegistrationOnboardingLinkHelper =
            "requestorId"
            Kernel.Prelude.Text
       :> Post '[JSON] OnboardingLinkRes
+  )
+
+type PostDriverRegistrationAddDrivers =
+  ( "addDrivers" :> MandatoryQueryParam "onboardingAs" Dashboard.Common.Driver.OnboardingAs
+      :> Kernel.ServantMultipart.MultipartForm
+           Kernel.ServantMultipart.Tmp
+           AddDriversReq
+      :> Post '[JSON] AddDriversResp
+  )
+
+type PostDriverRegistrationAddVehicles =
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "addVehicles"
+      :> Kernel.ServantMultipart.MultipartForm
+           Kernel.ServantMultipart.Tmp
+           AddVehiclesReq
+      :> Post '[JSON] Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities
   )
 
 type PostDriverRegistrationDocumentUpload =
@@ -1017,6 +1058,8 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
     getDriverRegistrationGetDocument :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe DocumentType -> Kernel.Prelude.Maybe EntityType -> EulerHS.Types.EulerClient GetDocumentResponse,
     postDriverRegistrationGenerateTempAppCode :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient TempAppCodeRes,
     postDriverRegistrationOnboardingLink :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient OnboardingLinkRes,
+    postDriverRegistrationAddDrivers :: Dashboard.Common.Driver.OnboardingAs -> (Data.ByteString.Lazy.ByteString, AddDriversReq) -> EulerHS.Types.EulerClient AddDriversResp,
+    postDriverRegistrationAddVehicles :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (Data.ByteString.Lazy.ByteString, AddVehiclesReq) -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
     postDriverRegistrationDocumentUpload :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UploadDocumentReq -> EulerHS.Types.EulerClient UploadDocumentResp,
     postDriverRegistrationRegisterDl :: Kernel.Types.Id.Id Dashboard.Common.Driver -> RegisterDLReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverRegistrationVerifyBankAccount :: Kernel.Types.Id.Id Dashboard.Common.Driver -> VerifyBankAccountReq -> EulerHS.Types.EulerClient Kernel.External.Verification.Interface.Types.VerifyAsyncResp,
@@ -1042,13 +1085,15 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
 mkDriverRegistrationAPIs :: (Client EulerHS.Types.EulerClient API -> DriverRegistrationAPIs)
 mkDriverRegistrationAPIs driverRegistrationClient = (DriverRegistrationAPIs {..})
   where
-    getDriverRegistrationDocumentsList :<|> getDriverRegistrationGetDocument :<|> postDriverRegistrationGenerateTempAppCode :<|> postDriverRegistrationOnboardingLink :<|> postDriverRegistrationDocumentUpload :<|> postDriverRegistrationRegisterDl :<|> postDriverRegistrationVerifyBankAccount :<|> getDriverRegistrationInfoBankAccount :<|> getDriverRegistrationPayoutRegistration :<|> postDriverRegistrationDeleteBankAccount :<|> getDriverRegistrationPayoutOrderStatus :<|> postDriverRegistrationRegisterRc :<|> postDriverRegistrationRegisterAadhaar :<|> postDriverRegistrationRegisterGenerateAadhaarOtp :<|> postDriverRegistrationRegisterVerifyAadhaarOtp :<|> getDriverRegistrationUnderReviewDrivers :<|> getDriverRegistrationDocumentsInfo :<|> getDriverRegistrationVerificationStatus :<|> getDriverRegistrationDocumentsCommonList :<|> postDriverRegistrationDocumentsUpdate :<|> postDriverRegistrationDocumentsCommon :<|> postDriverRegistrationDocumentRegister :<|> postDriverRegistrationUnlinkDocument :<|> postDriverRegistrationTriggerReminder = driverRegistrationClient
+    getDriverRegistrationDocumentsList :<|> getDriverRegistrationGetDocument :<|> postDriverRegistrationGenerateTempAppCode :<|> postDriverRegistrationOnboardingLink :<|> postDriverRegistrationAddDrivers :<|> postDriverRegistrationAddVehicles :<|> postDriverRegistrationDocumentUpload :<|> postDriverRegistrationRegisterDl :<|> postDriverRegistrationVerifyBankAccount :<|> getDriverRegistrationInfoBankAccount :<|> getDriverRegistrationPayoutRegistration :<|> postDriverRegistrationDeleteBankAccount :<|> getDriverRegistrationPayoutOrderStatus :<|> postDriverRegistrationRegisterRc :<|> postDriverRegistrationRegisterAadhaar :<|> postDriverRegistrationRegisterGenerateAadhaarOtp :<|> postDriverRegistrationRegisterVerifyAadhaarOtp :<|> getDriverRegistrationUnderReviewDrivers :<|> getDriverRegistrationDocumentsInfo :<|> getDriverRegistrationVerificationStatus :<|> getDriverRegistrationDocumentsCommonList :<|> postDriverRegistrationDocumentsUpdate :<|> postDriverRegistrationDocumentsCommon :<|> postDriverRegistrationDocumentRegister :<|> postDriverRegistrationUnlinkDocument :<|> postDriverRegistrationTriggerReminder = driverRegistrationClient
 
 data DriverRegistrationUserActionType
   = GET_DRIVER_REGISTRATION_DOCUMENTS_LIST
   | GET_DRIVER_REGISTRATION_GET_DOCUMENT
   | POST_DRIVER_REGISTRATION_GENERATE_TEMP_APP_CODE
   | POST_DRIVER_REGISTRATION_ONBOARDING_LINK
+  | POST_DRIVER_REGISTRATION_ADD_DRIVERS
+  | POST_DRIVER_REGISTRATION_ADD_VEHICLES
   | POST_DRIVER_REGISTRATION_DOCUMENT_UPLOAD
   | POST_DRIVER_REGISTRATION_REGISTER_DL
   | POST_DRIVER_REGISTRATION_VERIFY_BANK_ACCOUNT

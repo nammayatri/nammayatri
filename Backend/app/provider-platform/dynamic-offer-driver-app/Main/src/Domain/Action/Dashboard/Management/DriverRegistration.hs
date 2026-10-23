@@ -28,6 +28,9 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     postDriverRegistrationUnlinkDocument,
     postDriverRegistrationGenerateTempAppCode,
     postDriverRegistrationOnboardingLink,
+    postDriverRegistrationAddDrivers,
+    postDriverRegistrationAddVehicles,
+    mkRCApproveDetails,
     mapDocumentType,
     convertValidationStatus,
     sendDocumentDecisionNotification,
@@ -51,6 +54,7 @@ import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified Dashboard.Common.Driver as CommonDriver
+import qualified Dashboard.Common.Merchant as DCM
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as DAK
 import qualified Data.Aeson.KeyMap as DAKM
@@ -62,6 +66,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (utctDay)
 import qualified Domain.Action.Dashboard.Common as DCommon
+import qualified Domain.Action.Dashboard.Common.BulkUpload as BulkUpload
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegistrationV2
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
@@ -931,6 +936,22 @@ convertValidationStatus = \case
   Common.AUTO_DECLINED -> API.Types.UI.DriverOnboardingV2.AUTO_DECLINED
   Common.NEEDS_REVIEW -> API.Types.UI.DriverOnboardingV2.NEEDS_REVIEW
 
+mkRCApproveDetails :: Id Common.Image -> Text -> Maybe DriverVehicleDetails -> Common.RCApproveDetails
+mkRCApproveDetails imageId vehicleNumberPlate mbVehicleDetails =
+  Common.RCApproveDetails
+    { documentImageId = imageId,
+      vehicleNumberPlate = Just vehicleNumberPlate,
+      vehicleManufacturer = (.vehicleManufacturer) <$> mbVehicleDetails,
+      vehicleModel = (.vehicleModel) <$> mbVehicleDetails,
+      vehicleColor = (.vehicleColour) <$> mbVehicleDetails,
+      vehicleVariant = Nothing,
+      vehicleModelYear = (.vehicleModelYear) =<< mbVehicleDetails,
+      vehicleDoors = (.vehicleDoors) =<< mbVehicleDetails,
+      vehicleSeatBelts = (.vehicleSeatBelts) =<< mbVehicleDetails,
+      fitnessExpiry = Nothing,
+      permitExpiry = Nothing
+    }
+
 castVehicleDetails :: Common.DriverVehicleDetails -> DriverVehicleDetails
 castVehicleDetails Common.DriverVehicleDetails {..} =
   DriverVehicleDetails
@@ -1003,20 +1024,7 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
               }
         Common.RCData rcReq -> do
           void $ registerRC merchant merchantOpCityId autoApprove rcReq
-          pure . Just . Common.RC $
-            Common.RCApproveDetails
-              { documentImageId = rcReq.imageId,
-                vehicleNumberPlate = Just rcReq.vehicleRegistrationCertNumber,
-                vehicleManufacturer = (.vehicleManufacturer) <$> rcReq.vehicleDetails,
-                vehicleModel = (.vehicleModel) <$> rcReq.vehicleDetails,
-                vehicleColor = (.vehicleColour) <$> rcReq.vehicleDetails,
-                vehicleVariant = Nothing,
-                vehicleModelYear = (.vehicleModelYear) =<< rcReq.vehicleDetails,
-                vehicleDoors = (.vehicleDoors) =<< rcReq.vehicleDetails,
-                vehicleSeatBelts = (.vehicleSeatBelts) =<< rcReq.vehicleDetails,
-                fitnessExpiry = Nothing,
-                permitExpiry = Nothing
-              }
+          pure . Just . Common.RC $ mkRCApproveDetails rcReq.imageId rcReq.vehicleRegistrationCertNumber (castVehicleDetails <$> rcReq.vehicleDetails)
         Common.AadhaarData aadhaarReq -> void (registerAadhaar merchant merchantOpCityId aadhaarReq) >> pure Nothing
         Common.PanData panReq -> void (registerPan merchant merchantOpCityId panReq) >> pure Nothing
         Common.GSTData gstReq -> void (registerGst merchant merchantOpCityId gstReq) >> pure Nothing
@@ -3445,6 +3453,54 @@ postDriverRegistrationOnboardingLink merchantShortId opCity driverId requestorId
   linkTemplate <- merchantMessage.jsonData.var1 & fromMaybeM (InvalidRequest "Missing json_data.var1 link template for DRIVER_ONBOARDING_DEEPLINK_MESSAGE")
   link <- MessageBuilder.shortenOnboardingLink UrlShortner.DRIVER_ONBOARDING_LINK (expiryHours + 24) (T.replace (MessageBuilder.templateText "code") codeRes.code linkTemplate)
   pure $ Common.OnboardingLinkRes {link, expiresAt = codeRes.expiresAt}
+
+postDriverRegistrationAddDrivers :: ShortId DM.Merchant -> Context.City -> CommonDriver.OnboardingAs -> Common.AddDriversReq -> Flow Common.AddDriversResp
+postDriverRegistrationAddDrivers merchantShortId opCity onboardingAs req =
+  BulkUpload.addIndividualOrFleetSeekerDrivers merchantShortId opCity onboardingAs req.file
+
+postDriverRegistrationAddVehicles :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Bool -> Common.AddVehiclesReq -> Flow DCM.APISuccessWithUnprocessedEntities
+postDriverRegistrationAddVehicles merchantShortId opCity driverId mbAutoApprove req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (driver.role == DP.DRIVER && driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCityId) $
+    throwError (PersonDoesNotExist personId.getId)
+  -- Without a photo an RC can only be created from the row's details, which the register door honours only where the city allows it.
+  unless (transporterConfig.allowDashboardToPassVehicleDetails == Just True) $
+    throwError (InvalidRequest "Vehicle details from the dashboard are not enabled for this city")
+  rows <- BulkUpload.readVehiclesCsv transporterConfig merchantOpCity req.file
+  -- The driver in the path owns every row, so the file's driver phone column is ignored.
+  let registerRow (rcReq, mbFleetNo) = do
+        whenJust mbFleetNo $ \_ -> throwError (InvalidRequest "Fleet phone number is not applicable for adding vehicles under a driver")
+        when (isNothing rcReq.vehicleDetails) $ throwError (InvalidRequest "Manufacturer, model and colour are required")
+        -- Bulk only creates vehicles; an existing plate is linked through the dashboard, as the single add does.
+        mbExistingRC <- QRC.findLastVehicleRCWrapper rcReq.vehicleRegistrationCertNumber
+        whenJust mbExistingRC $ \_ -> throwError (InvalidRequest "RC already exists for this vehicle number")
+        imageId <- createBulkRcPlaceholderImage personId merchant.id merchantOpCityId
+        registered <-
+          withTryCatch "register:postDriverRegistrationAddVehicles" $
+            postDriverRegistrationDocumentRegisterWithVerifiedBy DPan.DASHBOARD merchantShortId opCity driverId mbAutoApprove $
+              Common.DocumentRegisterReq {metadata = Common.RCData ((rcReq :: Common.RegisterRCReq) {Common.imageId = cast imageId})}
+        case registered of
+          Right _ -> pure ()
+          Left err -> do
+            -- A row refused before its RC existed leaves no image behind; an image an RC already holds stays, as after a failed approve.
+            mbRc <- QRC.findByAnyImageId imageId
+            when (isNothing mbRc) $ QImage.deleteByIdAndPerson imageId personId
+            throwM err
+  unprocessedEntities <-
+    foldlM
+      ( \unprocessed (rcReq, _, _, _, mbFleetNo, _) ->
+          withTryCatch "process:postDriverRegistrationAddVehicles" (registerRow (rcReq, mbFleetNo)) <&> \case
+            Left err -> unprocessed <> ["Unable to add Vehicle (" <> rcReq.vehicleRegistrationCertNumber <> "): " <> T.pack (displayException err)]
+            Right () -> unprocessed
+      )
+      []
+      rows
+  pure DCM.APISuccessWithUnprocessedEntities {unprocessedEntities}
 
 checkRequestorDriverAccess :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow (Id DMOC.MerchantOperatingCity, Id DP.Person)
 checkRequestorDriverAccess merchantShortId opCity driverId requestorId = do

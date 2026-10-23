@@ -97,17 +97,15 @@ where
 
 import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 as RegV2
-import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration as Common
-import qualified "this" API.Types.ProviderPlatform.Management.Endpoints.Driver as Common
+import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration as Common hiding (AddDriversResp, ProcessedDriverInfo)
 import "this" API.Types.ProviderPlatform.Management.Ride (CancellationReasonCode (..))
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified API.Types.UI.FleetOwnerList as FleetOwnerListAPI
 import qualified Beckn.Types.Core.Taxi.Common.PaymentInstrument as BecknPI
-import Control.Applicative (liftA2, optional)
+import Control.Applicative (liftA2)
 import qualified "lib-dashboard" Dashboard.Common as DC
 import qualified "lib-dashboard" Dashboard.Common as DCommonRole (Role (..))
 import qualified "lib-dashboard" Dashboard.Common.Driver
-import qualified "this" Dashboard.ProviderPlatform.Management.Driver as Common
 import qualified DashboardAlert.Domain.Types.DashboardAlert as DTR
 import qualified DashboardAlert.Storage.Queries.DashboardAlert as QAR
 import Data.Char (isDigit)
@@ -124,13 +122,16 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
+import Domain.Action.Dashboard.Common.BulkUpload (DriverDetails (..), castCommonOnboardingAsToDomain, checkAndUpdateAddDriverLimit, fetchOrCreatePerson, processDriverRows, readDriversCsv, readVehiclesCsv, validateDriverName)
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegV2
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
+import qualified Domain.Action.Dashboard.Management.DriverRegistration as DRegistration
 import qualified Domain.Action.Dashboard.Management.Vehicle as DVehicle
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.Driver as UIDriver
+import Domain.Action.UI.DriverOnboarding.Image (createBulkRcPlaceholderImage)
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
@@ -195,7 +196,6 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
-import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
@@ -355,26 +355,47 @@ postDriverFleetAddVehicleHelper isBulkUpload autoApproved merchantShortId opCity
   unless (merchant.id == merchantId && merchantOpCityId == entityDetails.merchantOperatingCityId) $ throwError (PersonDoesNotExist entityDetails.id.getId)
   (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails merchant.fleetOwnerEnabledCheck
   rc <- RCQuery.findLastVehicleRCWrapper req.registrationNo
-  case (getEntityData.role, getMbFleetOwnerId) of
-    (DP.DRIVER, Nothing) -> do
-      -- DCO case
-      void $ checkRCAssociationForDriver getEntityData.id rc True
-      void $ DCommon.runVerifyRCFlow False getEntityData.id merchant merchantOpCityId opCity transporterConfig req True isBulkUpload autoApproved Nothing -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
-      logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
-      pure Success
-    (_, Just fleetOwnerId) -> do
-      -- fleet and fleetDriver case
-      let skipFleetChecks = fromMaybe False req.skipFleetChecks
-      whenJust rc $ \rcert -> do
-        unless skipFleetChecks $ checkRCAssociationForFleet fleetOwnerId rcert
-      void $ DCommon.runVerifyRCFlow skipFleetChecks getEntityData.id merchant merchantOpCityId opCity transporterConfig req True isBulkUpload autoApproved (Just $ Id @DP.Person fleetOwnerId) -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
-      let logTag = case getEntityData.role of
-            role | DCommon.checkFleetOwnerRole role -> "dashboard -> addVehicleUnderFleet"
-            DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
-            _ -> "dashboard -> addVehicleUnderUnknown"
-      logTagInfo logTag (show getEntityData.id)
-      pure Success
-    _ -> throwError (InvalidRequest "Invalid Data")
+  -- A bulk row has no photo: the RC built from its details gets the shared placeholder image so review and approval work.
+  let mbVehicleDetails = DCommon.mkDashboardVehicleDetails transporterConfig req
+  mbPlaceholderImageId <-
+    if isBulkUpload && isJust mbVehicleDetails
+      then Just <$> createBulkRcPlaceholderImage getEntityData.id merchant.id merchantOpCityId
+      else pure Nothing
+  let vehicleReq = maybe req (\imageId -> (req :: Common.AddVehicleReq) {Common.imageId = Just (cast imageId)}) mbPlaceholderImageId
+  let register = case (getEntityData.role, getMbFleetOwnerId) of
+        (DP.DRIVER, Nothing) -> do
+          -- DCO case
+          void $ checkRCAssociationForDriver getEntityData.id rc True
+          void $ DCommon.runVerifyRCFlow False getEntityData.id merchant merchantOpCityId opCity transporterConfig vehicleReq True isBulkUpload autoApproved Nothing -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+          logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
+        (_, Just fleetOwnerId) -> do
+          -- fleet and fleetDriver case
+          let skipFleetChecks = fromMaybe False req.skipFleetChecks
+          whenJust rc $ \rcert -> do
+            unless skipFleetChecks $ checkRCAssociationForFleet fleetOwnerId rcert
+          void $ DCommon.runVerifyRCFlow skipFleetChecks getEntityData.id merchant merchantOpCityId opCity transporterConfig vehicleReq True isBulkUpload autoApproved (Just $ Id @DP.Person fleetOwnerId) -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+          let logTag = case getEntityData.role of
+                role | DCommon.checkFleetOwnerRole role -> "dashboard -> addVehicleUnderFleet"
+                DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
+                _ -> "dashboard -> addVehicleUnderUnknown"
+          logTagInfo logTag (show getEntityData.id)
+        _ -> throwError (InvalidRequest "Invalid Data")
+  case mbPlaceholderImageId of
+    Nothing -> register
+    Just imageId ->
+      withTryCatch "register:postDriverFleetAddVehicleHelper" register >>= \case
+        Right () -> pure ()
+        Left err -> do
+          -- A row refused before its RC existed leaves no image behind; an image an RC already holds stays.
+          mbRc <- VRCQuery.findByAnyImageId imageId
+          when (isNothing mbRc) $ QImage.deleteByIdAndPerson imageId getEntityData.id
+          throwM err
+  when autoApproved $
+    whenJust mbPlaceholderImageId $ \imageId ->
+      void $
+        DRegistration.postDriverRegistrationDocumentsUpdate merchantShortId opCity $
+          Common.Approve (Common.RC (DRegistration.mkRCApproveDetails (cast imageId) req.registrationNo mbVehicleDetails))
+  pure Success
 
 mapInspectionHubRequestStatusToDashboard :: Maybe DOHR.RequestStatus -> DC.VerificationStatus
 mapInspectionHubRequestStatusToDashboard mbRequestStatus = case mbRequestStatus of
@@ -773,10 +794,6 @@ castDisabledReasonFlag DI.FleetDisabled = Dashboard.Common.Driver.FleetDisabled
 castDisabledReasonFlag DI.AdminDisabled = Dashboard.Common.Driver.AdminDisabled
 castDisabledReasonFlag DI.DriverDisabled = Dashboard.Common.Driver.DriverDisabled
 
-castCommonOnboardingAsToDomain :: Dashboard.Common.Driver.OnboardingAs -> DI.OnboardingAs
-castCommonOnboardingAsToDomain Dashboard.Common.Driver.FLEET_DRIVER = DI.FLEET_DRIVER
-castCommonOnboardingAsToDomain Dashboard.Common.Driver.INDIVIDUAL = DI.INDIVIDUAL
-
 getDriverFleetGetAllDriver :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Bool -> Maybe Common.ApprovalStatusFilter -> Maybe Bool -> Maybe Bool -> Maybe Common.OnboardingAs -> Maybe Bool -> Flow Common.FleetListDriverResT
 getDriverFleetGetAllDriver merchantShortId _opCity mblimit mboffset mbMobileNumber mbName mbSearchString mbFleetOwnerId mbIsActive mbMemberPersonId mbVerified mbApprovalStatus mbEnabled mbBlocked mbOnboardingAs mbFleetDriverAssociationConsent = do
   memberPersonId <- mbMemberPersonId & fromMaybeM (InvalidRequest "Member person id is required")
@@ -1070,11 +1087,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
     Nothing -> throwError $ FleetOwnerOrOperatorIdRequired
     Just id -> pure id
   mbRequestedPerson <- QPerson.findById (Id requestorId)
-  rcReq <-
-    Csv.readCsv @VehicleDetailsCSVRow @(Common.RegisterRCReq, DbHash, [DRoute.Route], Maybe Text, Maybe Text, Maybe Text) req.file $
-      parseVehicleInfo merchantOpCity
-  let maxVehiclesCsvRows = fromMaybe 100 (transporterConfig.limitsConfig >>= (.maxVehiclesCsvRows))
-  when (length rcReq > maxVehiclesCsvRows) $ throwError $ MaxVehiclesLimitExceeded maxVehiclesCsvRows
+  rcReq <- readVehiclesCsv transporterConfig merchantOpCity req.file
   let processVehicle func =
         foldlM
           ( \unprocessedEntities (registerRcReq, _, _, mbCountryCode, mbFleetNo, mbDriverNo) -> do
@@ -1195,7 +1208,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
             QPerson.findByMobileNumberAndMerchantAndRoles mobileCountryCode phoneHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS] >>= fromMaybeM (FleetOwnerNotFound fleetNo) <&> (Just . (.id.getId))
           Nothing -> pure Nothing
 
-        postDriverFleetAddVehicleHelper True autoApproved merchant.shortId opCity phoneNo requestorId mbFleetOwnerId mbCountryCode mbRole addVehicleReq
+        void $ postDriverFleetAddVehicleHelper True autoApproved merchant.shortId opCity phoneNo requestorId mbFleetOwnerId mbCountryCode mbRole addVehicleReq
 
       case result of
         Left e -> return $ Left $ "Error: " <> T.pack (displayException e)
@@ -1211,63 +1224,6 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
             Documents.VALID -> pure ()
             _ -> throwError $ VehicleNotVerified vehicleNo
 
-    parseVehicleInfo :: DMOC.MerchantOperatingCity -> Int -> VehicleDetailsCSVRow -> Flow (Common.RegisterRCReq, DbHash, [DRoute.Route], Maybe Text, Maybe Text, Maybe Text)
-    parseVehicleInfo moc idx row = do
-      let airConditioned :: (Maybe Bool) = Csv.readMaybeCSVField idx row.airConditioned "Air Conditioned"
-          mbRouteCodes :: Maybe [Text] = Csv.readMaybeCSVField idx (fromMaybe "" row.routeCodes) "Route Codes"
-          mbFleetPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneNo) "Fleet Phone Number"
-          mbDriverPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.driverPhoneNo) "Driver Phone Number"
-          mbCountryCode :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.countryCode) "Country Code"
-          vehicleCategory :: Maybe DVC.VehicleCategory = Csv.readMaybeCSVField idx (fromMaybe "" row.vehicleCategory) "Vehicle Category"
-          mbManufacturer :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.manufacturer) "Manufacturer"
-          mbModel :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.model) "Model"
-          mbColour :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.colour) "Colour"
-          mbVehicleClass :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.vehicleClass) "Vehicle Class"
-          mbVehicleModelYear :: Maybe Int = Csv.readMaybeCSVField idx (fromMaybe "" row.vehicleModelYear) "Vehicle Model Year"
-      vehicleRegistrationCertNumber <- Csv.cleanCSVField idx row.registrationNo "Registration No"
-      mbVehicleDetails <- case (mbManufacturer, mbModel, mbColour) of
-        (Just manufacturer', Just model', Just colour') ->
-          pure $
-            Just
-              DC.DriverVehicleDetails
-                { vehicleManufacturer = manufacturer',
-                  vehicleModel = model',
-                  vehicleColour = colour',
-                  vehicleDoors = Nothing,
-                  vehicleSeatBelts = Nothing,
-                  vehicleModelYear = mbVehicleModelYear
-                }
-        (Nothing, Nothing, Nothing) -> pure Nothing
-        _ -> throwError $ InvalidRequest $ "Manufacturer, model and colour must either all be filled or all be left empty at row: " <> show idx
-      vehicleNumberHash <- getDbHash vehicleRegistrationCertNumber
-      routes <-
-        case mbRouteCodes of
-          Just routeCodes -> mapM (\routeCode -> CQRoute.findByRouteCode routeCode >>= fromMaybeM (RouteNotFound routeCode)) routeCodes
-          Nothing -> pure []
-      pure
-        ( Common.RegisterRCReq
-            { dateOfRegistration = Nothing,
-              oxygen = Nothing,
-              ventilator = Nothing,
-              operatingCity = show moc.city,
-              imageId = Id "bulkVehicleUpload",
-              imageId2 = Nothing,
-              vehicleDetails = mbVehicleDetails,
-              vehicleClass = mbVehicleClass,
-              vehicleCategory = Just $ fromMaybe DVC.CAR vehicleCategory,
-              udinNumber = Nothing,
-              engineNumber = Nothing,
-              chassisNumber = Nothing,
-              previousRcNumber = Nothing,
-              ..
-            },
-          vehicleNumberHash,
-          routes,
-          mbCountryCode,
-          mbFleetPhoneNo,
-          mbDriverPhoneNo
-        )
-
     buildVehicleRouteMapping fleetOwnerId merchantId merchantOperatingCityId vehicleRegistrationNumber route = do
       now <- getCurrentTime
       vehicleNumber <- encrypt vehicleRegistrationNumber
@@ -1281,38 +1237,6 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
                 ..
               }
       VRM.upsert vehicleRouteMapping vehicleNumberHash
-
-data VehicleDetailsCSVRow = VehicleDetailsCSVRow
-  { registrationNo :: Text,
-    airConditioned :: Text,
-    routeCodes :: Maybe Text,
-    vehicleCategory :: Maybe Text,
-    fleetPhoneNo :: Maybe Text,
-    driverPhoneNo :: Maybe Text,
-    countryCode :: Maybe Text,
-    manufacturer :: Maybe Text,
-    model :: Maybe Text,
-    colour :: Maybe Text,
-    vehicleClass :: Maybe Text,
-    vehicleModelYear :: Maybe Text
-  }
-  deriving (Show)
-
-instance FromNamedRecord VehicleDetailsCSVRow where
-  parseNamedRecord r =
-    VehicleDetailsCSVRow
-      <$> r .: "registration_no"
-      <*> r .: "air_conditioned"
-      <*> optional (r .: "route_codes")
-      <*> optional (r .: "vehicle_category")
-      <*> optional (r .: "fleet_phone_no")
-      <*> optional (r .: "driver_phone_no")
-      <*> optional (r .: "country_code")
-      <*> optional (r .: "manufacturer")
-      <*> optional (r .: "model")
-      <*> optional (r .: "colour")
-      <*> optional (r .: "vehicle_class")
-      <*> optional (r .: "vehicle_model_year")
 
 ---------------------------------------------------------------------
 postDriverFleetRemoveDriver ::
@@ -3682,56 +3606,6 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
         }
 
 ---------------------------------------------------------------------
-data CreateDriversCSVRow = CreateDriversCSVRow
-  { driverName :: Maybe Text,
-    driverPhoneNumber :: Text,
-    driverOnboardingVehicleCategory :: Maybe Text,
-    fleetPhoneNo :: Maybe Text,
-    badgeName :: Maybe Text,
-    badgeRank :: Maybe Text,
-    badgeType :: Maybe Text,
-    driverPhoneCountryCode :: Maybe Text,
-    fleetPhoneCountryCode :: Maybe Text,
-    firstName :: Maybe Text,
-    lastName :: Maybe Text,
-    email :: Maybe Text,
-    gender :: Maybe Text
-  }
-
-data DriverDetails = DriverDetails
-  { rowNumber :: Int,
-    driverName :: Maybe Text,
-    driverPhoneNumber :: Text,
-    driverOnboardingVehicleCategory :: Maybe DVC.VehicleCategory,
-    fleetPhoneNo :: Maybe Text,
-    badgeName :: Maybe Text,
-    badgeRank :: Maybe Text,
-    badgeType :: Maybe DFBT.FleetBadgeType,
-    driverPhoneCountryCode :: Maybe Text,
-    fleetPhoneCountryCode :: Maybe Text,
-    firstName :: Maybe Text,
-    lastName :: Maybe Text,
-    email :: Maybe Text,
-    gender :: Maybe DP.Gender
-  }
-
-instance FromNamedRecord CreateDriversCSVRow where
-  parseNamedRecord r =
-    CreateDriversCSVRow
-      <$> optional (r .: "driver_name")
-      <*> r .: "driver_phone_number"
-      <*> optional (r .: "driver_onboarding_vehicle_category")
-      <*> optional (r .: "fleet_phone_no")
-      <*> optional (r .: "badge_name")
-      <*> optional (r .: "badge_rank")
-      <*> optional (r .: "badge_type")
-      <*> optional (r .: "driver_phone_country_code")
-      <*> optional (r .: "fleet_phone_country_code")
-      <*> optional (r .: "first_name")
-      <*> optional (r .: "last_name")
-      <*> optional (r .: "email")
-      <*> optional (r .: "gender")
-
 postDriverFleetAddDrivers ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -3742,27 +3616,10 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-  driverDetails <- Csv.readCsv @CreateDriversCSVRow @DriverDetails req.file parseDriverInfo
-  let maxAddDriversCsvRows = fromMaybe 100 (transporterConfig.limitsConfig >>= (.maxAddDriversCsvRows))
-  when (length driverDetails > maxAddDriversCsvRows) $ throwError $ MaxDriversLimitExceeded maxAddDriversCsvRows
-  when (not (null driverDetails) && all (\d -> T.null d.driverPhoneNumber) driverDetails) $
-    throwError (InvalidRequest "No valid mobile numbers found in the uploaded file. Please check the file format.")
-  let process func =
-        foldlM
-          ( \(processed, unprocessed) driverDetail ->
-              if T.null driverDetail.driverPhoneNumber
-                then return (processed, unprocessed <> ["Row " <> show driverDetail.rowNumber <> ": Mobile number is required"])
-                else
-                  withTryCatch
-                    "process:postDriverFleetAddDrivers"
-                    (func driverDetail)
-                    >>= \case
-                      Left err -> return (processed, unprocessed <> ["Unable to add Driver (" <> driverDetail.driverPhoneNumber <> ") to the Fleet: " <> T.pack (displayException err)])
-                      Right driverPersonId ->
-                        return (processed <> [Common.ProcessedDriverInfo {driverId = cast @DP.Person @Common.Driver driverPersonId, phoneNo = driverDetail.driverPhoneNumber}], unprocessed)
-          )
-          ([], [])
-          driverDetails
+  driverDetails <- readDriversCsv transporterConfig req.file
+  let process =
+        processDriverRows "process:postDriverFleetAddDrivers" driverDetails $ \phoneNo err ->
+          "Unable to add Driver (" <> phoneNo <> ") to the Fleet: " <> err
 
   (processedDrivers, unprocessedEntities) <- case mbRequestorId of
     Nothing -> do
@@ -3896,105 +3753,6 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             SGuard.withOnboardingAction transporterConfigForOperator (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $
               SA.associateDriverWithOperator merchant moc person operator isNew req_.driverPhoneNumber req_.driverOnboardingVehicleCategory
       pure person.id
-
-mkAddDriverCounterKey :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Text
-mkAddDriverCounterKey merchantOpCityId driverId = "Fleet:AddDriverCount:" <> driverId.getId <> ":" <> merchantOpCityId.getId
-
-checkAndUpdateAddDriverLimit :: Id DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> Id DP.Person -> Flow ()
-checkAndUpdateAddDriverLimit merchantOpCityId transporterConfig driverId =
-  whenJust transporterConfig.addDriverCountWindow $ \window -> do
-    let key = mkAddDriverCounterKey merchantOpCityId driverId
-    whenJust transporterConfig.addDriverCountThreshold $ \threshold -> do
-      addDriverCount <- Redis.withNonCriticalCrossAppRedis $ SWC.getCurrentWindowCount key window
-      when (addDriverCount >= fromIntegral threshold) $ do
-        logInfo $ "Add driver rate limit hit for driver " <> driverId.getId <> " with count " <> show addDriverCount
-        throwError (HitsLimitError (fromIntegral window.period * fromIntegral (SWC.convertPeriodTypeToSeconds window.periodType) :: Int))
-    Redis.withNonCriticalCrossAppRedis $ SWC.incrementWindowCount key window
-
-validateDriverName :: Maybe Text -> Bool -> Bool -> Flow ()
-validateDriverName mbDriverName isMandatory isStrongNameCheckRequired = do
-  case mbDriverName of
-    Nothing -> when isMandatory $ throwError $ InvalidRequest "Driver name is required"
-    Just driverName -> do
-      let validateFn = if isStrongNameCheckRequired then Common.validateUpdateDriverNameReq else Common.validateUpdateDriverNameReqWithLooseCheck
-      result <- try (void $ runRequestValidation validateFn (Common.UpdateDriverNameReq {firstName = driverName, middleName = Nothing, lastName = Nothing}))
-      case result of
-        Left (_ :: SomeException) ->
-          throwError . InvalidRequest $
-            if isStrongNameCheckRequired
-              then "Driver name should not contain numbers and should have at least 1 letter and at most 50 letters"
-              else "Driver name must be 1 to 50 characters: letters, digits, spaces and ' \x2019 - . , & / ( ) + are allowed"
-        Right _ -> pure ()
-
-parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
-parseDriverInfo idx row = do
-  let firstName :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.firstName) "First name"
-      lastName :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.lastName) "Last name"
-      email :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.email) "Email"
-      gender :: Maybe DP.Gender = Csv.readMaybeCSVField idx (fromMaybe "" row.gender) "Gender"
-      -- first_name/last_name win over the combined column; the combined form stays filled
-      -- either way since SMS, badges and name validation read it.
-      fullName = firstName <&> \fn -> maybe fn (\ln -> fn <> " " <> ln) lastName
-      driverName :: Maybe Text = fullName <|> (row.driverName >>= \name -> Csv.cleanMaybeCSVField idx name "Driver name")
-      -- Do not hard-fail the whole upload on a blank phone; keep the row (with an empty
-      -- phone) so it can be reported per-row in unprocessedEntities during processing.
-      driverPhoneNumber :: Text = fromMaybe "" (Csv.cleanMaybeCSVField idx row.driverPhoneNumber "Mobile number")
-      driverOnboardingVehicleCategory :: Maybe DVC.VehicleCategory = Csv.readMaybeCSVField idx (fromMaybe "" row.driverOnboardingVehicleCategory) "Onboarding Vehicle Category"
-      fleetPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneNo) "Fleet number"
-      badgeName :: Maybe Text = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeName) "Badge name"
-      badgeRank :: Maybe Text = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeRank) "Badge rank"
-      badgeType :: Maybe DFBT.FleetBadgeType = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeType) "Badge type"
-      driverPhoneCountryCode :: Maybe Text = DCommon.appendPlusInMobileCountryCode $ Csv.cleanMaybeCSVField idx (fromMaybe "" row.driverPhoneCountryCode) "Driver phone country code"
-      fleetPhoneCountryCode :: Maybe Text = DCommon.appendPlusInMobileCountryCode $ Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneCountryCode) "Fleet phone country code"
-  pure $
-    DriverDetails
-      { rowNumber = idx + 2, -- +1 for the header row, +1 to make the 0-based index human-readable (matches the CSV line)
-        driverName = driverName,
-        driverPhoneNumber = driverPhoneNumber,
-        driverOnboardingVehicleCategory = driverOnboardingVehicleCategory,
-        fleetPhoneNo = fleetPhoneNo,
-        badgeName = badgeName,
-        badgeRank = badgeRank,
-        badgeType = badgeType,
-        driverPhoneCountryCode = driverPhoneCountryCode,
-        fleetPhoneCountryCode = fleetPhoneCountryCode,
-        firstName = firstName,
-        lastName = lastName,
-        email = email,
-        gender = gender
-      }
-
-fetchOrCreatePerson :: DMOC.MerchantOperatingCity -> DriverDetails -> Flow (DP.Person, Bool)
-fetchOrCreatePerson moc req_ = do
-  let mobileCountryCode = fromMaybe (P.getCountryMobileCode moc.country) req_.driverPhoneCountryCode
-  let authData =
-        DReg.AuthReq
-          { mobileNumber = Just req_.driverPhoneNumber,
-            mobileCountryCode = Just mobileCountryCode,
-            merchantId = moc.merchantId.getId,
-            merchantOperatingCity = Just moc.city,
-            email = Nothing,
-            name = req_.driverName,
-            identifierType = Just DP.MOBILENUMBER,
-            registrationLat = Nothing,
-            registrationLon = Nothing,
-            otpChannel = Nothing,
-            password = Nothing,
-            employeeId = Nothing
-          }
-  mobileNumberHash <- getDbHash req_.driverPhoneNumber
-  QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash moc.merchantId DP.DRIVER
-    >>= \case
-      Nothing -> do
-        whenJust req_.email $ \reqEmail -> do
-          runRequestValidation (\e -> validateField "email" e P.email) reqEmail
-          mbExistingByEmail <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) moc.merchantId DP.DRIVER
-          when (isJust mbExistingByEmail) $ throwError (EmailAlreadyLinked reqEmail)
-        cloudType <- asks (.cloudType)
-        person <- DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing Nothing cloudType moc.merchantId moc.id True req_.firstName req_.lastName req_.email req_.gender
-        let isNew = True in pure (person, isNew)
-      Just person -> do
-        let isNew = False in pure (person, isNew)
 
 ---------------------------------------------------------------------
 postDriverDashboardFleetTrackDriver :: ShortId DM.Merchant -> Context.City -> Text -> Common.TrackDriverLocationsReq -> Flow Common.TrackDriverLocationsRes
