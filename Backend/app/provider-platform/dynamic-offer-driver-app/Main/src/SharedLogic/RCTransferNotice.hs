@@ -153,21 +153,28 @@ recordAndNotifyRCTransfer previousDriverId newDriverId rc = do
     Nothing -> pure ()
     Just overlayReq -> Notify.sendOverlay previousDriver.merchantOperatingCityId previousDriver overlayReq
 
--- | Latest unacknowledged notice for the driver, rendered in their language. Nothing when none is pending
---   or the city has no overlay configured.
+-- | Latest unacknowledged notice for the driver, rendered in their language. Nothing when none is pending,
+--   the city has no overlay configured, or building it fails: the notice is optional and must never fail
+--   the driver profile it is attached to.
 getPendingRCTransferNotice ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]) =>
   Id DP.Person ->
   Maybe Language ->
   m (Maybe RCTransferNoticeRes)
 getPendingRCTransferNotice driverId mbLanguage = do
-  pending <- QRTN.findAllByPreviousDriverIdAndAcknowledged driverId False
-  case sortOn (Down . (.createdAt)) pending of
-    [] -> pure Nothing
-    notice : _ -> do
-      mbRc <- RCQuery.findById notice.rcId
-      mbOverlayReq <- maybe (pure Nothing) (buildOverlayReq mbLanguage notice) mbRc
-      pure $ (\overlayReq -> RCTransferNoticeRes {transferId = notice.id, overlay = mkRCTransferOverlay overlayReq}) <$> mbOverlayReq
+  result <- withTryCatch "getPendingRCTransferNotice" $ do
+    pending <- QRTN.findAllByPreviousDriverIdAndAcknowledged driverId False
+    case sortOn (Down . (.createdAt)) pending of
+      [] -> pure Nothing
+      notice : _ -> do
+        mbRc <- RCQuery.findById notice.rcId
+        mbOverlayReq <- maybe (pure Nothing) (buildOverlayReq mbLanguage notice) mbRc
+        pure $ (\overlayReq -> RCTransferNoticeRes {transferId = notice.id, overlay = mkRCTransferOverlay overlayReq}) <$> mbOverlayReq
+  case result of
+    Right mbNotice -> pure mbNotice
+    Left err -> do
+      logError $ "Failed to build pending RC transfer notice for driver " <> driverId.getId <> ": " <> show err
+      pure Nothing
 
 -- | Dismisses every pending notice of the driver; the latest one supersedes older ones.
 acknowledgeRCTransferNotice :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> RCTransferNoticeAckReq -> m APISuccess
