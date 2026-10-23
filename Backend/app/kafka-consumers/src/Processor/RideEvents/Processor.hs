@@ -22,6 +22,7 @@ import Kernel.Utils.Common (logError, withLogTag, withTryCatch)
 import Kernel.Utils.DatastoreLatencyCalculator (withTimeGeneric)
 import qualified Processor.RideEvents.Handlers as Handlers
 import qualified Processor.RideEvents.Idempotency as Idem
+import "dynamic-offer-driver-app" Storage.Beam.Finance ()
 
 processRideEnded :: RideEndedEvent -> Flow ()
 processRideEnded event =

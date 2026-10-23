@@ -79,6 +79,7 @@ data MilestoneStatus
   | Completed
   | Rewarded
   | WaivedOff
+  | RewardPending
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 data RideDeltas = RideDeltas
@@ -151,7 +152,8 @@ data RewardDispatchCtx = RewardDispatchCtx
   { personId :: Text,
     journeyName :: Text,
     cohortJourneyMappingId :: Text,
-    milestoneId :: Text
+    milestoneId :: Text,
+    periodKey :: Text
   }
   deriving (Eq, Show, Generic)
 
@@ -188,8 +190,8 @@ awardAmount (Awarded n) = n
 
 -- | Milestone is done for sequencing (no further progress).
 isTerminalStatus :: MilestoneStatus -> Bool
-isTerminalStatus status = status `elem` [Completed, Rewarded, WaivedOff]
+isTerminalStatus status = status `elem` [Completed, Rewarded, WaivedOff, RewardPending]
 
 -- | Counts toward streak-end payout eligibility.
 isStreakEndSatisfiedStatus :: MilestoneStatus -> Bool
-isStreakEndSatisfiedStatus status = status `elem` [Completed, Rewarded, WaivedOff]
+isStreakEndSatisfiedStatus status = status `elem` [Completed, Rewarded, WaivedOff, RewardPending]

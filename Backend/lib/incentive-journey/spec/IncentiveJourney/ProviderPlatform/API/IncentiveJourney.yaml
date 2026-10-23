@@ -256,7 +256,7 @@ types:
     - derive: "HttpInstance"
 
   JourneyMilestoneStatus:
-    - enum: "NotStarted, InProgress, Completed, Rewarded, WaivedOff"
+    - enum: "NotStarted, InProgress, Completed, Rewarded, WaivedOff, RewardPending"
 
   CreateIncentiveJourneyReq:
     - name: Text

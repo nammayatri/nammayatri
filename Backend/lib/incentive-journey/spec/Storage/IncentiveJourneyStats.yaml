@@ -15,7 +15,7 @@ IncentiveJourneyStats:
 
   types:
     JourneyMilestoneStatus:
-      enum: "NotStarted, InProgress, Completed, Rewarded, WaivedOff"
+      enum: "NotStarted, InProgress, Completed, Rewarded, WaivedOff, RewardPending"
       derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   domainInstance:

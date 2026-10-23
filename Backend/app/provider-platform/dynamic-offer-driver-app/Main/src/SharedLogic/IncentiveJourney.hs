@@ -19,11 +19,13 @@ module SharedLogic.IncentiveJourney
     evaluateDriverJourney,
     loadJourneyMilestones,
     waiveDriverMilestone,
+    retryVerifiedVpaJourneyCashPayouts,
   )
 where
 
 import qualified Data.Text as T
 import qualified Domain.Types.Common as DCommon
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPlan as DDriverPlan
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.Extra.Plan ()
@@ -38,22 +40,31 @@ import Kernel.External.Types (Language (..), SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis (HedisLTSFlowEnv)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney as IJ
+import Lib.IncentiveJourney.Condition (evaluateCondition)
+import qualified Lib.IncentiveJourney.Convert as Convert
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
+import qualified Lib.IncentiveJourney.Domain.Types.Common as IJCommon
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
+import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats as DIJS
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.Assignment as CQAssignment
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourney as CQJourney
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyMilestone as CQMilestone
+import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyMilestone as QMilestone
+import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyStatsExtra as QStatsExtra
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Payment ()
@@ -61,14 +72,29 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverPlan as SQPlan
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
-import Tools.Encryption
+import Tools.Encryption (decrypt)
 import Tools.Error
 import Tools.Notifications (mkOverlayReq, sendOverlay)
 import qualified Tools.Payout as Payout
+
+-- | Cash payout only. Narrower than journey evaluation so a verified-VPA hook can call it
+-- without the coin and finance-ledger constraints.
+type JourneyCashPayoutFlow m r =
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    Finance.HasActorInfo m r,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
+  )
 
 type JourneyRewardDispatchFlow m r =
   ( MonadFlow m,
@@ -78,6 +104,7 @@ type JourneyRewardDispatchFlow m r =
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     PaymentBeamFlow.BeamFlow m r,
+    BeamFlow m r,
     Finance.HasActorInfo m r,
     Coins.EventFlow m r,
     SchedulerFlow r,
@@ -333,8 +360,7 @@ dispatchDriverReward driverId merchantId merchantOpCityId transporterConfig jour
             merchantId
             merchantOpCityId
             transporterConfig
-            vehCategory
-            ("incentive journey cashback: " <> journey.name <> " milestone " <> ctx.milestoneId)
+            (milestoneCashReferenceId driverId ctx)
             amount
     IJ.SubscriptionWaiveOff ->
       awardJourneySubscriptionWaiveOff driverId ("milestone " <> ctx.milestoneId <> " journey " <> journey.name) spec
@@ -404,8 +430,7 @@ dispatchDriverStreakEndReward driverId merchantId merchantOpCityId transporterCo
             merchantId
             merchantOpCityId
             transporterConfig
-            vehCategory
-            ("incentive streak-end cashback: " <> journey.name <> " campaignKey=" <> campaignKey)
+            (streakCashReferenceId driverId campaignKey)
             amount
     IJ.SubscriptionWaiveOff ->
       awardJourneySubscriptionWaiveOff driverId ("streak-end " <> journey.name <> " campaignKey=" <> campaignKey) spec
@@ -414,75 +439,106 @@ dispatchDriverStreakEndReward driverId merchantId merchantOpCityId transporterCo
       logInfo $ show otherKind <> " streak-end reward deferred journey=" <> journey.id.getId
       pure IJ.AwardSkipped
 
--- | Bank payout (same PG path as coin→direct payout) without burning coins.
--- Returns Awarded only when createPayoutService succeeds; otherwise AwardSkipped.
+-- | Create one payout order for this reference. The order id is the reference itself,
+-- so a retry or the verified-VPA backfill cannot create a second order.
+-- Awarded means a payout order exists. AwardSkipped means it does not (no verified UPI, payout off, partner error).
 awardJourneyCashPayout ::
-  JourneyRewardDispatchFlow m r =>
+  JourneyCashPayoutFlow m r =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   DTC.TransporterConfig ->
-  DTV.VehicleCategory ->
   Text ->
   Int ->
   m IJ.AwardResult
-awardJourneyCashPayout driverId merchantId merchantOpCityId transporterConfig vehCategory remark amountRupees = do
-  result <-
-    withTryCatch "IncentiveJourney:cashPayout" $ do
-      driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+awardJourneyCashPayout driverId merchantId merchantOpCityId transporterConfig referenceId amountRupees = do
+  let lockKey = "IncentiveJourneyCashLock:" <> referenceId
+  locked <- Redis.tryLockRedis lockKey 120
+  if not locked
+    then do
+      mbOrder <- QPayoutOrder.findByOrderId referenceId
+      pure $
+        if isJust mbOrder
+          then IJ.Awarded amountRupees
+          else IJ.AwardSkipped
+    else do
+      outcome <- withTryCatch "incentiveJourneyCashPayout" $ awardJourneyCashPayoutLocked driverId merchantId merchantOpCityId transporterConfig referenceId amountRupees
+      void $ Redis.unlockRedis lockKey
+      case outcome of
+        Right result -> pure result
+        Left err -> do
+          mbOrder <- QPayoutOrder.findByOrderId referenceId
+          case mbOrder of
+            Just _ -> do
+              logInfo $ "Incentive journey cash payout already exists referenceId=" <> referenceId <> " driver=" <> driverId.getId
+              pure (IJ.Awarded amountRupees)
+            Nothing -> do
+              logError $ "Incentive journey cash payout failed referenceId=" <> referenceId <> " driver=" <> driverId.getId <> " error=" <> show err
+              pure IJ.AwardSkipped
+
+awardJourneyCashPayoutLocked ::
+  JourneyCashPayoutFlow m r =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  Text ->
+  Int ->
+  m IJ.AwardResult
+awardJourneyCashPayoutLocked driverId merchantId merchantOpCityId transporterConfig referenceId amountRupees = do
+  mbExisting <- QPayoutOrder.findByOrderId referenceId
+  case mbExisting of
+    Just _ -> do
+      logInfo $ "Incentive journey cash payout already exists referenceId=" <> referenceId <> " driver=" <> driverId.getId
+      pure (IJ.Awarded amountRupees)
+    Nothing -> do
+      person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      mbVehicle <- QVeh.findById driverId
+      let vehicleCategory = fromMaybe DTV.AUTO_CATEGORY ((.category) =<< mbVehicle)
       payoutConfig <-
-        getOneConfig
-          ( PayoutConfigDimensions
-              { merchantOperatingCityId = merchantOpCityId.getId,
-                vehicleCategory = Just vehCategory,
-                isPayoutEnabled = Nothing
-              }
-          )
-          Nothing
-          >>= fromMaybeM (PayoutConfigNotFound (show vehCategory) merchantOpCityId.getId)
+        getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) Nothing
+          >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
       unless payoutConfig.isPayoutEnabled $
-        throwError $ InvalidRequest "Payout is not enabled for this vehicle category"
-      uid <- generateGUID
-      phoneNo <- mapM decrypt driver.mobileNumber
-      driverInformation <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+        throwError $ InvalidRequest "Incentive journey cash payout is not enabled"
+      when (amountRupees <= 0) $
+        throwError $ InvalidRequest "Incentive journey cash amount is not positive"
+      driverInfo <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
       (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <-
-        Payout.getCreatePayoutServiceFlow
-          Payout.MerchantServiceUsageConfigOption
-          DEMSC.PayoutService
-          driver.clientSdkVersion
-          merchantOpCityId
-          driver.id
-      vpa <- case payoutServiceFlow of
-        IPayout.JuspayFlow -> Just <$> (driverInformation.payoutVpa & fromMaybeM (InvalidRequest "Driver has no payout VPA"))
+        Payout.getCreatePayoutServiceFlow Payout.MerchantServiceUsageConfigOption DEMSC.PayoutService person.clientSdkVersion merchantOpCityId person.id
+      customerVpa <- case payoutServiceFlow of
+        IPayout.JuspayFlow ->
+          case (driverInfo.payoutVpaStatus, driverInfo.payoutVpa) of
+            (Just DI.VIA_WEBHOOK, Just vpa) -> pure (Just vpa)
+            (Just DI.VERIFIED_BY_USER, Just vpa) -> pure (Just vpa)
+            _ -> throwError $ InvalidRequest "Incentive journey cash payout needs a verified UPI id"
         IPayout.StripeFlow -> pure Nothing
-        IPayout.BulkFlow -> pure Nothing -- no VPA on the bulk/HDFC path; Tools.Payout.getCreatePayoutServiceFlow already required a bank account row
-      merchantOperatingCity <-
-        CQMOC.findById (cast merchantOpCityId)
-          >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+        IPayout.BulkFlow -> pure Nothing
+      phoneNo <- mapM decrypt person.mobileNumber
+      merchantOperatingCity <- CQMOC.findById (cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
       let amount = fromIntegral amountRupees :: HighPrecMoney
           createPayoutOrderReq =
             DPayment.mkCreatePayoutServiceReq
-              uid
+              referenceId
               amount
               transporterConfig.currency
               phoneNo
-              driver.email
+              person.email
               driverId.getId
-              remark
-              (Just driver.firstName)
-              vpa
+              payoutConfig.remark
+              (Just person.firstName)
+              customerVpa
               payoutConfig.orderType
               payoutServiceFlow
               Nothing
               Nothing
           entityName = DPayment.INCENTIVE_JOURNEY_CASHBACK
-          createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchantOpCityId driver.id mbPersonBankAccount
+          createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchantOpCityId person.id mbPersonBankAccount
       void $
         DPayment.createPayoutService
           (cast merchantId)
           (Just $ cast merchantOpCityId)
           (cast driverId)
-          (Just [driverId.getId])
+          (Just [referenceId])
           (Just entityName)
           (show merchantOperatingCity.city)
           createPayoutOrderReq
@@ -490,16 +546,112 @@ awardJourneyCashPayout driverId merchantId merchantOpCityId transporterConfig ve
           Nothing
           afterPayoutOrderCreated
       logInfo $
-        "Created incentive journey cash payout order="
-          <> uid
+        "Created incentive journey cash payout referenceId="
+          <> referenceId
           <> " amount="
           <> show amountRupees
           <> " driver="
           <> driverId.getId
-      pure amountRupees
-  case result of
-    Right awarded -> pure (IJ.Awarded awarded)
-    Left _ -> pure IJ.AwardSkipped
+      pure (IJ.Awarded amountRupees)
+
+-- | After a verified UPI id is saved, pay cash milestones from the last 7 days
+-- whose target was reached and whose payout never started. Status becomes Completed only when the payout order exists.
+retryVerifiedVpaJourneyCashPayouts ::
+  JourneyCashPayoutFlow m r =>
+  Id DP.Person ->
+  m ()
+retryVerifiedVpaJourneyCashPayouts driverId = do
+  outcome <- withTryCatch "IncentiveJourney:retryVerifiedVpaJourneyCashPayouts" $ do
+    driverInfo <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+    let vpaVerified =
+          isJust driverInfo.payoutVpa
+            && driverInfo.payoutVpaStatus `elem` [Just DI.VIA_WEBHOOK, Just DI.VERIFIED_BY_USER]
+    when vpaVerified $ do
+      person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      transporterConfig <-
+        getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
+          >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+      now <- getCurrentTime
+      let since = addUTCTime (negate $ 7 * 24 * 60 * 60) now
+      pending <- QStatsExtra.findAwaitingCashByPersonSince (cast driverId) since
+      forM_ pending $ \row -> do
+        rowOutcome <-
+          withTryCatch "IncentiveJourney:payOneAwaitingCashRow" $
+            payOneAwaitingCashRow driverId person.merchantId person.merchantOperatingCityId transporterConfig row
+        case rowOutcome of
+          Left err ->
+            logError $
+              "Incentive journey cash backfill row failed driver="
+                <> driverId.getId
+                <> " statsId="
+                <> row.id.getId
+                <> " error="
+                <> show err
+          Right () -> pure ()
+  case outcome of
+    Left err ->
+      logError $
+        "Incentive journey cash VPA backfill failed driver="
+          <> driverId.getId
+          <> " error="
+          <> show err
+    Right () -> pure ()
+
+payOneAwaitingCashRow ::
+  JourneyCashPayoutFlow m r =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  DIJS.IncentiveJourneyStats ->
+  m ()
+payOneAwaitingCashRow driverId merchantId merchantOpCityId transporterConfig stats = do
+  let targetMet =
+        evaluateCondition
+          (Convert.toLibConditionOperator stats.conditionOperator)
+          stats.currentValue
+          stats.conditionValue
+  case stats.cohortJourneyMappingId of
+    Nothing ->
+      logInfo $ "Skipping incentive journey cash backfill; cohort journey mapping missing statsId=" <> stats.id.getId
+    Just _ | not targetMet || stats.rewardType /= IJCommon.Cash -> pure ()
+    Just cjmId -> do
+      mbMilestone <- QMilestone.findById stats.milestoneId
+      case mbMilestone of
+        Just milestone
+          | milestone.rewardType == IJCommon.Cash,
+            Just amount <- milestone.rewardValue,
+            amount > 0 -> do
+            let referenceId =
+                  "milestone:"
+                    <> driverId.getId
+                    <> ":"
+                    <> cjmId.getId
+                    <> ":"
+                    <> stats.milestoneId.getId
+                    <> ":"
+                    <> stats.periodKey
+            result <- awardJourneyCashPayout driverId merchantId merchantOpCityId transporterConfig referenceId amount
+            case result of
+              IJ.Awarded _ -> QStatsExtra.markJourneyCashPaid stats.id amount
+              IJ.AwardSkipped -> pure ()
+        _ ->
+          logInfo $ "Skipping incentive journey cash backfill; milestone is not a positive cash reward statsId=" <> stats.id.getId
+
+milestoneCashReferenceId :: Id DP.Person -> IJ.RewardDispatchCtx -> Text
+milestoneCashReferenceId driverId ctx =
+  "milestone:"
+    <> driverId.getId
+    <> ":"
+    <> ctx.cohortJourneyMappingId
+    <> ":"
+    <> ctx.milestoneId
+    <> ":"
+    <> ctx.periodKey
+
+streakCashReferenceId :: Id DP.Person -> Text -> Text
+streakCashReferenceId driverId campaignKey =
+  "streak:" <> driverId.getId <> ":" <> campaignKey
 
 -- | Applies dashboard subscription waive config. Missing config keeps the previous
 -- hardcoded default (100%, 1 day, YATRI_SUBSCRIPTION, WITHOUT_OFFER).
