@@ -271,7 +271,7 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
           -- Refund Notify
           fork "Process Refunds Notifications" $ do
             case newPaymentFulfillmentStatus of
-              DPayment.FulfillmentRefundInitiated -> TNotifications.notifyPaymentFulfillment Notification.REFUND_PENDING paymentOrder.id personId paymentService
+              DPayment.FulfillmentRefundInitiated -> unless (paymentService == DOrder.BookingDeposit) $ TNotifications.notifyPaymentFulfillment Notification.REFUND_PENDING paymentOrder.id personId paymentService
               DPayment.FulfillmentRefundFailed -> TNotifications.notifyPaymentFulfillment Notification.REFUND_FAILED paymentOrder.id personId paymentService
               DPayment.FulfillmentRefunded -> TNotifications.notifyPaymentFulfillment Notification.REFUND_SUCCESS paymentOrder.id personId paymentService
               DPayment.FulfillmentPending -> do

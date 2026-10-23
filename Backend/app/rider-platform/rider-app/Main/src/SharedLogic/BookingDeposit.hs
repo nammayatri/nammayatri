@@ -47,6 +47,7 @@ module SharedLogic.BookingDeposit
     unpaidFeeGraceSeconds,
     depositOrderExpiryMinutes,
     depositOrderExpiryMinutesFor,
+    isUnpaidDepositAbandon,
   )
 where
 
@@ -60,6 +61,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RefundRequest as DRefundRequest
+import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (SchedulerFlow, SchedulerType, ServiceFlow)
 import Kernel.Prelude
@@ -95,6 +97,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Notifications as Notify
 
 bookingDepositHoldRefType, bookingDepositTopupRefType :: Text
 bookingDepositHoldRefType = "BOOKING_DEPOSIT_HOLD"
@@ -358,6 +361,11 @@ isFailedDepositAttempt = (`elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORI
 findHolds :: (CacheFlow m r, EsqDBFlow m r) => Id DRB.Booking -> m [LE.LedgerEntry]
 findHolds bookingId = snd <$> depositHoldState bookingId
 
+isUnpaidDepositAbandon :: (CacheFlow m r, EsqDBFlow m r) => DRB.Booking -> SBCR.CancellationSource -> m Bool
+isUnpaidDepositAbandon booking source
+  | source /= SBCR.ByUser || isNothing booking.bookingDepositAmount || not booking.requiresPaymentBeforeConfirm || booking.status /= DRB.NEW = pure False
+  | otherwise = null <$> findHolds booking.id
+
 captureBookingDeposit ::
   DepositFlow m r =>
   DRB.Booking ->
@@ -413,7 +421,8 @@ refundBookingDeposit ::
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   DRB.Booking ->
   m ()
@@ -568,7 +577,9 @@ executeDepositRefundGateway ::
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   DRB.Booking ->
   DRefundRequest.RefundRequest ->
@@ -619,7 +630,9 @@ applyDepositRefundResult ::
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   DRB.Booking ->
   DRefundRequest.RefundRequest ->
@@ -644,6 +657,9 @@ applyDepositRefundResult booking refundReq (row, order) refundId refundStatus er
   createJobIn @_ @'CheckRefundStatus (Just booking.merchantId) (Just booking.merchantOperatingCityId) riderConfig.refundStatusUpdateInterval $
     CheckRefundStatusJobData {refundId = refundId, numberOfRetries = 0}
   logInfo $ "Scheduled CheckRefundStatus for deposit refund " <> refundId <> " order " <> order.id.getId
+  when (refundStatus `notElem` [Payment.REFUND_FAILURE, Payment.REFUND_CANCELED]) $
+    fork "bookingDeposit:refundInitiatedPN" $
+      Notify.notifyPaymentFulfillment Notification.REFUND_PENDING order.id booking.riderId DOrder.BookingDeposit
   when (reqStatus == DRefundRequest.FAILED) $
     logError $
       "Booking deposit gateway refund FAILED for booking " <> booking.id.getId <> " order " <> order.id.getId
@@ -666,7 +682,8 @@ expireOrRepairBookingDeposit ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   DRB.Booking ->
   m Bool

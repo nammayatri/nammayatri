@@ -44,6 +44,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -85,10 +86,12 @@ onCancel ValidatedBookingCancelledReq {..} = do
   let castedCancellationSource = castCancellatonSource cancellationSource_
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let immediateCharge = isJust cancellationFee && resolveImmediateCapture riderConfig collectionMode castedCancellationSource
+  abandonedPayScreen <- BookingDeposit.isUnpaidDepositAbandon booking castedCancellationSource
   Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee cancellationFeeTax immediateCharge
   -- rider push for the cancellation consequence, keyed by the matrix row's notification key
-  whenJust customerCancellationNotificationKey $ \pnKey ->
-    fork "cancellationConsequencePN" $ Notify.notifyCancellationConsequence booking.riderId booking.id.getId pnKey
+  unless abandonedPayScreen $
+    whenJust customerCancellationNotificationKey $ \pnKey ->
+      fork "cancellationConsequencePN" $ Notify.notifyCancellationConsequence booking.riderId booking.id.getId pnKey
   whenJust mbRide $ \ride -> do
     fareBreakupEntries <- traverse (Common.buildFareBreakupV2 ride.id.getId DFareBreakup.RIDE) fareBreakups
     SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) fareBreakupEntries
