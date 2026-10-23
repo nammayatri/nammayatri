@@ -299,6 +299,7 @@ import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.OneShotAssign as OneShot
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
+import qualified SharedLogic.RCTransferNotice as RCTransferNotice
 import SharedLogic.Ride
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import SharedLogic.ScheduledRideVisibility (BookingVisibilityFacts (..), DriverVisibilityFacts (..), VisibilityFactNeeds (..), factsNeededBy, isVisibleUnderRules, resolveVisibilityStage)
@@ -481,6 +482,8 @@ data DriverInformationRes = DriverInformationRes
     -- active behaviour warnings pinned to the profile (WARN with showOnProfile);
     -- text is pre-localized to the driver's language with placeholders filled
     behaviourWarnings :: Maybe [BTT.ProfileWarningInfo],
+    -- set while the driver has an unacknowledged "your RC was linked to another account" notice
+    pendingRcTransferNotice :: Maybe RCTransferNotice.RCTransferNoticeRes,
     onboardingVehicleCategory :: Maybe VehicleCategory,
     subscriptionDown :: Maybe Bool,
     qrUrl :: Maybe Text,
@@ -1782,7 +1785,7 @@ buildOperatorInfo person = do
         createdAt = person.createdAt
       }
 
-makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r, HasKafkaProducer r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DriverInformation -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe [LYT.TagNameValueExpiry] -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> Maybe FDA.FleetDriverAssociation -> Maybe FDA.FleetDriverAssociation -> Maybe Bool -> m DriverInformationRes
+makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r, HasKafkaProducer r, HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DriverInformation -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe [LYT.TagNameValueExpiry] -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> Maybe FDA.FleetDriverAssociation -> Maybe FDA.FleetDriverAssociation -> Maybe Bool -> m DriverInformationRes
 makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo merchant referralCode driverStats dghInfo personTags currentDues manualDues md5DigestHash operatorReferral operatorId mbInactiveFda mbActiveFda mbFleetInfo = do
   (activeFleet, fleetRequest, fleetOwnerName') <-
     if mbFleetInfo == Just True || driverInfo.onboardingAs == Just DriverInfo.FLEET_DRIVER
@@ -1889,6 +1892,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   hasActiveRc <- isJust <$> QRCAssociation.findActiveAssociationByDriver id True
   availableForRidesInfo <- AvailableForRides.getAvailableForRidesInfo merchantConfig id personTags
   activeProfileWarnings <- BT.readProfileWarnings BTT.DRIVER id.getId
+  pendingRcTransferNotice <- RCTransferNotice.getPendingRCTransferNotice id language
   getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId) >>= \cfg ->
     return $
       DriverInformationRes
@@ -1947,6 +1951,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           disabledReasonFlag = driverInfo.disabledReasonFlag,
           preferredMapProvider = driverInfo.preferredMapProvider,
           behaviourWarnings = if null activeProfileWarnings then Nothing else Just activeProfileWarnings,
+          pendingRcTransferNotice,
           ..
         }
 

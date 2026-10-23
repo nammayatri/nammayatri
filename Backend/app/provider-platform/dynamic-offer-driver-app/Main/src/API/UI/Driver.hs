@@ -61,6 +61,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import Servant
+import qualified SharedLogic.RCTransferNotice as RCTransferNotice
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
@@ -270,6 +271,11 @@ type API =
            :> TokenAuth
            :> ReqBody '[JSON] DRegistration.MarketEventReq
            :> Post '[JSON] APISuccess
+           :<|> "rcTransferNotice"
+           :> "ack"
+           :> TokenAuth
+           :> ReqBody '[JSON] RCTransferNotice.RCTransferNoticeAckReq
+           :> Post '[JSON] APISuccess
        )
 
 handler :: FlowServer API
@@ -313,12 +319,16 @@ handler =
     :<|> acceptScheduledBooking
     :<|> consentResponse
     :<|> marketingEventsPostLogin
+    :<|> acknowledgeRCTransferNotice
 
 getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> Maybe Bool -> FlowHandler DDriver.DriverInformationRes
 getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName Nothing mbFleetInfo
 
 marketingEventsPostLogin :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DRegistration.MarketEventReq -> FlowHandler APISuccess
 marketingEventsPostLogin auth req = withFlowHandlerAPI $ DRegistration.marketingEventsPostLogin auth req
+
+acknowledgeRCTransferNotice :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> RCTransferNotice.RCTransferNoticeAckReq -> FlowHandler APISuccess
+acknowledgeRCTransferNotice (personId, _, _) = withFlowHandlerAPI . RCTransferNotice.acknowledgeRCTransferNotice personId
 
 setActivity :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DI.DriverMode -> FlowHandler APISuccess
 setActivity (personId, merchantId, merchantOpCityId) isActive = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId . DDriver.setActivity (personId, merchantId, merchantOpCityId) isActive

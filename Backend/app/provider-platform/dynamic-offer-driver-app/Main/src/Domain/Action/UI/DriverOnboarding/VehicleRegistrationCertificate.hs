@@ -93,6 +93,7 @@ import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboardingDocumentVersion (saveRCVersionMetadata)
 import qualified SharedLogic.FleetDriverSettings as FDS
+import qualified SharedLogic.RCTransferNotice as RCTransferNotice
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -813,13 +814,19 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) isTaxiBoothRequest req@RCS
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   unless (rc.verificationStatus == Documents.VALID) $ do
     DAQuery.updateRcErrorMessage driverId rc.id "Vehicle is not ready to be linked"
-    throwError (InvalidRequest "Vehicle is not ready to be linked")
+    throwError RCActivationRCNotValid
   now <- getCurrentTime
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if req.isActivate
     then do
-      validated <- validateRCActivation isTaxiBoothRequest driverId transporterConfig rc
-      when validated $ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc
+      activationCheck <- validateRCActivation isTaxiBoothRequest driverInfo transporterConfig rc
+      case activationCheck of
+        RCAlreadyActive -> pure ()
+        RCCanBeActivated mbPreviousHolderId -> do
+          activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc
+          -- Notify only once the transfer has fully succeeded; a push failure must not fail the activation.
+          whenJust mbPreviousHolderId $ \previousHolderId ->
+            fork "recordAndNotifyRCTransfer" $ RCTransferNotice.recordAndNotifyRCTransfer previousHolderId driverId rc
     else do
       deactivateRC isTaxiBoothRequest transporterConfig rc driverId
   return Success
@@ -886,8 +893,14 @@ forceDriverOffline transporterConfig driverId = do
     DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just now) (cast driverId)
     processingChangeOnline driverId transporterConfig (Just DCommon.OFFLINE) driverInfo.mode
 
-validateRCActivation :: OnboardingFlow m r => Bool -> Id Person.Person -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> m Bool
-validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
+data RCActivationCheck
+  = RCAlreadyActive
+  | -- | Carries the driver the RC (or its vehicle) was taken away from, if any.
+    RCCanBeActivated (Maybe (Id Person.Person))
+
+validateRCActivation :: OnboardingFlow m r => Bool -> DI.DriverInformation -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> m RCActivationCheck
+validateRCActivation isTaxiBoothRequest driverInfo transporterConfig rc = do
+  let driverId = driverInfo.driverId
   now <- getCurrentTime
   mAssoc <- DAQuery.findLinkedByRCIdAndDriverId driverId rc.id now
   case mAssoc of
@@ -895,12 +908,12 @@ validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
     Nothing -> do
       unless (transporterConfig.allowDriverToUseFleetRcs == Just True) $ do
         DAQuery.updateRcErrorMessage driverId rc.id "RC is not associated with the driver"
-        throwError (InvalidRequest "RC is not associated with the driver")
-      fleetDriverAssociation <- FDA.findByDriverId driverId True >>= fromMaybeM (InvalidRequest "RC is not linked with the driver.")
+        throwError RCActivationRCNotLinked
+      fleetDriverAssociation <- FDA.findByDriverId driverId True >>= fromMaybeM RCActivationRCNotLinked
       let fleetOwnerId = fleetDriverAssociation.fleetOwnerId
       unless (rc.fleetOwnerId == Just fleetOwnerId) $ do
         DAQuery.updateRcErrorMessage driverId rc.id "RC does not belong to you or your fleet."
-        throwError (InvalidRequest "RC does not belong to you or your fleet.")
+        throwError RCActivationRCNotInFleet
       createDriverRCAssociationIfPossible transporterConfig driverId rc
 
   -- check if rc is already active to other driver
@@ -908,54 +921,75 @@ validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
   case mActiveAssociation of
     Just activeAssociation -> do
       if activeAssociation.driverId == driverId
-        then return False
+        then return RCAlreadyActive
         else do
+          ensureDriverCanActivateRC driverInfo transporterConfig rc
           deactivateIfWeCanDeactivate activeAssociation.driverId now (deactivateRC isTaxiBoothRequest transporterConfig rc)
-          return True
+          return $ RCCanBeActivated (Just activeAssociation.driverId)
     Nothing -> do
+      ensureDriverCanActivateRC driverInfo transporterConfig rc
       -- check if vehicle of that rc number is already with other driver
       mVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
       case mVehicle of
         Just vehicle -> do
           if vehicle.driverId /= driverId
-            then deactivateIfWeCanDeactivate vehicle.driverId now (removeVehicle isTaxiBoothRequest)
-            else removeVehicle isTaxiBoothRequest driverId
-        Nothing -> return ()
-      return True
+            then do
+              deactivateIfWeCanDeactivate vehicle.driverId now removeVehicleAndGoOffline
+              return $ RCCanBeActivated (Just vehicle.driverId)
+            else do
+              removeVehicle isTaxiBoothRequest driverId
+              return $ RCCanBeActivated Nothing
+        Nothing -> return $ RCCanBeActivated Nothing
   where
-    deactivateIfWeCanDeactivate oldDriverId now deactivateFunc = do
-      driverInfo <- DIQuery.findById oldDriverId >>= fromMaybeM (PersonNotFound oldDriverId.getId)
-      let canUnlinkWhenOffline = transporterConfig.allowRcUnlinkWhenDriverOffline == Just True && driverInfo.mode == Just DCommon.OFFLINE
-      mLastRideAssigned <- RQuery.findLastRideAssigned oldDriverId
-      case mLastRideAssigned of
-        Just lastRide -> do
-          if ((nominalDiffTimeToSeconds (diffUTCTime now lastRide.createdAt) > transporterConfig.automaticRCActivationCutOff || canUnlinkWhenOffline) && driverInfo.onRide == False) || isTaxiBoothRequest
-            then deactivateFunc oldDriverId
-            else do
-              DAQuery.updateRcErrorMessage oldDriverId rc.id (show RCActiveOnOtherAccount)
-              throwError RCActiveOnOtherAccount
-        Nothing -> do
-          -- if driver didn't take any ride yet
-          person <- Person.findById oldDriverId >>= fromMaybeM (PersonNotFound oldDriverId.getId)
-          if ((nominalDiffTimeToSeconds (diffUTCTime now person.createdAt) > transporterConfig.automaticRCActivationCutOff || canUnlinkWhenOffline) && driverInfo.onRide == False) || isTaxiBoothRequest
-            then deactivateFunc oldDriverId
-            else do
-              DAQuery.updateRcErrorMessage oldDriverId rc.id (show RCActiveOnOtherAccount)
-              throwError RCActiveOnOtherAccount
+    deactivateIfWeCanDeactivate oldDriverId now deactivateFunc
+      | isTaxiBoothRequest = deactivateFunc oldDriverId
+      | otherwise = do
+        oldDriverInfo <- DIQuery.findById oldDriverId >>= fromMaybeM (PersonNotFound oldDriverId.getId)
+        when oldDriverInfo.onRide $ rejectActivation oldDriverId RCOtherDriverOnRide
+        let canUnlinkWhenOffline = transporterConfig.allowRcUnlinkWhenDriverOffline == Just True && oldDriverInfo.mode == Just DCommon.OFFLINE
+            withinCutOff since = nominalDiffTimeToSeconds (diffUTCTime now since) <= transporterConfig.automaticRCActivationCutOff
+        unless canUnlinkWhenOffline $ do
+          mLastRideAssigned <- RQuery.findLastRideAssigned oldDriverId
+          case mLastRideAssigned of
+            Just lastRide -> when (withinCutOff lastRide.createdAt) $ rejectActivation oldDriverId RCOtherDriverRecentRide
+            Nothing -> do
+              -- the other driver hasn't taken a ride yet: protect a freshly created account instead
+              person <- Person.findById oldDriverId >>= fromMaybeM (PersonNotFound oldDriverId.getId)
+              when (withinCutOff person.createdAt) $ rejectActivation oldDriverId RCOtherDriverAccountNew
+        deactivateFunc oldDriverId
 
-activateRC :: OnboardingFlow m r => DI.DriverInformation -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> UTCTime -> Domain.VehicleRegistrationCertificate -> m ()
-activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
+    -- Same end state as deactivateRC: a previous holder left without a vehicle must not stay online.
+    removeVehicleAndGoOffline oldDriverId = do
+      removeVehicle isTaxiBoothRequest oldDriverId
+      offlineAt <- getCurrentTime
+      DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just offlineAt) (cast oldDriverId)
+
+    rejectActivation oldDriverId err = do
+      DAQuery.updateRcErrorMessage oldDriverId rc.id (show err)
+      throwError err
+
+-- | Everything that can stop the activating driver from taking the RC. Runs before the RC (or its
+--   vehicle) is taken away from its current holder, so a rejected activation never strips them.
+ensureDriverCanActivateRC :: OnboardingFlow m r => DI.DriverInformation -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> m ()
+ensureDriverCanActivateRC driverInfo transporterConfig rc = do
   when (transporterConfig.requiresOnboardingInspection == Just True || transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $ do
     unless driverInfo.enabled $ do
       DAQuery.updateRcErrorMessage driverInfo.driverId rc.id "Driver is not enabled"
-      throwError (InvalidRequest "Driver is not enabled")
+      throwError RCActivationDriverNotEnabled
     unless (fromMaybe False rc.approved) $ do
       DAQuery.updateRcErrorMessage driverInfo.driverId rc.id "Vehicle is not approved"
-      throwError (InvalidRequest "Vehicle is not approved")
+      throwError RCActivationRCNotApproved
+  -- activateRC swaps out the driver's current vehicle, which is refused mid-ride
+  isOnRide <- DIQuery.findByDriverIdActiveRide (cast driverInfo.driverId)
+  when (isJust isOnRide) $ throwError RCActivationDriverOnRide
+
+activateRC :: OnboardingFlow m r => DI.DriverInformation -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> UTCTime -> Domain.VehicleRegistrationCertificate -> m ()
+activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
   mbOldVehicle <- VQuery.findById driverInfo.driverId
   deactivateCurrentRC transporterConfig driverInfo.driverId
   newVehicle <- addVehicleToDriver
   DAQuery.activateRCForDriver driverInfo.driverId rc.id now
+  RCTransferNotice.clearPendingRCTransferNotices driverInfo.driverId
   when (maybe False (\oldVehicle -> oldVehicle.category /= newVehicle.category) mbOldVehicle) $
     forceDriverOffline transporterConfig driverInfo.driverId
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.incrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverInfo.driverId

@@ -782,6 +782,7 @@ library
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.Pricing
       SharedLogic.QuickRetry
+      SharedLogic.RCTransferNotice
       SharedLogic.Reminder.Helper
       SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride
@@ -1704,6 +1705,7 @@ library
       Domain.Types.QuestionModuleMapping
       Domain.Types.Rating
       Domain.Types.RCStats
+      Domain.Types.RCTransferNotice
       Domain.Types.RCValidationRules
       Domain.Types.ReelsData
       Domain.Types.RegistrationToken
@@ -1907,6 +1909,7 @@ library
       Storage.Beam.QuestionModuleMapping
       Storage.Beam.Rating
       Storage.Beam.RCStats
+      Storage.Beam.RCTransferNotice
       Storage.Beam.RCValidationRules
       Storage.Beam.ReelsData
       Storage.Beam.RegistrationToken
@@ -2219,6 +2222,7 @@ library
       Storage.Queries.QuestionModuleMapping
       Storage.Queries.Rating
       Storage.Queries.RCStats
+      Storage.Queries.RCTransferNotice
       Storage.Queries.RCValidationRules
       Storage.Queries.ReelsData
       Storage.Queries.RegistrationToken
