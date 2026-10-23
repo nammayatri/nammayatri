@@ -19,6 +19,7 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.AutoAcceptRide as AutoAcceptRide
 import qualified API.Action.UI.AvailableForRides as AvailableForRides
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CallFeedback as CallFeedback
@@ -207,6 +208,7 @@ type API =
            :<|> DriverDocument.API
            :<|> DriverAreaPreference.API
            :<|> AvailableForRides.API
+           :<|> AutoAcceptRide.API
            :<|> DriverTag.API
            :<|> PolicyDocument.API
            :<|> DriverFyEarnings.API
@@ -298,6 +300,7 @@ handler =
     :<|> DriverDocument.handler
     :<|> DriverAreaPreference.handler
     :<|> AvailableForRides.handler
+    :<|> AutoAcceptRide.handler
     :<|> DriverTag.handler
     :<|> PolicyDocument.handler
     :<|> DriverFyEarnings.handler

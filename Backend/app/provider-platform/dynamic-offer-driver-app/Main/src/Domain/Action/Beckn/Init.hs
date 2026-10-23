@@ -50,6 +50,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.AddOn as SAddOn
+import SharedLogic.Allocator.Jobs.AutoAccept.SendAutoAcceptOverlay (sendAutoAcceptOverlay)
 import SharedLogic.Cancel
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.FareCalculator as FC
@@ -142,6 +143,8 @@ handler ::
     HasShortDurationRetryCfg r c,
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     HasField "gateNotifiedKeyShards" r Int
   ) =>
@@ -176,6 +179,9 @@ handler merchantId req validatedReq = do
         booking <- buildBooking (mkBuildBookingReq DRB.NEW (Just riderDetails.id) req.mbRiderName) searchRequest driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now mbPaymentMethod paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide driverQuote.preferenceMatchScore (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain driverQuote.isAutoAccepted searchTry.addOnData
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
+        when (booking.isAutoAccepted == Just True) $
+          fork "send auto-accept overlay" $
+            sendAutoAcceptOverlay booking.id driverQuote.driverId
         QST.updateStatus DST.COMPLETED (searchTry.id)
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
@@ -422,6 +428,7 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         ledgerWriteMode = Nothing,
         financeInvoiceId = Nothing,
         discountAmount = mbClampedDiscount,
+        autoAcceptCtaData = Nothing,
         ..
       }
 

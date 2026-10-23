@@ -296,3 +296,7 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN booking_deposit double pre
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN number_share_consent boolean ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN auto_accept_cta_data jsonb ;
