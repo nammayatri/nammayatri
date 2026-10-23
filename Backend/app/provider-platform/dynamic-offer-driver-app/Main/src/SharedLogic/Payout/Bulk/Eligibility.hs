@@ -67,7 +67,7 @@ readPayoutSnapshot transporterConfig person = do
       cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
   -- Same amount instant payout uses. Held money has already left the wallet, so a second sweep cannot
   -- pay it again; a payout still in flight does not block money earned since.
-  pb <- computePayoutableBalance counterparty personId.getId cutoff now
+  pb <- computePayoutableBalance counterparty personId.getId
   let eligibility = pb.eligibility
   pure
     PayoutSnapshot

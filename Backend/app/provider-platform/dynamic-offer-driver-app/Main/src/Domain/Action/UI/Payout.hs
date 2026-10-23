@@ -73,10 +73,15 @@ import Kernel.Types.Servant (RawByteString (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
-import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
-import Lib.Finance.Ledger.PayoutSettlement (PayoutOutcome (..), postOnceByReference)
+import Lib.Finance.Domain.Types.Account (CounterpartyType)
+import qualified Lib.Finance.Domain.Types.Transfer as DTransfer
+import Lib.Finance.FinanceM (FinanceCtx)
+import Lib.Finance.Ledger.PayoutSettlement (findActivePayoutHold, postOnceByReference)
 import Lib.Finance.Ledger.Service (markEntriesAsClaimed)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
+import qualified Lib.Finance.Storage.Queries.Transfer as QTransfer
+import qualified Lib.Finance.Transfer.Backfill as Backfill
+import qualified Lib.Finance.Transfer.Outcome as TransferOutcome
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
@@ -90,6 +95,8 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding (isFleetRole)
+import SharedLogic.Finance.PostActions (runFinance)
+import qualified SharedLogic.Finance.Rails as Rails
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.IncentiveJourney as SLIJ
 import SharedLogic.Merchant
@@ -561,6 +568,26 @@ settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amoun
         when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dStatsId
       callPayoutServiceAction payoutOrder.orderId dailyStats.driverId payoutConfig
 
+-- | The Stripe payout charge (opt-in via payoutFee.feeBearer), shared by the kernel and
+--   legacy settlement paths. Q = fixed + rate% of the payout amount; posts
+--   SellerExpense -> SellerLiability, plus OwnerLiability -> SellerRevenue when the
+--   driver bears it.
+postWalletPayoutFeeLegs ::
+  (PayoutSettlementFlow m r) =>
+  FinanceCtx ->
+  DTC.TransporterConfig ->
+  HighPrecMoney ->
+  m ()
+postWalletPayoutFeeLegs walletCtx transporterConfig amount =
+  case transporterConfig.driverWalletConfig.payoutFee >>= \cfg -> (cfg,) <$> cfg.feeBearer of
+    Nothing -> pure ()
+    Just (payoutFeeCfg, payoutBearer) -> do
+      let payoutChargeAmount = computeStripePayoutFee payoutFeeCfg amount
+      chargeEntryIds <-
+        postOnceByReference walletReferencePGPayoutCharges walletCtx (recordStripeChargeLedger walletCtx (payoutBearerToFunder payoutBearer) payoutChargeAmount walletReferencePGPayoutCharges)
+          >>= fromEitherM (\e -> InternalError ("Failed to post PG payout charge: " <> show e))
+      markEntriesAsClaimed chargeEntryIds
+
 -- | Ledger step of a finished driver wallet payout: on success the hold is paid out, on failure it
 --   goes back to the wallet. Shared with the HDFC CBX bulk path; callers hold the running-balance lock.
 settleDriverWalletPayoutLedger ::
@@ -577,6 +604,9 @@ settleDriverWalletPayoutLedger merchantOperatingCityId payoutOrder =
   settleDriverWalletPayoutLedgerFor merchantOperatingCityId payoutOrder.merchantId
 
 -- | 'settleDriverWalletPayoutLedger' for a payout known by its merchant rather than its order.
+--   One path: every payout settles through the kernel transfer verbs. A payout initiated
+--   before the kernel owned the flow has no Transfer row, so one is backfilled from the
+--   PayoutRequest (live hold + reserved entry ids) and settles down the same path.
 settleDriverWalletPayoutLedgerFor ::
   (PayoutSettlementFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
@@ -591,42 +621,56 @@ settleDriverWalletPayoutLedgerFor merchantOperatingCityId merchantId person tran
   let driverId = person.id
       counterparty = counterpartyFromRole person.role
   let walletCtx = buildDriverChargeCtx counterparty driverId.getId merchantId merchantOperatingCityId.getId transporterConfig.currency payoutReq.id.getId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
-      holdMetadata =
-        LedgerEntryMetadata
-          { driverPayable = Just (-1 * amount),
-            payoutOrderId = Nothing,
-            reason = Nothing,
-            subscriptionAllocations = Nothing,
-            d2cReferralEarnings = Nothing,
-            d2dReferralEarnings = Nothing,
-            dailyStatsId = Nothing
-          }
-  when (isPayoutOrderSuccess updPayoutStatus) $ do
-    payoutEntryIds <-
-      settleWalletPayoutLedger walletCtx amount (Just holdMetadata) PayoutSucceeded
-        >>= fromEitherM (\err -> InternalError ("Failed to settle wallet payout: " <> show err))
-    -- Stripe payout charge (opt-in via payoutFee.feeBearer). Q = fixed + rate% of the payout
-    -- amount; posts SellerExpense → SellerLiability, plus OwnerLiability → SellerRevenue when
-    -- the driver bears it. Uses a driver-counterparty ctx so the funding leg hits the driver wallet.
-    chargeEntryIds <- case transporterConfig.driverWalletConfig.payoutFee >>= \cfg -> (cfg,) <$> cfg.feeBearer of
-      Nothing -> pure []
-      Just (payoutFeeCfg, payoutBearer) -> do
-        let payoutChargeAmount = computeStripePayoutFee payoutFeeCfg amount
-        postOnceByReference walletReferencePGPayoutCharges walletCtx (recordStripeChargeLedger walletCtx (payoutBearerToFunder payoutBearer) payoutChargeAmount walletReferencePGPayoutCharges)
-          >>= fromEitherM (\e -> InternalError ("Failed to post PG payout charge: " <> show e))
-    markEntriesAsClaimed (payoutEntryIds <> chargeEntryIds)
-    entryIds <- map Id <$> PayoutRequest.getPayoutLedgerEntryIds payoutReq
-    settleWalletEntries entryIds payoutReq.id.getId
+  transfer <-
+    QTransfer.findByReference walletReferencePayout payoutReq.id.getId >>= \case
+      Just t -> pure t
+      Nothing -> backfillPreMigrationPayoutTransfer counterparty driverId.getId merchantOperatingCityId transporterConfig payoutReq amount
+  let rail = Rails.settlementRailByKey (fromMaybe Rails.juspayPayoutRailKey transfer.railKey)
+  void $
+    TransferOutcome.applyRailStatus runFinance rail walletPayoutLedgerRefs walletCtx transfer.id (show updPayoutStatus)
+      >>= fromEitherM (\err -> InternalError ("Failed to apply payout outcome for transfer " <> transfer.id.getId <> ": " <> show err))
+  when (isPayoutOrderSuccess updPayoutStatus) $
+    postWalletPayoutFeeLegs walletCtx transporterConfig amount
+  when (isPayoutOrderSuccess updPayoutStatus || isPayoutOrderFailed updPayoutStatus) $
     PayoutRequest.clearPayoutLedgerEntryIds payoutReq.id.getId
-  when (isPayoutOrderFailed updPayoutStatus) $ do
-    void $
-      settleWalletPayoutLedger walletCtx amount (Just holdMetadata) (PayoutFailed ("Payout failed: " <> show updPayoutStatus))
-        >>= fromEitherM (\err -> InternalError ("Failed to reverse wallet payout: " <> show err))
-    -- TODO: remove post release, kept only for backward compatibility with payouts initiated before OwnerPayoutLiability:
-    -- those reserved wallet entries as PROCESSING, so a failed one must flip them back to UNSETTLED.
-    entryIds <- map Id <$> PayoutRequest.getPayoutLedgerEntryIds payoutReq
-    releaseWalletEntriesReservation entryIds
-    PayoutRequest.clearPayoutLedgerEntryIds payoutReq.id.getId
+
+-- | Mint a Transfer row for a payout that predates the kernel owning the flow. The row
+--   carries the live hold (so the kernel settle claims it, not re-posts it) and the
+--   reserved earning entries from the PayoutRequest row, falling back to the Redis
+--   stash — the stash's only remaining reader.
+backfillPreMigrationPayoutTransfer ::
+  (PayoutSettlementFlow m r) =>
+  CounterpartyType ->
+  Text -> -- ownerId
+  Id DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  DPR.PayoutRequest ->
+  HighPrecMoney ->
+  m DTransfer.Transfer
+backfillPreMigrationPayoutTransfer counterparty ownerId merchantOperatingCityId transporterConfig payoutReq amount = do
+  account <-
+    getWalletAccountByOwner counterparty ownerId
+      >>= fromMaybeM (InternalError ("No wallet account for pre-migration payout " <> payoutReq.id.getId))
+  mbHold <- findActivePayoutHold walletReferencePayout payoutReq.id.getId
+  coveredIds <- case payoutReq.ledgerEntryIds of
+    Just ids | not (null ids) -> pure ids
+    _ -> PayoutRequest.getPayoutLedgerEntryIds payoutReq
+  Backfill.backfillTransfer
+    Backfill.BackfillSpec
+      { direction = DTransfer.OUTBOUND,
+        railKey = Rails.juspayPayoutRailKey, -- classification is rail-agnostic at settle time
+        railOrderId = payoutReq.payoutTransactionId,
+        accountId = account.id,
+        amount = amount,
+        feeAmount = 0,
+        currency = transporterConfig.currency,
+        referenceType = walletReferencePayout,
+        referenceId = payoutReq.id.getId,
+        knownEntryIds = maybe [] (\h -> [h.id]) mbHold,
+        coveredEntryIds = map Id coveredIds,
+        merchantId = account.merchantId,
+        merchantOperatingCityId = merchantOperatingCityId.getId
+      }
 
 -- | Adds a payout to driver_stats once per order, since a settle can run more than once for it. The
 --   key is in the master cloud's Redis so a webhook and a status check in different clouds agree.

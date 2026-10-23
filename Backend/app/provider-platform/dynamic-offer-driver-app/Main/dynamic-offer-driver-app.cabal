@@ -730,6 +730,7 @@ library
       SharedLogic.Finance.LedgerAdjustmentCast
       SharedLogic.Finance.PostActions
       SharedLogic.Finance.Prepaid
+      SharedLogic.Finance.Rails
       SharedLogic.Finance.Reconciliation.EntitySync
       SharedLogic.Finance.Reconciliation.Recipes.PostpaidDriverFeeVsPaymentOrder
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidDsrVsLedger
