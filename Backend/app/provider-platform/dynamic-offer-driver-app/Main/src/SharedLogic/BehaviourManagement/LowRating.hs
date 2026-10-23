@@ -95,7 +95,7 @@ recordDriverRating transporterConfig driverId merchantOpCityId rideId ratingValu
   let fetchRules = \dom -> do
         localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
         getAppDynamicLogic (cast merchantOpCityId) dom localTime Nothing Nothing
-  output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) LYT.RATING_BEHAVIOR fetchRules
+  output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) (BehaviorDispatch.behaviourEventCity (cast merchantOpCityId)) LYT.RATING_BEHAVIOR fetchRules
   logInfo $ "RatingBehavior for driver " <> driverId.getId <> " (rating " <> show ratingValue <> "): consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
   when (not (null output.consequences) || not (null output.communications)) $ do
     let dispatchCtx =

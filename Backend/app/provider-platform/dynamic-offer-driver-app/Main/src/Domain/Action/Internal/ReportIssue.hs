@@ -287,7 +287,7 @@ runBehaviorPipeline transporterConfig driverId merchantOpCityId counterConfig ac
   let fetchRules = \dom -> do
         localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
         getAppDynamicLogic (cast merchantOpCityId) dom localTime Nothing Nothing
-  output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) domain fetchRules
+  output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) (BehaviorDispatch.behaviourEventCity (cast merchantOpCityId)) domain fetchRules
   let hasConsequences = not (null output.consequences)
       hasCommunications = not (null output.communications)
   logInfo $ "BehaviorPipeline [" <> show domain <> "] for driver " <> driverId.getId <> ": consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
