@@ -649,6 +649,7 @@ MerchantServiceUsageConfig:
     initiateCall: CallService
     getDistances: MapsService
     getEstimatedPickupDistances: MapsService
+    getEstimatedPickupDistancesFallback: Maybe MapsService
     getRoutes: MapsService
     getPickupRoutes: MapsService
     getTripRoutes: MapsService
@@ -731,6 +732,7 @@ MerchantServiceUsageConfig:
     autoComplete: character varying(30)
     smsProvidersPriorityList: "text[]"
     getEstimatedPickupDistances: text
+    getEstimatedPickupDistancesFallback: text
     whatsappProvidersPriorityList: "text[]"
     getPickupRoutes: text
     getTripRoutes: text
@@ -797,6 +799,7 @@ MerchantServiceUsageConfig:
       params:
         - getDistances
         - getEstimatedPickupDistances
+        - getEstimatedPickupDistancesFallback
         - getRoutes
         - snapToRoad
         - getPlaceName
