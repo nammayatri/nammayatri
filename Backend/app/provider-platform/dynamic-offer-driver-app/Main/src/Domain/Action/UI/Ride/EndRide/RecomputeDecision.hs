@@ -381,7 +381,7 @@ recomputeBandQualifies mbBands estimatedDist distanceDelta = do
 -- catch-all band) — sub-5-min overruns bill the estimate, larger overruns
 -- bill with the first 5 minutes deducted.
 defaultTimeForgivenessBands :: [ExtraTC.TimeForgivenessBand]
-defaultTimeForgivenessBands = [ExtraTC.TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = 300}]
+defaultTimeForgivenessBands = [ExtraTC.TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = 999999}]
 
 -- | Forgiveness window of the tightest band matching the ride's estimated
 -- duration (band upper strictly above the estimate, mirroring the

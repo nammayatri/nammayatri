@@ -405,6 +405,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.rideEvidenceConfig (Kernel.Prelude.toJSON <$> rideEvidenceConfig),
       Se.Set Beam.rideTimeEstimatedThreshold rideTimeEstimatedThreshold,
       Se.Set Beam.routeDeviationThreshold routeDeviationThreshold,
+      Se.Set Beam.routeMismatchThresholdAtRideEnd routeMismatchThresholdAtRideEnd,
       Se.Set Beam.safetyTeamNumbers safetyTeamNumbers,
       Se.Set Beam.sameRiderDriverRideCountLookbackDays (Just sameRiderDriverRideCountLookbackDays),
       Se.Set Beam.sameRiderDriverRideCountThreshold (Just sameRiderDriverRideCountThreshold),

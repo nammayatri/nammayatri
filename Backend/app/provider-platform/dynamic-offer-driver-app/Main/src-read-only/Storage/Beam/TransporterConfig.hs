@@ -317,6 +317,7 @@ data TransporterConfigT f = TransporterConfigT
     rideEvidenceConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     rideTimeEstimatedThreshold :: B.C f Kernel.Types.Common.Seconds,
     routeDeviationThreshold :: B.C f Kernel.Types.Common.Meters,
+    routeMismatchThresholdAtRideEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     safetyTeamNumbers :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     sameRiderDriverRideCountLookbackDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     sameRiderDriverRideCountThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

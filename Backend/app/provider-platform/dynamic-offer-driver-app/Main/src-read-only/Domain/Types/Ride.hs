@@ -118,6 +118,7 @@ data Ride = Ride
     returnStartedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rideEndedBy :: Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy,
     rideTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
+    routeDeviatedAtRideEnd :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     safetyAlertTriggered :: Kernel.Prelude.Bool,
     scheduledAcceptanceMode :: Kernel.Prelude.Maybe Domain.Types.Ride.ScheduledAcceptanceMode,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,

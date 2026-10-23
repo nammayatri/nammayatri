@@ -1337,6 +1337,7 @@ TransporterConfig:
     enableDashboardSms: Bool
     driverLocationAccuracyBuffer: Meters
     routeDeviationThreshold: Meters
+    routeMismatchThresholdAtRideEnd: Maybe Meters
     canDowngradeToSedan: Bool
     canDowngradeToHatchback: Bool
     canDowngradeToTaxi: Bool

@@ -320,6 +320,7 @@ data TransporterConfig = TransporterConfig
     rideEvidenceConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.RideEvidenceConfig,
     rideTimeEstimatedThreshold :: Kernel.Types.Common.Seconds,
     routeDeviationThreshold :: Kernel.Types.Common.Meters,
+    routeMismatchThresholdAtRideEnd :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     safetyTeamNumbers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     sameRiderDriverRideCountLookbackDays :: Kernel.Prelude.Int,
     sameRiderDriverRideCountThreshold :: Kernel.Prelude.Int,

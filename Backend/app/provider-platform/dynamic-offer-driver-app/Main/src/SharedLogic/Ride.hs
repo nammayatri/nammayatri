@@ -666,6 +666,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         cancellationFeeIfCancelled = Nothing,
         tipAmount = Nothing,
         passedThroughDestination = Nothing,
+        routeDeviatedAtRideEnd = Nothing,
         recomputeReason = Nothing,
         deliveryFileIds = Nothing,
         destinationReachedAt = Nothing,
