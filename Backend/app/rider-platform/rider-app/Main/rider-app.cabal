@@ -625,6 +625,8 @@ library
       SharedLogic.IncentiveJourney
       SharedLogic.Insurance
       SharedLogic.IntegratedBPPConfig
+      SharedLogic.InvoiceEmail
+      SharedLogic.InvoiceEmailSchedule
       SharedLogic.JobScheduler
       SharedLogic.KaalChakra.Actions
       SharedLogic.LegalPolicyEmail
@@ -688,6 +690,7 @@ library
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
       SharedLogic.Scheduler.Jobs.SendLegalPolicyNotification
+      SharedLogic.Scheduler.Jobs.SendRideInvoiceEmail
       SharedLogic.Scheduler.Jobs.SettlementReportIngestion
       SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
       SharedLogic.Scheduler.Jobs.UnblockCustomer
@@ -1308,6 +1311,7 @@ library
       Domain.Types.DraftTicketChangeHistory
       Domain.Types.DriverOffer
       Domain.Types.EDCMachineMapping
+      Domain.Types.EmailTemplate
       Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.FareBreakup
@@ -1485,6 +1489,7 @@ library
       Storage.Beam.DraftTicketChangeHistory
       Storage.Beam.DriverOffer
       Storage.Beam.EDCMachineMapping
+      Storage.Beam.EmailTemplate
       Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.FareBreakup
@@ -1667,6 +1672,7 @@ library
       Storage.Queries.DraftTicketChangeHistory
       Storage.Queries.DriverOffer
       Storage.Queries.EDCMachineMapping
+      Storage.Queries.EmailTemplate
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup

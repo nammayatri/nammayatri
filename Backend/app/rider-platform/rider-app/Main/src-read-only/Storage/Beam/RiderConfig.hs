@@ -122,6 +122,7 @@ data RiderConfigT f = RiderConfigT
     initiateFirstMultimodalJourney :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     intercitySearchLocations :: B.C f (Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation]),
     invoiceConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    invoiceEmailConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     invoiceLogoUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
     isDeviceIdCheckDisabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

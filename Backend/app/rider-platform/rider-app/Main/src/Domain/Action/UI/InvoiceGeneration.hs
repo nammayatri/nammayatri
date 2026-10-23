@@ -32,9 +32,12 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.Booking as SB
+import qualified SharedLogic.InvoiceEmail as InvoiceEmail
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -82,6 +85,7 @@ generateInvoice ::
     ClickhouseFlow m r,
     BeamFlow m r,
     PaymentBeamFlow.BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r,
     HasField "emailServiceConfig" r Email.EmailServiceConfig,
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
@@ -101,7 +105,7 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
   allBookings <- case bookingId of
     Just bookingId' -> do
       booking <- QBE.findCompletedBookingById (Id bookingId')
-      return (maybeToList booking)
+      return (filter (\b -> b.riderId == personId) (maybeToList booking))
     Nothing -> do
       QBE.findBookingsForInvoice personId startDate endDate Nothing Nothing
 
@@ -138,10 +142,30 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
 
   -- Step 7: Fork async job to generate PDF and email (uses email from request)
   whenJust email $ \emaill -> do
-    fork "generate_and_email_invoice" $ do
-      generateAndEmailInvoice invoiceId person validBookingAPIEntities merchantId emaill
-        `catch` \(e :: SomeException) ->
-          logError $ "Invoice generation failed for " <> invoiceId.getId <> ": " <> show e <> "personId: " <> personId.getId <> "merchantId: " <> merchantId.getId <> "email: " <> emaill
+    mbHtmlInvoiceEmail <- case (bookingId, validBookingAPIEntities) of
+      (Just _, [bookingApi]) -> do
+        mbBookingRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = bookingApi.merchantOperatingCityId.getId}) Nothing
+        pure $ do
+          bookingRiderConfig <- mbBookingRiderConfig
+          emailConfig <- InvoiceEmail.getInvoiceEmailConfig bookingRiderConfig
+          pure (bookingRiderConfig, emailConfig, bookingApi)
+      _ -> pure Nothing
+    case mbHtmlInvoiceEmail of
+      Just (bookingRiderConfig, emailConfig, bookingApi) ->
+        fork "send_ride_invoice_email" $ do
+          result <- withTryCatch "sendRideInvoiceEmail:manual" $ do
+            ride <- listToMaybe bookingApi.rideList & fromMaybeM (InvalidRequest "No ride found for booking")
+            invoice <- InvoiceEmail.findRideInvoice ride.id [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid] >>= fromMaybeM (InvalidRequest $ "No invoice found for ride " <> ride.id.getId)
+            InvoiceEmail.sendRideInvoiceEmail emailConfig bookingRiderConfig person bookingApi invoice emaill
+          case result of
+            Right () -> pure ()
+            Left err ->
+              logError $ "Ride invoice email failed for booking " <> bookingApi.id.getId <> " personId: " <> personId.getId <> ": " <> show err
+      Nothing ->
+        fork "generate_and_email_invoice" $ do
+          generateAndEmailInvoice invoiceId person validBookingAPIEntities merchantId emaill
+            `catch` \(e :: SomeException) ->
+              logError $ "Invoice generation failed for " <> invoiceId.getId <> ": " <> show e <> "personId: " <> personId.getId <> "merchantId: " <> merchantId.getId <> "email: " <> emaill
   -- Step 8: Return immediate response
   logInfo $ "Invoice generation initiated for person: " <> personId.getId <> ", invoiceId: " <> invoiceId.getId <> ", total bookings: " <> show totalCount
 

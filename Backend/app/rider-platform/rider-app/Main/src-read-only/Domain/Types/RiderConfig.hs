@@ -23,6 +23,7 @@ import qualified Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.Finance.Invoice.Email
 import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
 
@@ -125,6 +126,7 @@ data RiderConfig = RiderConfig
     initiateFirstMultimodalJourney :: Kernel.Prelude.Bool,
     intercitySearchLocations :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation],
     invoiceConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.RiderInvoiceConfig,
+    invoiceEmailConfig :: Kernel.Prelude.Maybe Lib.Finance.Invoice.Email.InvoiceEmailConfig,
     invoiceLogoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isAvoidToll :: Kernel.Prelude.Bool,
     isDeviceIdCheckDisabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
