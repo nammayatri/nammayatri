@@ -59,6 +59,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.EventTracking as ET
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payment as TPayment
 
@@ -1178,6 +1179,7 @@ postPaymentVerifyVpa (mbPersonId, _merchantId) vpa = do
   QPerson.updatePayoutVpa (Just vpa) personId
   when (isNothing person.payoutVpa) $ do
     triggerPendingCashRideCashbackPayoutJob person{payoutVpa = Just vpa}
+    trackUpiIdAdded person
   pure Success
 
 -- else throwError $ InvalidRequest $ "VPA Verification Failed with status: " <> response.status
@@ -1210,11 +1212,18 @@ getPaymentVpaFromNumber (mbPersonId, merchantId) = do
           then do
             let updatedPerson = person{payoutVpa = Just response.vpa}
             QPerson.updateByPrimaryKey updatedPerson
-            when (isNothing person.payoutVpa) $
+            when (isNothing person.payoutVpa) $ do
               triggerPendingCashRideCashbackPayoutJob updatedPerson
+              trackUpiIdAdded person
             pure response.vpa
           else throwError $ InvalidRequest $ "VPA Verification Failed with status: " <> response.status
   pure $ API.Types.UI.RidePayment.VpaFromNumberResp {vpa = vpa}
+
+-- | First VPA of the rider
+trackUpiIdAdded :: Domain.Types.Person.Person -> Environment.Flow ()
+trackUpiIdAdded person =
+  fork "event_tracking: upi_id_added" $
+    ET.trackEvent person.merchantId person.merchantOperatingCityId (ET.UpiIdAdded person.id.getId)
 
 triggerPendingCashRideCashbackPayoutJob ::
   Domain.Types.Person.Person ->
