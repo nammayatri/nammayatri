@@ -88,12 +88,16 @@ module SharedLogic.Finance.RidePayment
     ridePaymentRefOfferDiscount,
     ridePaymentRefCashbackPayout,
     ridePaymentRefCashbackPayoutTransfer,
+    ridePaymentRefReferralAward,
+    ridePaymentRefReferralAwardPayout,
+    ridePaymentRefReferralAwardPayoutSettlement,
+    ridePaymentRefMetroCashback,
+    ridePaymentRefMetroCashbackPayout,
+    ridePaymentRefMetroCashbackPayoutSettlement,
     ridePaymentRefCashbackPayoutSettlement,
-    postCashbackOwnerPayoutLiability,
-    releaseCashbackEntriesReservation,
-    reserveCashbackEntriesForPayout,
     cashbackPayoutLedgerRefs,
-    settleCashbackPayoutLedger,
+    referralAwardPayoutLedgerRefs,
+    metroCashbackPayoutLedgerRefs,
     ridePaymentRefTollFare,
     ridePaymentRefTollVAT,
     ridePaymentRefParkingCharge,
@@ -126,6 +130,7 @@ module SharedLogic.Finance.RidePayment
     UpsertCoreLedgerResult (..),
     settleRidePaymentLedger,
     createSettledCashbackPayoutLeg,
+    createSettledAwardAccrualLeg,
     getWalletAccountByOwner,
     getWalletBalanceByOwner,
     getPayoutEligibilityData,
@@ -182,7 +187,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Service as FInvoiceService
-import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..), PayoutOutcome (..), settlePayoutLedger)
+import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..))
 import qualified Lib.Finance.Ledger.Service
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
@@ -229,6 +234,27 @@ ridePaymentRefCashbackPayoutTransfer = "CashbackPayoutTransfer"
 
 ridePaymentRefCashbackPayoutSettlement :: Text
 ridePaymentRefCashbackPayoutSettlement = "CashbackPayoutSettlement"
+
+-- Referral / metro award payouts (Phase 5 of the finance-kernel unification): the
+-- accrual leg records the platform granting the award into the rider's wallet; the
+-- Payout/PayoutSettlement pair are the kernel transfer's hold and settlement legs.
+ridePaymentRefReferralAward :: Text
+ridePaymentRefReferralAward = "ReferralAward"
+
+ridePaymentRefReferralAwardPayout :: Text
+ridePaymentRefReferralAwardPayout = "ReferralAwardPayout"
+
+ridePaymentRefReferralAwardPayoutSettlement :: Text
+ridePaymentRefReferralAwardPayoutSettlement = "ReferralAwardPayoutSettlement"
+
+ridePaymentRefMetroCashback :: Text
+ridePaymentRefMetroCashback = "MetroCashback"
+
+ridePaymentRefMetroCashbackPayout :: Text
+ridePaymentRefMetroCashbackPayout = "MetroCashbackPayout"
+
+ridePaymentRefMetroCashbackPayoutSettlement :: Text
+ridePaymentRefMetroCashbackPayoutSettlement = "MetroCashbackPayoutSettlement"
 
 ridePaymentRefTollFare :: Text
 ridePaymentRefTollFare = "TollFare"
@@ -782,35 +808,6 @@ getPayoutEligibilityData counterparty personId = do
             <> show (map (\e -> (e.id, e.amount)) unsettledEntries)
       pure (walletBalance, entriesWithNet)
 
--- | Reserve cashback accrual entries for an in-flight payout (UNSETTLED → PROCESSING), so a later
---   run cannot pay them again while the order has no terminal status. The optional settlementId is
---   the PayoutRequest id, stamped once the request exists.
-reserveCashbackEntriesForPayout ::
-  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
-  [Id LE.LedgerEntry] ->
-  Maybe Text ->
-  m ()
-reserveCashbackEntriesForPayout = Lib.Finance.Ledger.Service.markEntriesAsProcessing
-
--- | Release reserved cashback entries (PROCESSING → UNSETTLED) when a payout fails or is not sent,
---   so the next run pays them.
-releaseCashbackEntriesReservation ::
-  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
-  [Id LE.LedgerEntry] ->
-  m ()
-releaseCashbackEntriesReservation = Lib.Finance.Ledger.Service.markEntriesAsUnsettled
-
--- | PayoutInitiated: move the cashback amount out of the rider's wallet into the merchant's
---   OwnerPayoutLiability liability account (PROCESSING) until the PG confirms or fails the payout.
---   Keyed by ctx.referenceId (the PayoutRequest id), like every other leg of the payout.
-postCashbackOwnerPayoutLiability ::
-  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
-  FinanceCtx ->
-  HighPrecMoney ->
-  m (Either FinanceError [Id LE.LedgerEntry])
-postCashbackOwnerPayoutLiability ctx amount =
-  fmap snd <$> runFinance ctx (void $ transferInProcessing OwnerLiability OwnerPayoutLiability amount ridePaymentRefCashbackPayoutTransfer Nothing)
-
 cashbackPayoutLedgerRefs :: PayoutLedgerRefs
 cashbackPayoutLedgerRefs =
   PayoutLedgerRefs
@@ -819,23 +816,42 @@ cashbackPayoutLedgerRefs =
       settlementToRole = BuyerExternal
     }
 
--- | Apply a payout outcome to the rider cashback ledger; re-runnable, see 'settlePayoutLedger'.
---   On success the original cashback accrual entries are additionally flagged PAID_OUT under the
---   PayoutRequest id (a plain set, so also re-runnable).
-settleCashbackPayoutLedger ::
+referralAwardPayoutLedgerRefs :: PayoutLedgerRefs
+referralAwardPayoutLedgerRefs =
+  PayoutLedgerRefs
+    { holdReferenceType = ridePaymentRefReferralAwardPayout,
+      settlementReferenceType = ridePaymentRefReferralAwardPayoutSettlement,
+      settlementToRole = BuyerExternal
+    }
+
+metroCashbackPayoutLedgerRefs :: PayoutLedgerRefs
+metroCashbackPayoutLedgerRefs =
+  PayoutLedgerRefs
+    { holdReferenceType = ridePaymentRefMetroCashbackPayout,
+      settlementReferenceType = ridePaymentRefMetroCashbackPayoutSettlement,
+      settlementToRole = BuyerExternal
+    }
+
+-- | Post and settle an award accrual leg (BuyerExpense → OwnerLiability under the given
+--   reference type) and return its entry ids, so the caller can hand them to the kernel
+--   transfer as covered entries. Generalises 'createSettledCashbackPayoutLeg' for the
+--   referral / metro award flows; those awards previously moved money with no ledger at all.
+createSettledAwardAccrualLeg ::
   (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney ->
-  [Id LE.LedgerEntry] -> -- original cashback entry IDs (from the payout Redis stash)
-  PayoutOutcome ->
+  Text -> -- accrual reference type
   m (Either FinanceError [Id LE.LedgerEntry])
-settleCashbackPayoutLedger ctx amount entryIds outcome = do
-  result <- settlePayoutLedger runFinance cashbackPayoutLedgerRefs ctx amount Nothing outcome
-  forM result $ \postedIds -> do
-    case outcome of
-      PayoutSucceeded -> Lib.Finance.Ledger.Service.markEntriesAsPaidOut entryIds ctx.referenceId
-      PayoutFailed _ -> pure ()
-    pure postedIds
+createSettledAwardAccrualLeg ctx awardAmount accrualRefType
+  | awardAmount <= 0 = pure (Right [])
+  | otherwise = do
+    result <- runFinance ctx $ void $ transferPending BuyerExpense OwnerLiability awardAmount accrualRefType
+    case result of
+      Left err -> pure (Left err)
+      Right (_, entryIds) ->
+        settleRidePaymentLedger ctx entryIds settledReasonRidePayment <&> \case
+          Left err -> Left err
+          Right () -> Right entryIds
 
 -- | Build the canonical 'InvoiceConfig' for a rider ride-payment invoice.
 --   Reuses the same line-item layout that createRidePaymentLedger used when

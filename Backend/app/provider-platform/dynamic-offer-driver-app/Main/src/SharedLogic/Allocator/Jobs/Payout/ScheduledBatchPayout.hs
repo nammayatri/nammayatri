@@ -42,8 +42,13 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.AccountConfig as FinanceAccountConfig
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
+import qualified Lib.Finance.Domain.Types.ScheduledTransferRule as STR
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.ScheduledTransferRule as QSTR
+import qualified Lib.Finance.Transfer.Scheduled as KernelSweep
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
@@ -161,6 +166,15 @@ processWalletPayouts config jobData = do
       logInfo "Wallet payouts disabled at transporter level"
       pure Complete
     else do
+      -- Phase 3 (finance-kernel unification): the sweep SCHEDULE dual-reads from the
+      -- kernel's finance_scheduled_transfer_rule, named by the (Liability, DRIVER)
+      -- class config's autoTransferOut; batching/cursor/bulk mechanics are unchanged.
+      -- Folding the page loop into Lib.Finance.Transfer.Scheduled.runScheduledSweep is
+      -- the Phase-3b target — blocked on the bulk-vs-individual branching below, which
+      -- the kernel sweep does not model.
+      mbKernelRule <- findKernelSweepRule merchantId merchantOpCityId
+      let effBatchSize = maybe config.batchSize (.batchSize) mbKernelRule
+          effMinPayoutAmount = maybe config.minimumPayoutAmount (.minimumAmount) mbKernelRule
       let driverCursorKey = "ScheduledBatchPayout:Cursor:" <> merchantOpCityId.getId <> ":" <> show config.payoutCategory
           fleetCursorKey = "ScheduledBatchPayout:Cursor:Fleet:" <> merchantOpCityId.getId <> ":" <> show config.payoutCategory
           -- Bulk cycles that failed in a row, for the retry backoff.
@@ -173,7 +187,7 @@ processWalletPayouts config jobData = do
             Payout.JuspayFlow -> True
             Payout.StripeFlow -> False
             Payout.BulkFlow -> False -- HDFC CBX is account-and-IFSC based, not VPA based
-      eligibleDriverInfos <- QDIE.findEligibleForScheduledPayout merchantOpCityId config.batchSize mbLastDriverId isPayoutVpaRequired
+      eligibleDriverInfos <- QDIE.findEligibleForScheduledPayout merchantOpCityId effBatchSize mbLastDriverId isPayoutVpaRequired
       unless (null eligibleDriverInfos) $ do
         let lastDriverId = (.driverId) $ last eligibleDriverInfos
         -- Bulk moves its cursor only after its cycle succeeds, so a failed cycle does not skip this page.
@@ -183,25 +197,27 @@ processWalletPayouts config jobData = do
           for_ eligibleDriverInfos $ \driverInfo ->
             fork ("ScheduledWalletPayout:Driver:" <> driverInfo.driverId.getId) $
               processOneWalletPayout
-                config
                 transporterConfig
                 merchantId
                 merchantOpCityId
                 driverInfo.driverId
                 driverInfo.payoutVpa
                 (driverInfo.payoutVpaStatus == Just DI.MANUALLY_ADDED)
+                effMinPayoutAmount
 
       -- Process fleet owners
       mbLastFleetId <- Redis.get fleetCursorKey
-      eligibleFleetInfos <- QFOIE.findEligibleFleetOwnersForScheduledPayout merchantOpCityId config.batchSize mbLastFleetId isPayoutVpaRequired
+      eligibleFleetInfos <- QFOIE.findEligibleFleetOwnersForScheduledPayout merchantOpCityId effBatchSize mbLastFleetId isPayoutVpaRequired
       logDebug $
         "[SBP-DEBUG] mocId=" <> merchantOpCityId.getId
           <> " isPayoutVpaRequired="
           <> show isPayoutVpaRequired
           <> " minimumPayoutAmount="
-          <> show config.minimumPayoutAmount
+          <> show effMinPayoutAmount
           <> " batchSize="
-          <> show config.batchSize
+          <> show effBatchSize
+          <> " kernelRule="
+          <> show (mbKernelRule <&> (.name))
           <> " driverCursor="
           <> show mbLastDriverId
           <> " fleetCursor="
@@ -221,13 +237,13 @@ processWalletPayouts config jobData = do
           for_ eligibleFleetInfos $ \fleetInfo ->
             fork ("ScheduledWalletPayout:Fleet:" <> fleetInfo.fleetOwnerPersonId.getId) $
               processOneWalletPayout
-                config
                 transporterConfig
                 merchantId
                 merchantOpCityId
                 fleetInfo.fleetOwnerPersonId
                 fleetInfo.payoutVpa
                 (fleetInfo.payoutVpaStatus == Just DFOI.MANUALLY_ADDED)
+                effMinPayoutAmount
 
       -- Catch bulk errors here: this job is not retried on an exception, so one would end the city's sweep.
       bulkResult <-
@@ -270,7 +286,9 @@ processWalletPayouts config jobData = do
             then do
               Redis.del driverCursorKey
               Redis.del fleetCursorKey
-              nextTime <- computeNextRunTime config
+              nextTime <- case mbKernelRule of
+                Just rule -> KernelSweep.computeNextRunTime rule <$> getCurrentTime
+                Nothing -> computeNextRunTime config
               logInfo $ "All drivers and fleet owners processed. Next run at: " <> show nextTime
               pure $ ReSchedule nextTime
             else do
@@ -292,15 +310,15 @@ processOneWalletPayout ::
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text]
   ) =>
-  DSPC.ScheduledPayoutConfig ->
   DTConf.TransporterConfig ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   Maybe Text ->
   Bool -> -- isManuallyAdded
+  HighPrecMoney -> -- minimum payout amount (kernel rule or legacy config)
   m ()
-processOneWalletPayout config transporterConfig merchantId merchantOpCityId personId mbPayoutVpa isManuallyAdded = do
+processOneWalletPayout transporterConfig merchantId merchantOpCityId personId mbPayoutVpa isManuallyAdded minPayoutAmount = do
   result <- try $
     -- Skip manually-added VPAs
     unless isManuallyAdded $ do
@@ -317,14 +335,36 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId pers
           params =
             WalletPayoutParams
               { payoutType = PR.SCHEDULED,
-                minimumPayoutAmount = config.minimumPayoutAmount,
-                enforceDailyLimit = False,
+                minimumPayoutAmount = minPayoutAmount,
                 throwOnBelowMinimum = False
               }
       runWalletPayout ctx params
   case result of
     Left (e :: SomeException) -> logError $ "ScheduledWalletPayout error for " <> personId.getId <> ": " <> show e
     Right _ -> pure ()
+
+-- | The kernel sweep rule for the city's (Liability, DRIVER) class, when the class
+--   config names one and it is enabled. Nothing -> legacy ScheduledPayoutConfig path.
+findKernelSweepRule ::
+  (BeamFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe STR.ScheduledTransferRule)
+findKernelSweepRule merchantId merchantOpCityId = do
+  accCfg <-
+    FinanceAccountConfig.getAccountConfig
+      FinanceAccountConfig.AccountClass
+        { merchantId = merchantId.getId,
+          merchantOperatingCityId = merchantOpCityId.getId,
+          accountType = FinanceAccount.Liability,
+          counterpartyType = Just FinanceAccount.DRIVER,
+          subLedger = Nothing
+        }
+  case accCfg.autoTransferOut of
+    Nothing -> pure Nothing
+    Just ruleName -> do
+      mbRule <- QSTR.findByName merchantOpCityId.getId ruleName
+      pure $ mbRule >>= \rule -> if rule.isEnabled then Just rule else Nothing
 
 computeNextRunTime ::
   (MonadFlow m) =>
