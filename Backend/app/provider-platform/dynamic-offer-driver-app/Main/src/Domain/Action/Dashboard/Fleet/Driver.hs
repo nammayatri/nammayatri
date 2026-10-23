@@ -356,10 +356,10 @@ postDriverFleetAddVehicleHelper isBulkUpload callerMayAutoApprove merchantShortI
   unless (merchant.id == merchantId && merchantOpCityId == entityDetails.merchantOperatingCityId) $ throwError (PersonDoesNotExist entityDetails.id.getId)
   (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails merchant.fleetOwnerEnabledCheck
   rc <- RCQuery.findLastVehicleRCWrapper req.registrationNo
-  -- A bulk row has no photo: the RC built from its details gets the shared placeholder image so review and approval work.
+  -- A bulk row has no photo: its RC gets the shared placeholder image so review, versions and approval work.
   let mbVehicleDetails = DCommon.mkDashboardVehicleDetails transporterConfig req
   mbPlaceholderImageId <-
-    if isBulkUpload && isJust mbVehicleDetails
+    if isBulkUpload
       then Just <$> createBulkRcPlaceholderImage getEntityData.id merchant.id merchantOpCityId
       else pure Nothing
   let vehicleReq = maybe req (\imageId -> (req :: Common.AddVehicleReq) {Common.imageId = Just (cast imageId)}) mbPlaceholderImageId
@@ -393,7 +393,8 @@ postDriverFleetAddVehicleHelper isBulkUpload callerMayAutoApprove merchantShortI
           mbRc <- VRCQuery.findByAnyImageId imageId
           when (isNothing mbRc) $ QImage.deleteByIdAndPerson imageId getEntityData.id
           throwM err
-  when autoApproved $
+  -- Only an RC built from the request's details exists at this point; one sent for external verification is settled by the verifier's answer.
+  when (autoApproved && isJust mbVehicleDetails) $
     whenJust (fmap cast mbPlaceholderImageId <|> req.imageId) $ \imageId ->
       void $
         DRegistration.postDriverRegistrationDocumentsUpdate merchantShortId opCity $
@@ -3948,7 +3949,8 @@ convertToAddVehicleReq rcReq =
       make = maybe "" (.vehicleManufacturer) rcReq.vehicleDetails,
       airConditioned = rcReq.airConditioned,
       driverName = Nothing,
-      imageId = Just rcReq.imageId,
+      -- The add-vehicle helper sets a placeholder image created under the fleet owner or driver the vehicle is added to.
+      imageId = Nothing,
       imageId2 = rcReq.imageId2,
       vehicleCategory = rcReq.vehicleCategory,
       oxygen = rcReq.oxygen,

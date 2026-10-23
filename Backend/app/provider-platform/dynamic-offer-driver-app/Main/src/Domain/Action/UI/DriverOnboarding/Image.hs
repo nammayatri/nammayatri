@@ -655,7 +655,8 @@ mkImage personId_ merchantId mbMerchantOpCityId s3Path documentType_ mbRcId veri
 createBulkRcPlaceholderImage :: Id Person.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (Id Domain.Image)
 createBulkRcPlaceholderImage personId merchantId merchantOpCityId = do
   pathPrefix <- asks (.s3Env.pathPrefix)
-  let s3Path = pathPrefix <> "/driver-onboarding/bulk-upload/rc-placeholder.jpg"
+  placeholderPath <- asks (.bulkRcPlaceholderImagePath)
+  let s3Path = pathPrefix <> "/" <> placeholderPath
   image <- mkImage personId merchantId (Just merchantOpCityId) s3Path DVC.VehicleRegistrationCertificate Nothing (Just Documents.MANUAL_VERIFICATION_REQUIRED) Nothing Nothing
   Query.create image
   pure image.id
