@@ -105,7 +105,7 @@ stageAllowed :: Journey -> DRFC.RideFeedbackConfig -> Bool
 stageAllowed journey config = maybe False (`elem` questionStages config) journey.stage
 
 -- | Outcome of one question's own limits for a journey. Reasons are stable codes (shown in the dashboard preview):
--- STAGE_NOT_ALLOWED, ALREADY_SHOWN.
+-- STAGE_NOT_ALLOWED, ALREADY_CLOSED.
 data QuestionDecision = Eligible UTCTime | Excluded Text
   deriving (Show)
 
@@ -147,7 +147,7 @@ evaluateJourney now journey configs = case journey.stage of
         decisions = [(c, decideQuestion now journey responseByConfig c) | c <- candidates]
         eligibleTop = [c | (c, Eligible _) <- decisions]
         byKey = HM.fromList [(c.questionKey, c) | c <- configs]
-        followUps = collectFollowUps byKey (\c -> isOpen responseByConfig c && stageAllowed journey c) eligibleTop
+        followUps = collectFollowUps byKey (\c -> isOpen now responseByConfig c && stageAllowed journey c) eligibleTop
     pure JourneyEvaluation {context = Just ctx, logicVersion = selection.logicVersion, selectedKeys = selection.questionKeys, decisions, followUps}
 
 -- | The city's questions as Config Pilot serves them to this journey (`Just True`: enabled ones only).
@@ -176,7 +176,7 @@ decideQuestion ::
   QuestionDecision
 decideQuestion now journey responseByConfig config
   | not (stageAllowed journey config) = Excluded "STAGE_NOT_ALLOWED"
-  | not (isOpen responseByConfig config) = Excluded "ALREADY_SHOWN"
+  | not (isOpen now responseByConfig config) = Excluded "ALREADY_CLOSED"
   | otherwise = Eligible showAt
   where
     trigger = config.displayTrigger
@@ -207,10 +207,16 @@ collectFollowUps byKey usable roots = go (3 :: Int) (HS.fromList $ map (.questio
 isFollowUpOnly :: DRFC.RideFeedbackConfig -> Bool
 isFollowUpOnly = fromMaybe False . (.isFollowUpOnly)
 
--- | Open = not shown on its subject yet: a question is shown at most once per ride (ride stages) or
--- journey (booking stages).
-isOpen :: HM.HashMap (Id DRFC.RideFeedbackConfig) DRFR.RideFeedbackResponse -> DRFC.RideFeedbackConfig -> Bool
-isOpen responseByConfig config = not (HM.member config.id responseByConfig)
+-- | Open = not answered, skipped or expired on its subject yet: a question is finished at most once per
+-- ride (ride stages) or journey (booking stages). One only SHOWN stays open, so it comes back if the
+-- rider left without acting on it (e.g. the app was killed while it was on screen), until its
+-- auto-dismiss time from the first display has passed.
+isOpen :: UTCTime -> HM.HashMap (Id DRFC.RideFeedbackConfig) DRFR.RideFeedbackResponse -> DRFC.RideFeedbackConfig -> Bool
+isOpen now responseByConfig config = case HM.lookup config.id responseByConfig of
+  Nothing -> True
+  Just response -> not (isFinal response.status) && maybe True (\secs -> now < addUTCTime (fromIntegral secs) response.createdAt) autoDismiss
+  where
+    autoDismiss = config.displayTrigger >>= (.autoDismissAfterSeconds)
 
 isFinal :: DRFR.RideFeedbackResponseStatus -> Bool
 isFinal = (/= DRFR.SHOWN)
