@@ -2104,7 +2104,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
         let fetchRules = \dom -> do
               localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
               TDL.getAppDynamicLogic (cast merchantOpCityId) dom localTime Nothing Nothing
-        output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) LYT.QUOTE_RESPONSE_BEHAVIOR fetchRules
+        output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) (BehaviorDispatch.behaviourEventCity (cast merchantOpCityId)) LYT.QUOTE_RESPONSE_BEHAVIOR fetchRules
         when (not (null output.consequences) || not (null output.communications)) $ do
           let dispatchCtx =
                 BehaviorDispatch.DispatchContext

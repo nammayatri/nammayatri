@@ -37,7 +37,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 --
 -- Usage at integration point (e.g. on driver cancellation):
 --   let fetchRules = \domain -> TDL.getAppDynamicLogic (cast mocId) domain now Nothing Nothing
---   output <- recordAndOrchestrate counterConfig actionEvent entityState callerApp mocId domain fetchRules
+--   output <- recordAndOrchestrate counterConfig actionEvent entityState callerApp mocId lookupCity domain fetchRules
 --   CE.executeConsequences driverId output.consequences
 --   CM.dispatchCommunications driverId output.communications
 recordAndOrchestrate ::
@@ -54,12 +54,13 @@ recordAndOrchestrate ::
   A.Value -> -- entityState
   LYDL.CallerApp ->
   Id LYT.MerchantOperatingCity ->
+  m (Maybe EventLog.BehaviourEventCity) -> -- city names for the metrics event, looked up in the background
   LYT.LogicDomain ->
   RuleFetcher m ->
   m OrchestratedOutput
-recordAndOrchestrate config event entityState callerApp mocId domain fetchRules = do
+recordAndOrchestrate config event entityState callerApp mocId lookupCity domain fetchRules = do
   snapshot <- recordAndSnapshot config event entityState
-  orchestrate snapshot callerApp mocId domain fetchRules
+  orchestrate snapshot callerApp mocId lookupCity domain fetchRules
 
 -- | Evaluate rules for an existing snapshot (no recording)
 --
@@ -76,12 +77,13 @@ orchestrate ::
   BehaviorSnapshot ->
   LYDL.CallerApp ->
   Id LYT.MerchantOperatingCity ->
+  m (Maybe EventLog.BehaviourEventCity) -> -- city names for the metrics event, looked up in the background
   LYT.LogicDomain ->
   RuleFetcher m ->
   m OrchestratedOutput
-orchestrate snapshot callerApp mocId domain fetchRules = do
+orchestrate snapshot callerApp mocId lookupCity domain fetchRules = do
   let snapshotJson = A.toJSON snapshot
   logDebug $ "Orchestrating behavior evaluation for action " <> snapshot.actionType
   (output, mbVersion) <- evaluateRules callerApp mocId domain fetchRules snapshotJson
-  EventLog.emitBehaviourEvents (EventLog.snapshotEventContext callerApp mocId domain mbVersion snapshot) (EventLog.outputEventDetails output)
+  EventLog.emitBehaviourEvents lookupCity (EventLog.snapshotEventContext callerApp mocId domain mbVersion snapshot) (EventLog.outputEventDetails output)
   pure output

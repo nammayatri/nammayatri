@@ -14,6 +14,7 @@
 
 module SharedLogic.BehaviourManagement.ConsequenceDispatcher
   ( DispatchContext (..),
+    behaviourEventCity,
     handleConsequences,
     handleCommunications,
     sendOverlayByKey,
@@ -42,6 +43,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.BehaviorEngine.EventLog as EventLog
 import qualified Lib.BehaviorTracker.BlockTracker as BT
 import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Types as BTT
@@ -62,6 +64,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.VehicleServiceTier (recomputeSelectedServiceTiers, selectedServiceTiersLockKey)
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -79,6 +82,17 @@ data DispatchContext = DispatchContext
     counterConfig :: Maybe BTT.CounterConfig,
     actionEvent :: Maybe BTT.ActionEvent
   }
+
+-- | Merchant short id and city name for behaviour metrics events (cached read).
+-- Passed to the orchestrator, which runs it in the background with the event.
+behaviourEventCity :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m (Maybe EventLog.BehaviourEventCity)
+behaviourEventCity mocId = fmap toEventCity <$> CQMOC.findById mocId
+  where
+    toEventCity moc =
+      EventLog.BehaviourEventCity
+        { EventLog.merchantShortId = moc.merchantShortId.getShortId,
+          EventLog.city = show moc.city
+        }
 
 -- | Dispatch all consequence directives for a driver.
 handleConsequences ::
