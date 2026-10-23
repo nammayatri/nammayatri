@@ -339,6 +339,15 @@ updateDriverDeviatedFromRoute rideId deviation = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateRouteDeviatedAtRideEnd :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Bool -> m ()
+updateRouteDeviatedAtRideEnd rideId deviated = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.routeDeviatedAtRideEnd $ Just deviated,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateDriverDeviatedToTollRoute :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Bool -> m ()
 updateDriverDeviatedToTollRoute rideId deviation = do
   now <- getCurrentTime

@@ -112,6 +112,7 @@ data RideT f = RideT
     returnStartedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     rideEndedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy),
     rideTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    routeDeviatedAtRideEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     safetyAlertTriggered :: B.C f Kernel.Prelude.Bool,
     scheduledAcceptanceMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.ScheduledAcceptanceMode),
     shortId :: B.C f Kernel.Prelude.Text,

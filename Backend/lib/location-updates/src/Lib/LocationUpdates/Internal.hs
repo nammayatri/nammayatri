@@ -86,6 +86,8 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     updateTollChargesAndNamesAndIds :: Id person -> HighPrecMoney -> [Text] -> [Text] -> m (),
     updateRouteDeviation :: Id person -> [LatLong] -> [LatLong] -> Maybe LineSegment -> m (Bool, Bool, Bool),
     getTravelledDistanceAndTollInfo :: Id person -> Meters -> Maybe TollInfo -> m (Meters, Maybe TollInfo),
+    routeMismatchThresholdAtRideEnd :: Maybe Meters, -- Nothing disables the end-ride distance mismatch check (toll mismatch is always checked)
+    markRouteDeviatedAtRideEnd :: Id person -> m (),
     getRecomputeIfPickupDropNotOutsideOfThreshold :: Bool,
     sendTollCrossedNotificationToDriver :: Id person -> m (),
     sendTollCrossedUpdateToBAP :: Id person -> m ()
@@ -228,7 +230,24 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
     let snapToRoadCallCondition = (routeDeviation && recomputeIfPickupDropNotOutsideOfThreshold) || pickupDropOutsideThreshold || isJust rectifyDistantPointsFailureUsing || isJust estTollCharges || tollRouteDeviation
     if ending
       then do
-        if snapToRoadCallCondition
+        let estimatedTollInfo =
+              estimatedTollInfoFromCharges
+                <$> estTollCharges
+                <*> estTollNames
+                <*> estTollIds
+        (distanceToBeUpdated, tollChargesInfo) <-
+          if snapToRoadCallCondition
+            then pure (estDist, estimatedTollInfo)
+            else getTravelledDistanceAndTollInfo driverId estDist estimatedTollInfo
+        let routeMismatchCondition =
+              not snapToRoadCallCondition
+                && ( (isTollApplicable && ((.tollCharges) <$> tollChargesInfo) /= estTollCharges)
+                       || maybe False (\threshold -> abs (distanceToBeUpdated - estDist) > threshold) routeMismatchThresholdAtRideEnd
+                   )
+        when routeMismatchCondition $ do
+          logInfo $ "Cached route disagrees with the quote at ride end (distance " <> show distanceToBeUpdated <> ", tolls " <> show tollChargesInfo <> " vs quoted distance " <> show estDist <> ", tolls " <> show estTollCharges <> "), snapping the GPS for driverId " <> driverId.getId
+          markRouteDeviatedAtRideEnd driverId
+        if snapToRoadCallCondition || routeMismatchCondition
           then do
             currSnapToRoadState <- processSnapToRoadCall mbPreviousRouteSegment
             updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls currSnapToRoadState.numberOfSelfTuned calculationFailed
@@ -238,12 +257,6 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
               tollIds :: [Text] <- Redis.lRange (onRideTollIdsKey driverId) 0 (-1)
               whenJust mbTollCharges $ \tollCharges -> updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds
           else do
-            let estimatedTollInfo =
-                  estimatedTollInfoFromCharges
-                    <$> estTollCharges
-                    <*> estTollNames
-                    <*> estTollIds
-            (distanceToBeUpdated, tollChargesInfo) <- getTravelledDistanceAndTollInfo driverId estDist estimatedTollInfo
             updateDistance driverId (metersToHighPrecMeters distanceToBeUpdated) 0 0 (Just 0) calculationFailed
             whenJust tollChargesInfo $ \tollInfo ->
               when isTollApplicable $
@@ -365,12 +378,14 @@ mkRideInterpolationHandler ::
   (Id person -> [LatLong] -> [LatLong] -> Maybe LineSegment -> m (Bool, Bool, Bool)) ->
   (Maybe (Id person) -> Maybe LineSegment -> RoutePoints -> m (Maybe TollInfo)) ->
   (Id person -> Meters -> Maybe TollInfo -> m (Meters, Maybe TollInfo)) ->
+  Maybe Meters ->
+  (Id person -> m ()) ->
   Bool ->
   (Maybe MapsServiceConfig -> Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
   (Id person -> m ()) ->
   (Id person -> m ()) ->
   RideInterpolationHandler person m
-mkRideInterpolationHandler batchSize maxSnapToRoadReqPoints isEndRide updateDistance updateTollChargesAndNamesAndIds updateRouteDeviation getTollInfoOnTheRoute getTravelledDistanceAndTollInfo getRecomputeIfPickupDropNotOutsideOfThreshold snapToRoadCall sendTollCrossedNotificationToDriver sendTollCrossedUpdateToBAP =
+mkRideInterpolationHandler batchSize maxSnapToRoadReqPoints isEndRide updateDistance updateTollChargesAndNamesAndIds updateRouteDeviation getTollInfoOnTheRoute getTravelledDistanceAndTollInfo routeMismatchThresholdAtRideEnd markRouteDeviatedAtRideEnd getRecomputeIfPickupDropNotOutsideOfThreshold snapToRoadCall sendTollCrossedNotificationToDriver sendTollCrossedUpdateToBAP =
   RideInterpolationHandler
     { batchSize = batchSize,
       maxSnapToRoadReqPoints = maxSnapToRoadReqPoints,

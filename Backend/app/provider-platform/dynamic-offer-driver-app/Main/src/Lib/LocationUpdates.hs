@@ -325,6 +325,11 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
           ride <- maybe (QRide.getCurrentActiveByDriverId driverId) QRide.findById rideId
           getTravelledDistanceAndTollInfo merchantOpCityId ride estimatedDistance estimatedTollInfo
       )
+      transportConfig.routeMismatchThresholdAtRideEnd
+      ( \driverId -> do
+          ride <- maybe (QRide.getCurrentActiveByDriverId driverId) QRide.findById rideId
+          whenJust ride $ \ride' -> QRide.updateRouteDeviatedAtRideEnd ride'.id True
+      )
       (RD.mkRecomputeConfig transportConfig).cfgRecomputeIfPickupDropNotOutsideOfThreshold
       snapToRoad'
       ( \driverId -> do
@@ -368,6 +373,8 @@ buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRid
       (\_driverId _accurateWaypoints _allWaypoints _mbPreviousRouteSegment -> pure (False, False, False)) -- no route-deviation / safety checks on the pickup leg
       (\_mbDriverId _mbPreviousRouteSegment -> const (pure Nothing)) -- no toll detection on the pickup leg
       (\_driverId estimatedDistance estimatedTollInfo -> pure (estimatedDistance, estimatedTollInfo))
+      Nothing
+      (\_driverId -> pure ())
       False -- getRecomputeIfPickupDropNotOutsideOfThreshold
       snapToRoad'
       (\_driverId -> pure ())

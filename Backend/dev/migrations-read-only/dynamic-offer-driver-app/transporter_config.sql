@@ -1293,3 +1293,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN peer_bap_mercha
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN show_route_per_request boolean  default false;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN route_mismatch_threshold_at_ride_end integer ;
