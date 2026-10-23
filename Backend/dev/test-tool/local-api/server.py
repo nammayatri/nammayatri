@@ -1301,7 +1301,10 @@ def _devbox_resolve(force_new: bool = False) -> dict:
         "vpnSubnet": vpn_subnet,
         "workspaceUrl": f"http://{host}:{FRONTDESK_PORT}/{dev_id}",
         # Through hopper's gateway (any network) — rider and driver APIs only.
-        "publicUrl": _dc_stack.public_base(machine["name"], dev_id) if machine.get("name") else "",
+        # Only when hopper lists the dev-box's public front desk; the gateway
+        # 404s otherwise.
+        "publicUrl": (_dc_stack.public_base(machine["name"], dev_id)
+                      if machine.get("name") and _dc_stack.is_public(machine["name"]) else ""),
         "frontdeskOk": _frontdesk_ok(host),
         "message": message,
     }

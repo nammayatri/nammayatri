@@ -46,16 +46,11 @@ on:
         description: "Who started it (SCC user)"
         default: ""
       devbox_host:
-        description: "Dev-box address (empty = pick one; required for stop)"
+        description: "Dev-box address (spawn: empty = pick one; required for ping and stop)"
         default: ""
       devbox_user:
         description: "Dev-box SSH user (with devbox_host)"
         default: ""
-  # Test hook until this file is on main (only main's workflows can be
-  # dispatched): a change to this file on the feature branch runs `ping`.
-  push:
-    branches: [backend/feat/devbox-feature-test]
-    paths: [.github/workflows/devbox.yaml]
 
 concurrency:
   group: devbox-${{ inputs.workspace || github.run_id }}
@@ -84,19 +79,14 @@ jobs:
       - name: Check inputs
         run: |
           case "$ACTION" in
-            ping)
-              # The push test hook has no inputs: ping soya-chaap (its overlay
-              # IP; office IPs change after a power cut).
-              echo "DEVBOX_HOST=${INPUT_HOST:-100.64.0.12}" >> "$GITHUB_ENV"
-              echo "DEVBOX_USER=${INPUT_USER:-soya-chaap}" >> "$GITHUB_ENV" ;;
             spawn|stop)
               [[ "$WORKSPACE" =~ ^[A-Za-z0-9_-]+$ ]] || { echo "::error::workspace must be letters, digits, - or _"; exit 1; }
               [ -n "$RELEASE_ID" ] || { echo "::error::release_id is required"; exit 1; } ;;
           esac
           if [ "$ACTION" = spawn ] && [ -z "$BACKEND_REF" ]; then echo "::error::backend_ref is required for spawn"; exit 1; fi
-          if [ "$ACTION" = stop ]; then
+          if [ "$ACTION" = ping ] || [ "$ACTION" = stop ]; then
             if [ -z "$INPUT_HOST" ] || [ -z "$INPUT_USER" ]; then
-              echo "::error::devbox_host and devbox_user are required for stop"; exit 1
+              echo "::error::devbox_host and devbox_user are required for $ACTION"; exit 1
             fi
             echo "DEVBOX_HOST=$INPUT_HOST" >> "$GITHUB_ENV"
             echo "DEVBOX_USER=$INPUT_USER" >> "$GITHUB_ENV"
@@ -212,8 +202,9 @@ jobs:
       - name: Result
         if: env.ACTION == 'spawn'
         working-directory: tools/Backend/dev
-        # DEVBOX_HOST is how the runner reaches the dev-box (overlay); the URLs
-        # testers open use its office address, DEVBOX_URL_HOST.
+        # DEVBOX_HOST is how the runner reaches the dev-box (overlay). Testers'
+        # URLs (rider, driver, control centre) go through hopper's gateway;
+        # only office_url uses its office address, DEVBOX_URL_HOST.
         run: |
           python3 -m devbox_core result --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE" \
             --devbox "$DEVBOX_NAME" --url-host "${DEVBOX_URL_HOST:-}"
