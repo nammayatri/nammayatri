@@ -64,8 +64,8 @@ getDropSpecialLocation merchantOpCityId dropSpecialLocation = do
 getSearchSources :: Bool -> [DFareProduct.SearchSource]
 getSearchSources isDashboard = [DFareProduct.ALL] <> (if isDashboard then [DFareProduct.DASHBOARD] else [DFareProduct.MOBILE_APP])
 
-getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> LatLong -> Maybe LatLong -> Maybe (Id DSpecialLocation.SpecialLocation) -> Maybe (Id DSpecialLocation.SpecialLocation) -> DTC.TripCategory -> m FareProducts
-getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLong mToLocationLatLong mbFromSpecialLocationId mbToSpecialLocationId tripCategory = do
+getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => Maybe UTCTime -> Id Merchant -> Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> LatLong -> Maybe LatLong -> Maybe (Id DSpecialLocation.SpecialLocation) -> Maybe (Id DSpecialLocation.SpecialLocation) -> DTC.TripCategory -> m FareProducts
+getAllFareProducts mbPricingTime _merchantId merchantOpCityId searchSources fromLocationLatLong mToLocationLatLong mbFromSpecialLocationId mbToSpecialLocationId tripCategory = do
   -- If SpecialLocation IDs provided directly (fixed route search), use them
   case (mbFromSpecialLocationId, mbToSpecialLocationId) of
     (Just fromId, Just toId) ->
@@ -246,7 +246,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
           mapM getBoundedOrDefaultFareProduct fareProducts
 
     getBoundedOrDefaultFareProduct fareProduct = do
-      boundedFareProduct <- getBoundedFareProduct Nothing fareProduct.merchantOperatingCityId searchSources fareProduct.tripCategory fareProduct.vehicleServiceTier fareProduct.area
+      boundedFareProduct <- getBoundedFareProduct mbPricingTime fareProduct.merchantOperatingCityId searchSources fareProduct.tripCategory fareProduct.vehicleServiceTier fareProduct.area
       return $ fromMaybe fareProduct boundedFareProduct
 
 getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => Maybe UTCTime -> Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m (Maybe DFareProduct.FareProduct)
