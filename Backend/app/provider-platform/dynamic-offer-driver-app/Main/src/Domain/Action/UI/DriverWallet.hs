@@ -66,16 +66,21 @@ import Lib.Finance
     markEntriesAsClaimed,
     transfer,
   )
+import Lib.Finance.Account.Interface (AccountInput (..))
+import qualified Lib.Finance.Account.Service as FAccountService
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
+import qualified Lib.Finance.Domain.Types.Transfer as DTransfer
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
+import qualified Lib.Finance.Transfer.Inbound as Inbound
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPayoutRequestExtra
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid (counterpartyFleetOwner)
+import qualified SharedLogic.Finance.Rails as Rails
 import SharedLogic.Finance.Wallet
 import SharedLogic.Finance.WalletPayout (WalletPayoutParams (..), computePayoutFee, ensureInstantPayoutAllowed, ensurePayoutsEnabled, instantPayoutAllowedFor, loadPayoutContext)
 import qualified SharedLogic.Payment as SPayment
@@ -624,7 +629,6 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
         WalletPayoutParams
           { payoutType = PR.INSTANT,
             minimumPayoutAmount = ctx.transporterConfig.driverWalletConfig.minimumWalletPayoutAmount,
-            enforceDailyLimit = True,
             throwOnBelowMinimum = True
           }
   runInstantPayout ctx params
@@ -657,6 +661,7 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
                 _ -> Nothing
           (createOrderResp, returnedOrderId) <- SPayment.createWalletTopupOrder (driverId, mId, mocId0) r.amount mbReuseOrderId
           handleWalletTransaction driverId mId mocId0 r.amount mbExisting returnedOrderId
+          createInboundTopupTransfer driverId mId mocId0 r.amount returnedOrderId
           pure $
             PlanSubscribeRes
               { orderId = returnedOrderId,
@@ -665,6 +670,37 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
         >>= \case
           Right res -> pure res
           Left _ -> throwError WalletTopupLockFailed
+
+    -- One INBOUND Transfer row per payment order: the webhook settles it through the
+    -- kernel's CreditRecipe instead of hand-coding the credit. Idempotent on
+    -- (WalletTopup, orderId), so reused orders don't mint a second row.
+    createInboundTopupTransfer driverId mId mocId0 amount orderId = do
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId0.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId0.getId)
+      ctxIn <- mkDriverWalletFinanceCtx driverId mId mocId0 transporterConfig.currency orderId.getId False
+      walletAccount <-
+        FAccountService.getOrCreateAccount
+          AccountInput
+            { accountType = FAccount.Liability,
+              counterpartyType = Just FAccount.DRIVER,
+              counterpartyId = Just driverId.getId,
+              subLedger = Nothing,
+              currency = transporterConfig.currency,
+              merchantId = mId.getId,
+              merchantOperatingCityId = mocId0.getId
+            }
+          >>= fromEitherM (\e -> InternalError ("Failed to resolve wallet account for topup: " <> show e))
+      void $
+        Inbound.initiateTransferIn
+          Rails.juspayPgInboundRail
+          Inbound.InboundSpec
+            { ctx = ctxIn,
+              amount = amount,
+              referenceType = walletReferenceTopup,
+              referenceId = orderId.getId,
+              accountId = walletAccount.id,
+              metadata = DTransfer.emptyTransferMetadata
+            }
+          >>= fromEitherM (\e -> InternalError ("Failed to record inbound topup transfer: " <> show e))
 
     handleWalletTransaction driverId mId mocId0 amount mbExisting returnedOrderId =
       case mbExisting of
