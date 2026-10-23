@@ -112,6 +112,7 @@ import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import Tools.Error
+import qualified Tools.EventTracking as ET
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
@@ -244,6 +245,7 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     applyDriverOverlayNotification
     applyDriverCoinEvent
     applyCancellationAnalytics
+    applyCancellationTrackingEvent
     applyDriverMoneyConsequence ctx.driver
     applyDriverCancellationRateCount ctx.driver
     applyAutoAcceptCancellationBehaviour
@@ -272,6 +274,11 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
       when (ctx.source == SBCR.ByUser || ctx.source == SBCR.ByDriver) $
         fork "cancellationConsequenceCoinEvent" $
           DC.driverCoinsEvent ctx.ride.driverId Nothing ctx.merchant.id ctx.booking.merchantOperatingCityId (DCT.Cancellation ctx.ride.createdAt ctx.booking.distanceToPickup ctx.decision.disToPickup ctx.decision.cancelledBy (fromMaybe (DTCR.CancellationReasonCode "OTHER") ctx.decision.reasonCode) (CancellationConsequence.driverCoinDeduction =<< row) ((.id.getId) <$> row)) (Just ctx.ride.id.getId) ctx.ride.vehicleVariant (Just ctx.booking.vehicleServiceTier) (Just ctx.booking.configInExperimentVersions) Nothing
+
+    -- external analytics (Breeze etc.): one event per cancelled ride, whoever cancelled
+    applyCancellationTrackingEvent =
+      fork "track driver ride cancelled event" $
+        ET.trackEvent ctx.ride.merchantOperatingCityId $ ET.DriverRideCancelled ctx.ride.driverId.getId ctx.ride.id.getId (show ctx.source)
 
     -- source-based cancellation analytics + operator dashboard counters (moved from the
     -- retired RideCancel tag computation — the fault verdict is the judgment now)

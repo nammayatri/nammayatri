@@ -11,6 +11,8 @@ import qualified Kernel.External.BackgroundVerification.Types as BackgroundVerif
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.ChallanSearch.Interface.Types as ChallanSearchInterface
 import qualified Kernel.External.ChallanSearch.Types as ChallanSearch
+import qualified Kernel.External.EventTracking as EventTracking
+import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingInterface
 import qualified Kernel.External.GSTEInvoice.Interface.Types as GSTEInvoice
 import qualified Kernel.External.GSTEInvoice.Types as GSTEInvoice
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
@@ -155,6 +157,10 @@ getConfigJSON = \case
   Domain.ChallanSearchServiceConfig challanCfg -> case challanCfg of
     ChallanSearchInterface.SignzyChallanSearch cfg -> toJSON cfg
   Domain.FleetEngineServiceConfig cfg -> toJSON cfg
+  Domain.EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
+    EventTrackingInterface.MoengageConfig cfg -> toJSON cfg
+    EventTrackingInterface.ClevertapConfig cfg -> toJSON cfg
+    EventTrackingInterface.FirebaseAnalyticsConfig cfg -> toJSON cfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -251,6 +257,10 @@ getServiceName = \case
   Domain.ChallanSearchServiceConfig challanCfg -> case challanCfg of
     ChallanSearchInterface.SignzyChallanSearch _ -> Domain.ChallanSearchService ChallanSearch.Signzy
   Domain.FleetEngineServiceConfig _ -> Domain.FleetEngineService Domain.GoogleFleetEngine
+  Domain.EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
+    EventTrackingInterface.MoengageConfig _ -> Domain.EventTrackingService EventTracking.Moengage
+    EventTrackingInterface.ClevertapConfig _ -> Domain.EventTrackingService EventTracking.Clevertap
+    EventTrackingInterface.FirebaseAnalyticsConfig _ -> Domain.EventTrackingService EventTracking.FirebaseAnalytics
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
 getPaymentServiceConfigJson = \case
@@ -359,6 +369,9 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.AirportReachargeService paymentServiceName -> Domain.AirportReachargeServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.ChallanSearchService ChallanSearch.Signzy -> Domain.ChallanSearchServiceConfig . ChallanSearchInterface.SignzyChallanSearch <$> eitherValue configJSON
   Domain.FleetEngineService Domain.GoogleFleetEngine -> Domain.FleetEngineServiceConfig <$> eitherValue configJSON
+  Domain.EventTrackingService EventTracking.Moengage -> Domain.EventTrackingServiceConfig . EventTrackingInterface.MoengageConfig <$> eitherValue configJSON
+  Domain.EventTrackingService EventTracking.Clevertap -> Domain.EventTrackingServiceConfig . EventTrackingInterface.ClevertapConfig <$> eitherValue configJSON
+  Domain.EventTrackingService EventTracking.FirebaseAnalytics -> Domain.EventTrackingServiceConfig . EventTrackingInterface.FirebaseAnalyticsConfig <$> eitherValue configJSON
 
 eitherValue :: FromJSON a => A.Value -> Either Text a
 eitherValue value = case A.fromJSON value of
