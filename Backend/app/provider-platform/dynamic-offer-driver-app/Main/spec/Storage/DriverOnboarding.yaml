@@ -1262,6 +1262,7 @@ DriverGstin:
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
+    documentImageId1: SecondaryKey
     gstin: "!SecondaryKey" # forcing to be a secondary key
   queries:
     findById:

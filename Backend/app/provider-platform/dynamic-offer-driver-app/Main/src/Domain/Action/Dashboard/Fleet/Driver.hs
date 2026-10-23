@@ -2801,7 +2801,8 @@ getFleetOrOperatorInfo person = do
           then pure []
           else do
             let operatorIds = map (.operatorId) fleetOperatorAssocs
-            operators <- QPersonExtra.findAllByPersonIds operatorIds
+            -- KV read: findAllByPersonIds reads Postgres only, so a just-created operator would be missing until drained.
+            operators <- QPersonExtra.getDriversByIdIn (Id <$> operatorIds)
             forM fleetOperatorAssocs $ \fleetOperatorAssoc -> do
               operator <- case find (\op -> op.id.getId == fleetOperatorAssoc.operatorId) operators of
                 Just op -> pure op

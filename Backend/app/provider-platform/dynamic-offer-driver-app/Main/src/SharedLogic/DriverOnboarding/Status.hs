@@ -1002,14 +1002,16 @@ botApproveAndReconcile merchantOperatingCity person transporterConfig writeAppro
   fork "botApproveAndReconcile: recompute verified/enabled" $
     void $ runRefreshOnboardingFlagsDriverWithBotApproval (Just person) (Just transporterConfig) True person.id
 
--- BOT review writes. Each takes the entity as the review handler read it, writes under the recompute's lock with
--- the flag writers that stamp the onboarding lists' date, and moves the onboarding counters by the delta the
--- recompute would have, so a write the recompute never sees stays counted.
+-- BOT review writes. Each re-reads the entity under the recompute's lock (a recompute may have changed it since the
+-- review handler read it), writes with the flag writers that stamp the onboarding lists' date, and moves the
+-- onboarding counters by the delta the recompute would have, so a write the recompute never sees stays counted.
 
 -- | BOT phase 1 for a driver: `approved = True`, with the approval notification.
-botApproveDriver :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> DI.DriverInformation -> m ()
-botApproveDriver transporterConfig person driverInfo =
+botApproveDriver :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> m ()
+botApproveDriver transporterConfig person =
   withPersonDocsLock person.id $ do
+    driverInfo <- DIQuery.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+    unless driverInfo.verified $ throwError (InvalidRequest "Driver is not verified")
     DIQuery.updateVerifiedAndApprovedState (cast person.id) driverInfo.verified (Just True)
     adjustDriverOnboardingCounters transporterConfig person driverInfo driverInfo {DI.approved = Just True}
     unless (driverInfo.approved == Just True) $
@@ -1017,24 +1019,30 @@ botApproveDriver transporterConfig person driverInfo =
 
 -- | BOT phase 2 for a driver: `enabled = True` with operator analytics. `disabledReasonFlag` is left to its
 --   owners and no RC is auto-activated.
-botEnableDriver :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> DI.DriverInformation -> m ()
-botEnableDriver transporterConfig person driverInfo =
+botEnableDriver :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> m ()
+botEnableDriver transporterConfig person =
   withPersonDocsLock person.id $ do
+    driverInfo <- DIQuery.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+    unless driverInfo.verified $ throwError (InvalidRequest "Driver is not verified")
+    unless (driverInfo.approved == Just True) $ throwError (InvalidRequest "Driver is not approved")
     Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig person.id True Nothing
     adjustDriverOnboardingCounters transporterConfig person driverInfo driverInfo {DI.enabled = True}
 
 -- | BOT reject for a driver: `verified = False`, `approved = False` (as the old flow), whichever doc was rejected,
 --   so re-approval is needed even when the rejected doc's status doesn't change (e.g. NomineeDetails).
-botRejectDriver :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> DI.DriverInformation -> m ()
-botRejectDriver transporterConfig person driverInfo =
+botRejectDriver :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> m ()
+botRejectDriver transporterConfig person =
   withPersonDocsLock person.id $ do
+    driverInfo <- DIQuery.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
     DIQuery.updateVerifiedAndApprovedState (cast person.id) False (Just False)
     adjustDriverOnboardingCounters transporterConfig person driverInfo driverInfo {DI.verified = False, DI.approved = Just False}
 
 -- | BOT approve for a fleet owner (single phase): `approved = True` and `enabled = True`, with the approval notification.
-botApproveFleetOwner :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> DFOI.FleetOwnerInformation -> m ()
-botApproveFleetOwner transporterConfig person fleetOwnerInfo =
+botApproveFleetOwner :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> m ()
+botApproveFleetOwner transporterConfig person =
   withPersonDocsLock person.id $ do
+    fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+    unless fleetOwnerInfo.verified $ throwError (InvalidRequest "Fleet Owner is not verified")
     QFOI.updateFleetOwnerVerifiedApprovedAndEnabledStatus fleetOwnerInfo.verified (Just True) True person.id
     adjustFleetOnboardingCounters transporterConfig person fleetOwnerInfo fleetOwnerInfo {DFOI.approved = Just True, DFOI.enabled = True}
     unless (fleetOwnerInfo.approved == Just True) $
@@ -1042,16 +1050,19 @@ botApproveFleetOwner transporterConfig person fleetOwnerInfo =
 
 -- | BOT reject for a fleet owner: `verified`, `approved` and `enabled` False (as the old flow), whichever doc was
 --   rejected.
-botRejectFleetOwner :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> DFOI.FleetOwnerInformation -> m ()
-botRejectFleetOwner transporterConfig person fleetOwnerInfo =
+botRejectFleetOwner :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> m ()
+botRejectFleetOwner transporterConfig person =
   withPersonDocsLock person.id $ do
+    fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
     QFOI.updateFleetOwnerVerifiedApprovedAndEnabledStatus False (Just False) False person.id
     adjustFleetOnboardingCounters transporterConfig person fleetOwnerInfo fleetOwnerInfo {DFOI.verified = False, DFOI.approved = Just False, DFOI.enabled = False}
 
 -- | BOT approve for a vehicle: `approved = True`, with the approval notification. No RC auto-activation.
-botApproveVehicle :: OnboardingFlow m r => DTC.TransporterConfig -> RC.VehicleRegistrationCertificate -> m ()
-botApproveVehicle transporterConfig rc =
-  Hedis.withWaitAndLockRedis (mkRCDocsStatusKey rc.id) onboardingLockTTLSeconds onboardingLockRetryMicros $
+botApproveVehicle :: OnboardingFlow m r => DTC.TransporterConfig -> Id RC.VehicleRegistrationCertificate -> m ()
+botApproveVehicle transporterConfig rcId =
+  Hedis.withWaitAndLockRedis (mkRCDocsStatusKey rcId) onboardingLockTTLSeconds onboardingLockRetryMicros $ do
+    rc <- RCQuery.findById rcId >>= fromMaybeM (VehicleNotFound rcId.getId)
+    when (rc.verified /= Just True) $ throwError (InvalidRequest "RC is not verified")
     unless (rc.approved == Just True) $ do
       RCQuery.updateApprovedAndVerifiedById (Just True) rc.verified rc.id
       adjustVehicleOnboardingCounters transporterConfig rc rc {RC.approved = Just True}
@@ -1059,9 +1070,10 @@ botApproveVehicle transporterConfig rc =
       ApprovalComms.notifyVehicleApproved rc registrationNo
 
 -- | BOT reject for a vehicle: `verified` and `approved` False (as the old flow), whichever doc was rejected.
-botRejectVehicle :: OnboardingFlow m r => DTC.TransporterConfig -> RC.VehicleRegistrationCertificate -> m ()
-botRejectVehicle transporterConfig rc =
-  Hedis.withWaitAndLockRedis (mkRCDocsStatusKey rc.id) onboardingLockTTLSeconds onboardingLockRetryMicros $ do
+botRejectVehicle :: OnboardingFlow m r => DTC.TransporterConfig -> Id RC.VehicleRegistrationCertificate -> m ()
+botRejectVehicle transporterConfig rcId =
+  Hedis.withWaitAndLockRedis (mkRCDocsStatusKey rcId) onboardingLockTTLSeconds onboardingLockRetryMicros $ do
+    rc <- RCQuery.findById rcId >>= fromMaybeM (VehicleNotFound rcId.getId)
     RCQuery.updateApprovedAndVerifiedById (Just False) (Just False) rc.id
     adjustVehicleOnboardingCounters transporterConfig rc rc {RC.verified = Just False, RC.approved = Just False}
 

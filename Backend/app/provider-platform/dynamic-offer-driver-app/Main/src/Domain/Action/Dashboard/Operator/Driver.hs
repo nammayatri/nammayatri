@@ -1016,15 +1016,15 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             if driverInfo.approved == Just True
               then do
                 -- Throws (naming the offending docs) if any BotApproval dependency doc isn't VALID.
-                SStatus.botApproveAndReconcile merchantOpCity person transporterConfig (SStatus.botEnableDriver transporterConfig person driverInfo)
+                SStatus.botApproveAndReconcile merchantOpCity person transporterConfig (SStatus.botEnableDriver transporterConfig person)
                 pure (DRR.COMPLETED, Nothing, Nothing)
               else do
-                SStatus.botApproveDriver transporterConfig person driverInfo
+                SStatus.botApproveDriver transporterConfig person
                 pure (DRR.IN_PROGRESS, Nothing, Nothing)
           else do
             SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Reject (SGuard.TargetDriver driverId) $ do
               applyDocRejections req.entityType reqId validatedDocs
-              SStatus.botRejectDriver transporterConfig person driverInfo
+              SStatus.botRejectDriver transporterConfig person
             pure (DRR.REJECTED, Nothing, Just person)
       API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
         let fleetOwnerId = Kernel.Types.Id.Id reqId
@@ -1035,12 +1035,12 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
           then do
             -- Sync dependency-docs check and approved + enabled write; the heavy fleet recompute is forked.
             SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Approve (SGuard.TargetFleetOwner fleetOwnerInfo.fleetOwnerPersonId) $
-              SStatus.botApproveAndReconcile merchantOpCity fleetPerson transporterConfig (SStatus.botApproveFleetOwner transporterConfig fleetPerson fleetOwnerInfo)
+              SStatus.botApproveAndReconcile merchantOpCity fleetPerson transporterConfig (SStatus.botApproveFleetOwner transporterConfig fleetPerson)
             pure (DRR.COMPLETED, Nothing, Nothing)
           else do
             SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Reject (SGuard.TargetFleetOwner fleetOwnerInfo.fleetOwnerPersonId) $ do
               applyDocRejections req.entityType reqId validatedDocs
-              SStatus.botRejectFleetOwner transporterConfig fleetPerson fleetOwnerInfo
+              SStatus.botRejectFleetOwner transporterConfig fleetPerson
             pure (DRR.REJECTED, Nothing, Just fleetPerson)
       API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> do
         let rcId = Kernel.Types.Id.Id reqId
@@ -1048,12 +1048,12 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         when (rcInfo.verified /= Just True) $ throwError (InvalidRequest "RC is not verified")
         if isDocReqEmpty
           then do
-            SStatus.botApproveVehicle transporterConfig rcInfo
+            SStatus.botApproveVehicle transporterConfig rcId
             void $ SStatus.runRefreshOnboardingFlagsVehicleWithBotApproval (Just transporterConfig) True False rcId
             pure (DRR.COMPLETED, rcInfo.unencryptedCertificateNumber, Nothing)
           else do
             applyDocRejections req.entityType reqId validatedDocs
-            SStatus.botRejectVehicle transporterConfig rcInfo
+            SStatus.botRejectVehicle transporterConfig rcId
             mbPersonId <- resolvePersonIdViaRc rcId
             mbPerson <- case mbPersonId of
               Just pId -> QPerson.findById pId
