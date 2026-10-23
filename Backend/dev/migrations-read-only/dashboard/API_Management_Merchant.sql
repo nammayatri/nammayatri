@@ -272,3 +272,9 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.merchant.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CLOUD_CITY_UPDATE' ) ON CONFLICT DO NOTHING;
 -- {"api":"PostMerchantSchedulerRevive","migration":"capability","param":"system-config.scheduler.execute","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.scheduler.execute', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SCHEDULER_REVIVE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetMerchantToll","migration":"capability","param":"city-config.geo.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-config.geo.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_TOLL' ) ON CONFLICT DO NOTHING;

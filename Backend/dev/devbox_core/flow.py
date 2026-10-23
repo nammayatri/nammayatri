@@ -21,28 +21,47 @@ def _has_frontdesk(host: str) -> bool:
     return ssh.tcp_open(host, stack.FRONTDESK_PORT)
 
 
+def _not_public(devboxes: str) -> str:
+    return (f"public front desk (:{stack.PUBLIC_PORT}) not live in hopper on {devboxes}, so "
+            f"testers' phones cannot reach it — is hopper-agent running there, and was "
+            f"nix-the-builder's front desk setup re-run?")
+
+
+def _hopper_name(t: ssh.Target) -> str:
+    """The devbox's hostname — the name hopper (and the fleet) know it by."""
+    return ssh.run(t, "hostname").stdout.strip()
+
+
 def pick_target(user: str | None, host: str | None,
                 key: str | None) -> tuple[ssh.Target, str, str]:
     """The devbox to use: the given host, else the least-loaded reachable one
-    that has a front desk. Returns (target, devbox name, url host): the target
-    is how we reach it (the overlay address when it answers), the url host is
-    its office address, which testers' phones can open."""
+    that has a front desk and is published to hopper. Returns (target, devbox
+    name, url host): the target is how we reach it (the overlay address when it
+    answers), the devbox name is the one hopper's gateway URLs use, the url host
+    is its office address, for the office-only URLs."""
     if host:
         if not _has_frontdesk(host):
             raise RuntimeError(f"{host} has no front desk on :{stack.FRONTDESK_PORT} "
                                f"(Caddy + devbox-frontdesk-sync), so workspace URLs cannot answer")
-        return ssh.Target(user or "", host, 22, key or ssh.find_key()), host, host
+        t = ssh.Target(user or "", host, 22, key or ssh.find_key())
+        devbox = _hopper_name(t) or host
+        if not stack.is_public(devbox):
+            raise RuntimeError(_not_public(devbox))
+        return t, devbox, host
     base_host, base_port = fleet.base_api()
     res = fleet.fetch_machines(base_host, base_port)
     if res.get("error"):
         raise RuntimeError(res["error"])
     boxes = [m for m in fleet.devboxes(res.get("machines", []))
              if m.get("bestIp") and _has_frontdesk(m["bestIp"])]
-    m = fleet.pick(boxes)
-    if m is None:
+    if not boxes:
         raise RuntimeError(f"no reachable dev-box with a front desk on :{stack.FRONTDESK_PORT}")
+    public = [m for m in boxes if stack.is_public(m.get("name", ""))]
+    m = fleet.pick(public)
+    if m is None:
+        raise RuntimeError(_not_public(", ".join(b.get("name", b["bestIp"]) for b in boxes)))
     return (ssh.Target(m.get("user") or "", m["bestIp"], 22, key or ssh.find_key()),
-            m.get("name", m["bestIp"]), m.get("localIp") or m["bestIp"])
+            m["name"], m.get("localIp") or m["bestIp"])
 
 
 def _cc_url(c: dict, url_host: str) -> str:
@@ -55,21 +74,25 @@ def result_fields(t: ssh.Target, name: str, devbox: str = "", url_host: str = ""
     Needs nothing from earlier steps, so a workflow can call it last. Raises
     RuntimeError when the devbox cannot be reached or the workspace is not there.
 
-    "host" is how we reach the devbox (Stop uses it again); the URLs use
-    url_host (default: the same), the address testers open them on."""
+    "host" is how we reach the devbox (Stop uses it again). backend_url and the
+    rider/driver URLs go through hopper's gateway, so testers open them on any
+    network; office_url and cc_url use url_host (default: the same as host)."""
     if name not in (workspace.read_registry(t).get("users") or {}):
         raise RuntimeError(f"no workspace {name!r} on {t.host}")
     url_host = url_host or t.host
+    devbox = devbox or _hopper_name(t) or t.host
     wdir = workspace.workspace_dir(name)
-    ws = f"http://{t.host}:{stack.FRONTDESK_PORT}/{name}"
-    held = (data.ctx(ws, "/api/config-sync/status", timeout=5).get("last_synced") or {})
+    held = (data.ctx(stack.office_base(t.host, name), "/api/config-sync/status",
+                     timeout=5).get("last_synced") or {})
     c = cc.status(t, wdir)
     commit = ssh.run(t, f"cat {shlex.quote(wdir)}/Backend/.ci-cache-sha 2>/dev/null").stdout.strip()
-    rider, driver = stack.ready_urls(url_host, name)
+    public = stack.public_base(devbox, name)
+    rider, driver = stack.ready_urls(public)
     return {
-        "devbox": devbox or t.host, "host": t.host, "user": t.user, "workspace": name,
-        "backend_url": f"http://{url_host}:{stack.FRONTDESK_PORT}/{name}",
+        "devbox": devbox, "host": t.host, "user": t.user, "workspace": name,
+        "backend_url": public,
         "rider_url": rider, "driver_url": driver,
+        "office_url": stack.office_base(url_host, name),
         "cc_url": _cc_url(c, url_host),
         "data": f"{held.get('from')} {held.get('version')}" if held.get("from") else "",
         "cache_commit": commit,
@@ -127,8 +150,7 @@ def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
                 if not pick:
                     raise RuntimeError(f"no usable {source} version published")
                 version = f"v{pick['version']}"
-            ws = f"http://{t.host}:{stack.FRONTDESK_PORT}/{name}"
-            data.sync_and_wait(ws, source, version)
+            data.sync_and_wait(stack.office_base(t.host, name), source, version)
             data_label = f"{source} {version}"
 
     cc_url = ""
@@ -142,11 +164,13 @@ def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
         else:
             cc_url = _cc_url(cc.wait_running(t, wdir, timeout=CC_READY_TIMEOUT), url_host)
 
-    rider, driver = stack.ready_urls(url_host, name)
+    public = stack.public_base(devbox, name)
+    rider, driver = stack.ready_urls(public)
     fields = {
         "devbox": devbox, "host": t.host, "user": t.user, "workspace": name,
-        "backend_url": f"http://{url_host}:{stack.FRONTDESK_PORT}/{name}",
+        "backend_url": public,
         "rider_url": rider, "driver_url": driver,
+        "office_url": stack.office_base(url_host, name),
         "cc_url": cc_url, "data": data_label, "cache_commit": synced.get("cacheCommit", ""),
     }
     output.stage("ready", "done")

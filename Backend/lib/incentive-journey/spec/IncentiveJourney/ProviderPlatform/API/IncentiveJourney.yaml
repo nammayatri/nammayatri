@@ -329,6 +329,7 @@ types:
     - driverId: Id Driver
     - journeyId: Id IncentiveJourney
     - journeyName: Text
+    - cohortJourneyMappingId: Maybe (Id CohortJourneyMapping)
     - milestoneId: Id IncentiveJourneyMilestone
     - milestoneName: Maybe Text
     - periodKey: Text
@@ -365,6 +366,7 @@ types:
   WaiveIncentiveJourneyMilestoneReq:
     - driverId: Id Driver
     - journeyId: Id IncentiveJourney
+    - cohortJourneyMappingId: Id CohortJourneyMapping
     - milestoneId: Id IncentiveJourneyMilestone
     - periodKey: Text
     - derive: "'HideSecrets"

@@ -107,10 +107,11 @@ waiveRiderMilestone ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   DIJ.IncentiveJourney ->
+  Id DCJM.CohortJourneyMapping ->
   Id DIJM.IncentiveJourneyMilestone ->
   Text ->
   m ()
-waiveRiderMilestone personId merchantId merchantOpCityId journey milestoneId periodKey =
+waiveRiderMilestone personId merchantId merchantOpCityId journey cohortJourneyMappingId milestoneId periodKey =
   void $
     IJ.waiveMilestoneForPeriod
       mkRiderHandle
@@ -119,6 +120,7 @@ waiveRiderMilestone personId merchantId merchantOpCityId journey milestoneId per
       (cast merchantOpCityId)
       Nothing
       journey
+      cohortJourneyMappingId
       milestoneId
       periodKey
 

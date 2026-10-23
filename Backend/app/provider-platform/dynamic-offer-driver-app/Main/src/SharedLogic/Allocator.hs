@@ -84,6 +84,7 @@ data AllocatorJobType
   | DriverReferralPayout
   | ScheduledRideAssignedOnUpdate
   | CheckDriverPickupProgress
+  | CheckBetterDriverSearchProximity
   | CheckExotelCallStatusAndNotifyBAP
   | Daily
   | Weekly
@@ -167,6 +168,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SDriverReferralPayout jobData = AnyJobInfo <$> restoreJobInfo SDriverReferralPayout jobData
   restoreAnyJobInfo SScheduledRideAssignedOnUpdate jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideAssignedOnUpdate jobData
   restoreAnyJobInfo SCheckDriverPickupProgress jobData = AnyJobInfo <$> restoreJobInfo SCheckDriverPickupProgress jobData
+  restoreAnyJobInfo SCheckBetterDriverSearchProximity jobData = AnyJobInfo <$> restoreJobInfo SCheckBetterDriverSearchProximity jobData
   restoreAnyJobInfo SCheckExotelCallStatusAndNotifyBAP jobData = AnyJobInfo <$> restoreJobInfo SCheckExotelCallStatusAndNotifyBAP jobData
   restoreAnyJobInfo SDaily jobData = AnyJobInfo <$> restoreJobInfo SDaily jobData
   restoreAnyJobInfo SWeekly jobData = AnyJobInfo <$> restoreJobInfo SWeekly jobData
@@ -549,6 +551,20 @@ data CheckDriverPickupProgressJobData = CheckDriverPickupProgressJobData
 instance JobInfoProcessor 'CheckDriverPickupProgress
 
 type instance JobContent 'CheckDriverPickupProgress = CheckDriverPickupProgressJobData
+
+-- | Ticks while a stand-by better-driver search is active for this booking.
+data CheckBetterDriverSearchProximityJobData = CheckBetterDriverSearchProximityJobData
+  { searchTryId :: Id DST.SearchTry,
+    bookingId :: Id DB.Booking,
+    rideId :: Id SRide.Ride,
+    driverId :: Id DP.Person,
+    merchantId :: Id DM.Merchant
+  }
+  deriving (Generic, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CheckBetterDriverSearchProximity
+
+type instance JobContent 'CheckBetterDriverSearchProximity = CheckBetterDriverSearchProximityJobData
 
 data CheckExotelCallStatusAndNotifyBAPJobData = CheckExotelCallStatusAndNotifyBAPJobData
   { rideId :: Id DRide.Ride,

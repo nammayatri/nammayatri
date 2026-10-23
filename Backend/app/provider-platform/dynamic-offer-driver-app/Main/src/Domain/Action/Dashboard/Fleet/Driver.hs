@@ -25,6 +25,8 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetCashRideUpdate,
     getDriverFleetConfig,
     postDriverFleetConfigUpdate,
+    getDriverFleetDriverAutoAssign,
+    postDriverFleetDriverAutoAssign,
     postDriverFleetRemoveVehicle,
     postDriverFleetRemoveDriver,
     getDriverFleetTotalEarning,
@@ -175,6 +177,7 @@ import qualified Domain.Types.TripTransaction as DTT
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.VehicleRouteMapping as DVRM
+import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import EulerHS.Prelude (whenNothing_, (<|>))
@@ -202,6 +205,7 @@ import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
@@ -220,9 +224,11 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Fleet (getFleetOwnerId, getFleetOwnerIds, getFleetOwnersInfoMerchantBased)
+import qualified SharedLogic.FleetDriverSettings as FDS
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
+import qualified SharedLogic.VehicleServiceTier as SVST
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.DashboardAlert ()
 import Storage.Beam.SystemConfigs ()
@@ -3020,6 +3026,7 @@ linkExistingDriverToFleet merchant merchantOpCityId transporterConfig fleetOwner
       DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
     assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing DomainRC.defaultAssociationEnd (Just person.merchantId) (Just person.merchantOperatingCityId)
     QFDV.create assoc
+    fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver person.id merchantOpCityId
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById person.id
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig
@@ -3973,7 +3980,8 @@ fetchOrCreatePerson moc req_ = do
             registrationLon = Nothing,
             otpChannel = Nothing,
             password = Nothing,
-            employeeId = Nothing
+            employeeId = Nothing,
+            isOperatorReq = Nothing
           }
   mobileNumberHash <- getDbHash req_.driverPhoneNumber
   QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash moc.merchantId DP.DRIVER
@@ -4747,6 +4755,7 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
         QFDV.approveFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
         when (merchant.overwriteAssociation == Just True) $ do
           DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig driverId
+        fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver driverId merchantOpCityId
         when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $
           QDBA.deleteById driverId
         Analytics.handleDriverAnalyticsAndFlowStatus
@@ -4808,6 +4817,7 @@ postDriverFleetDriverChangeFleetOwner merchantShortId opCity driverId req = do
     FDV.createFleetDriverAssociationIfNotExists personId newFleetOwner.id Nothing (fromMaybe DVC.CAR driverInfo.onboardingVehicleCategory) linkAsActive req.reason (Just merchant.id) (Just moc.id) $
       when (linkAsActive && transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $
         Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just newFleetOwner.id.getId) personId
+    when linkAsActive $ fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver personId moc.id
   fork "Fleet owner change notification" $
     SOnboardingComms.notifyOnFleetOwnerChange moc.id person newFleetOwner mbOldFleetOwner
   pure Success
@@ -5632,3 +5642,62 @@ validatePoolingPrioritySpecialLocations merchantOpCityId priority = do
   where
     areaSpecialLocationId area = SL.pickupSpecialZoneIdFromArea area <|> SL.dropSpecialZoneIdFromArea area
     inCity = maybe False (\loc -> ((.getId) <$> loc.merchantOperatingCityId) == Just merchantOpCityId.getId)
+
+-- | The fleet's driver and their vehicle; per-driver auto-assign needs the vehicle, since it applies to that vehicle's tiers.
+getFleetAutoAssignDriver :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Maybe Text -> Flow (Id DMOC.MerchantOperatingCity, DP.Person, DP.Person, [DVST.VehicleServiceTier])
+getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId = do
+  (merchant, merchantOpCityId, fleetOwner) <- getFleetConfigOwner merchantShortId opCity requestorId mbFleetOwnerId
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCityId) $
+    throwError (PersonDoesNotExist personId.getId)
+  validateFleetDriverAssociation fleetOwner.id.getId personId
+  cityTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+  pure (merchantOpCityId, fleetOwner, driver, cityTiers)
+
+getDriverFleetDriverAutoAssign ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Id Common.Driver ->
+  Maybe Text ->
+  Flow Common.DriverAutoAssignStatusRes
+getDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFleetOwnerId = do
+  (merchantOpCityId, fleetOwner, driver, cityTiers) <- getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId
+  vehicle <- QVehicle.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
+  mbAutoAssign <- QFDAExtra.getFleetAutoAssignConfig fleetOwner.id.getId merchantOpCityId
+  now <- getCurrentTime
+  let tags = Yudhishthira.filterExpiredTags' now (fromMaybe [] driver.driverTag)
+      eligibleTiers = FDS.vehicleAutoAcceptTiers cityTiers vehicle
+      enabledTiers = [tier | tier <- eligibleTiers, tier `elem` fromMaybe [] vehicle.selectedAutoAcceptTiers, show tier `elem` FDS.autoAssignedTiers tags]
+  pure $
+    Common.DriverAutoAssignStatusRes
+      { enabled = not (null enabledTiers),
+        enabledTiers,
+        eligibleTiers,
+        autoAcceptOnlyTiers = [tier.serviceTierType | tier <- cityTiers, tier.serviceTierType `elem` eligibleTiers, maybe False ((== DC.AutoAcceptOnly) . (.mode)) tier.autoAcceptanceConfig],
+        hasAutoAssignTag = not (null (FDS.autoAssignedTiers tags)),
+        allowDriverToToggle = maybe True (.allowDriverToToggle) mbAutoAssign
+      }
+
+postDriverFleetDriverAutoAssign ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Id Common.Driver ->
+  Maybe Text ->
+  Common.FleetDriverAutoAssignReq ->
+  Flow APISuccess
+postDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFleetOwnerId req = do
+  (_, _, validatedDriver, cityTiers) <- getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId
+  let personId = validatedDriver.id
+  Redis.withWaitOnLockRedisWithExpiry (SVST.selectedServiceTiersLockKey personId) 5 10 $ do
+    driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+    vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
+    let tiers = FDS.vehicleAutoAcceptTiers cityTiers vehicle
+    if req.enable
+      then do
+        when (null tiers) $ throwError NoAutoAcceptTierForVehicle
+        FDS.applyFleetSettings True cityTiers driver vehicle
+      else FDS.removeAutoAssign tiers driver vehicle
+  pure Success

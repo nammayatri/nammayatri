@@ -78,7 +78,8 @@ buildOperatorAuthReq merchantId opCity Common.OperatorRegisterReq {..} =
       registrationLon = Nothing,
       otpChannel = Nothing,
       password = Nothing,
-      employeeId = Nothing
+      employeeId = Nothing,
+      isOperatorReq = Nothing
     }
 
 postRegistrationDashboardRegister ::

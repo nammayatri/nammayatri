@@ -57,6 +57,8 @@ data Handle m r = Handle
     cancelSearchTry :: m (),
     cancelBookingIfApplies :: m (),
     isScheduledBooking :: Bool,
+    -- | False for a stand-by better-driver search: the rider never knew it ran.
+    notifyBapOnExpiry :: Bool,
     mbTopUpSize :: Maybe Int,
     popTopUpDrivers :: Int -> m [DriverPoolWithActualDistResult],
     markDriversAttempted :: [DriverPoolWithActualDistResult] -> m ()
@@ -110,9 +112,10 @@ processBatchChainDispatch Handle {..} goHomeCfg transactionId = do
         else do
           metrics.incrementFailedTaskCounter
           logInfo "No driver accepted"
-          appBackendBapInternal <- asks (.appBackendBapInternal)
-          let request = CallBAPInternal.RideSearchExpiredReq {transactionId = transactionId}
-          void $ CallBAPInternal.rideSearchExpired appBackendBapInternal.apiKey appBackendBapInternal.url request
+          when notifyBapOnExpiry $ do
+            appBackendBapInternal <- asks (.appBackendBapInternal)
+            let request = CallBAPInternal.RideSearchExpiredReq {transactionId = transactionId}
+            void $ CallBAPInternal.rideSearchExpired appBackendBapInternal.apiKey appBackendBapInternal.url request
           cancelSearchTry
           cancelBookingIfApplies
           return (Complete, NormalPool, Nothing)

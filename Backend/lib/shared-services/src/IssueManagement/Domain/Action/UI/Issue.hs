@@ -783,6 +783,25 @@ createIssueReportWithContext creationContext args@(personId, _merchantId) mbLang
           awaitDedupedResponse dedupKey
         Nothing -> createIssueReportWithContext creationContext args mbLanguage req0 issueHandle identifier becknIssueId
 
+botTranscriptHistory :: UTCTime -> Text -> Maybe ([(Chat, Either Text Text)], Maybe Text)
+botTranscriptHistory now description
+  | null history = Nothing
+  | otherwise = Just (history, listToMaybe notes)
+  where
+    ls = filter (not . T.null) (map T.strip (T.lines description))
+    entries = reverse (foldl' addLine [] ls)
+    notes = [t | (Nothing, t) <- entries]
+    history =
+      [ (Chat chatType ("xyne-transcript-" <> show i) (addUTCTime (fromIntegral i / 1000) now), if chatType == IssueMessage then Left t else Right t)
+        | (i, (Just chatType, t)) <- zip [0 :: Int ..] entries
+      ]
+    addLine acc l
+      | Just t <- T.stripPrefix "Bot:" l = (Just IssueMessage, T.strip t) : acc
+      | Just t <- T.stripPrefix "Customer note:" l = (Nothing, T.strip t) : acc
+      | Just t <- T.stripPrefix "Customer:" l = (Just IssueOption, T.strip t) : acc
+      | (c, prev) : rest <- acc = (c, prev <> "\n" <> l) : rest
+      | otherwise = acc
+
 createIssueReportImpl ::
   ( EsqDBReplicaFlow m r,
     EncFlow m r,
@@ -828,7 +847,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
   issueConfig <- issueHandle.findIssueConfig mocId identifier >>= fromMaybeM (IssueConfigNotFound mocId.getId)
   -- FEEDBACK_TICKET: stored as CLOSED; the desk ticket is still raised so the
   -- feedback is visible to agents, then closed right away (see below).
-  let isFeedbackFlow = fromMaybe False isFeedback
+  let isFeedbackFlow = fromMaybe False isFeedback || botLabel == Just "CLOSED"
       shouldCreateTicket = not isFeedbackFlow && (isNothing createTicket || fromJust createTicket)
       -- auto reply: the submitted-from message's onSubmitReplyMsgs, else IssueConfig (tickets only)
       submitLabels
@@ -846,7 +865,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
       -- prefer the labelled message the customer was actually shown (present in chats)
       messageOverride = (.onSubmitReplyMsgs) =<< (listToMaybe [m | m <- labelled, m.id.getId `elem` shownIds] <|> listToMaybe labelled)
       -- label of the last labelled message in the chat; stored as is so new labels need no schema change
-      submitLabel = listToMaybe [l | shownId <- reverse shownIds, m <- submitMessages, m.id.getId == shownId, Just l <- [m.label]] <|> listToMaybe submitLabels
+      submitLabel = botLabel <|> listToMaybe [l | shownId <- reverse shownIds, m <- submitMessages, m.id.getId == shownId, Just l <- [m.label]] <|> listToMaybe submitLabels
       onCreateIssueMsgs
         | isFeedbackFlow = fromMaybe [] messageOverride
         | shouldCreateTicket = fromMaybe issueConfig.onCreateIssueMsgs messageOverride
@@ -882,7 +901,10 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
     -- before submit), it would land ahead of the earlier bot/option history
     -- once that history gets replayed afterward, inverting the real order.
 
-    resolvedHistory <- resolveHistoricalChats chats_ identifier language issueConfig mbRideInfoRes
+    resolvedChats <- resolveHistoricalChats chats_ identifier language issueConfig mbRideInfoRes
+    let (resolvedHistory, noteForThread) = case (resolvedChats, botTranscriptHistory now description) of
+          ([], Just (transcriptLines, mbNote)) -> (transcriptLines, fromMaybe "" mbNote)
+          _ -> (resolvedChats, description)
     -- xyneTicketBody/xyneSenderName are Xyne-ONLY overrides for the first
     -- message on the thread — issueDescription/name in buildTicket stay the
     -- real customer description/name unconditionally, because those are
@@ -895,7 +917,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
           [] -> (Nothing, Nothing, xyneDescriptionExternalId issueReport.id, [])
           ((chat, Left botMessage) : rest) -> (Just botMessage, Just "Auto Reply", xyneChatExternalId issueReport.id chat, rest)
           ((chat, Right userText) : rest) -> (Just userText, Nothing, xyneChatExternalId issueReport.id chat, rest)
-    ticket <- buildTicket issueReport categoryText mbCategory mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles mbTicketBody mbSenderName ticketExternalId
+    ticket <- buildTicket issueReport categoryText mbCategory mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles mbTicketBody mbSenderName ticketExternalId botLabel
     ticketResponse <- withTryCatch "createTicket:issueReport" (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right (primaryResp, additionalId) -> do
@@ -911,8 +933,8 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
         -- (the first historical entry took that slot instead) — forward it now,
         -- as a normal customer message, so it lands after the history it
         -- chronologically follows rather than ahead of it.
-        unless (null resolvedHistory) $
-          forwardChatToTicketService issueReportWithTicket identifier issueHandle description [] (Just $ xyneDescriptionExternalId issueReport.id)
+        unless (null resolvedHistory || T.null noteForThread) $
+          forwardChatToTicketService issueReportWithTicket identifier issueHandle noteForThread [] (Just $ xyneDescriptionExternalId issueReport.id)
         -- Forward the auto-generated onCreateIssue replies to the ticket service so
         -- the Xyne agent sees the bot's opening messages too. Runs inside the
         -- shouldCreateTicket guard, after the ticket exists, so there is a thread to
@@ -1039,8 +1061,8 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
               <> show moCity.city
               <> "\n"
 
-    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> Text -> Maybe D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> UTCTime -> ServiceHandle m -> [D.MediaFile] -> Maybe Text -> Maybe Text -> Text -> m TIT.CreateTicketReq
-    buildTicket issue categoryText mbCategory mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle riderUploadedMediaFiles mbTicketBody mbSenderName ticketExternalId = do
+    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> Text -> Maybe D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> UTCTime -> ServiceHandle m -> [D.MediaFile] -> Maybe Text -> Maybe Text -> Text -> Maybe Text -> m TIT.CreateTicketReq
+    buildTicket issue categoryText mbCategory mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle riderUploadedMediaFiles mbTicketBody mbSenderName ticketExternalId mbBotLabel = do
       info <- buildRideInfo moCity now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle
       phoneNumber <- mapM decrypt person.mobileNumber
       let merchantShortId = moCity.merchantShortId.getShortId
@@ -1073,7 +1095,8 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
             becknIssueId,
             ticketContext = Just TIT.IssueTicket,
             xyneChannelId = mbCategory >>= (.xyneChannelId),
-            xyneExternalId = Just ticketExternalId
+            xyneExternalId = Just ticketExternalId,
+            xyneBotLabel = mbBotLabel
           }
 
     buildRideInfo :: (BeamFlow m r, EncFlow m r) => MerchantOperatingCity -> UTCTime -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> ServiceHandle m -> m TIT.RideInfo

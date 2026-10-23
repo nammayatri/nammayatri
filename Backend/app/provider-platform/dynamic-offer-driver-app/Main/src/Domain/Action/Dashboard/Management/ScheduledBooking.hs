@@ -671,7 +671,8 @@ getOrCreateScheduledBookingIssueReport booking =
               isFeedback = Nothing,
               ticketBookingId = Nothing,
               categoryName = Nothing,
-              subCategoryName = Nothing
+              subCategoryName = Nothing,
+              botLabel = Nothing
             }
           AUI.driverIssueHandle
           Issue.DRIVER

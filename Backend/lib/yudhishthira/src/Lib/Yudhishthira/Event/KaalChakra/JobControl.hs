@@ -121,7 +121,8 @@ data ChakraJobRef t = ChakraJobRef
     refPhase :: DKCJR.KaalChakraJobRunPhase,
     refStatus :: JobStatus,
     refScheduledAt :: UTCTime,
-    refMerchantId :: Maybe Text
+    refMerchantId :: Maybe Text,
+    refParentJobId :: Id AnyJob
   }
 
 -- Wrong city and non-chakra jobs both read as "not found", so a caller cannot
@@ -151,7 +152,8 @@ findChakraJobForCity merchantOperatingCityId jobId = do
                   refPhase = phase,
                   refStatus = job.status,
                   refScheduledAt = job.scheduledAt,
-                  refMerchantId = getId <$> jobMerchantId
+                  refMerchantId = getId <$> jobMerchantId,
+                  refParentJobId = job.parentJobId
                 }
         _ -> Left "Job not found"
 
@@ -161,6 +163,16 @@ runEventId :: ChakraJobRef t -> [DKCJR.KaalChakraJobRun] -> Maybe (Id LYT.Event)
 runEventId ref startedRows = case ref.refPhase of
   DKCJR.UpdateTags -> (.eventId) <$> (decodeFromText ref.refJobContent :: Maybe LYT.UpdateKaalBasedTagsData)
   DKCJR.FetchUserData -> (.eventId) <$> listToMaybe startedRows
+
+-- A revived copy gets a new id but keeps the original job as parentJobId, and the run's history rows belong to that original job
+findRunRowsForJob :: BeamFlow m r => Id AnyJob -> ChakraJobRef t -> m [DKCJR.KaalChakraJobRun]
+findRunRowsForJob jobId ref = do
+  ownRows <- QKCJR.findAllBySchedulerJobId jobId.getId
+  parentRows <-
+    if ref.refParentJobId == jobId
+      then pure []
+      else QKCJR.findAllBySchedulerJobId ref.refParentJobId.getId
+  pure (ownRows <> parentRows)
 
 rescheduleChakraJob ::
   forall t m r.
@@ -211,7 +223,7 @@ cancelChakraJob callerMerchantId merchantOperatingCityId jobId =
       | otherwise -> do
         QDBJ.markAsCancelled jobId
         void $ RQ.removeQueuedCopies jobId ref.refScheduledAt
-        startedRows <- QKCJR.findAllBySchedulerJobId jobId.getId
+        startedRows <- findRunRowsForJob jobId ref
         let mbEventId = runEventId ref startedRows
             jobMerchantId = maybe callerMerchantId Id ref.refMerchantId
         -- A fetch job that never ran owns no run state yet; clearing here could
@@ -236,7 +248,7 @@ deleteChakraJob callerMerchantId merchantOperatingCityId jobId =
     Right ref
       | ref.refStatus /= Pending -> pure $ Left "Only a pending job can be deleted"
       | otherwise -> do
-        startedRows <- QKCJR.findAllBySchedulerJobId jobId.getId
+        startedRows <- findRunRowsForJob jobId ref
         if not (null startedRows)
           then pure $ Left "Job has already started; cancel it instead"
           else do

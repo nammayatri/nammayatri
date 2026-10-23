@@ -541,6 +541,28 @@ instance IsHTTPError RideCancellationError where
 
 instance IsAPIError RideCancellationError
 
+data FleetDriverSettingsError
+  = AreaPreferenceDisabledByFleet
+  | NoAutoAcceptTierForVehicle
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FleetDriverSettingsError
+
+instance IsBaseError FleetDriverSettingsError where
+  toMessage = \case
+    AreaPreferenceDisabledByFleet -> Just "Area preference is disabled by your fleet"
+    NoAutoAcceptTierForVehicle -> Just "The driver's vehicle serves no tier with auto-accept in this city"
+
+instance IsHTTPError FleetDriverSettingsError where
+  toErrorCode = \case
+    AreaPreferenceDisabledByFleet -> "AREA_PREFERENCE_DISABLED_BY_FLEET"
+    NoAutoAcceptTierForVehicle -> "NO_AUTO_ACCEPT_TIER_FOR_VEHICLE"
+  toHttpCode = \case
+    AreaPreferenceDisabledByFleet -> E400
+    NoAutoAcceptTierForVehicle -> E400
+
+instance IsAPIError FleetDriverSettingsError
+
 data FareParametersError
   = FareParametersNotFound Text
   | FareParametersDoNotExist Text
@@ -2522,3 +2544,71 @@ instance IsHTTPError RideEvidenceError where
     RideEvidenceLimitReached -> E400
 
 instance IsAPIError RideEvidenceError
+
+data DepotManagerError
+  = DepotManagerNotFound Text
+  | DepotFleetInfoNotFound Text
+  | DepotManagerDoesNotHaveAccessToFleet Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DepotManagerError
+
+instance IsBaseError DepotManagerError where
+  toMessage = \case
+    DepotManagerNotFound depotManagerId -> Just $ "Depot manager with id: " <> depotManagerId <> " not found."
+    DepotManagerDoesNotHaveAccessToFleet depotManagerId fleetId -> Just $ "Depot manager with id: " <> depotManagerId <> " does not have access to fleet with id: " <> fleetId <> "."
+    DepotFleetInfoNotFound fleetId -> Just $ "Depot fleet info with id: " <> fleetId <> " not found."
+
+instance IsHTTPError DepotManagerError where
+  toErrorCode = \case
+    DepotManagerNotFound _ -> "DEPOT_MANAGER_NOT_FOUND"
+    DepotManagerDoesNotHaveAccessToFleet _ _ -> "DEPOT_MANAGER_DOES_NOT_HAVE_ACCESS_TO_FLEET"
+    DepotFleetInfoNotFound _ -> "DEPOT_FLEET_INFO_NOT_FOUND"
+  toHttpCode = \case
+    DepotManagerNotFound _ -> E400
+    DepotManagerDoesNotHaveAccessToFleet _ _ -> E403
+    DepotFleetInfoNotFound _ -> E400
+
+instance IsAPIError DepotManagerError
+
+data PublicTransportBlockError
+  = BusBlocked Text
+  | BusBlockNotAllowed Text
+  | BusBlockLimitExceeded Int
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''PublicTransportBlockError
+
+instance IsBaseError PublicTransportBlockError where
+  toMessage = \case
+    BusBlocked vehicleNumber -> Just $ "Bus with vehicle number " <> vehicleNumber <> " is already blocked."
+    BusBlockNotAllowed personId -> Just $ "Person " <> personId <> " is not allowed to block/unblock buses."
+    BusBlockLimitExceeded maxLimit -> Just $ "Bus block limit exceeded (max " <> show maxLimit <> ")."
+
+instance IsHTTPError PublicTransportBlockError where
+  toErrorCode = \case
+    BusBlocked _ -> "BUS_BLOCKED"
+    BusBlockNotAllowed _ -> "BUS_BLOCK_NOT_ALLOWED"
+    BusBlockLimitExceeded _ -> "BUS_BLOCK_LIMIT_EXCEEDED"
+  toHttpCode = \case
+    BusBlocked _ -> E403
+    BusBlockNotAllowed _ -> E403
+    BusBlockLimitExceeded _ -> E403
+
+instance IsAPIError PublicTransportBlockError
+
+-- Passes upstream rider-app status + APIError envelope through unchanged.
+data BapProxyError = BapProxyResponseError HttpCode Text (Maybe Text) Value
+  deriving (Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''BapProxyError
+
+instance IsBaseError BapProxyError where
+  toMessage (BapProxyResponseError _ _ msg _) = msg
+
+instance IsHTTPError BapProxyError where
+  toErrorCode (BapProxyResponseError _ code _ _) = code
+  toHttpCode (BapProxyResponseError code _ _ _) = code
+
+instance IsAPIError BapProxyError where
+  toPayload (BapProxyResponseError _ _ _ payload) = payload

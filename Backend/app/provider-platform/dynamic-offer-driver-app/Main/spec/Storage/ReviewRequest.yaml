@@ -61,6 +61,7 @@ ReviewRequest:
 
   constraints:
     id: PrimaryKey
+    entityId: "!SecondaryKey" # forcing to be a secondary key
 
   extraOperations:
     - EXTRA_QUERY_FILE

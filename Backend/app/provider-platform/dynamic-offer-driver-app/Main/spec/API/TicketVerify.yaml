@@ -1,0 +1,34 @@
+imports:
+  Text: Data.Text
+  City: Kernel.Types.Beckn.Context
+  Provider: Domain.Types.MultimodalTicketVerify
+  UnifiedTicketQRV2: Domain.Types.MultimodalTicketVerify
+  MultimodalTicketVerifyResp: Domain.Types.MultimodalTicketVerify
+
+module: TicketVerify
+
+types:
+  IntegratedQRReq:
+    provider: Provider
+    integratedQR: UnifiedTicketQRV2
+    derive: "Show"
+
+  SingleQRReq:
+    provider: Provider
+    tickets: "[Text]"
+    derive: "Show"
+
+  MultimodalTicketVerifyReq:
+    enum: "IntegratedQR IntegratedQRReq, SingleQR SingleQRReq"
+    derive': "Show, Generic, ToJSON, FromJSON, ToSchema"
+
+apis:
+  - POST:
+      endpoint: /multimodal/ticket/verify
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        city: City
+      request:
+        type: MultimodalTicketVerifyReq
+      response:
+        type: "Domain.Types.MultimodalTicketVerify.MultimodalTicketVerifyResp"

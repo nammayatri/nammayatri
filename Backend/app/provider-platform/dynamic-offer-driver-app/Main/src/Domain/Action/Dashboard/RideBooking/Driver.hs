@@ -89,6 +89,7 @@ import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.Finance.Wallet as FWallet
+import qualified SharedLogic.FleetDriverSettings as FDS
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified SharedLogic.VehicleServiceTier as VST
@@ -1017,6 +1018,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
           driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
           let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' requestor merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
           QVehicle.create vehicle
+          fork "applyFleetSettings" $ FDS.applyFleetSettings False cityVehicleServiceTiers requestor vehicle
           DDriverMode.forceDriverOfflineOnVehicleChange personId transporterConfig driverInfo'
           when (vehicle.variant == DV.SUV) $
             QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId

@@ -22,3 +22,10 @@ CREATE INDEX CONCURRENTLY incentive_journey_stats_idx_person_id ON atlas_driver_
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats ADD CONSTRAINT incentive_journey_stats_unique_idx_journey_id_milestone_id_period_key_person_id UNIQUE (journey_id, milestone_id, period_key, person_id);
 CREATE INDEX CONCURRENTLY incentive_journey_stats_idx_merchant_operating_city_id ON atlas_driver_offer_bpp.incentive_journey_stats USING btree (merchant_operating_city_id);
 CREATE INDEX CONCURRENTLY incentive_journey_stats_idx_cohort_id ON atlas_driver_offer_bpp.incentive_journey_stats USING btree (cohort_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats ADD COLUMN cohort_journey_mapping_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats DROP CONSTRAINT incentive_journey_stats_unique_idx_journey_id_milestone_id_period_key_person_id;
+ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats ADD CONSTRAINT incentive_journey_stats_unique_idx_cohort_journey_mapping_id_milestone_id_period_key_person_id UNIQUE (cohort_journey_mapping_id, milestone_id, period_key, person_id);

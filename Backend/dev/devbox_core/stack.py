@@ -14,14 +14,22 @@ services (cache-restore → cabal-build → services in nix/services/nammayatri.
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import time
+import urllib.parse
 import urllib.request
 from typing import Callable
 
 from . import ssh
 
 FRONTDESK_PORT = 8888
+# The front desk's public-only site (rider + driver APIs), which the devbox
+# announces to hopper; testers reach it on any network through hopper's gateway:
+#   <GATEWAY_URL>/api/<devbox>/<PUBLIC_PORT>/<workspace>/rider-app/...
+PUBLIC_PORT = 8889
+GATEWAY_URL = os.environ.get("HOPPER_GATEWAY_URL",
+                             "https://service-discovery.devenv.movingtech.net").rstrip("/")
 STACK_COMMAND = ("cd Backend && nix develop .#backend -c "
                  ", run-mobility-stack-dev-on-available-ports -t=false")
 # A non-login ssh shell lacks the nix profile on PATH.
@@ -123,8 +131,32 @@ def _answers(url: str) -> bool:
         return False
 
 
-def ready_urls(host: str, name: str) -> list:
-    return [f"http://{host}:{FRONTDESK_PORT}/{name}/{p}" for p in READY_PATHS]
+def office_base(host: str, name: str) -> str:
+    """The workspace through the front desk: office network / tailnet only."""
+    return f"http://{host}:{FRONTDESK_PORT}/{name}"
+
+
+def public_base(devbox: str, name: str) -> str:
+    """The workspace through hopper's gateway: any network. `devbox` is the name
+    hopper knows it by (its hostname, same as the fleet's machine name)."""
+    return f"{GATEWAY_URL}/api/{devbox}/{PUBLIC_PORT}/{name}"
+
+
+def is_public(devbox: str) -> bool:
+    """hopper lists the devbox's public front desk, seen in the last 30s — i.e.
+    its gateway will forward to it (it 404s otherwise)."""
+    url = f"{GATEWAY_URL}/service/list?magicDNS={urllib.parse.quote(devbox)}"
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            services = json.load(resp)
+    except Exception:
+        return False
+    return any(s.get("magic_dns_name") == devbox and s.get("port") == PUBLIC_PORT
+               and s.get("public") for s in services)
+
+
+def ready_urls(base: str) -> list:
+    return [f"{base}/{p}" for p in READY_PATHS]
 
 
 def wait_ready(t: ssh.Target, name: str, wdir: str, timeout: int = 3600,
@@ -151,9 +183,10 @@ def wait_ready(t: ssh.Target, name: str, wdir: str, timeout: int = 3600,
             raise RuntimeError("stack is not running\n" + tail(t, wdir, 40))
         if until == "services" and seen == "services":
             return {"services": True}
-        if seen == "services" and all(_answers(u) for u in ready_urls(t.host, name)):
+        urls = ready_urls(office_base(t.host, name))
+        if seen == "services" and all(_answers(u) for u in urls):
             out("[stack] stage: ready")
-            return {"ready": True, "urls": ready_urls(t.host, name)}
+            return {"ready": True, "urls": urls}
         if time.time() > deadline:
             raise RuntimeError(f"not ready after {timeout}s (stage {seen})\n" + tail(t, wdir, 40))
         time.sleep(interval)

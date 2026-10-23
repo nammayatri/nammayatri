@@ -304,7 +304,7 @@ dispatchDriverReward driverId merchantId merchantOpCityId transporterConfig jour
               journey.name
               spec.rewardExpirationAt
               coinsToAward
-              (Just ctx.milestoneId)
+              (Just (ctx.cohortJourneyMappingId <> ":" <> ctx.milestoneId))
               vehCategory
               mbServiceTier
           when (awarded > 0) $
@@ -366,7 +366,7 @@ dispatchDriverStreakEndReward driverId merchantId merchantOpCityId transporterCo
           logInfo $ "Streak-end non-positive rewardValue journey=" <> journey.id.getId
           pure IJ.AwardSkipped
         Just coinsToAward -> do
-          let entityId = Just journey.id.getId
+          let entityId = Just campaignKey
           awarded <-
             Coins.awardJourneyMilestoneCoins
               driverId
@@ -571,12 +571,13 @@ waiveDriverMilestone ::
   Id DMOC.MerchantOperatingCity ->
   DTC.TransporterConfig ->
   DIJ.IncentiveJourney ->
+  Id DCJM.CohortJourneyMapping ->
   Id DIJM.IncentiveJourneyMilestone ->
   Text ->
   Maybe DTV.VehicleCategory ->
   Maybe DCommon.ServiceTierType ->
   m ()
-waiveDriverMilestone driverId merchantId merchantOpCityId transporterConfig journey milestoneId periodKey mbVehCategory mbServiceTier = do
+waiveDriverMilestone driverId merchantId merchantOpCityId transporterConfig journey cohortJourneyMappingId milestoneId periodKey mbVehCategory mbServiceTier = do
   let vehCategory = fromMaybe DTV.CAR mbVehCategory
       ijHandle =
         IJ.IncentiveJourneyHandle
@@ -597,6 +598,7 @@ waiveDriverMilestone driverId merchantId merchantOpCityId transporterConfig jour
       (cast merchantOpCityId)
       (T.pack . show <$> mbVehCategory)
       journey
+      cohortJourneyMappingId
       milestoneId
       periodKey
   when didWaive $ do

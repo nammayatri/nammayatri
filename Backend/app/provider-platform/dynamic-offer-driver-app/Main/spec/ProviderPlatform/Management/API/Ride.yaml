@@ -235,6 +235,15 @@ apis:
         rideId: Id Ride
       response:
         type: RideRouteRes
+  - GET: # RideEstimatedRouteAPI
+      endpoint: /{rideId}/estimatedRoute
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: RideEstimatedRouteRes
+      migrate:
+        capability: city-operations.ride.read
   - GET: # TicketRideListAPI
       endpoint: /kapture/list
       auth: ApiAuthV2
@@ -521,6 +530,10 @@ types:
     - plannedDropSpecialLocation: Maybe Text
     - actualPickupSpecialLocation: Maybe Text
     - actualDropSpecialLocation: Maybe Text
+    - recomputeReason: Maybe Text
+    - passedThroughDestination: Maybe Bool
+    - finalFarePolicyId: Maybe Text
+    - estimatedStaticDuration: Maybe Seconds
   TollInfoAPIEntity:
     - id: Text
     - name: Text
@@ -576,6 +589,20 @@ types:
     - recordType: NewType
     - actualRoute: [ActualRoute]
     - derive: "'HideSecrets"
+  RideEstimatedRouteRes:
+    - transactionId: Text
+    - estimatedDistance: Maybe Meters
+    - calls: [EstimatedRouteCall]
+    - derive: "'HideSecrets"
+  EstimatedRouteCall:
+    - apiName: Text
+    - provider: Text
+    - calledAt: UTCTime
+    - routes: [EstimatedRouteOption]
+  EstimatedRouteOption:
+    - distanceMeters: Maybe Int
+    - durationSec: Maybe Int
+    - points: [LatLong]
   DriverEdaKafka:
     - driver_id: String
     - rid: Maybe String

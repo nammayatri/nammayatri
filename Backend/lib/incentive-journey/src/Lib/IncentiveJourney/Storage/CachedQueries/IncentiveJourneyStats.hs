@@ -1,11 +1,11 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyStats
-  ( findByPersonIdAndJourneyIdAndPeriodKey,
-    findByPersonIdAndJourneyIdAndMilestoneIdAndPeriodKey,
+  ( findByPersonIdAndCjmAndPeriodKey,
+    findByPersonIdAndCjmAndMilestonePeriod,
     upsertJourneyStats,
     clearCacheForStats,
-    clearCacheByPersonJourneyPeriod,
+    clearCacheByPersonCjmPeriod,
   )
 where
 
@@ -13,45 +13,45 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as Common
-import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats as DIJS
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyStatsExtra as Queries
 import Lib.IncentiveJourney.Types.Actor (JourneyActor (..), actorCachePrefix)
 
-findByPersonIdAndJourneyIdAndPeriodKey ::
+findByPersonIdAndCjmAndPeriodKey ::
   (BeamFlow m r) =>
   JourneyActor ->
   Id Common.Person ->
-  Id DIJ.IncentiveJourney ->
+  Id DCJM.CohortJourneyMapping ->
   Text ->
   m [DIJS.IncentiveJourneyStats]
-findByPersonIdAndJourneyIdAndPeriodKey actor personId journeyId periodKey =
-  Hedis.withCrossAppRedis (Hedis.safeGet (makeByPersonJourneyPeriodKey actor personId journeyId periodKey)) >>= \case
+findByPersonIdAndCjmAndPeriodKey actor personId cohortJourneyMappingId periodKey =
+  Hedis.withCrossAppRedis (Hedis.safeGet (makeByPersonCjmPeriodKey actor personId cohortJourneyMappingId periodKey)) >>= \case
     Just rows -> pure rows
     Nothing -> do
-      rows <- Queries.findStatsByPersonJourneyAndPeriod personId journeyId periodKey
+      rows <- Queries.findStatsByPersonCjmAndPeriod personId cohortJourneyMappingId periodKey
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-      Hedis.withCrossAppRedis $ Hedis.setExp (makeByPersonJourneyPeriodKey actor personId journeyId periodKey) rows expTime
+      Hedis.withCrossAppRedis $ Hedis.setExp (makeByPersonCjmPeriodKey actor personId cohortJourneyMappingId periodKey) rows expTime
       pure rows
 
-findByPersonIdAndJourneyIdAndMilestoneIdAndPeriodKey ::
+findByPersonIdAndCjmAndMilestonePeriod ::
   (BeamFlow m r) =>
   JourneyActor ->
   Id Common.Person ->
-  Id DIJ.IncentiveJourney ->
+  Id DCJM.CohortJourneyMapping ->
   Id DIJM.IncentiveJourneyMilestone ->
   Text ->
   m (Maybe DIJS.IncentiveJourneyStats)
-findByPersonIdAndJourneyIdAndMilestoneIdAndPeriodKey actor personId journeyId milestoneId periodKey =
-  Hedis.withCrossAppRedis (Hedis.safeGet (makeByPersonJourneyMilestonePeriodKey actor personId journeyId milestoneId periodKey)) >>= \case
+findByPersonIdAndCjmAndMilestonePeriod actor personId cohortJourneyMappingId milestoneId periodKey =
+  Hedis.withCrossAppRedis (Hedis.safeGet (makeByPersonCjmMilestonePeriodKey actor personId cohortJourneyMappingId milestoneId periodKey)) >>= \case
     Just row -> pure row
     Nothing -> do
-      mbRow <- Queries.findStatsByPersonAndMilestonePeriod personId journeyId milestoneId periodKey
+      mbRow <- Queries.findStatsByPersonCjmAndMilestonePeriod personId cohortJourneyMappingId milestoneId periodKey
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-      Hedis.withCrossAppRedis $ Hedis.setExp (makeByPersonJourneyMilestonePeriodKey actor personId journeyId milestoneId periodKey) mbRow expTime
+      Hedis.withCrossAppRedis $ Hedis.setExp (makeByPersonCjmMilestonePeriodKey actor personId cohortJourneyMappingId milestoneId periodKey) mbRow expTime
       pure mbRow
 
 upsertJourneyStats ::
@@ -68,29 +68,30 @@ clearCacheForStats :: (CacheFlow m r) => JourneyActor -> DIJS.IncentiveJourneySt
 clearCacheForStats actor stats =
   Hedis.runInMultiCloudRedisWrite $
     Hedis.withCrossAppRedis $ do
-      void $ Hedis.del (makeByPersonJourneyPeriodKey actor stats.personId stats.journeyId stats.periodKey)
-      void $
-        Hedis.del
-          ( makeByPersonJourneyMilestonePeriodKey
-              actor
-              stats.personId
-              stats.journeyId
-              stats.milestoneId
-              stats.periodKey
-          )
+      whenJust stats.cohortJourneyMappingId $ \cohortJourneyMappingId -> do
+        void $ Hedis.del (makeByPersonCjmPeriodKey actor stats.personId cohortJourneyMappingId stats.periodKey)
+        void $
+          Hedis.del
+            ( makeByPersonCjmMilestonePeriodKey
+                actor
+                stats.personId
+                cohortJourneyMappingId
+                stats.milestoneId
+                stats.periodKey
+            )
 
-clearCacheByPersonJourneyPeriod ::
+clearCacheByPersonCjmPeriod ::
   (CacheFlow m r) =>
   JourneyActor ->
   Id Common.Person ->
-  Id DIJ.IncentiveJourney ->
+  Id DCJM.CohortJourneyMapping ->
   Text ->
   m ()
-clearCacheByPersonJourneyPeriod actor personId journeyId periodKey =
+clearCacheByPersonCjmPeriod actor personId cohortJourneyMappingId periodKey =
   Hedis.runInMultiCloudRedisWrite $
     Hedis.withCrossAppRedis $
       void $
-        Hedis.del (makeByPersonJourneyPeriodKey actor personId journeyId periodKey)
+        Hedis.del (makeByPersonCjmPeriodKey actor personId cohortJourneyMappingId periodKey)
 
 -- | Keep historical driver Redis segment "DriverId-" so live caches stay valid.
 personIdKeySegment :: JourneyActor -> Text
@@ -98,38 +99,38 @@ personIdKeySegment = \case
   DriverActor -> "DriverId"
   RiderActor -> "PersonId"
 
-makeByPersonJourneyPeriodKey ::
+makeByPersonCjmPeriodKey ::
   JourneyActor ->
   Id Common.Person ->
-  Id DIJ.IncentiveJourney ->
+  Id DCJM.CohortJourneyMapping ->
   Text ->
   Text
-makeByPersonJourneyPeriodKey actor personId journeyId periodKey =
+makeByPersonCjmPeriodKey actor personId cohortJourneyMappingId periodKey =
   actorCachePrefix actor
     <> ":CachedQueries:IncentiveJourneyStats:"
     <> personIdKeySegment actor
     <> "-"
     <> personId.getId
-    <> ":JourneyId-"
-    <> journeyId.getId
+    <> ":CohortJourneyMappingId-"
+    <> cohortJourneyMappingId.getId
     <> ":PeriodKey-"
     <> periodKey
 
-makeByPersonJourneyMilestonePeriodKey ::
+makeByPersonCjmMilestonePeriodKey ::
   JourneyActor ->
   Id Common.Person ->
-  Id DIJ.IncentiveJourney ->
+  Id DCJM.CohortJourneyMapping ->
   Id DIJM.IncentiveJourneyMilestone ->
   Text ->
   Text
-makeByPersonJourneyMilestonePeriodKey actor personId journeyId milestoneId periodKey =
+makeByPersonCjmMilestonePeriodKey actor personId cohortJourneyMappingId milestoneId periodKey =
   actorCachePrefix actor
     <> ":CachedQueries:IncentiveJourneyStats:"
     <> personIdKeySegment actor
     <> "-"
     <> personId.getId
-    <> ":JourneyId-"
-    <> journeyId.getId
+    <> ":CohortJourneyMappingId-"
+    <> cohortJourneyMappingId.getId
     <> ":MilestoneId-"
     <> milestoneId.getId
     <> ":PeriodKey-"

@@ -257,6 +257,7 @@ types:
     - statsId: Text
     - personId: Id Person
     - journeyId: Id IncentiveJourney
+    - cohortJourneyMappingId: Maybe (Id CohortJourneyMapping)
     - milestoneId: Id IncentiveJourneyMilestone
     - periodKey: Text
     - conditionType: MilestoneConditionType
@@ -291,6 +292,7 @@ types:
   WaiveIncentiveJourneyMilestoneReq:
     - personId: Id Person
     - journeyId: Id IncentiveJourney
+    - cohortJourneyMappingId: Id CohortJourneyMapping
     - milestoneId: Id IncentiveJourneyMilestone
     - periodKey: Text
     - derive: "'HideSecrets"

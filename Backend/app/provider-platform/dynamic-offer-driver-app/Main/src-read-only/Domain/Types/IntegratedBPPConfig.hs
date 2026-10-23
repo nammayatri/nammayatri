@@ -30,11 +30,19 @@ data IntegratedBPPConfig = IntegratedBPPConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data DIRECTConfig = DIRECTConfig {baseUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl, cipherKey :: Kernel.Prelude.Text, qrRefreshTtl :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds}
-  deriving (Generic, (FromJSON), (ToJSON), (Eq), (Show))
+data DIRECTConfig = DIRECTConfig
+  { baseUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
+    busBlockExpiryTime :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
+    busBlockMaxLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    cipherKey :: Kernel.Prelude.Text,
+    qrRefreshTtl :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds
+  }
+  deriving (Generic, FromJSON, ToJSON, Eq, Show)
 
 data ONDCBecknConfig = ONDCBecknConfig
-  { fareCachingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+  { busBlockExpiryTime :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
+    busBlockMaxLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    fareCachingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     multiInitAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     networkHostUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
     networkId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -42,14 +50,14 @@ data ONDCBecknConfig = ONDCBecknConfig
     redisPrefix :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     singleTicketForMultiplePassengers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
-  deriving (Generic, (FromJSON), (ToJSON), (Eq), (Show))
+  deriving (Generic, FromJSON, ToJSON, Eq, Show)
 
-data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data ProviderConfig = DIRECT Domain.Types.IntegratedBPPConfig.DIRECTConfig | ONDC Domain.Types.IntegratedBPPConfig.ONDCBecknConfig deriving (Generic, (FromJSON), (ToJSON), (Eq), (Show))
+data ProviderConfig = DIRECT Domain.Types.IntegratedBPPConfig.DIRECTConfig | ONDC Domain.Types.IntegratedBPPConfig.ONDCBecknConfig deriving (Generic, FromJSON, ToJSON, Eq, Show)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''PlatformType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PlatformType)
 
-$(Kernel.Utils.TH.mkToHttpInstanceForEnum (''PlatformType))
+$(Kernel.Utils.TH.mkToHttpInstanceForEnum ''PlatformType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''PlatformType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PlatformType)

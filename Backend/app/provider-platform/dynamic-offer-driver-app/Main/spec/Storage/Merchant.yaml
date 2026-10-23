@@ -1001,6 +1001,9 @@ TransporterConfig:
       noOfGeohashesToReturn: Int
       nearbyRadiusMeters: Maybe Int
       nearbySearchStalenessMinutes: Maybe Int
+      # When Just True, search writes 5-element members (product + isScheduled).
+      # Missing/False keeps legacy 3-element writes so old pods can still decode during rollout.
+      storeHotspotProductInMember: Maybe Bool
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     AadhaarImageResizeConfig:
       height: Int
@@ -1072,6 +1075,7 @@ TransporterConfig:
       enableScheduledRideActivationChecks: Maybe Bool
       driverActivationWindow: Maybe Seconds
       scheduledRideVisibilityStages: Maybe [ScheduledRideVisibilityStage]
+      enableScheduledRidePenaltyOrReward: Maybe Bool
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     ManualTollChargeConfig:
       tripCategories: Maybe [Text]
@@ -1394,6 +1398,10 @@ TransporterConfig:
     arrivedStopThreshold: Maybe HighPrecMeters
     arrivedPickupThreshold: HighPrecMeters
     arrivingPickupThreshold: HighPrecMeters
+    # Assigned driver inside this ⇒ abort any stand-by better-driver search.
+    betterDriverProximityAbortRadiusMeters: Maybe HighPrecMeters
+    # Ceiling on a stand-by better-driver search's own pool radius.
+    betterDriverSearchMaxRadiusMeters: Maybe HighPrecMeters
     specialDrivers: "[Text]"
     specialLocationTags: "[Text]"
     createdAt: UTCTime
@@ -1594,6 +1602,7 @@ TransporterConfig:
     enableLegalComplianceDocuments: Maybe Bool
     enableGoOnlinePolicyBlocker: Maybe Bool
     driverImagePresignedUrlExpiry: Maybe Seconds # Expiry of the pre-signed S3 URL of the driver image shared with non value-add BAPs. Nothing = 3600 seconds
+    peerBapMerchantShortId: Maybe Text # BAP merchant whose FRFS bookings anna-checker ticket-verify validates against; no default since proxying to the wrong BAP would check another operator's tickets
 
   beamType:
     currency: Maybe Currency
@@ -1983,6 +1992,8 @@ TransporterConfig:
     arrivedStopThreshold: double precision
     arrivedPickupThreshold: double precision
     arrivingPickupThreshold: double precision
+    betterDriverProximityAbortRadiusMeters: double precision
+    betterDriverSearchMaxRadiusMeters: double precision
     variantsToEnableForSubscription: "text[]"
     crossTravelCities: "text[]"
     arrivalTimeBufferOfVehicle: json

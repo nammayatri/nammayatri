@@ -205,6 +205,7 @@ data IncentiveJourneyStatsHistoryItem = IncentiveJourneyStatsHistoryItem
   { statsId :: Kernel.Prelude.Text,
     personId :: Kernel.Types.Id.Id Dashboard.Common.Person,
     journeyId :: Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney,
+    cohortJourneyMappingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.CohortJourneyMapping),
     milestoneId :: Kernel.Types.Id.Id Dashboard.Common.IncentiveJourneyMilestone,
     periodKey :: Kernel.Prelude.Text,
     conditionType :: MilestoneConditionType,
@@ -307,6 +308,7 @@ instance Kernel.Types.HideSecrets.HideSecrets UpdateCohortJourneyMappingReq wher
 data WaiveIncentiveJourneyMilestoneReq = WaiveIncentiveJourneyMilestoneReq
   { personId :: Kernel.Types.Id.Id Dashboard.Common.Person,
     journeyId :: Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney,
+    cohortJourneyMappingId :: Kernel.Types.Id.Id Dashboard.Common.CohortJourneyMapping,
     milestoneId :: Kernel.Types.Id.Id Dashboard.Common.IncentiveJourneyMilestone,
     periodKey :: Kernel.Prelude.Text
   }

@@ -39,6 +39,7 @@ module Domain.Action.Dashboard.Management.Merchant
     getMerchantConfigTollList,
     postMerchantTollUpsert,
     deleteMerchantTollDelete,
+    getMerchantToll,
     getMerchantConfigCommon,
     postMerchantConfigCommonUpdate,
     getMerchantConfigDriverPool,
@@ -517,7 +518,8 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
                      maxLeadTime = maybe config.scheduledRideConfig.maxLeadTime (.value) req.scheduledRideMaxLeadTime,
                      enableScheduledRideActivationChecks = config.scheduledRideConfig.enableScheduledRideActivationChecks,
                      driverActivationWindow = config.scheduledRideConfig.driverActivationWindow,
-                     scheduledRideVisibilityStages = visibilityStages
+                     scheduledRideVisibilityStages = visibilityStages,
+                     enableScheduledRidePenaltyOrReward = config.scheduledRideConfig.enableScheduledRidePenaltyOrReward
                    }
               }
   whenJust ((,) <$> updConfig.scheduledRideConfig.minLeadTime <*> updConfig.scheduledRideConfig.maxLeadTime) $ \(mn, mx) ->
@@ -1473,6 +1475,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission -> DVC.Permission
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training -> DVC.Training
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Fleet -> DVC.Fleet
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.SelfDeclaration -> DVC.SelfDeclaration
 
 castDocumentFlowGroupingFromReq :: Common.DocumentFlowGrouping -> DVC.DocumentFlowGrouping
 castDocumentFlowGroupingFromReq = \case
@@ -3684,6 +3687,15 @@ deleteMerchantTollDelete merchantShortId opCity tollId = do
   QTollExtra.deleteById tollId
   invalidateTollCache merchantOpCity.id.getId
   pure Success
+
+getMerchantToll :: ShortId DM.Merchant -> Context.City -> Id Toll.Toll -> Flow Common.TollAPIEntity
+getMerchantToll merchantShortId opCity tollId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  toll <- QToll.findByPrimaryKey tollId >>= fromMaybeM (InvalidRequest "Toll with given id not found")
+  when (toll.merchantOperatingCityId /= Just merchantOpCity.id.getId) $
+    throwError $ InvalidRequest "Toll with given id not found"
+  pure $ tollToAPIEntity toll
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 postMerchantSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Flow APISuccess

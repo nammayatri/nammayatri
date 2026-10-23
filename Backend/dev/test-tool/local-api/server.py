@@ -84,6 +84,7 @@ from devbox_core import data as _dc_data  # noqa: E402
 from devbox_core import deploy as _dc_deploy  # noqa: E402
 from devbox_core import fleet as _dc_fleet  # noqa: E402
 from devbox_core import ssh as _dc_ssh  # noqa: E402
+from devbox_core import stack as _dc_stack  # noqa: E402
 from devbox_core import workspace as _dc_workspace  # noqa: E402
 
 KNOWN_REPOS: dict = {
@@ -961,7 +962,7 @@ REMOTE_BUFFER_BYTES = 256 * 1024  # last ~256 KB per session for re-attach
 _SSH_KEY_CANDIDATES = [os.path.expanduser(k) for k in _dc_ssh.KEY_CANDIDATES]
 BASE_API_HOST = os.environ.get("BASE_API_HOST", "service-discovery.devenv.movingtech.net")
 BASE_API_PORT = os.environ.get("BASE_API_PORT", "8787")
-# Devbox front desk (nix-the-builder scripts/frontdesk): one Caddy per dev-box that
+# Devbox front desk (nix-the-builder scripts/daemonset/worker/devbox/frontdesk): one Caddy per dev-box that
 # routes /<workspace-id>/* to that workspace's own Caddy, so the URL survives port changes.
 FRONTDESK_PORT = os.environ.get("FRONTDESK_PORT", "8888")
 
@@ -1299,6 +1300,8 @@ def _devbox_resolve(force_new: bool = False) -> dict:
         "vpnHost": vpn_host,
         "vpnSubnet": vpn_subnet,
         "workspaceUrl": f"http://{host}:{FRONTDESK_PORT}/{dev_id}",
+        # Through hopper's gateway (any network) — rider and driver APIs only.
+        "publicUrl": _dc_stack.public_base(machine["name"], dev_id) if machine.get("name") else "",
         "frontdeskOk": _frontdesk_ok(host),
         "message": message,
     }

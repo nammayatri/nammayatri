@@ -57,6 +57,7 @@ module Lib.Finance.Ledger.Service
     -- * Payout eligibility (shared by driver wallet and rider cashback payouts)
     PayoutEligibility (..),
     getPayoutEligibilityData,
+    getPayoutEligibilityDataWith,
     entryNetForAccount,
 
     -- * Settlement reservation (Option A — DB-level in-flight guard)
@@ -70,6 +71,7 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as Aeson
+import Data.List (partition)
 import qualified Data.Map as Map
 import Kernel.Beam.Functions (ToTType' (..), findAllWithKV, findAllWithOptionsKV, updateWithKV)
 import Kernel.Prelude
@@ -951,6 +953,13 @@ Scenario 4 — debt carried across the cut-off
   wallet of 50; with it the whole 50 is held back, the payout is 0, and the
   post-cut-off earnings become payable next cycle once they have absorbed the
   debt.
+
+Always-redeemable entries
+-------------------------
+'getPayoutEligibilityDataWith' takes reference types that skip the hold: their
+unsettled entries above the cut-off are left out of netAbove and are paid out
+with the entries below it. This is for credits that are not earnings, such as a
+refund, so there is nothing to hold back for the next cycle.
 -}
 
 -- | Payout eligibility for one wallet account, see Note [Redeemable payout calculation].
@@ -964,17 +973,31 @@ getPayoutEligibilityData ::
   UTCTime -> -- payout cutoff time
   UTCTime -> -- current time (upper bound)
   m PayoutEligibility
-getPayoutEligibilityData accountId walletBalance cutoff now = do
+getPayoutEligibilityData = getPayoutEligibilityDataWith []
+
+-- | 'getPayoutEligibilityData' where entries with one of the given reference types are never held
+--   back by the cut-off: one posted after it is redeemable straight away, and goes into the entries
+--   the payout stamps PAID_OUT.
+getPayoutEligibilityDataWith ::
+  (BeamFlow.BeamFlow m r) =>
+  [Text] -> -- reference types that are redeemable as soon as they are posted
+  Id Account ->
+  HighPrecMoney -> -- current wallet balance
+  UTCTime -> -- payout cutoff time
+  UTCTime -> -- current time (upper bound)
+  m PayoutEligibility
+getPayoutEligibilityDataWith alwaysRedeemableRefs accountId walletBalance cutoff now = do
   unsettledAbove <- findUnsettledByAccountAfterTime accountId cutoff now
-  redeemableEntries <- findUnsettledByAccountBeforeTime accountId cutoff
-  let netAbove = sum (map (entryNetForAccount accountId) unsettledAbove)
+  redeemableBelow <- findUnsettledByAccountBeforeTime accountId cutoff
+  let (redeemableAbove, heldAbove) = partition (\e -> e.referenceType `elem` alwaysRedeemableRefs) unsettledAbove
+      netAbove = sum (map (entryNetForAccount accountId) heldAbove)
       nonRedeemableBalance = max 0 (min walletBalance netAbove)
   pure
     PayoutEligibility
       { walletBalance,
         nonRedeemableBalance,
         redeemableBalance = max 0 (walletBalance - nonRedeemableBalance),
-        redeemableEntries
+        redeemableEntries = redeemableBelow <> redeemableAbove
       }
 
 --------------------------------------------------------------------------------

@@ -23,8 +23,10 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
+import Kernel.Utils.Logging (logError)
 import Lib.LocationUpdates.Internal (updatePassedThroughDrop)
 import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Ride
@@ -89,6 +91,7 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
             Redis.setExp (multipleRouteKey booking.transactionId) allRoutes 3600
           let estimatedDistance = highPrecMetersToMeters <$> bookingUpdateReq.estimatedDistance
           QB.updateMultipleById bookingUpdateReq.estimatedFare bookingUpdateReq.maxEstimatedDistance estimatedDistance bookingUpdateReq.estimatedDuration bookingUpdateReq.estimatedStaticDuration bookingUpdateReq.fareParamsId.getId bookingUpdateReq.bookingId
+          promoteEditFarePolicyToQuote booking bookingUpdateReq
           recomputeRideFinancialsForFareUpdate booking ride bookingUpdateReq
           updatedBooking <- QB.findById bookingUpdateReq.bookingId >>= fromMaybeM (BookingDoesNotExist bookingUpdateReq.bookingId.getId)
           CallBAP.sendUpdateEditDestToBAP updatedBooking (Just ride) bookingUpdateReq Nothing Nothing OU.CONFIRM_UPDATE
@@ -139,5 +142,17 @@ postEditResultNoRide booking bookingUpdateReq dropLocation = do
     QSR.updateIsReallocationEnabled (Just False) searchReq.id
   let estimatedDistance = highPrecMetersToMeters <$> bookingUpdateReq.estimatedDistance
   QB.updateMultipleById bookingUpdateReq.estimatedFare bookingUpdateReq.maxEstimatedDistance estimatedDistance bookingUpdateReq.estimatedDuration bookingUpdateReq.estimatedStaticDuration bookingUpdateReq.fareParamsId.getId bookingUpdateReq.bookingId
+  promoteEditFarePolicyToQuote booking bookingUpdateReq
   updatedBooking <- QB.findById bookingUpdateReq.bookingId >>= fromMaybeM (BookingDoesNotExist bookingUpdateReq.bookingId.getId)
   CallBAP.sendUpdateEditDestToBAP updatedBooking Nothing bookingUpdateReq (Just dropLocation) Nothing OU.CONFIRM_UPDATE
+
+promoteEditFarePolicyToQuote ::
+  Domain.Types.Booking.Booking ->
+  Domain.Types.BookingUpdateRequest.BookingUpdateRequest ->
+  Environment.Flow ()
+promoteEditFarePolicyToQuote booking bookingUpdateReq =
+  SFP.getFarePolicyByBookingUpdateRequestId bookingUpdateReq.id.getId >>= \case
+    Just farePolicy
+      | booking.isScheduled -> SFP.cacheFarePolicyByScheduledEstOrQuoteId booking.quoteId booking.startTime booking.returnTime farePolicy
+      | otherwise -> SFP.cacheFarePolicyByQuoteId booking.quoteId farePolicy
+    Nothing -> logError $ "Edit destination fare policy not found for bookingUpdateRequestId: " <> bookingUpdateReq.id.getId <> ", quote fare policy left unchanged for bookingId: " <> booking.id.getId

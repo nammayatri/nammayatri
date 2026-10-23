@@ -4,7 +4,8 @@ import BulkPayoutTests (bulkPayoutTests)
 import Kernel.Prelude
 import OfferCountersTests (offerCountersTests)
 import OfferFrequencyTests (offerFrequencyTests)
+import PayoutItemsTests (payoutItemsTests)
 import Test.Tasty
 
 main :: IO ()
-main = defaultMain $ testGroup "Tests" [testGroup "Unit tests" [offerFrequencyTests, offerCountersTests, bulkPayoutTests]]
+main = defaultMain $ testGroup "Tests" [testGroup "Unit tests" [offerFrequencyTests, offerCountersTests, bulkPayoutTests, payoutItemsTests]]

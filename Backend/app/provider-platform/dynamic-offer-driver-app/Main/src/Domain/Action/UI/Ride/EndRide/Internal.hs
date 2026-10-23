@@ -192,8 +192,9 @@ endRideTransaction ::
   Maybe (Id RD.RiderDetails) ->
   DFare.FareParameters ->
   TransporterConfig ->
+  HighPrecMoney ->
   m ()
-endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
+endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig fareBeforePaymentCharge = do
   (merchantLabel, cityLabel) <- SML.getMetricsLabels booking.providerId booking.merchantOperatingCityId
   DSC.recordOnRideChange booking.merchantOperatingCityId False
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
@@ -282,7 +283,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   -- here never affect ride completion.
   -- Referral FCM and driver-to-driver referral reward moved to kafka-consumers
   -- RIDE_EVENTS_CONSUMER (handleReferral). See SharedLogic.RideEvents.Handlers.
-  RideEventsPublisher.publishRideEnded booking ride mbRiderDetailsId validRide
+  RideEventsPublisher.publishRideEnded booking ride mbRiderDetailsId validRide fareBeforePaymentCharge
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams, ..}
 
 processEndRideFinance ::

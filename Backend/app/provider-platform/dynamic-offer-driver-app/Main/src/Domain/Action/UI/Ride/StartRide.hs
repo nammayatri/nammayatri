@@ -27,6 +27,7 @@ import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
 import qualified Domain.Action.Internal.BulkLocPickupUpdate as BulkLocPickupUpdate
 import qualified Domain.Action.Internal.StopDetection as StopDetection
+import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
@@ -92,9 +93,12 @@ import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNoti
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.ScheduledPayout as QSP
+import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 import qualified Tools.Metrics.ARDUBPPMetrics as TMetrics
 import qualified Tools.Notifications as Notify
@@ -365,6 +369,29 @@ startRideHandler ServiceHandle {..} rideId req = do
               when (payoutStatus == DPR.INITIATED) $ do
                 let jobData = SpecialZonePayoutJobData {payoutRequestId = Just payoutRequestId, scheduledPayoutId = Nothing}
                 QAllJ.createJobByTime @_ @'SpecialZonePayout (Just booking.providerId) (Just ride.merchantOperatingCityId) scheduledTime jobData
+
+      fork "remove demand hotspot on ride start" $ do
+        -- booking.quoteId is DriverQuote.id for estimate/init (on-demand) and Quote.id for static offers.
+        mbSearchRequestId <- do
+          mbDriverQuote <- QDQ.findById (Id booking.quoteId)
+          case mbDriverQuote of
+            Just driverQuote -> pure (Just driverQuote.requestId)
+            Nothing -> fmap (.searchRequestId) <$> QQuote.findById (Id booking.quoteId)
+        case mbSearchRequestId of
+          Nothing -> logWarning $ "Demand hotspot not removed; quote missing for booking " <> booking.id.getId
+          Just searchRequestId -> do
+            mbSearchReq <- QSR.findById searchRequestId
+            -- Prefer search-time pickup / trip / schedule so geohash + member match the write.
+            let pickup = maybe booking.fromLocation (.fromLocation) mbSearchReq
+                tripCategories = maybe [booking.tripCategory] (\sr -> maybe [booking.tripCategory] (: []) sr.tripCategory) mbSearchReq
+                isScheduled = maybe booking.isScheduled (.isScheduled) mbSearchReq
+            DemandHotspots.removeDemandHotspot
+              searchRequestId
+              booking.merchantOperatingCityId
+              transporterConfig
+              (LatLong pickup.lat pickup.lon)
+              (Just (DemandHotspots.tripOptionFromCategories tripCategories))
+              isScheduled
 
       pure APISuccess.Success
   where

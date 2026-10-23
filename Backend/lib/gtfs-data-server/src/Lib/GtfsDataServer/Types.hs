@@ -510,3 +510,33 @@ data GimsEmployeeLoginResp = GimsEmployeeLoginResp
     role :: Maybe GimsEmployeeRole
   }
   deriving (Generic, FromJSON, ToJSON, Show)
+
+-- | v2 depot identity. @depot_id@ is the stable key we persist; @depot_code@ is a display short
+-- code that is nullable and not unique across depots, so it is never used as a key.
+data DepotInfo = DepotInfo
+  { depot_id :: Text,
+    depot_code :: Maybe Text,
+    depot_name :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+data DepotVehicleInfo = DepotVehicleInfo
+  { fleet_no :: Text,
+    vehicle_no :: Maybe Text,
+    status :: Maybe Text,
+    service_type :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+-- | A fleet's current operating state. Only @depot_id@ is guaranteed: everything else is null when
+-- the bus has no open waybill, which GIMS returns as a 200 since it is a normal state, not an error.
+data FleetOperationInfo = FleetOperationInfo
+  { depot_id :: Text,
+    depot_name :: Maybe Text,
+    waybill_no :: Maybe Text,
+    schedule_no :: Maybe Text,
+    conductor_code :: Maybe Text,
+    driver_code :: Maybe Text,
+    service_type :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)

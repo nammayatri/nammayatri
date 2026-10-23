@@ -193,6 +193,14 @@ data DriverEdaKafka = DriverEdaKafka
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data EstimatedRouteCall = EstimatedRouteCall {apiName :: Kernel.Prelude.Text, provider :: Kernel.Prelude.Text, calledAt :: Kernel.Prelude.UTCTime, routes :: [EstimatedRouteOption]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data EstimatedRouteOption = EstimatedRouteOption {distanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int, durationSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int, points :: [Kernel.External.Maps.Types.LatLong]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FParamsAmbulanceDetails = FParamsAmbulanceDetails
   { platformFee :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     sgst :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
@@ -424,6 +432,13 @@ data RideDetailGroup
   deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
+data RideEstimatedRouteRes = RideEstimatedRouteRes {transactionId :: Kernel.Prelude.Text, estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters, calls :: [EstimatedRouteCall]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets RideEstimatedRouteRes where
+  hideSecrets = Kernel.Prelude.identity
+
 data RideEvidenceFileRes = RideEvidenceFileRes {evidenceId :: Kernel.Prelude.Text, content :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -612,7 +627,11 @@ data RideInfoRes = RideInfoRes
     plannedPickupSpecialLocation :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     plannedDropSpecialLocation :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     actualPickupSpecialLocation :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    actualDropSpecialLocation :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    actualDropSpecialLocation :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    recomputeReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    passedThroughDestination :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    finalFarePolicyId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    estimatedStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -751,7 +770,7 @@ data WalletTransactionItem = WalletTransactionItem {ledgerEntryId :: Kernel.Prel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("ride" :> (GetRideAgentList :<|> GetRideListHelper :<|> GetRideListV2Helper :<|> PostRideEndMultipleHelper :<|> PostRideCancelMultipleHelper :<|> GetRideInfo :<|> GetRideEvidence :<|> GetRideEvidenceFile :<|> PostRideEvidenceVisibilityHelper :<|> PostRideSync :<|> PostRideSyncMultiple :<|> PostRideRoute :<|> GetRideKaptureList :<|> GetRideFareBreakUp :<|> PostRideWaiverRideCancellationPenalty :<|> GetRideNearby :<|> GetRideCallCount :<|> GetRideFlowDebug))
+type API = ("ride" :> (GetRideAgentList :<|> GetRideListHelper :<|> GetRideListV2Helper :<|> PostRideEndMultipleHelper :<|> PostRideCancelMultipleHelper :<|> GetRideInfo :<|> GetRideEvidence :<|> GetRideEvidenceFile :<|> PostRideEvidenceVisibilityHelper :<|> PostRideSync :<|> PostRideSyncMultiple :<|> PostRideRoute :<|> GetRideEstimatedRoute :<|> GetRideKaptureList :<|> GetRideFareBreakUp :<|> PostRideWaiverRideCancellationPenalty :<|> GetRideNearby :<|> GetRideCallCount :<|> GetRideFlowDebug))
 
 type GetRideAgentList =
   ( "agent" :> "list" :> QueryParam "bookingStatus" BookingStatus :> QueryParam "currency" Kernel.Types.Common.Currency
@@ -1037,6 +1056,8 @@ type PostRideSyncMultiple = ("sync" :> ReqBody '[JSON] MultipleRideSyncReq :> Po
 
 type PostRideRoute = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "route" :> Post '[JSON] RideRouteRes)
 
+type GetRideEstimatedRoute = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "estimatedRoute" :> Get '[JSON] RideEstimatedRouteRes)
+
 type GetRideKaptureList =
   ( "kapture" :> "list" :> QueryParam "rideShortId" (Kernel.Types.Id.ShortId Dashboard.Common.Ride) :> QueryParam "countryCode" Kernel.Prelude.Text
       :> QueryParam
@@ -1094,6 +1115,7 @@ data RideAPIs = RideAPIs
     postRideSync :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideSyncRes,
     postRideSyncMultiple :: MultipleRideSyncReq -> EulerHS.Types.EulerClient MultipleRideSyncRes,
     postRideRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideRouteRes,
+    getRideEstimatedRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideEstimatedRouteRes,
     getRideKaptureList :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient TicketRideListRes,
     getRideFareBreakUp :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient FareBreakUpRes,
     postRideWaiverRideCancellationPenalty :: Kernel.Types.Id.Id Dashboard.Common.Ride -> WaiverRideCancellationPenaltyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -1105,7 +1127,7 @@ data RideAPIs = RideAPIs
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)
 mkRideAPIs rideClient = (RideAPIs {..})
   where
-    getRideAgentList :<|> getRideList :<|> getRideListV2 :<|> postRideEndMultiple :<|> postRideCancelMultiple :<|> getRideInfo :<|> getRideEvidence :<|> getRideEvidenceFile :<|> postRideEvidenceVisibility :<|> postRideSync :<|> postRideSyncMultiple :<|> postRideRoute :<|> getRideKaptureList :<|> getRideFareBreakUp :<|> postRideWaiverRideCancellationPenalty :<|> getRideNearby :<|> getRideCallCount :<|> getRideFlowDebug = rideClient
+    getRideAgentList :<|> getRideList :<|> getRideListV2 :<|> postRideEndMultiple :<|> postRideCancelMultiple :<|> getRideInfo :<|> getRideEvidence :<|> getRideEvidenceFile :<|> postRideEvidenceVisibility :<|> postRideSync :<|> postRideSyncMultiple :<|> postRideRoute :<|> getRideEstimatedRoute :<|> getRideKaptureList :<|> getRideFareBreakUp :<|> postRideWaiverRideCancellationPenalty :<|> getRideNearby :<|> getRideCallCount :<|> getRideFlowDebug = rideClient
 
 data RideUserActionType
   = GET_RIDE_AGENT_LIST
@@ -1120,6 +1142,7 @@ data RideUserActionType
   | POST_RIDE_SYNC
   | POST_RIDE_SYNC_MULTIPLE
   | POST_RIDE_ROUTE
+  | GET_RIDE_ESTIMATED_ROUTE
   | GET_RIDE_KAPTURE_LIST
   | GET_RIDE_FARE_BREAK_UP
   | POST_RIDE_WAIVER_RIDE_CANCELLATION_PENALTY

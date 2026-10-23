@@ -1239,6 +1239,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN downward_recomp
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN better_driver_proximity_abort_radius_meters double precision ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN scheduled_ride_config SET DEFAULT '{"minLeadTime": null, "maxLeadTime": null, "avgSpeedKmph": null, "maxHoldsPerDriver": 1, "enableScheduledRideActivationChecks": true}' :: json;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN no_recompute_trip_categories text ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN gate_extra_time_charge_by_recompute boolean ;
@@ -1271,10 +1276,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN actual_ride_d
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN manual_toll_charge_config json ;
 
-
-
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN better_driver_search_max_radius_meters double precision ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN looking_for_fleet_supported boolean ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN ride_evidence_config json ;
 
@@ -1282,6 +1286,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN ride_evidence_c
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN peer_bap_merchant_short_id text ;
 
 
 

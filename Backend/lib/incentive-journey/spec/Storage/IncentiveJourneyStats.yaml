@@ -3,6 +3,7 @@ imports:
   IncentiveJourney: Lib.IncentiveJourney.Domain.Types.IncentiveJourney
   IncentiveJourneyMilestone: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
   CohortDetails: Lib.IncentiveJourney.Domain.Types.CohortDetails
+  CohortJourneyMapping: Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
   MilestoneConditionType: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
   MilestoneConditionOperator: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
   MilestoneRewardType: Lib.IncentiveJourney.Domain.Types.Common
@@ -27,6 +28,7 @@ IncentiveJourneyStats:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     cohortId: Id CohortDetails
+    cohortJourneyMappingId: Maybe (Id CohortJourneyMapping)
     journeyId: Id IncentiveJourney
     milestoneId: Id IncentiveJourneyMilestone
     periodKey: Text
@@ -60,14 +62,14 @@ IncentiveJourneyStats:
       where:
         and: [personId, journeyId]
       orderBy: createdAt
-    findByPersonIdAndJourneyIdAndMilestoneIdAndPeriodKey:
+    findByPersonIdAndCohortJourneyMappingIdAndMilestoneIdAndPeriodKey:
       kvFunction: findOneWithKV
       where:
-        and: [personId, journeyId, milestoneId, periodKey]
+        and: [personId, cohortJourneyMappingId, milestoneId, periodKey]
 
   extraIndexes:
     - columns: [personId]
-    - columns: [personId, journeyId, milestoneId, periodKey]
+    - columns: [personId, cohortJourneyMappingId, milestoneId, periodKey]
       unique: true
     - columns: [merchantOperatingCityId]
     - columns: [cohortId]

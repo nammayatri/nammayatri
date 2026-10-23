@@ -48,6 +48,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Text as T hiding (elem, find, map, zip)
 import Data.Time (Day)
+import Domain.Action.Internal.ProcessingChangeOnline (processingChangeOffline, processingChangeOnline)
 import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocumentVerificationConfig as ODC
@@ -91,6 +92,7 @@ import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboardingDocumentVersion (saveRCVersionMetadata)
+import qualified SharedLogic.FleetDriverSettings as FDS
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -738,8 +740,9 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                     vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
                     let updatedVehicle = (makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing) {DVeh.exemptParkingFee = vehicle.exemptParkingFee}
                     when (updatedVehicle.category /= vehicle.category) $
-                      forceDriverOffline vehicle.driverId
+                      forceDriverOffline transporterConfig vehicle.driverId
                     VQuery.upsert updatedVehicle
+                    fork "applyFleetSettings" $ FDS.applyFleetSettings False vehicleServiceTiers driver updatedVehicle
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey transporterConfig num
         Nothing -> pure ()
 
@@ -830,6 +833,7 @@ deactivateRC isTaxiBoothRequest transporterConfig rc driverId = do
   removeVehicle isTaxiBoothRequest driverId
   DAQuery.deactivateRCForDriver False driverId rc.id
   now <- getCurrentTime
+  processingChangeOffline driverId transporterConfig
   DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just now) (cast driverId)
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
   return ()
@@ -842,6 +846,7 @@ endAllRCAssociationsAndRemoveVehicle transporterConfig driverId = do
   removeVehicle False driverId -- throws RCVehicleOnRide rather than unlinking under a live ride
   DAQuery.endAllRCAssociationsForDriver driverId
   now <- getCurrentTime
+  processingChangeOffline driverId transporterConfig
   DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just now) (cast driverId)
   -- deactivateRC -- the sibling teardown doing the same removeVehicle + end-association work --
   -- decrements here. This path never did, so with overwriteAssociation enabled every driver
@@ -868,9 +873,10 @@ forceDriverOffline ::
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r
   ) =>
+  DTC.TransporterConfig ->
   Id Person.Person ->
   m ()
-forceDriverOffline driverId = do
+forceDriverOffline transporterConfig driverId = do
   isOnRide <- DIQuery.findByDriverIdActiveRide (cast driverId)
   when (isJust isOnRide) $ throwError RCVehicleOnRide
   driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
@@ -878,6 +884,7 @@ forceDriverOffline driverId = do
     now <- getCurrentTime
     logInfo $ "Forcing driver offline due to vehicle/variant change: " <> driverId.getId
     DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just now) (cast driverId)
+    processingChangeOnline driverId transporterConfig (Just DCommon.OFFLINE) driverInfo.mode
 
 validateRCActivation :: OnboardingFlow m r => Bool -> Id Person.Person -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> m Bool
 validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
@@ -950,7 +957,7 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
   newVehicle <- addVehicleToDriver
   DAQuery.activateRCForDriver driverInfo.driverId rc.id now
   when (maybe False (\oldVehicle -> oldVehicle.category /= newVehicle.category) mbOldVehicle) $
-    forceDriverOffline driverInfo.driverId
+    forceDriverOffline transporterConfig driverInfo.driverId
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.incrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverInfo.driverId
   return ()
   where
@@ -964,6 +971,7 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
       -- driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
       let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing
       VQuery.create vehicle
+      fork "applyFleetSettings" $ FDS.applyFleetSettings False cityVehicleServiceTiers person vehicle
       pure vehicle
 
 deactivateCurrentRC :: OnboardingFlow m r => DTC.TransporterConfig -> Id Person.Person -> m ()

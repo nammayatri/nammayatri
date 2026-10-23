@@ -11,6 +11,7 @@ import Domain.Types.Common
 import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.FarePolicy.FareProductType as DFPT
 import qualified Domain.Types.Journey as DJ
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
 import Kernel.Types.Id
 import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
@@ -23,7 +24,8 @@ data FlowStatus
         otherSelectedEstimates :: Maybe [Id DE.Estimate],
         validTill :: UTCTime,
         providerId :: Maybe Text,
-        tripCategory :: Maybe TripCategory
+        tripCategory :: Maybe TripCategory,
+        searchRequestId :: Maybe (Id DSR.SearchRequest)
       }
   | WAITING_FOR_DRIVER_ASSIGNMENT
       { bookingId :: Id DB.Booking,

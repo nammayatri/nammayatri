@@ -1,6 +1,7 @@
 imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   APISuccess: Kernel.Types.APISuccess
+  SelfDeclarationValueReq: Domain.Types.DriverProfileQuestions
 module: DriverProfileQuestions
 types:
   DriverProfileQuesRes:
@@ -13,6 +14,7 @@ types:
     otherImages: "[Text]"
     otherImageIds: "[Text]"
     vehicleImage: "Maybe Text"
+    selfDeclarations: "Maybe [SelfDeclarationValueReq]"
   DriverProfileQuesReq:
     aspirations : "[Text]"
     drivingSince : "Maybe Int"
@@ -20,6 +22,7 @@ types:
     pledges : "[Text]"
     vehicleTags : "[Text]"
     imageIds: "[Text]"
+    selfDeclarations: "Maybe [SelfDeclarationValueReq]"
 apis:
   # POST /DriverProfileQues
   - POST:

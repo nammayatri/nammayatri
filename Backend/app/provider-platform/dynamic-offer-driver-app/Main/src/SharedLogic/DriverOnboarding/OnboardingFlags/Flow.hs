@@ -13,6 +13,9 @@ module SharedLogic.DriverOnboarding.OnboardingFlags.Flow
     readOnboardingCounts,
     removeDriverFromOnboardingCounters,
     removeFleetOwnerFromOnboardingCounters,
+    adjustDriverOnboardingCounters,
+    adjustFleetOnboardingCounters,
+    adjustVehicleOnboardingCounters,
     BlockChange (..),
     BlockPayload (..),
     SimplePayload (..),
@@ -67,7 +70,9 @@ data VehicleDocsEntry = VehicleDocsEntry
     vdeItem :: VehicleDocumentItem,
     vdeConfigs :: [DVC.DocumentVerificationConfig],
     -- | The caller's value when known (statusHandler); standalone recomputes pass Nothing.
-    vdeMakeSelfieAadhaarPanMandatory :: Maybe Bool
+    vdeMakeSelfieAadhaarPanMandatory :: Maybe Bool,
+    -- | The RC's city has enableBotFlow: `approved` is BOT-owned.
+    vdeEnableBotFlow :: Bool
   }
 
 -- | Everything the person-side recompute needs besides the documents themselves.
@@ -123,6 +128,7 @@ recomputeOnboardingFlags input useUnifiedOnboardingFlagsRecompute = do
               personSideDocs
               pfc.pfcVehicleCategory
               pfc.pfcMakeSelfieAadhaarPanMandatory
+              pfc.pfcTransporterConfig
               useUnifiedOnboardingFlagsRecompute
         Right _ ->
           Just
@@ -141,7 +147,7 @@ recomputeOnboardingFlags input useUnifiedOnboardingFlagsRecompute = do
               pfc.pfcVehicleDocs
               useUnifiedOnboardingFlagsRecompute
   forM_ input.ofiVehicles $ \entry ->
-    recomputeVehicleFlagsArm entry.vdeRegistrationNo entry.vdeItem entry.vdeConfigs entry.vdeMakeSelfieAadhaarPanMandatory useUnifiedOnboardingFlagsRecompute
+    recomputeVehicleFlagsArm entry.vdeRegistrationNo entry.vdeItem entry.vdeConfigs entry.vdeMakeSelfieAadhaarPanMandatory entry.vdeEnableBotFlow useUnifiedOnboardingFlagsRecompute
   pure OnboardingFlagsResult {ofrPersonEnabled = personEnabled, ofrVehiclesTouched = length input.ofiVehicles}
 
 mkUnavailableDoc :: DVC.DocumentType -> DocumentStatusItem
@@ -215,10 +221,19 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
           then driverDocuments <> maybe unavailableVehicleDocs (.documents) (mbValidVehicleDoc ForEnabling)
           else driverDocuments
       derivedApproved = computeApprovedFromDocs (Just isFleetDriver) allDocVerificationConfigs person.role approvalDocs
-      newApproved =
-        case derivedApproved of
+      newApproved
+        | transporterConfig.enableBotFlow == Just True = botOwnedApproved
+        | otherwise = case derivedApproved of
           Just True | not allMandatoryDocsValid -> Nothing
           other -> other
+      -- BOT owns `approved`: only the BOT review sets it True. Losing `verified` revokes it (re-approval
+      -- required), regaining `verified` returns the driver to review, and a rejected approval doc on a
+      -- verified driver revokes it. Disabling revokes it too (via the disable helper, counted below).
+      botOwnedApproved
+        | driverInfo.verified && not verifiedToWrite = Just False
+        | not driverInfo.verified && verifiedToWrite = Nothing
+        | verifiedToWrite && derivedApproved == Just False = Just False
+        | otherwise = driverInfo.approved
       holdEnabledWithoutDocsVerifiedEnabledOrApproved = not approvalSupported && (driverInfo.verified || driverInfo.enabled)
       verifiedToWrite =
         if holdEnabledWithoutDocsVerifiedEnabledOrApproved || (driverInfo.verified && not allMandatoryDocsValid && not mutationAllowed)
@@ -277,6 +292,14 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
   when (bypassDocGates && docsDerivedEnable) $
     DIQueryExtra.updateEnabledReasonFlag Nothing (cast person.id)
   let justEnabled = shouldEnable && not driverInfo.enabled
+      justDisabled = not shouldEnable && driverInfo.enabled
+      -- Under BOT updateEnabledVerifiedStateWithAnalytics also revokes `approved` when it writes enabled = False
+      -- (disable) or verified = False (an admin force-enable of an unverified driver), so the counters must see
+      -- the revoked value, not the one written above.
+      approvedAfterWrites =
+        if transporterConfig.enableBotFlow == Just True && (justDisabled || (justEnabled && not verifiedToWrite))
+          then Just False
+          else approvedToWrite
   -- The association is read once and reused for both the onboardingAs reconciliation and the
   -- fleet-scoped counter key.
   mbFleetAssoc <-
@@ -285,12 +308,13 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
       else pure Nothing
   if justEnabled
     then do
-      let mbRcNumberToActivate = (.registrationNo) <$> mbValidVehicleDoc ForEnabling
+      -- Under enableBotFlow RC activation stays manual: no auto-activation on enabling.
+      let mbRcNumberToActivate = if transporterConfig.enableBotFlow == Just True then Nothing else (.registrationNo) <$> mbValidVehicleDoc ForEnabling
       enableDriver merchantOpCityId person.id person.role driverName transporterConfig merchantId verifiedToWrite mbRcNumberToActivate
       whenJust onboardingVehicleCategory $ \category ->
         DIIQuery.updateOnboardingVehicleCategory (Just category) person.id
     else
-      when (not shouldEnable && driverInfo.enabled) $
+      when justDisabled $
         SDO.disableDriverWithAnalytics merchantOpCityId person.id Nothing
   let mbFleetOwnerId = if effectiveOnboardingAs == DI.FLEET_DRIVER then (.fleetOwnerId) <$> mbFleetAssoc else Nothing
   when (useUnifiedOnboardingFlagsRecompute && driverInfo.isNew /= Just False) $ DIQuery.updateIsNew (Just False) (cast person.id)
@@ -300,7 +324,7 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
     merchantOpCityId
     mbFleetOwnerId
     (asAlreadyCounted driverInfo.isNew $ bucketsOfFlags' driverInfo.verified driverInfo.approved driverInfo.enabled driverInfo.blocked (isJust driverInfo.disabledReasonFlag))
-    (bucketsOfFlags' verifiedToWrite approvedToWrite shouldEnable driverInfo.blocked (isJust effectiveDisabledReasonFlag))
+    (bucketsOfFlags' verifiedToWrite approvedAfterWrites shouldEnable driverInfo.blocked (isJust effectiveDisabledReasonFlag))
   pure shouldEnable
 
 -- | Fleet owner (not fleet drivers — they go through recomputeDriverVerifiedAndEnabled). Recompute
@@ -316,27 +340,41 @@ recomputeFleetFlagsArm ::
   [DocumentStatusItem] ->
   DVC.VehicleCategory ->
   Maybe Bool ->
+  DTC.TransporterConfig ->
   Bool ->
   m Bool
-recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory useUnifiedOnboardingFlagsRecompute = do
+recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory transporterConfig useUnifiedOnboardingFlagsRecompute = do
   fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
-  let allFleetMandatoryDocsValid = checkAllDriverDocsValidForVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
+  let botFlow = transporterConfig.enableBotFlow == Just True
+      allFleetMandatoryDocsValid = checkAllDriverDocsValidForVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
       allFleetEnablingDocsValid = checkAllDriverDocsValidForEnabling allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
       derivedApproved = computeApprovedFromDocs Nothing allDocVerificationConfigs person.role driverDocuments
       approvalSupported = approvalSupportedInConfigs allDocVerificationConfigs
-      newApproved =
-        case derivedApproved of
+      newApproved
+        | botFlow = botOwnedApproved
+        | otherwise = case derivedApproved of
           Just True | not allFleetMandatoryDocsValid -> Nothing
           other -> other
-      holdEnabledWithoutDocsVerifiedEnabledOrApproved = not approvalSupported && (fleetOwnerInfo.verified || fleetOwnerInfo.enabled)
+      -- BOT owns `approved`, as on the driver side: only the BOT review sets it True; losing `verified`
+      -- revokes it, regaining `verified` returns the fleet to review, a rejected approval doc on a verified
+      -- fleet revokes it, and losing `enabled` revokes it (below).
+      botOwnedApproved
+        | fleetOwnerInfo.verified && not verifiedToWrite = Just False
+        | not fleetOwnerInfo.verified && verifiedToWrite = Nothing
+        | verifiedToWrite && derivedApproved == Just False = Just False
+        | otherwise = fleetOwnerInfo.approved
+      -- BOT cities recompute fleet flags in both directions; the hold keeps non-BOT cities without
+      -- approval support on their sticky flags.
+      holdEnabledWithoutDocsVerifiedEnabledOrApproved = not botFlow && not approvalSupported && (fleetOwnerInfo.verified || fleetOwnerInfo.enabled)
       verifiedToWrite = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then fleetOwnerInfo.verified else allFleetMandatoryDocsValid
       approvedToWrite = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then fleetOwnerInfo.approved else newApproved
-  when (verifiedToWrite /= fleetOwnerInfo.verified || approvedToWrite /= fleetOwnerInfo.approved) $
-    QFOI.updateFleetOwnerVerifiedAndApprovedStatus verifiedToWrite approvedToWrite person.id
-  when (approvalSupported && fleetOwnerInfo.approved /= Just True && approvedToWrite == Just True) $
-    ApprovalComms.notifyPersonApproved person.merchantOperatingCityId person
-  let approvedGateOk = approvedToWrite == Just True
+      approvedGateOk = approvedToWrite == Just True
       newEnabled = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then fleetOwnerInfo.enabled else allFleetEnablingDocsValid && approvedGateOk
+      approvedAfterWrites = if botFlow && fleetOwnerInfo.enabled && not newEnabled then Just False else approvedToWrite
+  when (verifiedToWrite /= fleetOwnerInfo.verified || approvedAfterWrites /= fleetOwnerInfo.approved) $
+    QFOI.updateFleetOwnerVerifiedAndApprovedStatus verifiedToWrite approvedAfterWrites person.id
+  when (approvalSupported && fleetOwnerInfo.approved /= Just True && approvedAfterWrites == Just True) $
+    ApprovalComms.notifyPersonApproved person.merchantOperatingCityId person
   when (newEnabled /= fleetOwnerInfo.enabled) $
     QFOI.updateFleetOwnerEnabledStatus newEnabled person.id
   when (useUnifiedOnboardingFlagsRecompute && fleetOwnerInfo.isNew /= Just False) $ QFOI.updateIsNew (Just False) person.id
@@ -346,7 +384,7 @@ recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleC
     person.merchantOperatingCityId
     (Just person.id.getId)
     (asAlreadyCounted fleetOwnerInfo.isNew $ bucketsOfFlags' fleetOwnerInfo.verified fleetOwnerInfo.approved fleetOwnerInfo.enabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
-    (bucketsOfFlags' verifiedToWrite approvedToWrite newEnabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
+    (bucketsOfFlags' verifiedToWrite approvedAfterWrites newEnabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
   pure newEnabled
 
 recomputeVehicleFlagsArm ::
@@ -356,8 +394,9 @@ recomputeVehicleFlagsArm ::
   [DVC.DocumentVerificationConfig] ->
   Maybe Bool ->
   Bool ->
+  Bool ->
   m ()
-recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationConfigs makeSelfieAadhaarPanMandatory useUnifiedOnboardingFlagsRecompute = do
+recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationConfigs makeSelfieAadhaarPanMandatory botFlow useUnifiedOnboardingFlagsRecompute = do
   let vehicleDocItem' = vehicleDocItem
       allVehicleMandatoryDocsValid = checkAllVehicleDocsValidForVerified allDocumentVerificationConfigs vehicleDocItem' makeSelfieAadhaarPanMandatory
   rcHash <- getDbHash registrationNo
@@ -366,14 +405,21 @@ recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationCo
       approvalSupported = approvalSupportedInConfigs (Right allDocumentVerificationConfigs)
   case mbRc of
     Just rc -> do
-      let holdEnabledWithoutDocsVerifiedEnabledOrApproved = not approvalSupported && rc.verified == Just True
+      let holdEnabledWithoutDocsVerifiedEnabledOrApproved = not botFlow && not approvalSupported && rc.verified == Just True
           newVerified = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then rc.verified else Just allVehicleMandatoryDocsValid
-          newApproved =
-            if holdEnabledWithoutDocsVerifiedEnabledOrApproved
-              then rc.approved
-              else case derivedApproved of
-                Just True | not allVehicleMandatoryDocsValid -> Nothing
-                other -> other
+          newApproved
+            | holdEnabledWithoutDocsVerifiedEnabledOrApproved = rc.approved
+            | botFlow = botOwnedApproved
+            | otherwise = case derivedApproved of
+              Just True | not allVehicleMandatoryDocsValid -> Nothing
+              other -> other
+          -- BOT owns the RC's `approved`: only the BOT review sets it True. Losing `verified` (True -> False)
+          -- revokes it, and so does a rejected approval doc on a verified RC. A new RC (verified NULL) whose
+          -- first recompute gives False was never verified, so it stays pending instead of counting as rejected.
+          botOwnedApproved
+            | rc.verified == Just True && newVerified == Just False = Just False
+            | newVerified == Just True && derivedApproved == Just False = Just False
+            | otherwise = rc.approved
       when (newVerified /= rc.verified || newApproved /= rc.approved) $
         VRCEQuery.updateApprovedAndVerifiedById newApproved newVerified rc.id
       when (approvalSupported && rc.approved /= Just True && newApproved == Just True) $
@@ -531,6 +577,56 @@ removeFleetOwnerFromOnboardingCounters useUnifiedOnboardingFlagsRecompute person
     (Just person.id.getId)
     (asAlreadyCounted fleetOwnerInfo.isNew $ bucketsOfFlags' fleetOwnerInfo.verified fleetOwnerInfo.approved fleetOwnerInfo.enabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
     emptyOnboardingBuckets
+
+-- | Move a driver's counters for a flag write made outside 'recomputeDriverFlagsArm' (the BOT
+--   review). The arm moves the counters from the row it reads, so a write it never sees would stay
+--   uncounted for good; this applies the delta the arm would have, with the same bucket derivation,
+--   key scoping and first-count handling.
+adjustDriverOnboardingCounters :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> DI.DriverInformation -> DI.DriverInformation -> m ()
+adjustDriverOnboardingCounters transporterConfig person oldInfo newInfo = do
+  let useUnifiedOnboardingFlagsRecompute = transporterConfig.unifiedOnboardingFlagsRecompute == Just True
+      effectiveOnboardingAs = fromMaybe DI.INDIVIDUAL (oldInfo.onboardingAs <|> transporterConfig.defaultOnboardingAs)
+      bucketsOf info = bucketsOfFlags' info.verified info.approved info.enabled info.blocked (isJust info.disabledReasonFlag)
+  mbFleetAssoc <-
+    if effectiveOnboardingAs == DI.FLEET_DRIVER
+      then QFDA.findOneByDriverIdWithStatus person.id
+      else pure Nothing
+  when (useUnifiedOnboardingFlagsRecompute && oldInfo.isNew /= Just False) $ DIQuery.updateIsNew (Just False) (cast person.id)
+  adjustOnboardingCounters
+    useUnifiedOnboardingFlagsRecompute
+    CounterDriver
+    person.merchantOperatingCityId
+    ((.fleetOwnerId) <$> mbFleetAssoc)
+    (asAlreadyCounted oldInfo.isNew $ bucketsOf oldInfo)
+    (bucketsOf newInfo)
+
+-- | 'adjustDriverOnboardingCounters' for a vehicle, mirroring 'recomputeVehicleFlagsArm'.
+adjustVehicleOnboardingCounters :: OnboardingFlow m r => DTC.TransporterConfig -> RC.VehicleRegistrationCertificate -> RC.VehicleRegistrationCertificate -> m ()
+adjustVehicleOnboardingCounters transporterConfig oldRc newRc = do
+  let useUnifiedOnboardingFlagsRecompute = transporterConfig.unifiedOnboardingFlagsRecompute == Just True
+  when (useUnifiedOnboardingFlagsRecompute && oldRc.isNew /= Just False) $ RCQuery.updateIsNew (Just False) oldRc.id
+  whenJust oldRc.merchantOperatingCityId $ \rcMerchantOpCityId ->
+    adjustOnboardingCounters
+      useUnifiedOnboardingFlagsRecompute
+      CounterVehicle
+      rcMerchantOpCityId
+      oldRc.fleetOwnerId
+      (asAlreadyCounted oldRc.isNew $ bucketsOfFlags (fromMaybe False oldRc.verified) oldRc.approved False)
+      (bucketsOfFlags (fromMaybe False newRc.verified) newRc.approved False)
+
+-- | 'adjustDriverOnboardingCounters' for a fleet owner, mirroring 'recomputeFleetFlagsArm'.
+adjustFleetOnboardingCounters :: OnboardingFlow m r => DTC.TransporterConfig -> DP.Person -> DFOI.FleetOwnerInformation -> DFOI.FleetOwnerInformation -> m ()
+adjustFleetOnboardingCounters transporterConfig person oldInfo newInfo = do
+  let useUnifiedOnboardingFlagsRecompute = transporterConfig.unifiedOnboardingFlagsRecompute == Just True
+      bucketsOf info = bucketsOfFlags' info.verified info.approved info.enabled info.blocked (isJust info.disabledReasonFlag)
+  when (useUnifiedOnboardingFlagsRecompute && oldInfo.isNew /= Just False) $ QFOI.updateIsNew (Just False) person.id
+  adjustOnboardingCounters
+    useUnifiedOnboardingFlagsRecompute
+    CounterFleetOwner
+    person.merchantOperatingCityId
+    (Just person.id.getId)
+    (asAlreadyCounted oldInfo.isNew $ bucketsOf oldInfo)
+    (bucketsOf newInfo)
 
 data BlockChange
   = Block BlockPayload

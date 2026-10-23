@@ -387,7 +387,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
             return 0
       else return 0
   let mbDriverInfo = driverIdForSearch
-  searchReq <- withTimeAPI "search" "buildSearchRequest" $ buildSearchRequest sReq bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId customerCancellationDue fromLocation mbToLocation mbDistance mbDuration mbStaticDuration spcllocationTag specialLocName allFarePoliciesProduct.area mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
+  searchReq <- withTimeAPI "search" "buildSearchRequest" $ buildSearchRequest sReq bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId customerCancellationDue fromLocation mbToLocation mbDistance mbDuration mbStaticDuration spcllocationTag specialLocName allFarePoliciesProduct.area allFarePoliciesProduct.pickupArea allFarePoliciesProduct.dropArea mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   unless sReq.isShadowSearch $
     triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId'}
@@ -404,7 +404,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
               }
       addNammaTags tagData
     fork "Updating Demand Hotspots on search" $ do
-      DemandHotspots.updateDemandHotspotsOnSearch searchReq.id merchantOpCityId transporterConfig sReq.pickupLocation
+      DemandHotspots.updateDemandHotspotsOnSearch searchReq.id merchantOpCityId transporterConfig sReq.pickupLocation (DemandHotspots.tripOptionFromCategories possibleTripOption.tripCategories) possibleTripOption.isScheduled
 
   -- considerDriversForSearch is permanently off platform-wide (confirmed, not just today's
   -- default) -- see selectDriversAndMatchFarePolicies for what that means for driver pool
@@ -495,6 +495,9 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
           specialLocationSupportNumber = listToMaybe products >>= (.specialLocationSupportNumber),
           fareSettlementType = listToMaybe products >>= (.fareSettlementType),
           mbPickupDropArea = listToMaybe products >>= (.mbPickupDropArea),
+          -- Any trip category's: they all come from the same pickup and drop points.
+          pickupArea = listToMaybe (mapMaybe (.pickupArea) products),
+          dropArea = listToMaybe (mapMaybe (.dropArea) products),
           vehicleServiceTierMap = foldMap (.vehicleServiceTierMap) products
         }
 
@@ -693,6 +696,8 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Text ->
   SL.Area ->
+  Maybe SL.Area ->
+  Maybe SL.Area ->
   Maybe HighPrecMoney ->
   Maybe [Text] ->
   Maybe [Text] ->
@@ -707,7 +712,7 @@ buildSearchRequest ::
   Maybe (Id DP.Person) ->
   [ConfigVersionMap] ->
   m DSR.SearchRequest
-buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId cancellationDues fromLocation mbToLocation mbDistance mbDuration mbStaticDuration specialLocationTag mbSpecialLocName area tollCharges tollNames tollIds isCustomerPrefferedSearchRoute isBlockedRoute currency distanceUnit fromLocGeohash toLocGeohash dynamicPricingLogicVersion stops' mbDriverInfo configVersionMap = do
+buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId cancellationDues fromLocation mbToLocation mbDistance mbDuration mbStaticDuration specialLocationTag mbSpecialLocName area mbPickupArea mbDropArea tollCharges tollNames tollIds isCustomerPrefferedSearchRoute isBlockedRoute currency distanceUnit fromLocGeohash toLocGeohash dynamicPricingLogicVersion stops' mbDriverInfo configVersionMap = do
   uuid <- generateGUID
   now <- getCurrentTime
   cloudType <- asks (.cloudType)
@@ -724,6 +729,9 @@ buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mb
       { id = Id uuid,
         messageId = Nothing,
         area = Just area,
+        -- The pickup and drop special locations, whichever fare was picked.
+        pickupArea = mbPickupArea,
+        dropArea = mbDropArea,
         bapCity = Just bapCity,
         bapCountry = Just bapCountry,
         autoAssignEnabled = Nothing,

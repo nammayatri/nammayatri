@@ -18,6 +18,7 @@ instance FromTType' Beam.IncentiveJourneyStats Lib.IncentiveJourney.Domain.Types
       Just
         Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.IncentiveJourneyStats
           { cohortId = Kernel.Types.Id.Id cohortId,
+            cohortJourneyMappingId = Kernel.Types.Id.Id <$> cohortJourneyMappingId,
             conditionOperator = conditionOperator,
             conditionType = conditionType,
             conditionValue = conditionValue,
@@ -40,6 +41,7 @@ instance ToTType' Beam.IncentiveJourneyStats Lib.IncentiveJourney.Domain.Types.I
   toTType' (Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.IncentiveJourneyStats {..}) = do
     Beam.IncentiveJourneyStatsT
       { Beam.cohortId = Kernel.Types.Id.getId cohortId,
+        Beam.cohortJourneyMappingId = Kernel.Types.Id.getId <$> cohortJourneyMappingId,
         Beam.conditionOperator = conditionOperator,
         Beam.conditionType = conditionType,
         Beam.conditionValue = conditionValue,

@@ -56,7 +56,7 @@ bulkLocPickupUpdate req = do
       mkWaypointWithTime w = (LatLong w.lat w.lon, fromMaybe nowTs w.ts)
       allWaypointsWithTime = fmap mkWaypointWithTime loc
       accWaypointsWithTime = map mkWaypointWithTime accLoc
-      pickupDriverId = LocUpd.pickupLocationUpdatesDriverId driverId
+      pickupDriverId = LocUpd.pickupLegDriverId driverId
   addIntermediatePickupPoints pickupInterpolationHandler rideId pickupDriverId accWaypointsWithTime allWaypointsWithTime
   pure Success
 
@@ -70,7 +70,7 @@ finalizePickupDistanceOnRideStart ::
   Flow ()
 finalizePickupDistanceOnRideStart merchantId merchantOpCityId rideId driverId = do
   pickupInterpolationHandler <- LocUpd.buildRidePickupInterpolationHandler merchantId merchantOpCityId (Just rideId) True Nothing
-  let pickupDriverId = LocUpd.pickupLocationUpdatesDriverId driverId
+  let pickupDriverId = LocUpd.pickupLegDriverId driverId
   remaining <- LTSF.pickupDriverLocation rideId merchantId driverId
   currentTime <- getCurrentTime
   let nowTs = floor $ utcTimeToPOSIXSeconds currentTime
@@ -86,5 +86,4 @@ finalizePickupDistanceOnRideStart merchantId merchantOpCityId rideId driverId = 
       pure $ (\neBuffered -> (NE.last neBuffered, nowTs) :| []) <$> nonEmpty buffered
   whenJust mbFinalWaypoints $ \finalWaypoints ->
     finalPickupDistanceCalculation pickupInterpolationHandler rideId pickupDriverId (NE.toList finalWaypoints) finalWaypoints
-  pickupInterpolationHandler.clearLocationUpdates pickupDriverId
-  pickupInterpolationHandler.clearInterpolatedPoints pickupDriverId
+  LocUpd.resetPickupLegState driverId

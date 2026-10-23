@@ -8,8 +8,8 @@ import Kernel.Prelude
 import Kernel.Types.Common (Seconds)
 import Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime, secondsToNominalDiffTime)
+import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as Common
-import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats as DIJS
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
@@ -17,7 +17,7 @@ import qualified Lib.IncentiveJourney.Storage.Beam.IncentiveJourneyStats as Beam
 import Lib.IncentiveJourney.Storage.Queries.OrphanInstances.IncentiveJourneyStats ()
 import qualified Sequelize as Se
 
--- | Upsert by (personId, journeyId, milestoneId, periodKey).
+-- | Upsert by (personId, cohortJourneyMappingId, milestoneId, periodKey).
 upsertJourneyStats ::
   (BeamFlow m r) =>
   DIJS.IncentiveJourneyStats ->
@@ -27,7 +27,7 @@ upsertJourneyStats stats = do
     findOneWithKV
       [ Se.And
           [ Se.Is Beam.personId $ Se.Eq (getId stats.personId),
-            Se.Is Beam.journeyId $ Se.Eq (getId stats.journeyId),
+            Se.Is Beam.cohortJourneyMappingId $ Se.Eq (getId <$> stats.cohortJourneyMappingId),
             Se.Is Beam.milestoneId $ Se.Eq (getId stats.milestoneId),
             Se.Is Beam.periodKey $ Se.Eq stats.periodKey
           ]
@@ -107,50 +107,50 @@ mkLocalDayUtcBounds day timeDiffFromUtc =
         addUTCTime offset dayEndLocal
       )
 
-findStatsByPersonJourneyAndPeriod ::
+findStatsByPersonCjmAndPeriod ::
   (BeamFlow m r) =>
   Id Common.Person ->
-  Id DIJ.IncentiveJourney ->
+  Id DCJM.CohortJourneyMapping ->
   Text ->
   m [DIJS.IncentiveJourneyStats]
-findStatsByPersonJourneyAndPeriod personId journeyId periodKey =
+findStatsByPersonCjmAndPeriod personId cohortJourneyMappingId periodKey =
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.personId $ Se.Eq (getId personId),
-          Se.Is Beam.journeyId $ Se.Eq (getId journeyId),
+          Se.Is Beam.cohortJourneyMappingId $ Se.Eq (Just (getId cohortJourneyMappingId)),
           Se.Is Beam.periodKey $ Se.Eq periodKey
         ]
     ]
 
--- | Scoped fetch for streak-end eligibility — only the period keys that will be checked.
-findStatsByPersonJourneyAndPeriodKeys ::
+-- | Scoped fetch for streak-end eligibility — only this campaign's period keys.
+findStatsByPersonCjmAndPeriodKeys ::
   (BeamFlow m r) =>
   Id Common.Person ->
-  Id DIJ.IncentiveJourney ->
+  Id DCJM.CohortJourneyMapping ->
   [Text] ->
   m [DIJS.IncentiveJourneyStats]
-findStatsByPersonJourneyAndPeriodKeys _personId _journeyId [] = pure []
-findStatsByPersonJourneyAndPeriodKeys personId journeyId periodKeys =
+findStatsByPersonCjmAndPeriodKeys _personId _cohortJourneyMappingId [] = pure []
+findStatsByPersonCjmAndPeriodKeys personId cohortJourneyMappingId periodKeys =
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.personId $ Se.Eq (getId personId),
-          Se.Is Beam.journeyId $ Se.Eq (getId journeyId),
+          Se.Is Beam.cohortJourneyMappingId $ Se.Eq (Just (getId cohortJourneyMappingId)),
           Se.Is Beam.periodKey $ Se.In periodKeys
         ]
     ]
 
-findStatsByPersonAndMilestonePeriod ::
+findStatsByPersonCjmAndMilestonePeriod ::
   (BeamFlow m r) =>
   Id Common.Person ->
-  Id DIJ.IncentiveJourney ->
+  Id DCJM.CohortJourneyMapping ->
   Id DIJM.IncentiveJourneyMilestone ->
   Text ->
   m (Maybe DIJS.IncentiveJourneyStats)
-findStatsByPersonAndMilestonePeriod personId journeyId milestoneId periodKey =
+findStatsByPersonCjmAndMilestonePeriod personId cohortJourneyMappingId milestoneId periodKey =
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.personId $ Se.Eq (getId personId),
-          Se.Is Beam.journeyId $ Se.Eq (getId journeyId),
+          Se.Is Beam.cohortJourneyMappingId $ Se.Eq (Just (getId cohortJourneyMappingId)),
           Se.Is Beam.milestoneId $ Se.Eq (getId milestoneId),
           Se.Is Beam.periodKey $ Se.Eq periodKey
         ]

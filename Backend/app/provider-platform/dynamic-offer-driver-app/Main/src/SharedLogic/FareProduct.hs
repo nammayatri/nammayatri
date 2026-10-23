@@ -37,7 +37,10 @@ data FareProducts = FareProducts
     specialLocationTag :: Maybe Text,
     specialLocationSupportNumber :: Maybe Text,
     fareSettlementType :: Maybe SL.FareSettlementType,
-    mbPickupDropArea :: Maybe SL.Area
+    mbPickupDropArea :: Maybe SL.Area,
+    -- The trip's pickup and drop special locations, whichever fare was picked (for fleet pooling priority).
+    pickupArea :: Maybe SL.Area,
+    dropArea :: Maybe SL.Area
   }
 
 getPickupSpecialLocation ::
@@ -65,20 +68,21 @@ getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) =
 getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLong mToLocationLatLong mbFromSpecialLocationId mbToSpecialLocationId tripCategory = do
   -- If SpecialLocation IDs provided directly (fixed route search), use them
   case (mbFromSpecialLocationId, mbToSpecialLocationId) of
-    (Just fromId, Just toId) -> do
-      mbFromLoc <- QSpecialLocation.findById fromId
-      mbToLoc <- QSpecialLocation.findById toId
-      case (mbFromLoc, mbToLoc) of
-        (Just fromLoc, Just toLoc) -> do
-          let specialLocationTag = mkSpecialLocationTag fromLoc.category toLoc.category "FixedRoute"
-          mbFareProducts <- getPickupDropFareProducts fromLoc toLoc specialLocationTag
-          maybe getDefaultFareProducts return mbFareProducts
-        _ -> getDefaultFareProducts
+    (Just fromId, Just toId) ->
+      withEnds (Just (SL.Pickup fromId Nothing)) (Just (SL.Drop toId)) <$> do
+        mbFromLoc <- QSpecialLocation.findById fromId
+        mbToLoc <- QSpecialLocation.findById toId
+        case (mbFromLoc, mbToLoc) of
+          (Just fromLoc, Just toLoc) -> do
+            let specialLocationTag = mkSpecialLocationTag fromLoc.category toLoc.category "FixedRoute"
+            mbFareProducts <- getPickupDropFareProducts fromLoc toLoc specialLocationTag
+            maybe getDefaultFareProducts return mbFareProducts
+          _ -> getDefaultFareProducts
     _ -> do
       -- Existing flow: lookup SpecialLocation by lat/long
       mbPickupSpecialLocation <- mapM (getPickupSpecialLocation merchantOpCityId) =<< QSpecialLocation.findPickupSpecialLocationByLatLong fromLocationLatLong
       mbDropSpecialLocation <- maybe (pure Nothing) (\toLoc -> mapM (getDropSpecialLocation merchantOpCityId) =<< QSpecialLocation.findSpecialLocationByLatLong' toLoc) mToLocationLatLong
-      case (mbPickupSpecialLocation, mbDropSpecialLocation) of
+      withEnds ((\(sl, _) -> SL.Pickup sl.id Nothing) <$> mbPickupSpecialLocation) (SL.Drop . (.id) . fst <$> mbDropSpecialLocation) <$> case (mbPickupSpecialLocation, mbDropSpecialLocation) of
         (Just (pickupSpecialLocation, pickupPriority), Just (dropSpecialLocation, dropPriority)) -> do
           mbPickupDropFareProducts <- getPickupDropFareProducts pickupSpecialLocation dropSpecialLocation $ mkSpecialLocationTag pickupSpecialLocation.category dropSpecialLocation.category "None"
           case mbPickupDropFareProducts of
@@ -93,6 +97,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
         (Nothing, Just (dropSpecialLocation, _)) -> getDropFareProductsAndSpecialLocationTag dropSpecialLocation $ mkSpecialLocationTag "None" dropSpecialLocation.category "Drop"
         (Nothing, Nothing) -> getDefaultFareProducts
   where
+    withEnds mbPickupArea mbDropArea fareProducts = fareProducts {pickupArea = mbPickupArea, dropArea = mbDropArea}
     getPickupDropFareProducts pickupSpecialLocation dropSpecialLocation specialLocationTag = do
       mbPickupGate <- QGateInfo.findGateInfoByLatLongWithinRadius pickupSpecialLocation.id fromLocationLatLong 2000.0
       let mbPickupGateId = (.id.getId) <$> mbPickupGate
@@ -112,7 +117,9 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
                   specialLocationTag = Just specialLocationTag,
                   specialLocationSupportNumber = pickupSpecialLocation.supportNumber,
                   fareSettlementType = pickupSpecialLocation.fareSettlementType,
-                  mbPickupDropArea = Nothing
+                  mbPickupDropArea = Nothing,
+                  pickupArea = Nothing,
+                  dropArea = Nothing
                 }
 
     getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation specialLocationTag =
@@ -132,7 +139,9 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
                 specialLocationTag = Just specialLocationTag,
                 specialLocationSupportNumber = pickupSpecialLocation.supportNumber,
                 fareSettlementType = pickupSpecialLocation.fareSettlementType,
-                mbPickupDropArea = Nothing
+                mbPickupDropArea = Nothing,
+                pickupArea = Nothing,
+                dropArea = Nothing
               }
     fetchAllGateFareProducts pickupSpecialLocation specialLocationTag = do
       let slId = pickupSpecialLocation.id
@@ -156,7 +165,9 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
             specialLocationTag = Just specialLocationTag,
             specialLocationSupportNumber = pickupSpecialLocation.supportNumber,
             fareSettlementType = pickupSpecialLocation.fareSettlementType,
-            mbPickupDropArea = Nothing
+            mbPickupDropArea = Nothing,
+            pickupArea = Nothing,
+            dropArea = Nothing
           }
     getDropFareProductsAndSpecialLocationTag dropSpecialLocation specialLocationTag = do
       let area = SL.Drop dropSpecialLocation.id
@@ -170,7 +181,9 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
             specialLocationTag = Just specialLocationTag,
             specialLocationSupportNumber = dropSpecialLocation.supportNumber,
             fareSettlementType = dropSpecialLocation.fareSettlementType,
-            mbPickupDropArea = Nothing
+            mbPickupDropArea = Nothing,
+            pickupArea = Nothing,
+            dropArea = Nothing
           }
 
     getDefaultFareProducts = do
@@ -184,7 +197,9 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
             specialLocationTag = Nothing,
             specialLocationSupportNumber = Nothing,
             fareSettlementType = Nothing,
-            mbPickupDropArea = Nothing
+            mbPickupDropArea = Nothing,
+            pickupArea = Nothing,
+            dropArea = Nothing
           }
 
     mkSpecialLocationTag pickupSpecialLocationCategory dropSpecialLocationCategory priority = pickupSpecialLocationCategory <> "_" <> dropSpecialLocationCategory <> "_" <> "Priority" <> priority

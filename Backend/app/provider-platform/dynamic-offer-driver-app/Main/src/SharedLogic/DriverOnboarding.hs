@@ -183,7 +183,8 @@ notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
           xyneChannelId = Nothing,
           xyneTicketBody = Nothing,
           xyneSenderName = Nothing,
-          xyneExternalId = Nothing
+          xyneExternalId = Nothing,
+          xyneBotLabel = Nothing
         }
 
 throwImageError :: OnboardingFlow m r => Id Domain.Image -> DriverOnboardingError -> m b
@@ -896,6 +897,7 @@ castDocumentCategory = \case
   Domain.Types.DocumentVerificationConfig.Permission -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission
   Domain.Types.DocumentVerificationConfig.Training -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training
   Domain.Types.DocumentVerificationConfig.Fleet -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Fleet
+  Domain.Types.DocumentVerificationConfig.SelfDeclaration -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.SelfDeclaration
 
 castLegalStructure :: Domain.Types.DocumentOnboardingStage.LegalStructure -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.LegalStructure
 castLegalStructure = \case

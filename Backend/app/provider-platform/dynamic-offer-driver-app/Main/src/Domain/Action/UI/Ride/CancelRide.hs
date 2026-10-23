@@ -31,6 +31,7 @@ import qualified Data.Map as M
 import qualified Data.Text as Text
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.SharedLogic.Cancel as SharedCancel
+import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
@@ -69,6 +70,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import Storage.ConfigPilot.Config.FleetConfig (fleetForbidsDriverCancellation, getCityFleetConfigs)
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
@@ -246,6 +248,12 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation all
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
           -- Fare-params snapshot of the service-tier/fare-policy config; dashboard and system requestors stay exempt.
           when (booking.fareParams.driverCancellationNotAllowed == Just True) $ throwError $ DriverCancellationNotAllowedOnRide ride.id.getId
+          -- Static-quote rides are priced before a driver exists, so the fleet's rule never reaches their fare params:
+          -- check the fleet the ride was assigned under (dynamic rides carry it in the fare params above).
+          unless (DTC.isDynamicOfferTrip booking.tripCategory) $
+            whenJust ride.fleetOwnerId $ \fleetOwnerId -> do
+              fleetConfigs <- getCityFleetConfigs booking.merchantOperatingCityId
+              when (fleetForbidsDriverCancellation (M.lookup fleetOwnerId.getId fleetConfigs)) $ throwError $ DriverCancellationNotAllowedOnRide ride.id.getId
           goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> booking.merchantOperatingCityId.getId)
           dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
           (cancellationCount, isGoToDisabled, driverGoHomeRequestId) <-

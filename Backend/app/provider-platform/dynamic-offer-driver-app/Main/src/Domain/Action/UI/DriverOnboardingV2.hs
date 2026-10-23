@@ -658,6 +658,8 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
     let hasAutoAssignTag tier =
           Yudhishthira.elemTagValue (LYT.TagName "AutoAssign") (show tier) (Yudhishthira.filterExpiredTags' now (fromMaybe [] person.driverTag))
 
+    -- A fleet that doesn't let its drivers toggle auto-assign keeps its auto-accept tiers as they are.
+    fleetLocksAutoAssign <- maybe False (not . (.allowDriverToToggle)) <$> FDA.getDriverFleetAutoAssignConfig personId merchantOperatingCityId
     -- Single pass over the driver's own filtered tier list, not cityVehicleServiceTiers -- force-select must never bypass isUsageRestricted.
     driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOperatingCityId
     tierResults <-
@@ -695,7 +697,9 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
     -- automated recompute would re-add it on the next rating/AC event anyway.
     let ratingGatedTiers = [t.serviceTierType | (t, isUsageRestricted) <- driverVehicleServiceTierTypes, not isUsageRestricted, isJust t.vehicleRating]
         selectedServiceTierTypes = DL.nub $ mapMaybe fst tierResults <> ratingGatedTiers
-        selectedAutoAcceptTierTypes = mapMaybe snd tierResults
+        -- Auto-assign the fleet gave stays on while the driver keeps the tier; the base tier follows their choice.
+        fleetKeptAutoAcceptTiers = [tier | fleetLocksAutoAssign, tier <- fromMaybe [] vehicle.selectedAutoAcceptTiers, hasAutoAssignTag tier, tier `elem` selectedServiceTierTypes]
+        selectedAutoAcceptTierTypes = DL.nub $ mapMaybe snd tierResults <> fleetKeptAutoAcceptTiers
     QVehicle.updateSelectedServiceTiers selectedServiceTierTypes personId
     QVehicle.updateSelectedAutoAcceptTiers selectedAutoAcceptTierTypes personId
 

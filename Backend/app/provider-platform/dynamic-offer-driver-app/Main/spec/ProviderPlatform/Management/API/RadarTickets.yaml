@@ -6,6 +6,9 @@ module: RadarTickets
 apis:
   - GET: # RadarTicketsListAPI
       endpoint: /list
+      # Ticket visibility depends on the caller (own tickets vs support.radar.read_all),
+      # so the hand-written DashboardAuth handler resolves it from the session.
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         - pageSize: Int
@@ -20,6 +23,9 @@ apis:
 
   - GET: # RadarTicketsSummaryAPI
       endpoint: /summary
+      # Ticket visibility depends on the caller (own tickets vs support.radar.read_all),
+      # so the hand-written DashboardAuth handler resolves it from the session.
+      appServerHandler: custom
       auth: ApiAuthV2
       response:
         type: RadarSummaryRes
@@ -28,6 +34,9 @@ apis:
 
   - GET: # RadarTicketsReportersAPI
       endpoint: /reporters
+      # Ticket visibility depends on the caller (own tickets vs support.radar.read_all),
+      # so the hand-written DashboardAuth handler resolves it from the session.
+      appServerHandler: custom
       auth: ApiAuthV2
       response:
         type: RadarReportersRes
@@ -36,6 +45,9 @@ apis:
 
   - GET: # RadarTicketsTicketAPI
       endpoint: /ticket/{ticketId}
+      # Ticket visibility depends on the caller (own tickets vs support.radar.read_all),
+      # so the hand-written DashboardAuth handler resolves it from the session.
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         ticketId: Text
@@ -46,6 +58,9 @@ apis:
 
   - GET: # RadarTicketsTicketConversationAPI
       endpoint: /ticket/{ticketId}/conversation
+      # Ticket visibility depends on the caller (own tickets vs support.radar.read_all),
+      # so the hand-written DashboardAuth handler resolves it from the session.
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         ticketId: Text
@@ -56,6 +71,9 @@ apis:
 
   - GET: # RadarTicketsTicketAttachmentAPI
       endpoint: /ticket/{ticketId}/attachment/{attachmentId}
+      # Ticket visibility depends on the caller (own tickets vs support.radar.read_all),
+      # so the hand-written DashboardAuth handler resolves it from the session.
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         ticketId: Text
@@ -125,6 +143,9 @@ apis:
 
   - POST: # RadarTicketsTicketUpdateStatusAPI
       endpoint: /ticket/{ticketId}/updateStatus
+      # Ticket visibility depends on the caller (own tickets vs support.radar.read_all),
+      # so the hand-written DashboardAuth handler resolves it from the session.
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         ticketId: Text
@@ -137,6 +158,9 @@ apis:
 
   - POST: # RadarTicketsTicketCsatAPI
       endpoint: /ticket/{ticketId}/csat
+      # Ticket visibility depends on the caller (own tickets vs support.radar.read_all),
+      # so the hand-written DashboardAuth handler resolves it from the session.
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         ticketId: Text

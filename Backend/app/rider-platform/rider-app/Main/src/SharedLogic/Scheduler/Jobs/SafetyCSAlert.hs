@@ -136,7 +136,8 @@ mkTicket person phoneNumber mediaLinks mbInfo flow disposition queue = do
       xyneChannelId = Nothing,
       xyneTicketBody = Nothing,
       xyneSenderName = Nothing,
-      xyneExternalId = Nothing
+      xyneExternalId = Nothing,
+      xyneBotLabel = Nothing
     }
   where
     issueDescription = case flow of

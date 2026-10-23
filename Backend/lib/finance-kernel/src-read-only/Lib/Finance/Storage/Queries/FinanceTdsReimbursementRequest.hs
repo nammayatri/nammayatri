@@ -23,6 +23,17 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest] -> m ())
 createMany = traverse_ create
 
+findAllByFleetOwnerIdAndMerchantOperatingCityId ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest])
+findAllByFleetOwnerIdAndMerchantOperatingCityId fleetOwnerId merchantOperatingCityId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
+        ]
+    ]
+
 findAllByFleetOwnerIdQuarterAndAssessmentYear ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Prelude.Text -> Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.Quarter -> Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.AssessmentYear -> Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest])

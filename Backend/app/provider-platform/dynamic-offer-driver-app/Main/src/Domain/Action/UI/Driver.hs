@@ -267,6 +267,7 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers as SSRD
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
+import qualified SharedLogic.BetterDriverSwap as BetterDriverSwap
 import SharedLogic.Booking
 import SharedLogic.Cac
 import SharedLogic.CallBAP (sendRideAssignedUpdateToBAP)
@@ -281,6 +282,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardi
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import SharedLogic.DriverPool as DP
+import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
@@ -1681,8 +1683,15 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
         let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry petTag (mbNammTag >>= (.validity)) now
         return $ Yudhishthira.replaceTagNameValue person.driverTag reqDriverTagWithExpiry
       else return $ Yudhishthira.removeTagName person.driverTag petTag
-  unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
-    QPerson.updateDriverTag (Just tag) personId
+  -- Saving a trip distance brings the driver's limit back after a fleet that ignored it, unless they are still in one.
+  let distanceTag = LYT.TagNameValue AreaPref.distancePreferenceEnabledTagName
+  clearDistanceTag <-
+    if (isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold) && Yudhishthira.elemTagName distanceTag tag
+      then not . maybe False (.disableDriverAreaAndDistancePreference) <$> QFDA.getDriverFleetAutoAssignConfig personId merchantOpCityId
+      else pure False
+  let updatedTag = if clearDistanceTag then Yudhishthira.removeTagName (Just tag) distanceTag else tag
+  unless (Just (Yudhishthira.showRawTags updatedTag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
+    QPerson.updateDriverTag (Just updatedTag) personId
 
   updatedDriverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
@@ -2060,7 +2069,20 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                             clientId = clientId,
                             transporterConfig = transporterConfig
                           }
-                acceptDynamicOfferDriverRequest (Just (assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver transporterConfig)) clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig (Just oneShotAssignAction)
+                    betterDriverSwapAction driverQuote =
+                      BetterDriverSwap.betterDriverSwapAssign
+                        BetterDriverSwap.BetterDriverSwapReq
+                          { merchant = merchant,
+                            searchReq = searchReq,
+                            searchTry = searchTry,
+                            driverQuote = driverQuote,
+                            driver = driver,
+                            driverStats = driverStats,
+                            driverInfo = driverInfo,
+                            clientId = clientId,
+                            transporterConfig = transporterConfig
+                          }
+                acceptDynamicOfferDriverRequest (Just (assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver transporterConfig)) clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig (Just oneShotAssignAction) (Just betterDriverSwapAction)
               -- Static-offer: the booking already exists (created at confirm) and the ride is
               -- initialized inside the accept, so it returns the assigned-ride payload too.
               DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig Nothing Nothing

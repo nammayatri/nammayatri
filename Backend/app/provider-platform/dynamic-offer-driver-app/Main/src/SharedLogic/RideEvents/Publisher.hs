@@ -22,7 +22,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Storage.Hedis.Config (HedisFlow)
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
-import Kernel.Types.Common (MonadTime (getCurrentTime))
+import Kernel.Types.Common (HighPrecMoney, MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Kernel.Utils.Common (logError, logInfo)
 import qualified Lib.Finance.Core.Types as Finance
@@ -38,8 +38,9 @@ publishRideEnded ::
   Ride.Ride ->
   Maybe (Id RD.RiderDetails) ->
   Bool ->
+  HighPrecMoney ->
   m ()
-publishRideEnded booking ride mbRiderDetailsId isValid = do
+publishRideEnded booking ride mbRiderDetailsId isValid fareBeforePaymentCharge = do
   actorInfo <- asks (.actorInfo)
   mbCfg <- asks (.rideEventsPublisherCfg)
   case mbCfg of
@@ -47,7 +48,7 @@ publishRideEnded booking ride mbRiderDetailsId isValid = do
     Just cfg -> do
       result <- try @_ @SomeException $ do
         now <- getCurrentTime
-        let event = buildEvent now booking ride mbRiderDetailsId isValid actorInfo
+        let event = buildEvent now booking ride mbRiderDetailsId isValid actorInfo fareBeforePaymentCharge
         let rideIdT = ride.id.getId
         let shardId = hash rideIdT `mod` cfg.shardCount
         let streamName = cfg.streamPrefix <> show shardId
@@ -67,8 +68,9 @@ buildEvent ::
   Maybe (Id RD.RiderDetails) ->
   Bool ->
   Finance.ActorInfo ->
+  HighPrecMoney ->
   RideEndedEvent
-buildEvent now booking ride mbRiderDetailsId isValid actorInfo =
+buildEvent now booking ride mbRiderDetailsId isValid actorInfo fareBeforePaymentCharge =
   RideEndedEvent
     { schemaVer = schemaVersion,
       eventTimestamp = now,
@@ -92,5 +94,6 @@ buildEvent now booking ride mbRiderDetailsId isValid actorInfo =
       currency = show booking.currency,
       fleetOwnerId = getId <$> ride.fleetOwnerId,
       isValidRide = isValid,
-      actorInfo = Just actorInfo
+      actorInfo = Just actorInfo,
+      fareBeforePaymentCharge = Just fareBeforePaymentCharge
     }

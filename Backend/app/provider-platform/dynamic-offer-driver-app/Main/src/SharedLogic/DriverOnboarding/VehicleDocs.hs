@@ -296,6 +296,7 @@ isDriverSideDocType :: Maybe DDVC.DocumentCategory -> DVC.DocumentType -> Bool
 isDriverSideDocType category docType = case category of
   Just DDVC.Driver -> True
   Just DDVC.Training -> True
+  Just DDVC.SelfDeclaration -> True
   Just DDVC.Vehicle -> False
   Just DDVC.Permission -> False
   Just DDVC.Fleet -> False

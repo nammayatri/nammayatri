@@ -46,11 +46,13 @@ module Tools.Auth.DashboardUser
     beginFleetOwnerRegistration,
     completeFleetOwnerRegistration,
     requestorCityAccess,
+    requestorHasCapability,
   )
 where
 
 import "lib-dashboard" Dashboard.Common ()
 import qualified Data.Text as T
+import qualified "lib-dashboard" Domain.Types.Capability as DDashboardCapability
 import qualified "lib-dashboard" Domain.Types.Merchant as DDashboardMerchant
 import qualified "lib-dashboard" Domain.Types.Person as DDashboardPerson
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
@@ -75,6 +77,7 @@ import qualified "lib-dashboard" Storage.Queries.Person as QDashboardPerson
 import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QDashboardRegistrationToken
 import qualified "lib-dashboard" Storage.Queries.Role as QDashboardRole
 import "lib-dashboard" Tools.Auth.ApiAuth (dashboardApiHitsCountKey)
+import qualified "lib-dashboard" Tools.Auth.Capability as DashboardCapability
 import qualified "lib-dashboard" Tools.Auth.Common as DashboardCommon
 import qualified "lib-dashboard" Tools.Auth.Verify as Verify
 import qualified "lib-dashboard" Tools.DashboardTopic as DTopic
@@ -413,3 +416,15 @@ requestorCityAccess dashboardUser merchantShortId cities = runInDashboardDb $ do
         (fmap isJust . QDashboardAccess.findByPersonIdAndMerchantIdAndCity dashboardUser.personId merchant.id)
         cities
     pure (allowed, filter (`notElem` allowed) cities)
+
+-- | Whether the caller effectively holds @capabilityId@: role capabilities plus
+-- live per-person GRANTs, minus live DENYs. SUPER_ADMIN holds every
+-- capability, as in 'DashboardCapability.enforce'.
+--
+-- For capabilities that widen what a handler returns rather than gate the
+-- endpoint (e.g. @support.radar.read_all@). Reads the same cached set the
+-- auth layer resolved for this request.
+requestorHasCapability :: DashboardAuthFlow m r => DashboardUser -> Text -> m Bool
+requestorHasCapability dashboardUser capabilityId = runInDashboardDb $ do
+  access <- DashboardCapability.resolveAccess dashboardUser.personId dashboardUser.person.roleId
+  pure (access.adminTier == DDashboardCapability.superAdminTier || capabilityId `elem` access.capabilities)

@@ -80,6 +80,8 @@ data TransporterConfig = TransporterConfig
     badDebtSchedulerTime :: Kernel.Prelude.NominalDiffTime,
     badDebtTimeThreshold :: Kernel.Prelude.Int,
     bankErrorExpiry :: Kernel.Prelude.NominalDiffTime,
+    betterDriverProximityAbortRadiusMeters :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+    betterDriverSearchMaxRadiusMeters :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     blockDriverOwnRCForFleetDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     bookAnyVehicleDowngradeLevel :: Kernel.Prelude.Int,
     bulkWaiveOffLimit :: Kernel.Prelude.Int,
@@ -296,6 +298,7 @@ data TransporterConfig = TransporterConfig
     payoutBatchLimit :: Kernel.Prelude.Int,
     payoutRideMoneyToDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     payoutRideScheduleTimeBuffer :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    peerBapMerchantShortId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pickupLocThreshold :: Kernel.Types.Common.Meters,
     pickupStallMonitoringConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallMonitoringConfig,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -468,7 +471,9 @@ data DemandHotspotsConfig = DemandHotspotsConfig
     nearbySearchStalenessMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     noOfGeohashesToReturn :: Kernel.Prelude.Int,
     precisionOfGeohash :: Kernel.Prelude.Int,
-    resultDurationMinutes :: Kernel.Prelude.Int
+    resultDurationMinutes :: Kernel.Prelude.Int,
+    -- Just True → write 5-element members; missing/False → legacy 3-element (safe for old pods).
+    storeHotspotProductInMember :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
@@ -630,6 +635,7 @@ data ScheduledRideConfig = ScheduledRideConfig
   { avgSpeedKmph :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     driverActivationWindow :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     enableScheduledRideActivationChecks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableScheduledRidePenaltyOrReward :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     maxHoldsPerDriver :: Kernel.Prelude.Int,
     maxLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     minLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
