@@ -354,6 +354,7 @@ let AllocatorJobType =
       | DeleteUnreferencedFarePolicies
       | GenerateInvoicePdf
       | SendLegalPolicyNotification
+      | CheckBetterDriverSearchProximity
       >
 
 let jobRetryOnExceptionMapx =
@@ -453,6 +454,9 @@ let jobInfoMapx =
         }
       , { mapKey = AllocatorJobType.FleetEngineRetry, mapValue = True }
       , { mapKey = AllocatorJobType.SendLegalPolicyNotification
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.CheckBetterDriverSearchProximity
         , mapValue = True
         }
       ]
