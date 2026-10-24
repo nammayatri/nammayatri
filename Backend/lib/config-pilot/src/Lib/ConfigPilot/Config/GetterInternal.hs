@@ -64,7 +64,7 @@ selectActiveElementVersions logicDomain merchantOpCityId = do
         Just txnId -> getTxnIdStickyVersions txnId
         Nothing -> getActiveRolloutVersionsWithToss
   where
-    mkTxnIdConfigStickyKey txnId = "sticky_config_versions:" <> txnId <> ":" <> show logicDomain
+    mkTxnIdConfigStickyKey txnId = "sticky_config_versions:" <> txnId <> ":" <> show logicDomain <> ":" <> merchantOpCityId.getId
 
     getTxnIdStickyVersions txnId = do
       let stickyKey = mkTxnIdConfigStickyKey txnId
