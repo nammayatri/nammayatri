@@ -24,7 +24,7 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.FinanceAccountConfig.FinanceAccountConfig] -> m ())
 createMany = traverse_ create
 
-findAllByMerchantId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.FinanceAccountConfig.FinanceAccountConfig]))
+findAllByMerchantId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.FinanceAccountConfig.FinanceAccountConfig])
 findAllByMerchantId merchantId = do findAllWithKV [Se.Is Beam.merchantId $ Se.Eq merchantId]
 
 findByPrimaryKey ::
@@ -46,7 +46,10 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.FinanceAccountConfig.FinanceAccount
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.minRetainedBalance minRetainedBalance,
       Se.Set Beam.minTransferOutAmount minTransferOutAmount,
+      Se.Set Beam.pointsConversionRate pointsConversionRate,
       Se.Set Beam.redeemableCutoff (Data.Aeson.toJSON <$> redeemableCutoff),
+      Se.Set Beam.statusCheckIntervalSec statusCheckIntervalSec,
+      Se.Set Beam.statusCheckMaxAttempts statusCheckMaxAttempts,
       Se.Set Beam.subLedger subLedger,
       Se.Set Beam.transferInEnabled transferInEnabled,
       Se.Set Beam.transferOutEnabled transferOutEnabled,
@@ -72,7 +75,10 @@ instance FromTType' Beam.FinanceAccountConfig Lib.Finance.Domain.Types.FinanceAc
             merchantOperatingCityId = merchantOperatingCityId,
             minRetainedBalance = minRetainedBalance,
             minTransferOutAmount = minTransferOutAmount,
+            pointsConversionRate = pointsConversionRate,
             redeemableCutoff = redeemableCutoff >>= Kernel.Utils.JSON.valueToMaybe,
+            statusCheckIntervalSec = statusCheckIntervalSec,
+            statusCheckMaxAttempts = statusCheckMaxAttempts,
             subLedger = subLedger,
             transferInEnabled = transferInEnabled,
             transferOutEnabled = transferOutEnabled,
@@ -95,7 +101,10 @@ instance ToTType' Beam.FinanceAccountConfig Lib.Finance.Domain.Types.FinanceAcco
         Beam.merchantOperatingCityId = merchantOperatingCityId,
         Beam.minRetainedBalance = minRetainedBalance,
         Beam.minTransferOutAmount = minTransferOutAmount,
+        Beam.pointsConversionRate = pointsConversionRate,
         Beam.redeemableCutoff = Data.Aeson.toJSON <$> redeemableCutoff,
+        Beam.statusCheckIntervalSec = statusCheckIntervalSec,
+        Beam.statusCheckMaxAttempts = statusCheckMaxAttempts,
         Beam.subLedger = subLedger,
         Beam.transferInEnabled = transferInEnabled,
         Beam.transferOutEnabled = transferOutEnabled,

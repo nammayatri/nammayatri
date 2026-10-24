@@ -183,6 +183,7 @@ import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (MonadFlow, getCurrentTime, logDebug, logError, logInfo)
 import Lib.Finance hiding (PayoutEligibility (..), getPayoutEligibilityData)
+import qualified Lib.Finance.Balance as FinanceBalance
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
@@ -788,25 +789,27 @@ getPayoutEligibilityData ::
   Id Domain.Types.Person.Person ->
   m (HighPrecMoney, [(LE.LedgerEntry, HighPrecMoney)])
 getPayoutEligibilityData counterparty personId = do
-  now <- getCurrentTime
   mbAccount <- getWalletAccountByOwner counterparty personId.getId
   case mbAccount of
     Nothing -> pure (0, [])
-    Just Account {id = accountId, balance = walletBalance} -> do
-      eligibility <- Lib.Finance.Ledger.Service.getPayoutEligibilityData accountId walletBalance now now
-      let unsettledEntries = eligibility.redeemableEntries
-          entriesWithNet = map (\e -> (e, Lib.Finance.Ledger.Service.entryNetForAccount accountId e)) unsettledEntries
+    Just account -> do
+      -- The kernel breakdown resolves cutoff policy internally (rider classes have
+      -- none, so everything unsettled up to now is redeemable) — this wrapper only
+      -- adds the per-entry net view cashback needs.
+      breakdown <- FinanceBalance.getBalanceBreakdown account []
+      let unsettledEntries = breakdown.redeemableEntries
+          entriesWithNet = map (\e -> (e, Lib.Finance.Ledger.Service.entryNetForAccount account.id e)) unsettledEntries
           totalNet = sum (map snd entriesWithNet)
-      when (walletBalance < totalNet) $ do
+      when (account.balance < totalNet) $ do
         logError $
           "Wallet balance less than net amount for person: " <> personId.getId
             <> " wallet balance: "
-            <> show walletBalance
+            <> show account.balance
             <> " unsettled entries net amount: "
             <> show totalNet
             <> " unsettled entries: "
             <> show (map (\e -> (e.id, e.amount)) unsettledEntries)
-      pure (walletBalance, entriesWithNet)
+      pure (account.balance, entriesWithNet)
 
 cashbackPayoutLedgerRefs :: PayoutLedgerRefs
 cashbackPayoutLedgerRefs =

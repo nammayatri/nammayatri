@@ -44,6 +44,11 @@ ScheduledTransferRule:
     maxRetries: Int
     rescheduleBufferMinutes: Maybe Int
     defaultRailKey: Maybe Text # RailRegistry key the sweep submits on
+    # --- bulk-rail pacing + submission dressing (Nothing = caller's legacy config) ---
+    bulkStatusCheckIntervalMinutes: Maybe Int
+    bulkStatusCheckBatchLimit: Maybe Int
+    orderType: Maybe Text
+    remark: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
 

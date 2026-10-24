@@ -255,8 +255,6 @@ RiderConfig:
     refundBufferTTLSec: Maybe Seconds
     filterWalkAndUnspecifiedTransitModes: Bool
     nyRegularMasterJobNextRunOffsetSeconds: NominalDiffTime
-    refundStatusUpdateInterval: NominalDiffTime
-    refundStatusUpdateRetries: Int
     sourceOfServiceTier: ServiceTierSource
     domainRouteCalculationEnabledModes: "Maybe [GeneralVehicleType]"
     upcomingBusThresholdSec: Maybe Seconds
@@ -411,8 +409,6 @@ RiderConfig:
     enableAutoJourneyRefund: Maybe Bool
     filterWalkAndUnspecifiedTransitModes: Maybe Bool
     nyRegularMasterJobNextRunOffsetSeconds: Maybe Seconds
-    refundStatusUpdateInterval: Maybe Seconds
-    refundStatusUpdateRetries: Maybe Int
     sourceOfServiceTier: Maybe ServiceTierSource
     enableRideEndOffers: Maybe Bool
     enableRideHailingOffers: Maybe Bool
@@ -483,8 +479,6 @@ RiderConfig:
     nyRegularMinGapSeconds: fromMaybe 900 nyRegularMinGapSeconds|E
     filterWalkAndUnspecifiedTransitModes: fromMaybe False filterWalkAndUnspecifiedTransitModes|E
     nyRegularMasterJobNextRunOffsetSeconds: fromMaybe 86400 (Kernel.Utils.Common.secondsToNominalDiffTime <$> nyRegularMasterJobNextRunOffsetSeconds)| E
-    refundStatusUpdateInterval: fromMaybe 43200 (Kernel.Utils.Common.secondsToNominalDiffTime <$> refundStatusUpdateInterval)| E
-    refundStatusUpdateRetries: fromMaybe 5 refundStatusUpdateRetries|E
     sourceOfServiceTier: fromMaybe (Domain.Types.RiderConfig.NANDI) sourceOfServiceTier|E
     enableRideEndOffers: fromMaybe False enableRideEndOffers|E
     enableRideHailingOffers: fromMaybe False enableRideHailingOffers|E
@@ -547,8 +541,6 @@ RiderConfig:
     nyRegularMinGapSeconds: Just nyRegularMinGapSeconds|E
     filterWalkAndUnspecifiedTransitModes: Just filterWalkAndUnspecifiedTransitModes|E
     nyRegularMasterJobNextRunOffsetSeconds: (Just  . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
-    refundStatusUpdateInterval: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
-    refundStatusUpdateRetries: Just refundStatusUpdateRetries|E
     sourceOfServiceTier: Just sourceOfServiceTier|E
     enableRideEndOffers: Just enableRideEndOffers|E
     enableRideHailingOffers: Just enableRideHailingOffers|E
