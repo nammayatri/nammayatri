@@ -39,7 +39,6 @@ import qualified Domain.Action.WebhookHandler as AWebhook
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverGstin as DDG
 import qualified Domain.Types.DriverInformation as DI
-import Domain.Types.Extra.WalletTransaction (mapWalletStatus)
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Invoice as INV
 import qualified "beckn-spec" Domain.Types.Invoice as BecknInvoice
@@ -145,7 +144,6 @@ import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.VendorFeeExtra as QVF
-import qualified Storage.Queries.WalletTransaction as QWalletTransaction
 import Tools.Error
 import Tools.Notifications
 import qualified Tools.Payment as Payment
@@ -560,7 +558,6 @@ processWalletTopupWebhook ::
   Payment.TransactionStatus ->
   m ()
 processWalletTopupWebhook driver order transactionStatus = do
-  QWalletTransaction.updateStatus (mapWalletStatus transactionStatus) order.id
   -- One path: every topup settles through the kernel's INBOUND transfer, keyed
   -- (WalletTopup, orderId); the credit (+ invoice) posts via the CreditRecipe,
   -- idempotent by construction (anchor check on the credit leg covers orders whose

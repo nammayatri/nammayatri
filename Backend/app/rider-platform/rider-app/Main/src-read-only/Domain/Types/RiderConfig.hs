@@ -196,8 +196,6 @@ data RiderConfig = RiderConfig
     qrTicketRestrictionEndTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
     qrTicketRestrictionStartTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
     refundBufferTTLSec :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    refundStatusUpdateInterval :: Kernel.Prelude.NominalDiffTime,
-    refundStatusUpdateRetries :: Kernel.Prelude.Int,
     remindEverydayUntilPassExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rentalsConfig :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.RentalsConfig],
     routeCacheMaxDurationDeviation :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,

@@ -62,6 +62,7 @@ import Kernel.Types.Id (Id (..), ShortId (..), cast)
 import Kernel.Utils.Common (logError, logWarning, secondsToNominalDiffTime)
 import Kernel.Utils.Error (fromMaybeM, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Balance as FinanceBalance
 import qualified Lib.Finance.Core.Types as FinanceCore
 import qualified Lib.Finance.Domain.Types.Account as Account
 import qualified Lib.Finance.Domain.Types.AuditEntry as AuditEntry
@@ -1654,11 +1655,10 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
         Just account -> do
           let availableBalance = account.balance
 
-          now <- getCurrentTime
-          let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
-              cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
-              cutoff = WalletService.payoutCutoffTimeUTC timeDiff cutOffDays now
-          lockedBalance <- (.nonRedeemableBalance) <$> LedgerService.getPayoutEligibilityDataWith WalletService.alwaysRedeemableWalletRefs account.id availableBalance cutoff now
+          -- Locked (post-cutoff) balance straight from the kernel breakdown: policy,
+          -- cutoff and eligibility all resolve inside the kernel — this handler only
+          -- asks for the number (TDS reimbursements count as redeemable straight away).
+          lockedBalance <- (.nonRedeemable) <$> FinanceBalance.getBalanceBreakdownWith WalletService.alwaysRedeemableWalletRefs account []
 
           -- Get last wallet update time from latest ledger entry
           mbLatestEntry <- LedgerService.getLatestEntryByAccount account.id
