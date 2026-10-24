@@ -12,11 +12,11 @@
 --   2. 'settlePrepaidHoldByReference': settles a PENDING hold at a DIFFERENT amount than
 --      it was created for (partial settle) — FinanceM has no partial-settle verb yet.
 --
--- creditPrepaidBalance runs through SharedLogic.Finance.PostActions.runFinance (the
--- app-mandated wrapper); the debit/hold/expiry legs use the kernel runFinance directly
--- because their legs never touch a (Liability, DRIVER) account — PostActions dispatch is
--- a provable no-op — and the wrapper's HedisLTSFlowEnv constraint must not leak into the
--- Allocator job env or SubscriptionConsumption's signature.
+-- Every leg runs through the kernel's runFinance, not SharedLogic.Finance.PostActions:
+-- PostActions only acts on (Liability, DRIVER) accounts when ctx.enableWalletGatedTierCheck
+-- is set, and prepaid legs never touch such an account (mkPrepaidCtx passes False), so
+-- the dispatch would be a no-op. Importing it would also close an import cycle
+-- (PostActions -> VehicleServiceTier -> GetNearestDrivers -> Prepaid).
 module SharedLogic.Finance.Prepaid
   ( counterpartyDriver,
     counterpartyFleetOwner,
@@ -85,10 +85,8 @@ import qualified Lib.Finance.FinanceM as FinanceM
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Finance.EInvoice
-import qualified SharedLogic.Finance.PostActions as PostActions
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
-import SharedLogic.Finance.Wallet (buildDriverChargeCtx)
-import SharedLogic.Finance.WalletAccount (computeTdsRateReason)
+import SharedLogic.Finance.WalletAccount (buildDriverChargeCtx, computeTdsRateReason)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Plan as QPlan
@@ -691,7 +689,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
         if paidAmount > 0 && gstAmount' > 0 && not (purchaseEntryExists sellerAsset.id governmentLiability.id gstAmount')
           then
             postLeg "subscriptionPurchaseGst" $
-              PostActions.runFinance ctxPlain $
+              FinanceM.runFinance ctxPlain $
                 transferWithEntryType LiabilityCreated Nothing SellerAsset GovtIndirect gstAmount' subscriptionPurchaseReferenceType Nothing
           else pure Nothing
       -- Create liability entry
@@ -699,7 +697,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
         if paidAmount > 0 && netAmount > 0 && not (purchaseEntryExists sellerAsset.id sellerLiability.id netAmount)
           then
             postLeg "subscriptionPurchaseLiability" $
-              PostActions.runFinance ctxPlain $
+              FinanceM.runFinance ctxPlain $
                 transferWithEntryType LiabilityCreated Nothing SellerAsset SellerLiability netAmount subscriptionPurchaseReferenceType Nothing
           else pure Nothing
       -- Create TDS reimbursement entry
@@ -710,7 +708,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
             if tdsAmount > 0 && not (tdsEntryExists govtDirectAsset.id govtDirectExpense.id tdsAmount)
               then
                 postLeg "tdsReimbursement" $
-                  PostActions.runFinance ctxPlain $
+                  FinanceM.runFinance ctxPlain $
                     transfer GovtDirectAsset GovtDirectExpense tdsAmount tdsReimbursementReferenceType Nothing
               else pure Nothing
           _ -> pure Nothing
@@ -720,7 +718,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
           then case prepaidSubLedger mbVehicleCategory of
             Nothing ->
               postLeg "subscriptionCredit" $
-                PostActions.runFinance ctxOwner $
+                FinanceM.runFinance ctxOwner $
                   transfer SellerRideCredit PrepaidOwner creditAmount subscriptionCreditReferenceType metadata
             Just _ -> do
               -- Scoped prepaid account carries a subLedger PrepaidOwner can't express;

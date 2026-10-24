@@ -83,9 +83,6 @@ import Lib.Finance
     InvoiceLineItem (..),
     ItemType (..),
     LineItemDescription (..),
-    getEntriesByReference,
-    invoice,
-    transfer,
   )
 import Lib.Finance.Account.Interface (AccountInput (..))
 import qualified Lib.Finance.Account.Service as FAccountService

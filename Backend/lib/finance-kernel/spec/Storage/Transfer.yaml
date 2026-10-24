@@ -105,6 +105,11 @@ Transfer:
 
   extraIndexes:
     - columns: [accountId, createdAt]
+    # The idempotency anchor (design §5): one transfer per (referenceType, referenceId).
+    # The code checks findByReference before create; this keeps a racing create out of
+    # Postgres (the drainer inserts with ON CONFLICT DO NOTHING, so it cannot stall).
+    - columns: [referenceType, referenceId]
+      unique: true
 
   extraOperations:
     - GENERATE_INDEXES
