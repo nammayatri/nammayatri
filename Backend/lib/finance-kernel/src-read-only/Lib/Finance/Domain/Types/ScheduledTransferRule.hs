@@ -14,6 +14,8 @@ import qualified Tools.Beam.UtilsTH
 data ScheduledTransferRule = ScheduledTransferRule
   { accountType :: Lib.Finance.Domain.Types.Account.AccountType,
     batchSize :: Kernel.Prelude.Int,
+    bulkStatusCheckBatchLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    bulkStatusCheckIntervalMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     counterpartyType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Account.CounterpartyType,
     createdAt :: Kernel.Prelude.UTCTime,
     dayOfMonth :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -29,6 +31,8 @@ data ScheduledTransferRule = ScheduledTransferRule
     merchantOperatingCityId :: Kernel.Prelude.Text,
     minimumAmount :: Kernel.Types.Common.HighPrecMoney,
     name :: Kernel.Prelude.Text,
+    orderType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    remark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rescheduleBufferMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     subLedger :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
@@ -39,6 +43,6 @@ data ScheduledTransferRule = ScheduledTransferRule
 
 data ScheduledTransferFrequency = DAILY | WEEKLY | MONTHLY | HOURLY | EVERY_N_DAYS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ScheduledTransferFrequency))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ScheduledTransferFrequency)
 
-$(mkHttpInstancesForEnum (''ScheduledTransferFrequency))
+$(mkHttpInstancesForEnum ''ScheduledTransferFrequency)

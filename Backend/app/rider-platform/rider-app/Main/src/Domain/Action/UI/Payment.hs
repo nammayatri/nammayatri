@@ -1252,7 +1252,7 @@ stripeWebhookAction paymentMode merchantOperatingCityId resp respDump = do
           QRefundRequest.findByRefundsId (Just refundsId) >>= \case
             Nothing -> logInfo $ "No refund request found for update in webhook with refundsId: " <> refundsId.getId
             Just refundRequest -> do
-              let updStatus = DRidePayment.castRefundRequestStatus refundInfo.status
+              let updStatus = SPayment.refundStatusToRequestStatus refundInfo.status
               DRidePayment.processRefundResult refundRequest updStatus Nothing
         pure Ack
       DPayment.OrderTxnWebhookData (_mbOrderShortId, orderTxn) -> do
@@ -1377,37 +1377,3 @@ getWalletBalance (personId, merchantId) = do
       QPersonWallet.updateByPrimaryKey personWallet {DPersonWallet.pointsAmount = walletBalanceResp.walletData.pointsAmount, DPersonWallet.cashAmount = walletBalanceResp.walletData.cashAmount, DPersonWallet.expiredBalance = walletBalanceResp.walletData.expiredBalance, DPersonWallet.cashFromPointsRedemption = walletBalanceResp.walletData.cashFromPointsRedemption, DPersonWallet.usablePointsAmount = walletBalanceResp.walletData.usablePointsAmount, DPersonWallet.usableCashAmount = walletBalanceResp.walletData.usableCashAmount, DPersonWallet.updatedAt = now}
       return walletBalanceResp.walletData
     False -> throwError (InternalError $ "Failed to get wallet balance for personId: " <> show personId.getId)
-
--- redeemWallet :: (PaymentBeamFlow.BeamFlow m r, MonadThrow m) => Id.Id DP.Person -> HighPrecMoney -> m (Maybe DWalletRewardPosting.WalletPostingStatus)
--- redeemWallet personId pointsAmount = do
---   personWallet <- QPersonWallet.findByPersonId personId.getId >>= fromMaybeM (InternalError $ "Person wallet not found for personId: " <> show personId.getId)
---   walletRewardPosting <- QWalletRewardPosting.findByWalletIdAndStatus personWallet.id DWalletRewardPosting.NEW
-
---   walletRewardPostingId <- generateGUID
---   operationId <- generateShortId
---   now <- getCurrentTime
-
---   ------------- call payout service here ---------------
-
---   -- payoutConfig <- CPC.findByPrimaryKey merchOpCity vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchOpCity.getId)
---   -- let entityName = DPayment.BACKLOG
---   --     createPayoutOrderCall = Payout.createPayoutOrder person.clientSdkVersion person.merchantId merchOpCity (Just person.id.getId)
---   --     createPayoutOrderReq = DPayment.mkCreatePayoutOrderReq uid pendingAmount phoneNo person.email personId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
---   -- void $ DPayment.createPayoutService (cast person.merchantId) (Just $ cast merchOpCity) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
-
---   let walletRewardPosting =
---         DWalletRewardPosting.WalletRewardPosting
---           { id = walletRewardPostingId,
---             shortId = operationId,
---             walletId = personWallet.id,
---             pointsAmount = pointsAmount,
---             cashAmount = HighPrecMoney {getHighPrecMoney = 0},
---             postingType = WalletInterface.REDEEM,
---             status = DWalletRewardPosting.NEW,
---             createdAt = now,
---             updatedAt = now,
---             merchantId = "",
---             merchantOperatingCityId = Nothing
---           }
---   QWalletRewardPosting.create walletRewardPosting
---   return (Just DWalletRewardPosting.NEW)

@@ -95,6 +95,7 @@ library
       Lib.Finance.Transfer.Outbound
       Lib.Finance.Transfer.Outcome
       Lib.Finance.Transfer.Rail
+      Lib.Finance.Transfer.RailStatus
       Lib.Finance.Transfer.Scheduled
       Lib.Finance.Utils.GstBreakdown
       Lib.Finance.Utils.SensitiveData

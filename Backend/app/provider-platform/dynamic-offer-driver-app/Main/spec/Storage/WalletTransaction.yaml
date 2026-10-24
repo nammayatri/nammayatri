@@ -1,3 +1,7 @@
+# WRITE-FROZEN (2026-10-24, finance-kernel unification): the topup process record is
+# finance_transfer (INBOUND, refType WalletTopup); nothing writes this table anymore.
+# It survives read-only for pre-migration history rows (DriverWallet topup list) and
+# can be dropped once those drain.
 imports:
   HighPrecMoney: Kernel.Types.Common
   Person: Domain.Types.Person

@@ -28,6 +28,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import qualified Lib.Finance.AccountConfig as AccountConfig
+import Lib.Finance.Balance (withAccountBalanceLock)
 import Lib.Finance.Core.Types (HasActorInfo)
 import Lib.Finance.Domain.Types.Account (Account)
 import qualified Lib.Finance.Domain.Types.Transfer as DT
@@ -36,6 +38,7 @@ import Lib.Finance.FinanceM (AccountRole, FinanceCtx (..), InvoiceConfig, invoic
 import Lib.Finance.Ledger.PayoutSettlement (RunFinance)
 import Lib.Finance.Ledger.Service (getEntriesByReference)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
+import qualified Lib.Finance.Storage.Queries.Account as QAccount
 import qualified Lib.Finance.Storage.Queries.Transfer as QT
 import qualified Lib.Finance.Storage.Queries.TransferExtra as QTE
 import Lib.Finance.Transfer.Outcome (bumpNonLedgerStatus, guardCtxMatchesTransfer)
@@ -68,65 +71,94 @@ data InboundSpec = InboundSpec
     -- | inbound is always exact — the payer chose the amount
     amount :: HighPrecMoney,
     referenceType :: Text,
-    referenceId :: Text,
     accountId :: Id Account,
     metadata :: DT.TransferMetadata
   }
   deriving (Generic)
 
+-- | The WHOLE recharge process, kernel-owned: gate on the class's transferInEnabled,
+--   reuse the open intent when the amount matches (the rail re-fetches that order's
+--   payload), supersede stale open intents, otherwise have the rail create a fresh
+--   payment order — its id becomes (referenceId, railOrderId), which is what the
+--   webhook later correlates on. The domain contributes only the rail closure and
+--   which account to credit; it never creates payment orders or tracks intent status.
 initiateTransferIn ::
   (BeamFlow.BeamFlow m r) =>
   TransferRail m ->
   InboundSpec ->
-  m (Either FinanceError (DT.Transfer, Maybe Aeson.Value))
+  m (Either FinanceError (DT.Transfer, Aeson.Value))
 initiateTransferIn rail spec
-  | spec.ctx.referenceId /= spec.referenceId =
-    pure $ Left $ DomainError "CTX_REFERENCE_MISMATCH" ("ctx " <> spec.ctx.referenceId <> " vs spec " <> spec.referenceId)
   | spec.amount <= 0 =
     pure $ Left $ DomainError "INVALID_TRANSFER_AMOUNT" (show spec.amount)
-  | otherwise = do
-    transfer' <-
-      QT.findByReference spec.referenceType spec.referenceId >>= \case
-        Just existing -> pure existing -- idempotent: rails must re-fetch, not re-create
-        Nothing -> do
-          transferId <- generateGUID
-          now <- getCurrentTime
-          let row =
-                DT.Transfer
-                  { id = Id transferId,
-                    direction = DT.INBOUND,
-                    status = DT.CREATED,
-                    railKey = Just rail.railKey,
-                    railStatus = Nothing,
-                    railOrderId = Nothing,
-                    accountId = spec.accountId,
-                    counterAccountId = Nothing,
-                    requestedAmount = Just spec.amount,
-                    amount = spec.amount,
-                    feeAmount = 0,
-                    currency = spec.ctx.currency,
-                    referenceType = spec.referenceType,
-                    referenceId = spec.referenceId,
-                    holdEntryId = Nothing,
-                    entryIds = Just [],
-                    coveredEntryIds = Just [],
-                    metadata = Just spec.metadata,
-                    scheduledFor = Nothing,
-                    attemptCount = 0,
-                    lastError = Nothing,
-                    merchantId = spec.ctx.merchantId,
-                    merchantOperatingCityId = spec.ctx.merchantOpCityId,
-                    createdAt = now,
-                    updatedAt = now
-                  }
-          QT.create row
-          pure row
-    payload <- traverse (\collect -> collect (toSubmission transfer')) rail.collectPayload
-    pure $ Right (transfer', payload)
+  | otherwise = case rail.collectPayload of
+    Nothing -> pure $ Left $ DomainError "INBOUND_RAIL_WITHOUT_COLLECT" rail.railKey
+    Just collect -> withAccountBalanceLock spec.accountId 10 $ do
+      QAccount.findById spec.accountId >>= \case
+        Nothing -> pure $ Left $ AccountError AccountNotFound (show spec.accountId)
+        Just account -> do
+          cfg <- AccountConfig.getAccountConfigForAccount account
+          if not cfg.transferInEnabled
+            then pure $ Left $ DomainError "TRANSFER_IN_DISABLED" (show spec.accountId)
+            else do
+              transferId <- Id <$> generateGUID
+              transfers <- QT.findAllByAccountId spec.accountId
+              let openIntents =
+                    [ t | t <- transfers, t.direction == DT.INBOUND, t.referenceType == spec.referenceType, t.status `elem` [DT.CREATED, DT.SUBMITTED, DT.IN_FLIGHT]
+                    ]
+                  mbReuse = listToMaybe [t | t <- openIntents, t.amount == spec.amount]
+              -- Exactly one live intent per (account, referenceType): anything open that
+              -- is not being reused is superseded (the old EXPIRED semantics).
+              forM_ [t | t <- openIntents, Just t.id /= ((.id) <$> mbReuse)] $ \old ->
+                QTE.updateStatusById DT.FAILED Nothing (Just "SUPERSEDED_BY_NEW_INTENT") old.id
+              result <-
+                collect
+                  RailCollectRequest
+                    { submission = toSubmission (maybe transferId (.id) mbReuse) ((.referenceId) <$> mbReuse),
+                      reuseRailOrderId = (.referenceId) <$> mbReuse
+                    }
+              case mbReuse of
+                Just existing -> pure $ Right (existing, result.payload)
+                Nothing -> do
+                  -- A crash between collect and this insert leaves an orphan payment
+                  -- order; the webhook backfill covers a payment landing on it, and the
+                  -- next initiate simply mints a fresh order.
+                  now <- getCurrentTime
+                  let row =
+                        DT.Transfer
+                          { id = transferId,
+                            direction = DT.INBOUND,
+                            status = DT.CREATED,
+                            railKey = Just rail.railKey,
+                            railStatus = Nothing,
+                            railOrderId = Just result.railOrderId,
+                            accountId = spec.accountId,
+                            counterAccountId = Nothing,
+                            requestedAmount = Just spec.amount,
+                            amount = spec.amount,
+                            feeAmount = 0,
+                            currency = spec.ctx.currency,
+                            referenceType = spec.referenceType,
+                            referenceId = result.railOrderId,
+                            holdEntryId = Nothing,
+                            entryIds = Just [],
+                            coveredEntryIds = Just [],
+                            metadata = Just spec.metadata,
+                            scheduledFor = Nothing,
+                            attemptCount = 0,
+                            lastError = Nothing,
+                            merchantId = spec.ctx.merchantId,
+                            merchantOperatingCityId = spec.ctx.merchantOpCityId,
+                            createdAt = now,
+                            updatedAt = now
+                          }
+                  QT.create row
+                  pure $ Right (row, result.payload)
   where
-    toSubmission t =
+    -- For a fresh intent referenceId is unknown until the rail mints the order; it is
+    -- only populated on reuse. Collect closures must key on amount + reuseRailOrderId.
+    toSubmission transferId mbRefId =
       RailSubmission
-        { transferId = t.id,
+        { transferId = transferId,
           netAmount = spec.amount,
           grossAmount = spec.amount,
           fee = 0,
@@ -135,7 +167,7 @@ initiateTransferIn rail spec
           counterpartyId = spec.ctx.counterpartyId,
           accountId = spec.accountId,
           referenceType = spec.referenceType,
-          referenceId = spec.referenceId,
+          referenceId = fromMaybe "" mbRefId,
           metadata = spec.metadata,
           merchantId = spec.ctx.merchantId,
           merchantOperatingCityId = spec.ctx.merchantOpCityId

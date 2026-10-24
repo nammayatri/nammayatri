@@ -165,6 +165,7 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
               ledgerRefs = RidePaymentFinance.cashbackPayoutLedgerRefs,
               instant = True,
               legacyOfferHoldKeys = [],
+              alwaysRedeemableRefs = [],
               coveredEntryIds = Just originalEntryIds,
               holdLedgerMetadata = Nothing,
               metadata =

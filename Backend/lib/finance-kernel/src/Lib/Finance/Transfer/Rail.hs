@@ -19,6 +19,8 @@ module Lib.Finance.Transfer.Rail
     HoldOrdering (..),
     RailSubmission (..),
     RailSubmitResult (..),
+    RailCollectRequest (..),
+    RailCollectResult (..),
     TransferOutcome (..),
   )
 where
@@ -74,6 +76,24 @@ data RailSubmitResult
     RailDeferred {railStatus :: Text}
   deriving (Eq, Show, Generic)
 
+-- | What the kernel asks an INBOUND rail for: a collectable payment order. When
+--   'reuseRailOrderId' is set, the rail must RE-FETCH that order's payload (same open
+--   intent, same amount) instead of creating a new one — rails must be idempotent here.
+data RailCollectRequest = RailCollectRequest
+  { submission :: RailSubmission,
+    reuseRailOrderId :: Maybe Text
+  }
+  deriving (Generic)
+
+-- | The rail's order id (becomes transfer.referenceId + railOrderId, and is what the
+--   webhook later correlates on) plus the opaque payload the client app needs to
+--   collect the money (SDK payload).
+data RailCollectResult = RailCollectResult
+  { railOrderId :: Text,
+    payload :: Aeson.Value
+  }
+  deriving (Generic)
+
 -- | A rail-neutral outcome, the only vocabulary Outcome.hs speaks.
 data TransferOutcome
   = OutcomeSucceeded
@@ -95,9 +115,10 @@ data TransferRail m = TransferRail
     pollStatus :: Transfer -> m (Maybe Text),
     -- | THE rail→canonical mapping; replaces the per-caller cast tables
     classifyStatus :: Text -> TransferOutcome,
-    -- | INBOUND only: payload the client app needs to collect the money (SDK payload);
-    --   must be idempotent per referenceId (re-fetch, don't re-create)
-    collectPayload :: Maybe (RailSubmission -> m Aeson.Value)
+    -- | INBOUND only: create (or, on reuse, re-fetch) the payment order and return its
+    --   id + client payload. The kernel drives the whole recharge process through this
+    --   closure — domains never create payment orders themselves.
+    collectPayload :: Maybe (RailCollectRequest -> m RailCollectResult)
   }
 
 -- | App-side dispatch table, same pattern as the reconciliation RecipeRegistry.

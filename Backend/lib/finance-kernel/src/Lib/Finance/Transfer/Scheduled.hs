@@ -45,6 +45,7 @@ data AccountSweepTarget = AccountSweepTarget
     referenceType :: Text,
     referenceId :: Text,
     legacyOfferHoldKeys :: [Text],
+    alwaysRedeemableRefs :: [Text],
     holdLedgerMetadata :: Maybe LE.LedgerEntryMetadata,
     metadata :: DT.TransferMetadata
   }
@@ -85,6 +86,7 @@ runScheduledSweep runFinance rail rule cursor enumerate = do
               ledgerRefs = tgt.ledgerRefs,
               instant = False,
               legacyOfferHoldKeys = tgt.legacyOfferHoldKeys,
+              alwaysRedeemableRefs = tgt.alwaysRedeemableRefs,
               coveredEntryIds = Nothing,
               holdLedgerMetadata = tgt.holdLedgerMetadata,
               metadata = tgt.metadata

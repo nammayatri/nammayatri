@@ -74,17 +74,10 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
   let def =
         DriverWalletConfig
           { enableDriverWallet = False,
-            driverWalletPayoutThreshold = 0,
-            gstPercentage = 0.0,
-            enableWalletPayout = False,
-            enableWalletTopup = False,
             forceOnlineLedger = Nothing,
-            maxWalletPayoutsPerDay = Nothing,
             minWalletAmountForCashRides = Nothing,
             minWalletAmountForScheduledRides = Nothing,
             fleetLinkedDriverWalletView = Nothing,
-            minimumWalletPayoutAmount = 0,
-            payoutCutOffDays = 7,
             payoutFee = Nothing,
             onlineCommissionPaidOutDirectly = Nothing,
             fetchWalletTransactionsFromClickhouse = Nothing,
@@ -101,8 +94,7 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             connectAccountChargeBearer = Nothing,
             connectAccountChargeTimeOfDay = Nothing,
             connectAccountChargeDayOfWeek = Nothing,
-            connectAccountChargeDayOfMonth = Nothing,
-            instantPayoutExcludedRoles = Nothing
+            connectAccountChargeDayOfMonth = Nothing
           }
   parseFieldWithDefaultM "transporterConfig" "driverWalletConfig" merchantOperatingCityId def parseDriverWalletConfigWithDefault mbVal
 
