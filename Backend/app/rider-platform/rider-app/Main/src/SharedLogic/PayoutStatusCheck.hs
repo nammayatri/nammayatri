@@ -12,6 +12,8 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.AccountConfig as FinanceConfig
+import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Lib.Payment.Payout.StatusCheck as PSC
@@ -41,20 +43,43 @@ getPayoutStatusCheckConfig order = do
     Nothing -> do
       person <- QPerson.findById (Id order.customerId) >>= fromMaybeM (PersonNotFound order.customerId)
       pure person.merchantOperatingCityId.getId
-  let vehicleCategory = case order.entityName of
-        Just DPayment.RIDE_OFFER_CASHBACK -> DV.CAR
-        _ -> DV.AUTO_CATEGORY
-  mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing}) Nothing
-  payoutConfig <- case mbPayoutConfig of
-    Just cfg -> pure cfg
-    Nothing ->
-      listToMaybe <$> CQPayoutCfg.findAllByMerchantOpCityId (Id merchantOperatingCityId) Nothing
-        >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOperatingCityId)
-  pure
-    PSC.PayoutStatusCheckConfig
-      { checkInterval = secondsToNominalDiffTime (fromIntegral payoutConfig.payoutStatusCheckInterval),
-        maxAttempts = payoutConfig.payoutStatusCheckMaxAttempts
-      }
+  -- Kernel-managed cashback transfers carry their own poll pacing on the rider class
+  -- config (both fields must be set); PayoutConfig stays the fallback and the source
+  -- for referral / metro orders.
+  mbKernelPacing <-
+    if order.entityName == Just DPayment.RIDE_OFFER_CASHBACK
+      then do
+        cfg <-
+          FinanceConfig.getAccountConfig
+            FinanceConfig.AccountClass
+              { merchantId = order.merchantId,
+                merchantOperatingCityId = merchantOperatingCityId,
+                accountType = FAccount.Liability,
+                counterpartyType = Just FAccount.RIDER,
+                subLedger = Nothing
+              }
+        pure $
+          PSC.PayoutStatusCheckConfig
+            <$> (secondsToNominalDiffTime . fromIntegral <$> cfg.statusCheckIntervalSec)
+            <*> cfg.statusCheckMaxAttempts
+      else pure Nothing
+  case mbKernelPacing of
+    Just pacing -> pure pacing
+    Nothing -> do
+      let vehicleCategory = case order.entityName of
+            Just DPayment.RIDE_OFFER_CASHBACK -> DV.CAR
+            _ -> DV.AUTO_CATEGORY
+      mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing}) Nothing
+      payoutConfig <- case mbPayoutConfig of
+        Just cfg -> pure cfg
+        Nothing ->
+          listToMaybe <$> CQPayoutCfg.findAllByMerchantOpCityId (Id merchantOperatingCityId) Nothing
+            >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOperatingCityId)
+      pure
+        PSC.PayoutStatusCheckConfig
+          { checkInterval = secondsToNominalDiffTime (fromIntegral payoutConfig.payoutStatusCheckInterval),
+            maxAttempts = payoutConfig.payoutStatusCheckMaxAttempts
+          }
 
 scheduleNextPayoutStatusCheck :: (PayoutStatusCheckCreator m r) => DPayoutOrder.PayoutOrder -> PSC.PayoutStatusCheckJobData -> NominalDiffTime -> m ()
 scheduleNextPayoutStatusCheck order jobData delay =

@@ -32,7 +32,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -45,10 +44,10 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.BookingDepositLedger as BookingDepositLedger
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.Finance.Rails as FinanceRails
 import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.SchedulerJob ()
-import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
@@ -89,14 +88,15 @@ checkRefundStatusJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   paymentOrder <- QPaymentOrder.findByShortId refundEntry.orderId >>= fromMaybeM (InvalidRequest $ "payment order not found for refund: " <> show refundEntry.id.getId)
   person <- QP.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
   retryStatus <- processRefundStatus refundEntry person paymentOrder
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  -- Poll pacing is kernel class config (hard defaults inside the helper); the
+  -- RiderConfig fields were deleted.
+  (baseInterval, maxRetries) <- FinanceRails.refundPollPacing person.merchantId.getId person.merchantOperatingCityId.getId
   when retryStatus $ do
-    let maxRetries = riderConfig.refundStatusUpdateRetries
     if currentRetries >= maxRetries
       then do
         logInfo $ "Maximum retries reached for refund " <> refundId.getId <> ". Stopping further checks."
       else do
-        let nextSchedule = riderConfig.refundStatusUpdateInterval * (2 ^ currentRetries)
+        let nextSchedule = baseInterval * (2 ^ currentRetries)
             newJobData =
               CheckRefundStatusJobData
                 { refundId = refundId.getId,

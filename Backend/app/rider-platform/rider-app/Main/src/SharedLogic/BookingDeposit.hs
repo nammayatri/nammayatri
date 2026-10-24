@@ -71,7 +71,6 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Account.Service as Account
 import qualified Lib.Finance.Balance as FinanceBalance
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
@@ -85,11 +84,11 @@ import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.BookingDepositLedger
+import qualified SharedLogic.Finance.Rails as FinanceRails
 import qualified SharedLogic.Finance.RidePayment as RidePayment
 import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.SchedulerJob ()
-import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
@@ -633,9 +632,6 @@ applyDepositRefundResult ::
   Maybe Text ->
   m ()
 applyDepositRefundResult booking refundReq (row, order) refundId refundStatus errorCode = do
-  riderConfig <-
-    getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-      >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   resolveDepositRefundLegs booking.riderId order.id refundStatus
   let reqStatus = SPayment.refundStatusToRequestStatus refundStatus
       bpStatus = case refundStatus of
@@ -645,7 +641,8 @@ applyDepositRefundResult booking refundReq (row, order) refundId refundStatus er
         _ -> DBP.REFUND_INITIATED
   QRefundRequest.updateRefundIdAndStatus (Just (Id refundId)) reqStatus refundReq.id
   QBookingPayment.updateStatusById bpStatus row.id
-  createJobIn @_ @'CheckRefundStatus (Just booking.merchantId) (Just booking.merchantOperatingCityId) riderConfig.refundStatusUpdateInterval $
+  (pollAfter, _) <- FinanceRails.refundPollPacing booking.merchantId.getId booking.merchantOperatingCityId.getId
+  createJobIn @_ @'CheckRefundStatus (Just booking.merchantId) (Just booking.merchantOperatingCityId) pollAfter $
     CheckRefundStatusJobData {refundId = refundId, numberOfRetries = 0}
   logInfo $ "Scheduled CheckRefundStatus for deposit refund " <> refundId <> " order " <> order.id.getId
   unless (refundStatus `elem` [Payment.REFUND_FAILURE, Payment.REFUND_CANCELED]) $

@@ -32,6 +32,7 @@ module Lib.Finance
     module Lib.Finance.Domain.Types.Transfer,
     module Lib.Finance.Domain.Types.ScheduledTransferRule,
     module Lib.Finance.Transfer.Rail,
+    module Lib.Finance.Transfer.RailStatus,
     module Lib.Finance.Transfer.Backfill,
     module Lib.Finance.Transfer.Internal,
     module Lib.Finance.Transfer.Outbound,
@@ -119,4 +120,5 @@ import Lib.Finance.Transfer.Internal
 import Lib.Finance.Transfer.Outbound
 import Lib.Finance.Transfer.Outcome
 import Lib.Finance.Transfer.Rail
+import Lib.Finance.Transfer.RailStatus
 import Lib.Finance.Transfer.Scheduled

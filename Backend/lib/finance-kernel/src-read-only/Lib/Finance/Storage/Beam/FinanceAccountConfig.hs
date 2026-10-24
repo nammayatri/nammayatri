@@ -13,24 +13,27 @@ import qualified Lib.Finance.Domain.Types.Account
 import Tools.Beam.UtilsTH
 
 data FinanceAccountConfigT f = FinanceAccountConfigT
-  { accountType :: (B.C f Lib.Finance.Domain.Types.Account.AccountType),
-    allowNegativeBalance :: (B.C f Kernel.Prelude.Bool),
-    autoTransferOut :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    counterpartyType :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Account.CounterpartyType)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    instantTransferOutEnabled :: (B.C f Kernel.Prelude.Bool),
-    maxTransferOutPerDay :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    minRetainedBalance :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    minTransferOutAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    redeemableCutoff :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    subLedger :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    transferInEnabled :: (B.C f Kernel.Prelude.Bool),
-    transferOutEnabled :: (B.C f Kernel.Prelude.Bool),
-    transferOutFee :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { accountType :: B.C f Lib.Finance.Domain.Types.Account.AccountType,
+    allowNegativeBalance :: B.C f Kernel.Prelude.Bool,
+    autoTransferOut :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    counterpartyType :: B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Account.CounterpartyType),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    instantTransferOutEnabled :: B.C f Kernel.Prelude.Bool,
+    maxTransferOutPerDay :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    minRetainedBalance :: B.C f Kernel.Types.Common.HighPrecMoney,
+    minTransferOutAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    pointsConversionRate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    redeemableCutoff :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    statusCheckIntervalSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    statusCheckMaxAttempts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    subLedger :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    transferInEnabled :: B.C f Kernel.Prelude.Bool,
+    transferOutEnabled :: B.C f Kernel.Prelude.Bool,
+    transferOutFee :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -40,6 +43,6 @@ instance B.Table FinanceAccountConfigT where
 
 type FinanceAccountConfig = FinanceAccountConfigT Identity
 
-$(enableKVPG (''FinanceAccountConfigT) [('id)] [])
+$(enableKVPG ''FinanceAccountConfigT ['id] [])
 
-$(mkTableInstancesGenericSchema (''FinanceAccountConfigT) "finance_account_config")
+$(mkTableInstancesGenericSchema ''FinanceAccountConfigT "finance_account_config")
