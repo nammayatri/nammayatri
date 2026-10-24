@@ -29,7 +29,6 @@ where
 
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.Finance.AccountConfig (ResolvedAccountConfig (..), cutoffTimeFor, getAccountConfigForAccount)
@@ -193,9 +192,12 @@ floorToTwoDecimals x = fromIntegral (floor (x * 100) :: Integer) / 100
 accountBalanceLockKey :: Id Account -> Text
 accountBalanceLockKey accountId = "Finance:BalanceLock:" <> accountId.getId
 
+-- | Runs the action under the account's balance lock and returns its result. Waiters
+--   retry every 10ms until the lock is released or its TTL expires (a crashed holder
+--   cannot wedge the account for longer than 'ttlSeconds').
 withAccountBalanceLock :: (CacheFlow m r, MonadFlow m) => Id Account -> Int -> m a -> m a
 withAccountBalanceLock accountId ttlSeconds =
-  Redis.withWaitOnLockRedisWithExpiry (accountBalanceLockKey accountId) (fromIntegral ttlSeconds) (fromIntegral ttlSeconds)
+  Redis.withWaitAndLockRedis (accountBalanceLockKey accountId) ttlSeconds 10000
 
 -- | Standard offer-hold key for an account. New write paths must use this; legacy
 --   domain-named keys are accepted read-side via getBalanceBreakdown's second argument.

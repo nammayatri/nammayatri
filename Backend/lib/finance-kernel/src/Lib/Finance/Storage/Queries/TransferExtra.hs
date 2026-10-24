@@ -8,7 +8,7 @@ import Kernel.Utils.Common (getCurrentTime)
 import qualified Lib.Finance.Domain.Types.Transfer as Domain
 import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.Transfer as Beam
-import Lib.Finance.Storage.Queries.Transfer ()
+import Lib.Finance.Storage.Queries.OrphanInstances.Transfer ()
 import qualified Sequelize as Se
 
 -- | Status move, optionally stamping the latest raw rail status / error. Fields not

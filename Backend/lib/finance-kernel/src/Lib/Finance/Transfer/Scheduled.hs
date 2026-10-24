@@ -24,7 +24,6 @@ import Data.Time.Calendar.WeekDate (toWeekDate)
 import Kernel.Prelude
 import Kernel.Utils.Common
 import Lib.Finance.Balance (TransferAmount (AllAvailable))
-import Lib.Finance.Core.Types (HasActorInfo)
 import Lib.Finance.Domain.Types.Account (Account)
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.Domain.Types.ScheduledTransferRule

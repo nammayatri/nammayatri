@@ -20,11 +20,11 @@ module Lib.Finance.Transfer.Outcome
   )
 where
 
+import Data.List (nub)
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.Finance.Balance (withAccountBalanceLock)
-import Lib.Finance.Core.Types (HasActorInfo)
 import Lib.Finance.Domain.Types.LedgerEntry (EntryType (Reversal), LedgerEntry)
 import qualified Lib.Finance.Domain.Types.Transfer as DT
 import Lib.Finance.Error.Types
@@ -127,7 +127,12 @@ settleOutboundReversed refs ctx t mbRaw reason
   | t.status == DT.REVERSED = pure (Right t)
   | otherwise = do
     settlementLegs <- getEntriesByReference refs.settlementReferenceType ctx.referenceId
-    reversalRes <- reverseUnreversed settlementLegs reason
+    -- inline (not a where-bound helper): a signature-less local binding would be
+    -- generalised and lose the enclosing HasActorInfo m r constraint
+    let reversedIds = mapMaybe (.reversalOf) settlementLegs
+        toReverse = [e | e <- settlementLegs, e.entryType /= Reversal, e.id `notElem` reversedIds]
+    reversalResults <- mapM (\e -> createReversal e.id reason) toReverse
+    let reversalRes = map (.id) <$> sequenceEither reversalResults
     case reversalRes of
       Left err -> pure (Left err)
       Right settlementReversals -> do
@@ -142,12 +147,6 @@ settleOutboundReversed refs ctx t mbRaw reason
             QTE.updateLedgerLegsById Nothing (mergeLegIds t (settlementReversals <> holdReversals)) t.id
             QTE.updateStatusById DT.REVERSED mbRaw (Just reason) t.id
             refetch t.id
-  where
-    reverseUnreversed legs why = do
-      let reversedIds = mapMaybe (.reversalOf) legs
-          toReverse = [e | e <- legs, e.entryType /= Reversal, e.id `notElem` reversedIds]
-      results <- mapM (\e -> createReversal e.id why) toReverse
-      pure $ map (.id) <$> sequenceEither results
 
 -- | Status-only moves: pending bumps and review flags. Never downgrades a terminal
 --   status and never moves NEEDS_REVIEW back to IN_FLIGHT on a mere pending poll.
