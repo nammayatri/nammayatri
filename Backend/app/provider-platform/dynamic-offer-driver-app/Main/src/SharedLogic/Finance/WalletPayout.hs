@@ -72,17 +72,20 @@ data PayoutContext = PayoutContext
     transporterConfig :: DTConf.TransporterConfig
   }
 
--- | The per-day payout cap moved to the kernel (finance_account_config
---   maxTransferOutPerDay, enforced on instant transfers inside initiateTransferOut).
+-- | The per-day payout cap and the minimum both moved to the kernel
+--   (finance_account_config maxTransferOutPerDay / minTransferOutAmount).
+--   mbMinimumPayoutOverride exists for the scheduled sweep, whose rule may set a
+--   higher floor than the class minimum; Nothing = the class minimum applies.
 data WalletPayoutParams = WalletPayoutParams
   { payoutType :: PR.PayoutType,
-    minimumPayoutAmount :: HighPrecMoney,
+    mbMinimumPayoutOverride :: Maybe HighPrecMoney,
     throwOnBelowMinimum :: Bool
   }
 
 data WalletPayoutPlan = WalletPayoutPlan
   { payoutableBalance :: HighPrecMoney,
-    cutoff :: UTCTime,
+    -- | Nothing = no redeemable cutoff configured for the class
+    cutoff :: Maybe UTCTime,
     redeemableEntryIds :: [Text],
     merchantTransferAmount :: HighPrecMoney
   }
@@ -122,25 +125,28 @@ loadPayoutContext mbPersonId merchantId mocId = do
       pure (mbDriverInfo >>= (.payoutVpa))
   pure PayoutContext {..}
 
-ensurePayoutsEnabled :: (MonadFlow m) => PayoutContext -> m ()
-ensurePayoutsEnabled ctx =
-  unless ctx.transporterConfig.driverWalletConfig.enableWalletPayout $
+-- | Payout enablement is the kernel class config's transferOutEnabled — one switch per
+--   (Liability, counterparty) class per city.
+ensurePayoutsEnabled :: (BeamFlow m r, MonadFlow m) => PayoutContext -> m ()
+ensurePayoutsEnabled ctx = do
+  cfg <- walletClassConfig ctx.merchantId.getId ctx.mocId.getId (counterpartyFromRole ctx.person.role)
+  unless cfg.transferOutEnabled $
     throwError $ InvalidRequest "Payouts are disabled"
 
--- | Whether this role may take an instant payout in the city.
---   FLEET_BUSINESS counts as FLEET_OWNER, as everywhere else in the wallet.
-instantPayoutAllowedFor :: DTConf.DriverWalletConfig -> DP.Role -> Bool
-instantPayoutAllowedFor walletConfig role = asFleetOwner role `notElem` map asFleetOwner (fromMaybe [] walletConfig.instantPayoutExcludedRoles)
-  where
-    asFleetOwner DP.FLEET_BUSINESS = DP.FLEET_OWNER
-    asFleetOwner r = r
+-- | Whether this role may take an instant payout in the city: the class config's
+--   instantTransferOutEnabled. Roles map to classes via 'counterpartyFromRole'
+--   (FLEET_BUSINESS folds into FLEET_OWNER), so the old instantPayoutExcludedRoles
+--   list is now simply instantTransferOutEnabled = False on the FLEET_OWNER class row.
+instantPayoutAllowedFor :: (BeamFlow m r) => Id Domain.Types.Merchant.Merchant -> Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> DP.Role -> m Bool
+instantPayoutAllowedFor merchantId mocId role =
+  (.instantTransferOutEnabled) <$> walletClassConfig merchantId.getId mocId.getId (counterpartyFromRole role)
 
--- | Instant payouts only; scheduled and adhoc payouts skip it. Kept apart from 'enableWalletPayout'
---   so a city can leave payouts to admins and the sweep.
-ensureInstantPayoutAllowed :: (MonadFlow m) => PayoutContext -> m ()
-ensureInstantPayoutAllowed ctx =
-  unless (instantPayoutAllowedFor ctx.transporterConfig.driverWalletConfig ctx.person.role) $
-    throwError InstantPayoutNotAllowed
+-- | Instant payouts only; scheduled and adhoc payouts skip it. Kept apart from
+--   transferOutEnabled so a city can leave payouts to admins and the sweep.
+ensureInstantPayoutAllowed :: (BeamFlow m r, MonadFlow m) => PayoutContext -> m ()
+ensureInstantPayoutAllowed ctx = do
+  allowed <- instantPayoutAllowedFor ctx.merchantId ctx.mocId ctx.person.role
+  unless allowed $ throwError InstantPayoutNotAllowed
 
 -- | Reason prefix for held money given back because the payout was never sent.
 payoutNotSentPrefix :: Text
@@ -203,27 +209,25 @@ runWalletPayoutWith ctx params initiate =
 
 findWalletPayoutAmount :: (WalletPayoutFlow m r) => PayoutContext -> WalletPayoutParams -> m (Maybe WalletPayoutPlan)
 findWalletPayoutAmount ctx params = do
-  now <- getCurrentTime
   let counterparty = counterpartyFromRole ctx.person.role
-      timeDiff = secondsToNominalDiffTime ctx.transporterConfig.timeDiffFromUtc
-      cutOffDays = ctx.transporterConfig.driverWalletConfig.payoutCutOffDays
-      cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
   -- The per-day payout cap is enforced by the kernel (finance_account_config
-  -- maxTransferOutPerDay, instant transfers only) inside initiateTransferOut.
+  -- maxTransferOutPerDay, instant transfers only) inside initiateTransferOut; the
+  -- cutoff and minimum come from the same class config via the breakdown.
   pb <- computePayoutableBalance counterparty ctx.driverId.getId
   let eligibility = pb.eligibility
       payoutableBalance = pb.payoutableBalance
-  logInfo $ "Payout eligibility for " <> ctx.driverId.getId <> ": walletBalance=" <> show pb.walletBalance <> ", nonRedeemable=" <> show eligibility.nonRedeemableBalance <> ", processingPayout=" <> show eligibility.processingPayoutBalance <> ", rideHold=" <> show pb.rideHoldBalance <> ", offerHold=" <> show pb.offerHoldBalance <> ", payoutableBalance=" <> show payoutableBalance <> ", minimum=" <> show params.minimumPayoutAmount <> ", redeemableEntryIds=" <> show eligibility.redeemableEntryIds
-  if payoutableBalance < params.minimumPayoutAmount
+      minimumPayoutAmount = fromMaybe pb.classConfig.minTransferOutAmount params.mbMinimumPayoutOverride
+  logInfo $ "Payout eligibility for " <> ctx.driverId.getId <> ": walletBalance=" <> show pb.walletBalance <> ", nonRedeemable=" <> show eligibility.nonRedeemableBalance <> ", processingPayout=" <> show eligibility.processingPayoutBalance <> ", rideHold=" <> show pb.rideHoldBalance <> ", offerHold=" <> show pb.offerHoldBalance <> ", payoutableBalance=" <> show payoutableBalance <> ", minimum=" <> show minimumPayoutAmount <> ", redeemableEntryIds=" <> show eligibility.redeemableEntryIds
+  if payoutableBalance < minimumPayoutAmount
     then do
-      when params.throwOnBelowMinimum $ throwError $ InvalidRequest ("Minimum payout amount is " <> show params.minimumPayoutAmount)
+      when params.throwOnBelowMinimum $ throwError $ InvalidRequest ("Minimum payout amount is " <> show minimumPayoutAmount)
       pure Nothing
     else
       pure $
         Just
           WalletPayoutPlan
             { payoutableBalance,
-              cutoff,
+              cutoff = pb.resolvedCutoff,
               redeemableEntryIds = map (.getId) eligibility.redeemableEntryIds,
               merchantTransferAmount = eligibility.merchantTransferAmount
             }
@@ -232,7 +236,7 @@ findWalletPayoutAmount ctx params = do
 --   no batch, coverage up to the cutoff, and a per-order status check.
 initiateWalletPayout :: (WalletPayoutFlow m r) => PayoutContext -> PR.PayoutType -> WalletPayoutPlan -> m ()
 initiateWalletPayout ctx payoutType WalletPayoutPlan {..} =
-  void $ initiateWalletPayoutWith ctx payoutableBalance payoutType Nothing (Just cutoff) redeemableEntryIds merchantTransferAmount Nothing Nothing afterPayoutOrderCreated
+  void $ initiateWalletPayoutWith ctx payoutableBalance payoutType Nothing cutoff redeemableEntryIds merchantTransferAmount Nothing Nothing afterPayoutOrderCreated
 
 -- | Payout route and decrypted phone, resolved before the wallet lock so they are not fetched while holding it.
 data PayoutPrefetch = PayoutPrefetch
@@ -389,7 +393,7 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
           failRequest pr.id (payoutNotSentPrefix <> "KERNEL_REJECTED")
           logError $ "Wallet payout rejected by finance kernel for payoutRequest " <> pr.id.getId <> ": " <> show err
           case err of
-            -- The domain gate (enableWalletPayout) passed, so a kernel refusal means the
+            -- The pre-check (ensurePayoutsEnabled, same kernel config) passed, so a refusal here means the
             -- finance_account_config row is missing or wrong — be loud, not silent.
             DomainError "TRANSFER_OUT_DISABLED" _ -> throwError $ InvalidRequest "Payouts are disabled for this wallet class (finance_account_config)"
             DomainError "INSTANT_TRANSFER_NOT_ALLOWED" _ -> throwError InstantPayoutNotAllowed

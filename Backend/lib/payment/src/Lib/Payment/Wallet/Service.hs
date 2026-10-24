@@ -23,6 +23,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import qualified Lib.Finance.Account.Service as FAccountSvc
+import qualified Lib.Finance.AccountConfig as FAccountConfig
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Finance.Domain.Types.LedgerEntry as FLE
@@ -66,6 +67,32 @@ parsePoints t = realToFrac <$> (readMaybe (T.unpack t) :: Maybe Double)
 
 positiveRate :: HighPrecMoney -> Maybe HighPrecMoney
 positiveRate r = if r > 0 then Just r else Nothing
+
+-- | Drift corrections against the PSP-authoritative point balance post under this
+--   reference type, keyed by the wallet id.
+loyaltySyncReferenceType :: Text
+loyaltySyncReferenceType = "LoyaltySync"
+
+-- | Currency-units-per-point from the kernel class config of the loyalty wallet's
+--   account class — the rate's home. The legacy Juspay service-config map stays as a
+--   fallback until class rows are seeded per city.
+kernelConversionRate ::
+  (FBeamFlow.BeamFlow m r) =>
+  Text -> -- merchantId
+  Maybe Text -> -- merchantOperatingCityId
+  FAccount.CounterpartyType -> -- programType
+  m (Maybe HighPrecMoney)
+kernelConversionRate merchantId mbMerchantOperatingCityId programType = do
+  cfg <-
+    FAccountConfig.getAccountConfig
+      FAccountConfig.AccountClass
+        { merchantId = merchantId,
+          merchantOperatingCityId = fromMaybe "" mbMerchantOperatingCityId,
+          accountType = FAccount.Liability,
+          counterpartyType = Just programType,
+          subLedger = Nothing
+        }
+  pure ((positiveRate . realToFrac) =<< cfg.pointsConversionRate)
 
 -- | Live ₹-per-point rate from the programs-API burn options (value / points).
 programConversionRate :: LoyaltyProgramSummary -> Maybe HighPrecMoney
@@ -294,13 +321,14 @@ bumpWalletAggregatesOnBurn walletId points = do
   QWallet.updateAggregatesOnBurn newAvailable newLifetimeBurned walletId
 
 reconcileWalletFromProgram ::
-  (FBeamFlow.BeamFlow m r, PBeamFlow.BeamFlow m r, Log m, MonadTime m) =>
+  (FBeamFlow.BeamFlow m r, PBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   DWallet.Wallet ->
   FAccount.Account ->
   Maybe HighPrecMoney -> -- config default ₹-per-point rate (from loyaltyProgramMap)
   LoyaltyProgramSummary ->
   m ()
-reconcileWalletFromProgram wallet account mbConfigRate program = do
+reconcileWalletFromProgram wallet _account mbConfigRate program = do
+  kernelRate <- kernelConversionRate wallet.merchantId wallet.merchantOperatingCityId wallet.programType
   let pw = program.wallet
       pockets = fromMaybe [] pw.pockets
       pocketByKeyword kw =
@@ -310,8 +338,9 @@ reconcileWalletFromProgram wallet account mbConfigRate program = do
       mbLifeRedeemed = parsePoints =<< pw.lifetimeRedeemed
       mbTopup = parsePoints =<< ((.lifetimeEarned) =<< pocketByKeyword "topup")
       mbCashback = parsePoints =<< ((.lifetimeEarned) =<< pocketByKeyword "reward")
-      -- ₹-per-point: latest programs-API rate, else last persisted, else config default.
-      newRate = programConversionRate program <|> (wallet.conversionRate >>= positiveRate) <|> (mbConfigRate >>= positiveRate)
+      -- ₹-per-point: latest programs-API rate, else the kernel class config, else the
+      -- last persisted rate, else the legacy Juspay service-config default.
+      newRate = programConversionRate program <|> kernelRate <|> (wallet.conversionRate >>= positiveRate) <|> (mbConfigRate >>= positiveRate)
       rateChanged = wallet.conversionRate /= newRate
       mismatched mbRemote localVal = maybe False (/= localVal) mbRemote
       drifted =
@@ -329,11 +358,26 @@ reconcileWalletFromProgram wallet account mbConfigRate program = do
     QWallet.syncFromLoyaltyInfo syncAvailable syncLifeEarned syncLifeBurned syncTopup syncCashback newRate wallet.id
   case newRate of
     Just rate -> do
+      -- Drift against the PSP-authoritative point balance is corrected on the LEDGER —
+      -- an Adjustment pair for the DELTA against the merchant buyer Asset account
+      -- (positive credits the wallet, negative debits it; 'Finance.adjustment' flips the
+      -- direction itself) — never by overwriting account.balance, which would erase the
+      -- effect of any concurrently posted entry and leave no trace. Reads the balance
+      -- fresh so the delta is computed against the postings made earlier in this handler.
+      freshAccount <-
+        QFAccount.findById wallet.accountId
+          >>= fromMaybeM (InternalError $ "Loyalty wallet account missing during reconcile: " <> wallet.accountId.getId)
       let expectedBalance = syncAvailable * rate
-      when (account.balance /= expectedBalance) $
-        QFAccount.updateBalance expectedBalance wallet.accountId
+          delta = expectedBalance - freshAccount.balance
+      when (delta /= 0) $ do
+        res <-
+          runLoyaltyTransfer wallet wallet.id.getId $
+            Finance.adjustment Finance.BuyerAsset Finance.OwnerLiability delta loyaltySyncReferenceType
+        case res of
+          Left err -> logError $ "loyalty reconcile adjustment failed wallet=" <> wallet.id.getId <> ": " <> show err
+          Right _ -> pure ()
     Nothing ->
-      logError $ "reconcile: no conversion rate for wallet " <> wallet.id.getId <> "; skipping balance update"
+      logError $ "reconcile: no conversion rate for wallet " <> wallet.id.getId <> "; skipping balance adjustment"
 
 processLoyaltyInfoFromOrderStatus ::
   (FBeamFlow.BeamFlow m r, PBeamFlow.BeamFlow m r, Log m, Finance.HasActorInfo m r) =>
@@ -359,7 +403,11 @@ processLoyaltyInfoFromOrderStatus personId order domainEntityId loyalty resolveP
       pure []
     Right ps -> pure ps
   let apiRateByProgramId = Map.fromList (mapMaybe (\p -> (,) p.id <$> programConversionRate p) programs)
-      effectiveRate pid mbConfigRate = Map.lookup pid apiRateByProgramId <|> (mbConfigRate >>= positiveRate)
+      -- Precedence: live programs-API rate, then the kernel class config (the rate's
+      -- home), then the legacy Juspay service-config map until class rows are seeded.
+      effectiveRate pid programType mbConfigRate = do
+        kernelRate <- kernelConversionRate merchantId mbMerchantOperatingCityId programType
+        pure $ Map.lookup pid apiRateByProgramId <|> kernelRate <|> (mbConfigRate >>= positiveRate)
 
   let payloadTotalEarned = sum (map (.points) loyalty.earnDetails)
       payloadTotalBurned = sum [sum (map (.points) burn.burnOptions) | burn <- loyalty.burnDetails]
@@ -386,8 +434,8 @@ processLoyaltyInfoFromOrderStatus personId order domainEntityId loyalty resolveP
             <> merchantId
       Just (programType, mbConfigRate) -> do
         rate <-
-          effectiveRate earn.programId mbConfigRate
-            & fromMaybeM (InternalError ("No conversion rate for loyalty program " <> earn.programId))
+          effectiveRate earn.programId programType mbConfigRate
+            >>= fromMaybeM (InternalError ("No conversion rate for loyalty program " <> earn.programId))
         (wallet, _acc) <-
           getOrCreateWalletForPerson personId programType earn.programId currency merchantId mbMerchantOperatingCityId
         let kind = if isTopup then DWP.TOPUP else DWP.CASHBACK
@@ -418,8 +466,8 @@ processLoyaltyInfoFromOrderStatus personId order domainEntityId loyalty resolveP
         let totalPoints = sum (map (.points) burn.burnOptions)
         when (totalPoints > 0) $ do
           rate <-
-            effectiveRate burn.programId mbConfigRate
-              & fromMaybeM (InternalError ("No conversion rate for loyalty program " <> burn.programId))
+            effectiveRate burn.programId programType mbConfigRate
+              >>= fromMaybeM (InternalError ("No conversion rate for loyalty program " <> burn.programId))
           (wallet, _acc) <-
             getOrCreateWalletForPerson personId programType burn.programId currency merchantId mbMerchantOperatingCityId
           void $ upsertWalletHistory wp wallet programType DWP.BURN Nothing totalPoints burn.reversedPoints (Just (totalPoints * rate)) domainEntityId

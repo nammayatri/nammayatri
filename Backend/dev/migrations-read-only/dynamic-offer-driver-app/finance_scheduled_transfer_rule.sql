@@ -23,3 +23,12 @@ ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN ti
 ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN time_of_day text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN remark text ;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN order_type text ;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN bulk_status_check_interval_minutes integer ;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN bulk_status_check_batch_limit integer ;

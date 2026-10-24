@@ -128,7 +128,7 @@ claimBeneficiary config payoutType transporterConfig payoutServiceName merchantI
                         standing.payoutableBalance
                         payoutType
                         Nothing
-                        (Just standing.cutoff)
+                        standing.cutoff
                         standing.redeemableEntryIds
                         standing.merchantTransferAmount
                         (Just batch.id)

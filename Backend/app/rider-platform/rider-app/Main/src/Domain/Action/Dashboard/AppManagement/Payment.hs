@@ -34,6 +34,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified "payment" Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified SharedLogic.BookingDeposit as BookingDeposit
+import qualified SharedLogic.Finance.Rails as FinanceRails
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -238,7 +239,17 @@ submitRefundToPaymentService refundRequest retryIfFailed = do
       DRidePayment.processRefundResult refundRequest DRefundRequest.FAILED refundRequest.refundsId
       pure Common.RefundRequestRespondResp {status = DRefundRequest.FAILED, refundStatus = Nothing, errorCode = Nothing}
     Just result -> do
-      let updStatus = DRidePayment.castRefundRequestStatus result.status
+      -- Canonical money status: one kernel transfer row per gateway attempt (the refund
+      -- LEDGER legs are unchanged — they stay on the createRefundRaisedLedger path).
+      FinanceRails.mintRideRefundTransfer
+        refundRequest.personId.getId
+        refundRequest.merchantId.getId
+        refundRequest.merchantOperatingCityId.getId
+        refundRequest.currency
+        (fromMaybe refundRequest.transactionAmount refundRequest.refundsAmount)
+        result.refundId
+      FinanceRails.updateRideRefundTransferStatus result.refundId (Just (show result.status)) (FinanceRails.refundStatusToTransferStatus result.status)
+      let updStatus = SPayment.refundStatusToRequestStatus result.status
           refundId = Id result.refundId
       DRidePayment.processRefundResult refundRequest updStatus (Just refundId)
       pure Common.RefundRequestRespondResp {status = updStatus, refundStatus = Just result.status, errorCode = result.errorCode}

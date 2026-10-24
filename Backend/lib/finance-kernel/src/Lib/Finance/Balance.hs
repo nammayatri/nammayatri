@@ -60,6 +60,11 @@ data BalanceBreakdown = BalanceBreakdown
     available :: HighPrecMoney,
     -- | the unsettled entries a payout of 'redeemable' would cover
     redeemableEntries :: [LedgerEntry],
+    -- | the cutoff instant this breakdown was computed under: the configured
+    --   redeemable cutoff, or Nothing when the class has none (everything before
+    --   "now" counted as redeemable). Domains needing a cutoff for display or
+    --   bucketing take it from HERE — never recompute one from config.
+    cutoffAt :: Maybe UTCTime,
     -- | the class config this breakdown was computed under
     config :: ResolvedAccountConfig
   }
@@ -95,24 +100,25 @@ getBalanceBreakdown account legacyOfferHoldKeys = do
   pendingHolds <- QLedgerExtra.sumPendingByFromAccount account.id
   offerHolds <- sum <$> mapM getOfferHoldTotalAtKey (offerHoldKeyForAccount account.id : legacyOfferHoldKeys)
   processingOut <- getProcessingOut account
-  (nonRedeemable, redeemable, redeemableEntries) <- case cfg.redeemableCutoff of
-    Nothing -> pure (0, max 0 account.balance, [])
-    Just spec -> do
-      now <- getCurrentTime
-      let cutoff = cutoffTimeFor spec now
-      elig <- getPayoutEligibilityData account.id account.balance cutoff now
-      pure (elig.nonRedeemableBalance, elig.redeemableBalance, elig.redeemableEntries)
-  let available = max 0 (redeemable - pendingHolds - offerHolds - cfg.minRetainedBalance)
+  now <- getCurrentTime
+  -- No configured cutoff means "everything accrued so far is redeemable": eligibility
+  -- runs against 'now', so nonRedeemable is 0 by construction and redeemableEntries is
+  -- still the full unsettled set (callers like cashback need the entry list even when
+  -- the class has no cutoff policy).
+  let cutoffAt = (`cutoffTimeFor` now) <$> cfg.redeemableCutoff
+  elig <- getPayoutEligibilityData account.id account.balance (fromMaybe now cutoffAt) now
+  let available = max 0 (elig.redeemableBalance - pendingHolds - offerHolds - cfg.minRetainedBalance)
   pure
     BalanceBreakdown
       { ledgerBalance = account.balance,
         pendingHolds,
         offerHolds,
         processingOut,
-        nonRedeemable,
-        redeemable,
+        nonRedeemable = elig.nonRedeemableBalance,
+        redeemable = elig.redeemableBalance,
         available,
-        redeemableEntries,
+        redeemableEntries = elig.redeemableEntries,
+        cutoffAt,
         config = cfg
       }
 

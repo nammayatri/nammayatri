@@ -17,20 +17,28 @@ module SharedLogic.Finance.Rails
     settleRiderPayoutViaKernel,
     transferStatusToPayoutStatus,
     payoutOrderFallbackStatus,
+    rideRefundTransferRefType,
+    refundStatusToTransferStatus,
+    refundRequestStatusToTransferStatus,
+    mintRideRefundTransfer,
+    updateRideRefundTransferStatus,
+    refundPollPacing,
   )
 where
 
-import qualified Data.Text as T
 import qualified Domain.Types.PersonStats as DPS
+import qualified Domain.Types.RefundRequest as DRefundRequest
+import qualified Kernel.External.Payment.Interface.Types as PaymentI
 import qualified Kernel.External.Payout.Interface as IPayout
 import qualified Kernel.External.Payout.Juspay.Types.Payout as JPayout
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
+import qualified Lib.Finance.AccountConfig as FinanceConfig
 import qualified Lib.Finance.Balance as FinanceBalance
 import qualified Lib.Finance.Core.Types as Finance
-import Lib.Finance.Domain.Types.Account (CounterpartyType (RIDER))
+import Lib.Finance.Domain.Types.Account (AccountType (Liability), CounterpartyType (RIDER))
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Domain.Types.Transfer as DT
 import Lib.Finance.FinanceM (runFinance)
@@ -38,10 +46,12 @@ import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..), findActivePay
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Finance.Storage.Queries.Transfer as QTransfer
+import qualified Lib.Finance.Storage.Queries.TransferExtra as QTransferExtra
 import qualified Lib.Finance.Transfer.Backfill as Backfill
 import Lib.Finance.Transfer.Outbound (OutboundSpec (..), initiateTransferOut)
 import Lib.Finance.Transfer.Outcome (applyRailStatus)
 import Lib.Finance.Transfer.Rail
+import qualified Lib.Finance.Transfer.RailStatus as RailStatus
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import qualified Lib.Payment.Payout.Request as PayoutRequest
@@ -55,24 +65,10 @@ riderJuspayPayoutRailKey = "JUSPAY_PAYOUT"
 
 -- | The ONE rider-side mapping from Juspay's raw payout-status vocabulary to the
 --   kernel's canonical outcomes. Unparseable text goes to review, never to a guess.
+-- | Delegates to the kernel's canonical mapping (Lib.Finance.Transfer.RailStatus) —
+--   one interpreter for Juspay's payout vocabulary across both apps.
 classifyJuspayPayoutStatus :: Text -> TransferOutcome
-classifyJuspayPayoutStatus raw = case readMaybe @JPayout.PayoutOrderStatus (T.unpack raw) of
-  Nothing -> OutcomeNeedsReview ("unrecognised payout status: " <> raw)
-  Just st -> case st of
-    JPayout.SUCCESS -> OutcomeSucceeded
-    JPayout.FULFILLMENTS_SUCCESSFUL -> OutcomeSucceeded
-    JPayout.ERROR -> OutcomeFailed raw
-    JPayout.FAILURE -> OutcomeFailed raw
-    JPayout.FULFILLMENTS_FAILURE -> OutcomeFailed raw
-    JPayout.CANCELLED -> OutcomeFailed raw
-    JPayout.FULFILLMENTS_CANCELLED -> OutcomeFailed raw
-    JPayout.DISCARDED -> OutcomeFailed raw
-    JPayout.INVALID -> OutcomeFailed raw
-    JPayout.REVERSED -> OutcomeReversed raw
-    JPayout.MANUAL_REVIEW -> OutcomeNeedsReview raw
-    JPayout.FULFILLMENTS_MANUAL_REVIEW -> OutcomeNeedsReview raw
-    JPayout.CONFLICTED -> OutcomeNeedsReview raw
-    _ -> OutcomePending
+classifyJuspayPayoutStatus = RailStatus.classifyJuspayPayoutStatus
 
 -- | Status-only rail used at webhook / settlement time: classify + poll (the persisted
 --   PayoutOrder row; the PayoutStatusCheck job keeps refreshing it from the gateway).
@@ -273,3 +269,119 @@ payoutOrderFallbackStatus st = case classifyJuspayPayoutStatus (show st) of
   OutcomeReversed _ -> DPS.Failed
   OutcomeNeedsReview _ -> DPS.ManualReview
   OutcomePending -> DPS.Processing
+
+--------------------------------------------------------------------------------
+-- Ride-refund transfer tracking
+--------------------------------------------------------------------------------
+
+-- | Transfer-row reference type for ride refunds. NOT a ledger refType: the refund's
+--   ledger legs keep their own vocabulary (RideFareRefund, ...) on the existing
+--   createRefundRaisedLedger / Succeeded / void path; this row is only the canonical
+--   money-process status for the gateway attempt.
+rideRefundTransferRefType :: Text
+rideRefundTransferRefType = "RideRefund"
+
+riderJuspayRefundRailKey :: Text
+riderJuspayRefundRailKey = "JUSPAY_REFUND"
+
+-- | THE gateway refund-status mapping (canonical, total).
+refundStatusToTransferStatus :: PaymentI.RefundStatus -> DT.TransferStatus
+refundStatusToTransferStatus = \case
+  PaymentI.REFUND_SUCCESS -> DT.SUCCEEDED
+  PaymentI.REFUND_FAILURE -> DT.FAILED
+  PaymentI.REFUND_CANCELED -> DT.FAILED
+  PaymentI.MANUAL_REVIEW -> DT.NEEDS_REVIEW
+  PaymentI.REFUND_REQUIRES_ACTION -> DT.NEEDS_REVIEW
+  PaymentI.REFUND_PENDING -> DT.IN_FLIGHT
+
+-- | RefundRequest-status view of the same lifecycle, for the funnel that only sees the
+--   cast status (processRefundResult). Nothing = not a money transition (OPEN/REJECTED).
+refundRequestStatusToTransferStatus :: DRefundRequest.RefundRequestStatus -> Maybe DT.TransferStatus
+refundRequestStatusToTransferStatus = \case
+  DRefundRequest.REFUNDED -> Just DT.SUCCEEDED
+  DRefundRequest.FAILED -> Just DT.FAILED
+  DRefundRequest.APPROVED -> Just DT.IN_FLIGHT
+  DRefundRequest.OPEN -> Nothing
+  DRefundRequest.REJECTED -> Nothing
+
+-- | Mint the money-process row for one gateway refund attempt, idempotent on the
+--   Refunds row id (each retry attempt = one Refunds row = one transfer). A rider with
+--   no wallet account was never ledgered — skip with a log, never fabricate an account.
+mintRideRefundTransfer ::
+  (FinanceBeamFlow.BeamFlow m r) =>
+  Text -> -- rider id
+  Text -> -- merchant id
+  Text -> -- merchant operating city id
+  Currency ->
+  HighPrecMoney ->
+  Text -> -- Refunds row id (gateway requestId)
+  m ()
+mintRideRefundTransfer riderId merchantId merchantOpCityId currency amount refundsId =
+  RidePaymentFinance.getWalletAccountByOwner RIDER riderId >>= \case
+    Nothing ->
+      logInfo $ "ride refund " <> refundsId <> ": no wallet account for rider " <> riderId <> "; transfer tracking skipped"
+    Just account ->
+      void $
+        Backfill.backfillTransfer
+          Backfill.BackfillSpec
+            { direction = DT.OUTBOUND,
+              railKey = riderJuspayRefundRailKey,
+              railOrderId = Just refundsId,
+              accountId = account.id,
+              amount = amount,
+              feeAmount = 0,
+              currency = currency,
+              referenceType = rideRefundTransferRefType,
+              referenceId = refundsId,
+              knownEntryIds = [],
+              coveredEntryIds = [],
+              merchantId = merchantId,
+              merchantOperatingCityId = merchantOpCityId
+            }
+
+-- | Status landing for a refund attempt. Terminal rows are never downgraded by a late
+--   pending poll; a missing row (pre-migration refund, account-less rider) is a skip.
+updateRideRefundTransferStatus ::
+  (FinanceBeamFlow.BeamFlow m r) =>
+  Text -> -- Refunds row id
+  Maybe Text -> -- raw gateway status, verbatim
+  DT.TransferStatus ->
+  m ()
+updateRideRefundTransferStatus refundsId mbRaw newStatus =
+  QTransfer.findByReference rideRefundTransferRefType refundsId >>= \case
+    Nothing -> pure ()
+    Just t -> do
+      let terminal = t.status `elem` [DT.SUCCEEDED, DT.FAILED, DT.REVERSED]
+      unless (terminal && newStatus == DT.IN_FLIGHT) $
+        QTransferExtra.updateStatusById newStatus mbRaw Nothing t.id
+
+-- | Refund status-poll pacing for a city: the kernel (Liability, RIDER) class config's
+--   statusCheckIntervalSec / statusCheckMaxAttempts, with the historical hard defaults
+--   (12h base interval, 5 attempts) when the class carries none. This REPLACES
+--   RiderConfig.refundStatusUpdateInterval/Retries — the class config is the only
+--   configurable source now (seeded per city by rider migration 0006).
+refundPollPacing ::
+  (FinanceBeamFlow.BeamFlow m r) =>
+  Text -> -- merchantId
+  Text -> -- merchantOperatingCityId
+  m (NominalDiffTime, Int)
+refundPollPacing merchantId merchantOperatingCityId = do
+  cfg <-
+    FinanceConfig.getAccountConfig
+      FinanceConfig.AccountClass
+        { merchantId = merchantId,
+          merchantOperatingCityId = merchantOperatingCityId,
+          accountType = Liability,
+          counterpartyType = Just RIDER,
+          subLedger = Nothing
+        }
+  pure
+    ( maybe defaultRefundPollInterval fromIntegral cfg.statusCheckIntervalSec,
+      fromMaybe defaultRefundPollAttempts cfg.statusCheckMaxAttempts
+    )
+  where
+    -- the defaults RiderConfig's fromTType historically applied (43200s, 5 retries)
+    defaultRefundPollInterval :: NominalDiffTime
+    defaultRefundPollInterval = 43200
+    defaultRefundPollAttempts :: Int
+    defaultRefundPollAttempts = 5

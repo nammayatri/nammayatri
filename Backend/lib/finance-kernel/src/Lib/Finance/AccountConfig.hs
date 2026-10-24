@@ -77,6 +77,10 @@ data ResolvedAccountConfig = ResolvedAccountConfig
     transferOutFee :: Maybe FeeSpec,
     transferInEnabled :: Bool,
     autoTransferOut :: Maybe Text,
+    statusCheckIntervalSec :: Maybe Int,
+    statusCheckMaxAttempts :: Maybe Int,
+    -- | points-denominated classes (loyalty wallets): currency units per point
+    pointsConversionRate :: Maybe Double,
     resolvedFrom :: Maybe (Id FinanceAccountConfig)
   }
   deriving (Eq, Show, Generic)
@@ -97,6 +101,9 @@ defaultAccountConfig =
       transferOutFee = Nothing,
       transferInEnabled = False,
       autoTransferOut = Nothing,
+      statusCheckIntervalSec = Nothing,
+      statusCheckMaxAttempts = Nothing,
+      pointsConversionRate = Nothing,
       resolvedFrom = Nothing
     }
 
@@ -163,12 +170,16 @@ toResolved r =
       transferOutFee = r.transferOutFee,
       transferInEnabled = r.transferInEnabled,
       autoTransferOut = r.autoTransferOut,
+      statusCheckIntervalSec = r.statusCheckIntervalSec,
+      statusCheckMaxAttempts = r.statusCheckMaxAttempts,
+      pointsConversionRate = r.pointsConversionRate,
       resolvedFrom = Just r.id
     }
 
 -- | The redeemable-cutoff instant for "now": the start of the local day (shifted to
 --   timeOfDay "HH:MM" when given) minus 'days'. Entries unsettled before this instant
---   are redeemable. Same anchor semantics as the driver app's payoutCutoffTimeUTC.
+--   are redeemable. (Same anchor semantics as the driver app's historical
+--   payoutCutoffTimeUTC, which this replaced.)
 cutoffTimeFor :: CutoffSpec -> UTCTime -> UTCTime
 cutoffTimeFor spec now =
   let tz = Time.minutesToTimeZone (spec.tzOffsetSeconds `div` 60)
