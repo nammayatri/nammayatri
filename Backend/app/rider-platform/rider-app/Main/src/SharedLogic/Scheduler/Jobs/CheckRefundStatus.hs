@@ -49,7 +49,6 @@ import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.Person as QP
-import Tools.Error
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 import qualified Tools.Payment as Payment
 import qualified UrlShortner.Common as UrlShortner

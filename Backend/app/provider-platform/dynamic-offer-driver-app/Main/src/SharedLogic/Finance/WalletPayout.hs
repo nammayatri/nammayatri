@@ -398,6 +398,9 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
             -- finance_account_config row is missing or wrong — be loud, not silent.
             DomainError "TRANSFER_OUT_DISABLED" _ -> throwError $ InvalidRequest "Payouts are disabled for this wallet class (finance_account_config)"
             DomainError "INSTANT_TRANSFER_NOT_ALLOWED" _ -> throwError InstantPayoutNotAllowed
+            -- Same client-visible error the driver always got for the per-day cap; the kernel
+            -- only gates instant payouts, so scheduled sweeps never reach this.
+            DomainError "TRANSFER_DAILY_LIMIT_REACHED" _ -> throwError $ InvalidRequest "Maximum payouts per day reached"
             _ -> pure Nothing
         Right transfer -> case transfer.status of
           DTransfer.FAILED -> do

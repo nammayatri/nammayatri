@@ -62,6 +62,7 @@ import Lib.Finance
     ItemType (..),
     LedgerEntryMetadata (..),
     LineItemDescription (..),
+    ResolvedAccountConfig,
     getEntriesByReference,
     invoice,
     markEntriesAsClaimed,
@@ -530,8 +531,8 @@ getWalletTransactionHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate
       walletTxns <- QWalletTransaction.findAllByPaymentOrderIds topupOrderIds
       let walletStatusByOrderId = Map.fromList [(wt.paymentOrderId.getId, wt.status) | wt <- walletTxns]
           statusFor refId =
-            fromMaybe DWT.SUCCESS $
-              listToMaybe $ catMaybes [Map.lookup refId transferStatusByOrderId, Map.lookup refId walletStatusByOrderId]
+            -- transfer row first, then the frozen wallet_transaction row, then SUCCESS
+            fromMaybe (fromMaybe DWT.SUCCESS (Map.lookup refId walletStatusByOrderId)) (Map.lookup refId transferStatusByOrderId)
       let mkItem e =
             let isTopup = e.referenceType == walletReferenceTopup
                 mbReason = e.metadataV2 >>= (.reason)

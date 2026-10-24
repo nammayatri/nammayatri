@@ -27,3 +27,8 @@ ALTER TABLE atlas_app.finance_transfer ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_app.finance_transfer ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.finance_transfer ADD PRIMARY KEY ( id);
 CREATE INDEX CONCURRENTLY finance_transfer_idx_account_id_created_at ON atlas_app.finance_transfer USING btree (account_id, created_at);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_transfer ADD CONSTRAINT finance_transfer_unique_idx_reference_id_reference_type UNIQUE (reference_id, reference_type);
