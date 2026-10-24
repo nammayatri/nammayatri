@@ -589,7 +589,8 @@ bookingCancel ::
     Finance.HasActorInfo m r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Common.BookingCancelledReq ->
   m ()

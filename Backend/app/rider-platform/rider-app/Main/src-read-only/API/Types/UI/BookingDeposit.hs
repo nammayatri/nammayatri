@@ -29,6 +29,8 @@ data BookingDepositStatus
   | REFUND_FAILED
   | REFUNDED
   | FORFEITED
+  | NOT_PAID
+  | RETURNED_TO_WALLET
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
