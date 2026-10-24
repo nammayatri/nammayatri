@@ -53,6 +53,8 @@ data OutboundSpec = OutboundSpec
     instant :: Bool,
     -- | domain-named Redis offer-hold keys still in use (see Lib.Finance.Balance)
     legacyOfferHoldKeys :: [Text],
+    -- | reference types redeemable as soon as posted, never held back by the cutoff
+    alwaysRedeemableRefs :: [Text],
     -- | earning entries this transfer settles; Nothing = the breakdown's redeemables
     coveredEntryIds :: Maybe [Id LE.LedgerEntry],
     -- | metadata stamped on the hold ledger leg (e.g. driverPayable attribution)
@@ -74,7 +76,7 @@ initiateTransferOut runFinance rail spec
     QT.findByReference spec.referenceType spec.referenceId >>= \case
       Just existing -> pure (Right existing) -- idempotent re-entry
       Nothing -> do
-        breakdown <- getBalanceBreakdown spec.account spec.legacyOfferHoldKeys
+        breakdown <- getBalanceBreakdownWith spec.alwaysRedeemableRefs spec.account spec.legacyOfferHoldKeys
         let cfg = breakdown.config
         gateRes <- runGates cfg
         case gateRes >>= \() -> resolveTransferAmount cfg breakdown spec.amount of

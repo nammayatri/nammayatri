@@ -19,3 +19,11 @@ ALTER TABLE atlas_app.finance_account_config ADD COLUMN transfer_out_enabled boo
 ALTER TABLE atlas_app.finance_account_config ADD COLUMN transfer_out_fee json ;
 ALTER TABLE atlas_app.finance_account_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.finance_account_config ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_account_config ADD COLUMN status_check_max_attempts integer ;
+ALTER TABLE atlas_app.finance_account_config ADD COLUMN status_check_interval_sec integer ;
+ALTER TABLE atlas_app.finance_account_config ADD COLUMN points_conversion_rate double precision ;

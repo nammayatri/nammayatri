@@ -41,6 +41,11 @@ FinanceAccountConfig:
     transferOutFee: Maybe FeeSpec
     # --- inbound transfer (recharge / topup) ---
     transferInEnabled: Bool
+    # --- transfer status-poll pacing (Nothing = caller's legacy config decides) ---
+    statusCheckIntervalSec: Maybe Int
+    statusCheckMaxAttempts: Maybe Int
+    # --- points-denominated classes (loyalty wallets): currency units per point ---
+    pointsConversionRate: Maybe Double
     # --- scheduling hook (names a scheduled_transfer_rule; Nothing = manual only) ---
     autoTransferOut: Maybe Text
     createdAt: UTCTime

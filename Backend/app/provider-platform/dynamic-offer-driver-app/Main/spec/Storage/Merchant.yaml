@@ -1122,27 +1122,21 @@ TransporterConfig:
       percentageRate: Maybe Double
       feeBearer: Maybe PayoutChargeBearer
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq
+    # Money-movement policy (payout enablement, instant eligibility, minimums, per-day
+    # cap, redeemable cutoff, topup enablement) lives in finance_account_config keyed on
+    # the account class — see docs/backend/design/finance-kernel-unification-plan.md §3.
+    # Only domain policy that is NOT about moving money stays here.
     DriverWalletConfig:
       enableDriverWallet: Bool
-      driverWalletPayoutThreshold: HighPrecMoney
-      gstPercentage: Double
-      enableWalletPayout: Bool
-      enableWalletTopup: Bool
-      maxWalletPayoutsPerDay: Maybe Int
-      minimumWalletPayoutAmount: HighPrecMoney
       minWalletAmountForCashRides: Maybe HighPrecMoney
       minWalletAmountForScheduledRides: Maybe HighPrecMoney
       # Wallet summary a fleet-linked driver sees. Absent = FLEET_ACCOUNT.
       fleetLinkedDriverWalletView: Maybe FleetLinkedDriverWalletView
-      payoutCutOffDays: Int
       payoutFee: Maybe PayoutFeeConfig
       forceOnlineLedger: Maybe Bool
       onlineCommissionPaidOutDirectly: Maybe Bool
       fetchWalletTransactionsFromClickhouse: Maybe Bool
       enableWalletGatedTierCheck: Maybe Bool
-      # Roles barred from instant wallet payout in this city (scheduled, bulk and adhoc are unaffected).
-      # FLEET_OWNER also covers FLEET_BUSINESS. Absent: nobody is barred.
-      instantPayoutExcludedRoles: Maybe [Role]
       paymentChargeBearer: Maybe PaymentChargeBearer
       paymentChargeRate: Maybe Double
       paymentChargeVat: Maybe Double
@@ -2571,6 +2565,18 @@ PayoutConfig:
 #       - vehicleCategory
 #       - isPayoutEnabled
 
+# KERNEL-SUPERSEDED (finance-kernel unification, 2026-10-24): for the
+# DRIVER_WALLET_TRANSACTION sweep, finance_scheduled_transfer_rule (seeded by migration
+# 0016, resolved via finance_account_config.autoTransferOut) is THE source — no runtime
+# fallback remains. RUNTIME-DEAD FOR WALLET SWEEPS since 2026-10-24:
+# frequency/timeOfDay/dayOfWeek/dayOfMonth/intervalDays/intervalHours/timeDiffFromUtc/
+# minimumPayoutAmount/batchSize/bulkStatusCheckIntervalMinutes/bulkStatusCheckBatchLimit
+# — kept only for the dashboard upsert/view surface, the 0016 seed source, and
+# computeNextRunTime's dashboard/retime callers. Still live at runtime: isEnabled +
+# payoutCategory (job trigger/dispatcher, Redis cursor-key identity) and the bulk-only
+# fields defaultPayoutRail/itemsPerBatchLimit/bufferCheckEnabled.
+# maxRetriesPerDriver/orderType/remark have no runtime readers (dashboard surface only).
+# Edit the kernel rule, not this table; drop the dead fields once dashboards move.
 ScheduledPayoutConfig:
   tableName: scheduled_payout_config
   derives: "Generic,Show,ToJSON,FromJSON,Eq"

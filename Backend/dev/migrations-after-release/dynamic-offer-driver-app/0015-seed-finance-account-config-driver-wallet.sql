@@ -55,18 +55,26 @@ SELECT
       )
     ELSE NULL
   END,
-  COALESCE((tc.driver_wallet_config ->> 'enableDriverWallet')::boolean, false),
+  ( COALESCE((tc.driver_wallet_config ->> 'enableDriverWallet')::boolean, false)
+    OR COALESCE(m.prepaid_subscription_and_wallet_enabled, false)
+  ),
   NULL,
   now(),
   now()
 FROM atlas_driver_offer_bpp.transporter_config tc
+JOIN atlas_driver_offer_bpp.merchant m ON m.id = tc.merchant_id
 CROSS JOIN (
   VALUES
     ('DRIVER', ARRAY['DRIVER']),
     ('FLEET_OWNER', ARRAY['FLEET_OWNER', 'FLEET_BUSINESS'])
 ) AS cp (counterparty_type, excluded_role_names)
 WHERE tc.driver_wallet_config IS NOT NULL
-  AND COALESCE((tc.driver_wallet_config ->> 'enableDriverWallet')::boolean, false) = true
+  -- City wallet switch OR the merchant-level prepaid+wallet stack: both historically
+  -- turned the wallet on, so both get class rows — the kernel row is now the ONLY
+  -- payout authority (the merchant flag no longer gates payouts in code).
+  AND ( COALESCE((tc.driver_wallet_config ->> 'enableDriverWallet')::boolean, false) = true
+        OR COALESCE(m.prepaid_subscription_and_wallet_enabled, false) = true
+      )
   AND NOT EXISTS (
     SELECT 1
     FROM atlas_driver_offer_bpp.finance_account_config fac

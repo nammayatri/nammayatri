@@ -22,7 +22,7 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.ScheduledTransferRule.ScheduledTransferRule] -> m ())
 createMany = traverse_ create
 
-findAllByCity :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.ScheduledTransferRule.ScheduledTransferRule]))
+findAllByCity :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.ScheduledTransferRule.ScheduledTransferRule])
 findAllByCity merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
 findById ::
@@ -44,6 +44,8 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.ScheduledTransferRule.ScheduledTran
   updateWithKV
     [ Se.Set Beam.accountType accountType,
       Se.Set Beam.batchSize batchSize,
+      Se.Set Beam.bulkStatusCheckBatchLimit bulkStatusCheckBatchLimit,
+      Se.Set Beam.bulkStatusCheckIntervalMinutes bulkStatusCheckIntervalMinutes,
       Se.Set Beam.counterpartyType counterpartyType,
       Se.Set Beam.dayOfMonth dayOfMonth,
       Se.Set Beam.dayOfWeek dayOfWeek,
@@ -57,6 +59,8 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.ScheduledTransferRule.ScheduledTran
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.minimumAmount minimumAmount,
       Se.Set Beam.name name,
+      Se.Set Beam.orderType orderType,
+      Se.Set Beam.remark remark,
       Se.Set Beam.rescheduleBufferMinutes rescheduleBufferMinutes,
       Se.Set Beam.subLedger subLedger,
       Se.Set Beam.timeDiffFromUtc timeDiffFromUtc,
@@ -72,6 +76,8 @@ instance FromTType' Beam.ScheduledTransferRule Lib.Finance.Domain.Types.Schedule
         Lib.Finance.Domain.Types.ScheduledTransferRule.ScheduledTransferRule
           { accountType = accountType,
             batchSize = batchSize,
+            bulkStatusCheckBatchLimit = bulkStatusCheckBatchLimit,
+            bulkStatusCheckIntervalMinutes = bulkStatusCheckIntervalMinutes,
             counterpartyType = counterpartyType,
             createdAt = createdAt,
             dayOfMonth = dayOfMonth,
@@ -87,6 +93,8 @@ instance FromTType' Beam.ScheduledTransferRule Lib.Finance.Domain.Types.Schedule
             merchantOperatingCityId = merchantOperatingCityId,
             minimumAmount = minimumAmount,
             name = name,
+            orderType = orderType,
+            remark = remark,
             rescheduleBufferMinutes = rescheduleBufferMinutes,
             subLedger = subLedger,
             timeDiffFromUtc = timeDiffFromUtc,
@@ -99,6 +107,8 @@ instance ToTType' Beam.ScheduledTransferRule Lib.Finance.Domain.Types.ScheduledT
     Beam.ScheduledTransferRuleT
       { Beam.accountType = accountType,
         Beam.batchSize = batchSize,
+        Beam.bulkStatusCheckBatchLimit = bulkStatusCheckBatchLimit,
+        Beam.bulkStatusCheckIntervalMinutes = bulkStatusCheckIntervalMinutes,
         Beam.counterpartyType = counterpartyType,
         Beam.createdAt = createdAt,
         Beam.dayOfMonth = dayOfMonth,
@@ -114,6 +124,8 @@ instance ToTType' Beam.ScheduledTransferRule Lib.Finance.Domain.Types.ScheduledT
         Beam.merchantOperatingCityId = merchantOperatingCityId,
         Beam.minimumAmount = minimumAmount,
         Beam.name = name,
+        Beam.orderType = orderType,
+        Beam.remark = remark,
         Beam.rescheduleBufferMinutes = rescheduleBufferMinutes,
         Beam.subLedger = subLedger,
         Beam.timeDiffFromUtc = timeDiffFromUtc,
