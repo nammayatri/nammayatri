@@ -233,13 +233,12 @@ import qualified Lib.Finance.Balance as FinanceBalance
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..))
-import qualified Lib.Finance.Ledger.Service as LedgerService
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Finance.TempBalanceHold (addOfferHoldAtKey, getOfferHoldTotalAtKey, removeOfferHoldAtKey)
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid (tdsReimbursementReferenceType)
-import SharedLogic.Finance.WalletAccount (cashWalletCheckEnabled, computeTdsRateReason, estimateBufferedStatutoryDeductions, estimateOfferDeductions, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getPrepaidOfferHoldTotalExcluding, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletAvailableBalanceByOwner, getWalletBalanceByOwner, getWalletHoldBalanceByOwner, getWalletOfferHoldTotalExcluding, hasMinWalletBalance, makePrepaidOfferHoldsKey, makeWalletOfferHoldsKey, shouldCheckCashWallet, validateWalletDebitAmount, walletReferenceStatutoryHold)
+import SharedLogic.Finance.WalletAccount (buildDriverChargeCtx, cashWalletCheckEnabled, computeTdsRateReason, estimateBufferedStatutoryDeductions, estimateOfferDeductions, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getPrepaidOfferHoldTotalExcluding, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletAvailableBalanceByOwner, getWalletBalanceByOwner, getWalletHoldBalanceByOwner, getWalletOfferHoldTotalExcluding, hasMinWalletBalance, makePrepaidOfferHoldsKey, makeWalletOfferHoldsKey, shouldCheckCashWallet, validateWalletDebitAmount, walletReferenceStatutoryHold)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -830,50 +829,6 @@ recordStripeChargeLedger ctx funder amount refType
         void $ transfer OwnerLiability SellerRevenue amount refType Nothing
     pure (snd <$> result)
 
--- | Minimal FinanceCtx for posting a driver-side Stripe charge (payout / connect),
---   where no booking/ride is in scope. Counterparty is the driver (or fleet owner),
---   so OwnerLiability resolves to their wallet.
-buildDriverChargeCtx ::
-  CounterpartyType -> -- DRIVER or FLEET_OWNER
-  Text -> -- owner (driver / fleet owner) id
-  Text -> -- merchant id
-  Text -> -- merchant operating city id
-  Currency ->
-  Text -> -- reference id (e.g. payout order id / period key)
-  Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
-  FinanceCtx
-buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId currency referenceId walletGateEnabled =
-  FinanceCtx
-    { merchantId = merchantId,
-      merchantOpCityId = merchantOperatingCityId,
-      currency = currency,
-      isOnline = True,
-      counterpartyType = counterpartyType,
-      counterpartyId = ownerId,
-      concernedIndividualId = if counterpartyType == DRIVER then Just ownerId else Nothing,
-      referenceId = referenceId,
-      entityReferenceId = Nothing,
-      entityReferenceType = Nothing,
-      merchantName = Nothing,
-      merchantShortId = Nothing,
-      issuedByAddress = Nothing,
-      supplierName = Nothing,
-      supplierGSTIN = Nothing,
-      supplierVatNumber = Nothing,
-      supplierAddress = Nothing,
-      merchantGstin = Nothing,
-      merchantVatNumber = Nothing,
-      supplierId = Nothing,
-      panOfParty = Nothing,
-      panType = Nothing,
-      tdsRateReason = Nothing,
-      emitLedgerEntries = True,
-      fromLocationAddress = Nothing,
-      issuedToName = Nothing,
-      enableWalletGatedTierCheck = walletGateEnabled,
-      buyerCounterpartyId = Nothing
-    }
-
 -- | Stripe payout charge Q = fixedFee + percentageRate% * amount (new model),
 --   falling back to the legacy single-mode feeType/feeValue when the new fields
 --   are unset. Capped at the payout amount.
@@ -1126,9 +1081,9 @@ getPayoutEligibilityData ::
   Text -> -- owner id (for the legacy offer-hold key)
   Account ->
   m WalletPayoutEligibility
-getPayoutEligibilityData ownerId account = do
-  breakdown <- FinanceBalance.getBalanceBreakdownWith alwaysRedeemableWalletRefs account [makeWalletOfferHoldsKey ownerId]
-  pure $ eligibilityFromBreakdown account.id breakdown
+getPayoutEligibilityData ownerId walletAccount = do
+  breakdown <- FinanceBalance.getBalanceBreakdownWith alwaysRedeemableWalletRefs walletAccount [makeWalletOfferHoldsKey ownerId]
+  pure $ eligibilityFromBreakdown walletAccount.id breakdown
 
 -- | What a wallet payout may pay right now, and how it was arrived at.
 data PayoutableBalance = PayoutableBalance
@@ -1170,18 +1125,18 @@ computePayoutableBalance counterparty ownerId = do
             classConfig = defaultAccountConfig,
             resolvedCutoff = Nothing
           }
-    Just account -> do
-      breakdown <- FinanceBalance.getBalanceBreakdownWith alwaysRedeemableWalletRefs account [makeWalletOfferHoldsKey ownerId]
+    Just walletAccount -> do
+      breakdown <- FinanceBalance.getBalanceBreakdownWith alwaysRedeemableWalletRefs walletAccount [makeWalletOfferHoldsKey ownerId]
       when (isNothing breakdown.config.redeemableCutoff) $
-        logWarning $ "finance_account_config has no redeemableCutoff for wallet account " <> account.id.getId <> " (owner " <> ownerId <> "); payouts stay gated by transferOutEnabled"
+        logWarning $ "finance_account_config has no redeemableCutoff for wallet account " <> walletAccount.id.getId <> " (owner " <> ownerId <> "); payouts stay gated by transferOutEnabled"
       pure
         PayoutableBalance
           { payoutableBalance = breakdown.available,
             walletBalance = breakdown.ledgerBalance,
             rideHoldBalance = breakdown.pendingHolds,
             offerHoldBalance = breakdown.offerHolds,
-            mbAccountId = Just account.id,
-            eligibility = eligibilityFromBreakdown account.id breakdown,
+            mbAccountId = Just walletAccount.id,
+            eligibility = eligibilityFromBreakdown walletAccount.id breakdown,
             classConfig = breakdown.config,
             resolvedCutoff = breakdown.cutoffAt
           }

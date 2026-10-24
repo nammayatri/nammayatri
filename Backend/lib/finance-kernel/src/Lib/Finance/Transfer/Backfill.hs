@@ -18,7 +18,6 @@ module Lib.Finance.Transfer.Backfill
 where
 
 import Kernel.Prelude
-import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.Finance.Domain.Types.Account (Account)

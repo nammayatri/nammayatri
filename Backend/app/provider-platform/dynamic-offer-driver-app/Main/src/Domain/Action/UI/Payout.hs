@@ -82,6 +82,7 @@ import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Finance.Storage.Queries.Transfer as QTransfer
 import qualified Lib.Finance.Transfer.Backfill as Backfill
 import qualified Lib.Finance.Transfer.Outcome as TransferOutcome
+import qualified Lib.Finance.Transfer.Rail as Rail
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
@@ -406,9 +407,49 @@ runPayoutSettlementWith hooks merchantId merchantOperatingCityId payoutStatus am
   case payoutOrder.entityName of
     Just DPayment.SPECIAL_ZONE_PAYOUT ->
       settleSpecialZonePayout merchantOperatingCityId payoutOrder callPayoutServiceAction
-    _ ->
-      unless (isPayoutOrderSuccess payoutOrder.status) $
+    _
+      | isPayoutOrderSuccess payoutOrder.status ->
+        reportContradictionAfterSuccess merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction
+      | otherwise ->
         settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction
+
+-- | The provider contradicts a wallet payout that already settled as paid (a failure or a
+--   reversal arriving after SUCCESS). Everything the legacy entities recorded stays as it
+--   is; only the kernel transfer is told, so a failure parks it in NEEDS_REVIEW and a reversal
+--   returns the money to the wallet. Acts on a transfer that is SUCCEEDED or already parked
+--   (a reversal can follow a failure); the kernel makes a repeated failure or reversal a no-op.
+reportContradictionAfterSuccess ::
+  (PayoutSettlementFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  IPayout.PayoutOrderStatus ->
+  HighPrecMoney ->
+  DPayoutOrder.PayoutOrder ->
+  CallPayoutServiceAction m ->
+  m ()
+reportContradictionAfterSuccess merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction =
+  when (payoutOrder.entityName == Just DPayment.DRIVER_WALLET_TRANSACTION && contradictsPaid payoutStatus) $
+    whenJust (listToMaybe (fromMaybe [] payoutOrder.entityIds)) $ \payoutRequestId -> do
+      let driverId = Id payoutOrder.customerId
+      QTransfer.findByReference walletReferencePayout payoutRequestId >>= \case
+        Just transfer
+          | transfer.status `elem` [DTransfer.SUCCEEDED, DTransfer.NEEDS_REVIEW] ->
+            Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
+              payoutConfig <- getPayoutConfigForCustomer merchantOperatingCityId payoutOrder.customerId
+              -- the provider's current word, same as the normal settlement re-polls
+              (updPayoutStatus, _) <- callPayoutServiceAction payoutOrder.orderId driverId payoutConfig
+              when (contradictsPaid updPayoutStatus) $ do
+                logError $ "Provider contradicted a settled wallet payout " <> payoutRequestId <> ": " <> show updPayoutStatus
+                person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+                transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+                mbPayoutReq <- QPR.findById (Id payoutRequestId)
+                whenJust mbPayoutReq $ \payoutReq ->
+                  settleDriverWalletPayoutLedger merchantOperatingCityId payoutOrder person transporterConfig payoutReq amount updPayoutStatus
+        _ -> pure ()
+  where
+    contradictsPaid st = case Rails.classifyPayoutOrderStatus (show st) of
+      Rail.OutcomeFailed _ -> True
+      Rail.OutcomeReversed _ -> True
+      _ -> False
 
 settleSpecialZonePayout ::
   (PayoutSettlementFlow m r) =>

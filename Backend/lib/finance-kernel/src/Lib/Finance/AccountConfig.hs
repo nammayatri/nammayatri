@@ -26,13 +26,11 @@ module Lib.Finance.AccountConfig
   )
 where
 
-import Data.List (maximumBy)
 import Data.Ord (comparing)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import Lib.Finance.Domain.Types.Account (Account, AccountType, CounterpartyType)

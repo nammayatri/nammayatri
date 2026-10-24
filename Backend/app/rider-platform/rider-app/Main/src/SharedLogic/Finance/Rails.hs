@@ -32,7 +32,6 @@ import qualified Kernel.External.Payment.Interface.Types as PaymentI
 import qualified Kernel.External.Payout.Interface as IPayout
 import qualified Kernel.External.Payout.Juspay.Types.Payout as JPayout
 import Kernel.Prelude
-import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import qualified Lib.Finance.AccountConfig as FinanceConfig
