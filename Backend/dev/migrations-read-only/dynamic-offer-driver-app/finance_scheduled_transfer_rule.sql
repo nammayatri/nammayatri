@@ -1,0 +1,25 @@
+CREATE TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ();
+
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN account_type text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN batch_size integer NOT NULL default 50;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN counterparty_type text ;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN day_of_month integer ;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN day_of_week integer ;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN default_rail_key text ;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN frequency text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN interval_days integer ;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN interval_hours integer ;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN is_enabled boolean NOT NULL default true;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN max_retries integer NOT NULL default 3;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN merchant_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN merchant_operating_city_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN minimum_amount numeric(30,2) NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN name text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN reschedule_buffer_minutes integer ;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN sub_ledger text ;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN time_diff_from_utc integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN time_of_day text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.finance_scheduled_transfer_rule ADD PRIMARY KEY ( id);

@@ -603,6 +603,7 @@ library
       SharedLogic.FareBreakupInfo
       SharedLogic.FeedbackForm
       SharedLogic.Finance.CashbackPayout
+      SharedLogic.Finance.Rails
       SharedLogic.Finance.RidePayment
       SharedLogic.FRFSCancel
       SharedLogic.FRFSCancelJourney

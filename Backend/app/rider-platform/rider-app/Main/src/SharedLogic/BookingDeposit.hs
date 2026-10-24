@@ -71,6 +71,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Account.Service as Account
+import qualified Lib.Finance.Balance as FinanceBalance
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.FinanceM
@@ -130,7 +131,9 @@ depositOrderExpiryMinutesFor bookingCreatedAt now =
       secondsLeft = floor (diffUTCTime deadline now) :: Int
    in if secondsLeft <= 0 then Nothing else Just (max 1 (min depositOrderExpiryMinutes (secondsLeft `div` 60)))
 
--- | Spendable balance: account balance minus every PENDING booking-fee hold.
+-- | Spendable balance via the kernel's breakdown: ledger balance minus every PENDING
+--   hold debiting the account (deposit holds and in-flight deposit-refund legs are the
+--   only such entries on a rider wallet), floored at zero.
 getAvailableBalance ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Id DP.Person ->
@@ -140,20 +143,8 @@ getAvailableBalance riderId = do
   case mbAcc of
     Nothing -> pure 0
     Just acc -> do
-      pending <-
-        Ledger.findByAccountWithFiltersAndConcernedIndividual
-          acc.id
-          Nothing
-          Nothing
-          Nothing
-          Nothing
-          (Just LE.PENDING)
-          (Just [bookingDepositHoldRefType, bookingDepositRefundRefType])
-          Nothing
-          Nothing
-          Nothing
-      let holds = filter (\e -> e.fromAccountId == acc.id) pending
-      pure $ acc.balance - sum (map (.amount) holds)
+      breakdown <- FinanceBalance.getBalanceBreakdown acc []
+      pure breakdown.available
 
 hasCreditForOrder :: (CacheFlow m r, EsqDBFlow m r) => Text -> m Bool
 hasCreditForOrder referenceId = not . null <$> Ledger.getEntriesByReference bookingDepositTopupRefType referenceId
