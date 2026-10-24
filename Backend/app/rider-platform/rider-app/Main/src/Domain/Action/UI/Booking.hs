@@ -67,6 +67,7 @@ import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
 import Lib.JourneyModule.Types (GetStateFlow)
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.Booking as SB
+import qualified SharedLogic.BookingDepositStatus as BookingDepositStatus
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified SharedLogic.LocationMapping as SLM
@@ -547,7 +548,7 @@ buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings jour
       where
         go _ [] acc = pure (toList acc)
         go riderId' (MBooking booking : ls) acc = do
-          bookingEntity <- SRB.buildBookingAPIEntity booking riderId' dontNeedFareBreakup
+          bookingEntity <- SRB.buildBookingAPIEntity booking riderId' dontNeedFareBreakup >>= BookingDepositStatus.withBookingDeposit booking
           go riderId' ls (acc Seq.|> Ride bookingEntity)
         go riderId' (MJourney journey : ls) acc = do
           mbJourneyEntity <- JMU.measureLatency (buildJourneyApiEntity journey) (show journey.id <> " buildJourneyApiEntity measureLatency: ")

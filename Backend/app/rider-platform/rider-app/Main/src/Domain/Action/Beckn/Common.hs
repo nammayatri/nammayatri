@@ -1505,6 +1505,8 @@ cancellationTransaction ::
   Bool ->
   m ()
 cancellationTransaction booking mbRide cancellationSource cancellationFee cancellationFeeTax immediateCharge = do
+  -- Before the deposit settlement below releases any hold.
+  abandonedPayScreen <- BookingDeposit.isUnpaidDepositAbandon booking cancellationSource
   bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) cancellationSource
   merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
   fork "incrementing fraud counters" $ do
@@ -1686,7 +1688,9 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
         _ -> logDebug "Configs or person stats doesnt not exist for checking blocking condition"
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
-  Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties
+  if abandonedPayScreen
+    then logInfo $ "Skipping cancel push for booking " <> booking.id.getId <> ": rider left the deposit pay screen without paying"
+    else Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties
   when (booking.isDashboardRequest == Just True && riderConfig.autoSendBookingDetailsViaWhatsapp == Just True) $ do
     fork "Sending Dashboard Cancelled Ride Message" $ do
       sendBookingCancelledMessageViaWhatsapp booking.riderId riderConfig
