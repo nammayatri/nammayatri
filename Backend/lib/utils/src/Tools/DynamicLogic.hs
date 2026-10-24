@@ -167,7 +167,7 @@ selectVersionForConfigs ::
   Maybe Int ->
   m (Maybe Int)
 selectVersionForConfigs merchantOpCityId domain mbToss =
-  selectWithTxnStickiness domain $ do
+  selectWithTxnStickiness domain merchantOpCityId $ do
     mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
     -- Behaviour domains are opt-in per city: never inherit the "default"-city rollout
     -- (its 0% row is only a canonical-version marker for the enablement APIs).
@@ -179,29 +179,30 @@ selectVersionForConfigs merchantOpCityId domain mbToss =
 dynamicLogicVersionStickyTtlSec :: Int
 dynamicLogicVersionStickyTtlSec = 7200
 
-mkTxnVersionStickyKey :: Text -> LogicDomain -> Text
-mkTxnVersionStickyKey txnId domain = "sticky_dynamic_logic_version:" <> txnId <> ":" <> show domain
+mkTxnVersionStickyKey :: Text -> LogicDomain -> Id MerchantOperatingCity -> Text
+mkTxnVersionStickyKey txnId domain merchantOpCityId = "sticky_dynamic_logic_version:" <> txnId <> ":" <> show domain <> ":" <> getId merchantOpCityId
 
 selectWithTxnStickiness ::
   BeamFlow m r =>
   LogicDomain ->
+  Id MerchantOperatingCity ->
   m (Maybe Int) ->
   m (Maybe Int)
-selectWithTxnStickiness domain selectFresh = do
+selectWithTxnStickiness domain merchantOpCityId selectFresh = do
   mbTxnId <- L.getOptionLocal TxnIdKey
   case mbTxnId of
     Nothing -> selectFresh
     Just txnId -> do
-      let stickyKey = mkTxnVersionStickyKey txnId domain
+      let stickyKey = mkTxnVersionStickyKey txnId domain merchantOpCityId
       mbCached <- Hedis.withCrossAppRedis $ Hedis.safeGet stickyKey
       case mbCached of
         Just cachedVersion -> do
-          logDebug $ "DYNAMIC_LOGIC_STICKY: [HIT] domain=" <> show domain <> " txnId=" <> txnId <> " version=" <> show (cachedVersion :: Maybe Int)
+          logDebug $ "DYNAMIC_LOGIC_STICKY: [HIT] domain=" <> show domain <> " mocId=" <> getId merchantOpCityId <> " txnId=" <> txnId <> " version=" <> show (cachedVersion :: Maybe Int)
           pure cachedVersion
         Nothing -> do
           version <- selectFresh
           Hedis.withCrossAppRedis $ Hedis.setExp stickyKey version dynamicLogicVersionStickyTtlSec
-          logDebug $ "DYNAMIC_LOGIC_STICKY: [NEW] domain=" <> show domain <> " txnId=" <> txnId <> " frozeVersion=" <> show version <> " ttlSec=" <> show dynamicLogicVersionStickyTtlSec
+          logDebug $ "DYNAMIC_LOGIC_STICKY: [NEW] domain=" <> show domain <> " mocId=" <> getId merchantOpCityId <> " txnId=" <> txnId <> " frozeVersion=" <> show version <> " ttlSec=" <> show dynamicLogicVersionStickyTtlSec
           pure version
 
 isExperimentRunning :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> m Bool
@@ -218,7 +219,7 @@ selectAppDynamicLogicVersion ::
   Maybe Int ->
   m (Maybe Int)
 selectAppDynamicLogicVersion merchantOpCityId domain localTime mbToss =
-  selectWithTxnStickiness domain $ do
+  selectWithTxnStickiness domain merchantOpCityId $ do
     mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
     -- Behaviour domains are opt-in per city: never inherit the "default"-city rollout
     -- (its 0% row is only a canonical-version marker for the enablement APIs).
