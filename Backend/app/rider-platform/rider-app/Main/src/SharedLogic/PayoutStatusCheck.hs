@@ -14,6 +14,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.AccountConfig as FinanceConfig
 import qualified Lib.Finance.Domain.Types.Account as FAccount
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Lib.Payment.Payout.StatusCheck as PSC
@@ -29,6 +30,7 @@ type PayoutStatusCheckCreator m r =
   ( MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,
+    FinanceBeamFlow.BeamFlow m r,
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text]
   )
@@ -36,7 +38,7 @@ type PayoutStatusCheckCreator m r =
 -- | Same PayoutConfig the payout was created with: RIDE_OFFER_CASHBACK orders come from the CAR
 --   config, referral / metro orders from AUTO_CATEGORY; any config in the city is the last resort so a
 --   status check is always scheduled.
-getPayoutStatusCheckConfig :: (CacheFlow m r, EsqDBFlow m r) => DPayoutOrder.PayoutOrder -> m PSC.PayoutStatusCheckConfig
+getPayoutStatusCheckConfig :: (CacheFlow m r, EsqDBFlow m r, FinanceBeamFlow.BeamFlow m r) => DPayoutOrder.PayoutOrder -> m PSC.PayoutStatusCheckConfig
 getPayoutStatusCheckConfig order = do
   merchantOperatingCityId <- case order.merchantOperatingCityId of
     Just mocId -> pure mocId

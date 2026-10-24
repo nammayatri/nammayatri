@@ -23,9 +23,7 @@ import qualified Data.Time as Time
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
-import Lib.Finance.AccountConfig (ResolvedAccountConfig (..))
 import Lib.Finance.Balance
-import Lib.Finance.Core.Types (HasActorInfo)
 import Lib.Finance.Domain.Types.Account (Account (..))
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Domain.Types.Transfer as DT
@@ -216,7 +214,12 @@ initiateTransferOut runFinance rail spec
               -- the partner may have the money in motion: always park it
               holdRes <- postHold transfer resolved
               case holdRes of
-                Left err ->
+                Left err -> do
+                  -- the partner holds the order: keep its id so ops can reconcile the row
+                  case other of
+                    RailAccepted oid rawStatus -> QTE.updateSubmissionById DT.NEEDS_REVIEW (Just oid) (Just rawStatus) 1 transfer.id
+                    RailDeferred rawStatus -> QTE.updateSubmissionById DT.NEEDS_REVIEW Nothing (Just rawStatus) 1 transfer.id
+                    RailAmbiguous _ -> QTE.updateSubmissionById DT.NEEDS_REVIEW Nothing Nothing 1 transfer.id
                   QTE.updateStatusById DT.NEEDS_REVIEW Nothing (Just ("HOLD_FAILED_AFTER_SUBMIT: " <> show err)) transfer.id
                 Right _ -> recordSubmit transfer covered other
       maybe (Left $ DomainError "TRANSFER_NOT_FOUND" transfer.id.getId) Right <$> QT.findById transfer.id

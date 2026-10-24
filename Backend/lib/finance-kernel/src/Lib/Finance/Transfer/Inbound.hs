@@ -23,14 +23,13 @@ module Lib.Finance.Transfer.Inbound
 where
 
 import qualified Data.Aeson as Aeson
+import Data.List (nub)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import qualified Lib.Finance.AccountConfig as AccountConfig
 import Lib.Finance.Balance (withAccountBalanceLock)
-import Lib.Finance.Core.Types (HasActorInfo)
 import Lib.Finance.Domain.Types.Account (Account)
 import qualified Lib.Finance.Domain.Types.Transfer as DT
 import Lib.Finance.Error.Types
@@ -221,6 +220,7 @@ applyInboundTransferOutcome runFinance ctx recipe transferId mbRaw outcome =
           Right entryIds -> do
             QTE.updateLedgerLegsById Nothing (nub (fromMaybe [] t.entryIds <> map (.getId) entryIds)) t.id
             QTE.updateStatusById DT.SUCCEEDED mbRaw' Nothing t.id
+            QTE.clearLastErrorById t.id
             maybe (Left $ DomainError "TRANSFER_NOT_FOUND" t.id.getId) Right <$> QT.findById t.id
 
 -- | Turn portions into concrete amounts. FullAmount legs carry the whole total (several

@@ -181,7 +181,7 @@ import qualified "this" Domain.Types.RefundRequest as DRefundRequest
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id (Id (..))
-import Kernel.Utils.Common (MonadFlow, getCurrentTime, logDebug, logError, logInfo)
+import Kernel.Utils.Common (MonadFlow, logDebug, logError, logInfo)
 import Lib.Finance hiding (PayoutEligibility (..), getPayoutEligibilityData)
 import qualified Lib.Finance.Balance as FinanceBalance
 import qualified Lib.Finance.Core.Types as Finance
@@ -792,24 +792,24 @@ getPayoutEligibilityData counterparty personId = do
   mbAccount <- getWalletAccountByOwner counterparty personId.getId
   case mbAccount of
     Nothing -> pure (0, [])
-    Just account -> do
+    Just walletAccount -> do
       -- The kernel breakdown resolves cutoff policy internally (rider classes have
       -- none, so everything unsettled up to now is redeemable) — this wrapper only
       -- adds the per-entry net view cashback needs.
-      breakdown <- FinanceBalance.getBalanceBreakdown account []
+      breakdown <- FinanceBalance.getBalanceBreakdown walletAccount []
       let unsettledEntries = breakdown.redeemableEntries
-          entriesWithNet = map (\e -> (e, Lib.Finance.Ledger.Service.entryNetForAccount account.id e)) unsettledEntries
+          entriesWithNet = map (\e -> (e, Lib.Finance.Ledger.Service.entryNetForAccount walletAccount.id e)) unsettledEntries
           totalNet = sum (map snd entriesWithNet)
-      when (account.balance < totalNet) $ do
+      when (walletAccount.balance < totalNet) $ do
         logError $
           "Wallet balance less than net amount for person: " <> personId.getId
             <> " wallet balance: "
-            <> show account.balance
+            <> show walletAccount.balance
             <> " unsettled entries net amount: "
             <> show totalNet
             <> " unsettled entries: "
             <> show (map (\e -> (e.id, e.amount)) unsettledEntries)
-      pure (account.balance, entriesWithNet)
+      pure (walletAccount.balance, entriesWithNet)
 
 cashbackPayoutLedgerRefs :: PayoutLedgerRefs
 cashbackPayoutLedgerRefs =
