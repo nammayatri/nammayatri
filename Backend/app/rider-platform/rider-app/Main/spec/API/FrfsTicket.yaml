@@ -163,6 +163,23 @@ types:
     latency: Maybe Int
     derive: "Show"
 
+  FRFSPassInstantBookReq:
+    purchasedPassPaymentId: Id PurchasedPassPayment
+    sourceStopCode: Text
+    destinationStopCode: Text
+    quantity: Maybe Int
+    serviceTier: Maybe ServiceTierType
+    routeCode: Maybe Text
+    vehicleNumber: Maybe Text
+    tripId: Maybe Text
+    seatIds: Maybe [(Id Seat)]
+    platformType: Maybe PlatformType
+
+  FRFSPassInstantBookResp:
+    booking: Maybe FRFSTicketBookingStatusAPIRes
+    isRecentBooking: Bool
+    inProgress: Bool
+
   FRFSQuoteConfirmReq:
     offered: Maybe [FRFSCategorySelectionReq]
     crisSdkResponse: Maybe CrisSdkResponse
@@ -620,6 +637,7 @@ apis:
         vehicleType: VehicleCategory
       query:
         hasPasses: Bool
+        enforceFRFSPass: Bool
         city: City
         integratedBppConfigId: Id IntegratedBPPConfig
         newServiceTiers: [ServiceTierType]
@@ -675,6 +693,16 @@ apis:
         type: API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq
       response:
         type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+
+  - POST:
+      endpoint: /frfs/pass/instantBook
+      query:
+        forceBook: Bool
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSPassInstantBookReq
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSPassInstantBookResp
 
   # Retry payment
   - POST:

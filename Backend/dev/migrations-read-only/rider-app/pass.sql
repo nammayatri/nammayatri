@@ -148,3 +148,14 @@ ALTER TABLE atlas_app.pass ADD COLUMN min_days_to_suggest_renewal integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.pass ADD COLUMN time_overlapping_frfs_bookings_limit integer ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass ADD COLUMN variable_validity_days boolean ;
+ALTER TABLE atlas_app.pass ADD COLUMN validity_days_recommendations integer[] ;

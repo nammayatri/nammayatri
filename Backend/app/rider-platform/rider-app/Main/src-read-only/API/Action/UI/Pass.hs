@@ -35,7 +35,7 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "multimodal" :> "pass" :> "availablePasses" :> QueryParam "language" Kernel.External.Types.Language
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.Pass.PassInfoAPIEntity]
       :<|> TokenAuth
       :> "multimodal"
@@ -63,8 +63,21 @@ type API =
            "startDate"
            Data.Time.Day
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Pass.PassSelectionAPIEntity
+      :<|> TokenAuth
+      :> "multimodal"
+      :> "pass"
+      :> Capture
+           "passId"
+           (Kernel.Types.Id.Id Domain.Types.Pass.Pass)
+      :> "calculateFare"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.Pass.PassCalculateFareReq
+      :> Post
+           '[JSON]
+           API.Types.UI.Pass.PassCalculateFareResp
       :<|> TokenAuth
       :> "multimodal"
       :> "pass"
@@ -77,10 +90,10 @@ type API =
            "isMockPayment"
            Kernel.Prelude.Bool
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Pass.PassSelectReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Pass.PassSelectionAPIEntity
       :<|> TokenAuth
       :> "multimodal"
@@ -105,7 +118,7 @@ type API =
            "status"
            Domain.Types.PurchasedPass.StatusType
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.Pass.PurchasedPassAPIEntity]
       :<|> TokenAuth
       :> "multimodal"
@@ -115,20 +128,20 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
       :> "verify"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Pass.PassVerifyReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
       :> "pass"
       :> "switchDeviceId"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Pass.PassSwitchDeviceIdReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
@@ -144,7 +157,7 @@ type API =
            "status"
            Data.Text.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity]
       :<|> TokenAuth
       :> "multimodal"
@@ -154,7 +167,7 @@ type API =
            "purchasedPassPaymentId"
            (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment)
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Pass.FRFSPassTicketStatisticsResp
       :<|> TokenAuth
       :> "multimodal"
@@ -167,7 +180,7 @@ type API =
            "date"
            Data.Time.Day
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
@@ -186,17 +199,17 @@ type API =
            Kernel.ServantMultipart.Tmp
            IssueManagement.Common.UI.Issue.IssueMediaUploadReq
       :> Post
-           ('[JSON])
+           '[JSON]
            IssueManagement.Common.UI.Issue.IssueMediaUploadRes
       :<|> TokenAuth
       :> "multimodal"
       :> "pass"
       :> "uploadProfilePicture"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Pass.PassUploadProfilePictureReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
@@ -206,7 +219,7 @@ type API =
            "mediaId"
            (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile)
       :> Get
-           ('[JSON])
+           '[JSON]
            Data.Text.Text
       :<|> TokenAuth
       :> "multimodal"
@@ -217,21 +230,21 @@ type API =
            "purchasedPassId"
            (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Pass.SetPassPrefSrcAndDestReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> getMultimodalPassFrfsStatistics :<|> postMultimodalPassActivateToday :<|> postMultimodalPassUploadProfilePicture :<|> postMultimodalPassUploadProfilePictureV1 :<|> getMultimodalPassPhoto :<|> postMultimodalPassSetPrefSrcAndDest
+handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassCalculateFare :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> getMultimodalPassFrfsStatistics :<|> postMultimodalPassActivateToday :<|> postMultimodalPassUploadProfilePicture :<|> postMultimodalPassUploadProfilePictureV1 :<|> getMultimodalPassPhoto :<|> postMultimodalPassSetPrefSrcAndDest
 
 getMultimodalPassAvailablePasses ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Kernel.External.Types.Language) ->
+    Kernel.Prelude.Maybe Kernel.External.Types.Language ->
     Environment.FlowHandler [API.Types.UI.Pass.PassInfoAPIEntity]
   )
 getMultimodalPassAvailablePasses a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Pass.getMultimodalPassAvailablePasses (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
@@ -241,22 +254,32 @@ postMultimodalPassSelect ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Pass.Pass ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
-    Kernel.Prelude.Maybe (Data.Time.Day) ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Time.Day ->
     Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity
   )
 postMultimodalPassSelect a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a8) $ Domain.Action.UI.Pass.postMultimodalPassSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
+
+postMultimodalPassCalculateFare ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Pass.Pass ->
+    API.Types.UI.Pass.PassCalculateFareReq ->
+    Environment.FlowHandler API.Types.UI.Pass.PassCalculateFareResp
+  )
+postMultimodalPassCalculateFare a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Pass.postMultimodalPassCalculateFare (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalPassV2Select ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Pass.Pass ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     API.Types.UI.Pass.PassSelectReq ->
     Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity
   )
@@ -266,12 +289,12 @@ getMultimodalPassList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
-    Kernel.Prelude.Maybe (Kernel.External.Types.Language) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Domain.Types.PurchasedPass.StatusType) ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Kernel.External.Types.Language ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Domain.Types.PurchasedPass.StatusType ->
     Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassAPIEntity]
   )
 getMultimodalPassList a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a7) $ Domain.Action.UI.Pass.getMultimodalPassList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
@@ -299,9 +322,9 @@ getMultimodalPassTransactions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
     Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity]
   )
 getMultimodalPassTransactions a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.Pass.getMultimodalPassTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
@@ -320,7 +343,7 @@ postMultimodalPassActivateToday ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe (Data.Time.Day) ->
+    Kernel.Prelude.Maybe Data.Time.Day ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postMultimodalPassActivateToday a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Pass.postMultimodalPassActivateToday (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
@@ -330,8 +353,8 @@ postMultimodalPassUploadProfilePicture ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     IssueManagement.Common.UI.Issue.IssueMediaUploadReq ->
     Environment.FlowHandler IssueManagement.Common.UI.Issue.IssueMediaUploadRes
   )

@@ -188,6 +188,25 @@ data FRFSGtfsStopAPI = FRFSGtfsStopAPI {code :: Data.Text.Text, lat :: Data.Mayb
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSPassInstantBookReq = FRFSPassInstantBookReq
+  { destinationStopCode :: Data.Text.Text,
+    platformType :: Data.Maybe.Maybe Domain.Types.IntegratedBPPConfig.PlatformType,
+    purchasedPassPaymentId :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
+    quantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    routeCode :: Data.Maybe.Maybe Data.Text.Text,
+    seatIds :: Data.Maybe.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat],
+    serviceTier :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    sourceStopCode :: Data.Text.Text,
+    tripId :: Data.Maybe.Maybe Data.Text.Text,
+    vehicleNumber :: Data.Maybe.Maybe Data.Text.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSPassInstantBookResp = FRFSPassInstantBookResp {booking :: Data.Maybe.Maybe FRFSTicketBookingStatusAPIRes, inProgress :: Kernel.Prelude.Bool, isRecentBooking :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSPassOptionAPIEntity = FRFSPassOptionAPIEntity
   { availableTripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
     maxTicketQuantityPerOverride :: Data.Maybe.Maybe Kernel.Prelude.Int,

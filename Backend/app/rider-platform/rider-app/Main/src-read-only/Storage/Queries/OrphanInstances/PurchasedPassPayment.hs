@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.PurchasedPassPayment where
 
+import qualified Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.PurchasedPassPayment
 import Kernel.Beam.Functions
@@ -12,6 +13,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.PurchasedPassPayment as Beam
 
@@ -28,12 +30,14 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
             benefitType = benefitType,
             benefitValue = benefitValue,
             clientSdkVersion = clientSdkVersion',
+            destinationStopCode = destinationStopCode,
             endDate = endDate,
             id = Kernel.Types.Id.Id id,
             isDashboard = isDashboard,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             orderId = Kernel.Types.Id.Id orderId,
+            overrideBenefitConfigJson = overrideBenefitConfigJson >>= Kernel.Utils.JSON.valueToMaybe,
             passCode = passCode,
             passEnum = passEnum,
             passId = Kernel.Types.Id.Id <$> passId,
@@ -43,8 +47,11 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
             personId = Kernel.Types.Id.Id personId,
             profilePicture = profilePicture,
             purchasedPassId = Kernel.Types.Id.Id purchasedPassId,
+            referenceFare = referenceFare,
+            sourceStopCode = sourceStopCode,
             startDate = startDate,
             status = status,
+            validityDays = validityDays,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -59,12 +66,14 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
         Beam.benefitType = benefitType,
         Beam.benefitValue = benefitValue,
         Beam.clientSdkVersion = Kernel.Utils.Version.versionToText <$> clientSdkVersion,
+        Beam.destinationStopCode = destinationStopCode,
         Beam.endDate = endDate,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isDashboard = isDashboard,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.orderId = Kernel.Types.Id.getId orderId,
+        Beam.overrideBenefitConfigJson = Data.Aeson.toJSON <$> overrideBenefitConfigJson,
         Beam.passCode = passCode,
         Beam.passEnum = passEnum,
         Beam.passId = Kernel.Types.Id.getId <$> passId,
@@ -74,8 +83,11 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.profilePicture = profilePicture,
         Beam.purchasedPassId = Kernel.Types.Id.getId purchasedPassId,
+        Beam.referenceFare = referenceFare,
+        Beam.sourceStopCode = sourceStopCode,
         Beam.startDate = startDate,
         Beam.status = status,
+        Beam.validityDays = validityDays,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
