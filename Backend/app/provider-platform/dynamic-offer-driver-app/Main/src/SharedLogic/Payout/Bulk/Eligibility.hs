@@ -58,7 +58,7 @@ readPayoutSnapshot ::
   DTConf.TransporterConfig ->
   DP.Person ->
   m PayoutSnapshot
-readPayoutSnapshot transporterConfig person = do
+readPayoutSnapshot _transporterConfig person = do
   let personId = person.id
       counterparty = counterpartyFromRole person.role
   mbBankAccount <- QDBA.findByPrimaryKey personId

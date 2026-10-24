@@ -20,11 +20,11 @@ module Lib.Finance.Transfer.Outcome
   )
 where
 
+import Data.List (nub)
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.Finance.Balance (withAccountBalanceLock)
-import Lib.Finance.Core.Types (HasActorInfo)
 import Lib.Finance.Domain.Types.LedgerEntry (EntryType (Reversal), LedgerEntry)
 import qualified Lib.Finance.Domain.Types.Transfer as DT
 import Lib.Finance.Error.Types
@@ -87,6 +87,7 @@ settleOutboundSuccess runFinance refs ctx t mbRaw
         markEntriesAsPaidOut (coveredIds t) t.id.getId
         QTE.updateLedgerLegsById Nothing (mergeLegIds t legIds) t.id
         QTE.updateStatusById DT.SUCCEEDED mbRaw Nothing t.id
+        QTE.clearLastErrorById t.id
         refetch t.id
 
 settleOutboundFailure ::
@@ -99,19 +100,28 @@ settleOutboundFailure ::
   Text ->
   m (Either FinanceError DT.Transfer)
 settleOutboundFailure runFinance refs ctx t mbRaw reason
-  -- a failure arriving after settlement is a contradiction, not a failure to record;
-  -- settlePayoutLedger would no-op the ledger, so surface it for ops instead
-  | t.status == DT.SUCCEEDED = bumpNonLedgerStatus t mbRaw (OutcomeNeedsReview ("failure reported after success: " <> reason))
-  | t.status == DT.FAILED = pure (Right t)
+  -- a failure arriving after settlement is a contradiction, not a failure to record. The money
+  -- was paid, so nothing is compensated; SUCCEEDED is terminal for the ordinary status bumps, so
+  -- park the row for ops explicitly (a plain bump would silently do nothing here)
+  | t.status == DT.SUCCEEDED = do
+    QTE.updateStatusById DT.NEEDS_REVIEW mbRaw (Just ("failure reported after success: " <> reason)) t.id
+    refetch t.id
+  | t.status `elem` [DT.FAILED, DT.REVERSED] = pure (Right t)
   | otherwise = do
-    res <- settlePayoutLedger runFinance refs ctx t.amount Nothing (PayoutFailed reason)
-    case res of
-      Left err -> pure (Left err)
-      Right legIds -> do
-        markEntriesAsUnsettled (coveredIds t)
-        QTE.updateLedgerLegsById Nothing (mergeLegIds t legIds) t.id
-        QTE.updateStatusById DT.FAILED mbRaw (Just reason) t.id
-        refetch t.id
+    settlementLegs <- getEntriesByReference refs.settlementReferenceType ctx.referenceId
+    -- settlement legs mean the payout was paid and the row was parked afterwards: a repeated
+    -- failure must not reverse money that already left
+    if not (null settlementLegs)
+      then pure (Right t)
+      else do
+        res <- settlePayoutLedger runFinance refs ctx t.amount Nothing (PayoutFailed reason)
+        case res of
+          Left err -> pure (Left err)
+          Right legIds -> do
+            markEntriesAsUnsettled (coveredIds t)
+            QTE.updateLedgerLegsById Nothing (mergeLegIds t legIds) t.id
+            QTE.updateStatusById DT.FAILED mbRaw (Just reason) t.id
+            refetch t.id
 
 -- | Rail reversed an already-settled transfer: reverse every unreversed settlement and
 --   hold leg (money returns to the owner account) and release the covered entries.
@@ -127,7 +137,12 @@ settleOutboundReversed refs ctx t mbRaw reason
   | t.status == DT.REVERSED = pure (Right t)
   | otherwise = do
     settlementLegs <- getEntriesByReference refs.settlementReferenceType ctx.referenceId
-    reversalRes <- reverseUnreversed settlementLegs reason
+    -- inline (not a where-bound helper): a signature-less local binding would be
+    -- generalised and lose the enclosing HasActorInfo m r constraint
+    let reversedIds = mapMaybe (.reversalOf) settlementLegs
+        toReverse = [e | e <- settlementLegs, e.entryType /= Reversal, e.id `notElem` reversedIds]
+    reversalResults <- mapM (\e -> createReversal e.id reason) toReverse
+    let reversalRes = map (.id) <$> sequenceEither reversalResults
     case reversalRes of
       Left err -> pure (Left err)
       Right settlementReversals -> do
@@ -142,12 +157,6 @@ settleOutboundReversed refs ctx t mbRaw reason
             QTE.updateLedgerLegsById Nothing (mergeLegIds t (settlementReversals <> holdReversals)) t.id
             QTE.updateStatusById DT.REVERSED mbRaw (Just reason) t.id
             refetch t.id
-  where
-    reverseUnreversed legs why = do
-      let reversedIds = mapMaybe (.reversalOf) legs
-          toReverse = [e | e <- legs, e.entryType /= Reversal, e.id `notElem` reversedIds]
-      results <- mapM (\e -> createReversal e.id why) toReverse
-      pure $ map (.id) <$> sequenceEither results
 
 -- | Status-only moves: pending bumps and review flags. Never downgrades a terminal
 --   status and never moves NEEDS_REVIEW back to IN_FLIGHT on a mere pending poll.

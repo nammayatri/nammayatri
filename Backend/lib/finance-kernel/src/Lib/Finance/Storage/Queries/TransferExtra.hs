@@ -8,7 +8,7 @@ import Kernel.Utils.Common (getCurrentTime)
 import qualified Lib.Finance.Domain.Types.Transfer as Domain
 import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.Transfer as Beam
-import Lib.Finance.Storage.Queries.Transfer ()
+import Lib.Finance.Storage.Queries.OrphanInstances.Transfer ()
 import qualified Sequelize as Se
 
 -- | Status move, optionally stamping the latest raw rail status / error. Fields not
@@ -27,6 +27,18 @@ updateStatusById status mbRailStatus mbLastError transferId = do
         <> maybe [] (\rs -> [Se.Set Beam.railStatus (Just rs)]) mbRailStatus
         <> maybe [] (\le -> [Se.Set Beam.lastError (Just le)]) mbLastError
     )
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId transferId)]
+
+-- | Drop a stale error once the transfer has settled: a late success after a failure
+--   (or NEEDS_REVIEW) must not keep reading as an error on the row.
+clearLastErrorById ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Domain.Transfer ->
+  m ()
+clearLastErrorById transferId = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.lastError Nothing, Se.Set Beam.updatedAt now]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId transferId)]
 
 -- | Record the result of handing the transfer to a rail.

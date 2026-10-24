@@ -99,7 +99,7 @@ import Lib.Finance.Domain.Types.Invoice
 import Lib.Finance.Domain.Types.LedgerEntry hiding (Adjustment, Expense, Revenue)
 import Lib.Finance.Domain.Types.SapJournalEntry
 import Lib.Finance.Domain.Types.ScheduledTransferRule
-import Lib.Finance.Domain.Types.Transfer
+import Lib.Finance.Domain.Types.Transfer hiding (FAILED) -- avoid conflict with SapJournalEntry.FAILED
 import Lib.Finance.Error.Types
 import Lib.Finance.FinanceM
 import Lib.Finance.Invoice.Interface
