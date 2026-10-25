@@ -26,6 +26,13 @@ Transfer:
       enum: "INTERNAL,OUTBOUND,INBOUND"
       derive: "HttpInstance"
 
+    # The rails money can ride (PSP integrations — infrastructure, not domain
+    # vocabulary). Show values are what the DB stores; the backfill seeds
+    # (0017) write these exact strings.
+    RailKey:
+      enum: "JUSPAY_PAYOUT,STRIPE_PAYOUT,HDFC_BULK,JUSPAY_PG,JUSPAY_REFUND"
+      derive: "HttpInstance"
+
     # The ONE canonical money lifecycle. Raw rail statuses (Juspay's 24-ctor enum etc.)
     # are never interpreted outside a rail's classifyStatus; they ride along verbatim
     # in railStatus. CREATED also covers scheduled-but-not-yet-due.
@@ -37,7 +44,7 @@ Transfer:
     id: Id Transfer
     direction: TransferDirection
     status: TransferStatus
-    railKey: Maybe Text # registry key, e.g. "JUSPAY_PAYOUT"; Nothing for INTERNAL
+    railKey: Maybe RailKey # Nothing for INTERNAL
     railStatus: Maybe Text # opaque passthrough, e.g. "FULFILLMENTS_SUCCESSFUL"
     railOrderId: Maybe Text # the rail layer's order id (PayoutOrder / PaymentOrder)
     accountId: Id Account # the finance account this transfer is about

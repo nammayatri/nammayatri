@@ -5,6 +5,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime)
+import qualified Lib.Finance.Domain.Types.Account
 import qualified Lib.Finance.Domain.Types.Transfer as Domain
 import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.Transfer as Beam
@@ -87,6 +88,80 @@ updateMetadataById metadata transferId = do
   updateWithKV
     [Se.Set Beam.metadata (Just (Data.Aeson.toJSON metadata)), Se.Set Beam.updatedAt now]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId transferId)]
+
+-- | Open (non-terminal) INBOUND intents for one account + reference type — the topup
+--   reuse scan. Status/direction are not KV keys so this reads through to the DB, but
+--   the (accountId) index + tight predicates keep it a few rows instead of the
+--   account's full transfer history.
+findOpenInboundByAccountAndRefType ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  Text ->
+  m [Domain.Transfer]
+findOpenInboundByAccountAndRefType accountId referenceType =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.accountId $ Se.Eq (Kernel.Types.Id.getId accountId),
+          Se.Is Beam.direction $ Se.Eq Domain.INBOUND,
+          Se.Is Beam.referenceType $ Se.Eq referenceType,
+          Se.Is Beam.status $ Se.In [Domain.CREATED, Domain.SUBMITTED, Domain.IN_FLIGHT]
+        ]
+    ]
+
+-- | OUTBOUND transfers for one account created at/after an instant — the per-day cap
+--   count. Time-bounded at the DB, never the full history.
+findOutboundByAccountSince ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  Kernel.Prelude.UTCTime ->
+  m [Domain.Transfer]
+findOutboundByAccountSince accountId since =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.accountId $ Se.Eq (Kernel.Types.Id.getId accountId),
+          Se.Is Beam.direction $ Se.Eq Domain.OUTBOUND,
+          Se.Is Beam.createdAt $ Se.GreaterThanOrEq since
+        ]
+    ]
+
+-- | One page of an account's transfers, newest first, optionally one direction.
+--   Sorting and paging happen at the DB (accountId index) — never load an account's
+--   full transfer history to page it in memory.
+findByAccountWithOptions ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  Maybe Domain.TransferDirection ->
+  Maybe Int -> -- limit
+  Maybe Int -> -- offset
+  m [Domain.Transfer]
+findByAccountWithOptions accountId mbDirection limit offset =
+  findAllWithOptionsKV
+    [ Se.And
+        ( [Se.Is Beam.accountId $ Se.Eq (Kernel.Types.Id.getId accountId)]
+            <> [Se.Is Beam.direction $ Se.Eq d | Just d <- [mbDirection]]
+        )
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
+
+-- | Transfers for a batch of domain reference ids of one type/direction — bulk status
+--   resolution for a page of history rows (referenceId is a KV secondary key).
+findByDirectionRefTypeAndRefIds ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Domain.TransferDirection ->
+  Text ->
+  [Text] ->
+  m [Domain.Transfer]
+findByDirectionRefTypeAndRefIds _ _ [] = pure []
+findByDirectionRefTypeAndRefIds direction referenceType referenceIds =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.direction $ Se.Eq direction,
+          Se.Is Beam.referenceType $ Se.Eq referenceType,
+          Se.Is Beam.referenceId $ Se.In referenceIds
+        ]
+    ]
 
 -- | Ops view: non-terminal transfers for a merchant (NEEDS_REVIEW queue, stuck
 --   IN_FLIGHT audits). Status is not a KV key, so this reads through to the DB —

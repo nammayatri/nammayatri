@@ -10,6 +10,7 @@ module Lib.Finance.Error.Types
     InvoiceErrorCode (..),
     StateErrorCode (..),
     TaxErrorCode (..),
+    TransferErrorCode (..),
     RecoveryAction (..),
   )
 where
@@ -23,8 +24,28 @@ data FinanceError
   | InvoiceError InvoiceErrorCode Text
   | StateError StateErrorCode Text
   | TaxError TaxErrorCode Text
+  | TransferError TransferErrorCode Text
   | DomainError Text Text -- Domain extends
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
+-- | Every rejection the transfer verbs can hand back, as a closed set — callers match
+--   on constructors, not string codes. SCREAMING_SNAKE so 'show' reproduces the
+--   pre-enum string codes verbatim (logs, lastError, dashboards stay stable).
+data TransferErrorCode
+  = TRANSFER_OUT_DISABLED
+  | TRANSFER_IN_DISABLED
+  | INSTANT_TRANSFER_NOT_ALLOWED
+  | TRANSFER_DAILY_LIMIT_REACHED
+  | TRANSFER_BELOW_MINIMUM
+  | TRANSFER_CONSUMED_BY_FEE
+  | INVALID_TRANSFER_AMOUNT
+  | TRANSFER_NOT_FOUND
+  | CTX_REFERENCE_MISMATCH
+  | INBOUND_RAIL_WITHOUT_COLLECT
+  | NOT_AN_INBOUND_TRANSFER
+  | INBOUND_REQUIRES_RECIPE
+  | INVALID_CREDIT_RECIPE
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
 
 -- | Ledger-specific errors
 data LedgerErrorCode

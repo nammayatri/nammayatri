@@ -14,6 +14,7 @@
 module Lib.Finance.Transfer.Backfill
   ( BackfillSpec (..),
     backfillTransfer,
+    backfilledPreMigrationMarker,
   )
 where
 
@@ -26,9 +27,16 @@ import qualified Lib.Finance.Domain.Types.Transfer as DT
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.Transfer as QT
 
+-- | Persistent marker (metadata.reason) identifying rows minted by backfill: their
+--   createdAt is the backfill moment, NOT when the money moved, so time-window logic
+--   (e.g. the per-day cap) must exclude them. lastError carries the same text but is
+--   cleared on later status updates — metadata survives.
+backfilledPreMigrationMarker :: Text
+backfilledPreMigrationMarker = "BACKFILLED_PRE_MIGRATION"
+
 data BackfillSpec = BackfillSpec
   { direction :: DT.TransferDirection,
-    railKey :: Text,
+    railKey :: DT.RailKey,
     railOrderId :: Maybe Text,
     accountId :: Id Account,
     amount :: HighPrecMoney,
@@ -79,10 +87,10 @@ backfillTransfer spec =
                 holdEntryId = listToMaybe spec.knownEntryIds,
                 entryIds = Just (map (.getId) spec.knownEntryIds),
                 coveredEntryIds = Just (map (.getId) spec.coveredEntryIds),
-                metadata = Nothing,
+                metadata = Just DT.emptyTransferMetadata {DT.reason = Just backfilledPreMigrationMarker},
                 scheduledFor = Nothing,
                 attemptCount = 1,
-                lastError = Just "BACKFILLED_PRE_MIGRATION",
+                lastError = Just backfilledPreMigrationMarker,
                 merchantId = spec.merchantId,
                 merchantOperatingCityId = spec.merchantOperatingCityId,
                 createdAt = now,

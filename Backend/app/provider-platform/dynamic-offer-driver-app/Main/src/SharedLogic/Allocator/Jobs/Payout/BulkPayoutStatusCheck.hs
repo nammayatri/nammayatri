@@ -22,7 +22,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Payout.Bulk.StatusCheck as Bulk
 import Lib.Scheduler
 import SharedLogic.Allocator
-import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (findKernelSweepRule)
+import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (findKernelSweepRuleAnyState)
 import SharedLogic.Payout.Bulk.Driver (driverBulkHandle)
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -43,7 +43,9 @@ runBulkPayoutStatusCheck Job {id, jobInfo} =
     -- and 50 batches.
     mbRuleE <-
       withTryCatch "BulkPayoutStatusCheck:kernelSweepRule" $
-        findKernelSweepRule jobInfo.jobData.merchantId jobInfo.jobData.merchantOperatingCityId
+        -- pacing is operational: a sweep-disabled city keeps its tuned cadence for
+        -- batches already in flight
+        findKernelSweepRuleAnyState jobInfo.jobData.merchantId jobInfo.jobData.merchantOperatingCityId
     let mbRule = either (const Nothing) identity mbRuleE
         idleInterval = fromIntegral (60 * max 1 (fromMaybe 5 (mbRule >>= (.bulkStatusCheckIntervalMinutes))))
         batchLimit = max 1 (min 500 (fromMaybe 50 (mbRule >>= (.bulkStatusCheckBatchLimit))))
