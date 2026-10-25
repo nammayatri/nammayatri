@@ -75,9 +75,43 @@ syncSearch merchantIdRaw mbToken mbIsShadowSearch mbParentTransactionId reqV2 = 
 
       -- A shadow search arrives under its own transaction id (the BAP creates a separate
       -- search request for it), so it never collides with the search it shadows here.
-      isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
-      unless isFirst $
-        throwError $ InternalError $ "Search already processed by beckn for txn " <> transactionId
-      (_, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country (bool "sync_search" "sync_search_shadow" isShadowSearch) (toJSON reqV2)
-      logTagInfo "SyncSearchV2 Internal Flow" $ "Returning OnSearch inline:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
-      pure onSearchReq
+      let resultKey = searchTxnResultKey transactionId transporterId.getId
+      mbCachedResult <- Redis.withCrossAppRedis $ Redis.get @Spec.OnSearchReq resultKey
+      case mbCachedResult of
+        Just cachedResult -> do
+          logTagInfo "SyncSearchV2 Internal Flow" $ "Returning cached OnSearch inline for txn:-" <> transactionId
+          pure cachedResult
+        Nothing -> do
+          isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
+          if isFirst
+            then do
+              (_, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country (bool "sync_search" "sync_search_shadow" isShadowSearch) (toJSON reqV2)
+              Redis.withCrossAppRedis $ Redis.setExp resultKey onSearchReq 60
+              logTagInfo "SyncSearchV2 Internal Flow" $ "Returning OnSearch inline:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
+              pure onSearchReq
+            else do
+              mbResult <- pollForSearchResult resultKey
+              case mbResult of
+                Just result -> do
+                  logTagInfo "SyncSearchV2 Internal Flow" $ "Returning polled OnSearch inline for txn:-" <> transactionId
+                  pure result
+                Nothing -> throwError $ InvalidRequest $ "Duplicate sync_search for txn " <> transactionId <> "; result not yet available"
+
+searchTxnResultKey :: Text -> Text -> Text
+searchTxnResultKey txnId mId = "Driver:Search:TxnResult-" <> txnId <> ":" <> mId
+
+pollForSearchResult ::
+  (MonadFlow m, CacheFlow m r, Redis.HedisFlow m r) =>
+  Text ->
+  m (Maybe Spec.OnSearchReq)
+pollForSearchResult key = go 30
+  where
+    go 0 = pure Nothing
+    go remaining = do
+      mbResult <- Redis.withCrossAppRedis $ Redis.get @Spec.OnSearchReq key
+      case mbResult of
+        Just result -> pure $ Just result
+        Nothing | remaining > 1 -> do
+          liftIO $ threadDelay 100000 -- 100ms
+          go (remaining - 1)
+        _ -> pure Nothing
