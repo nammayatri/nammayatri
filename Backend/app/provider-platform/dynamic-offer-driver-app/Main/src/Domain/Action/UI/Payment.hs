@@ -53,6 +53,7 @@ import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
 import Domain.Types.SubscriptionPurchase
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import qualified Domain.Types.WalletTransaction as DWT
 import qualified Domain.Types.WebhookExtra as WT
 import Environment
 import Kernel.Beam.Functions (runInMasterDb)
@@ -83,17 +84,16 @@ import Lib.Finance
     InvoiceLineItem (..),
     ItemType (..),
     LineItemDescription (..),
+    getEntriesByReference,
+    invoice,
+    transfer,
   )
-import Lib.Finance.Account.Interface (AccountInput (..))
-import qualified Lib.Finance.Account.Service as FAccountService
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.Account ()
-import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Finance.Domain.Types.Transfer as DTransfer
 import Lib.Finance.Ledger.Service ()
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.Transfer as QTransfer
-import qualified Lib.Finance.Transfer.Backfill as Backfill
 import qualified Lib.Finance.Transfer.Inbound as Inbound
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -141,6 +141,7 @@ import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.VendorFeeExtra as QVF
+import qualified Storage.Queries.WalletTransaction as QWalletTransaction
 import Tools.Error
 import Tools.Notifications
 import qualified Tools.Payment as Payment
@@ -554,57 +555,68 @@ processWalletTopupWebhook ::
   DOrder.PaymentOrder ->
   Payment.TransactionStatus ->
   m ()
+
+-- | TRANSITIONAL: gateway status -> wallet_transaction status, kept only while the
+--   dual-write lives (see the note in the webhook body). The canonical lifecycle is
+--   the finance_transfer row.
+transitionalWalletStatus :: Payment.TransactionStatus -> DWT.WalletTransactionStatus
+transitionalWalletStatus = \case
+  Payment.CHARGED -> DWT.SUCCESS
+  Payment.AUTO_REFUNDED -> DWT.REFUNDED
+  Payment.CLIENT_AUTH_TOKEN_EXPIRED -> DWT.EXPIRED
+  Payment.AUTHENTICATION_FAILED -> DWT.FAILED
+  Payment.AUTHORIZATION_FAILED -> DWT.FAILED
+  Payment.JUSPAY_DECLINED -> DWT.FAILED
+  Payment.CANCELLED -> DWT.FAILED
+  Payment.NEW -> DWT.INITIATED
+  _ -> DWT.PROCESSING
+
 processWalletTopupWebhook driver order transactionStatus = do
   -- One path: every topup settles through the kernel's INBOUND transfer, keyed
   -- (WalletTopup, orderId); the credit (+ invoice) posts via the CreditRecipe,
   -- idempotent by construction (anchor check on the credit leg covers orders whose
-  -- credit the pre-kernel code already posted). Orders created before the kernel owned
-  -- the flow have no row, so one is backfilled here.
-  transfer' <-
-    QTransfer.findByReference walletReferenceTopup order.id.getId >>= \case
-      Just t -> pure t
-      Nothing -> do
-        walletAccount <-
-          FAccountService.getOrCreateAccount
-            AccountInput
-              { accountType = FAccount.Liability,
-                counterpartyType = Just FAccount.DRIVER,
-                counterpartyId = Just order.personId.getId,
-                subLedger = Nothing,
-                currency = order.currency,
-                merchantId = order.merchantId.getId,
-                merchantOperatingCityId = driver.merchantOperatingCityId.getId
-              }
-            >>= fromEitherM (\e -> InternalError ("Failed to resolve wallet account for topup backfill: " <> show e))
-        Backfill.backfillTransfer
-          Backfill.BackfillSpec
-            { direction = DTransfer.INBOUND,
-              railKey = Rails.juspayPgRailKey,
-              railOrderId = Just order.id.getId,
-              accountId = walletAccount.id,
-              amount = order.amount,
-              feeAmount = 0,
-              currency = order.currency,
-              referenceType = walletReferenceTopup,
-              referenceId = order.id.getId,
-              knownEntryIds = [],
-              coveredEntryIds = [],
-              merchantId = order.merchantId.getId,
-              merchantOperatingCityId = driver.merchantOperatingCityId.getId
-            }
+  -- credit the pre-kernel code already posted).
+  -- TRANSITIONAL dual-write for the staggered release: old pods / the driver UI still
+  -- read wallet_transaction. Dropped with the table after migration 0017 backfills.
+  QWalletTransaction.updateStatus (transitionalWalletStatus transactionStatus) order.id
+  mbTransfer <- QTransfer.findByReference walletReferenceTopup order.id.getId
   let lockKey = "wallet:topup:lock:" <> order.id.getId
   Redis.withLockRedis lockKey 60 $ do
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
     ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId) (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
-    let recipe =
-          Inbound.CreditRecipe
-            { legs = Inbound.CreditLeg {fromRole = PlatformAsset, toRole = OwnerLiability, portion = Inbound.FullAmount, referenceType = walletReferenceTopup} :| [],
-              invoiceConfig = Just (mkTopupInvoiceConfig order)
-            }
-    void $
-      Inbound.applyInboundTransferOutcome runFinance ctx recipe transfer'.id (Just (show transactionStatus)) (Rails.classifyPaymentTransactionStatus transactionStatus)
-        >>= fromEitherM (\e -> WalletBalanceUpdateFailed ("wallet topup: " <> show e))
-    when (transactionStatus == Payment.CHARGED) $ do
+    -- creditedNow: the credit posted on THIS delivery. Webhooks are at-least-once, so
+    -- the success push is gated on it — a redelivery must not re-notify.
+    creditedNow <- case mbTransfer of
+      Just transfer' -> do
+        let recipe =
+              Inbound.CreditRecipe
+                { legs = Inbound.CreditLeg {fromRole = PlatformAsset, toRole = OwnerLiability, portion = Inbound.FullAmount, referenceType = walletReferenceTopup} :| [],
+                  invoiceConfig = Just (mkTopupInvoiceConfig order)
+                }
+        updated <-
+          Inbound.applyInboundTransferOutcome runFinance ctx recipe transfer'.id (Just (show transactionStatus)) (Rails.classifyPaymentTransactionStatus transactionStatus)
+            >>= fromEitherM (\e -> WalletBalanceUpdateFailed ("wallet topup: " <> show e))
+        pure (transfer'.status /= DTransfer.SUCCEEDED && updated.status == DTransfer.SUCCEEDED)
+      Nothing ->
+        -- No transfer row: an order from before the kernel owned this flow, or minted
+        -- by an old pod during the staggered release. Settle the OLD way — the
+        -- idempotent direct credit — and let migration 0017 backfill the transfer row
+        -- from wallet_transaction/payment_order afterwards.
+        if transactionStatus == Payment.CHARGED
+          then do
+            alreadyPosted <- not . null <$> getEntriesByReference walletReferenceTopup order.id.getId
+            unless alreadyPosted $
+              void $
+                runFinance
+                  ctx
+                  ( do
+                      void $ transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup Nothing
+                      void $ invoice (mkTopupInvoiceConfig order)
+                  )
+                  >>= fromEitherM (\e -> WalletBalanceUpdateFailed ("wallet topup (pre-migration): " <> show e))
+            pure (not alreadyPosted)
+          else pure False
+    when creditedNow $ do
       let notificationTitle = "Wallet Top-up Successful"
           notificationMessage = "Your wallet has been topped up with Rs." <> show order.amount
       sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken

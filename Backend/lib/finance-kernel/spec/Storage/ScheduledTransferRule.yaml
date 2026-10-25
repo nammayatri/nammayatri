@@ -13,6 +13,7 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   AccountType: Lib.Finance.Domain.Types.Account
   CounterpartyType: Lib.Finance.Domain.Types.Account
+  RailKey: Lib.Finance.Domain.Types.Transfer
 
 ScheduledTransferRule:
   tableName: finance_scheduled_transfer_rule
@@ -43,7 +44,7 @@ ScheduledTransferRule:
     batchSize: Int
     maxRetries: Int
     rescheduleBufferMinutes: Maybe Int
-    defaultRailKey: Maybe Text # RailRegistry key the sweep submits on
+    defaultRailKey: Maybe RailKey # the rail the sweep submits on
     # --- bulk-rail pacing + submission dressing (Nothing = caller's legacy config) ---
     bulkStatusCheckIntervalMinutes: Maybe Int
     bulkStatusCheckBatchLimit: Maybe Int

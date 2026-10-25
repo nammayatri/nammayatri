@@ -8,9 +8,10 @@
   domain ever re-derives spendable/redeemable amounts by hand.
 
   Invariant this module relies on: a PENDING ledger entry whose FROM side is a
-  balance-bearing account IS a hold on that account (statutory holds, booking-deposit
-  holds, deposit-refund legs, prepaid holds all satisfy this today). Flows must not
-  post PENDING from-side entries that are not holds.
+  balance-bearing account is a hold on that account — EXCEPT pending tax accruals
+  (counterpart = a GOVERNMENT account), which deduct from a pending inflow by
+  construction, never from the balance (e.g. TDS on a not-yet-collected cancellation
+  fee). sumPendingByFromAccount implements the exclusion.
 
   Design: docs/backend/design/finance-kernel-unification-plan.md §4.
 -}
@@ -162,26 +163,35 @@ getProcessingOut account
 
 -- | Resolve a requested amount against the breakdown. Pure so it can only be called
 --   with a breakdown read under the balance lock.
+--
+--   Fee policy applies ONLY when the kernel resolves the amount itself (AllAvailable).
+--   'Exact' means the caller fixed the gross debit — typically having already deducted
+--   its own fee — so re-applying the class fee here would double-charge the gates
+--   (falsely tripping TRANSFER_BELOW_MINIMUM near the threshold).
 resolveTransferAmount ::
   ResolvedAccountConfig ->
   BalanceBreakdown ->
   TransferAmount ->
   Either FinanceError ResolvedTransferAmount
 resolveTransferAmount cfg breakdown requested = do
-  gross <- case requested of
-    AllAvailable -> Right breakdown.available
+  (gross, feeApplies) <- case requested of
+    AllAvailable -> Right (breakdown.available, True)
     Exact amt
-      | amt <= 0 -> Left $ DomainError "INVALID_TRANSFER_AMOUNT" ("non-positive amount: " <> show amt)
+      | amt <= 0 -> Left $ TransferError INVALID_TRANSFER_AMOUNT ("non-positive amount: " <> show amt)
       | amt > breakdown.available -> Left $ AccountError InsufficientBalance ("requested " <> show amt <> ", available " <> show breakdown.available)
-      | otherwise -> Right amt
-  let (feeAmt, mbBearer) = computeFee cfg.transferOutFee gross
+      | otherwise -> Right (amt, False)
+  let (feeAmt, mbBearer) = if feeApplies then computeFee cfg.transferOutFee gross else (0, Nothing)
       net = case mbBearer of
         Just OWNER_BEARER -> floorToTwoDecimals (gross - feeAmt)
         _ -> floorToTwoDecimals gross
   when (net <= 0) $
-    Left $ DomainError "TRANSFER_CONSUMED_BY_FEE" ("gross " <> show gross <> ", fee " <> show feeAmt)
-  when (net < cfg.minTransferOutAmount) $
-    Left $ DomainError "TRANSFER_BELOW_MINIMUM" ("net " <> show net <> ", minimum " <> show cfg.minTransferOutAmount)
+    Left $ TransferError TRANSFER_CONSUMED_BY_FEE ("gross " <> show gross <> ", fee " <> show feeAmt)
+  -- The class minimum, like the fee, applies only to kernel-RESOLVED amounts: an
+  -- Exact caller already enforced its own floor against the GROSS (the historical
+  -- check), and re-checking the fee-netted value here created a silent dead band
+  -- of [minimum, minimum + fee) where nothing was ever paid.
+  when (feeApplies && net < cfg.minTransferOutAmount) $
+    Left $ TransferError TRANSFER_BELOW_MINIMUM ("net " <> show net <> ", minimum " <> show cfg.minTransferOutAmount)
   pure
     ResolvedTransferAmount
       { grossDebit = gross,
@@ -195,7 +205,8 @@ computeFee Nothing _ = (0, Nothing)
 computeFee (Just spec) gross =
   let fixed = fromMaybe 0 spec.fixedFee
       pct = maybe 0 (\rate -> gross * realToFrac (rate / 100)) spec.percentageRate
-   in (floorToTwoDecimals (fixed + pct), Just spec.bearer)
+   in -- capped at gross, as the pre-kernel fee computation always was
+      (min gross (floorToTwoDecimals (fixed + pct)), Just spec.bearer)
 
 floorToTwoDecimals :: HighPrecMoney -> HighPrecMoney
 floorToTwoDecimals x = fromIntegral (floor (x * 100) :: Integer) / 100

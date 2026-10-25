@@ -30,7 +30,7 @@ import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import qualified Lib.Finance.AccountConfig as AccountConfig
 import Lib.Finance.Balance (withAccountBalanceLock)
-import Lib.Finance.Domain.Types.Account (Account)
+import Lib.Finance.Domain.Types.Account (Account, CounterpartyType (SELLER))
 import qualified Lib.Finance.Domain.Types.Transfer as DT
 import Lib.Finance.Error.Types
 import Lib.Finance.FinanceM (AccountRole, FinanceCtx (..), InvoiceConfig, invoice, transfer)
@@ -65,9 +65,11 @@ data CreditRecipe = CreditRecipe
   }
   deriving (Generic)
 
+-- | Everything else (currency, merchant ids, counterparty) derives from the credited
+--   ACCOUNT — no FinanceCtx at initiate time; the outcome-time ctx (webhook) is where
+--   posting context lives.
 data InboundSpec = InboundSpec
-  { ctx :: FinanceCtx,
-    -- | inbound is always exact — the payer chose the amount
+  { -- | inbound is always exact — the payer chose the amount
     amount :: HighPrecMoney,
     referenceType :: Text,
     accountId :: Id Account,
@@ -88,23 +90,20 @@ initiateTransferIn ::
   m (Either FinanceError (DT.Transfer, Aeson.Value))
 initiateTransferIn rail spec
   | spec.amount <= 0 =
-    pure $ Left $ DomainError "INVALID_TRANSFER_AMOUNT" (show spec.amount)
+    pure $ Left $ TransferError INVALID_TRANSFER_AMOUNT (show spec.amount)
   | otherwise = case rail.collectPayload of
-    Nothing -> pure $ Left $ DomainError "INBOUND_RAIL_WITHOUT_COLLECT" rail.railKey
+    Nothing -> pure $ Left $ TransferError INBOUND_RAIL_WITHOUT_COLLECT (show rail.railKey)
     Just collect -> withAccountBalanceLock spec.accountId 10 $ do
       QAccount.findById spec.accountId >>= \case
         Nothing -> pure $ Left $ AccountError AccountNotFound (show spec.accountId)
         Just account -> do
           cfg <- AccountConfig.getAccountConfigForAccount account
           if not cfg.transferInEnabled
-            then pure $ Left $ DomainError "TRANSFER_IN_DISABLED" (show spec.accountId)
+            then pure $ Left $ TransferError TRANSFER_IN_DISABLED (show spec.accountId)
             else do
               transferId <- Id <$> generateGUID
-              transfers <- QT.findAllByAccountId spec.accountId
-              let openIntents =
-                    [ t | t <- transfers, t.direction == DT.INBOUND, t.referenceType == spec.referenceType, t.status `elem` [DT.CREATED, DT.SUBMITTED, DT.IN_FLIGHT]
-                    ]
-                  mbReuse = listToMaybe [t | t <- openIntents, t.amount == spec.amount]
+              openIntents <- QTE.findOpenInboundByAccountAndRefType spec.accountId spec.referenceType
+              let mbReuse = listToMaybe [t | t <- openIntents, t.amount == spec.amount]
               -- Exactly one live intent per (account, referenceType): anything open that
               -- is not being reused is superseded (the old EXPIRED semantics).
               forM_ [t | t <- openIntents, Just t.id /= ((.id) <$> mbReuse)] $ \old ->
@@ -112,64 +111,79 @@ initiateTransferIn rail spec
               result <-
                 collect
                   RailCollectRequest
-                    { submission = toSubmission (maybe transferId (.id) mbReuse) ((.referenceId) <$> mbReuse),
+                    { submission = toSubmission account (maybe transferId (.id) mbReuse) ((.referenceId) <$> mbReuse),
                       reuseRailOrderId = (.referenceId) <$> mbReuse
                     }
+              -- A crash between collect and the insert below leaves an orphan payment
+              -- order; the webhook backfill covers a payment landing on it, and the
+              -- next initiate simply mints a fresh order.
+              let mintRow = do
+                    now <- getCurrentTime
+                    let row =
+                          DT.Transfer
+                            { id = transferId,
+                              direction = DT.INBOUND,
+                              status = DT.CREATED,
+                              railKey = Just rail.railKey,
+                              railStatus = Nothing,
+                              railOrderId = Just result.railOrderId,
+                              accountId = spec.accountId,
+                              counterAccountId = Nothing,
+                              requestedAmount = Just spec.amount,
+                              amount = spec.amount,
+                              feeAmount = 0,
+                              currency = account.currency,
+                              referenceType = spec.referenceType,
+                              referenceId = result.railOrderId,
+                              holdEntryId = Nothing,
+                              entryIds = Just [],
+                              coveredEntryIds = Just [],
+                              metadata = Just spec.metadata,
+                              scheduledFor = Nothing,
+                              attemptCount = 0,
+                              lastError = Nothing,
+                              merchantId = account.merchantId,
+                              merchantOperatingCityId = account.merchantOperatingCityId,
+                              createdAt = now,
+                              updatedAt = now
+                            }
+                    QT.create row
+                    pure $ Right (row, result.payload)
               case mbReuse of
-                Just existing -> pure $ Right (existing, result.payload)
-                Nothing -> do
-                  -- A crash between collect and this insert leaves an orphan payment
-                  -- order; the webhook backfill covers a payment landing on it, and the
-                  -- next initiate simply mints a fresh order.
-                  now <- getCurrentTime
-                  let row =
-                        DT.Transfer
-                          { id = transferId,
-                            direction = DT.INBOUND,
-                            status = DT.CREATED,
-                            railKey = Just rail.railKey,
-                            railStatus = Nothing,
-                            railOrderId = Just result.railOrderId,
-                            accountId = spec.accountId,
-                            counterAccountId = Nothing,
-                            requestedAmount = Just spec.amount,
-                            amount = spec.amount,
-                            feeAmount = 0,
-                            currency = spec.ctx.currency,
-                            referenceType = spec.referenceType,
-                            referenceId = result.railOrderId,
-                            holdEntryId = Nothing,
-                            entryIds = Just [],
-                            coveredEntryIds = Just [],
-                            metadata = Just spec.metadata,
-                            scheduledFor = Nothing,
-                            attemptCount = 0,
-                            lastError = Nothing,
-                            merchantId = spec.ctx.merchantId,
-                            merchantOperatingCityId = spec.ctx.merchantOpCityId,
-                            createdAt = now,
-                            updatedAt = now
-                          }
-                  QT.create row
-                  pure $ Right (row, result.payload)
+                -- Genuine reuse: the rail re-fetched the SAME order.
+                Just existing
+                  | existing.referenceId == result.railOrderId ->
+                    pure $ Right (existing, result.payload)
+                -- The rail minted a NEW order despite the reuse request (the reused
+                -- order's auth token had expired and the rail retried fresh): the old
+                -- intent is dead — supersede it and key a fresh row on the new order,
+                -- or the returned orderId would not match its own payload and the
+                -- zombie intent would be reused forever.
+                Just existing -> do
+                  QTE.updateStatusById DT.FAILED Nothing (Just "SUPERSEDED_BY_NEW_INTENT") existing.id
+                  mintRow
+                Nothing -> mintRow
   where
     -- For a fresh intent referenceId is unknown until the rail mints the order; it is
-    -- only populated on reuse. Collect closures must key on amount + reuseRailOrderId.
-    toSubmission transferId mbRefId =
+    -- only populated on reuse. Collect closures must key on amount + reuseRailOrderId
+    -- and carry their own person context — the submission describes the credited
+    -- account (counterparty fallback: the merchant-side SELLER, for the rare
+    -- counterparty-less account).
+    toSubmission account transferId mbRefId =
       RailSubmission
         { transferId = transferId,
           netAmount = spec.amount,
           grossAmount = spec.amount,
           fee = 0,
-          currency = spec.ctx.currency,
-          counterpartyType = spec.ctx.counterpartyType,
-          counterpartyId = spec.ctx.counterpartyId,
+          currency = account.currency,
+          counterpartyType = fromMaybe SELLER account.counterpartyType,
+          counterpartyId = fromMaybe account.merchantId account.counterpartyId,
           accountId = spec.accountId,
           referenceType = spec.referenceType,
           referenceId = fromMaybe "" mbRefId,
           metadata = spec.metadata,
-          merchantId = spec.ctx.merchantId,
-          merchantOperatingCityId = spec.ctx.merchantOpCityId
+          merchantId = account.merchantId,
+          merchantOperatingCityId = account.merchantOperatingCityId
         }
 
 -- | Apply what the rail said about an inbound transfer. On OutcomeSucceeded the recipe
@@ -185,11 +199,11 @@ applyInboundTransferOutcome ::
   m (Either FinanceError DT.Transfer)
 applyInboundTransferOutcome runFinance ctx recipe transferId mbRaw outcome =
   QT.findById transferId >>= \case
-    Nothing -> pure $ Left $ DomainError "TRANSFER_NOT_FOUND" transferId.getId
+    Nothing -> pure $ Left $ TransferError TRANSFER_NOT_FOUND transferId.getId
     Just t -> case guardCtxMatchesTransfer ctx t of
       Left err -> pure (Left err)
       Right ()
-        | t.direction /= DT.INBOUND -> pure $ Left $ DomainError "NOT_AN_INBOUND_TRANSFER" transferId.getId
+        | t.direction /= DT.INBOUND -> pure $ Left $ TransferError NOT_AN_INBOUND_TRANSFER transferId.getId
         | otherwise -> case outcome of
           OutcomeSucceeded -> settleInbound t mbRaw
           other -> bumpNonLedgerStatus t mbRaw other
@@ -221,7 +235,7 @@ applyInboundTransferOutcome runFinance ctx recipe transferId mbRaw outcome =
             QTE.updateLedgerLegsById Nothing (nub (fromMaybe [] t.entryIds <> map (.getId) entryIds)) t.id
             QTE.updateStatusById DT.SUCCEEDED mbRaw' Nothing t.id
             QTE.clearLastErrorById t.id
-            maybe (Left $ DomainError "TRANSFER_NOT_FOUND" t.id.getId) Right <$> QT.findById t.id
+            maybe (Left $ TransferError TRANSFER_NOT_FOUND t.id.getId) Right <$> QT.findById t.id
 
 -- | Turn portions into concrete amounts. FullAmount legs carry the whole total (several
 --   are allowed — e.g. a pass-through pair); Portion/Remainder split it.
@@ -229,8 +243,8 @@ resolvePortions :: HighPrecMoney -> [CreditLeg] -> Either FinanceError [(CreditL
 resolvePortions total legs = do
   let fixedSum = sum [p | CreditLeg {portion = Portion p} <- legs]
       remainders = length [() | CreditLeg {portion = Remainder} <- legs]
-  when (remainders > 1) $ Left $ DomainError "INVALID_CREDIT_RECIPE" "more than one Remainder leg"
-  when (fixedSum > total) $ Left $ DomainError "INVALID_CREDIT_RECIPE" ("portions " <> show fixedSum <> " exceed total " <> show total)
+  when (remainders > 1) $ Left $ TransferError INVALID_CREDIT_RECIPE "more than one Remainder leg"
+  when (fixedSum > total) $ Left $ TransferError INVALID_CREDIT_RECIPE ("portions " <> show fixedSum <> " exceed total " <> show total)
   pure $
     legs <&> \leg ->
       ( leg,

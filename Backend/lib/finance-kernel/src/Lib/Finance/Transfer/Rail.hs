@@ -31,7 +31,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id (Id)
 import Lib.Finance.Domain.Types.Account (Account, CounterpartyType)
-import Lib.Finance.Domain.Types.Transfer (Transfer, TransferMetadata)
+import Lib.Finance.Domain.Types.Transfer (RailKey, Transfer, TransferMetadata)
 
 -- | When the ledger hold is posted relative to the rail call.
 --     HoldThenSubmit — HDFC bulk style: money is parked first, the file goes later;
@@ -106,8 +106,8 @@ data TransferOutcome
   deriving (Eq, Show, Generic)
 
 data TransferRail m = TransferRail
-  { -- | registry key, stored on the transfer row ("JUSPAY_PAYOUT", "HDFC_BULK", ...)
-    railKey :: Text,
+  { -- | registry key, stored on the transfer row
+    railKey :: RailKey,
     holdOrdering :: HoldOrdering,
     submit :: RailSubmission -> m RailSubmitResult,
     -- | fresh raw rail status for a transfer; Nothing = this rail can't poll
@@ -123,7 +123,7 @@ data TransferRail m = TransferRail
 
 -- | App-side dispatch table, same pattern as the reconciliation RecipeRegistry.
 --   Used at webhook/poll time, where only pollStatus/classifyStatus matter.
-type RailRegistry m = Map.Map Text (TransferRail m)
+type RailRegistry m = Map.Map RailKey (TransferRail m)
 
-lookupRail :: RailRegistry m -> Text -> Maybe (TransferRail m)
+lookupRail :: RailRegistry m -> RailKey -> Maybe (TransferRail m)
 lookupRail = flip Map.lookup

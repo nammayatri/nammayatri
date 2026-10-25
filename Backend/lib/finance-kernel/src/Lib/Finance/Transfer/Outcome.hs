@@ -41,7 +41,7 @@ import Lib.Finance.Transfer.Rail (TransferOutcome (..), TransferRail (..))
 guardCtxMatchesTransfer :: FinanceCtx -> DT.Transfer -> Either FinanceError ()
 guardCtxMatchesTransfer ctx t
   | ctx.referenceId == t.referenceId = Right ()
-  | otherwise = Left $ DomainError "CTX_REFERENCE_MISMATCH" ("ctx " <> ctx.referenceId <> " vs transfer " <> t.referenceId)
+  | otherwise = Left $ TransferError CTX_REFERENCE_MISMATCH ("ctx " <> ctx.referenceId <> " vs transfer " <> t.referenceId)
 
 applyTransferOutcome ::
   (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
@@ -54,13 +54,13 @@ applyTransferOutcome ::
   m (Either FinanceError DT.Transfer)
 applyTransferOutcome runFinance refs ctx transferId mbRaw outcome =
   QT.findById transferId >>= \case
-    Nothing -> pure $ Left $ DomainError "TRANSFER_NOT_FOUND" transferId.getId
+    Nothing -> pure $ Left $ TransferError TRANSFER_NOT_FOUND transferId.getId
     Just t -> case guardCtxMatchesTransfer ctx t of
       Left err -> pure (Left err)
       Right () -> case t.direction of
         DT.INTERNAL -> pure (Right t) -- terminal at creation; nothing to apply
         DT.INBOUND -> case outcome of
-          OutcomeSucceeded -> pure $ Left $ DomainError "INBOUND_REQUIRES_RECIPE" "use Lib.Finance.Transfer.Inbound.applyInboundTransferOutcome"
+          OutcomeSucceeded -> pure $ Left $ TransferError INBOUND_REQUIRES_RECIPE "use Lib.Finance.Transfer.Inbound.applyInboundTransferOutcome"
           _ -> bumpNonLedgerStatus t mbRaw outcome
         DT.OUTBOUND -> withAccountBalanceLock t.accountId 10 $ case outcome of
           OutcomeSucceeded -> settleOutboundSuccess runFinance refs ctx t mbRaw
@@ -84,7 +84,10 @@ settleOutboundSuccess runFinance refs ctx t mbRaw
     case res of
       Left err -> pure (Left err)
       Right legIds -> do
-        markEntriesAsPaidOut (coveredIds t) t.id.getId
+        -- settlementId = the DOMAIN process id (transfer.referenceId, e.g. the
+        -- PayoutRequest id) — dashboards and the stash-fallback lookup resolve it
+        -- against domain tables, so the kernel row id would dangle.
+        markEntriesAsPaidOut (coveredIds t) t.referenceId
         QTE.updateLedgerLegsById Nothing (mergeLegIds t legIds) t.id
         QTE.updateStatusById DT.SUCCEEDED mbRaw Nothing t.id
         QTE.clearLastErrorById t.id
@@ -208,7 +211,7 @@ checkTransferStatus ::
   m (Either FinanceError DT.Transfer)
 checkTransferStatus runFinance rail refs ctx transferId =
   QT.findById transferId >>= \case
-    Nothing -> pure $ Left $ DomainError "TRANSFER_NOT_FOUND" transferId.getId
+    Nothing -> pure $ Left $ TransferError TRANSFER_NOT_FOUND transferId.getId
     Just t ->
       rail.pollStatus t >>= \case
         Nothing -> pure (Right t)
@@ -224,7 +227,7 @@ mergeLegIds t newIds = nub (fromMaybe [] t.entryIds <> map (.getId) newIds)
 
 refetch :: (BeamFlow.BeamFlow m r) => Id DT.Transfer -> m (Either FinanceError DT.Transfer)
 refetch transferId =
-  maybe (Left $ DomainError "TRANSFER_NOT_FOUND" transferId.getId) Right <$> QT.findById transferId
+  maybe (Left $ TransferError TRANSFER_NOT_FOUND transferId.getId) Right <$> QT.findById transferId
 
 sequenceEither :: [Either e a] -> Either e [a]
 sequenceEither = sequence

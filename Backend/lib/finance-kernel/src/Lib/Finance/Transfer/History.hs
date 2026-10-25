@@ -3,6 +3,8 @@
 
   Unified account history: every kind of movement (internal, outbound, inbound) through
   one feed of Transfer rows, plus the settled-ledger read keyed by settlement id.
+  Both reads filter, sort and page at the DB — an account's transfer history grows
+  without bound, so nothing here may fetch it whole.
 -}
 module Lib.Finance.Transfer.History
   ( getAccountHistory,
@@ -10,19 +12,16 @@ module Lib.Finance.Transfer.History
   )
 where
 
-import Data.List (sortBy)
-import Data.Ord (Down (..), comparing)
 import Kernel.Prelude
 import Kernel.Types.Id (Id)
 import Lib.Finance.Domain.Types.Account (Account)
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntry)
 import qualified Lib.Finance.Domain.Types.Transfer as DT
-import Lib.Finance.Ledger.Service (findBySettlementId)
+import Lib.Finance.Ledger.Service (findBySettlementIdWithOptions)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
-import qualified Lib.Finance.Storage.Queries.Transfer as QT
+import qualified Lib.Finance.Storage.Queries.TransferExtra as QTE
 
--- | Transfers touching an account, newest first. Per-account row counts are small
---   enough that in-memory paging is fine; revisit with a DB-side page if that changes.
+-- | Transfers touching an account, newest first.
 getAccountHistory ::
   (BeamFlow.BeamFlow m r) =>
   Id Account ->
@@ -30,27 +29,17 @@ getAccountHistory ::
   Int -> -- offset
   Int -> -- limit
   m [DT.Transfer]
-getAccountHistory accountId mbDirection offset limit = do
-  rows <- QT.findAllByAccountId accountId
-  pure
-    . take limit
-    . drop offset
-    . sortBy (comparing (Down . (.createdAt)))
-    $ filter (\t -> maybe True (== t.direction) mbDirection) rows
+getAccountHistory accountId mbDirection offset limit =
+  QTE.findByAccountWithOptions accountId mbDirection (Just limit) (Just offset)
 
 -- | The settled ledger entries one settlement (transfer) covered, filtered to a
 --   reference type: "which earnings did this payout pay out".
 getSettledLedgerBySettlement ::
   (BeamFlow.BeamFlow m r) =>
   Text -> -- reference type
-  Text -> -- settlement id (= the Transfer id for kernel-driven payouts)
+  Text -> -- settlement id (= the domain process id for kernel-driven payouts)
   Int -> -- offset
   Int -> -- limit
   m [LedgerEntry]
-getSettledLedgerBySettlement refType settlementId offset limit = do
-  entries <- findBySettlementId settlementId
-  pure
-    . take limit
-    . drop offset
-    . sortBy (comparing (Down . (.timestamp)))
-    $ filter (\e -> e.referenceType == refType) entries
+getSettledLedgerBySettlement refType settlementId offset limit =
+  findBySettlementIdWithOptions refType settlementId (Just limit) (Just offset)
