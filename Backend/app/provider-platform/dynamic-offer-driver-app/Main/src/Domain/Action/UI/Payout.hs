@@ -409,7 +409,11 @@ runPayoutSettlementWith hooks merchantId merchantOperatingCityId payoutStatus am
       settleSpecialZonePayout merchantOperatingCityId payoutOrder callPayoutServiceAction
     _
       | isPayoutOrderSuccess payoutOrder.status ->
+        -- This arm handles a case main silently 200-ed (contradiction after success);
+        -- it must never turn a previously-acknowledged webhook into a 5xx the provider
+        -- then retries forever — failures are logged for ops instead.
         reportContradictionAfterSuccess merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction
+          `catchAny` \e -> logError $ "reportContradictionAfterSuccess failed for order " <> payoutOrder.orderId <> ": " <> show e
       | otherwise ->
         settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction
 

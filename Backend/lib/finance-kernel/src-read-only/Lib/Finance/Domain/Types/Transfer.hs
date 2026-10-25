@@ -32,7 +32,7 @@ data Transfer = Transfer
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
     metadata :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Extra.Transfer.TransferMetadata,
-    railKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    railKey :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Transfer.RailKey,
     railOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     railStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referenceId :: Kernel.Prelude.Text,
@@ -44,14 +44,20 @@ data Transfer = Transfer
   }
   deriving (Generic, Show)
 
+data RailKey = JUSPAY_PAYOUT | STRIPE_PAYOUT | HDFC_BULK | JUSPAY_PG | JUSPAY_REFUND deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 data TransferDirection = INTERNAL | OUTBOUND | INBOUND deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data TransferStatus = CREATED | SUBMITTED | IN_FLIGHT | NEEDS_REVIEW | SUCCEEDED | FAILED | REVERSED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TransferDirection))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RailKey)
 
-$(mkHttpInstancesForEnum (''TransferDirection))
+$(mkHttpInstancesForEnum ''RailKey)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TransferStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TransferDirection)
 
-$(mkHttpInstancesForEnum (''TransferStatus))
+$(mkHttpInstancesForEnum ''TransferDirection)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TransferStatus)
+
+$(mkHttpInstancesForEnum ''TransferStatus)

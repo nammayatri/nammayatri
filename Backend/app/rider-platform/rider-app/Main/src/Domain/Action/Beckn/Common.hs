@@ -2072,6 +2072,7 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
               RidePaymentFinance.referralAwardPayoutLedgerRefs
               submitViaKernel
               (\reason -> logError $ "referral award payout not submitted, rideId: " <> show ride.id.getId <> " orderId: " <> show uid <> " reason: " <> reason)
+              (\reason -> logError $ "referral award payout parked for review, rideId: " <> show ride.id.getId <> " orderId: " <> show uid <> " reason: " <> reason)
         Nothing -> do
           when isReferredByPerson $ do
             setPayoutCountForReferree person.id.getId dailyPayoutCount

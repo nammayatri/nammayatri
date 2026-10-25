@@ -16,6 +16,7 @@ module SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout
   ( sendScheduledBatchPayout,
     computeNextRunTime,
     findKernelSweepRule,
+    findKernelSweepRuleAnyState,
   )
 where
 
@@ -182,8 +183,12 @@ processWalletPayouts config jobData = do
       -- migration 0016); no enabled rule = loud gate, same philosophy as
       -- TRANSFER_OUT_DISABLED. ScheduledPayoutConfig survives only as the job trigger
       -- and the carrier of unmigrated bulk-only fields.
-      logError $ "ScheduledBatchPayout: no enabled kernel sweep rule for (Liability, DRIVER) in city " <> merchantOpCityId.getId <> " (finance_account_config.autoTransferOut -> finance_scheduled_transfer_rule; seed 0016). Skipping wallet sweep."
-      pure Complete
+      -- RESCHEDULE, never Complete: Complete would terminate this city's job chain
+      -- permanently, so a rule seeded late (or the 10-min AccountConfig Redis cache
+      -- lagging right after 0016) would silently kill the sweep forever.
+      logError $ "ScheduledBatchPayout: no enabled kernel sweep rule for (Liability, DRIVER) in city " <> merchantOpCityId.getId <> " (finance_account_config.autoTransferOut -> finance_scheduled_transfer_rule; seed 0016). Retrying in 30 minutes."
+      now <- getCurrentTime
+      pure $ ReSchedule (addUTCTime 1800 now)
     (True, Just kernelRule) -> do
       -- Folding the page loop into Lib.Finance.Transfer.Scheduled.runScheduledSweep is
       -- the Phase-3b target — blocked on the bulk-vs-individual branching below, which
@@ -377,6 +382,26 @@ findKernelSweepRule merchantId merchantOpCityId = do
     Just ruleName -> do
       mbRule <- QSTR.findByName merchantOpCityId.getId ruleName
       pure $ mbRule >>= \rule -> if rule.isEnabled then Just rule else Nothing
+
+-- | The rule regardless of isEnabled — for consumers of its OPERATIONAL fields (bulk
+--   status-check pacing): a city that switched its sweep off must keep its tuned
+--   polling cadence for batches already in flight.
+findKernelSweepRuleAnyState ::
+  (BeamFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe STR.ScheduledTransferRule)
+findKernelSweepRuleAnyState merchantId merchantOpCityId = do
+  accCfg <-
+    FinanceAccountConfig.getAccountConfig
+      FinanceAccountConfig.AccountClass
+        { merchantId = merchantId.getId,
+          merchantOperatingCityId = merchantOpCityId.getId,
+          accountType = FinanceAccount.Liability,
+          counterpartyType = Just FinanceAccount.DRIVER,
+          subLedger = Nothing
+        }
+  maybe (pure Nothing) (QSTR.findByName merchantOpCityId.getId) accCfg.autoTransferOut
 
 computeNextRunTime ::
   (MonadFlow m) =>

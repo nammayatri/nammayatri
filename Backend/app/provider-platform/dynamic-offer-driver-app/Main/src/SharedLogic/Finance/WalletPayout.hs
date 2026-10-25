@@ -36,7 +36,7 @@ import Lib.Finance (LedgerEntryMetadata (..))
 import Lib.Finance.Balance (TransferAmount (..))
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Transfer as DTransfer
-import Lib.Finance.Error.Types (FinanceError (..))
+import Lib.Finance.Error.Types (AccountErrorCode (InsufficientBalance), FinanceError (..), TransferErrorCode (..))
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Transfer.Outbound as Outbound
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -396,12 +396,16 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
           case err of
             -- The pre-check (ensurePayoutsEnabled, same kernel config) passed, so a refusal here means the
             -- finance_account_config row is missing or wrong — be loud, not silent.
-            DomainError "TRANSFER_OUT_DISABLED" _ -> throwError $ InvalidRequest "Payouts are disabled for this wallet class (finance_account_config)"
-            DomainError "INSTANT_TRANSFER_NOT_ALLOWED" _ -> throwError InstantPayoutNotAllowed
+            TransferError TRANSFER_OUT_DISABLED _ -> throwError $ InvalidRequest "Payouts are disabled for this wallet class (finance_account_config)"
+            TransferError INSTANT_TRANSFER_NOT_ALLOWED _ -> throwError InstantPayoutNotAllowed
             -- Same client-visible error the driver always got for the per-day cap; the kernel
             -- only gates instant payouts, so scheduled sweeps never reach this.
-            DomainError "TRANSFER_DAILY_LIMIT_REACHED" _ -> throwError $ InvalidRequest "Maximum payouts per day reached"
-            _ -> pure Nothing
+            TransferError TRANSFER_DAILY_LIMIT_REACHED _ -> throwError $ InvalidRequest "Maximum payouts per day reached"
+            -- The balance moved between the domain's read and the kernel's locked
+            -- re-read (cash-ride commission, a fresh offer hold): surface it — a
+            -- silent Success with nothing paid is worse than asking to retry.
+            AccountError InsufficientBalance _ -> throwError $ InvalidRequest "Wallet balance changed; please retry the payout"
+            _ -> throwError $ InternalError ("Wallet payout rejected by finance kernel: " <> show err)
         Right transfer -> case transfer.status of
           DTransfer.FAILED -> do
             -- Kernel already compensated: hold reversed, covered entries released.
@@ -410,8 +414,16 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
             pure Nothing
           DTransfer.NEEDS_REVIEW -> do
             -- Money stays parked on OwnerPayoutLiability; ops resolve via the transfer row.
-            -- The request keeps whatever status the rail left (PROCESSING on ambiguous sends).
-            logError $ "Wallet payout needs review for " <> ctx.driverId.getId <> " | payoutRequest " <> pr.id.getId <> ": " <> fromMaybe "" transfer.lastError
+            -- The request keeps whatever status the rail left (PROCESSING on ambiguous
+            -- sends — the money may be with the partner). ONE exception: a failed
+            -- give-back (reversal pending) must also land on the PayoutRequest, because
+            -- the ops hold-release tool and the batch-close guards read
+            -- pr.failureReason for the REVERSAL_PENDING prefix — exactly as before the
+            -- kernel owned compensation.
+            let reviewReason = fromMaybe "" transfer.lastError
+            when (reversalPendingPrefix `T.isPrefixOf` reviewReason) $
+              failRequest pr.id reviewReason
+            logError $ "Wallet payout needs review for " <> ctx.driverId.getId <> " | payoutRequest " <> pr.id.getId <> ": " <> reviewReason
             pure Nothing
           _ -> do
             -- Forked so the batch claim, under each wallet lock, does not wait on FCM.

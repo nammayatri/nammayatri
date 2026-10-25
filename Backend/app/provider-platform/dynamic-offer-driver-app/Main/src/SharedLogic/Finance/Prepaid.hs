@@ -510,12 +510,39 @@ createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOp
       case mbExistingHold of
         Just _ -> pure $ Right ()
         Nothing -> case prepaidSubLedger mbVehicleCategory of
-          Nothing -> do
-            let ctxOwner = mkPrepaidCtx counterpartyType ownerId currency merchantId merchantOperatingCityId referenceId
-            res <-
-              FinanceM.runFinance ctxOwner $
-                transferPendingWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Revenue metadata PrepaidOwner SellerRideCredit amount prepaidRideDebitReferenceType
-            pure $ fmap (const ()) res
+          Nothing
+            | amount > 0 -> do
+              let ctxOwner = mkPrepaidCtx counterpartyType ownerId currency merchantId merchantOperatingCityId referenceId
+              res <-
+                FinanceM.runFinance ctxOwner $
+                  transferPendingWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Revenue metadata PrepaidOwner SellerRideCredit amount prepaidRideDebitReferenceType
+              pure $ fmap (const ()) res
+            | otherwise -> do
+              -- ZERO-amount hold must still be written (FinanceM's pending verb skips
+              -- amount <= 0): a fully-discounted / zero-estimate booking relies on this
+              -- PENDING anchor so settlePrepaidHoldByReference can debit the FINAL fare
+              -- at ride end — without it the ride is never debited. Same literal as the
+              -- scoped branch below, just on the pooled accounts.
+              res <-
+                createEntry
+                  LedgerEntryInput
+                    { fromAccountId = ownerAccount.id,
+                      toAccountId = sellerRideCredit.id,
+                      concernedIndividualId = if counterpartyType == counterpartyDriver then Just ownerId else Nothing,
+                      amount = amount,
+                      currency = currency,
+                      entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
+                      status = PENDING,
+                      referenceType = prepaidRideDebitReferenceType,
+                      referenceId = referenceId,
+                      entityReferenceId = Nothing,
+                      entityReferenceType = Nothing,
+                      metadata = metadata,
+                      merchantId = merchantId,
+                      merchantOperatingCityId = merchantOperatingCityId,
+                      settlementStatus = Nothing
+                    }
+              pure $ fmap (const ()) res
           Just _ -> do
             -- Scoped prepaid account carries a subLedger PrepaidOwner can't express; see
             -- the module header.

@@ -194,4 +194,8 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
                 <> show (length originalEntryIds)
                 <> " amount="
                 <> show totalAmount
-            Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_INITIATED" totalAmount
+            -- notify only on a genuinely fresh submission (IN_FLIGHT = rail accepted);
+            -- SUBMITTED here means an idempotent re-entry (NotExecutable), which the
+            -- pre-kernel code logged without pushing.
+            when (transfer.status == DT.IN_FLIGHT) $
+              Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_INITIATED" totalAmount
