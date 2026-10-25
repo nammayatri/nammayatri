@@ -112,11 +112,11 @@ runScheduledSweep runFinance rail rule cursor enumerate = do
       }
   where
     isExpectedSkip = \case
-      DomainError "TRANSFER_BELOW_MINIMUM" _ -> True
-      DomainError "TRANSFER_CONSUMED_BY_FEE" _ -> True
-      DomainError "INVALID_TRANSFER_AMOUNT" _ -> True
-      DomainError "TRANSFER_OUT_DISABLED" _ -> True
-      DomainError "TRANSFER_DAILY_LIMIT_REACHED" _ -> True
+      TransferError TRANSFER_BELOW_MINIMUM _ -> True
+      TransferError TRANSFER_CONSUMED_BY_FEE _ -> True
+      TransferError INVALID_TRANSFER_AMOUNT _ -> True
+      TransferError TRANSFER_OUT_DISABLED _ -> True
+      TransferError TRANSFER_DAILY_LIMIT_REACHED _ -> True
       AccountError InsufficientBalance _ -> True
       _ -> False
 

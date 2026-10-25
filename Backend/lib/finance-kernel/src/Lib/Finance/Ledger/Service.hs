@@ -53,6 +53,7 @@ module Lib.Finance.Ledger.Service
     findUnsettledByAccountAfterTime,
     findUnsettledByAccountBeforeTime,
     findBySettlementId,
+    findBySettlementIdWithOptions,
 
     -- * Payout eligibility (shared by driver wallet and rider cashback payouts)
     PayoutEligibility (..),
@@ -845,6 +846,27 @@ findBySettlementId ::
   m [LedgerEntry]
 findBySettlementId settlementId =
   findAllWithKV [Se.Is BeamLE.settlementId $ Se.Eq (Just settlementId)]
+
+-- | One page of a settlement's entries for a reference type, newest first. Filter,
+--   sort and paging all at the DB — the per-settlement set is usually small, but
+--   history reads must never rely on that.
+findBySettlementIdWithOptions ::
+  (BeamFlow.BeamFlow m r) =>
+  Text -> -- reference type
+  Text -> -- settlement id
+  Maybe Int -> -- limit
+  Maybe Int -> -- offset
+  m [LedgerEntry]
+findBySettlementIdWithOptions referenceType settlementId limit offset =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamLE.settlementId $ Se.Eq (Just settlementId),
+          Se.Is BeamLE.referenceType $ Se.Eq referenceType
+        ]
+    ]
+    (Se.Desc BeamLE.timestamp)
+    limit
+    offset
 
 --------------------------------------------------------------------------------
 -- PAYOUT ELIGIBILITY

@@ -10,6 +10,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Finance.Domain.Types.Account
 import qualified Lib.Finance.Domain.Types.ScheduledTransferRule
+import qualified Lib.Finance.Domain.Types.Transfer
 import Tools.Beam.UtilsTH
 
 data ScheduledTransferRuleT f = ScheduledTransferRuleT
@@ -21,7 +22,7 @@ data ScheduledTransferRuleT f = ScheduledTransferRuleT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     dayOfMonth :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     dayOfWeek :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    defaultRailKey :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    defaultRailKey :: B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Transfer.RailKey),
     frequency :: B.C f Lib.Finance.Domain.Types.ScheduledTransferRule.ScheduledTransferFrequency,
     id :: B.C f Kernel.Prelude.Text,
     intervalDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

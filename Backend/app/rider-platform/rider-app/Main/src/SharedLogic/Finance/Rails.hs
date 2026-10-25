@@ -59,8 +59,8 @@ import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import Storage.Beam.Payment ()
 
-riderJuspayPayoutRailKey :: Text
-riderJuspayPayoutRailKey = "JUSPAY_PAYOUT"
+riderJuspayPayoutRailKey :: DT.RailKey
+riderJuspayPayoutRailKey = DT.JUSPAY_PAYOUT
 
 -- | The ONE rider-side mapping from Juspay's raw payout-status vocabulary to the
 --   kernel's canonical outcomes. Unparseable text goes to review, never to a guess.
@@ -150,8 +150,9 @@ runAwardPayoutTransfer ::
   PayoutLedgerRefs ->
   m RailSubmitResult -> -- adapted createPayoutService closure
   (Text -> m ()) -> -- retry/bookkeeping hook when nothing was submitted (reason)
+  (Text -> m ()) -> -- escalation hook when the transfer PARKED (NEEDS_REVIEW): money may be in motion, so no retry — surface to ops/product instead
   m ()
-runAwardPayoutTransfer merchantId merchantOpCityId currency riderId orderId accrualReferenceId amount accrualRefType transferRefType refs submitAction onNotSubmitted = do
+runAwardPayoutTransfer merchantId merchantOpCityId currency riderId orderId accrualReferenceId amount accrualRefType transferRefType refs submitAction onNotSubmitted onParked = do
   let ctx = RidePaymentFinance.buildRiderFinanceCtx merchantId merchantOpCityId currency True riderId orderId Nothing Nothing Nothing
       accrualCtx = RidePaymentFinance.buildRiderFinanceCtx merchantId merchantOpCityId currency True riderId accrualReferenceId Nothing Nothing Nothing
   -- Idempotent accrual: a retry of the same award (same anchor) reuses the existing
@@ -191,6 +192,14 @@ runAwardPayoutTransfer merchantId merchantOpCityId currency riderId orderId accr
                 }
           case res of
             Left err -> do
+              -- Pre-row rejection: nothing was sent and no hold exists, but the accrual
+              -- WAS posted. Left standing it would be a phantom wallet credit (spendable
+              -- via booking deposits) that nobody paid in — reverse any accrual minted
+              -- by THIS call (a reused accrual belongs to the retry chain and stays).
+              when (null existingAccrual) $
+                forM_ accrualIds $ \accrualId ->
+                  LedgerService.createReversal accrualId ("AWARD_PAYOUT_NOT_STARTED: " <> show err)
+                    >>= either (\e -> logError $ "award payout " <> orderId <> ": accrual reversal failed: " <> show e) (const (pure ()))
               logError $ "award payout " <> orderId <> ": kernel transfer rejected: " <> show err
               onNotSubmitted ("KERNEL_REJECTED: " <> show err)
             Right t -> do
@@ -198,6 +207,10 @@ runAwardPayoutTransfer merchantId merchantOpCityId currency riderId orderId accr
               when (t.status == DT.FAILED) $
                 -- rail confirmed nothing was sent; hold already reversed by the kernel
                 onNotSubmitted ("RAIL_REJECTED: " <> fromMaybe "-" t.lastError)
+              when (t.status == DT.NEEDS_REVIEW) $
+                -- parked: the submit outcome is unknown, money may be with the partner.
+                -- Never retried (that's how double-pays happen) — escalate instead.
+                onParked ("PARKED_FOR_REVIEW: " <> fromMaybe "-" t.lastError)
 
 -- | Settle a payout outcome through the kernel transfer. Pre-migration payouts have no
 --   transfer row; one is minted from the domain's process record (backfill-on-read) so
@@ -229,23 +242,32 @@ settleRiderPayoutViaKernel refType refId refs merchantId merchantOpCityId curren
             pure Nothing
           Just account -> do
             mbHold <- findActivePayoutHold refs.holdReferenceType refId
-            Just
-              <$> Backfill.backfillTransfer
-                Backfill.BackfillSpec
-                  { direction = DT.OUTBOUND,
-                    railKey = riderJuspayPayoutRailKey,
-                    railOrderId = mbRailOrderId,
-                    accountId = account.id,
-                    amount = amount,
-                    feeAmount = 0,
-                    currency = currency,
-                    referenceType = refType,
-                    referenceId = refId,
-                    knownEntryIds = maybeToList ((.id) <$> mbHold),
-                    coveredEntryIds = coveredIds,
-                    merchantId = merchantId,
-                    merchantOperatingCityId = merchantOpCityId
-                  }
+            if isNothing mbHold && null coveredIds
+              then do
+                -- Pre-migration UNLEDGERED payout (awards had no ledger on main: no hold,
+                -- no covered accruals). Settling via the kernel here would hold-repair a
+                -- hold that never existed and debit a wallet that was never credited —
+                -- driving it negative. Keep main's behaviour: presentation updates only.
+                logInfo $ "payout settle " <> refId <> ": pre-migration unledgered payout (no hold, no covered entries); skipping kernel ledger settlement"
+                pure Nothing
+              else
+                Just
+                  <$> Backfill.backfillTransfer
+                    Backfill.BackfillSpec
+                      { direction = DT.OUTBOUND,
+                        railKey = riderJuspayPayoutRailKey,
+                        railOrderId = mbRailOrderId,
+                        accountId = account.id,
+                        amount = amount,
+                        feeAmount = 0,
+                        currency = currency,
+                        referenceType = refType,
+                        referenceId = refId,
+                        knownEntryIds = maybeToList ((.id) <$> mbHold),
+                        coveredEntryIds = coveredIds,
+                        merchantId = merchantId,
+                        merchantOperatingCityId = merchantOpCityId
+                      }
   whenJust mbTransfer $ \transfer -> do
     let ctx = RidePaymentFinance.buildRiderFinanceCtx merchantId merchantOpCityId currency True riderId refId Nothing Nothing Nothing
     applyRailStatus runFinance riderJuspayStatusRail refs ctx transfer.id rawStatus
@@ -281,8 +303,8 @@ payoutOrderFallbackStatus st = case classifyJuspayPayoutStatus (show st) of
 rideRefundTransferRefType :: Text
 rideRefundTransferRefType = "RideRefund"
 
-riderJuspayRefundRailKey :: Text
-riderJuspayRefundRailKey = "JUSPAY_REFUND"
+riderJuspayRefundRailKey :: DT.RailKey
+riderJuspayRefundRailKey = DT.JUSPAY_REFUND
 
 -- | THE gateway refund-status mapping (canonical, total).
 refundStatusToTransferStatus :: PaymentI.RefundStatus -> DT.TransferStatus

@@ -28,7 +28,6 @@ module Domain.Action.UI.DriverWallet
 where
 
 import qualified API.Types.UI.DriverWallet as DriverWallet
-import qualified Data.Aeson as A
 import Data.List (partition, span)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -57,12 +56,14 @@ import Lib.Finance
   ( Account,
     AccountRole (OwnerLiability, PlatformAsset),
     FinanceCtx (..),
+    FinanceError (TransferError),
     InvoiceConfig (..),
     InvoiceLineItem (..),
     ItemType (..),
     LedgerEntryMetadata (..),
     LineItemDescription (..),
     ResolvedAccountConfig,
+    TransferErrorCode (TRANSFER_IN_DISABLED),
     getEntriesByReference,
     invoice,
     markEntriesAsClaimed,
@@ -75,7 +76,7 @@ import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Finance.Domain.Types.Transfer as DTransfer
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
-import qualified Lib.Finance.Storage.Queries.Transfer as QTransfer
+import qualified Lib.Finance.Storage.Queries.TransferExtra as QTransferExtra
 import qualified Lib.Finance.Transfer.Inbound as Inbound
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
@@ -520,14 +521,9 @@ getWalletTransactionHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate
       -- Topup status comes from the kernel transfer row; wallet_transaction is a frozen
       -- pre-migration read (no writes anymore). A row with neither exists only because
       -- its credit ledger entry exists, i.e. the topup succeeded.
-      transfers <- QTransfer.findAllByAccountId walletAcc.id
+      transfers <- QTransferExtra.findByDirectionRefTypeAndRefIds DTransfer.INBOUND walletReferenceTopup (map (.getId) topupOrderIds)
       let transferStatusByOrderId =
-            Map.fromList
-              [ (t.referenceId, walletStatusFromTransfer t.status)
-                | t <- transfers,
-                  t.direction == DTransfer.INBOUND,
-                  t.referenceType == walletReferenceTopup
-              ]
+            Map.fromList [(t.referenceId, walletStatusFromTransfer t.status) | t <- transfers]
       walletTxns <- QWalletTransaction.findAllByPaymentOrderIds topupOrderIds
       let walletStatusByOrderId = Map.fromList [(wt.paymentOrderId.getId, wt.status) | wt <- walletTxns]
           statusFor refId =
@@ -686,9 +682,6 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
         when (r.amount <= 0) $ throwError $ InvalidRequest "Top-up amount must be greater than zero"
         Redis.whenWithLockRedisAndReturnValue (makeWalletTopupLockKey driverId.getId) 10 $ do
           transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId0.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId0.getId)
-          -- referenceId is minted by the kernel from the payment order; the outcome-time
-          -- ctx (webhook) is built against it, so this initiate ctx carries none.
-          ctxIn <- mkDriverWalletFinanceCtx driverId mId mocId0 transporterConfig.currency "" False
           walletAccount <-
             FAccountService.getOrCreateAccount
               AccountInput
@@ -703,21 +696,30 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
               >>= fromEitherM (\e -> InternalError ("Failed to resolve wallet account for topup: " <> show e))
           -- The whole recharge process (reuse/supersede of open intents, order creation,
           -- the transfer row, the SDK payload) is the kernel's; PSP-speak lives in the
-          -- rail module. This handler contributes ids and nothing else.
-          (topupTransfer, payload) <-
+          -- rail module. The typed order response is tapped at source (the kernel keeps
+          -- payloads opaque), so no JSON re-decode.
+          respRef <- newIORef Nothing
+          (topupTransfer, _payload) <-
             Inbound.initiateTransferIn
-              (Rails.mkJuspayPgInboundRail driverId mId mocId0)
+              (Rails.mkJuspayPgInboundRail driverId mId mocId0 (liftIO . writeIORef respRef . Just))
               Inbound.InboundSpec
-                { ctx = ctxIn,
-                  amount = r.amount,
+                { amount = r.amount,
                   referenceType = walletReferenceTopup,
                   accountId = walletAccount.id,
                   metadata = DTransfer.emptyTransferMetadata
                 }
-              >>= fromEitherM (\e -> InternalError ("Failed to initiate topup transfer: " <> show e))
-          orderResp <- case A.fromJSON payload of
-            A.Success resp -> pure resp
-            A.Error err -> throwError $ InternalError ("Topup payload decode failed: " <> show err)
+              >>= either
+                ( \case
+                    -- config gate, not a server fault: tell the app, not the pager
+                    TransferError TRANSFER_IN_DISABLED _ -> throwError $ InvalidRequest "Wallet top-up is not enabled for this city"
+                    e -> throwError $ InternalError ("Failed to initiate topup transfer: " <> show e)
+                )
+                pure
+          orderResp <- readIORef respRef >>= fromMaybeM (InternalError "Topup order response missing after collect")
+          -- TRANSITIONAL dual-write for the staggered release: old pods still read
+          -- wallet_transaction (reuse query, webhook update, UI). Dropped together with
+          -- the table once the post-release backfill (migration 0017) has run.
+          mirrorWalletTransaction driverId mId mocId0 r.amount (Id topupTransfer.referenceId)
           pure $
             PlanSubscribeRes
               { orderId = Id topupTransfer.referenceId,
@@ -726,6 +728,28 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
         >>= \case
           Right res -> pure res
           Left _ -> throwError WalletTopupLockFailed
+
+    -- TRANSITIONAL (see above): mirror of the pre-kernel intent bookkeeping.
+    mirrorWalletTransaction driverId mId mocId0 amount orderId = do
+      mbExisting <- QWalletTransaction.findByDriverIdAndStatus driverId DWT.INITIATED
+      case mbExisting of
+        Just existing | existing.paymentOrderId == orderId -> pure ()
+        _ -> do
+          whenJust mbExisting $ \existing -> QWalletTransaction.updateStatus DWT.EXPIRED existing.paymentOrderId
+          walletTxnId <- generateGUID
+          now <- getCurrentTime
+          QWalletTransaction.create $
+            DWT.WalletTransaction
+              { id = Id walletTxnId,
+                driverId = driverId,
+                paymentOrderId = orderId,
+                amount = amount,
+                status = DWT.INITIATED,
+                merchantId = Just mId,
+                merchantOperatingCityId = Just mocId0,
+                createdAt = now,
+                updatedAt = now
+              }
 
     makeWalletTopupLockKey :: Text -> Text
     makeWalletTopupLockKey dId = "wallet-topup-lock:" <> dId

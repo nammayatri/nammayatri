@@ -37,6 +37,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.Transfer as DT
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Finance.Transfer.Rail as Rail
 import qualified Lib.Finance.Transfer.RailStatus as RailStatus
@@ -53,13 +54,13 @@ import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Payment as TPayment
 
-juspayPayoutRailKey, stripePayoutRailKey, hdfcBulkRailKey, juspayPgRailKey :: Text
-juspayPayoutRailKey = "JUSPAY_PAYOUT"
-stripePayoutRailKey = "STRIPE_PAYOUT"
-hdfcBulkRailKey = "HDFC_BULK"
-juspayPgRailKey = "JUSPAY_PG"
+juspayPayoutRailKey, stripePayoutRailKey, hdfcBulkRailKey, juspayPgRailKey :: DT.RailKey
+juspayPayoutRailKey = DT.JUSPAY_PAYOUT
+stripePayoutRailKey = DT.STRIPE_PAYOUT
+hdfcBulkRailKey = DT.HDFC_BULK
+juspayPgRailKey = DT.JUSPAY_PG
 
-railKeyForFlow :: IPayout.PayoutServiceFlow -> Text
+railKeyForFlow :: IPayout.PayoutServiceFlow -> DT.RailKey
 railKeyForFlow = \case
   IPayout.JuspayFlow -> juspayPayoutRailKey
   IPayout.StripeFlow -> stripePayoutRailKey
@@ -125,7 +126,7 @@ mkWalletPayoutRail payoutServiceFlow payoutRequest mbTransferAmount currency pay
 -- | Settlement-time rail: webhooks only need classifyStatus (and the key must round-trip
 --   from the transfer row). Its submit must never be reached; if it is, the transfer
 --   parks in NEEDS_REVIEW rather than guessing.
-settlementRailByKey :: (Applicative m) => Text -> Rail.TransferRail m
+settlementRailByKey :: (Applicative m) => DT.RailKey -> Rail.TransferRail m
 settlementRailByKey key =
   Rail.TransferRail
     { railKey = key,
@@ -153,8 +154,11 @@ mkJuspayPgInboundRail ::
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  -- | typed order-response tap: the kernel keeps payloads opaque (Value), so the
+  --   caller captures the typed CreateOrderResp here instead of re-decoding JSON
+  (Payment.CreateOrderResp -> m ()) ->
   Rail.TransferRail m
-mkJuspayPgInboundRail driverId merchantId mocId =
+mkJuspayPgInboundRail driverId merchantId mocId onOrderResp =
   Rail.TransferRail
     { railKey = juspayPgRailKey,
       holdOrdering = Rail.SubmitThenHold,
@@ -163,6 +167,7 @@ mkJuspayPgInboundRail driverId merchantId mocId =
       classifyStatus = \_ -> Rail.OutcomePending,
       collectPayload = Just $ \req -> do
         (resp, orderId) <- createTopupOrder (driverId, merchantId, mocId) req.submission.netAmount (Id <$> req.reuseRailOrderId)
+        onOrderResp resp
         pure Rail.RailCollectResult {railOrderId = orderId.getId, payload = A.toJSON resp}
     }
 

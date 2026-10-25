@@ -27,7 +27,9 @@ import Lib.Finance.Transfer.Rail (RailSubmitResult (..))
 import qualified Lib.Payment.Domain.Action as DP
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import qualified SharedLogic.Finance.Rails as FinanceRails
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
@@ -91,9 +93,19 @@ getReferralPayoutHistory (mbPersonId, _mbMerchantId) mbLimit mbOffset = do
     -- the kernel transfer is the status authority; rows from before the migration have
     -- no transfer and fall back to the order status through the ONE classify mapping
     mbTransfer <- findTransferForOrder payoutOrder
+    -- Pre-migration rows have no transfer; main also honored a TERMINAL PayoutRequest
+    -- when the order was stuck non-terminal — without this, a CREDITED pre-migration
+    -- payout shows Processing and re-polls the gateway on every history load, forever.
+    mbRequestOverride <- case mbTransfer of
+      Just _ -> pure Nothing
+      Nothing ->
+        maybe
+          (pure Nothing)
+          (fmap (>>= terminalRequestStatus) . QPR.findById . Id)
+          (Kernel.Prelude.listToMaybe =<< payoutOrder.entityIds)
     let derivedStatus order =
           maybe
-            (FinanceRails.payoutOrderFallbackStatus order.status)
+            (fromMaybe (FinanceRails.payoutOrderFallbackStatus order.status) mbRequestOverride)
             (FinanceRails.transferStatusToPayoutStatus . (.status))
             mbTransfer
         status0 = derivedStatus payoutOrder
@@ -114,6 +126,14 @@ getReferralPayoutHistory (mbPersonId, _mbMerchantId) mbLimit mbOffset = do
         pure $ mkPayoutItem refreshedOrder (derivedStatus refreshedOrder)
   pure $ PayoutHistory {..}
   where
+    terminalRequestStatus pr = case pr.status of
+      DPR.CREDITED -> Just PS.Success
+      DPR.CASH_PAID -> Just PS.Success
+      DPR.FAILED -> Just PS.Failed
+      DPR.AUTO_PAY_FAILED -> Just PS.Failed
+      DPR.CANCELLED -> Just PS.Failed
+      _ -> Nothing
+
     -- award transfers are keyed by the payout order id; ride-offer cashback by its
     -- payout-request id (the order's first entity id). Whichever exists wins.
     findTransferForOrder payoutOrder = do
@@ -205,6 +225,7 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
             RidePaymentFinance.referralAwardPayoutLedgerRefs
             submitViaKernel
             (\reason -> logError $ "backlog award payout not submitted, riderId: " <> show person.id.getId <> " orderId: " <> show uid <> " reason: " <> reason)
+            (\reason -> logError $ "backlog award payout parked for review, riderId: " <> show person.id.getId <> " orderId: " <> show uid <> " reason: " <> reason)
         Nothing -> logTagError "Payout Config Error" $ "PayoutConfig Not Found During Backlog Payout for cityId: " <> merchantOpCityId.getId
 
     getEntityName toPayReferredByReward toPayBacklogAmount = case (toPayReferredByReward, toPayBacklogAmount) of
