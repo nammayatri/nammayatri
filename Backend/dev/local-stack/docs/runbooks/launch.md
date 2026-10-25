@@ -48,6 +48,8 @@ This restores last night's off-site backup into throwaway containers (about 70 s
 
 ### 3b. Remove the 12 simulated cars and the 2 test passengers
 
+> Since 2026-10-25 the list also names the two **review accounts** made for the stores' reviewers: `+222 22000701` (passenger) and `+222 22000702` (driver), so up to 14 drivers and 4 passengers. Their bypass (`SMS_BYPASS` in `/opt/ny/secrets/test-accounts.env`) must already be gone: remove it the day the review ends.
+
     sudo ./launch-cleanup.sh              # who would go, and what stays. Writes nothing.
     sudo ./launch-cleanup.sh --apply      # does it
 

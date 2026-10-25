@@ -25,6 +25,10 @@ WITH wanted (side, cc, num) AS (VALUES
   ('driver', '+213', '555100001'), ('driver', '+213', '555100002'), ('driver', '+213', '555100003'),
   ('driver', '+213', '555100004'), ('driver', '+213', '555100005'), ('driver', '+213', '555100006'),
   ('rider',  '+222', '22778899'),
+  -- The two REVIEW accounts made for Google Play's reviewers (2026-10-25): +222 22000701
+  -- (passenger) and 22000702 (driver). Each number may exist on either side.
+  ('driver', '+222', '22000701'), ('driver', '+222', '22000702'),
+  ('rider',  '+222', '22000701'), ('rider',  '+222', '22000702'),
   ('rider',  '+213', '0555000199'), ('rider', '+213', '555000199')
 )
 SELECT 'driver', p.id::text, p.mobile_country_code, p.unencrypted_mobile_number, coalesce(p.first_name, '')

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# The day-1 clean-up: the twelve simulated cars and the two test passengers go,
+# The day-1 clean-up: the twelve simulated cars, the two test passengers and the
+# two store-review accounts (2026-10-25) go,
 # so that only real drivers and passengers remain. Written 2026-10-18 from what
 # was done by hand on 2026-10-01 (local-stack/docs/countries.md, *The test fleet*).
 #
@@ -59,8 +60,8 @@ SAFETY_DIR="${SAFETY_DIR:-/root/pre-launch-clean}"
 TARGETS_SQL="$HERE/launch-cleanup-targets.sql"
 ACTOR="${ACTOR:-owner: test accounts removed for the launch $(date -u +%F)}"
 NOTE="${NOTE:-launch clean-up: simulated cars and test passengers}"
-MAX_DRIVERS=12
-MAX_RIDERS=2
+MAX_DRIVERS=14   # the twelve cars + the two review accounts (2026-10-25)
+MAX_RIDERS=4     # the two test passengers + the two review accounts
 
 APPLY=0 REHEARSAL=0 PAPERS_HANDLED=0
 while [ $# -gt 0 ]; do

@@ -122,11 +122,11 @@ const run = (args, env) => new Promise((resolve) => {
     t.ok((await rowsOf('SELECT 1 FROM movin.admin_audit')).length === 14, 'and writes no more audit rows');
 
     t.section('4. it refuses, changing nothing, when the selection is not what it was written for');
-    // Thirteen cars: a duplicate of a car's number appears.
+    // More than fourteen drivers: a duplicate of a car's number, and fourteen extras.
     await db.sql("INSERT INTO atlas_driver_offer_bpp.person (id, merchant_id, role, unencrypted_mobile_number, mobile_country_code, first_name) VALUES ('dup', $1, 'DRIVER', '22100001', '+222', 'Duplicate')", [MR]);
-    await db.sql("INSERT INTO atlas_driver_offer_bpp.person (id, merchant_id, role, unencrypted_mobile_number, mobile_country_code, first_name) SELECT 'x' || g, $1, 'DRIVER', '2210000' || (g % 6 + 1), '+222', 'Extra' FROM generate_series(1, 12) g", [MR]);
+    await db.sql("INSERT INTO atlas_driver_offer_bpp.person (id, merchant_id, role, unencrypted_mobile_number, mobile_country_code, first_name) SELECT 'x' || g, $1, 'DRIVER', '2210000' || (g % 6 + 1), '+222', 'Extra' FROM generate_series(1, 14) g", [MR]);
     r = await run(['--rehearsal', 'fake-pg', '--apply'], env);
-    t.ok(r.code === 1 && /at most 12 were expected/.test(r.out), 'more than twelve cars: stopped', r.out.slice(-200));
+    t.ok(r.code === 1 && /at most 14 were expected/.test(r.out), 'more than fourteen drivers (twelve cars + two review accounts): stopped', r.out.slice(-200));
     t.ok((await rowsOf("SELECT 1 FROM atlas_driver_offer_bpp.person WHERE id = 'dup' AND first_name = 'Duplicate'")).length === 1, 'and nothing was erased');
     await db.sql("DELETE FROM atlas_driver_offer_bpp.person WHERE id = 'dup' OR id LIKE 'x%'");
 
