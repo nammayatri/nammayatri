@@ -1,0 +1,220 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:android)
+
+flavors = ["nyUserProd"]
+flavorsMY = ["myUserProd"]
+flavorsY = ["yatriUserProd"]
+flavorsYP = ["yatriDriverProd"]
+flavoursNYP = ["nyDriverProd"]
+flavorsMYP = ["myDriverProd"]
+flavorsOYP = ["oyDriverProd"]
+
+platform :android do
+  desc "Runs all the tests"
+  lane :test do
+    gradle(task: "test")
+  end
+
+  desc "Submit a new Beta Build to Crashlytics Beta"
+  lane :beta do
+    gradle(task: "clean assembleRelease")
+    crashlytics
+  end
+
+  desc "Deploy a new version to the Google Play"
+  lane :deploy do
+    gradle(task: "clean assembleRelease")
+    upload_to_play_store
+  end
+
+  desc "List Apps"
+  lane :release_ny do
+    flavors.each { |flavor|
+  
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
+  
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'in.juspay.nammayatri',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "nyUser-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
+  end
+
+  desc "List Apps1"
+  lane :release_my do
+    flavorsMY.each { |flavor|
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
+  
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'in.mobility.manayatri',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "myUser-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
+  end
+
+  desc "List Apps2"
+  lane :release_y do
+    flavorsY.each { |flavor|
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
+  
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'net.openkochi.yatri',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "yatriUser-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
+  end
+
+  desc "Yatri Partner Release"
+  lane :release_yp do
+    flavorsYP.each { |flavor|
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
+  
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'net.openkochi.yatripartner',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "yatriDriver-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
+  end
+
+  desc "Namma Yatri Partner Release"
+  lane :release_nyp do
+    flavoursNYP.each { |flavor|
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
+  
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'in.juspay.nammayatripartner',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "nyDriver-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
+  end
+
+  desc "Manayatri Partner Release"
+  lane :release_myp do
+    flavorsMYP.each { |flavor|
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
+  
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'in.mobility.manayatripartner',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "myDriver-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
+  end
+
+  desc "OdishaYatri Partner Release"
+  lane :release_oyp do
+    flavorsOYP.each { |flavor|
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
+  
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'in.mobility.odishayatripartner',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "oyDriver-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
+  end
+
+end

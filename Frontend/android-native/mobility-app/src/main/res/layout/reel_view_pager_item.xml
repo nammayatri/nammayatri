@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:background="@drawable/black_background">
+
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/black_background"
+            android:id = "@+id/reelThumbnailImageView"/>
+
+
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:gravity="center"
+            android:id="@+id/reelVideoProgressBar">
+            <ProgressBar
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_centerInParent="true"
+                android:indeterminateTint="@color/colorWhite"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+        </LinearLayout>
+
+
+        <androidx.media3.ui.PlayerView
+            android:id="@+id/reelVideoView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/black_background"
+            app:resize_mode="fit"
+            app:show_buffering="when_playing"
+            app:use_controller="false" />
+
+        <ImageView
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_centerInParent="true"
+            android:background="@drawable/ny_ic_white_play_button_with_grey"
+            android:id = "@+id/reelPauseButton"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_alignParentBottom="true"
+            android:background="@drawable/black_gradient"
+            android:id="@+id/reel_gradient_background"
+            android:orientation="horizontal">
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginBottom="200px"
+            android:id="@+id/reelPauseButtonClickView"
+            android:orientation="horizontal">
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:paddingBottom="16dp"
+            android:animateLayoutChanges="true"
+            android:layout_alignParentBottom="true">
+
+            <LinearLayout
+                android:layout_weight="1.0"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_gravity="bottom"
+                android:animateLayoutChanges="true"
+                android:layout_width="wrap_content">
+
+
+                        <ScrollView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:id="@+id/reelInfoScrollView"
+                            android:animateLayoutChanges="true">
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:orientation="vertical"
+                                    android:id="@+id/reelInfoView"
+                                    >
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:id="@+id/reelTitleView"
+                                        android:fontFamily="@font/plus_jakarta_sans_bold"
+                                        android:animateLayoutChanges="true"
+                                        android:ellipsize="end"/>
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:id="@+id/reelDescriptionView"
+                                        android:fontFamily= "@font/plus_jakartasans_regular"
+                                        android:animateLayoutChanges="true"
+                                        android:ellipsize="end"/>
+                                </LinearLayout>
+                        </ScrollView>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/reelBottomButtonContainer"
+                    android:orientation="vertical">
+                    <!-- add the button in a linearLayout according to the array coming from json data-->
+                </LinearLayout>
+
+
+            </LinearLayout>
+
+           <LinearLayout
+               android:layout_width="wrap_content"
+               android:layout_height="wrap_content"
+               android:id="@+id/reelSideButtonContainer"
+               android:layout_gravity="bottom"
+               android:layout_marginBottom="20dp"
+               android:layout_marginLeft="10dp"
+               android:orientation="vertical">
+           </LinearLayout>
+
+        </LinearLayout>
+
+       <SeekBar
+           android:id="@+id/reels_player_view_seekbar"
+           android:layout_width="match_parent"
+           android:layout_alignParentBottom="true"
+           android:layout_height="wrap_content"
+           android:backgroundTint="#33FFFFFF"
+           android:progress="0"
+           android:paddingStart="0dp"
+           app:trackCornerRadius="50dp"
+           android:thumb="@drawable/reel_thumb"
+           android:paddingEnd="0dp"
+           android:splitTrack="false"
+           android:max="100"
+           android:focusable="true" />
+
+    </RelativeLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
