@@ -19,7 +19,7 @@
 -- market price: nothing here has been checked against what a taxi in Nouakchott
 -- actually costs, and it should not be presented to anyone as if it had.
 --
---   Voiture   SEDAN           8 start   15 /km   20 pickup
+--   Voiture   SEDAN           8 start   15 /km   12 pickup
 --   Scooter   AUTO_RICKSHAW   8 start   10 /km   15 pickup
 --   Waw       HATCHBACK       8 start   10 /km   15 pickup
 --   Fourgon   SUV             8 start   20 /km   30 pickup
@@ -31,7 +31,12 @@
 -- change together, and apply-tariff.sh applies both.
 --
 -- A 13.7 km Voiture worked out at about 270 MRU before the 2026-10-22 start
--- change; it is now about 234 MRU (8 + 20 + 13.7 x 15).
+-- change; after it, about 234 MRU (8 + 20 + 13.7 x 15).
+--
+-- ── 2026-10-25: the Voiture's pickup is 12 MRU (the boss: 40 DA) ───────────
+-- « Let's make it 40 for the cars »: 40 DA x 0.30 = 12 MRU, the Voiture only,
+-- in the same release as algeria-tariff.sql. Scooter / Waw / Fourgon keep
+-- 15 / 15 / 30. A 13.7 km Voiture is now about 226 MRU (8 + 12 + 13.7 x 15).
 --
 -- **A waw is still priced exactly like a scooter**, inherited from Algeria
 -- where it took over the old Economy row. Nobody decided that, and it is still
@@ -56,7 +61,7 @@ UPDATE atlas_driver_offer_bpp.fare_policy
    SET base_distance_fare   = 8,
        base_distance_meters = 0,
        per_extra_km_fare    = 15,
-       dead_km_fare         = 20,
+       dead_km_fare         = 12,
        driver_min_extra_fee = 0,
        driver_max_extra_fee = 90,
        updated_at           = now()

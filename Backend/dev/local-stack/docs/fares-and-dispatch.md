@@ -23,6 +23,13 @@ approach (`dead_km_fare`) and the per-km are unchanged, so the receipt's
 « Prise en charge » is now 25 + the approach — Voiture 90 DA (was 215), 28 MRU
 (was 65). The tables below are the measurements of their day.
 
+**2026-10-25, the boss: « let's make it 40 for the cars »** — the Voiture's
+pickup (`dead_km_fare`) is **40 DA, 12 MRU** (was 65 / 20); the Scooter, the Herbin
+and the Fourgon keep 50 / 50 / 100 (15 / 15 / 30 MRU). A 5 km Voiture is 25 + 40 +
+250 = **315 DA** (was 340); the receipt's « Prise en charge » is 65 DA / 20 MRU.
+Two oddities to say aloud to the boss: the Voiture's pickup is now below the
+Scooter's, and the website's price page follows the same numbers.
+
 Re-measured 2026-08-24, on both merchants, all four variants:
 
 | App name | Variant | Start | Per km | Pickup | Max extra |

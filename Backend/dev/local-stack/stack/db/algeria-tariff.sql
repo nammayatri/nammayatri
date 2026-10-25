@@ -13,7 +13,7 @@
 -- produced it on 2026-09-03) and rounded to the nearest 5.
 --
 --   App name          Variant         Start   Per km   Pickup
---   Voiture           SEDAN              25       50       65
+--   Voiture           SEDAN              25       50       40
 --   Scooter           AUTO_RICKSHAW      25       35       50
 --   Herbin            HATCHBACK          25       35       50
 --   Fourgon           SUV                25       65      100
@@ -25,6 +25,12 @@
 -- 25 + the approach (Voiture 90 DA, was 215). It was 150 / 100 / 100 / 200.
 -- Mauritania moved the same day by the same rule (mauritania-tariff.sql, 8 MRU):
 -- the two files change together, and apply-tariff.sh applies both.
+--
+-- ── 2026-10-25: the Voiture's pickup is 40 DA (the boss) ───────────────────
+-- « Let's make it 40 for the cars », answering the price table the owner sent
+-- him (pickup 65 -> 40 was the option offered). The Voiture ONLY: the Scooter,
+-- the Herbin and the Fourgon keep 50 / 50 / 100. It was 65 (the first table of
+-- 2026-08-13 had 70). Mauritania: 40 x 0.30 = 12 MRU, in the same release. A 5 km Voiture: 25 + 40 + 250 = 315 DA (was 340).
 --
 -- That is close to, NOT the same as, the table the client set for Algeria on
 -- 2026-08-13 (Voiture 150/45/70, Fourgon 200/60/100). The Mauritanian figures
@@ -45,7 +51,7 @@ UPDATE atlas_driver_offer_bpp.fare_policy
    SET base_distance_fare   = 25,
        base_distance_meters = 0,
        per_extra_km_fare    = 50,
-       dead_km_fare         = 65,
+       dead_km_fare         = 40,
        driver_min_extra_fee = 0,
        driver_max_extra_fee = 300,
        updated_at           = now()
