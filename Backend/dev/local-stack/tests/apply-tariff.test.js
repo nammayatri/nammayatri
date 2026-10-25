@@ -68,8 +68,8 @@ const VARIANTS = ['SEDAN', 'SUV', 'HATCHBACK', 'AUTO_RICKSHAW'];
   let now = await starts();
   c.ok(VARIANTS.every((v) => now[`DZ ${v}`].s === 25), 'Algeria: every start is 25 DA', JSON.stringify(now));
   c.ok(VARIANTS.every((v) => now[`MR ${v}`].s === 8), 'Mauritania: every start is 8 MRU, the same day', JSON.stringify(now));
-  c.ok(now['DZ SEDAN'].km === 50 && now['DZ SEDAN'].dead === 40 && now['MR SEDAN'].km === 15 && now['MR SEDAN'].dead === 12,
-    'the per-km is unchanged and the Voiture pickup is 40 DA / 12 MRU (2026-10-25)', JSON.stringify([now['DZ SEDAN'], now['MR SEDAN']]));
+  c.ok(now['DZ SEDAN'].km === 40 && now['DZ SEDAN'].dead === 65 && now['MR SEDAN'].km === 12 && now['MR SEDAN'].dead === 20,
+    'the Voiture per-km is 40 DA / 12 MRU and its pickup 65 DA / 20 MRU (2026-10-25)', JSON.stringify([now['DZ SEDAN'], now['MR SEDAN']]));
   const bands = await db.sql('SELECT merchant_id, count(*)::int AS n FROM atlas_driver_offer_bpp.restricted_extra_fare GROUP BY 1 ORDER BY 1');
   c.ok(bands.length === 2 && bands.every((b) => b.n === 40), 'both countries keep their ten bands per vehicle', JSON.stringify(bands));
   const scans = fd.redis.filter((a) => a[0] === '--scan').map((a) => a[2]);

@@ -13,7 +13,7 @@
 -- produced it on 2026-09-03) and rounded to the nearest 5.
 --
 --   App name          Variant         Start   Per km   Pickup
---   Voiture           SEDAN              25       50       40
+--   Voiture           SEDAN              25       40       65
 --   Scooter           AUTO_RICKSHAW      25       35       50
 --   Herbin            HATCHBACK          25       35       50
 --   Fourgon           SUV                25       65      100
@@ -26,11 +26,14 @@
 -- Mauritania moved the same day by the same rule (mauritania-tariff.sql, 8 MRU):
 -- the two files change together, and apply-tariff.sh applies both.
 --
--- ── 2026-10-25: the Voiture's pickup is 40 DA (the boss) ───────────────────
--- « Let's make it 40 for the cars », answering the price table the owner sent
--- him (pickup 65 -> 40 was the option offered). The Voiture ONLY: the Scooter,
--- the Herbin and the Fourgon keep 50 / 50 / 100. It was 65 (the first table of
--- 2026-08-13 had 70). Mauritania: 40 x 0.30 = 12 MRU, in the same release. A 5 km Voiture: 25 + 40 + 250 = 315 DA (was 340).
+-- ── 2026-10-25: the Voiture's PER-KM is 40 DA (the boss) ───────────────────
+-- « Let's make it 40 for the cars », answering the owner's price table, whose
+-- first line was « Voiture: 50 DA per km ». The first reading took it for the
+-- PICKUP and set that to 40 for a few hours (released, applied, live); it was
+-- corrected the same day: the pickup is back to 65 and the per-km is 40. The
+-- Voiture ONLY; Scooter, Herbin and Fourgon keep 35 / 35 / 65 per km.
+-- Mauritania: 40 x 0.30 = 12 MRU per km, in the same release. A 5 km Voiture:
+-- 25 + 65 + 5 x 40 = 290 DA (was 340 before 2026-10-25).
 --
 -- That is close to, NOT the same as, the table the client set for Algeria on
 -- 2026-08-13 (Voiture 150/45/70, Fourgon 200/60/100). The Mauritanian figures
@@ -50,8 +53,8 @@ BEGIN;
 UPDATE atlas_driver_offer_bpp.fare_policy
    SET base_distance_fare   = 25,
        base_distance_meters = 0,
-       per_extra_km_fare    = 50,
-       dead_km_fare         = 40,
+       per_extra_km_fare    = 40,
+       dead_km_fare         = 65,
        driver_min_extra_fee = 0,
        driver_max_extra_fee = 300,
        updated_at           = now()

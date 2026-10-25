@@ -82,9 +82,9 @@ const VARIANTS = ['SEDAN', 'SUV', 'HATCHBACK', 'AUTO_RICKSHAW'];
 
   // ── the live server's own quotes, Algiers, Voiture ───────────────────────
   // Measured under the tariff of before 2026-10-22, when the Voiture started at
-  // 150 DA with a 65 DA pickup (the pickup became 40 on 2026-10-25): both are put
+  // 150 DA, 50 DA per km (the per-km became 40 on 2026-10-25): both are put
   // back for these three, then the file again.
-  await db.sql(`UPDATE atlas_driver_offer_bpp.fare_policy SET base_distance_fare = 150, dead_km_fare = 65 WHERE merchant_id = $1 AND vehicle_variant = 'SEDAN'`, [DZ]);
+  await db.sql(`UPDATE atlas_driver_offer_bpp.fare_policy SET base_distance_fare = 150, dead_km_fare = 65, per_extra_km_fare = 50 WHERE merchant_id = $1 AND vehicle_variant = 'SEDAN'`, [DZ]);
   let r = await ask(`${algiers}&distance=3120&variant=SEDAN`);
   t.check('3.12 km: 371-486 DA, as the server quoted it', r.status === 200 && r.body.min === 371 && r.body.max === 486, r);
   r = await ask(`${algiers}&distance=7120&variant=SEDAN`);
@@ -95,7 +95,7 @@ const VARIANTS = ['SEDAN', 'SUV', 'HATCHBACK', 'AUTO_RICKSHAW'];
   // ── the tariff of 2026-10-22: the start is 25 DA (the boss) ──────────────
   await db.exec(fs.readFileSync(path.join(STACK, 'db', 'algeria-tariff.sql'), 'utf8'));
   r = await ask(`${algiers}&distance=7120&variant=SEDAN`);
-  t.check('since 2026-10-25, 7.12 km Voiture: 25 + 40 + 356 = 421 DA, up to 606', r.status === 200 && r.body.min === 421 && r.body.max === 606, r);
+  t.check('since 2026-10-25, 7.12 km Voiture: 25 + 65 + 285 = 375 DA, up to 560', r.status === 200 && r.body.min === 375 && r.body.max === 560, r);
 
   // ── the bands step at their lower bound, and the cap is the band's ───────
   r = await ask(`${algiers}&distance=1999&variant=SEDAN`);
