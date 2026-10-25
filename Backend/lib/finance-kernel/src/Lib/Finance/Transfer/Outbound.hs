@@ -34,6 +34,7 @@ import Lib.Finance.Ledger.Service (markEntriesAsProcessing, markEntriesAsUnsettl
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.Transfer as QT
 import qualified Lib.Finance.Storage.Queries.TransferExtra as QTE
+import qualified Lib.Finance.Transfer.Backfill as Backfill
 import Lib.Finance.Transfer.Rail
 
 data OutboundSpec = OutboundSpec
@@ -69,7 +70,7 @@ initiateTransferOut ::
   m (Either FinanceError DT.Transfer)
 initiateTransferOut runFinance rail spec
   | spec.ctx.referenceId /= spec.referenceId =
-    pure $ Left $ DomainError "CTX_REFERENCE_MISMATCH" ("ctx " <> spec.ctx.referenceId <> " vs spec " <> spec.referenceId)
+    pure $ Left $ TransferError CTX_REFERENCE_MISMATCH ("ctx " <> spec.ctx.referenceId <> " vs spec " <> spec.referenceId)
   | otherwise = withAccountBalanceLock spec.account.id 10 $ do
     QT.findByReference spec.referenceType spec.referenceId >>= \case
       Just existing -> pure (Right existing) -- idempotent re-entry
@@ -81,36 +82,49 @@ initiateTransferOut runFinance rail spec
           Left err -> pure (Left err)
           Right resolved -> do
             let covered = fromMaybe (map (.id) breakdown.redeemableEntries) spec.coveredEntryIds
+            -- settlementId stamp = the DOMAIN process id, matching what settlement
+            -- writes on PAID_OUT and what domain lookups resolve against.
             transfer <- createRow resolved covered
-            markEntriesAsProcessing covered (Just transfer.id.getId)
+            markEntriesAsProcessing covered (Just spec.referenceId)
             orchestrate transfer resolved covered
   where
     runGates cfg = do
-      dailyCount <- countTowardDailyCap
+      -- The per-day cap gates only instant (user-initiated) transfers; the count is
+      -- evaluated only when such a cap can actually fire (it loads the account's
+      -- transfer history).
+      mbCapViolation <- case (spec.instant, cfg.maxTransferOutPerDay) of
+        (True, Just cap') -> do
+          dailyCount <- countTowardDailyCap cfg
+          pure $ if dailyCount >= cap' then Just (show dailyCount <> "/" <> show cap') else Nothing
+        _ -> pure Nothing
       pure $ do
         unless cfg.transferOutEnabled $
-          Left $ DomainError "TRANSFER_OUT_DISABLED" (show spec.account.id)
+          Left $ TransferError TRANSFER_OUT_DISABLED (show spec.account.id)
         when (spec.instant && not cfg.instantTransferOutEnabled) $
-          Left $ DomainError "INSTANT_TRANSFER_NOT_ALLOWED" (show spec.account.id)
-        -- The per-day cap gates only instant (user-initiated) transfers; scheduled
-        -- sweeps are exempt. All outbound transfers count toward the cap, though —
-        -- same semantics the driver wallet enforced before the kernel owned this.
-        when spec.instant $
-          whenJust_ cfg.maxTransferOutPerDay $ \cap' ->
-            when (dailyCount >= cap') $
-              Left $ DomainError "TRANSFER_DAILY_LIMIT_REACHED" (show dailyCount <> "/" <> show cap')
+          Left $ TransferError INSTANT_TRANSFER_NOT_ALLOWED (show spec.account.id)
+        whenJust_ mbCapViolation $ \detail ->
+          Left $ TransferError TRANSFER_DAILY_LIMIT_REACHED detail
       where
         whenJust_ mb f = maybe (Right ()) f mb
 
-    -- Transfers created since UTC midnight; never-sent failures (FAILED without a rail
-    -- order id) don't count, mirroring today's reversal-prefix discounting.
-    countTowardDailyCap = do
+    -- Transfers created since the class's LOCAL midnight (the cutoff tz, seeded from
+    -- the merchant's timeDiffFromUtc — the same day boundary the pre-kernel per-day
+    -- cap used); UTC midnight only when the class has no cutoff config. Never-sent
+    -- failures (FAILED without a rail order id) don't count, mirroring the old
+    -- reversal-prefix discounting.
+    countTowardDailyCap cfg = do
       now <- getCurrentTime
-      let dayStart = Time.UTCTime (Time.utctDay now) 0
-      rows <- QT.findAllByAccountId spec.account.id
+      let tzMinutes = maybe 0 ((`div` 60) . (.tzOffsetSeconds)) cfg.redeemableCutoff
+          tz = Time.minutesToTimeZone tzMinutes
+          localDay = Time.localDay (Time.utcToLocalTime tz now)
+          dayStart = Time.localTimeToUTC tz (Time.LocalTime localDay Time.midnight)
+      rows <- QTE.findOutboundByAccountSince spec.account.id dayStart
+      -- Backfilled rows carry createdAt = the backfill moment, not when the money
+      -- moved — a webhook for YESTERDAY's payout must not consume today's cap.
+      let isBackfilled t = (t.metadata >>= (.reason)) == Just Backfill.backfilledPreMigrationMarker
       pure $
         length
-          [ t | t <- rows, t.direction == DT.OUTBOUND, t.createdAt >= dayStart, not (t.status == DT.FAILED && isNothing t.railOrderId)
+          [ t | t <- rows, not (t.status == DT.FAILED && isNothing t.railOrderId), not (isBackfilled t)
           ]
 
     createRow resolved covered = do
@@ -222,7 +236,7 @@ initiateTransferOut runFinance rail spec
                     RailAmbiguous _ -> QTE.updateSubmissionById DT.NEEDS_REVIEW Nothing Nothing 1 transfer.id
                   QTE.updateStatusById DT.NEEDS_REVIEW Nothing (Just ("HOLD_FAILED_AFTER_SUBMIT: " <> show err)) transfer.id
                 Right _ -> recordSubmit transfer covered other
-      maybe (Left $ DomainError "TRANSFER_NOT_FOUND" transfer.id.getId) Right <$> QT.findById transfer.id
+      maybe (Left $ TransferError TRANSFER_NOT_FOUND transfer.id.getId) Right <$> QT.findById transfer.id
 
     recordSubmit transfer covered = \case
       RailAccepted oid rawStatus ->

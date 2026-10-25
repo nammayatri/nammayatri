@@ -48,7 +48,7 @@ transferInternal ::
   m (Either FinanceError DT.Transfer)
 transferInternal runFinance spec
   | spec.ctx.referenceId /= spec.referenceId =
-    pure $ Left $ DomainError "CTX_REFERENCE_MISMATCH" ("ctx " <> spec.ctx.referenceId <> " vs spec " <> spec.referenceId)
+    pure $ Left $ TransferError CTX_REFERENCE_MISMATCH ("ctx " <> spec.ctx.referenceId <> " vs spec " <> spec.referenceId)
   | otherwise = withAccountBalanceLock spec.fromAccount.id 10 $ do
     QT.findByReference spec.referenceType spec.referenceId >>= \case
       Just existing -> pure (Right existing)
@@ -57,13 +57,13 @@ transferInternal runFinance spec
         let resolvedE = case spec.amount of
               AllAvailable -> Right breakdown.available
               Exact amt
-                | amt <= 0 -> Left $ DomainError "INVALID_TRANSFER_AMOUNT" (show amt)
+                | amt <= 0 -> Left $ TransferError INVALID_TRANSFER_AMOUNT (show amt)
                 | amt > breakdown.available -> Left $ AccountError InsufficientBalance ("requested " <> show amt <> ", available " <> show breakdown.available)
                 | otherwise -> Right amt
         case resolvedE of
           Left err -> pure (Left err)
           Right gross
-            | gross <= 0 -> pure $ Left $ DomainError "INVALID_TRANSFER_AMOUNT" "nothing available to move"
+            | gross <= 0 -> pure $ Left $ TransferError INVALID_TRANSFER_AMOUNT "nothing available to move"
             | otherwise -> do
               postRes <- runFinance spec.ctx $ void $ transfer spec.fromRole spec.toRole gross spec.referenceType spec.ledgerMetadata
               case postRes of

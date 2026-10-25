@@ -174,6 +174,14 @@ callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
               RidePaymentFinance.metroCashbackPayoutLedgerRefs
               submitViaKernel
               onNotSubmitted
+              -- Parked (unknown submit outcome): never blind-retried — main retried any
+              -- exception, which risked double-pays; instead the booking escalates to
+              -- manual verification immediately so ops sees it (transfer row has detail).
+              ( \reason -> do
+                  logError $ "metro cashback payout parked for booking " <> booking.id.getId <> ": " <> reason
+                  Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey booking.id.getId) 3 3 $
+                    QFTB.updatePayoutStatusById (Just MANUAL_VERIFICATION) booking.id
+              )
         Nothing -> do
           Redis.withWaitAndLockRedisWithTimeout (DAP.payoutProcessingLockKey booking.id.getId) 3 3 50000 $ do
             QFTB.updatePayoutStatusById (Just MANUAL_VERIFICATION) booking.id

@@ -13,31 +13,31 @@ import qualified Lib.Finance.Domain.Types.Transfer
 import Tools.Beam.UtilsTH
 
 data TransferT f = TransferT
-  { accountId :: (B.C f Kernel.Prelude.Text),
-    amount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    attemptCount :: (B.C f Kernel.Prelude.Int),
-    counterAccountId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    coveredEntryIds :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    currency :: (B.C f Kernel.Types.Common.Currency),
-    direction :: (B.C f Lib.Finance.Domain.Types.Transfer.TransferDirection),
-    entryIds :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
-    feeAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    holdEntryId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    id :: (B.C f Kernel.Prelude.Text),
-    lastError :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    metadata :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    railKey :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    railOrderId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    railStatus :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    referenceId :: (B.C f Kernel.Prelude.Text),
-    referenceType :: (B.C f Kernel.Prelude.Text),
-    requestedAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    scheduledFor :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    status :: (B.C f Lib.Finance.Domain.Types.Transfer.TransferStatus),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { accountId :: B.C f Kernel.Prelude.Text,
+    amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    attemptCount :: B.C f Kernel.Prelude.Int,
+    counterAccountId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    coveredEntryIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    currency :: B.C f Kernel.Types.Common.Currency,
+    direction :: B.C f Lib.Finance.Domain.Types.Transfer.TransferDirection,
+    entryIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    feeAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    holdEntryId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    lastError :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    metadata :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    railKey :: B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Transfer.RailKey),
+    railOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    railStatus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    referenceId :: B.C f Kernel.Prelude.Text,
+    referenceType :: B.C f Kernel.Prelude.Text,
+    requestedAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    scheduledFor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    status :: B.C f Lib.Finance.Domain.Types.Transfer.TransferStatus,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -47,6 +47,6 @@ instance B.Table TransferT where
 
 type Transfer = TransferT Identity
 
-$(enableKVPG (''TransferT) [('id)] [[('accountId)], [('railOrderId)], [('referenceId)]])
+$(enableKVPG ''TransferT ['id] [['accountId], ['railOrderId], ['referenceId]])
 
-$(mkTableInstancesGenericSchema (''TransferT) "finance_transfer")
+$(mkTableInstancesGenericSchema ''TransferT "finance_transfer")
