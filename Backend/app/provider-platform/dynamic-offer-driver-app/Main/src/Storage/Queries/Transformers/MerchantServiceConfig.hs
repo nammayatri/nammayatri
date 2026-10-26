@@ -144,6 +144,7 @@ getConfigJSON = \case
   Domain.InsuranceDeclarationServiceConfig iffcoTokioCfg -> toJSON iffcoTokioCfg
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig cfg -> toJSON cfg
+  Domain.LiwipStoreServiceConfig liwipCfg -> toJSON liwipCfg
   Domain.SAPServiceConfig sapCfg -> toJSON sapCfg
   Domain.SettlementServiceConfig settlementCfg -> toJSON settlementCfg
   Domain.GSTEInvoiceServiceConfig eInvCfg -> case eInvCfg of
@@ -243,6 +244,7 @@ getServiceName = \case
   Domain.InsuranceDeclarationServiceConfig _ -> Domain.InsuranceDeclarationService Domain.IffcoTokio
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig _ -> Domain.PartnerSdkService Domain.Aarokya
+  Domain.LiwipStoreServiceConfig _ -> Domain.LiwipStoreService Domain.LiwipStore
   Domain.SAPServiceConfig _ -> Domain.SAPService Domain.Journal
   Domain.SettlementServiceConfig settlementCfg -> Domain.SettlementService settlementCfg.settlementService
   Domain.GSTEInvoiceServiceConfig eInvCfg -> case eInvCfg of
@@ -342,6 +344,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.PlasmaService Plasma.LMS -> Domain.PlasmaServiceConfig . Plasma.LMSConfig <$> eitherValue configJSON
   Domain.InsuranceDeclarationService Domain.IffcoTokio -> Domain.InsuranceDeclarationServiceConfig <$> eitherValue configJSON
   Domain.PartnerSdkService Domain.Aarokya -> Domain.PartnerSdkServiceConfig . PartnerSdk.AarokyaPartnerSdkConfig <$> eitherValue configJSON
+  Domain.LiwipStoreService Domain.LiwipStore -> Domain.LiwipStoreServiceConfig <$> eitherValue configJSON
   Domain.SAPService Domain.Journal -> Domain.SAPServiceConfig <$> eitherValue configJSON
   Domain.SettlementService svc ->
     case eitherValue configJSON of

@@ -72,6 +72,7 @@ import qualified API.Action.UI.VehicleDetails as VehicleDetails
 import qualified API.Action.UI.WMB as WMB
 import qualified API.FleetEngineToken as FleetEngineToken
 import qualified API.UI.Aarokya as Aarokya
+import qualified API.UI.LiwipStore as LiwipStore
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.CancellationReason as CancellationReason
@@ -202,6 +203,7 @@ type API =
            :<|> CancellationReasonLookup.API
            :<|> QueueRank.API
            :<|> Aarokya.API
+           :<|> LiwipStore.API
            :<|> FRFSFleetOperator.API
            :<|> FleetEngineToken.API
            :<|> DriverDocument.API
@@ -293,6 +295,7 @@ handler =
     :<|> CancellationReasonLookup.handler
     :<|> QueueRank.handler
     :<|> Aarokya.handler
+    :<|> LiwipStore.handler
     :<|> FRFSFleetOperator.handler
     :<|> FleetEngineToken.handler
     :<|> DriverDocument.handler
