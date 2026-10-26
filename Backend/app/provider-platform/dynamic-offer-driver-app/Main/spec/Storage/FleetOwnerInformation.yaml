@@ -60,7 +60,7 @@ FleetOwnerInformation:
     tollRouteBlockedTill: Maybe UTCTime
     isBlockedForReferralPayout: Maybe Bool
     payoutRegistrationOrderId: Maybe Text
-    docsVerificationStatusUpdatedAt: Maybe UTCTime # Stamped by every unified-flow write of verified / approved / enabled / blocked; the onboarding lists sort by it.
+    docsVerificationStatusUpdatedAt: Maybe UTCTime # Stamped by every unified-flow write of verified / approved / enabled / blocked / disabled reason; the onboarding lists sort by it.
     address: Maybe Text
     addressState: Maybe IndianState
     addressDocumentType: Maybe AddressDocumentType
@@ -159,10 +159,6 @@ FleetOwnerInformation:
     updateRegistration:
       kvFunction: updateOneWithKV
       params: [registeredAt]
-      where: fleetOwnerPersonId
-    updateFleetOwnerDisabledReasonFlag:
-      kvFunction: updateOneWithKV
-      params: [disabledReasonFlag]
       where: fleetOwnerPersonId
     updateReferredByOperatorId:
       kvFunction: updateOneWithKV

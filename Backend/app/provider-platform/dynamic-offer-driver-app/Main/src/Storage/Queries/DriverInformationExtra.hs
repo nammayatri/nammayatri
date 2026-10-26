@@ -162,10 +162,12 @@ updateDisabledReasonFlag mbReason driverId = do
   mbDriverInfo <- findById driverId
   updateOneWithKV
     [ Se.Set BeamDI.disabledReasonFlag mbReason,
-      Se.Set BeamDI.updatedAt now
+      Se.Set BeamDI.updatedAt now,
+      Se.Set BeamDI.docsVerificationStatusUpdatedAt (Just now)
     ]
     ([Se.Is BeamDI.driverId (Se.Eq driverId.getId)] <> [Se.Is BeamDI.enabled (Se.Eq True) | isJust mbReason])
-  when (isNothing mbReason || maybe False (.enabled) mbDriverInfo) $
+  when (isNothing mbReason || maybe False (.enabled) mbDriverInfo) $ do
+    updateFleetDriverAssociationDocsVerificationStatusUpdatedAtByDriverId driverId now
     LTSSync.syncDriverPoolDataToLTS (cast driverId) $
       LTSSync.emptyUpdate {LTSSync.isDisabledReasonFlag = LTSSync.Set (Just (isJust mbReason))}
 
