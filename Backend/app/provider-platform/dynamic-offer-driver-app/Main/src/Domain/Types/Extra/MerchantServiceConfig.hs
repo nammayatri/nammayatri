@@ -64,6 +64,17 @@ data PartnerSdkProvider = Aarokya
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
+data LiwipStoreProvider = LiwipStore
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data LiwipStoreCfg = LiwipStoreCfg
+  { url :: BaseUrl,
+    apiKey :: EncryptedField 'AsEncrypted Text
+  }
+  deriving (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
+
 data SAPProvider = Journal
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -98,6 +109,7 @@ data ServiceName
   | PlasmaService Plasma.PlasmaService
   | InsuranceDeclarationService InsuranceProvider
   | PartnerSdkService PartnerSdkProvider
+  | LiwipStoreService LiwipStoreProvider
   | SAPService SAPProvider
   | SettlementService Settlement.SettlementService
   | GSTEInvoiceService GSTEInvoice.GSTEInvoiceService
@@ -135,6 +147,7 @@ instance Show ServiceName where
   show (PlasmaService s) = "Plasma_" <> show s
   show (InsuranceDeclarationService s) = "InsuranceDeclaration_" <> show s
   show (PartnerSdkService s) = "PartnerSdk_" <> show s
+  show (LiwipStoreService s) = "LiwipStore_" <> show s
   show (SAPService s) = "SAP_" <> show s
   show (SettlementService s) = "Settlement_" <> show s
   show (GSTEInvoiceService s) = "GSTEInvoice_" <> show s
@@ -247,6 +260,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "PartnerSdk_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (LiwipStoreService v1, r2)
+                 | r1 <- stripPrefix "LiwipStore_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (SAPService v1, r2)
                  | r1 <- stripPrefix "SAP_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -302,6 +319,7 @@ data ServiceConfigD (s :: UsageSafety)
   | PlasmaServiceConfig !Plasma.PlasmaServiceConfig
   | InsuranceDeclarationServiceConfig !IffcoTokioConfig
   | PartnerSdkServiceConfig !PartnerSdk.PartnerSdkConfig
+  | LiwipStoreServiceConfig !LiwipStoreCfg
   | SAPServiceConfig !SAP.SAPServiceConfig
   | SettlementServiceConfig !Settlement.SettlementServiceConfig
   | GSTEInvoiceServiceConfig !GSTEInvoice.GSTEInvoiceConfig
