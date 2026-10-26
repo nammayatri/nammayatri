@@ -577,6 +577,7 @@ library
       SharedLogic.Booking
       SharedLogic.BookingDeposit
       SharedLogic.BookingDepositLedger
+      SharedLogic.BookingDepositStatus
       SharedLogic.Cac
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal

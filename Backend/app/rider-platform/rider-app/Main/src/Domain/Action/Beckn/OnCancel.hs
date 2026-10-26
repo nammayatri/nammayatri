@@ -19,12 +19,15 @@ module Domain.Action.Beckn.OnCancel
     onSoftCancel,
     OnCancelReq (..),
     ValidatedOnCancelReq (..),
+    SoftCancelQuote (..),
+    getSoftCancelQuote,
   )
 where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Common as Common
+import qualified Domain.Action.UI.Payment as DPaymentAction
 import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -38,9 +41,11 @@ import Environment ()
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -82,10 +87,14 @@ onCancel ValidatedBookingCancelledReq {..} = do
   let castedCancellationSource = castCancellatonSource cancellationSource_
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let immediateCharge = isJust cancellationFee && resolveImmediateCapture riderConfig collectionMode castedCancellationSource
+  whenJust booking.bookingDepositAmount $ \_ ->
+    void . withTryCatch "onCancel:reconcileDeposit" $ DPaymentAction.reconcileDepositPayment True booking
+  abandonedPayScreen <- BookingDeposit.isUnpaidDepositAbandon booking castedCancellationSource
   Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee cancellationFeeTax immediateCharge
   -- rider push for the cancellation consequence, keyed by the matrix row's notification key
-  whenJust customerCancellationNotificationKey $ \pnKey ->
-    fork "cancellationConsequencePN" $ Notify.notifyCancellationConsequence booking.riderId booking.id.getId pnKey
+  unless abandonedPayScreen $
+    whenJust customerCancellationNotificationKey $ \pnKey ->
+      fork "cancellationConsequencePN" $ Notify.notifyCancellationConsequence booking.riderId booking.id.getId pnKey
   whenJust mbRide $ \ride -> do
     fareBreakupEntries <- traverse (Common.buildFareBreakupV2 ride.id.getId DFareBreakup.RIDE) fareBreakups
     SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) fareBreakupEntries
@@ -96,17 +105,31 @@ onCancel ValidatedBookingCancelledReq {..} = do
       Just Enums.CONSUMER -> SBCR.ByUser
       _ -> SBCR.ByDriver
 
-onSoftCancel :: ValidatedOnCancelReq -> Flow ()
-onSoftCancel ValidatedBookingCancelledReq {..} =
-  case cancellationFee of
-    Just fee -> do
-      let cancellationFeeToBeSettled = Just (fee.amount + maybe 0 (.amount) cancellationFeeTax)
-      whenJust mbRide $ \ride -> do
-        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-        -- Soft cancel is always rider-initiated; tells the UI whether the fee would be captured now or carried to the next ride
-        let immediateCapture = resolveImmediateCapture riderConfig collectionMode SBCR.ByUser
-        QRide.updateCancellationFeeIfCancelledField cancellationFeeToBeSettled (Just immediateCapture) ride.id
-    _ -> pure ()
+-- | The fee from one soft cancel, keyed by its Beckn message id, so the soft-cancel API that sent the
+-- request can return it.
+data SoftCancelQuote = SoftCancelQuote
+  { cancellationFee :: Maybe PriceAPIEntity,
+    cancellationFeeImmediateCapture :: Maybe Bool
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+softCancelQuoteKey :: Text -> Text
+softCancelQuoteKey messageId = "SoftCancelQuote:" <> messageId
+
+getSoftCancelQuote :: CacheFlow m r => Text -> m (Maybe SoftCancelQuote)
+getSoftCancelQuote = Redis.safeGet . softCancelQuoteKey
+
+onSoftCancel :: Text -> ValidatedOnCancelReq -> Flow ()
+onSoftCancel messageId ValidatedBookingCancelledReq {..} = do
+  let feeTotal = cancellationFee <&> \fee -> PriceAPIEntity {amount = fee.amount + maybe 0 (.amount) cancellationFeeTax, currency = fee.currency}
+  mbImmediateCapture <- forM cancellationFee $ \_ -> do
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+    -- Soft cancel is always rider-initiated; tells the UI whether the fee would be captured now or carried to the next ride
+    pure $ resolveImmediateCapture riderConfig collectionMode SBCR.ByUser
+  -- always overwrite, so a no-fee quote clears an earlier one
+  whenJust mbRide $ \ride ->
+    QRide.updateCancellationFeeIfCancelledField ((.amount) <$> feeTotal) mbImmediateCapture ride.id
+  Redis.setExp (softCancelQuoteKey messageId) (SoftCancelQuote feeTotal mbImmediateCapture) 60
 
 -- | Immediate-capture is configured separately for rider- vs driver-initiated cancellations.
 -- When true we capture the fee now; when false the fee becomes a pending due.

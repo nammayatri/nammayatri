@@ -510,7 +510,8 @@ bookingDepositOrderStatusHandler ::
     HasBAPMetrics m r,
     HasShortDurationRetryCfg r c,
     CallFRFSBPP.BecknAPICallFlow m r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Bool ->
   Id DOrder.PaymentOrder ->

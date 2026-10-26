@@ -23,6 +23,8 @@ module API.UI.Cancel
 where
 
 import qualified Beckn.ACL.Cancel as ACL
+import qualified Beckn.OnDemand.Utils.Common as BecknUtils
+import qualified Domain.Action.Beckn.OnCancel as DOnCancel
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.CancellationReasons as DCancellationReasons
 import qualified Domain.Types.Booking as SRB
@@ -95,8 +97,18 @@ softCancel bookingId (personId, merchantId) mbLanguage =
     dCancelRes <- DCancel.softCancel booking (personId, merchantId)
     cancelBecknReq <- ACL.buildCancelReqV2 dCancelRes Nothing
     void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl cancelBecknReq
+    -- Our provider delivers on_cancel before acking cancel, so its quote is already saved under this message id
+    messageId <- BecknUtils.getMessageIdText cancelBecknReq.cancelReqContext
+    mbQuote <- DOnCancel.getSoftCancelQuote messageId
     cancellationReasons <- DCancellationReasons.getCancellationReasonsForBooking booking mbLanguage
-    return $ DCancel.SoftCancelRes {result = "Success", cancellationReasons}
+    return $
+      DCancel.SoftCancelRes
+        { result = "Success",
+          cancellationReasons,
+          cancellationFee = mbQuote >>= (.cancellationFee),
+          cancellationFeeImmediateCapture = mbQuote >>= (.cancellationFeeImmediateCapture),
+          isQuoteAvailable = Just (isJust mbQuote)
+        }
 
 getCancellationDuesDetails ::
   (Id Person.Person, Id Merchant.Merchant) ->

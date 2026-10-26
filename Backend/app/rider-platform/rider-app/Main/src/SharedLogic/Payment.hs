@@ -271,7 +271,7 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
           -- Refund Notify
           fork "Process Refunds Notifications" $ do
             case newPaymentFulfillmentStatus of
-              DPayment.FulfillmentRefundInitiated -> TNotifications.notifyPaymentFulfillment Notification.REFUND_PENDING paymentOrder.id personId paymentService
+              DPayment.FulfillmentRefundInitiated -> unless (paymentService == DOrder.BookingDeposit) $ TNotifications.notifyPaymentFulfillment Notification.REFUND_PENDING paymentOrder.id personId paymentService
               DPayment.FulfillmentRefundFailed -> TNotifications.notifyPaymentFulfillment Notification.REFUND_FAILED paymentOrder.id personId paymentService
               DPayment.FulfillmentRefunded -> TNotifications.notifyPaymentFulfillment Notification.REFUND_SUCCESS paymentOrder.id personId paymentService
               DPayment.FulfillmentPending -> do
@@ -602,7 +602,7 @@ refundStatusHandler paymentOrder paymentServiceType = do
       DRefunds.Refunds ->
       m ()
     bookingDepositRefundStatusHandler refund = do
-      let newStatus = refundStatusToBookingPaymentStatus refund
+      let newStatus = if BookingDepositLedger.unknownRefundOutcome refund then DBP.REFUND_INITIATED else refundStatusToBookingPaymentStatus refund
       depositReqs <- filter (\r -> r.refundPurpose == DRefundRequest.BOOKING_DEPOSIT) <$> QRefundRequest.findAllByOrderId paymentOrder.id
       case depositReqs of
         [] -> pure ()

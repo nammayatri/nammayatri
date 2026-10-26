@@ -1834,32 +1834,40 @@ notifyPaymentFulfillment notifCategory paymentOrderId personId paymentServiceTyp
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   notificationSoundFromConfig <- SQNSC.findByNotificationType notifCategory person.merchantOperatingCityId
   mbMerchantPN <- CPN.findMatchingMerchantPN person.merchantOperatingCityId (mkRefundNotificationKey) Nothing Nothing person.language Nothing
-  whenJust mbMerchantPN \merchantPN -> do
-    when (merchantPN.shouldTrigger) $ do
-      let notificationSound = maybe (Just "default") NSC.defaultSound notificationSoundFromConfig
-          templateParams = [] :: [(Text, Text)]
-          title = buildTemplate templateParams merchantPN.title
-          body = buildTemplate templateParams merchantPN.body
-          notificationData =
-            Notification.NotificationReq
-              { category = notifCategory,
-                subCategory = Nothing,
-                showNotification = Notification.SHOW,
-                messagePriority = Nothing,
-                entity = Notification.Entity Notification.Product paymentOrderId.getId (),
-                body,
-                title,
-                dynamicParams = EmptyDynamicParam,
-                auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-                ttl = Nothing,
-                sound = notificationSound,
-                overlayNotificationData = Nothing
-              }
-      notifyPerson person.merchantId person.merchantOperatingCityId person.id (Just merchantPN.notificationCategory) notificationData Nothing
+  let mbContent = case mbMerchantPN of
+        Just merchantPN -> if merchantPN.shouldTrigger then Just (merchantPN.title, merchantPN.body, Just merchantPN.notificationCategory) else Nothing
+        Nothing -> (\(t, b) -> (t, b, Nothing)) <$> fallbackContent
+  whenJust mbContent \(titleTemplate, bodyTemplate, mbPNCategory) -> do
+    let notificationSound = maybe (Just "default") NSC.defaultSound notificationSoundFromConfig
+        templateParams = [] :: [(Text, Text)]
+        title = buildTemplate templateParams titleTemplate
+        body = buildTemplate templateParams bodyTemplate
+        notificationData =
+          Notification.NotificationReq
+            { category = notifCategory,
+              subCategory = Nothing,
+              showNotification = Notification.SHOW,
+              messagePriority = Nothing,
+              entity = Notification.Entity Notification.Product paymentOrderId.getId (),
+              body,
+              title,
+              dynamicParams = EmptyDynamicParam,
+              auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+              ttl = Nothing,
+              sound = notificationSound,
+              overlayNotificationData = Nothing
+            }
+    notifyPerson person.merchantId person.merchantOperatingCityId person.id mbPNCategory notificationData Nothing
   where
     mkRefundNotificationKey :: Text
     mkRefundNotificationKey =
       T.pack (show paymentServiceType) <> "_" <> T.pack (show notifCategory)
+    -- Booking-deposit refunds push even when no merchant_push_notification row is configured.
+    fallbackContent :: Maybe (Text, Text)
+    fallbackContent = case (paymentServiceType, notifCategory) of
+      (DOrder.BookingDeposit, Notification.REFUND_PENDING) ->
+        Just ("Deposit refund initiated", "Your booking deposit refund has been initiated. It will be credited back to your original payment method.")
+      _ -> Nothing
 
 -- | Rider push for a cancellation consequence, keyed by the BPP consequence-matrix
 -- row's customerNotificationKey (carried on the on_cancel order tags). No matching
