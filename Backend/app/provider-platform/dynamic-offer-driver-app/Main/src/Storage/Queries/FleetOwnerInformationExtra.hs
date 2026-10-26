@@ -1,5 +1,6 @@
 module Storage.Queries.FleetOwnerInformationExtra where
 
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.FleetOwnerInformation
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -378,6 +379,15 @@ updateFleetOwnerEnabledStatus enabled fleetOwnerPersonId = do
   _now <- getCurrentTime
   updateOneWithKV
     [Se.Set Beam.enabled enabled, Se.Set Beam.docsVerificationStatusUpdatedAt (Just _now), Se.Set Beam.updatedAt _now]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
+-- | Set `disabledReasonFlag`, stamping `docsVerificationStatusUpdatedAt` (the onboarding lists' sort key) like every
+--   onboarding-flag write.
+updateFleetOwnerDisabledReasonFlag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe DI.DisabledReasonFlag -> Kernel.Types.Id.Id DP.Person -> m ()
+updateFleetOwnerDisabledReasonFlag disabledReasonFlag fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.disabledReasonFlag disabledReasonFlag, Se.Set Beam.docsVerificationStatusUpdatedAt (Just _now), Se.Set Beam.updatedAt _now]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
 -- | Set `approved` and `enabled` in a single targeted write. Used by the BOT-review approve path:
