@@ -25,13 +25,14 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingPayment as QBookingPayment
+import Tools.Error (BookingDepositError (..))
 
 -- | Shared preamble for both endpoints: authorise the caller, read the fee, and reconcile any in-flight attempt with the gateway.
---   Returns the latest attempt row as it stands after that sync.
+--   Returns the latest attempt row as it stands after that sync, and whether that sync reached the gateway.
 validateAndSync ::
   Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) ->
   Kernel.Types.Id.Id DRB.Booking ->
-  Environment.Flow (DRB.Booking, HighPrecMoney, Maybe DBP.BookingPayment)
+  Environment.Flow (DRB.Booking, HighPrecMoney, Maybe DBP.BookingPayment, Bool)
 validateAndSync mbPersonId bookingId = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person id is required")
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
@@ -40,10 +41,10 @@ validateAndSync mbPersonId bookingId = do
   mbLatestAttempt <- QBookingPayment.findLatestByBookingIdAndServiceType booking.id DOrder.BookingDeposit
   case mbLatestAttempt of
     Just row | row.status == DBP.PENDING -> do
-      DPayment.syncBookingDepositOrderStatus booking.merchantId booking.riderId row.paymentOrderId
+      synced <- DPayment.syncBookingDepositOrderStatus booking.merchantId booking.riderId row.paymentOrderId
       mbRow <- QBookingPayment.findLatestByBookingIdAndServiceType booking.id DOrder.BookingDeposit
-      pure (booking, fee, mbRow)
-    _ -> pure (booking, fee, mbLatestAttempt)
+      pure (booking, fee, mbRow, synced)
+    _ -> pure (booking, fee, mbLatestAttempt, True)
 
 resumeIfWithheld :: DRB.Booking -> Environment.Flow ()
 resumeIfWithheld booking =
@@ -61,8 +62,11 @@ getBookingDepositStatus ::
     Environment.Flow API.Types.UI.BookingDeposit.BookingDepositStatusResp
   )
 getBookingDepositStatus (mbPersonId, _merchantId) bookingId = do
-  (booking, fee, mbRow) <- validateAndSync mbPersonId bookingId
-  statusFromRows booking fee mbRow
+  (booking, fee, mbRow, synced) <- validateAndSync mbPersonId bookingId
+  resp <- statusFromRows booking fee mbRow
+  when (not synced && resp.feeStatus `elem` [API.Types.UI.BookingDeposit.PAYABLE, API.Types.UI.BookingDeposit.FAILED]) $
+    throwError $ BookingDepositGatewaySyncFailed booking.id.getId
+  pure resp
 
 statusFromRows ::
   DRB.Booking ->
@@ -130,10 +134,17 @@ postBookingDepositPaymentIntent ::
     Environment.Flow API.Types.UI.BookingDeposit.BookingDepositPaymentResp
   )
 postBookingDepositPaymentIntent (mbPersonId, _merchantId) bookingId mbIsMockPayment = do
-  (booking, fee, _) <- validateAndSync mbPersonId bookingId
+  (booking, fee, _, synced) <- validateAndSync mbPersonId bookingId
   when (booking.status `elem` DRB.terminalBookingStatus) $
     throwError $ RideInvalidStatus $ "Booking " <> booking.id.getId <> " is " <> show booking.status
-  (orderResult, mbAvailableBalance) <- DPayment.createBookingDepositPaymentOrder booking (fromMaybe False mbIsMockPayment)
+  (orderResult, mbAvailableBalance) <-
+    if synced
+      then DPayment.createBookingDepositPaymentOrder booking (fromMaybe False mbIsMockPayment)
+      else do
+        -- The pending attempt was not checked with the gateway and may already be paid there: answer RETRY, never its sheet.
+        logError $ "Booking fee payment intent for " <> booking.id.getId <> ": pending attempt not verified with the gateway; returning RETRY"
+        available <- BookingDeposit.getAvailableBalance booking.riderId
+        pure (DPayment.BookingDepositOrderUnavailable, Just available)
   (feeStatus, sdkPayload) <- case orderResult of
     DPayment.BookingDepositCoveredByBalance -> pure (API.Types.UI.BookingDeposit.COVERED, Nothing)
     DPayment.BookingDepositOrderReady resp -> pure (API.Types.UI.BookingDeposit.PAYABLE, Just resp)
@@ -159,7 +170,7 @@ postBookingDepositRefund ::
     Environment.Flow API.Types.UI.BookingDeposit.BookingDepositStatusResp
   )
 postBookingDepositRefund (mbPersonId, merchantId) bookingId = do
-  (booking, _fee, _) <- validateAndSync mbPersonId bookingId
+  (booking, _fee, _, _) <- validateAndSync mbPersonId bookingId
   unless (booking.status `elem` DRB.terminalBookingStatus) $
     throwError (InvalidRequest $ "Booking is still in status " <> show booking.status <> "; the booking fee can be refunded only after the booking ends")
   captured <- fst <$> BookingDeposit.depositHoldState booking.id

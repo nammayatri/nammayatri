@@ -771,6 +771,26 @@ instance IsHTTPError PaymentError where
 
 instance IsAPIError PaymentError
 
+-- | Kept on HTTP 500 on purpose: the app retries 502/503/504 automatically, which would multiply a gateway outage.
+data BookingDepositError
+  = BookingDepositGatewaySyncFailed Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''BookingDepositError
+
+instance IsBaseError BookingDepositError where
+  toMessage = \case
+    BookingDepositGatewaySyncFailed bookingId -> Just $ "Could not confirm the booking deposit payment for booking \"" <> show bookingId <> "\" with the payment gateway."
+
+instance IsHTTPError BookingDepositError where
+  toErrorCode = \case
+    BookingDepositGatewaySyncFailed _ -> "BOOKING_DEPOSIT_GATEWAY_SYNC_FAILED"
+
+  toHttpCode = \case
+    BookingDepositGatewaySyncFailed _ -> E500
+
+instance IsAPIError BookingDepositError
+
 data FRFSTicketBookingPaymentError
   = FRFSTicketBookingPaymentNotFound Text
   | FRFSTicketBookingPaymentDoesNotExist Text

@@ -341,16 +341,27 @@ depositHoldState bookingId = do
   pure (any (\e -> e.status == LE.SETTLED) entries, filter (\e -> e.status == LE.PENDING) entries)
 
 -- | (in flight, failed) for the latest attempt, from one read of its order. In flight: still PENDING on our
---   side but already CHARGED at the gateway. Failed: still PENDING and its last transaction failed; the order
---   stays live, since a retry on it can still be CHARGED, so this is a retryable failure, not an unpaid verdict.
+--   side but already CHARGED at the gateway, or mid-payment there (e.g. a UPI collect awaiting approval) for
+--   under 5 minutes; a new sheet then would let the rider capture the order twice, and only one capture is
+--   credited. Failed: still PENDING and its last transaction failed; the order stays live, since a retry on it
+--   can still be CHARGED, so this is a retryable failure, not an unpaid verdict.
 depositAttemptVerdict :: (CacheFlow m r, EsqDBFlow m r) => Maybe DBP.BookingPayment -> m (Bool, Bool)
 depositAttemptVerdict = \case
   Just row
     | row.status == DBP.PENDING -> do
       mbOrder <- QPaymentOrder.findById row.paymentOrderId
-      let inFlight = maybe False (\o -> o.status == Payment.CHARGED) mbOrder
+      inFlight <- maybe (pure False) orderInFlight mbOrder
       pure (inFlight, not inFlight && maybe False (isFailedDepositAttempt . (.status)) mbOrder)
   _ -> pure (False, False)
+  where
+    orderInFlight order
+      | order.status == Payment.CHARGED = pure True
+      | order.status `elem` [Payment.STARTED, Payment.PENDING_VBV, Payment.AUTHORIZING] = do
+        txns <- QPaymentTransaction.findAllByOrderId order.id
+        now <- getCurrentTime
+        let startedAt = fromMaybe order.updatedAt (maximumMay (mapMaybe (.dateCreated) txns))
+        pure $ diffUTCTime now startedAt < 300
+      | otherwise = pure False
 
 isDeadDepositOrder :: Payment.TransactionStatus -> Bool
 isDeadDepositOrder = (`elem` [Payment.CANCELLED, Payment.CLIENT_AUTH_TOKEN_EXPIRED, Payment.AUTO_REFUNDED])
