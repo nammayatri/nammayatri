@@ -108,7 +108,7 @@ def fetch_machines(base_host: str, base_port: str,
         with urllib.request.urlopen(url, timeout=5) as r:
             data = json.loads(r.read().decode())
     except Exception as e:
-        return {"machines": [], "myIps": [], "error": f"base station API unreachable: {e}"}
+        return {"machines": [], "myIps": [], "error": f"base station API unreachable at {url}: {e}"}
 
     # Collect this machine's IPs + networks so we can pick the best route.
     my_networks = _my_networks()

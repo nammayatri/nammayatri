@@ -75,6 +75,13 @@ jobs:
       INPUT_HOST: ${{ inputs.devbox_host }}
       INPUT_USER: ${{ inputs.devbox_user }}
       SRC: ${{ github.workspace }}/ws/nammayatri
+      # Service discovery that "pick" asks for the dev-boxes. Set here because
+      # the runner service carries an old BASE_API_HOST (a relay IP that no
+      # longer answers): nix-the-builder scripts/runners/init.py copies the
+      # machine's .env into the github-runner unit, and devbox_core.fleet
+      # prefers that variable over its default.
+      BASE_API_HOST: service-discovery.devenv.movingtech.net
+      BASE_API_PORT: "8787"
     steps:
       - name: Check inputs
         run: |
