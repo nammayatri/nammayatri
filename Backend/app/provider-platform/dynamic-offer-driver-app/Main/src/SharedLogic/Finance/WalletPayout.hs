@@ -264,7 +264,8 @@ initiateWalletPayoutWith ::
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     Redis.HedisLTSFlowEnv r,
-    PostActionsEnv r
+    PostActionsEnv r,
+    DriverPoolStateEnv r
   ) =>
   PayoutContext ->
   HighPrecMoney -> -- payoutable balance

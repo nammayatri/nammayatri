@@ -49,6 +49,7 @@ import qualified Lib.Payment.Payout.Bulk.Batch as Bulk
 import qualified Lib.Payment.Payout.Bulk.Types as Bulk
 import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.PostActions (PostActionsEnv)
 import SharedLogic.Finance.WalletPayout (PayoutContext (..), PayoutPrefetch (..), initiateWalletPayoutWith)
 import SharedLogic.Payout.Bulk.Eligibility
@@ -67,7 +68,8 @@ claimBeneficiary ::
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     Redis.HedisLTSFlowEnv r,
-    PostActionsEnv r
+    PostActionsEnv r,
+    DriverPoolStateEnv r
   ) =>
   DSPC.ScheduledPayoutConfig ->
   PR.PayoutType -> -- SCHEDULED or ADHOC
@@ -174,7 +176,7 @@ beneficiaryBankOf bankAccount = do
 --   since every sweep run re-excludes the same people. Drivers only (fleet owners have no push
 --   channel yet); forked so a slow push never holds the wallet lock.
 notifyExcludedBeneficiary ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   DP.Person ->
   HighPrecMoney ->
   Text -> -- why they were excluded
