@@ -62,6 +62,7 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobInWithCheck)
 import SharedLogic.Allocator
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.Wallet (makeWalletRunningBalanceLockKey)
 import SharedLogic.Finance.WalletPayout (PayoutContext (..), PayoutPrefetch (..), WalletPayoutFlow, WalletPayoutParams (..), initiateWalletPayoutWith, runWalletPayout, runWalletPayoutWith)
 import SharedLogic.Payout.Bulk.Claim (beneficiaryBankOf, claimBeneficiary)
@@ -358,7 +359,7 @@ data BulkPushKind
 
 -- | The bulk payout push, with HDFC's reason on a failure. Fleet owners get none (no channel yet).
 notifyBulkPayoutOutcome ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   DP.Person ->
   DPayoutOrder.PayoutOrder ->
   BulkPushKind ->

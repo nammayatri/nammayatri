@@ -263,7 +263,8 @@ initiateWalletPayoutWith ::
     BeamFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   PayoutContext ->
   HighPrecMoney -> -- payoutable balance
