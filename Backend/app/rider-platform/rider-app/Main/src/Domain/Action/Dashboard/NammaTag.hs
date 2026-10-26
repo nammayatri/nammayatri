@@ -201,6 +201,7 @@ $(YTH.generateGenericDefault ''DIC.IssueConfig)
 
 $(YTH.generateGenericDefault ''DPC.PassCategory)
 $(YTH.generateGenericDefault ''DSF.StopFare)
+$(YTH.generateGenericDefault ''DTMSUC.MerchantServiceUsageConfig)
 
 $(genToSchema ''DTR.RiderConfig)
 $(genToSchema ''CumulativeOfferReq)
@@ -492,6 +493,14 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DPC.PassCategory) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DPC.PassCategory)) req logicData
+    LYTU.RIDER_CONFIG LYTU.MerchantServiceUsageConfigRider -> do
+      def' <- fromMaybeM (InvalidRequest "MerchantServiceUsageConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTMSUC.MerchantServiceUsageConfig))
+      let configWrap = LYTU.Config def' Nothing 1
+      logicData :: (LYTU.Config DTMSUC.MerchantServiceUsageConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTMSUC.MerchantServiceUsageConfig)) req logicData
+    LYTU.RIDER_CONFIG LYTU.MerchantServiceConfig -> do
+      logicData :: A.Value <- YudhishthiraFlow.createLogicData (A.object []) (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy A.Value) req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
   when resp.isRuleUpdated $ case req.domain of
