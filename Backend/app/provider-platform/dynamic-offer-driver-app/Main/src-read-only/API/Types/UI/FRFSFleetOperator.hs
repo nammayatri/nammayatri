@@ -5,6 +5,7 @@ module API.Types.UI.FRFSFleetOperator where
 import qualified BecknV2.FRFS.Enums
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
+import qualified Domain.Types.FleetOperatorIncidentType
 import qualified Domain.Types.FleetOperatorTripAction
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
@@ -98,6 +99,18 @@ data FleetOperatorCurrentOperationResp = FleetOperatorCurrentOperationResp
     upcoming :: [OperatorTripInfo],
     vehicleNumber :: Data.Text.Text,
     waybillNo :: Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetOperatorIncidentReq = FleetOperatorIncidentReq
+  { description :: Kernel.Prelude.Maybe Data.Text.Text,
+    gimsConductorId :: Kernel.Prelude.Maybe Data.Text.Text,
+    gimsDriverId :: Kernel.Prelude.Maybe Data.Text.Text,
+    idempotencyKey :: Kernel.Prelude.Maybe Data.Text.Text,
+    incidentType :: Domain.Types.FleetOperatorIncidentType.FleetOperatorIncidentType,
+    location :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

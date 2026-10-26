@@ -156,6 +156,7 @@ getConfigJSON = \case
   Domain.ChallanSearchServiceConfig challanCfg -> case challanCfg of
     ChallanSearchInterface.SignzyChallanSearch cfg -> toJSON cfg
   Domain.FleetEngineServiceConfig cfg -> toJSON cfg
+  Domain.BmsServiceConfig cfg -> toJSON cfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -253,6 +254,7 @@ getServiceName = \case
   Domain.ChallanSearchServiceConfig challanCfg -> case challanCfg of
     ChallanSearchInterface.SignzyChallanSearch _ -> Domain.ChallanSearchService ChallanSearch.Signzy
   Domain.FleetEngineServiceConfig _ -> Domain.FleetEngineService Domain.GoogleFleetEngine
+  Domain.BmsServiceConfig _ -> Domain.BmsService Domain.DtcBms
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
 getPaymentServiceConfigJson = \case
@@ -362,6 +364,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.AirportReachargeService paymentServiceName -> Domain.AirportReachargeServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.ChallanSearchService ChallanSearch.Signzy -> Domain.ChallanSearchServiceConfig . ChallanSearchInterface.SignzyChallanSearch <$> eitherValue configJSON
   Domain.FleetEngineService Domain.GoogleFleetEngine -> Domain.FleetEngineServiceConfig <$> eitherValue configJSON
+  Domain.BmsService Domain.DtcBms -> Domain.BmsServiceConfig <$> eitherValue configJSON
 
 eitherValue :: FromJSON a => A.Value -> Either Text a
 eitherValue value = case A.fromJSON value of

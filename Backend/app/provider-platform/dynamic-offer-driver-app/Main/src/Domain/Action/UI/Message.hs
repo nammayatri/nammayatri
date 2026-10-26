@@ -17,6 +17,7 @@ module Domain.Action.UI.Message where
 import qualified AWS.S3 as S3
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
+import Domain.Types.Extra.MessageReport (MessageDynamicFieldsType)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Message as Domain
@@ -46,6 +47,7 @@ data MessageAPIEntityResponse = MessageAPIEntityResponse
   { title :: Text,
     description :: Text,
     _type :: Domain.MessageType,
+    category :: Maybe Domain.MessageCategory,
     created_at :: UTCTime,
     label :: Maybe Text,
     reply :: Maybe Text,
@@ -56,7 +58,8 @@ data MessageAPIEntityResponse = MessageAPIEntityResponse
     shareable :: Bool,
     alwaysTriggerOnOnboarding :: Bool,
     messageId :: Id Domain.Message,
-    mediaFiles :: [MediaFileApiResponse]
+    mediaFiles :: [MediaFileApiResponse],
+    messageDynamicFields :: MessageDynamicFieldsType
   }
   deriving (Generic, ToSchema, FromJSON)
 
@@ -66,10 +69,13 @@ instance ToJSON MessageAPIEntityResponse where
 newtype MessageReplyReq = MessageReplyReq {reply :: Text}
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
-messageList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Flow [MessageAPIEntityResponse]
-messageList (driverId, _, _) mbLimit mbOffset = do
+messageList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Domain.MessageCategory -> Maybe Int -> Maybe Int -> Flow [MessageAPIEntityResponse]
+messageList (driverId, _, _) mbCategory mbLimit mbOffset = do
   person <- B.runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
-  messageDetails <- B.runInReplica $ MRQ.findByDriverIdAndLanguage (cast driverId) (fromMaybe ENGLISH person.language) mbLimit mbOffset
+  -- Defaults to Broadcast: this feed is capped at 10 rows and older clients cannot send
+  -- the param, so unfiltered would let self-filed reports push broadcasts off their page.
+  let category = Just $ fromMaybe Domain.Broadcast mbCategory
+  messageDetails <- B.runInReplica $ MRQ.findByDriverIdAndLanguage (cast driverId) (fromMaybe ENGLISH person.language) category mbLimit mbOffset
   mapM makeMessageAPIEntity messageDetails
   where
     makeMessageAPIEntity (messageReport, rawMessage, messageTranslation) = do
@@ -79,6 +85,7 @@ messageList (driverId, _, _) mbLimit mbOffset = do
           { title = maybe rawMessage.title (.title) messageTranslation,
             description = maybe rawMessage.description (.description) messageTranslation,
             _type = rawMessage._type,
+            category = rawMessage.category,
             label = messageTranslation >>= (.label),
             reply = messageReport.reply,
             created_at = rawMessage.createdAt,
@@ -89,7 +96,8 @@ messageList (driverId, _, _) mbLimit mbOffset = do
             shareable = rawMessage.shareable,
             alwaysTriggerOnOnboarding = rawMessage.alwaysTriggerOnOnboarding,
             messageId = rawMessage.id,
-            mediaFiles = mediaFilesApiType
+            mediaFiles = mediaFilesApiType,
+            messageDynamicFields = messageReport.messageDynamicFields
           }
 
 getMessage :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id Domain.Message -> Flow MessageAPIEntityResponse
@@ -105,6 +113,7 @@ getMessage (driverId, _, _) messageId = do
           { title = maybe rawMessage.title (.title) messageTranslation,
             description = maybe rawMessage.description (.description) messageTranslation,
             _type = rawMessage._type,
+            category = rawMessage.category,
             label = messageTranslation >>= (.label),
             reply = messageReport.reply,
             created_at = rawMessage.createdAt,
@@ -115,7 +124,8 @@ getMessage (driverId, _, _) messageId = do
             shareable = rawMessage.shareable,
             alwaysTriggerOnOnboarding = rawMessage.alwaysTriggerOnOnboarding,
             messageId = rawMessage.id,
-            mediaFiles = mediaFilesApiType
+            mediaFiles = mediaFilesApiType,
+            messageDynamicFields = messageReport.messageDynamicFields
           }
 
 fetchMedia :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> Flow Text

@@ -7,20 +7,31 @@ module Domain.Action.UI.FRFSFleetOperator
     postFrfsFleetOperatorCurrentOperation',
     postFrfsFleetOperatorActiveManifest,
     getV2FrfsBusTripSchedule,
+    postFrfsFleetOperatorReportIncident,
   )
 where
 
 import API.Types.UI.FRFSFleetOperator
 import BecknV2.FRFS.Enums (VehicleCategory (..))
+import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Map as M
 import Data.Text (unpack)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time.Clock (NominalDiffTime, diffUTCTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
+import qualified Data.UUID as UUID
+import qualified Data.UUID.V5 as UUIDV5
+import qualified Domain.Types.Extra.MerchantServiceConfig as DMSC
+import Domain.Types.FleetOperatorIncidentType (FleetOperatorIncidentType (..), toBmsAlertType)
 import Domain.Types.FleetOperatorTripAction (FleetOperatorTripAction (..))
 import Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Message as DMessage
+import qualified Domain.Types.MessageReport as DMessageReport
 import qualified Domain.Types.Person
 import Environment (Flow)
 import EulerHS.Prelude hiding (id, unpack)
@@ -29,21 +40,28 @@ import Kernel.External.MultiModal.Utils (decode)
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude (BaseUrl, listToMaybe)
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common (Meters (..), Minutes (..), Seconds (..))
-import Kernel.Types.Id (Id (..), getId)
+import Kernel.Types.Error (PersonError (..))
+import Kernel.Types.Id (Id (..), cast, getId)
 import Kernel.Types.TimeBound (TimeBound (..))
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
-import Kernel.Utils.Common (fork, fromMaybeM, getCurrentTime, highPrecMetersToMeters, logError, logInfo, logWarning, throwError)
+import Kernel.Utils.Common (fork, fromMaybeM, generateGUID, getCurrentTime, highPrecMetersToMeters, logError, logInfo, logWarning, throwError, withTryCatch)
+import qualified Lib.BmsBackend.Flow as BmsFlow
+import qualified Lib.BmsBackend.Types as BmsTypes
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.GtfsDataServer.Flow as NandiFlow
 import Lib.GtfsDataServer.Types
 import SharedLogic.CallBAPInternal (getFrfsTripManifest, notifyFrfsTripStarted)
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, findIntegratedBPPConfig, getGimsBaseUrl)
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Message as MQuery
+import qualified Storage.Queries.MessageReport as MRQuery
 import qualified Storage.Queries.Person as QPerson
-import Tools.Error (FRFSFleetOperatorTripActionError (..), GenericError (InvalidRequest))
+import Tools.Error (FRFSFleetOperatorTripActionError (..), GenericError (InternalError, InvalidRequest), MerchantError (MerchantServiceConfigNotFound))
 import Tools.Notifications (NotifReq (..), notifyDriverOnEvents)
 
 getV2FrfsRoute ::
@@ -690,3 +708,208 @@ validateStartLeadTime integratedBPPConfig waybillNo vehicleNumber tripNumber rou
             ("This trip can only be started within " <> show leadTime.getMinutes <> " minutes of its scheduled start time.")
             waybillNo
             vehicleNumber
+
+-- | bms is called before anything is persisted, so a bms failure leaves no local report
+-- for an incident bms never received; the client retries with the same idempotencyKey.
+postFrfsFleetOperatorReportIncident ::
+  ( ( Maybe (Id Domain.Types.Person.Person),
+      Id Domain.Types.Merchant.Merchant,
+      Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    FleetOperatorIncidentReq ->
+    Flow APISuccess
+  )
+postFrfsFleetOperatorReportIncident (mbPersonId, _merchantId, merchantOpCityId) req = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Authenticated person required to report an incident")
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  unless (person.role `elem` [Domain.Types.Person.BUS_DRIVER, Domain.Types.Person.BUS_CONDUCTOR]) $
+    throwError (InvalidRequest "Only bus crew can report an incident")
+  reportId <- resolveReportId personId req.idempotencyKey
+  lockToken <- generateGUID
+  let messageId = Id reportId
+      driverId = cast person.id
+      lockKey = reportLockKey reportId
+  lockAcquired <- Hedis.setNxExpire lockKey reportLockTtlSeconds lockToken
+  unless lockAcquired $ throwError (InvalidRequest "A report with this idempotencyKey is already in progress")
+  flip finally (releaseReportLock lockKey lockToken) $ do
+    MRQuery.findByMessageIdAndDriverId messageId driverId >>= \case
+      Just filed -> ensureSameIncident reportId req filed
+      Nothing -> fileIncident person messageId req merchantOpCityId mbPersonId
+  pure Success
+
+resolveReportId :: Id Domain.Types.Person.Person -> Maybe Text -> Flow Text
+resolveReportId _ Nothing = generateGUID
+resolveReportId personId (Just key) = do
+  unless (isJust $ UUID.fromText key) $ throwError (InvalidRequest "idempotencyKey must be a UUID")
+  pure . UUID.toText . UUIDV5.generateNamed UUID.nil . BS.unpack . TE.encodeUtf8 $ personId.getId <> ":" <> key
+
+-- | An expired lease may already belong to another request, so only clear our own.
+releaseReportLock :: Text -> Text -> Flow ()
+releaseReportLock lockKey lockToken = do
+  mbOwner <- Hedis.get lockKey
+  when (mbOwner == Just lockToken) $ void $ Hedis.del lockKey
+
+ensureSameIncident :: Text -> FleetOperatorIncidentReq -> DMessageReport.MessageReport -> Flow ()
+ensureSameIncident reportId req filed =
+  if sameType && sameBus
+    then logInfo $ "FRFSFleetOperator: incident " <> reportId <> " already filed, skipping"
+    else throwError $ InvalidRequest "idempotencyKey was already used for a different incident"
+  where
+    stored field = M.lookup field filed.messageDynamicFields
+    sameType = stored incidentTypeField == Just (toBmsAlertType req.incidentType)
+    -- Only checkable when the client named the bus; GIMS resolution happens after this.
+    sameBus = maybe True (\vehicleNumber -> stored busIdField == Just vehicleNumber) req.vehicleNumber
+
+fileIncident ::
+  Domain.Types.Person.Person ->
+  Id DMessage.Message ->
+  FleetOperatorIncidentReq ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Maybe (Id Domain.Types.Person.Person) ->
+  Flow ()
+fileIncident person messageId req merchantOpCityId mbPersonId = do
+  mbDerivedAnchor <- resolveEmployeeGimsAnchor mbPersonId
+  let anchor =
+        fromMaybe
+          GimsOperationAnchor
+            { gimsConductorId = req.gimsConductorId,
+              gimsDriverId = req.gimsDriverId,
+              vehicleNumber = req.vehicleNumber
+            }
+          mbDerivedAnchor
+  mbGimsVehicle <- resolveReportedVehicle merchantOpCityId anchor
+  busId <-
+    (mbGimsVehicle <|> req.vehicleNumber)
+      & fromMaybeM (InvalidRequest "Could not determine which bus this report is for")
+  bmsCfg <- getBmsBackendConfig merchantOpCityId
+  BmsFlow.reportEvent
+    bmsCfg
+    BmsTypes.ReportEventReq
+      { idempotencyKey = messageId.getId,
+        alertType = toBmsAlertType req.incidentType,
+        busId = busId,
+        -- GIMS exposes no depot for a driver, so bms falls back to its no-depot routing.
+        depotId = Nothing,
+        description = mkBmsDescription req
+      }
+  persistIncidentReport person messageId.getId req busId
+  logInfo $ "FRFSFleetOperator: incident reported - " <> show req.incidentType <> " bus " <> busId
+
+-- | Per-city, like every other external service; bms differs by deployment, not by build.
+getBmsBackendConfig :: Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Flow BmsTypes.BmsBackendConfig
+getBmsBackendConfig merchantOpCityId = do
+  merchantServiceConfig <-
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.BmsService DMSC.DtcBms)}) Nothing
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Bms" (show DMSC.DtcBms))
+  case merchantServiceConfig.serviceConfig of
+    DMSC.BmsServiceConfig cfg -> pure cfg
+    _ -> throwError $ InternalError "Unknown Service Config"
+
+reportLockKey :: Text -> Text
+reportLockKey reportId = "frfsIncidentReport:" <> reportId
+
+reportLockTtlSeconds :: Int
+reportLockTtlSeconds = 60
+
+-- | Fails open: a crashed bus is exactly when GIMS may be unreachable, and the report
+-- must still go through on the client-supplied vehicleNumber.
+resolveReportedVehicle :: Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> GimsOperationAnchor -> Flow (Maybe Text)
+resolveReportedVehicle merchantOpCityId anchor = do
+  result <- withTryCatch "FRFSFleetOperator:resolveReportedVehicle" $ do
+    integratedBPPConfig <- findFirstIbppConfigByCityAndVehicle merchantOpCityId (show BUS)
+    baseUrl <- getGimsBaseUrl integratedBPPConfig
+    let gtfsId = DIBC.feedKey integratedBPPConfig
+    gimsOps <- NandiFlow.gimsCurrentOperation baseUrl gtfsId anchor
+    let redisKey = frfsCurrentTripRedisKey (getId integratedBPPConfig.id) gimsOps.waybill_no
+    mbPrevTrip <- Hedis.get redisKey
+    tripResp <-
+      NandiFlow.gimsCurrentTripDetails baseUrl gtfsId $
+        GimsCurrentTripDetailsReq
+          { previousTripNumber = fromMaybe 0 (mbPrevTrip :: Maybe Int),
+            gimsConductorId = anchor.gimsConductorId,
+            gimsDriverId = anchor.gimsDriverId,
+            vehicleNumber = anchor.vehicleNumber
+          }
+    pure tripResp.vehicleNumber
+  case result of
+    Right vehicleNumber -> pure (Just vehicleNumber)
+    Left err -> do
+      logWarning $ "FRFSFleetOperator: falling back to client vehicleNumber for incident report - " <> show err
+      pure Nothing
+
+-- | bms has no location field, so coordinates ride in the description rather than be lost.
+mkBmsDescription :: FleetOperatorIncidentReq -> Maybe Text
+mkBmsDescription req =
+  case (req.description, req.location) of
+    (Nothing, Nothing) -> Nothing
+    (mbDesc, mbLoc) ->
+      Just $
+        T.intercalate
+          " "
+          ( catMaybes
+              [ mbDesc,
+                mbLoc <&> \loc -> "[lat=" <> show loc.lat <> ",lon=" <> show loc.lon <> "]"
+              ]
+          )
+
+persistIncidentReport :: Domain.Types.Person.Person -> Text -> FleetOperatorIncidentReq -> Text -> Flow ()
+persistIncidentReport person reportId req busId = do
+  now <- getCurrentTime
+  let messageId = Id reportId
+      title = incidentReportTitle req.incidentType
+      description = fromMaybe title req.description
+  -- Idempotency is tracked on the report row, so a retry after a half-written report
+  -- reuses this message instead of colliding on its primary key.
+  whenNothingM_ (MQuery.findById messageId) $
+    MQuery.create
+      DMessage.Message
+        { id = messageId,
+          _type = DMessage.Read,
+          category = Just DMessage.IncidentReport,
+          title = title,
+          description = description,
+          shortDescription = title,
+          label = Nothing,
+          likeCount = 0,
+          viewCount = 0,
+          mediaFiles = [],
+          messageTranslations = [],
+          alwaysTriggerOnOnboarding = False,
+          shareable = False,
+          merchantId = person.merchantId,
+          merchantOperatingCityId = person.merchantOperatingCityId,
+          createdAt = now
+        }
+  MRQuery.create
+    DMessageReport.MessageReport
+      { driverId = cast person.id,
+        messageId = messageId,
+        -- Nothing is pushed for a self-filed report, so it must not show up unread.
+        deliveryStatus = DMessageReport.Success,
+        readStatus = True,
+        likeStatus = False,
+        reply = Nothing,
+        messageDynamicFields = mkReportDynamicFields req busId,
+        createdAt = now,
+        updatedAt = now
+      }
+
+incidentTypeField :: Text
+incidentTypeField = "incidentType"
+
+busIdField :: Text
+busIdField = "busId"
+
+mkReportDynamicFields :: FleetOperatorIncidentReq -> Text -> M.Map Text Text
+mkReportDynamicFields req busId =
+  M.fromList $
+    [ (busIdField, busId),
+      (incidentTypeField, toBmsAlertType req.incidentType)
+    ]
+      <> maybe [] (\loc -> [("lat", show loc.lat), ("lon", show loc.lon)]) req.location
+
+incidentReportTitle :: FleetOperatorIncidentType -> Text
+incidentReportTitle = \case
+  Accident -> "Accident reported"
+  BreakDown -> "Breakdown reported"
+  Others -> "Incident reported"

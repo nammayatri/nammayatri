@@ -19,6 +19,17 @@ import Storage.Queries.MessageExtra as ReExport
 updateShareable :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Message.Message -> m ())
 updateShareable shareable id = do updateOneWithKV [Se.Set Beam.shareable (Kernel.Prelude.Just shareable)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateTitleAndDescription ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Message.Message -> m ())
+updateTitleAndDescription title description shortDescription id = do
+  updateOneWithKV
+    [ Se.Set Beam.title title,
+      Se.Set Beam.description description,
+      Se.Set Beam.shortDescription shortDescription
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Message.Message -> m (Maybe Domain.Types.Message.Message))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -27,6 +38,7 @@ updateByPrimaryKey (Domain.Types.Message.Message {..}) = do
   updateWithKV
     [ Se.Set Beam.messageType _type,
       Se.Set Beam.alwaysTriggerOnOnboarding (Kernel.Prelude.Just alwaysTriggerOnOnboarding),
+      Se.Set Beam.category category,
       Se.Set Beam.description description,
       Se.Set Beam.label label,
       Se.Set Beam.likeCount likeCount,

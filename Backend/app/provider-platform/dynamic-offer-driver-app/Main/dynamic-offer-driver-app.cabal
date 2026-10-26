@@ -383,6 +383,7 @@ library
       Domain.Action.UI.DriverAcceptOffer
       Domain.Action.UI.DriverAreaPreference
       Domain.Action.UI.DriverCoin
+      Domain.Action.UI.DriverCommunication
       Domain.Action.UI.DriverDocument
       Domain.Action.UI.DriverFyEarnings
       Domain.Action.UI.DriverGoHomeRequest
@@ -557,6 +558,7 @@ library
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.FinancialYear
+      Domain.Types.FleetOperatorIncidentType
       Domain.Types.FleetOperatorTripAction
       Domain.Types.FleetPoolingPriority
       Domain.Types.Geometry
@@ -1314,6 +1316,7 @@ library
       API.Action.UI.DemandHotspots
       API.Action.UI.Dispatcher
       API.Action.UI.DriverAreaPreference
+      API.Action.UI.DriverCommunication
       API.Action.UI.DriverDocument
       API.Action.UI.DriverFyEarnings
       API.Action.UI.DriverIncentiveCoins
@@ -1517,6 +1520,7 @@ library
       API.Types.UI.DemandHotspots
       API.Types.UI.Dispatcher
       API.Types.UI.DriverAreaPreference
+      API.Types.UI.DriverCommunication
       API.Types.UI.DriverFyEarnings
       API.Types.UI.DriverIncentiveCoins
       API.Types.UI.DriverOnboardingV2
@@ -2358,6 +2362,7 @@ library
     , beckn-spec
     , behavior-engine
     , behavior-tracker
+    , bms-backend
     , bytestring
     , casing
     , cassava
