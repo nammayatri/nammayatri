@@ -9,6 +9,7 @@ import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude (head, listToMaybe, showBaseUrl)
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
@@ -16,10 +17,13 @@ import Lib.Finance.Domain.Types.Invoice (InvoiceStatus (..))
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
+import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as YudhishthiraBeamFlow
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -87,7 +91,19 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
 
 -- | Render the first (newest) renderable invoice to a base64 PDF. Returns
 -- (pdfBase64, invoiceNumber). Callers own the access checks on @invoices@.
-renderFinanceInvoicePdf :: Text -> Language -> [FInvoice.Invoice] -> Flow (Text, Text)
+renderFinanceInvoicePdf ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    ClickhouseFlow m r,
+    FinanceBeamFlow.BeamFlow m r,
+    YudhishthiraBeamFlow.BeamFlow m r,
+    PaymentBeamFlow.BeamFlow m r
+  ) =>
+  Text ->
+  Language ->
+  [FInvoice.Invoice] ->
+  m (Text, Text)
 renderFinanceInvoicePdf merchantOperatingCityId lang invoices = do
   mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId}) Nothing
   let tz = maybe DT.utc (\rc -> DT.minutesToTimeZone (fromIntegral rc.timeDiffFromUtc `div` 60)) mbRiderConfig

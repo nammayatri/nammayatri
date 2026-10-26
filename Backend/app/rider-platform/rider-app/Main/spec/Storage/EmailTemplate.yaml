@@ -1,0 +1,47 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Language: Kernel.External.Types
+  Value: Data.Aeson
+
+EmailTemplate:
+  tableName: email_template
+  derives: Generic,Show,Eq,FromJSON,ToJSON
+
+  types:
+    EmailTemplateKey:
+      enum: "RIDE_INVOICE"
+      derive: "Bounded, Enum"
+
+  fields:
+    id: Id EmailTemplate
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    templateKey: EmailTemplateKey
+    language: Language
+    value: Value
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    id: character(36)
+    merchantId: character(36)
+    merchantOperatingCityId: character(36)
+    templateKey: text
+    value: json
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findByMerchantOperatingCityIdAndTemplateKeyAndLanguage:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, templateKey, language]
+
+  extraIndexes:
+    - columns: [merchantOperatingCityId, templateKey, language]
+      unique: true
+
+  extraOperations:
+    - GENERATE_INDEXES

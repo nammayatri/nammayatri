@@ -117,6 +117,7 @@ import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.Insurance as SI
+import qualified SharedLogic.InvoiceEmailSchedule as SInvoiceEmailSchedule
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -1362,6 +1363,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     SafetyCQSos.updateStatusToNotResolvedIfPendingByRideId (cast ride.id)
   unless isInitiatedByCronJob $
     Notify.notifyOnRideCompleted booking updRide otherParties rideDiscountAmount
+  fork "schedule ride invoice email" $ SInvoiceEmailSchedule.scheduleRideInvoiceEmail booking updRide
   EditLocationThrottle.clearBookingEditAttempts booking.id
   where
     buildFareBreakup :: MonadFlow m => Id DRide.Ride -> DFareBreakup -> m DFareBreakup.FareBreakup
