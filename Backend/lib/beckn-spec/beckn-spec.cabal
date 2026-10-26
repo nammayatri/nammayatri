@@ -250,6 +250,7 @@ library
       Domain.Types.RiderPreferredOption
       Domain.Types.RideStatus
       Domain.Types.ServiceTierType
+      Domain.Types.SharedCabSession
       Domain.Types.StationType
       Domain.Types.TrackingStatus
       Domain.Types.Trip

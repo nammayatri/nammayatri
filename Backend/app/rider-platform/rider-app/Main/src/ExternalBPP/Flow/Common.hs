@@ -46,6 +46,7 @@ import Lib.JourneyModule.Types (mkRouteDetail)
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.FRFSLiveTrip as FRFSLiveTrip
 import SharedLogic.FRFSUtils
+import SharedLogic.SharedCab (Refund, isSharedCabAgency, refundAmounts)
 import qualified Storage.CachedQueries.FRFSCancellationConfig as CQFRFSCancellationConfig
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -298,7 +299,8 @@ buildInterchangeJourney searchReq integratedBPPConfig transitRoute legsRouteDeta
       fromLocationId <- generateGUID
       toLocationId <- generateGUID
       routeDetails <- mapM (mkRouteDetail searchReq.merchantId searchReq.merchantOperatingCityId journeyLegGuid Nothing) legsRouteDetails
-      let mode = mapVehicleCategoryToTripMode searchReq.vehicleType
+      let isSharedCabRoute = any (\leg -> maybe False isSharedCabAgency (leg.agency >>= (.gtfsId))) transitRoute.legs
+          mode = if isSharedCabRoute then DTrip.SharedCab else mapVehicleCategoryToTripMode searchReq.vehicleType
           lastSubLeg = fromMaybe firstSubLeg (listToMaybe (reverse legsRouteDetails))
           fromLat = maybe 0.0 (.lat) searchReq.fromStationPoint
           fromLon = maybe 0.0 (.lon) searchReq.fromStationPoint
@@ -562,8 +564,8 @@ verifyTicket _merchantId _merchantOperatingCity integratedBPPConfig _bapConfig e
   TicketPayload {..} <- CallAPI.verifyTicket integratedBPPConfig encryptedQrData
   return DTicketPayload {..}
 
-cancel :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Spec.CancellationType -> Maybe FRFSLiveTrip.LiveTripDecision -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnCancel.DOnCancel
-cancel _merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType mbLiveDecision booking = do
+cancel :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Spec.CancellationType -> Maybe FRFSLiveTrip.LiveTripDecision -> DFRFSTicketBooking.FRFSTicketBooking -> Maybe Refund -> m DOnCancel.DOnCancel
+cancel _merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType mbLiveDecision booking mbSharedCabRefund = do
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id Not Found")
   let orderStatus = case cancellationType of
         Spec.SOFT_CANCEL -> Spec.SOFT_CANCELLED
@@ -571,12 +573,14 @@ cancel _merchant merchantOperatingCity integratedBPPConfig bapConfig cancellatio
   let baseFare = fromMaybe booking.totalPrice.amount booking.overriddenAmount
       scheduledDepartureTime = fromMaybe booking.validTill booking.startTime
       tieredCharges departureTime = calculateCancellationCharges merchantOperatingCity.id booking.vehicleType baseFare departureTime
-  (charges, refund) <- case mbLiveDecision of
-    Just decision
+  -- shared cab: the refund policy decided it (resolved by ExternalBPP.CallAPI.Cancel); never the tier table.
+  (charges, refund) <- case (mbSharedCabRefund, mbLiveDecision) of
+    (Just sharedCabRefund, _) -> pure (refundAmounts baseFare sharedCabRefund)
+    (Nothing, Just decision)
       | not decision.canCancel -> throwError CancellationNotSupported
       | decision.fullRefund -> pure (0, baseFare)
       | otherwise -> tieredCharges decision.chargeAnchor
-    Nothing -> tieredCharges scheduledDepartureTime
+    (Nothing, Nothing) -> tieredCharges scheduledDepartureTime
   return $
     DOnCancel.DOnCancel
       { providerId = bapConfig.uniqueKeyId,

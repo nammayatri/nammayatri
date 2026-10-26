@@ -153,10 +153,25 @@ getRoutesByGtfsId ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   IntegratedBPPConfig ->
   m [Route.Route]
-getRoutesByGtfsId integratedBPPConfig = do
+getRoutesByGtfsId = routesByGtfsId False
+
+-- | As 'getRoutesByGtfsId', with each route's polyline (GIMS's, else the rider-db one). Only for callers that draw the line: the bus and
+-- metro lists stay light.
+getRoutesByGtfsIdWithPolyline ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  m [Route.Route]
+getRoutesByGtfsIdWithPolyline = routesByGtfsId True
+
+routesByGtfsId ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Bool ->
+  IntegratedBPPConfig ->
+  m [Route.Route]
+routesByGtfsId isPolylineRequired integratedBPPConfig = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   routes <- Flow.getRoutesByGtfsId baseUrl integratedBPPConfig.feedKey
-  parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId False
+  parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId isPolylineRequired
 
 getRoutesByVehicleType ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>

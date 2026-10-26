@@ -538,7 +538,7 @@ conductorTokenAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbR
   merchantOpCity <-
     CQMOC.findByMerchantShortIdAndCity req.merchantId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> req.merchantId.getShortId <> " ,city: " <> show city)
-  bppConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOpCity.id (fromMaybe BecknSpec.BUS req.vehicleType) DIBC.MULTIMODAL
+  bppConfig <- SIBC.findBusIntegratedBPPConfig merchantOpCity.id (fromMaybe BecknSpec.BUS req.vehicleType) DIBC.MULTIMODAL
   baseUrl <- MM.getOTPRestServiceReq bppConfig.merchantId merchantOpCity.id
   let gtfsId = bppConfig.feedKey
   -- Call GIMS verify endpoint
@@ -1112,7 +1112,8 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
             referredByEarningsPayoutStatus = Nothing,
             backlogPayoutStatus = Nothing,
             backlogPayoutAmount = 0,
-            isBackfilled = Just False
+            isBackfilled = Just False,
+            sharedCabNoShows = 0
           }
 
 checkPersonExists :: (CacheFlow m r, EsqDBFlow m r) => Text -> m SP.Person

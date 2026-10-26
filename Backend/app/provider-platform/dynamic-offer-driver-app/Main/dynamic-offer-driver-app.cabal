@@ -95,6 +95,8 @@ library
       API.Internal.SearchTryPoolStats
       API.Internal.SendEmailOTP
       API.Internal.SendSMS
+      API.Internal.SharedCabAllocation
+      API.Internal.SharedCabCallNumber
       API.Internal.SpecialLocationList
       API.Internal.SpecialLocationUpsert
       API.Internal.StopDetection
@@ -109,10 +111,10 @@ library
       API.OnixBppWebhook
       API.Types.Dashboard.AppManagement.OrphanInstances.DepotManager
       API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
+      API.Types.UI.SharedCab
       API.Types.UI.TicketKapture
       API.UI
       API.UI.Aarokya
-      API.UI.LiwipStore
       API.UI.Call
       API.UI.CallEvent
       API.UI.CancellationReason
@@ -128,6 +130,7 @@ library
       API.UI.Issue
       API.UI.KioskLocation
       API.UI.LeaderBoard
+      API.UI.LiwipStore
       API.UI.Maps
       API.UI.Message
       API.UI.OnMessage
@@ -142,6 +145,8 @@ library
       API.UI.RideRoute
       API.UI.RideSummary
       API.UI.Route
+      API.UI.SharedCab
+      API.UI.SharedCabBooking
       API.UI.Sos
       API.UI.Transporter
       API.UI.Whatsapp
@@ -357,6 +362,8 @@ library
       Domain.Action.Internal.SearchTryPoolStats
       Domain.Action.Internal.SendEmailOTP
       Domain.Action.Internal.SendSMS
+      Domain.Action.Internal.SharedCabAllocation
+      Domain.Action.Internal.SharedCabCallNumber
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.TollUpsert
@@ -364,7 +371,6 @@ library
       Domain.Action.Internal.VerifyEmailUpdate
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.Aarokya
-      Domain.Action.UI.LiwipStore
       Domain.Action.UI.AvailableForRides
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
@@ -429,6 +435,7 @@ library
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
       Domain.Action.UI.LegalPublishInternal
+      Domain.Action.UI.LiwipStore
       Domain.Action.UI.LmsModule
       Domain.Action.UI.Location
       Domain.Action.UI.Maps
@@ -480,6 +487,9 @@ library
       Domain.Action.UI.SearchRequestForDriver
       Domain.Action.UI.SearchRequestLocation
       Domain.Action.UI.SearchRoute
+      Domain.Action.UI.SharedCab
+      Domain.Action.UI.SharedCabBooking
+      Domain.Action.UI.SharedCabCall
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialLocation
@@ -630,6 +640,7 @@ library
       SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch
       SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion
       SharedLogic.Allocator.Jobs.Settlement.SubscriptionTotals
+      SharedLogic.Allocator.Jobs.SharedCab.Reconciler
       SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival
       SharedLogic.Allocator.Jobs.SpecialZoneQueue.TriggerSpecialZoneNotify
       SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase
@@ -807,6 +818,9 @@ library
       SharedLogic.SearchRequestProcessing
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
+      SharedLogic.SharedCab.Flag
+      SharedLogic.SharedCab.ReconcilerSeed
+      SharedLogic.SharedCab.RiderClient
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand
       SharedLogic.Subscription.BillingModel
@@ -2579,3 +2593,150 @@ executable dynamic-offer-driver-app-exe
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
+
+test-suite driver-app-test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      SharedCabProxyTests
+      Paths_dynamic_offer_driver_app
+  hs-source-dirs:
+      test
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DerivingStrategies
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+      TemplateHaskell
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts -with-rtsopts=-N -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates
+  extra-libraries:
+      cac_client
+  build-depends:
+      JuicyPixels
+    , JuicyPixels-extra
+    , aeson
+    , base >=4.7 && <5
+    , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , beckn-services
+    , beckn-spec
+    , behavior-engine
+    , behavior-tracker
+    , bytestring
+    , casing
+    , cassava
+    , cereal
+    , communication-engine
+    , config-pilot
+    , consequence-engine
+    , containers
+    , cryptonite
+    , cryptostore >=0.2.3.0
+    , data-default-class
+    , directory
+    , dynamic-offer-driver-app
+    , either
+    , esqueleto
+    , euler-hs
+    , exceptions
+    , extra
+    , finance-kernel
+    , generic-lens
+    , geohash ==1.0.1
+    , hashable
+    , haskell-cac
+    , hedis
+    , hex-text
+    , hspec
+    , http-client
+    , http-client-tls
+    , http-conduit
+    , http-types
+    , incentive-journey
+    , json-logic-hs
+    , jwt >=0.11
+    , lens
+    , lens-aeson
+    , lib-dashboard
+    , memory
+    , mobility-core
+    , network-uri
+    , openapi3
+    , passetto-client
+    , passetto-lib
+    , persistent
+    , postgresql-simple
+    , prometheus-client
+    , pureMD5
+    , random
+    , record-dot-preprocessor
+    , record-hasfield
+    , regex-posix
+    , resource-pool
+    , scheduler
+    , scientific
+    , sequelize
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-multipart
+    , servant-openapi3
+    , servant-server
+    , servant-xml
+    , shared-services
+    , singletons
+    , singletons-th
+    , split
+    , stm
+    , string-conversions
+    , tasty
+    , tasty-hunit
+    , template-haskell
+    , temporary
+    , text
+    , text-conversions
+    , text-format
+    , time
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+    , wai-extra
+    , warp
+    , x509
+    , xml-conduit
+    , xmlbf
+    , yudhishthira
+  default-language: Haskell2010

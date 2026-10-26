@@ -229,3 +229,33 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN overridden_amount double pr
 ------- SQL updates -------
 
 CREATE INDEX CONCURRENTLY frfs_ticket_booking_idx_override_applied_entity_id ON atlas_app.frfs_ticket_booking USING btree (override_applied_entity_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN vehicle_trip_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN shared_cab_no_shows integer  default 0;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

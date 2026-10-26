@@ -31,6 +31,7 @@ module Domain.Action.UI.Call
     getCallTwillioAccessToken,
     getCallTwillioConnectedEntityTwiml,
     addCampaignData,
+    handleCallStatus,
   )
 where
 
@@ -458,19 +459,25 @@ sendFCMToBAPOnFailedCallStatus callStatus idInfo = do
   if isFailureStatus callStatus
     then do
       deploymentVersion <- asks (.version)
-      (ride, booking) <- case idInfo of
+      mbRideAndBooking <- case idInfo of
         Left driverId -> do
           ride <- runInReplica $ QRide.getLatestActiveByDriverId driverId >>= fromMaybeM (RideForDriverNotFound $ getId driverId)
           booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-          return (ride, booking)
+          return (Just (ride, booking))
         Right maybeEntityId -> do
           rideId <- fromMaybeM (CallStatusFieldNotPresent "rideId") maybeEntityId
-          ride <- runInReplica $ QRide.findById (Id rideId) >>= fromMaybeM (RideNotFound rideId)
-          booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-          return (ride, booking)
-      fork "updating in prometheus" $ incrementCounter (getId booking.merchantOperatingCityId) "call_attempt" deploymentVersion.getDeploymentVersion
-      void $ CallBAP.sendPhoneCallRequestUpdateToBAP booking ride
-      return True
+          runInReplica (QRide.findById (Id rideId)) >>= \case
+            -- the entity is not a ride (a shared-cab booking, a vehicle certificate): there is no ride to nudge the BAP about
+            Nothing -> return Nothing
+            Just ride -> do
+              booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+              return (Just (ride, booking))
+      case mbRideAndBooking of
+        Nothing -> return False
+        Just (ride, booking) -> do
+          fork "updating in prometheus" $ incrementCounter (getId booking.merchantOperatingCityId) "call_attempt" deploymentVersion.getDeploymentVersion
+          void $ CallBAP.sendPhoneCallRequestUpdateToBAP booking ride
+          return True
     else return False
   where
     isFailureStatus :: CallTypes.CallStatus -> Bool

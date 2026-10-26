@@ -59,6 +59,7 @@ import qualified SharedLogic.FRFSLiveTrip as FRFSLiveTrip
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.SharedCab as SharedCab
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -87,6 +88,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
       integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
       (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
       case mode of
+        DTrip.SharedCab -> SharedCab.getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus bookingStatus trackingStatuses
         DTrip.Bus -> do
           logDebug $ "CFRFS getState: Processing Bus leg for booking with searchId: " <> show searchId.getId
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
@@ -122,7 +124,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     mode,
                     fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
                     serviceTierType = mbCurrentLegDetails >>= (.finalBoardedBusServiceTierType),
-                    merchantOperatingCityId = booking.merchantOperatingCityId
+                    merchantOperatingCityId = booking.merchantOperatingCityId,
+                    sharedCab = Nothing
                   }
           mbQuote <- QFRFSQuote.findById booking.quoteId
           validBuses <-
@@ -178,7 +181,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       mode,
                       fleetNo = Nothing,
                       serviceTierType = Nothing,
-                      merchantOperatingCityId = journeyLeg.merchantOperatingCityId
+                      merchantOperatingCityId = journeyLeg.merchantOperatingCityId,
+                      sharedCab = Nothing
                     }
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
@@ -221,7 +225,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     mode,
                     fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
                     serviceTierType = mbCurrentLegDetails >>= (.finalBoardedBusServiceTierType),
-                    merchantOperatingCityId = journeyLeg.merchantOperatingCityId
+                    merchantOperatingCityId = journeyLeg.merchantOperatingCityId,
+                    sharedCab = Nothing
                   }
 
           vehiclePositionsToReturn <-
@@ -246,6 +251,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           -- finalStateData <- updateFleetNoIfFinalized integratedBppConfig detailedStateData mbCurrentLegDetails searchId (isJust mbBooking)
           -- return $ JT.Single finalStateData
           return $ JT.Single detailedStateData
+        DTrip.SharedCab -> SharedCab.noBookingLegState now userPosition journeyLeg mode searchId oldStatus bookingStatus trackingStatuses
         _ -> do
           -- Other modes (Metro, Subway, etc.)
           let journeyLegStates =
@@ -261,7 +267,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       mode,
                       fleetNo = Nothing,
                       serviceTierType = Nothing,
-                      merchantOperatingCityId = journeyLeg.merchantOperatingCityId
+                      merchantOperatingCityId = journeyLeg.merchantOperatingCityId,
+                      sharedCab = Nothing
                     }
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
@@ -328,6 +335,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
                 -- L.setOptionLocal QRSTT.CalledForFare True
                 ((possibleServiceTiers, availableFares), mbPossibleRoutes) <- case serviecType of
                   Just serviceTier -> pure ((Just [serviceTier], fares), Nothing) -- bypassing as in case of serviceType/serviceTier is passed, we only calculate fare for that type
+                  Nothing | Just sharedCabTiers <- SharedCab.sharedCabFareTiers agencyGtfsId -> pure ((Just sharedCabTiers, fares), Nothing) -- shared-cab availability is decided by the search gate; GIMS bus-schedule has no frequency GTFS
                   Nothing -> JMU.measureLatency (filterAvailableBuses arrivalTime fareRoute.segments integratedBPPConfig fares) ("filterAvailableBuses" <> show vehicleCategory <> " routeDetails: " <> show fareRoute.segments)
                 -- L.setOptionLocal QRSTT.CalledForFare False
 
@@ -425,7 +433,7 @@ getInfo searchId journeyLeg journeyLegs mbPassCandidates = do
 search :: (JT.SearchRequestFlow m r c, HasMasterCloudForwarder r) => Spec.VehicleCategory -> Id DPerson.Person -> Id DMerchant.Merchant -> Int -> Context.City -> DJourneyLeg.JourneyLeg -> Maybe (Id DRL.RecentLocation) -> Maybe Text -> Maybe Spec.ServiceTierType -> (Text -> m ()) -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Bool -> m JT.SearchResponse
 search vehicleCategory personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId mbServiceTier upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbHasPasses = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency (journeyLeg.agency <&> (.name)) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency (journeyLeg.agency >>= (.gtfsId)) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
   frfsSearchReq <- buildFRFSSearchReq frfsRouteDetails
   let mbFare = journeyLeg.estimatedMinFare <|> journeyLeg.estimatedMaxFare
