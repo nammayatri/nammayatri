@@ -175,6 +175,7 @@ postMessageAdd merchantShortId opCity Common.AddMessageRequest {..} = do
             merchantId = merchant.id,
             merchantOperatingCityId = merchantOpCityId,
             _type = toDomainType _type,
+            category = Just Domain.Broadcast,
             title,
             label,
             likeCount = 0,

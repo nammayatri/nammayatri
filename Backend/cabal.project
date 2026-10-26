@@ -16,6 +16,7 @@ packages:
   lib/payment
   lib/shared-services
   lib/gtfs-data-server
+  lib/bms-backend
   lib/location-updates
   lib/special-zone
   lib/scheduler

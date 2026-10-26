@@ -18,6 +18,7 @@ import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -84,6 +85,16 @@ type API =
            '[JSON]
            API.Types.UI.FRFSFleetOperator.FRFSActiveManifestResp
       :<|> TokenAuth
+      :> "frfs"
+      :> "fleetOperator"
+      :> "reportIncident"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSFleetOperator.FleetOperatorIncidentReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
       :> "v2"
       :> "frfs"
       :> "busTripSchedule"
@@ -102,7 +113,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getV2FrfsRoute :<|> getV2FrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation :<|> postFrfsFleetOperatorActiveManifest :<|> getV2FrfsBusTripSchedule
+handler = getV2FrfsRoute :<|> getV2FrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation :<|> postFrfsFleetOperatorActiveManifest :<|> postFrfsFleetOperatorReportIncident :<|> getV2FrfsBusTripSchedule
 
 getV2FrfsRoute ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -158,6 +169,16 @@ postFrfsFleetOperatorActiveManifest ::
     Environment.FlowHandler API.Types.UI.FRFSFleetOperator.FRFSActiveManifestResp
   )
 postFrfsFleetOperatorActiveManifest a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FRFSFleetOperator.postFrfsFleetOperatorActiveManifest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postFrfsFleetOperatorReportIncident ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.FRFSFleetOperator.FleetOperatorIncidentReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postFrfsFleetOperatorReportIncident a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FRFSFleetOperator.postFrfsFleetOperatorReportIncident (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getV2FrfsBusTripSchedule ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
