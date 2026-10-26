@@ -65,7 +65,7 @@ runPerEventCommit flowRt appEnv kafkaConsumer handler =
   readMessages kafkaConsumer
     & S.mapM
       ( \(value, key, cr) -> do
-          runFlowR flowRt appEnv $ withTaggedFlow key $ handler value key
+          runFlowWithFreshLocalOptions flowRt appEnv $ withTaggedFlow key $ handler value key
           commitRecord kafkaConsumer cr
       )
     & S.drain
