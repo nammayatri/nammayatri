@@ -274,7 +274,8 @@ data FRFSQuoteCategoryAPIEntity = FRFSQuoteCategoryAPIEntity
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq
-  { childTicketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
+  { cabId :: Data.Maybe.Maybe Data.Text.Text,
+    childTicketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
     crisSdkResponse :: Data.Maybe.Maybe CrisSdkResponse,
     enableOffer :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     isSpotBooking :: Data.Maybe.Maybe Kernel.Prelude.Bool,

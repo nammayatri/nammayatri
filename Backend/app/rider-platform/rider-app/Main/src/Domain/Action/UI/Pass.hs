@@ -105,6 +105,7 @@ import qualified SharedLogic.OfferSegment as SOfferSegment
 import qualified SharedLogic.Pass.Eligibility as SLE
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.PersonPTStats as SPUS
+import qualified SharedLogic.SharedCab as SharedCab
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.Payment ()
@@ -1479,7 +1480,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
         when isStudentPass $ rollbackStudentPassActivation purchasedPass
         throwError err
 
-  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  integratedBPPConfigs <- SharedCab.withoutCabRows (.agencyKey) <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
 
   -- If autoActivated is requested, find the nearest fleet (vehicle number) from user location
   vehicleNumberToUse <-

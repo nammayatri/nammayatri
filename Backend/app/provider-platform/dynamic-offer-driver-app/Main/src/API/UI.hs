@@ -75,7 +75,6 @@ import qualified API.Action.UI.VehicleDetails as VehicleDetails
 import qualified API.Action.UI.WMB as WMB
 import qualified API.FleetEngineToken as FleetEngineToken
 import qualified API.UI.Aarokya as Aarokya
-import qualified API.UI.LiwipStore as LiwipStore
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.CancellationReason as CancellationReason
@@ -91,6 +90,7 @@ import qualified API.UI.IncentiveJourney as IncentiveJourney
 import qualified API.UI.Issue as Issue
 import qualified API.UI.KioskLocation as KioskLocation
 import qualified API.UI.LeaderBoard as LeaderBoard
+import qualified API.UI.LiwipStore as LiwipStore
 import qualified API.UI.Maps as Maps
 import qualified API.UI.Message as Message
 import qualified API.UI.OnMessage as OnMessage
@@ -105,6 +105,8 @@ import qualified API.UI.Ride as Ride
 import qualified API.UI.RideRoute as RideRoute
 import qualified API.UI.RideSummary as RideSummary
 import qualified API.UI.Route as Route
+import qualified API.UI.SharedCab as SharedCab
+import qualified API.UI.SharedCabBooking as SharedCabBooking
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Whatsapp as Whatsapp
@@ -220,6 +222,8 @@ type API =
            :<|> Dispatcher.API
            :<|> PublicTransport.API
            :<|> TicketVerify.API
+           :<|> SharedCab.API
+           :<|> SharedCabBooking.API
        )
 
 handler :: FlowServer API
@@ -315,3 +319,5 @@ handler =
     :<|> Dispatcher.handler
     :<|> PublicTransport.handler
     :<|> TicketVerify.handler
+    :<|> SharedCab.handler
+    :<|> SharedCabBooking.handler

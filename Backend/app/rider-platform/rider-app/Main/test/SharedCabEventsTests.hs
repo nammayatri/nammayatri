@@ -1,0 +1,56 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
+
+module SharedCabEventsTests (tests) where
+
+import Data.Aeson (object, toJSON, (.=))
+import Data.Text (Text)
+import Data.Time (UTCTime (..), fromGregorian)
+import "rider-app" SharedLogic.SharedCab.Events
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
+import Prelude
+
+t0 :: UTCTime
+t0 = UTCTime (fromGregorian 2026 9 25) 0
+
+tests :: TestTree
+tests =
+  testGroup
+    "SharedCab Kafka events"
+    [ testCase "session event: flat envelope plus its own fields" $
+        toJSON (sessionEvent (RouteChanged "SC-MAWLAI-F") "ML05A1234" "SC-MAWLAI-R" "d1" t0)
+          @?= object
+            [ "event" .= ("route_changed" :: Text),
+              "at" .= t0,
+              "vehicleNumber" .= ("ML05A1234" :: Text),
+              "bookingId" .= (Nothing :: Maybe Text),
+              "routeCode" .= ("SC-MAWLAI-R" :: Text),
+              "driverId" .= ("d1" :: Text),
+              "vehicleTripId" .= (Nothing :: Maybe Text),
+              "merchantOperatingCityId" .= (Nothing :: Maybe Text),
+              "fromRoute" .= ("SC-MAWLAI-F" :: Text)
+            ],
+      testCase "booking event: enum payloads use the wire spellings" $
+        toJSON (bookingEvent (AllocationClosed "TIMEOUT" BlameDriver) "b1" (Just "ML05A1234") Nothing t0)
+          @?= object
+            [ "event" .= ("allocation_closed" :: Text),
+              "at" .= t0,
+              "vehicleNumber" .= ("ML05A1234" :: Text),
+              "bookingId" .= ("b1" :: Text),
+              "routeCode" .= (Nothing :: Maybe Text),
+              "driverId" .= (Nothing :: Maybe Text),
+              "vehicleTripId" .= (Nothing :: Maybe Text),
+              "merchantOperatingCityId" .= (Nothing :: Maybe Text),
+              "outcome" .= ("TIMEOUT" :: Text),
+              "blame" .= ("driver" :: Text)
+            ],
+      testCase "booking events are keyed by booking, session events by plate" $
+        ( partitionKey (bookingEvent BookingCreated "b1" (Just "ML05A1234") Nothing t0),
+          partitionKey (sessionEvent SessionStarted "ML05A1234" "SC-MAWLAI-F" "d1" t0)
+        )
+          @?= (Just "b1", Just "ML05A1234"),
+      testCase "every kind has its wire name" $
+        map eventName [SessionStarted, Resumed, Boarded ByFallback, Dropped DroppedByTick, NoShow, SeatLost, CabFull 3, InvariantViolation "r" "d"]
+          @?= ["session_started", "resumed", "boarded", "dropped", "no_show", "seat_lost", "cab_full", "invariant_violation"]
+    ]

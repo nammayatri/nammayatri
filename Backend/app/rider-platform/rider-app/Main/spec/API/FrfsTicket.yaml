@@ -172,6 +172,7 @@ types:
     tripId: Maybe Text
     isSpotBooking: Maybe Bool
     purchasedPassPaymentId: Maybe (Id PurchasedPassPayment)
+    cabId: Maybe Text
 
   FRFSRescheduleSeatReq:
     category: FRFSQuoteCategoryType

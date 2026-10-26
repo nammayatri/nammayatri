@@ -173,6 +173,7 @@ DriverInformation:
     onboardingAs: Maybe OnboardingAs
     approved: Maybe Bool
     isNew: Maybe Bool
+    sharedCabSessionActive: Bool
     preferredMapProvider: Maybe MapProvider
     docsVerificationStatusUpdatedAt: Maybe UTCTime # Stamped by every unified-flow write of verified / approved / enabled / blocked / disabled reason; the onboarding lists sort by it.
     address: Maybe Text # deprecated: moved to driver_identity_info;
@@ -201,6 +202,7 @@ DriverInformation:
     acRestrictionLiftCount: "0"
     hasAdvanceBooking: "false"
     isInteroperable: "false"
+    sharedCabSessionActive: "false"
     onlineDurationRefreshedAt: 'CURRENT_TIMESTAMP'
   constraints:
     driverId: PrimaryKey
@@ -226,6 +228,7 @@ DriverInformation:
 
   beamType:
     canSwitchToRental: Maybe Bool
+    sharedCabSessionActive: Maybe Bool
     canSwitchToInterCity: Maybe Bool
     canSwitchToIntraCity: Maybe Bool
     enableForAirport: Maybe AirportRestrictionType
@@ -252,6 +255,7 @@ DriverInformation:
 
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    sharedCabSessionActive: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     canSwitchToInterCity: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     canSwitchToIntraCity: Kernel.Prelude.fromMaybe Kernel.Prelude.True|I
     enableForAirport: Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.ENABLED|I
@@ -277,6 +281,7 @@ DriverInformation:
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
+    sharedCabSessionActive: Kernel.Prelude.Just|I
     canSwitchToInterCity: Kernel.Prelude.Just|I
     canSwitchToIntraCity: Kernel.Prelude.Just|I
     enableForAirport: Kernel.Prelude.Just|I

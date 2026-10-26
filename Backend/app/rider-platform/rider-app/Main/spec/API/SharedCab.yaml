@@ -1,0 +1,73 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+  APISuccess: Kernel.Types.APISuccess
+  FRFSTicketBooking: Domain.Types.FRFSTicketBooking
+
+module: SharedCab
+
+# Rider-facing route browse (home card). Driver-side routes live in SharedCabInternal.
+types:
+  SharedCabStop:
+    code: Text
+    name: Text
+    point: LatLong
+    sequenceNum: Int
+
+  SharedCabRouteInfo:
+    routeCode: Text
+    name: Text
+    stops: "[SharedCabStop]"
+    polyline: Maybe Text
+    cabsRunning: Int
+
+  SharedCabRouteListResp:
+    routes: "[SharedCabRouteInfo]"
+
+  SharedCabLiveCab:
+    cabId: Text
+    plateLast4: Text
+    position: Maybe LatLong
+    freeSeats: Int
+    ridersOnBoard: Int
+    etaMin: Maybe Int
+    distanceM: Maybe Int
+
+  SharedCabRouteDetailResp:
+    routeInfo: SharedCabRouteInfo
+    cabs: "[SharedCabLiveCab]"
+    pickEnabled: Bool
+
+  # FULL = no seat for me (nobody's fault), OTHER = I don't want this cab (counts as my miss)
+  SharedCabSkipReason:
+    enum: "FULL,OTHER"
+
+  SharedCabSkipReq:
+    reason: SharedCabSkipReason
+
+apis:
+  - GET:
+      endpoint: /sharedCab/routes
+      auth: TokenAuth
+      response:
+        type: SharedCabRouteListResp
+  - GET:
+      endpoint: /sharedCab/routes/{routeCode}
+      name: getSharedCabRoute
+      auth: TokenAuth
+      params:
+        routeCode: Text
+      query:
+        boardStop: Text
+        lat: Double
+        lon: Double
+      response:
+        type: SharedCabRouteDetailResp
+  - POST:
+      endpoint: /sharedCab/booking/{bookingId}/skip
+      auth: TokenAuth
+      params:
+        bookingId: Id FRFSTicketBooking
+      request:
+        type: SharedCabSkipReq
+      response:
+        type: APISuccess
