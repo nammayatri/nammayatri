@@ -254,7 +254,7 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
         )
           =<< fareParameter
       rideDuration = maybe 0 (round . uncurry diffUTCTime) $ liftA2 (,) ride.tripEndTime ride.tripStartTime
-  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let localTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) (fromMaybe ride.createdAt ride.tripStartTime)
   ds <- SQDS.findByDriverIdAndDate driverId (utctDay localTime)
   case ds of
     Nothing -> do
