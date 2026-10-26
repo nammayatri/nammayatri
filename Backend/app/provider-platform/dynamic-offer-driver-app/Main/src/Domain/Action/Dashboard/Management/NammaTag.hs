@@ -1626,7 +1626,8 @@ postNammaTagBehaviorMarkCanonical merchantShortId _opCity domain requestorId _re
         createdAt = now,
         updatedAt = now
       }
-  CADLR.clearDomainCache (Id "default") domain
+  -- the status/enable reads of the canonical marker go through the BaseRollout cache key, which clearDomainCache leaves stale
+  CADLR.clearCache (Id "default") domain
   logInfo $ "Behaviour " <> show domain <> " canonical version set to " <> show req.version <> " by " <> requestorId
   pure Kernel.Types.APISuccess.Success
 
