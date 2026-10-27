@@ -29,6 +29,7 @@ import Tools.Beam.UtilsTH
 data BookingT f = BookingT
   { backendAppVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     backendConfigVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    betterDriverAbortRadiusMeters :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     billingCategory :: (B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory)),
     bookingDepositAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     distance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters)),

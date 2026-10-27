@@ -39,6 +39,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
         Domain.Types.Booking.Booking
           { backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
+            betterDriverAbortRadiusMeters = betterDriverAbortRadiusMeters,
             billingCategory = Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             bookingDepositAmount = bookingDepositAmount,
             bookingDetails = (snd toBookingDetailsAndFromLocation'),
@@ -140,6 +141,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
     Beam.BookingT
       { Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = Kernel.Utils.Version.versionToText <$> backendConfigVersion,
+        Beam.betterDriverAbortRadiusMeters = betterDriverAbortRadiusMeters,
         Beam.billingCategory = Kernel.Prelude.Just billingCategory,
         Beam.bookingDepositAmount = bookingDepositAmount,
         Beam.distance = (Kernel.Utils.Common.distanceToHighPrecMeters <$> distance),
