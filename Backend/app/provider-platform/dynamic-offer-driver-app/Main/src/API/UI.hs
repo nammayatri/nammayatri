@@ -75,7 +75,6 @@ import qualified API.Action.UI.VehicleDetails as VehicleDetails
 import qualified API.Action.UI.WMB as WMB
 import qualified API.FleetEngineToken as FleetEngineToken
 import qualified API.UI.Aarokya as Aarokya
-import qualified API.UI.LiwipStore as LiwipStore
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.CancellationReason as CancellationReason
@@ -91,6 +90,7 @@ import qualified API.UI.IncentiveJourney as IncentiveJourney
 import qualified API.UI.Issue as Issue
 import qualified API.UI.KioskLocation as KioskLocation
 import qualified API.UI.LeaderBoard as LeaderBoard
+import qualified API.UI.LiwipStore as LiwipStore
 import qualified API.UI.Maps as Maps
 import qualified API.UI.Message as Message
 import qualified API.UI.OnMessage as OnMessage

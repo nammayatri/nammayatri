@@ -9,6 +9,7 @@ module SharedLogic.FleetDriverSettings
     applyFleetSettings,
     applyFleetSettingsToDriver,
     removeAutoAssign,
+    clearFleetPreferenceOverrides,
   )
 where
 
@@ -110,6 +111,18 @@ removeAutoAssign tiers driver vehicle = do
           else setTag autoAssignTagName (LYT.ArrayValue remaining) oldTags
   when (newTags /= oldTags) $ QPerson.updateDriverTag (Just newTags) driver.id
   updateAutoAcceptTiers vehicle (filter (`notElem` tiers) (fromMaybe [] vehicle.selectedAutoAcceptTiers))
+
+-- | Undo "Ignore area and trip-distance preferences". Removing the forced-off tags
+-- returns the driver to their own preference defaults (normal-driver behaviour).
+clearFleetPreferenceOverrides ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Person ->
+  m ()
+clearFleetPreferenceOverrides driver = do
+  let oldTags = fromMaybe [] driver.driverTag
+      withoutArea = Yudhishthira.removeTagName (Just oldTags) (LYT.TagNameValue AreaPref.areaPreferenceEnabledTagName)
+      newTags = Yudhishthira.removeTagName (Just withoutArea) (LYT.TagNameValue AreaPref.distancePreferenceEnabledTagName)
+  when (newTags /= oldTags) $ QPerson.updateDriverTag (Just newTags) driver.id
 
 setTag :: Text -> LYT.TagValue -> [LYT.TagNameValueExpiry] -> [LYT.TagNameValueExpiry]
 setTag name value tags =

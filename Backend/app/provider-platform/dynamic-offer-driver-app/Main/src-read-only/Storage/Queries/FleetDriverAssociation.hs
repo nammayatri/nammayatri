@@ -32,6 +32,13 @@ deleteByFleetOwnerId fleetOwnerId = do deleteWithKV [Se.Is Beam.fleetOwnerId $ S
 deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FleetDriverAssociation.FleetDriverAssociation -> m ())
 deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateRideConsent ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.FleetDriverAssociation.FleetDriverAssociation -> m ())
+updateRideConsent consentGiven consentValidTill id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.consentGiven consentGiven, Se.Set Beam.consentValidTill consentValidTill, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.FleetDriverAssociation.FleetDriverAssociation -> m (Maybe Domain.Types.FleetDriverAssociation.FleetDriverAssociation))
@@ -43,6 +50,8 @@ updateByPrimaryKey (Domain.Types.FleetDriverAssociation.FleetDriverAssociation {
   updateWithKV
     [ Se.Set Beam.associatedOn associatedOn,
       Se.Set Beam.associatedTill associatedTill,
+      Se.Set Beam.consentGiven consentGiven,
+      Se.Set Beam.consentValidTill consentValidTill,
       Se.Set Beam.docsVerificationStatusUpdatedAt docsVerificationStatusUpdatedAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.enableCashRide enableCashRide,

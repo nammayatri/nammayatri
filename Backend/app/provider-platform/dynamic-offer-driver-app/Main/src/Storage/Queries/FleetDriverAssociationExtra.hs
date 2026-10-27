@@ -107,6 +107,8 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
                   createdAt = now,
                   updatedAt = now,
                   responseReason = Nothing,
+                  consentGiven = Nothing,
+                  consentValidTill = Nothing,
                   ..
                 }
         createWithKV newAssociation
@@ -211,9 +213,23 @@ getFleetAutoAssignConfig ownerId merchantOpCityId =
   (\fleetConfigs -> M.lookup ownerId fleetConfigs >>= (.autoAssign)) <$> getCityFleetConfigs merchantOpCityId
 
 -- | Auto-assign settings of the driver's active fleet.
+-- Fleets that require daily ride consent only return settings while consent is currently yes.
+-- Local-day rollover is handled by SharedLogic.FleetRideConsent.syncFleetRidePerks (API + clear job).
 getDriverFleetAutoAssignConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id MerchantOperatingCity -> m (Maybe DFC.AutoAssignConfig)
-getDriverFleetAutoAssignConfig driverId merchantOpCityId =
-  findByDriverId driverId True >>= maybe (pure Nothing) (\assoc -> getFleetAutoAssignConfig assoc.fleetOwnerId merchantOpCityId)
+getDriverFleetAutoAssignConfig driverId merchantOpCityId = do
+  mbAssoc <- findByDriverId driverId True
+  case mbAssoc of
+    Nothing -> pure Nothing
+    Just assoc -> do
+      fleetConfigs <- getCityFleetConfigs merchantOpCityId
+      case M.lookup assoc.fleetOwnerId fleetConfigs of
+        Nothing -> pure Nothing
+        Just fleetConfig
+          | not fleetConfig.allowConsentPopup -> pure fleetConfig.autoAssign
+          | otherwise -> do
+            now <- getCurrentTime
+            let consentActive = assoc.consentGiven == Just True && maybe False (now <) assoc.consentValidTill
+            pure $ if consentActive then fleetConfig.autoAssign else Nothing
 
 findByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

@@ -102,6 +102,15 @@ types:
     isActive: Bool
     badgeType: FleetBadgeType
 
+  RideConsentReq:
+    consentGiven: Bool
+    consentValidTill: UTCTime
+
+  FleetInfoRes:
+    shouldShowPopup: Bool
+    consentGiven: Maybe Bool
+    consentValidTill: Maybe UTCTime
+
 apis:
   - GET: # Get all Available Driver Badges of Private Fleet
       endpoint: /wmb/fleetBadges
@@ -224,3 +233,17 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: FleetConfig
+
+  - POST: # Driver answers the daily ride-consent popup. Does not change fleet membership.
+      endpoint: /fleet/rideConsent
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: RideConsentReq
+      response:
+        type: APISuccess
+
+  - GET: # Popup state for the driver's active fleet. A null or Unbounded ride window stays open until consentValidTill. A bounded window closes once that window has started.
+      endpoint: /fleet/info
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: FleetInfoRes

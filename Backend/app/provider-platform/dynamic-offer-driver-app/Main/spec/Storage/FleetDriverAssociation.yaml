@@ -20,6 +20,8 @@ FleetDriverAssociation:
     enableCashRide: Maybe Bool
     responseReason: Maybe Text
     docsVerificationStatusUpdatedAt: Maybe UTCTime # Copy of driver_information's, kept in step by its flag writers; a fleet's driver list without other filters sorts by it.
+    consentGiven: Maybe Bool
+    consentValidTill: Maybe UTCTime
     merchantId: Maybe (Id Merchant)
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     createdAt: UTCTime
@@ -39,6 +41,10 @@ FleetDriverAssociation:
       where: fleetOwnerId
     deleteById:
       kvFunction: deleteWithKV
+      where: id
+    updateRideConsent:
+      kvFunction: updateOneWithKV
+      params: [consentGiven, consentValidTill]
       where: id
 
   sqlType:

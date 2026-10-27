@@ -11,12 +11,14 @@ import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.TimeBound
 import qualified Lib.DriverCoins.Types
 import qualified Tools.Beam.UtilsTH
 
 data FleetConfig = FleetConfig
   { allowAutomaticRoundTripAssignment :: Kernel.Prelude.Bool,
     allowCancellationByDriver :: Kernel.Prelude.Bool,
+    allowConsentPopup :: Kernel.Prelude.Bool,
     allowEndingMidRoute :: Kernel.Prelude.Bool,
     allowStartRideFromQR :: Kernel.Prelude.Bool,
     autoAssign :: Kernel.Prelude.Maybe Domain.Types.FleetConfig.AutoAssignConfig,
@@ -26,6 +28,7 @@ data FleetConfig = FleetConfig
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     fleetPoolingPriority :: Kernel.Prelude.Maybe Domain.Types.FleetPoolingPriority.FleetPoolingPriority,
     rideEndApproval :: Kernel.Prelude.Bool,
+    rideTimeBound :: Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound,
     unlinkDriverAndVehicleOnTripTermination :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

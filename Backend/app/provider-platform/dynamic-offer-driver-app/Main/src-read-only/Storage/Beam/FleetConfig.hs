@@ -11,12 +11,14 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.TimeBound
 import qualified Lib.DriverCoins.Types
 import Tools.Beam.UtilsTH
 
 data FleetConfigT f = FleetConfigT
   { allowAutomaticRoundTripAssignment :: B.C f Kernel.Prelude.Bool,
     allowCancellationByDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    allowConsentPopup :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowEndingMidRoute :: B.C f Kernel.Prelude.Bool,
     allowStartRideFromQR :: B.C f Kernel.Prelude.Bool,
     autoAssign :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
@@ -26,6 +28,7 @@ data FleetConfigT f = FleetConfigT
     fleetOwnerId :: B.C f Data.Text.Text,
     fleetPoolingPriority :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     rideEndApproval :: B.C f Kernel.Prelude.Bool,
+    rideTimeBound :: B.C f (Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound),
     unlinkDriverAndVehicleOnTripTermination :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),

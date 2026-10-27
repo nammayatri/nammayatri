@@ -19,6 +19,8 @@ instance FromTType' Beam.FleetDriverAssociation Domain.Types.FleetDriverAssociat
         Domain.Types.FleetDriverAssociation.FleetDriverAssociation
           { associatedOn = associatedOn,
             associatedTill = associatedTill,
+            consentGiven = consentGiven,
+            consentValidTill = consentValidTill,
             createdAt = createdAt,
             docsVerificationStatusUpdatedAt = docsVerificationStatusUpdatedAt,
             driverId = Kernel.Types.Id.Id driverId,
@@ -40,6 +42,8 @@ instance ToTType' Beam.FleetDriverAssociation Domain.Types.FleetDriverAssociatio
     Beam.FleetDriverAssociationT
       { Beam.associatedOn = associatedOn,
         Beam.associatedTill = associatedTill,
+        Beam.consentGiven = consentGiven,
+        Beam.consentValidTill = consentValidTill,
         Beam.createdAt = createdAt,
         Beam.docsVerificationStatusUpdatedAt = docsVerificationStatusUpdatedAt,
         Beam.driverId = Kernel.Types.Id.getId driverId,
