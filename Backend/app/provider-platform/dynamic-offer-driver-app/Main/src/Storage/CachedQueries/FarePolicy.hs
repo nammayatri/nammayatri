@@ -32,7 +32,6 @@ import Data.Text as Text
 import Domain.Types.Common
 import Domain.Types.FarePolicy
 import Kernel.Prelude
-import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
@@ -63,15 +62,16 @@ makeIdKey :: Id FarePolicy -> Text
 makeIdKey id = "driver-offer:CachedQueries:FarePolicy:Id-" <> id.getId
 
 -- Call it after any update
-clearCache :: HedisFlow m r => FarePolicy -> m ()
-clearCache fp = Hedis.runInMultiCloudRedisWrite $
-  Hedis.withCrossAppRedis $ do
-    Hedis.del (makeIdKey fp.id)
+clearCache :: (CacheFlow m r, MonadFlow m) => FarePolicy -> m ()
+clearCache fp = clearCacheById fp.id
 
-clearCacheById :: HedisFlow m r => Id FarePolicy -> m ()
-clearCacheById fid = Hedis.runInMultiCloudRedisWrite $
-  Hedis.withCrossAppRedis $ do
-    Hedis.del (makeIdKey fid)
+clearCacheById :: (CacheFlow m r, MonadFlow m) => Id FarePolicy -> m ()
+clearCacheById fid = do
+  Hedis.runInMultiCloudRedisWrite $
+    Hedis.withCrossAppRedis $ do
+      Hedis.del (makeIdKey fid)
+  -- Also drop the in-mem entries on all pods, so an update isn't masked by a stale in-process copy.
+  IM.refreshInMem (makeIdKey fid)
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
 create = Queries.create
