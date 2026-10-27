@@ -10,12 +10,18 @@ module Processor.DriverPoolState.Types
     currentKey,
     historyKey,
     writerWatermarkKey,
+    writerPartitionsField,
+    writerPartitionField,
+    writerWatermarkFromHash,
+    stateBufferMs,
+    awaitStateWriter,
     sessionizerWatermarkKey,
     stateHorizonKey,
     stateExpiry,
   )
 where
 
+import qualified Control.Concurrent as CC
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
@@ -23,6 +29,9 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
+import Data.Time.Clock.POSIX (getPOSIXTime)
+import qualified Database.Redis as R
 import Kernel.Prelude
 
 -- | One message on the driver-pool-state topic: only the fields that changed,
@@ -102,9 +111,59 @@ currentKey did = "driver_state:current:" <> did
 historyKey :: Text -> Text
 historyKey did = "driver_state:history:" <> did
 
--- | Epoch ms up to which the writer has applied every event.
+-- | Hash: how far the writer has applied events, per partition of the
+-- driver-pool-state topic ('writerPartitionField' -> epoch ms), plus the
+-- topic's partition count ('writerPartitionsField'). Each writer replica
+-- writes only the partitions it owns; the watermark is the minimum over all
+-- partitions, so a fast replica can't speak for a slow one.
 writerWatermarkKey :: Text
-writerWatermarkKey = "state_writer:watermark"
+writerWatermarkKey = "state_writer:partition_watermarks"
+
+writerPartitionsField :: ByteString
+writerPartitionsField = "partitions"
+
+writerPartitionField :: Int -> ByteString
+writerPartitionField p = "p" <> encodeUtf8 (show p :: Text)
+
+-- | The writer watermark from the hash's fields: the minimum over every
+-- partition, or Nothing until every partition has reported.
+writerWatermarkFromHash :: [(ByteString, ByteString)] -> Maybe Integer
+writerWatermarkFromHash fields = do
+  let readInt :: Read a => ByteString -> Maybe a
+      readInt = readMaybe . T.unpack . TE.decodeUtf8
+  n :: Int <- lookup writerPartitionsField fields >>= readInt
+  marks <- forM [0 .. n - 1] $ \p -> lookup (writerPartitionField p) fields >>= readInt
+  if null marks then Nothing else Just (minimum marks)
+
+-- | Events are looked up only once the writer is this far past them, so a
+-- state change published late (producer batching, retries) or stamped by a
+-- pod whose clock is behind still lands before the lookup.
+stateBufferMs :: Integer
+stateBufferMs = 30 * 1000
+
+-- | Block until the writer has applied every partition up to @needed@ +
+-- 'stateBufferMs' (epoch ms) and return its watermark. @needed@ is capped at
+-- the time of the call, so an event stamped ahead of the clock waits only
+-- the buffer. No timeout: tagging an event with a state the writer has not
+-- applied yet would be silently wrong, while waiting only delays (Kafka holds
+-- the backlog). @warn@ is called every 'stallWarnEveryMs' of waiting.
+awaitStateWriter :: (Text -> IO ()) -> R.Connection -> Integer -> IO Integer
+awaitStateWriter warn conn needed = do
+  callMs <- round . (* 1000) <$> getPOSIXTime
+  go (min callMs needed + stateBufferMs) 0
+  where
+    go target waitedMs = do
+      reply <- (Right <$> R.runRedis conn (R.hgetall (TE.encodeUtf8 writerWatermarkKey))) `catchAny` (pure . Left . show)
+      let mbWm = either (const Nothing) (either (const Nothing) writerWatermarkFromHash) reply
+      case mbWm of
+        Just wm | wm >= target -> pure wm
+        _ -> do
+          when (waitedMs > 0 && waitedMs `mod` stallWarnEveryMs == 0) $
+            warn $ "waiting " <> show waitedMs <> " ms for the state writer to reach " <> show target <> "; it is at " <> maybe "no watermark (unreadable, or not every partition reported)" show mbWm <> either (\e -> " (read failed: " <> e <> ")") (const "") reply
+          CC.threadDelay (fromIntegral writerPollMs * 1000)
+          go target (waitedMs + writerPollMs)
+    writerPollMs = 200
+    stallWarnEveryMs = 30 * 1000
 
 -- | Epoch ms up to which the sessionizer has committed pings (T in the plan).
 sessionizerWatermarkKey :: Text

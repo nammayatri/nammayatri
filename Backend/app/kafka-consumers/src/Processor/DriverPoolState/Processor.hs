@@ -17,7 +17,10 @@ where
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
+import Data.ByteString (ByteString)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as M
+import qualified Database.Redis as R
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -61,9 +64,19 @@ processDriverPoolState ev = do
       Hedis.expire hk stateExpiry
     trimHistory hk
 
--- | Record how far the writer has applied events, for the sessionizer to wait on.
-publishWriterWatermark :: Integer -> Flow ()
-publishWriterWatermark ms = inStateRedis $ Hedis.set writerWatermarkKey ms
+-- | Record how far the writer has applied events on the partitions this
+-- replica owns (partition -> epoch ms), and the topic's partition count, for
+-- the sessionizer and DRIVER_PERFORMANCE to wait on.
+publishWriterWatermark :: Int -> M.Map Int Integer -> Flow ()
+publishWriterWatermark partitionCount marks = do
+  stateEnv <- asks (.driverStateHedisEnv) >>= fromMaybeM (InternalError "driverStateRedisCfg is not set; DRIVER_POOL_STATE needs it")
+  let num :: Integer -> ByteString
+      num n = encodeUtf8 (show n :: Text)
+      fields = (writerPartitionsField, num (toInteger partitionCount)) : [(writerPartitionField p, num ms) | (p, ms) <- M.toList marks]
+  reply <- liftIO $ R.runRedis stateEnv.hedisConnection $ R.hmset (encodeUtf8 writerWatermarkKey) fields
+  case reply of
+    Left err -> throwError (InternalError ("writer watermark write failed: " <> show err))
+    Right _ -> pure ()
 
 -- | Keep the newest entry at or before T plus every entry after T, where T is
 -- the earlier of the sessionizer's watermark and DRIVER_PERFORMANCE's state

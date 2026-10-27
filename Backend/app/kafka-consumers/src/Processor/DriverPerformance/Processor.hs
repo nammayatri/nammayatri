@@ -12,8 +12,8 @@
 -- ride created_at), looked up in the writer's history when the entity is
 -- first seen and kept with its state, so every later version and retraction
 -- lands in the same row. Joined facts count in their ride's row. Before
--- looking states up a batch waits (bounded) for the writer to reach its
--- newest event time, and every flush publishes
+-- looking states up a batch waits (unbounded) until the writer is
+-- 'stateBufferMs' past its newest event time, and every flush publishes
 -- perf:state_horizon so the writer keeps the history those lookups need.
 --
 -- State lives in the writer's Redis (driverStateRedisCfg, keys perf:*). A poll
@@ -60,7 +60,7 @@ import Kernel.Utils.Common (logDebug, logError, logInfo, logWarning)
 import Processor.ClickhouseText (asciiJson)
 import Processor.DriverPerformance.Contribution
 import Processor.DriverPerformance.Types
-import Processor.DriverPoolState.Types (stateHorizonKey, writerWatermarkKey)
+import Processor.DriverPoolState.Types (awaitStateWriter, stateHorizonKey)
 import Processor.StateColumns (renderStateValues, stateOfTag, stateTag, statesAt)
 import Transporter.Kafka.Committing (isRdKafkaError)
 import qualified Prelude as P
@@ -79,14 +79,6 @@ loadRetryMicros = 1000000
 -- | Keys per MGET, commands per pipelined write.
 redisChunk :: Int
 redisChunk = 500
-
--- | The bounded wait for the state writer before stamp lookups, like the
--- sessionizer's: poll every 200 ms, give up after 30 s.
-writerPollMicros :: Int
-writerPollMicros = 200000
-
-writerWaitTimeoutMs :: Integer
-writerWaitTimeoutMs = 30 * 1000
 
 -- | perf:state_horizon is this far before the earliest event time looked up
 -- in the window, for lookups of entities that arrive late.
@@ -235,9 +227,8 @@ runDriverPerformance flowRt appEnv kc = do
         -- the writer has applied events up to the newest of those times.
         let lookups = stampLookups loaded2 msgs
             lookupTimes = map snd lookups
-        waitNow <- nowMs
-        -- Capped at now, so an event stamped ahead of the clock can't hold the batch.
-        unless (null lookupTimes) $ waitForWriter conn (min waitNow (maximum lookupTimes))
+        -- However long it takes: a stamp the writer has not caught up to would be wrong for good.
+        unless (null lookupTimes) $ void $ awaitStateWriter (flow . logWarning . ("driver-performance: " <>)) conn (maximum lookupTimes)
         found <- retryingAfter loadRetryMicros "driver state history read" (statesAt conn lookups)
         -- An entry written before snapshots carried @state@ counts as no state.
         let stamps = M.mapMaybe (\(entryTs, snapshot) -> if AKM.null snapshot.state then Nothing else Just (entryTs, stateTag snapshot.state)) found
@@ -245,21 +236,6 @@ runDriverPerformance flowRt appEnv kc = do
             applied = foldl' (applyMsg stamps) withLookups msgs
         forM_ (reverse applied.wNotes) (flow . logDebug)
         pure (lp {lpWindow = applied {wNotes = []}})
-
-    -- Until state_writer:watermark reaches @needed@ (epoch ms), or
-    -- 'writerWaitTimeoutMs' passed; an unreadable watermark counts as not reached.
-    waitForWriter :: R.Connection -> Integer -> IO ()
-    waitForWriter conn needed = go 0
-      where
-        go waitedMs = do
-          reply <- (Right <$> R.runRedis conn (R.get (TE.encodeUtf8 writerWatermarkKey))) `catchAny` (pure . Left)
-          let reached = case reply of
-                Right (Right (Just wmBytes)) -> maybe False (>= needed) (A.decodeStrict wmBytes :: Maybe Integer)
-                _ -> False
-          if
-              | reached -> pure ()
-              | waitedMs >= writerWaitTimeoutMs -> flow $ logWarning $ "driver-performance: state writer has not reached " <> show needed <> " after " <> show writerWaitTimeoutMs <> " ms, looking states up anyway"
-              | otherwise -> threadDelay writerPollMicros >> go (waitedMs + 200)
 
     -- Keys already read or written this window are not read again.
     loadKeys :: R.Connection -> Window -> [Text] -> IO Window
