@@ -15,6 +15,7 @@
 module Domain.Action.UI.DriverProfile
   ( postDriverProfileUpdateAuthDataTriggerOTP,
     postDriverProfileUpdateAuthDataVerifyOTP,
+    postDriverOperatingCityUpdate,
     AuthData (..),
   )
 where
@@ -23,12 +24,15 @@ import qualified API.Types.UI.DriverProfile as DriverProfileTypes
 import Control.Applicative ((<|>))
 import Data.Aeson as DA
 import qualified Data.Text as T
+import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Email.Types
+import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig, useFakeSms)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -36,9 +40,14 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Geofencing (GeoRestriction (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverCityMigration as SDriverCityMigration
 import qualified SharedLogic.OTP as SOTP
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import Tools.Error
@@ -50,6 +59,45 @@ data AuthData = AuthData
     otp :: DbHash
   }
   deriving (Generic, Show, FromJSON, ToJSON)
+
+postDriverOperatingCityUpdate ::
+  (Maybe (Id SP.Person), Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  DriverProfileTypes.UpdateOperatingCityReq ->
+  Flow DriverProfileTypes.UpdateOperatingCityRes
+postDriverOperatingCityUpdate (mbPersonId, merchantId, currentOpCityId) req = do
+  driverId <- mbPersonId & fromMaybeM (PersonNotFound "Person ID not found")
+  driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+  if driverInfo.onRide
+    then keepCurrentCity
+    else do
+      merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      when (merchant.geofencingConfig.origin == Unrestricted) $ throwError (InvalidRequest "Operating city cannot be derived from location for this merchant")
+      try @_ @SomeException (DSearch.getNearestOperatingAndSourceCity merchant (LatLong req.lat req.lon)) >>= \case
+        Left err -> do
+          logInfo $ "Keeping operating city for driver " <> driverId.getId <> ", could not resolve city from location: " <> show err
+          keepCurrentCity
+        Right DSearch.NearestOperatingAndSourceCity {nearestOperatingCity, sourceCity} ->
+          if sourceCity.city /= nearestOperatingCity.city
+            then keepCurrentCity
+            else do
+              targetOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just nearestOperatingCity.city)
+              driverPerson <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+              let isCityChanged = targetOpCityId /= driverPerson.merchantOperatingCityId
+              when isCityChanged $ do
+                logInfo $ "Driver " <> driverId.getId <> " changing operating city from " <> driverPerson.merchantOperatingCityId.getId <> " to " <> targetOpCityId.getId
+                SDriverCityMigration.migrateDriverOperatingCity driverPerson merchantId targetOpCityId
+              pure $ mkUpdateOperatingCityRes nearestOperatingCity.city nearestOperatingCity.state isCityChanged
+  where
+    keepCurrentCity = do
+      currentOpCity <- CQMOC.findById currentOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound currentOpCityId.getId)
+      pure $ mkUpdateOperatingCityRes currentOpCity.city currentOpCity.state False
+
+    mkUpdateOperatingCityRes resCity resState changed =
+      DriverProfileTypes.UpdateOperatingCityRes
+        { DriverProfileTypes.city = resCity,
+          DriverProfileTypes.state = resState,
+          DriverProfileTypes.isCityChanged = changed
+        }
 
 postDriverProfileUpdateAuthDataTriggerOTP ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],

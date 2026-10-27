@@ -1,6 +1,8 @@
 imports:
   Person: Domain.Types.Person
   IdentifierType: Domain.Types.Person
+  City: Kernel.Types.Beckn.Context
+  IndianState: Kernel.Types.Beckn.Context
 
 module: DriverProfile
 
@@ -13,6 +15,15 @@ types:
   VerifyUpdateAuthOTPReq:
     identifier: Maybe IdentifierType
     otp: Text
+
+  UpdateOperatingCityReq:
+    lat: Double
+    lon: Double
+
+  UpdateOperatingCityRes:
+    city: City
+    state: IndianState
+    isCityChanged: Bool
 
 apis:
   - POST:
@@ -30,4 +41,12 @@ apis:
         type: API.Types.UI.DriverProfile.VerifyUpdateAuthOTPReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /driver/operatingCity/update
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.DriverProfile.UpdateOperatingCityReq
+      response:
+        type: API.Types.UI.DriverProfile.UpdateOperatingCityRes
 
