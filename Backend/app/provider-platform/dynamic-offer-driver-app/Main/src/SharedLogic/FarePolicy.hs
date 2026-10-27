@@ -403,7 +403,7 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
   congestionChargeEndTime <- getCurrentTime
   let congestionChargeDuration = diffUTCTime congestionChargeEndTime congestionChargeStartTime
   logInfo $ "getFullFarePolicy: getCongestionChargeMultiplierFromModel took " <> show congestionChargeDuration
-  mbFarePolicy' <- QFP.findById txnId fareProduct.farePolicyId
+  mbFarePolicy' <- QFP.findByIdForCity txnId (Just fareProduct.merchantOperatingCityId) fareProduct.farePolicyId
   case mbFarePolicy' of
     Nothing -> do
       logError $ "No fare policy found for farePolicyId: " <> show fareProduct.farePolicyId

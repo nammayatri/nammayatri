@@ -63,7 +63,7 @@ updateEstimatedFareAndAddOnDetails (Id quoteId) estimatedFare addOnData =
 -}
 instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
   fromTType' BeamQSZ.QuoteSpecialZoneT {..} = do
-    farePolicy <- maybe (pure Nothing) (BeamFPolicy.findById Nothing . Id) farePolicyId
+    farePolicy <- maybe (pure Nothing) (BeamFPolicy.findByIdForCity Nothing (Id <$> merchantOperatingCityId) . Id) farePolicyId
     fareParams <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError $ "FareParameters not found in Quote for id: " <> show fareParametersId)
     return $
       Just
