@@ -91,7 +91,18 @@ uv run sessionizer/test_driver_performance.py           # ~5 min: four phases, a
 uv run sessionizer/test_driver_performance.py --fast    # no flush between phases (~1.5 min)
 uv run sessionizer/test_driver_performance.py --e2e     # right after a ride run
 uv run sessionizer/test_driver_performance.py --selfcheck   # reference model only, no stack needed
+uv run sessionizer/test_metrics_reconciliation.py       # ~15 min: both legs + column audit
+uv run sessionizer/test_metrics_reconciliation.py --fast  # shorter perf leg (no mid-run flushes)
 ```
+
+# `test_metrics_reconciliation.py`
+
+Runs a compact sessionizer timeline and a compact driver-performance timeline in
+one go, then prints an input ledger (Kafka message counts), per-column totals
+(model vs ClickHouse), and per-(bucket, city, driver, state) row checks for
+both activity and performance measures. Use it when you want one pass that
+touches every `driver_analytics_5m` metric column without running the full
+~11 min + ~5 min scenario suites.
 
 # `test_sessionizer.py`
 
