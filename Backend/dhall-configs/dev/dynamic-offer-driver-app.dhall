@@ -355,12 +355,14 @@ let AllocatorJobType =
       | GenerateInvoicePdf
       | SendLegalPolicyNotification
       | CheckBetterDriverSearchProximity
+      | FleetAnalyticsRedisRecon
       >
 
 let jobRetryOnExceptionMapx =
       [ { mapKey = AllocatorJobType.BulkUserCohortMappingUpload
         , mapValue = True
         }
+      , { mapKey = AllocatorJobType.FleetAnalyticsRedisRecon, mapValue = True }
       ]
 
 let jobInfoMapx =
