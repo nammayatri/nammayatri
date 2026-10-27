@@ -207,7 +207,7 @@ runSessionizer flowRt appEnv kc = do
             foldl' (\accPiece (b, ms) -> addToRow (b, c.city, c.driverId) mbEntry (classify mbEntry ms) accPiece) accSeg (splitAtBuckets segFrom segTo)
           withTime = foldl' creditSegment acc segments
           endsUnknown = maybe True (\(_, _, s) -> isNothing s) (listToMaybe (reverse segments))
-       in if endsUnknown then addToRow (floorBucket c.toMs, c.city, c.driverId) Nothing mempty {pingsUnknownState = 1} withTime else withTime
+       in if endsUnknown then addToRow (floorBucket c.toMs, c.city, c.driverId) (Nothing :: Maybe (Integer, DriverStateSnapshot)) mempty {pingsUnknownState = 1} withTime else withTime
 
     -- Adds to the row of the state from a history entry (ts, snapshot), or
     -- to the unknown-state row.
