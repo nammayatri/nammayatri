@@ -917,7 +917,9 @@ data BulkUserCohortMappingUploadJobData = BulkUserCohortMappingUploadJobData
     -- | Seconds to wait before the next chunk job (throttles DB load).
     rescheduleDelaySeconds :: Int,
     -- | Stable id returned to dashboard for log/correlation across chunk jobs.
-    runId :: Text
+    runId :: Text,
+    -- | App-level attempt (Pattern B). Missing/Nothing treated as 1. Not scheduler curr_errors.
+    attemptCount :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

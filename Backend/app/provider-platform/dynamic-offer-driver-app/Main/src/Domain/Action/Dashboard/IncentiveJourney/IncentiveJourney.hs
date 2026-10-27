@@ -154,7 +154,8 @@ mkHandle =
                     offset = 0,
                     batchSize = batchSize,
                     rescheduleDelaySeconds = delaySecs,
-                    runId = runIdText
+                    runId = runIdText,
+                    attemptCount = Just 1
                   }
           createJobByTime @_ @'BulkUserCohortMappingUpload (Just (cast merchantId)) (Just (cast merchantOpCityId)) scheduledAt jobData,
       findSpecialLocationNameById = Nothing,
