@@ -1463,6 +1463,15 @@ data DriverOnboardingError
   | ActiveRCNotFound
   | RCVehicleOnRide
   | RCActiveOnOtherAccount
+  | RCOtherDriverOnRide
+  | RCOtherDriverRecentRide
+  | RCOtherDriverAccountNew
+  | RCActivationDriverOnRide
+  | RCActivationDriverNotEnabled
+  | RCActivationRCNotApproved
+  | RCActivationRCNotValid
+  | RCActivationRCNotLinked
+  | RCActivationRCNotInFleet
   | RCDataMismatch Text
   | VehicleIsNotRegistered
   | InvalidOperatingCity Text
@@ -1562,6 +1571,15 @@ instance IsBaseError DriverOnboardingError where
     VehicleIsNotRegistered -> Just " Vehicle is not Registered "
     RCVehicleOnRide -> Just "Vehicle on ride. Please try again later."
     RCActiveOnOtherAccount -> Just "RC active on another driver account."
+    RCOtherDriverOnRide -> Just "This vehicle is on a ride with another driver account. Try again after that ride ends."
+    RCOtherDriverRecentRide -> Just "This vehicle was used for a ride on another driver account recently. Try again later."
+    RCOtherDriverAccountNew -> Just "This vehicle is active on a driver account that was created recently. Try again later."
+    RCActivationDriverOnRide -> Just "Finish your current ride before switching to this vehicle."
+    RCActivationDriverNotEnabled -> Just "Your account is not enabled yet. Complete onboarding before activating this vehicle."
+    RCActivationRCNotApproved -> Just "This vehicle is not approved yet."
+    RCActivationRCNotValid -> Just "This vehicle's RC is not verified yet."
+    RCActivationRCNotLinked -> Just "This RC is not linked to your account. Upload it before activating."
+    RCActivationRCNotInFleet -> Just "This vehicle does not belong to you or your fleet."
     RCDataMismatch fields -> Just $ "Submitted RC data does not match the approved Vehicle Registration Certificate. Mismatched fields: " <> fields <> "."
     RCActivationFailedPaymentDue id_ -> Just $ "cannot activate RC for person \"" <> id_ <> "\" Due to paymentDue."
     RCDependentDocExpired detail -> Just $ "RC dependent doc not valid : " <> detail
@@ -1659,6 +1677,16 @@ instance IsHTTPError DriverOnboardingError where
     VehicleIsNotRegistered -> "VEHICLE_IS_NOT_REGISTERED"
     RCVehicleOnRide -> "RC_Vehicle_ON_RIDE"
     RCActiveOnOtherAccount -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
+    -- RC activation errors keep the codes clients already branch on; the specific reason is in errorPayload.reasonCode.
+    RCOtherDriverOnRide -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
+    RCOtherDriverRecentRide -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
+    RCOtherDriverAccountNew -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
+    RCActivationDriverOnRide -> "RC_Vehicle_ON_RIDE"
+    RCActivationDriverNotEnabled -> "INVALID_REQUEST"
+    RCActivationRCNotApproved -> "INVALID_REQUEST"
+    RCActivationRCNotValid -> "INVALID_REQUEST"
+    RCActivationRCNotLinked -> "INVALID_REQUEST"
+    RCActivationRCNotInFleet -> "INVALID_REQUEST"
     RCDataMismatch _ -> "RC_DATA_MISMATCH"
     RCActivationFailedPaymentDue _ -> "RC_ACTIVATION_FAILED_PAYMENT_DUE"
     RCDependentDocExpired _ -> "RC_DEPENDENT_DOC_EXPIRED"
@@ -1749,6 +1777,15 @@ instance IsHTTPError DriverOnboardingError where
     VehicleIsNotRegistered -> E400
     RCVehicleOnRide -> E400
     RCActiveOnOtherAccount -> E400
+    RCOtherDriverOnRide -> E400
+    RCOtherDriverRecentRide -> E400
+    RCOtherDriverAccountNew -> E400
+    RCActivationDriverOnRide -> E400
+    RCActivationDriverNotEnabled -> E400
+    RCActivationRCNotApproved -> E400
+    RCActivationRCNotValid -> E400
+    RCActivationRCNotLinked -> E400
+    RCActivationRCNotInFleet -> E400
     RCDataMismatch _ -> E400
     RCActivationFailedPaymentDue _ -> E400
     RCDependentDocExpired _ -> E400
@@ -1808,7 +1845,22 @@ instance IsHTTPError DriverOnboardingError where
     DigiLockerInvalidVehicleCategory _ -> E400
     DigiLockerAllDocumentsVerified -> E400
 
-instance IsAPIError DriverOnboardingError
+instance IsAPIError DriverOnboardingError where
+  toPayload err = maybe Null (\reasonCode -> object ["reasonCode" .= reasonCode]) (rcActivationReasonCode err)
+
+-- | Specific reason for an RC activation rejection, sent alongside the backward-compatible errorCode.
+rcActivationReasonCode :: DriverOnboardingError -> Maybe Text
+rcActivationReasonCode = \case
+  RCOtherDriverOnRide -> Just "RC_OTHER_DRIVER_ON_RIDE"
+  RCOtherDriverRecentRide -> Just "RC_OTHER_DRIVER_RECENT_RIDE"
+  RCOtherDriverAccountNew -> Just "RC_OTHER_DRIVER_ACCOUNT_NEW"
+  RCActivationDriverOnRide -> Just "RC_ACTIVATION_DRIVER_ON_RIDE"
+  RCActivationDriverNotEnabled -> Just "RC_ACTIVATION_DRIVER_NOT_ENABLED"
+  RCActivationRCNotApproved -> Just "RC_ACTIVATION_RC_NOT_APPROVED"
+  RCActivationRCNotValid -> Just "RC_ACTIVATION_RC_NOT_VALID"
+  RCActivationRCNotLinked -> Just "RC_ACTIVATION_RC_NOT_LINKED"
+  RCActivationRCNotInFleet -> Just "RC_ACTIVATION_RC_NOT_IN_FLEET"
+  _ -> Nothing
 
 instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
 
