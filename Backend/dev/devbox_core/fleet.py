@@ -95,7 +95,8 @@ def fetch_machines(base_host: str, base_port: str,
 
     Transforms that into:
       { "machines": [MachineInfo, …], "myIps": [...], "myNetworks": [...] }
-    where MachineInfo = {name, role, localIp, awsIp, overlayIp, bestIp, user, type, resources}
+    where MachineInfo = {name, role, localIp, awsIp, overlayIp, bestIp, routes, user, type, resources}
+    and routes = [{route, ip}, …]: the addresses that answered, office first.
 
     `reachable(ip)` decides whether an address answers; callers that poll pass
     a cached version."""
@@ -147,19 +148,17 @@ def fetch_machines(base_host: str, base_port: str,
         lan_ok = bool(local_ip) and reachable(local_ip)
         # Skip the VPN probe when the local address already answered — same box.
         vpn_ok = bool(aws_ip) and (False if lan_ok else reachable(aws_ip))
-        # The overlay address wins when it answers: it does not change when the
-        # office IPs do, and dev-box keys may accept the runner only on it. Then
-        # the local address (no tunnel hop). None → no route from here; the
+        # The office (local) address first: no tunnel hop, and it does not need
+        # the tailnet's control server. Then the overlay address, which works
+        # from outside the office and survives office IP changes; then the VPN
+        # one. routes keeps every address that answered, in that order, so a
+        # caller that must log in can fall back. None → no route from here; the
         # addresses are still reported (for display) but bestIp/route stay
         # empty so callers can refuse to assign it.
-        if overlay_ok:
-            best, route = overlay_ip, "overlay"
-        elif lan_ok:
-            best, route = local_ip, "local"
-        elif vpn_ok:
-            best, route = aws_ip, "vpn"
-        else:
-            best, route = "", ""
+        routes = ([{"route": "local", "ip": local_ip}] if lan_ok else []) \
+            + ([{"route": "overlay", "ip": overlay_ip}] if overlay_ok else []) \
+            + ([{"route": "vpn", "ip": aws_ip}] if vpn_ok else [])
+        best, route = (routes[0]["ip"], routes[0]["route"]) if routes else ("", "")
         return {
             "name":        m.get("name", default_name),
             "role":        role,
@@ -170,6 +169,7 @@ def fetch_machines(base_host: str, base_port: str,
             "localSubnet": lan_subnet,
             "vpnSubnet":   vpn_subnet,
             "route":       route,
+            "routes":      routes,
             "overlayReachable": overlay_ok,
             "localReachable": lan_ok,
             "vpnReachable": vpn_ok,

@@ -32,13 +32,28 @@ def _hopper_name(t: ssh.Target) -> str:
     return ssh.run(t, "hostname").stdout.strip()
 
 
+def _login(m: dict, key: str | None, skip: str = "") -> ssh.Target:
+    """Log in on the first of the machine's routes that takes our key (office,
+    then tailnet, then VPN), leaving out `skip`; raise naming every address tried."""
+    tried = []
+    for r in m.get("routes") or []:
+        if r["ip"] == skip:
+            continue
+        t = ssh.Target(m.get("user") or "", r["ip"], 22, key or ssh.find_key())
+        err = ssh.login_error(t)
+        if not err:
+            return t
+        tried.append(f"{r['route']} {r['ip']}: {err}")
+    raise RuntimeError(f"cannot log in to {m.get('name')}: " + ("; ".join(tried) or "no route"))
+
+
 def pick_target(user: str | None, host: str | None,
                 key: str | None) -> tuple[ssh.Target, str, str]:
     """The devbox to use: the given host, else the least-loaded reachable one
     that has a front desk and is published to hopper. Returns (target, devbox
-    name, url host): the target is how we reach it (the overlay address when it
-    answers), the devbox name is the one hopper's gateway URLs use, the url host
-    is its office address, for the office-only URLs."""
+    name, url host): the target is the first address that takes our key (office
+    first, then the overlay), the devbox name is the one hopper's gateway URLs
+    use, the url host is its office address, for the office-only URLs."""
     if host:
         if not _has_frontdesk(host):
             raise RuntimeError(f"{host} has no front desk on :{stack.FRONTDESK_PORT} "
@@ -60,8 +75,7 @@ def pick_target(user: str | None, host: str | None,
     m = fleet.pick(public)
     if m is None:
         raise RuntimeError(_not_public(", ".join(b.get("name", b["bestIp"]) for b in boxes)))
-    return (ssh.Target(m.get("user") or "", m["bestIp"], 22, key or ssh.find_key()),
-            m["name"], m.get("localIp") or m["bestIp"])
+    return _login(m, key), m["name"], m.get("localIp") or m["bestIp"]
 
 
 def _cc_url(c: dict, url_host: str, public: str) -> str:
@@ -183,6 +197,21 @@ def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
     output.stage("ready", "done")
     output.result(fields)
     return fields
+
+
+def reach(t: ssh.Target) -> ssh.Target:
+    """t when its address takes our key; else the same dev-box on another of its
+    addresses (office first), found in service discovery by any of them."""
+    err = ssh.login_error(t)
+    if not err:
+        return t
+    res = fleet.fetch_machines(*fleet.base_api())
+    m = next((m for m in fleet.devboxes(res.get("machines", []))
+              if t.host in (m.get("localIp"), m.get("overlayIp"), m.get("awsIp"))), None)
+    if m is None:
+        raise RuntimeError(f"cannot log in to {t.host} ({err}) and service discovery "
+                           f"knows no other address for it")
+    return _login({**m, "user": t.user or m.get("user")}, t.identity, skip=t.host)
 
 
 def stop(t: ssh.Target, name: str, owner: dict | None) -> dict:

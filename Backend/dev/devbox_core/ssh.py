@@ -63,6 +63,21 @@ def run(t: Target, script: str, timeout: int = 20) -> subprocess.CompletedProces
                           capture_output=True, text=True, timeout=timeout)
 
 
+def login_error(t: Target, timeout: int = 20) -> str:
+    """"" when ssh with this key really logs in to t, else the reason.
+
+    tcp_open only checks the network path; this checks the key too: a dev-box
+    can answer on port 22 yet refuse a key limited with from="…"."""
+    try:
+        r = subprocess.run(argv(t) + ["true"], capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return f"no answer in {timeout}s"
+    if r.returncode == 0:
+        return ""
+    lines = (r.stderr or "").strip().splitlines()
+    return lines[-1] if lines else f"exit {r.returncode}"
+
+
 def tcp_open(host: str, port: int = 22, timeout: float = 3.0) -> bool:
     """True when something is listening on host:port.
 

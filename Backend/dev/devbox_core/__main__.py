@@ -231,7 +231,7 @@ def cmd_spawn(args: argparse.Namespace) -> int:
 
 def cmd_stop(args: argparse.Namespace) -> int:
     try:
-        res = flow.stop(_target(args), args.name, _owner(args))
+        res = flow.stop(flow.reach(_target(args)), args.name, _owner(args))
     except (ValueError, RuntimeError) as e:
         print(json.dumps({"error": str(e)}))
         return 1

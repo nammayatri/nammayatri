@@ -49,6 +49,11 @@ it to hopper (nix-the-builder `scripts/daemonset/worker/devbox/frontdesk`). A de
 list as public is never picked. `office_url` (`http://<office ip>:8888/<name>`,
 every service) and `cc_url` only answer on the office network or the tailnet.
 
+The dev-box is reached by the first address that really logs in with the key:
+its office address, then its tailnet (overlay) address, then its VPN one. Stop
+starts from the address the release recorded and falls back to the dev-box's
+other addresses the same way.
+
 Stages: `preparing`, `sync`, `build`, `start`, `data`, `cc`, `ready`.
 States: `started`, `done`, `skipped`, `failed` (with `error`).
 
