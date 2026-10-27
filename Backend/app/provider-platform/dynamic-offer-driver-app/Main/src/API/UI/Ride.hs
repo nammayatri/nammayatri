@@ -57,6 +57,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
+import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import SharedLogic.Person (findPerson)
 import Storage.Beam.SystemConfigs ()
@@ -260,8 +261,14 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
   booking <-
     runInReplica $
       QBooking.findBookingBySpecialZoneOTPAndCity merchantOpCityId.getId rideOtp now transporterConfig.specialZoneBookingOtpExpiry
+        |<|>| SBooking.findScheduledBookingBySpecialZoneOtp merchantOpCityId rideOtp
         |<|>| QBooking.findBookingBySpecialZoneOTP merchantId.getId rideOtp now transporterConfig.specialZoneBookingOtpExpiry -- TODO :: Fix properly, when driver goes from one city to another, he should see the booking.
         >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
+  -- A scheduled booking starts no earlier than an assigned scheduled ride may be activated.
+  when booking.isScheduled $
+    whenJust transporterConfig.scheduledRideConfig.driverActivationWindow $ \activationWindow -> do
+      let earliestStartTime = addUTCTime (negate $ secondsToNominalDiffTime activationWindow) booking.startTime
+      when (now < earliestStartTime) $ throwError $ ScheduledRideActivationTooEarly earliestStartTime
   void $ validateOtpRideStartRestriction driverInfo transporterConfig.otpRideStartRestrictionRadius booking.fromLocation
   isLocked <- Redis.tryLockRedis (mkOtpRideLockKey booking.id) 30
   if isLocked
