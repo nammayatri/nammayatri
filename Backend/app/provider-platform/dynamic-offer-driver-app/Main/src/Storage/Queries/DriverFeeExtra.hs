@@ -607,6 +607,10 @@ updateAutopayPaymentStageAndRetryCountByIds autopayPaymentStage retryCount drive
     ]
     [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
 
+-- Statuses meaning the fee is already paid/settled and must not be collected or cleared again.
+settledDriverFeeStatuses :: [DriverFeeStatus]
+settledDriverFeeStatuses = [CLEARED, EXEMPTED, COLLECTED_CASH, CLEARED_BY_YATRI_COINS]
+
 --- note :- bad debt recovery date set in fork pls remeber to add fork in all places with driver fee status update in future----
 updateStatusByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -> [Id DriverFee] -> UTCTime -> m ()
 updateStatusByIds status driverFeeIds now = do
@@ -634,6 +638,8 @@ updateStatusAndCancellationPenaltyByIds status cancellationPenaltyAmount driverF
 -- path that clears a fee retroactively (delayed webhook, paid-but-not-cleared
 -- reconciliation): stamping "now" there lands the fee in the wrong collection
 -- window in finance reports.
+-- Fees already settled are skipped, so a second payment touching the same fee
+-- never re-clears it or overwrites the original collectedAt.
 updateClearedStatusByIdsWithCollectedAt :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DriverFee] -> UTCTime -> UTCTime -> m ()
 updateClearedStatusByIdsWithCollectedAt driverFeeIds collectedAt now = do
   updateWithKV
@@ -641,7 +647,11 @@ updateClearedStatusByIdsWithCollectedAt driverFeeIds collectedAt now = do
       Se.Set BeamDF.updatedAt now,
       Se.Set BeamDF.collectedAt (Just collectedAt)
     ]
-    [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
+    [ Se.And
+        [ Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds),
+          Se.Is BeamDF.status $ Se.Not $ Se.In settledDriverFeeStatuses
+        ]
+    ]
   fork "set bad recovery date" $ do updateBadDebtRecoveryDate CLEARED driverFeeIds
 
 updateFeeTypeByIds :: (MonadFlow m, EsqDBFlow m r) => FeeType -> [Id DriverFee] -> UTCTime -> m ()
@@ -688,14 +698,18 @@ updateToManualFeeByDriverFeeIds driverFeeIds = do
         ]
     ]
 
+-- With a merchant: only that merchant's fees. A driver who moved between merchants keeps the old
+-- merchant's fees, and those must never be bundled into (and collected by) the current merchant's
+-- order, so order-creating flows pass Just. Flows that account for all of a driver's dues pass Nothing.
 findAllByStatusAndDriverIdWithServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe (Id Merchant) ->
   Id Person ->
   [Domain.DriverFeeStatus] ->
   Maybe [Id DriverFee] ->
   ServiceNames ->
   m [DriverFee]
-findAllByStatusAndDriverIdWithServiceName (Id driverId) driverFeeStatus mbDriverFeeIds serviceName = do
+findAllByStatusAndDriverIdWithServiceName mbMerchantId (Id driverId) driverFeeStatus mbDriverFeeIds serviceName = do
   findAllWithKV
     [ Se.And $
         [ Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE],
@@ -703,6 +717,7 @@ findAllByStatusAndDriverIdWithServiceName (Id driverId) driverFeeStatus mbDriver
           Se.Is BeamDF.status $ Se.In driverFeeStatus,
           Se.Is BeamDF.driverId $ Se.Eq driverId
         ]
+          <> maybe [] (\(Id merchantId) -> [Se.Is BeamDF.merchantId $ Se.Eq merchantId]) mbMerchantId
           <> maybe [] (\driverFeeIds -> [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]) mbDriverFeeIds
     ]
 

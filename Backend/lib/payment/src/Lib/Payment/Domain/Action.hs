@@ -861,42 +861,47 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
   logInfo $ "CreateOrderService: skipCreateOrderCall-" <> show skipCreateOrderCall
   let updatedOrderShortId = updateShortId (Just paymentServiceType) isTestTransaction createOrderRequest.orderShortId
       createOrderReq = (createOrderRequest :: Payment.CreateOrderReq) {Payment.orderShortId = updatedOrderShortId}
-  mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
-  case mbExistingOrder of
-    Nothing | skipCreateOrderCall -> do
-      paymentOrder <- buildExternalPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq _isMockPayment mbGroupId
-      QOrder.create paymentOrder
-      return Nothing
-    Nothing -> do
-      createOrderResp <- createOrderCall createOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderResp _isMockPayment mbGroupId Nothing
-      QOrder.create paymentOrder
-      return $ Just createOrderResp
-    Just existingOrder
-      | existingOrder.isExternalOrder == Just True ->
-        return Nothing
-    Just existingOrder -> do
-      isOrderExpired <- maybe (pure True) (checkIfExpired existingOrder) existingOrder.clientAuthTokenExpiry
-      if isOrderExpired
-        then do
-          QOrder.updateStatusToExpired existingOrder.id
-          return Nothing
-        else do
-          sdkPayload <- buildSDKPayload createOrderReq existingOrder
-          case sdkPayload of
-            Just sdk_payload -> do
-              return $
-                Just $
-                  Payment.CreateOrderResp
-                    { status = existingOrder.status,
-                      id = existingOrder.paymentServiceOrderId,
-                      order_id = existingOrder.shortId.getShortId,
-                      payment_links = Just existingOrder.paymentLinks,
-                      sdk_payload,
-                      sdk_payload_json = existingOrder.sdkPayloadDump
-                    }
-            Nothing -> return Nothing
+  -- Lock on the order id: find-then-create is not atomic, and concurrent calls for the same
+  -- order id used to create it more than once with different amounts. A concurrent caller (double
+  -- tap, resume) waits for the first and then finds the order it created.
+  Redis.withWaitAndLockRedis (paymentOrderCreateKey createOrderReq.orderId) 60 100000 (createOrUseExistingOrder createOrderReq)
   where
+    createOrUseExistingOrder req = do
+      mbExistingOrder <- QOrder.findById (Id req.orderId)
+      case mbExistingOrder of
+        Nothing | skipCreateOrderCall -> do
+          paymentOrder <- buildExternalPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType req _isMockPayment mbGroupId
+          QOrder.create paymentOrder
+          return Nothing
+        Nothing -> do
+          createOrderResp <- createOrderCall req -- api call
+          paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType req createOrderResp _isMockPayment mbGroupId Nothing
+          QOrder.create paymentOrder
+          return $ Just createOrderResp
+        Just existingOrder
+          | existingOrder.isExternalOrder == Just True ->
+            return Nothing
+        Just existingOrder -> do
+          isOrderExpired <- maybe (pure True) (checkIfExpired existingOrder) existingOrder.clientAuthTokenExpiry
+          if isOrderExpired
+            then do
+              QOrder.updateStatusToExpired existingOrder.id
+              return Nothing
+            else do
+              sdkPayload <- buildSDKPayload req existingOrder
+              case sdkPayload of
+                Just sdk_payload -> do
+                  return $
+                    Just $
+                      Payment.CreateOrderResp
+                        { status = existingOrder.status,
+                          id = existingOrder.paymentServiceOrderId,
+                          order_id = existingOrder.shortId.getShortId,
+                          payment_links = Just existingOrder.paymentLinks,
+                          sdk_payload,
+                          sdk_payload_json = existingOrder.sdkPayloadDump
+                        }
+                Nothing -> return Nothing
     checkIfExpired order expiry = do
       now <- getCurrentTime
       let buffer = secondsToNominalDiffTime 150 -- 2.5 mins of buffer
@@ -2695,6 +2700,9 @@ calculateArnGeneratedAt existingArnGeneratedAt status mbArn stampedAt
   | isJust existingArnGeneratedAt = existingArnGeneratedAt
   | status == Payment.REFUND_SUCCESS, isJust mbArn = Just stampedAt
   | otherwise = Nothing
+
+paymentOrderCreateKey :: Text -> Text
+paymentOrderCreateKey orderId = "PaymentOrder:Create:OrderId" <> orderId
 
 txnProccessingKey :: Text -> Text
 txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid

@@ -138,7 +138,7 @@ groupDriverFeeByInvoices currency driverFees_ = do
       Id INV.Invoice ->
       m DriverFeeByInvoice
     buildDriverFeeByInvoice driverFees mStatus invoiceId = do
-      invoices <- QINV.findById invoiceId
+      invoices <- QINV.findAllRowsByInvoiceId invoiceId
       now <- getCurrentTime
       let driverFeeIds = invoices <&> (.driverFeeId)
           invoiceDriverFees = DL.filter (\x -> x.id `elem` driverFeeIds) driverFees

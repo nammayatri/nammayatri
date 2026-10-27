@@ -32,7 +32,7 @@ import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
 import qualified SharedLogic.ActiveDriversList as ADL
 import SharedLogic.Allocator
-import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf)
+import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual)
 import SharedLogic.Payment
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.Payment ()
@@ -141,7 +141,7 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
         forM_ vendorFees' $ \vf ->
           whenJust (subscriptionConfig.vendorMigrationMappings >>= find (\m -> m.oldVendorId == vf.vendorId)) $ \mapping ->
             QVF.updateVendorId vf.driverFeeId mapping.oldVendorId mapping.newVendorId
-      splitSettlementDetails' <- withTryCatch "mkSplitSettlementDetails:buildExecutionRequestAndInvoice" $ if splitEnabled then mkSplitSettlementDetails vendorFees (roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst + fromMaybe 0 driverFee.cancellationPenaltyAmount)) else pure Nothing
+      splitSettlementDetails' <- withTryCatch "mkSplitSettlementDetails:buildExecutionRequestAndInvoice" $ if splitEnabled then mkSplitSettlementDetails vendorFees (SPayment.driverFeeOrderAmount driverFee) else pure Nothing
       case splitSettlementDetails' of
         Left err -> do
           logError ("Execution failed for driverFeeId : " <> invoice.driverFeeId.getId <> " error : " <> show err)
@@ -154,7 +154,7 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
           let executionRequest =
                 PaymentInterface.MandateExecutionReq
                   { orderId = invoice.invoiceShortId,
-                    amount = roundToHalf driverFee.currency $ driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst + fromMaybe 0 driverFee.cancellationPenaltyAmount,
+                    amount = SPayment.driverFeeOrderAmount driverFee,
                     customerId = driverFee.driverId.getId,
                     notificationId = notification.shortId,
                     mandateId = mandateId.getId,

@@ -1,5 +1,6 @@
 module Storage.Queries.InvoiceExtra where
 
+import Data.List (nubBy)
 import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Invoice as Domain
@@ -16,6 +17,17 @@ import qualified Storage.Beam.Invoice as BeamI
 import Storage.Queries.OrphanInstances.Invoice ()
 
 -- Extra code goes here --
+
+-- | All rows (one per driver fee) of an invoice.
+-- The KV primary key of Invoice is ['id'] while the DB primary key is (id, driver_fee_id),
+-- so every row of one invoice maps to the same KV key: KV holds a single row per invoice id and
+-- findAllWithKV drops the DB rows sharing that key, returning just one fee. Merge the KV read
+-- (latest, possibly not yet drained) with a DB read, de-duplicated on (id, driverFeeId).
+findAllRowsByInvoiceId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Invoice -> m [Domain.Invoice]
+findAllRowsByInvoiceId (Id invoiceId) = do
+  kvRows <- findAllWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
+  dbRows <- findAllWithDb [Se.Is BeamI.id $ Se.Eq invoiceId]
+  pure $ nubBy (\a b -> a.driverFeeId == b.driverFeeId) (kvRows <> dbRows)
 
 checkIfAutoPayInvoiceById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Invoice -> m Bool
 checkIfAutoPayInvoiceById (Id invoiceId) = do
@@ -120,6 +132,34 @@ findAllByStatusWithLimit status merchantOperatingCityId limit = do
     (Just limit)
     Nothing
 
+-- | Manual / mandate-setup invoices marked FAILED in the last 24h and not yet re-checked today.
+-- A failed attempt can be followed by a successful one on the same order; once the invoice is
+-- FAILED it is no longer ACTIVE, so without this the order is never re-synced and stays failed.
+findRecentFailedWithLimit ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Int ->
+  m [Domain.Invoice]
+findRecentFailedWithLimit merchantOperatingCityId limit = do
+  endTime <- getCurrentTime
+  let startTime = addUTCTime (- (1 * 3600 * 24)) endTime
+  let lastCheckedAt = UTCTime (utctDay endTime) (secondsToDiffTime 0)
+  findAllWithOptionsKV'
+    [ Se.And
+        [ Se.Is BeamI.invoiceStatus $ Se.Eq Domain.FAILED,
+          Se.Is BeamI.paymentMode $ Se.In [Domain.MANUAL_INVOICE, Domain.MANDATE_SETUP_INVOICE],
+          Se.Is BeamI.createdAt $ Se.LessThanOrEq endTime,
+          Se.Is BeamI.createdAt $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamI.merchantOperatingCityId $ Se.Eq $ Just merchantOperatingCityId.getId,
+          Se.Or
+            [ Se.Is BeamI.lastStatusCheckedAt $ Se.Eq Nothing,
+              Se.Is BeamI.lastStatusCheckedAt $ Se.Not (Se.Eq $ Just lastCheckedAt)
+            ]
+        ]
+    ]
+    (Just limit)
+    Nothing
+
 findAllAutoPayInvoicesActiveOlderThanProvidedDuration ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   NominalDiffTime ->
@@ -192,6 +232,22 @@ retireAutopayInvoicesByDriverFeeIds driverFeeIds = do
           Se.Is BeamI.invoiceStatus $ Se.In [Domain.ACTIVE_INVOICE, Domain.INACTIVE]
         ]
     ]
+
+-- | Set the status of specific rows (one per driver fee) of an invoice, e.g. after a partial
+-- payment only the rows of the fees that payment covered become SUCCESS.
+updateInvoiceStatusByInvoiceIdAndDriverFeeIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.InvoiceStatus -> Id Domain.Invoice -> [Id DF.DriverFee] -> m ()
+updateInvoiceStatusByInvoiceIdAndDriverFeeIds invoiceStatus invoiceId driverFeeIds =
+  unless (null driverFeeIds) $ do
+    now <- getCurrentTime
+    updateWithKV
+      [ Se.Set BeamI.invoiceStatus invoiceStatus,
+        Se.Set BeamI.updatedAt now
+      ]
+      [ Se.And
+          [ Se.Is BeamI.id (Se.Eq $ getId invoiceId),
+            Se.Is BeamI.driverFeeId (Se.In $ getId <$> driverFeeIds)
+          ]
+      ]
 
 updateInvoiceStatusByInvoiceId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.InvoiceStatus -> Id Domain.Invoice -> m ()
 updateInvoiceStatusByInvoiceId invoiceStatus invoiceId = do
