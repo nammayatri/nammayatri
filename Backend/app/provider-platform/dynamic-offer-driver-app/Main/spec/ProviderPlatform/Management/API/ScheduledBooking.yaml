@@ -19,6 +19,7 @@ apis:
         to: UTCTime
         assignmentStatus: AssignmentStatus
         isHistory: Bool
+        pickupArea: Text
       auth: ApiAuthV2
       response:
         type: ScheduledBookingListRes
@@ -115,6 +116,20 @@ types:
   ScheduledBookingListRes:
     - totalItems: Int
     - bookings: [ScheduledBookingListItem]
+    - specialLocationSummary: Maybe ScheduledBookingSpecialLocationSummary # only when pickupArea is passed
+
+  # Counts over the pickup special location's whole live window, before the gate and assignment filters.
+  ScheduledBookingSpecialLocationSummary:
+    - total: Int
+    - assigned: Int
+    - unassigned: Int
+    - gates: [ScheduledBookingGateSummary]
+
+  ScheduledBookingGateSummary:
+    - pickupArea: Text # Pickup_<specialLocationId>_Gate_<gateId>, or Pickup_<specialLocationId> when no gate matched
+    - total: Int
+    - assigned: Int
+    - unassigned: Int
 
   ScheduledBookingListItem:
     - transactionId: Text
@@ -138,6 +153,7 @@ types:
     - cancellationSource: Maybe CancellationSource
     - cancellationReasonCode: Maybe Text
     - cancellationAdditionalInfo: Maybe Text
+    - pickupArea: Maybe Text # Pickup_<specialLocationId>[_Gate_<gateId>]
 
   ScheduledBookingInfoRes:
     - transactionId: Text
