@@ -133,7 +133,7 @@ onSelect OnSelectValidatedReq {..} = do
           isLockAcquired <- SConfirm.tryInitTriggerLock autoAssignQuote.requestId
           when isLockAcquired $ do
             merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
-            let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, dashboardAgentId = Nothing, quote = autoAssignQuote, paymentMethodId = searchRequest.selectedPaymentMethodId, paymentInstrument = searchRequest.selectedPaymentInstrument, merchant, requiresPaymentBeforeConfirm = False, mbOneShotDetails = Nothing, mbBetterDriverSwapDetails = Nothing, supportsBookingDeposit = Nothing}
+            let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, dashboardAgentId = Nothing, quote = autoAssignQuote, paymentMethodId = searchRequest.selectedPaymentMethodId, paymentInstrument = searchRequest.selectedPaymentInstrument, merchant, requiresPaymentBeforeConfirm = False, mbOneShotDetails = Nothing, mbBetterDriverSwapDetails = Nothing, supportsBookingDeposit = Nothing, numberOfPassengers = Nothing, numberOfCheckInBags = Nothing, numberOfCabinBags = Nothing}
             dConfirmRes <- SConfirm.confirm dConfirmReq
             becknInitReq <- ACL.buildInitReqV2 dConfirmRes
             handle (errHandler dConfirmRes.booking) $ do
@@ -211,6 +211,7 @@ buildSelectedQuote estimate providerInfo now req@QSRLite.SearchRequestLite {..} 
             driverCancellationNotAllowed = estimate.driverCancellationNotAllowed,
             vehicleServiceTierSeatingCapacity = estimate.vehicleServiceTierSeatingCapacity,
             vehicleServiceTierLuggageCapacity = estimate.vehicleServiceTierLuggageCapacity,
+            luggageFitEnabled = estimate.luggageFitEnabled,
             specialLocationName = estimate.specialLocationName,
             specialLocationSupportNumber = Nothing,
             fareSettlementType = estimate.fareSettlementType,

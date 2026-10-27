@@ -172,3 +172,8 @@ ALTER TABLE atlas_app.quote ADD COLUMN booking_deposit double precision ;
 
 ALTER TABLE atlas_app.quote ADD COLUMN selected_offer_discount_amount double precision ;
 ALTER TABLE atlas_app.quote ADD COLUMN rider_tax_rates json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN luggage_fit_enabled boolean ;

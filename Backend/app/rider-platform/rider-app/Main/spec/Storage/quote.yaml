@@ -93,6 +93,7 @@ Quote:
     vehicleServiceTierType : ServiceTierType
     vehicleServiceTierSeatingCapacity : Maybe Int
     vehicleServiceTierLuggageCapacity : Maybe Int
+    luggageFitEnabled: Maybe Bool
     vehicleServiceTierAirConditioned : Maybe Double
     isAirConditioned: Maybe Bool
     driverCancellationNotAllowed: Maybe Bool

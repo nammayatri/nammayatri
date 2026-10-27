@@ -168,7 +168,7 @@ mkBackendHandle merchantId mocId _ctx =
            in preferAuto (\qe -> show qe.vehicleVariant) qs & map toBotQuote,
       confirmQuote = \auth quoteId ->
         runBot "confirmQuote" $ do
-          res <- UIConfirm.confirm' (Id auth.personId, merchantId) (Id quoteId) Nothing Nothing Nothing Nothing Nothing Nothing
+          res <- UIConfirm.confirm' (Id auth.personId, merchantId) (Id quoteId) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
           pure res.bookingId.getId,
       selectEstimate = \auth estimateId ->
         runBot "selectEstimate" $ do
@@ -336,6 +336,9 @@ mkBackendHandle merchantId mocId _ctx =
           preferSafetyPlus = Nothing,
           driverPreference = Nothing,
           selectedOfferId = Nothing,
+          numberOfPassengers = Nothing,
+          numberOfCheckInBags = Nothing,
+          numberOfCabinBags = Nothing,
           -- The bot books what the customer asked for over chat; there is no map to move a
           -- marker on, so no walk-and-save endpoint to name.
           suggestedPickupAddress = Nothing,

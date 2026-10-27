@@ -26,6 +26,7 @@ import qualified Domain.Types.DeliveryPersonDetails as DTDPD
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
+import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
@@ -56,6 +57,7 @@ import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.MetricsLabels as SML
+import qualified SharedLogic.PassengerLuggage as SPL
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.Settlement (driverTaxRates)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
@@ -106,7 +108,11 @@ data InitReq = InitReq
     paymentChargeDetails :: Maybe PaymentChargeDetails,
     -- | A BAP can select more than one add-on on the same item -- empty when
     -- none was echoed, never a single Maybe.
-    addOns :: [Spec.AddOn]
+    addOns :: [Spec.AddOn],
+    -- | The group's counts, sent at confirm for quotes, which have no select step.
+    numberOfPassengers :: Maybe Int,
+    numberOfCheckInBags :: Maybe Int,
+    numberOfCabinBags :: Maybe Int
   }
 
 data InitReqDetails = InitReqDeliveryDetails DTDD.DeliveryDetails
@@ -184,8 +190,9 @@ handler merchantId req validatedReq = do
         QST.updateStatus DST.COMPLETED (searchTry.id)
         QST.markReallocationOutcome searchTry
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
-      ValidatedQuote quote -> do
-        booking <- buildBooking (mkBuildBookingReq DRB.NEW (Just riderDetails.id) req.mbRiderName) searchRequest quote SLT.PERSONAL quote.id.getId quote.tripCategory now mbPaymentMethod paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing Nothing Nothing Nothing Nothing Nothing Nothing quote.addOnData
+      ValidatedQuote validatedQuote -> do
+        (searchRequestWithLuggage, quote) <- applyPassengerLuggageToQuote req searchRequest validatedQuote
+        booking <- buildBooking (mkBuildBookingReq DRB.NEW (Just riderDetails.id) req.mbRiderName) searchRequestWithLuggage quote SLT.PERSONAL quote.id.getId quote.tripCategory now mbPaymentMethod paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing Nothing Nothing Nothing Nothing Nothing Nothing quote.addOnData
         QRB.createBooking booking
         QFP.updatePaymentCharge quote.fareParams booking.fareParams
         cityLabel <- SML.getCityLabel searchRequest.merchantOperatingCityId
@@ -426,6 +433,9 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         addOnData = addOnData,
         exotelDeclinedCallStatusReceivingTime = Nothing,
         numberOfLuggages = searchRequest.numberOfLuggages,
+        numberOfCheckInBags = searchRequest.numberOfCheckInBags,
+        numberOfCabinBags = searchRequest.numberOfCabinBags,
+        numberOfPassengers = searchRequest.numberOfPassengers,
         isPickupOrDestinationEdited = Just False,
         paymentMode = searchRequest.paymentMode,
         searchTryId = searchTryId,
@@ -437,6 +447,48 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         discountAmount = mbClampedDiscount,
         ..
       }
+
+-- The group's counts price a quote-based booking when the quote's fare policy has the feature on:
+-- the counts are stored on the search request and the luggage above the tier trunk is charged.
+-- Without counts, or with the feature off, the quote is used as it is.
+applyPassengerLuggageToQuote ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  InitReq ->
+  DSR.SearchRequest ->
+  DQ.Quote ->
+  m (DSR.SearchRequest, DQ.Quote)
+applyPassengerLuggageToQuote req searchRequest quote =
+  case SPL.storedPassengerLuggage req.numberOfPassengers req.numberOfCheckInBags req.numberOfCabinBags of
+    Just passengerLuggage | (quote.farePolicy >>= (.luggageFitEnabled)) == Just True -> do
+      QSR.updatePassengerLuggage searchRequest.id searchRequest.isScheduled (Just passengerLuggage.passengers) (Just passengerLuggage.checkInBags) (Just passengerLuggage.cabinBags)
+      let searchRequestWithLuggage =
+            searchRequest
+              { DSR.numberOfPassengers = Just passengerLuggage.passengers,
+                DSR.numberOfCheckInBags = Just passengerLuggage.checkInBags,
+                DSR.numberOfCabinBags = Just passengerLuggage.cabinBags
+              }
+      -- Without bags there is no luggage above any trunk, so the tier is not needed.
+      mbExcessHalfUnits <-
+        if passengerLuggage.checkInBags == 0 && passengerLuggage.cabinBags == 0
+          then pure (Just 0)
+          else do
+            vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow quote.vehicleServiceTier searchRequest.merchantOperatingCityId (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show quote.vehicleServiceTier))
+            pure $ SPL.excessLuggageHalfUnits vehicleServiceTierItem (Just passengerLuggage.checkInBags) (Just passengerLuggage.cabinBags)
+      let mbPerLuggageCharge = DFarePolicy.perUnitLuggageCharge (Just True) (quote.farePolicy >>= (.perLuggageCharge))
+          luggageCharge = SPL.excessLuggageCharge mbPerLuggageCharge mbExcessHalfUnits
+          fareChange = SPL.luggageFareAdjustment mbExcessHalfUnits mbPerLuggageCharge quote.fareParams.luggageCharge
+      if fareChange == 0
+        then pure (searchRequestWithLuggage, quote)
+        else do
+          newFareParamsId <- generateGUID
+          let quoteFareParams = quote.fareParams
+              newFareParams = quoteFareParams {DFP.id = newFareParamsId, DFP.luggageCharge = if luggageCharge > 0 then Just luggageCharge else Nothing}
+          QFP.create newFareParams
+          -- The quote keeps the luggage fare, so the later driver batches, a reallocation and a fleet reassign start from it.
+          let estimatedFareWithLuggage = quote.estimatedFare + fareChange
+          QQuote.updateEstimatedFareAndFareParameters quote.id estimatedFareWithLuggage newFareParamsId
+          pure (searchRequestWithLuggage, quote {DQ.estimatedFare = estimatedFareWithLuggage, DQ.fareParams = newFareParams})
+    _ -> pure (searchRequest, quote)
 
 makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)
 makeBookingDeliveryDetails searchReq deliveryDetails mId = do

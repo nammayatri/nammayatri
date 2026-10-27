@@ -85,6 +85,10 @@ SearchRequest:
     totalRidesCount: Maybe Int
     isAdvanceBookingEnabled: Maybe Bool
     isMeterRideSearch: Maybe Bool
+    # The group's counts from select, kept only when every selected estimate has the luggage feature on.
+    numberOfPassengers: Maybe Int
+    numberOfCheckInBags: Maybe Int
+    numberOfCabinBags: Maybe Int
     isDashboardRequest: Maybe Bool
     # True when this search originated from the WhatsApp bot (WhatsappBot/Adapter/Backend.hs's
     # runSearch), so it can be traced/counted at the source. Set once here, copied onto
@@ -296,6 +300,11 @@ SearchRequest:
       kvFunction: updateOneWithKV
       where: id
       params: [isPetRide]
+
+    updatePassengerLuggage:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [numberOfPassengers, numberOfCheckInBags, numberOfCabinBags]
 
   constraints:
     id: PrimaryKey

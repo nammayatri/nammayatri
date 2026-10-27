@@ -106,7 +106,11 @@ data DConfirmReq = DConfirmReq
     -- | Better-driver swap: replaces an already-active booking for the same rider, so
     -- the active-booking guard must not fire. Nothing on every other path.
     mbBetterDriverSwapDetails :: Maybe BetterDriverSwapDetails,
-    supportsBookingDeposit :: Maybe Bool
+    supportsBookingDeposit :: Maybe Bool,
+    -- | The group's counts, set only for a quote whose fare policy has the feature on.
+    numberOfPassengers :: Maybe Int,
+    numberOfCheckInBags :: Maybe Int,
+    numberOfCabinBags :: Maybe Int
   }
 
 -- | BPP-computed booking fields that legacy receives via init/on_init but one-shot
@@ -149,7 +153,10 @@ data DConfirmRes = DConfirmRes
     riderGender :: Maybe Text,
     bookingOfferEntity :: Maybe DOfferEntity.OfferEntity,
     paymentChargeDetails :: Maybe PaymentCharge.PaymentChargeDetails,
-    bookingFeePending :: Bool
+    bookingFeePending :: Bool,
+    numberOfPassengers :: Maybe Int,
+    numberOfCheckInBags :: Maybe Int,
+    numberOfCabinBags :: Maybe Int
   }
   deriving (Show, Generic)
 
@@ -229,7 +236,14 @@ confirm DConfirmReq {..} = do
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = (maybe False not searchRequest.isMultimodalSearch) && merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
   let driverPreference = extractDriverPreference person.customerNammaTags
-  (booking0, bookingParties) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference mbOneShotDetails supportsBookingDeposit
+  -- A quote confirm carries the counts itself; an estimate booking has them from select.
+  let searchRequestWithLuggage =
+        searchRequest
+          { DSReq.numberOfPassengers = maybe searchRequest.numberOfPassengers Just numberOfPassengers,
+            DSReq.numberOfCheckInBags = maybe searchRequest.numberOfCheckInBags Just numberOfCheckInBags,
+            DSReq.numberOfCabinBags = maybe searchRequest.numberOfCabinBags Just numberOfCabinBags
+          }
+  (booking0, bookingParties) <- buildBooking merchant personId searchRequestWithLuggage bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference mbOneShotDetails supportsBookingDeposit
   mbBookingOfferEntity <-
     case booking0.selectedOfferId of
       Just offerId -> do
@@ -557,6 +571,9 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           vehicleServiceTierType = quote.vehicleServiceTierType,
           vehicleServiceTierSeatingCapacity = quote.vehicleServiceTierSeatingCapacity,
           vehicleServiceTierLuggageCapacity = quote.vehicleServiceTierLuggageCapacity,
+          numberOfPassengers = searchRequest.numberOfPassengers,
+          numberOfCheckInBags = searchRequest.numberOfCheckInBags,
+          numberOfCabinBags = searchRequest.numberOfCabinBags,
           vehicleServiceTierAirConditioned = quote.vehicleServiceTierAirConditioned,
           vehicleIconUrl = quote.vehicleIconUrl,
           isAirConditioned = quote.isAirConditioned,

@@ -66,6 +66,7 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.isCustomerPrefferedSearchRoute isCustomerPrefferedSearchRoute,
       Se.Set Beam.isSafetyPlus (Kernel.Prelude.Just isSafetyPlus),
       Se.Set Beam.itemId itemId,
+      Se.Set Beam.luggageFitEnabled luggageFitEnabled,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Just $ Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.navigationInstruction navigationInstruction,

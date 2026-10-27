@@ -586,6 +586,7 @@ calculateFareParametersForFarePolicy fullFarePolicy mbDistance mbDuration mercha
             merchantOperatingCityId = merchantOperatingCityId,
             mbAdditonalChargeCategories = Nothing,
             numberOfLuggages = Nothing,
+            excessLuggageHalfUnits = Nothing,
             pickupGateId = Nothing,
             fareSettlementType = fullFarePolicy.fareSettlementType,
             isParkingFeeExempt = False
@@ -646,7 +647,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       serviceChargeItem = mkBreakupItem serviceChargeCaption . (mkValue . highPrecMoneyToText) <$> farePolicy.serviceCharge
 
       luggageChargeCaption = show Tags.LUGGAGE_CHARGE
-      luggageChargeItem = mkBreakupItem luggageChargeCaption . (mkValue . show) <$> farePolicy.perLuggageCharge
+      luggageChargeItem = mkBreakupItem luggageChargeCaption . (mkValue . show) <$> FarePolicyD.perUnitLuggageCharge farePolicy.luggageFitEnabled farePolicy.perLuggageCharge
 
       (boothChargeFixedItem, boothChargePercentageItem) =
         case farePolicy.boothCharges of

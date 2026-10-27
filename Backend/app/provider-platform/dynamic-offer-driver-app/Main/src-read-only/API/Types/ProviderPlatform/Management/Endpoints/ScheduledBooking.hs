@@ -89,7 +89,8 @@ data NearbyDriverItem = NearbyDriverItem
     rating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     totalRides :: Kernel.Prelude.Int,
     cancellationRatePercent :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    isFavourite :: Kernel.Prelude.Bool
+    isFavourite :: Kernel.Prelude.Bool,
+    fitsGroup :: Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -163,7 +164,11 @@ data ScheduledBookingInfoRes = ScheduledBookingInfoRes
     vehicleServiceTierName :: Kernel.Prelude.Text,
     reallocationHistory :: [ReallocationEventItem],
     opsNotes :: [OpsNote],
-    minWalletBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
+    minWalletBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    numberOfPassengers :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    numberOfCheckInBags :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    numberOfCabinBags :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    luggageCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -190,7 +195,10 @@ data ScheduledBookingListItem = ScheduledBookingListItem
     cancellationSource :: Kernel.Prelude.Maybe CancellationSource,
     cancellationReasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationAdditionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    pickupArea :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    pickupArea :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    numberOfPassengers :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    numberOfCheckInBags :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    numberOfCabinBags :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

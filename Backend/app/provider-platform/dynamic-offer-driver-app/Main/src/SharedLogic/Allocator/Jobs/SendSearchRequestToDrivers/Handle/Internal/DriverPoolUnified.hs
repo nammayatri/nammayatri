@@ -43,6 +43,7 @@ import qualified SharedLogic.Beckn.Common as DTS
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FarePolicy as SFarePolicy
+import qualified SharedLogic.PassengerLuggage as SPL
 import qualified SharedLogic.ScheduledRideTopDrivers as SRTD
 import Storage.Beam.SpecialZone ()
 import Storage.Beam.Yudhishthira ()
@@ -286,6 +287,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     tollCharges = tollCharges_,
                     paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                     paymentMode = searchReq.paymentMode,
+                    passengerLuggage = SPL.storedPassengerLuggage searchReq.numberOfPassengers searchReq.numberOfCheckInBags searchReq.numberOfCabinBags,
                     excludeDriverIds = excludeDriverIds,
                     prevAttemptedDriverIds = prevAttemptedDriverIds,
                     mbSearchTryId = Just searchTry.id.getId,
@@ -448,6 +450,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         tollCharges = tollCharges_,
                         paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                         paymentMode = searchReq.paymentMode,
+                        passengerLuggage = SPL.storedPassengerLuggage searchReq.numberOfPassengers searchReq.numberOfCheckInBags searchReq.numberOfCabinBags,
                         excludeDriverIds = [],
                         prevAttemptedDriverIds = [],
                         mbSearchTryId = Just searchTry.id.getId,

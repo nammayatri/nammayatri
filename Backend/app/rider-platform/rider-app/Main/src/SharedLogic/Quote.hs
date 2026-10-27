@@ -50,6 +50,7 @@ data QuoteAPIEntity = QuoteAPIEntity
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierLuggageCapacity :: Maybe Int,
+    luggageFitEnabled :: Maybe Bool,
     tripCategory :: Maybe DTC.TripCategory,
     bookingDepositWithCurrency :: Maybe PriceAPIEntity,
     customerOffers :: Maybe SOffer.CumulativeOfferResp,

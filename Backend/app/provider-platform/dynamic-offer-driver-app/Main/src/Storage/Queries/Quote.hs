@@ -19,6 +19,7 @@ import qualified Data.Aeson
 import qualified Data.Time as T
 import qualified Domain.Types as DTC
 import Domain.Types.AddOnConfig (AddOnData)
+import qualified Domain.Types.FareParameters as DFP
 import Domain.Types.Quote
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Beam.Functions
@@ -52,6 +53,16 @@ updateEstimatedFareAndAddOnDetails (Id quoteId) estimatedFare addOnData =
     [ Se.Set BeamQSZ.estimatedFare $ roundToIntegral estimatedFare,
       Se.Set BeamQSZ.estimatedFareAmount $ Just estimatedFare,
       Se.Set BeamQSZ.addOnData $ Just (Data.Aeson.toJSON addOnData)
+    ]
+    [Se.Is BeamQSZ.id $ Se.Eq quoteId]
+
+-- The luggage charge of a group's counts, once it prices the quote, with the fare parameters that carry it.
+updateEstimatedFareAndFareParameters :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Quote -> HighPrecMoney -> Id DFP.FareParameters -> m ()
+updateEstimatedFareAndFareParameters (Id quoteId) estimatedFare (Id fareParametersId) =
+  updateOneWithKV
+    [ Se.Set BeamQSZ.estimatedFare $ roundToIntegral estimatedFare,
+      Se.Set BeamQSZ.estimatedFareAmount $ Just estimatedFare,
+      Se.Set BeamQSZ.fareParametersId fareParametersId
     ]
     [Se.Is BeamQSZ.id $ Se.Eq quoteId]
 

@@ -1723,3 +1723,25 @@ instance IsHTTPError OpenMeterError where
     OpenMeterRideInvalidState _ -> E400
 
 instance IsAPIError OpenMeterError
+
+data PassengerLuggageError
+  = PassengersExceedSeats Int Int Text
+  | TooMuchLuggage Text Int Integer Integer
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''PassengerLuggageError
+
+instance IsBaseError PassengerLuggageError where
+  toMessage = \case
+    PassengersExceedSeats passengers seats tierName -> Just $ show passengers <> " passengers do not fit the " <> show seats <> " seats of " <> tierName
+    TooMuchLuggage tierName passengers allowedHalfUnits loadHalfUnits -> Just $ "Too much luggage for " <> tierName <> " with " <> show passengers <> " passengers: at most " <> show allowedHalfUnits <> " half-bag units, got " <> show loadHalfUnits
+
+instance IsHTTPError PassengerLuggageError where
+  toErrorCode = \case
+    PassengersExceedSeats {} -> "PASSENGERS_EXCEED_SEATS"
+    TooMuchLuggage {} -> "TOO_MUCH_LUGGAGE"
+  toHttpCode = \case
+    PassengersExceedSeats {} -> E400
+    TooMuchLuggage {} -> E400
+
+instance IsAPIError PassengerLuggageError
