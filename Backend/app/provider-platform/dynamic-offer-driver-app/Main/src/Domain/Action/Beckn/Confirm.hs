@@ -156,7 +156,9 @@ handler merchant req validatedQuote = do
       mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails Nothing
 
     handleRideOtpFlow isNewRider _ booking riderDetails = do
-      otpCode <- generateUniqueOTPCode booking.merchantOperatingCityId.getId (0 :: Integer)
+      now <- getCurrentTime
+      let otpTtl = if booking.isScheduled then SBooking.scheduledSpecialZoneOtpTtl now booking.startTime else 3600
+      otpCode <- generateRideOtp booking otpTtl (0 :: Integer)
       QRB.updateSpecialZoneOtpCode booking.id otpCode
       updateBookingDetails isNewRider booking riderDetails
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
@@ -184,20 +186,28 @@ handler merchant req validatedQuote = do
         SpecialZoneDriverDemand.completePickupZoneRequestsForDriver driver.id uBooking2.id.getId uBooking2.pickupGateId (show $ DV.castServiceTierToVariant uBooking2.vehicleServiceTier)
       mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails Nothing
 
-    generateUniqueOTPCode merchantOperatingCityId cnt = do
+    -- A scheduled booking also claims its OTP's lookup entry; losing it means a confirm racing this one drew the same OTP.
+    generateRideOtp booking otpTtl cnt = do
+      otpCode <- generateUniqueOTPCode booking.merchantOperatingCityId.getId otpTtl cnt
+      isClaimed <- if booking.isScheduled then SBooking.addScheduledSpecialZoneOtpBooking booking otpCode otpTtl else pure True
+      if isClaimed
+        then return otpCode
+        else generateRideOtp booking otpTtl (cnt + 1)
+
+    generateUniqueOTPCode merchantOperatingCityId otpTtl cnt = do
       when (cnt == 100) $ throwError (InternalError "Please try again in some time") -- Avoiding infinite loop (Todo: fix with something like LRU later)
       otpCode <- generateOTPCode
-      isUnique <- checkAndStoreOTP merchantOperatingCityId otpCode
+      isUnique <- checkAndStoreOTP merchantOperatingCityId otpTtl otpCode
       if isUnique
         then return otpCode
-        else generateUniqueOTPCode merchantOperatingCityId (cnt + 1)
+        else generateUniqueOTPCode merchantOperatingCityId otpTtl (cnt + 1)
 
-    checkAndStoreOTP merchantOperatingCityId otpCode = do
+    checkAndStoreOTP merchantOperatingCityId otpTtl otpCode = do
       let otpKey = mkSpecialZoneOtpKey merchantOperatingCityId otpCode
       isPresent :: Maybe Bool <- Redis.runInMultiCloudRedisMaybeResult $ Redis.get otpKey
       case isPresent of
         Nothing -> do
-          Redis.setExp otpKey True 3600
+          Redis.setExp otpKey True otpTtl
           return True
         Just _ -> return False
 
