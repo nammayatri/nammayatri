@@ -144,6 +144,7 @@ RiderConfig:
     bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
     kaptureQueue: Text # deprecated
     kaptureConfig: IssueManagement.Common.KaptureConfig
+    enableXyneSupportBot: Maybe Bool
     emailOtpConfig: Maybe Email.Types.EmailOTPConfig
     emailMagicLinkConfig: Maybe Email.Types.EmailMagicLinkConfig
     emailBusinessVerificationConfig: Maybe Email.Types.EmailBusinessVerificationConfig
