@@ -41,6 +41,7 @@ findByMerchantOperatingCityIdAndMaybeStatus limit offset merchantOperatingCityId
     offset
 
 -- | Read-modify-write progress. Safe to call from the worker after each chunk.
+-- 'mbErrorMessage': set on Failed / optional Running (retry) updates; cleared on Succeeded.
 updateProgress ::
   (BeamFlow m r) =>
   Id DRun.BulkUserCohortMappingRun ->
@@ -50,8 +51,9 @@ updateProgress ::
   Int ->
   Int ->
   Maybe Text ->
+  Maybe Text ->
   m ()
-updateProgress runId status offset totalRows insertedDelta skippedDelta mbSchedulerJobId = do
+updateProgress runId status offset totalRows insertedDelta skippedDelta mbSchedulerJobId mbErrorMessage = do
   mbRun <- findOneWithKV [Se.Is Beam.id $ Se.Eq (getId runId)]
   case mbRun of
     Nothing -> pure ()
@@ -61,13 +63,21 @@ updateProgress runId status offset totalRows insertedDelta skippedDelta mbSchedu
           newSkipped = existing.rowsSkipped + max 0 skippedDelta
           newTotal = maybe existing.totalRows Just totalRows
           newJobId = maybe existing.currentSchedulerJobId Just mbSchedulerJobId
+          errorSets = case status of
+            DRun.Succeeded -> [Se.Set Beam.errorMessage Nothing]
+            DRun.Failed -> [Se.Set Beam.errorMessage mbErrorMessage]
+            _ -> case mbErrorMessage of
+              Just msg -> [Se.Set Beam.errorMessage (Just msg)]
+              Nothing -> []
       updateWithKV
-        [ Se.Set Beam.status status,
-          Se.Set Beam.fileOffset offset,
-          Se.Set Beam.totalRows newTotal,
-          Se.Set Beam.rowsInserted newInserted,
-          Se.Set Beam.rowsSkipped newSkipped,
-          Se.Set Beam.currentSchedulerJobId newJobId,
-          Se.Set Beam.updatedAt now
-        ]
+        ( [ Se.Set Beam.status status,
+            Se.Set Beam.fileOffset offset,
+            Se.Set Beam.totalRows newTotal,
+            Se.Set Beam.rowsInserted newInserted,
+            Se.Set Beam.rowsSkipped newSkipped,
+            Se.Set Beam.currentSchedulerJobId newJobId,
+            Se.Set Beam.updatedAt now
+          ]
+            <> errorSets
+        )
         [Se.Is Beam.id $ Se.Eq (getId runId)]
