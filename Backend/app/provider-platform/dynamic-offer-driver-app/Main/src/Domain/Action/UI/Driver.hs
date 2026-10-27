@@ -277,6 +277,7 @@ import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardingFlags
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
@@ -1153,7 +1154,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
             mbAnyFleetAssociation <- QFDA.findOneByDriverIdWithStatus driverId
             when (isNothing mbAnyFleetAssociation) $
               fork "setActivity:resetOnboardingAs" $
-                SOnboardingComms.setOnboardingAs transporterConfig person DriverInfo.INDIVIDUAL
+                SOnboardingComms.setOnboardingAs transporterConfig SGuard.None person DriverInfo.INDIVIDUAL
         when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
           let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
           -- Track offline timestamp when driver goes offline
@@ -1674,7 +1675,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
 
   whenJust req.onboardingAs $ \reqOnboardingAs -> do
     transporterConfigForOnboardingAs <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    SOnboardingComms.setOnboardingAs transporterConfigForOnboardingAs person reqOnboardingAs
+    SOnboardingComms.setOnboardingAs transporterConfigForOnboardingAs SGuard.None person reqOnboardingAs
 
   let petTag = Yudhishthira.TagNameValue "PetDriver#\"true\""
   when (isPetModeEnabled && maybe False (Yudhishthira.elemTagNameValue petTag) person.driverTag) $

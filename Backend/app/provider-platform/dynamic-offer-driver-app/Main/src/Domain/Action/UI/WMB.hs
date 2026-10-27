@@ -212,7 +212,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
       Analytics.incrementFleetOwnerAnalyticsActiveDriverCount wmbTransporterConfig (Just vehicleRouteMapping.fleetOwnerId.getId) driverId
   let qrStartTransporterConfig = wmbTransporterConfig
   qrStartDriver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  SOnboardingComms.setOnboardingAs qrStartTransporterConfig qrStartDriver DDI.FLEET_DRIVER
+  SOnboardingComms.setOnboardingAs qrStartTransporterConfig SGuard.None qrStartDriver DDI.FLEET_DRIVER
   tripTransaction <-
     if fleetConfig.directlyStartFirstTripAssignment
       then WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber sourceStopInfo destinationStopInfo req.location DriverDirect (mbDriverBadge <&> (.id)) (mbDriverBadge <&> (.badgeName)) (mbConductorBadge <&> (.id)) (mbConductorBadge <&> (.badgeName))
