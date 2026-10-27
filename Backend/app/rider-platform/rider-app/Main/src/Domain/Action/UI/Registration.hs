@@ -1069,6 +1069,8 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
   addNammaTags person (Y.LoginTagData {id = person.id, gender = req.gender, clientSdkVersion = mbClientVersion, clientBundleVersion = mbBundleVersion, clientReactNativeVersion = mbRnVersion, clientConfigVersion = mbClientConfigVersion, clientDevice = mbDevice})
   fork "event_tracking: user_onboarded" $
     ET.trackEvent merchant.id merchantOperatingCityId (ET.UserOnboarded person.id.getId (show identifierType) (show currentCity))
+  fork "event_tracking: mark_onboarded_city_pending" $
+    ET.markOnboardedCityPending person.id (show identifierType)
   fork "update emergency contact id" $
     whenJust req.mobileNumber $ \mobileNumber -> updatePersonIdForEmergencyContacts person.id mobileNumber merchant.id
   pure person
