@@ -212,9 +212,34 @@ releaseConfirmedSeats tripId seatIds fromIdx toIdx = do
 -- | Standard functions (Availability check doesn't need hold hashtags)
 getTripAvailability :: (MonadFlow m, Redis.HedisFlow m r) => Text -> Int -> Int -> [Seat.Seat] -> m [SeatWithStatus]
 getTripAvailability tripId fromIdx toIdx seats = do
-  let keys = map (\s -> seatKey tripId s.id) seats
-  bitmaps <- Redis.runInMasterCloudRedisCell $ mapM Redis.tryGetFromCluster keys
+  bitmaps <- seatBitmaps tripId (map (.id) seats)
   return $ zipWith (checkSeatStatus fromIdx toIdx) seats bitmaps
+
+seatBitmaps :: (MonadFlow m, Redis.HedisFlow m r) => Text -> [Id Seat.Seat] -> m [Maybe BS.ByteString]
+seatBitmaps tripId seatIds = Redis.runInMasterCloudRedisCell $ mapM (Redis.tryGetFromCluster . seatKey tripId) seatIds
+
+-- | The seats free for the whole of [fromIdx, toIdx), for callers that have seat ids but no seat rows.
+freeSeatIds :: (MonadFlow m, Redis.HedisFlow m r) => Text -> Int -> Int -> [Id Seat.Seat] -> m [Id Seat.Seat]
+freeSeatIds tripId fromIdx toIdx seatIds = do
+  bitmaps <- seatBitmaps tripId seatIds
+  pure [seatId | (seatId, bitmap) <- zip seatIds bitmaps, maybe True (\bs -> isRangeFree bs fromIdx toIdx) bitmap]
+
+data AutoSeatMiss = TooFewSeats | SeatsTaken [Id Seat.Seat]
+
+-- | Count-based auto-seating: hold `requiredSeatCount` of `orderedSeatIds`, a fresh slice per attempt when a hold loses a race.
+selectAndHold :: Monad m => (Int -> [Id Seat.Seat] -> m (Maybe a)) -> [Id Seat.Seat] -> Int -> Int -> m (Either AutoSeatMiss ([Id Seat.Seat], a))
+selectAndHold tryHold orderedSeatIds requiredSeatCount maxAttempts = go 0
+  where
+    go attempt = do
+      let chosen = take requiredSeatCount (drop (attempt * requiredSeatCount) orderedSeatIds)
+      if length chosen < requiredSeatCount
+        then pure (Left TooFewSeats)
+        else
+          tryHold attempt chosen >>= \case
+            Just held -> pure (Right (chosen, held))
+            Nothing
+              | attempt + 1 >= maxAttempts -> pure (Left (SeatsTaken chosen))
+              | otherwise -> go (attempt + 1)
 
 checkSeatStatus :: Int -> Int -> Seat.Seat -> Maybe BS.ByteString -> SeatWithStatus
 checkSeatStatus fromIdx toIdx seat mbBitmap =

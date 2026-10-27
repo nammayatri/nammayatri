@@ -3,10 +3,7 @@ module SharedLogic.SharedCab.Booking
     reseatOnWaybill,
     withBookingLock,
     tryWithBookingLock,
-    markDropped,
     ridersOnBoard,
-    liveSeatsOnVehicle,
-    boardedSeatsOnVehicle,
     recordRiderFix,
     readRiderFix,
     recordCancelReason,
@@ -23,7 +20,6 @@ module SharedLogic.SharedCab.Booking
 where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import qualified Data.Aeson as A
 import qualified Data.Map.Strict as Map
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
@@ -33,8 +29,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Allocation.Types (RiderFix)
-import qualified SharedLogic.SharedCab.Events as Events
-import SharedLogic.SharedCab.Keys (bookingLockKey, cancelReasonKey, degradedKey, riderFixKey)
+import SharedLogic.SharedCab.Keys (bookingLockKey, cancelReasonKey, riderFixKey)
 import SharedLogic.SharedCab.LegState (CancelReason, seatsHeld)
 import SharedLogic.SharedCab.RefundDecision (isSharedCabBooking)
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -60,14 +55,6 @@ tryWithBookingLock bookingId action = do
       Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.unlockRedis (bookingLockKey bookingId)
       pure (Just result)
 
--- | "I got down": boarded tickets go USED; a ticket that never boarded is a cancel, not consumed here.
-markDropped :: (Events.EventFlow m r, MonadMask m) => Events.DropBy -> DFRFSTicketBooking.FRFSTicketBooking -> m ()
-markDropped by booking = withBookingLock booking.id $ do
-  droppable <- filter ((== DFRFSTicket.INPROGRESS) . (.status)) <$> QFRFSTicket.findAllByTicketBookingId booking.id
-  forM_ droppable $ \ticket ->
-    QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.USED ticket.scannedByVehicleNumber booking.id ticket.ticketNumber
-  unless (null droppable) $ Events.forBooking (Events.Dropped by) booking
-
 ridersOnBoard :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
 ridersOnBoard plate = do
   bookings <- QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) [DFRFSTicketBookingStatus.CONFIRMED]
@@ -77,24 +64,6 @@ ridersOnBoard plate = do
       tickets <- QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
       let boarded = [ticket.frfsTicketBookingId | ticket <- tickets, ticket.status == DFRFSTicket.INPROGRESS]
       pure $ filter ((`elem` boarded) . (.id)) bookings
-
--- | Seats app bookings hold on the cab, one per ticket still held. A degraded boarding holds none. `plate` is canonical.
-liveSeatsOnVehicle :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m Int
-liveSeatsOnVehicle = seatsOnVehicle (const True)
-
-boardedSeatsOnVehicle :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m Int
-boardedSeatsOnVehicle = seatsOnVehicle (DFRFSTicket.INPROGRESS `elem`)
-
-seatsOnVehicle :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => ([DFRFSTicket.FRFSTicketStatus] -> Bool) -> Text -> m Int
-seatsOnVehicle keep plate = do
-  bookings <- QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) [DFRFSTicketBookingStatus.CONFIRMED]
-  counted <- filterM (fmap isNothing . shared . Redis.get @A.Value . degradedKey . (.id)) bookings
-  if null counted
-    then pure 0
-    else do
-      tickets <- QFRFSTicket.findAllByTicketBookingIds (map (.id) counted)
-      parties <- partySizes counted
-      pure $ sum [bookingSeats (partyOf parties b) statuses | b <- counted, let statuses = [t.status | t <- tickets, t.frfsTicketBookingId == b.id], keep statuses]
 
 -- | A booking holds its whole party's seats while any of its ticket rows is still held (one group ticket or one per rider).
 bookingSeats :: Int -> [DFRFSTicket.FRFSTicketStatus] -> Int

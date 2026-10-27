@@ -21,14 +21,15 @@ allocated =
       hasAllocTimer = True,
       degraded = False,
       payOnBoard = True,
-      paymentRows = 0
+      paymentRows = 0,
+      seatHold = True
     }
 
 boarded :: BookingFacts
 boarded = allocated {ticketStatuses = [INPROGRESS], hasAllocTimer = False, vehicleTripId = Just "trip1"}
 
 cab :: CabFacts
-cab = CabFacts {liveSession = Just (LiveSession "trip1" 4 1), activeTripId = Just "trip1", seatsTaken = 3}
+cab = CabFacts {liveSession = Just (LiveSession "trip1"), activeTripId = Just "trip1"}
 
 tests :: TestTree
 tests =
@@ -42,9 +43,20 @@ tests =
       testCase "boarded booking with no vehicleTripId, unless degraded" $
         (boardedHasTrip boarded {vehicleTripId = Nothing}, boardedHasTrip boarded {vehicleTripId = Nothing, degraded = True})
           @?= (Just BoardedWithoutTrip, Nothing),
-      testCase "live seats above capacity" $
-        (seatsWithinCapacity cab {seatsTaken = 4}, seatsWithinCapacity cab {seatsTaken = 4, liveSession = Nothing})
-          @?= (Just (SeatsOverCapacity 5 4), Nothing),
+      testCase "a booking on a cab with a ticket held must hold its seats in the seat engine; a degraded boarding holds none" $
+        ( seatedHasHold allocated {seatHold = False},
+          seatedHasHold boarded {seatHold = False},
+          seatedHasHold allocated {seatHold = False, vehicleNumber = Nothing},
+          seatedHasHold boarded {seatHold = False, degraded = True}
+        )
+          @?= (Just SeatedWithoutHold, Just SeatedWithoutHold, Nothing, Nothing),
+      testCase "seats held for a booking that is off its cab, dropped or cancelled" $
+        ( holdHasSeat allocated {vehicleNumber = Nothing},
+          holdHasSeat boarded {ticketStatuses = [USED]},
+          holdHasSeat allocated {confirmed = False},
+          holdHasSeat allocated {seatHold = False, vehicleNumber = Nothing}
+        )
+          @?= (Just HoldWithoutSeat, Just HoldWithoutSeat, Just HoldWithoutSeat, Nothing),
       testCase "ACTIVE trip row and live session must match" $
         ( tripMatchesSession cab {activeTripId = Nothing},
           tripMatchesSession cab {activeTripId = Just "trip0"},

@@ -32,7 +32,7 @@ import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Select as Select
 import SharedLogic.SharedCab.Allocation.Types (SkipReason (..), usesRiderSkip)
 import qualified SharedLogic.SharedCab.Approach as Approach
-import SharedLogic.SharedCab.Booking (isSharedCabBooking, liveSeatsOnVehicle)
+import SharedLogic.SharedCab.Booking (isSharedCabBooking)
 import SharedLogic.SharedCab.BookingState (readRiderSkipUsed)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Demand as Demand
@@ -40,6 +40,7 @@ import SharedLogic.SharedCab.Interest (bestEffort)
 import SharedLogic.SharedCab.LegState (SkipVerdict (..), decideRiderSkip)
 import qualified SharedLogic.SharedCab.Nearby as Nearby
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
+import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session)
 import SharedLogic.SharedCab.WalkUp (findSharedCabConfig)
@@ -77,14 +78,15 @@ liveCabsOnRoute routeCode =
     Right cabs -> pure cabs
 
 -- | What the rider sees of a cab. The plate stays server-side: the rider names a cab by `cabId` and sees only the last four characters.
-liveCabEntry :: Int -> Maybe Int -> Maybe Int -> Maybe LatLong -> Session -> API.SharedCabLiveCab
-liveCabEntry liveSeats etaMin distanceM position s =
+-- `freeSeats` and `ridersOnBoard` are the seat engine's (Seats.cabLoad).
+liveCabEntry :: (Int, Int) -> Maybe Int -> Maybe Int -> Maybe LatLong -> Session -> API.SharedCabLiveCab
+liveCabEntry (freeSeats, ridersOnBoard) etaMin distanceM position s =
   API.SharedCabLiveCab
     { cabId = s.vehicleTripId.getId,
       plateLast4 = T.takeEnd 4 s.vehicleNumber,
       position,
-      freeSeats = max 0 (s.capacity - s.walkupCount - liveSeats),
-      ridersOnBoard = s.walkupCount + liveSeats,
+      freeSeats,
+      ridersOnBoard,
       etaMin,
       distanceM
     }
@@ -107,11 +109,11 @@ getSharedCabRoute (mbPersonId, _) routeCode mbBoardStop mbLat mbLon = do
       boardStop = mbBoardStop >>= \code -> find (\st -> st.code == code) routeInfo.stops
       reference = (LatLong <$> mbLat <*> mbLon) <|> ((.point) <$> boardStop)
   cabs <- forM sessions $ \s -> do
-    liveSeats <- liveSeatsOnVehicle s.vehicleNumber
     let mbLive = Map.lookup s.vehicleNumber positions
         position = (\v -> LatLong v.vehicleInfo.latitude v.vehicleInfo.longitude) <$> mbLive
         eta = join $ (\st -> Nearby.nextCabEtaMin now cfg st.code st.point (maybeToList mbLive)) <$> boardStop
-    pure (eta, liveCabEntry liveSeats eta (round <$> (distanceBetweenInMeters <$> reference <*> position)) position s)
+    load <- Seats.cabLoad s mbBoardStop ((.vehicleInfo) <$> mbLive)
+    pure (eta, liveCabEntry load eta (round <$> (distanceBetweenInMeters <$> reference <*> position)) position s)
   pure API.SharedCabRouteDetailResp {routeInfo, cabs = Nearby.sortByEta cabs, pickEnabled = cfg.pickEnabled}
 
 skipReason :: API.SharedCabSkipReason -> SkipReason

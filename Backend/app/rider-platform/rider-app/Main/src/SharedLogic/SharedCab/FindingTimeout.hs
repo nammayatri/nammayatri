@@ -40,6 +40,7 @@ import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, owesRefund, refundAmounts, refundWord)
 import SharedLogic.SharedCab.RefundPolicy (CancelBy (..), CancelDecision (..), decideCancel)
 import qualified SharedLogic.SharedCab.RefundRetry as RefundRetry
+import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -145,6 +146,7 @@ flipToCancelled decision b = do
   let (charges, refundAmount) = refundAmounts (fromMaybe b.totalPrice.amount b.overriddenAmount) decision
   void $ QFRFSTicketBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just charges) (Just True) b.id
   clearBookingState b.id
+  Seats.releaseBooking b.id
 
 -- | Starts the refund of the payment; a free (pass-covered) booking has none. A failure is logged and left for ops since the
 -- booking is already CANCELLED and no later tick sees it, but ALSO marks it for the retry sweep (RefundRetry).

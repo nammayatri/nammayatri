@@ -22,7 +22,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, releaseSharedCabAllocation, releaseUnboarded)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), isFreshPosition)
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, passedStopBlame, runningTimerDeadline, seatIsRiders)
-import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (readRiderFix, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
@@ -32,6 +32,7 @@ import SharedLogic.SharedCab.Lts (readRoutePositions)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Plate (findByPlate)
+import SharedLogic.SharedCab.Seats (markDropped)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (PauseReason (OFF_ROUTE), Session (..), SessionStatus (..))
 import SharedLogic.SharedCab.StopProgress.Rules

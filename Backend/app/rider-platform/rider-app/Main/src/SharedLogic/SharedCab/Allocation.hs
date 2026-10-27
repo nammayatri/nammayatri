@@ -8,6 +8,8 @@ module SharedLogic.SharedCab.Allocation
     releaseSharedCabAllocation,
     skipSharedCabAllocation,
     releaseUnboarded,
+    closeUnboarded,
+    afterUnboarded,
     allocationPass,
     cityLiveBookings,
   )
@@ -24,19 +26,21 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFirst, liveBookingsOf)
-import SharedLogic.SharedCab.Allocation.Reallocate (closeAllocation)
+import SharedLogic.SharedCab.Allocation.Reallocate (Closed (..), afterClose, closeAllocation, closeLocked)
 import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), PreferenceLoss (..), PreferenceVerdict (..), RankedCandidate, allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, onlyPreferred, preferenceVerdict, silentCab, skippedWhileFinding, withoutSkipped)
 import SharedLogic.SharedCab.Allocation.Timers (expireTimers, pushTimeFallbacks)
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, partyOf, partySizes)
+import SharedLogic.SharedCab.Booking (partyOf, partySizes, withBookingLock)
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
 import SharedLogic.SharedCab.Lts (readRoutePositions)
 import qualified SharedLogic.SharedCab.Notify as Notify
+import SharedLogic.SharedCab.Plate (samePlate)
 import SharedLogic.SharedCab.Schedule (withCityTickLease)
+import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
-import SharedLogic.SharedCab.SessionState (Session)
+import SharedLogic.SharedCab.SessionState (Session, SessionStatus (ACTIVE))
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
 cityLiveBookings ::
@@ -69,13 +73,23 @@ skipSharedCabAllocation cfg bookingId plate reason = do
 
 -- | Releases a leaving cab's unboarded allocations without penalty. Call after the session write, outside the plate lock.
 releaseUnboarded :: AllocFlow m r => Text -> AllocationOutcome -> m ()
-releaseUnboarded plate outcome = do
+releaseUnboarded plate outcome = closeUnboarded plate outcome >>= afterUnboarded plate outcome
+
+type ClosedUnboarded = (Config.SharedCabTunables, Id DFTB.FRFSTicketBooking, Closed)
+
+-- | The closes of `releaseUnboarded`, each under its booking lock and nothing else, so a caller holding the plate lock may run them.
+closeUnboarded :: AllocFlow m r => Text -> AllocationOutcome -> m [ClosedUnboarded]
+closeUnboarded plate outcome = do
   live <- QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) [CONFIRMED] >>= liveBookingsOf
-  let unboarded = [lb.booking | lb <- live, isJust (allocatedPlate lb)]
-  cities <- forM unboarded $ \b -> do
+  fmap catMaybes . forM [lb.booking | lb <- live, isJust (allocatedPlate lb)] $ \b -> do
     cfg <- Config.getTunables b.merchantOperatingCityId
-    closeAllocation cfg b.id plate outcome (pure ())
-  mapM_ triggerSharedCabAllocation (nub (map (.closedCity) (catMaybes cities)))
+    fmap (cfg,b.id,) <$> withBookingLock b.id (closeLocked cfg b.id plate outcome)
+
+-- | The effects of `closeUnboarded`'s closes, outside every lock.
+afterUnboarded :: AllocFlow m r => Text -> AllocationOutcome -> [ClosedUnboarded] -> m ()
+afterUnboarded plate outcome closed = do
+  forM_ closed $ \(cfg, bookingId, c) -> afterClose cfg bookingId plate outcome (Just c)
+  mapM_ triggerSharedCabAllocation (nub [c.closedCity | (_, _, c) <- closed])
 
 triggerSharedCabAllocation ::
   AllocFlow m r =>
@@ -154,8 +168,10 @@ narrowToPreferred cfg now sessions booking candidates =
         True -> pure candidates
         False -> do
           skipped <- readSkipped booking.bookingId
-          liveSeats <- liveSeatsOnVehicle plate
-          case preferenceVerdict cfg now booking.findingSince skipped sessions liveSeats booking.seats plate of
+          freeSeats <- case find (\s -> s.status == ACTIVE && samePlate plate s.vehicleNumber) sessions of
+            Just s -> Seats.freeForStops s booking.boardStopCode booking.dropStopCode
+            Nothing -> pure 0
+          case preferenceVerdict cfg now booking.findingSince skipped sessions freeSeats booking.seats plate of
             Honour p -> pure (onlyPreferred p candidates)
             Lost loss -> do
               writePreferenceDropped (allocKeyTtl cfg) booking.bookingId

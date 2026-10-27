@@ -221,17 +221,16 @@ tests =
           phase BS.CANCELLED (Just "P1") [TS.ACTIVE]
         ]
           @?= [Finding, Finding, NotWaiting, AllocatedTo "P1", NotWaiting, NotWaiting, NotWaiting, NotWaiting],
-      testCase "the claim gate refuses a skipped plate first, then a cab without the seats, then a booking no longer waiting" $
+      testCase "the claim gate refuses a skipped plate first, then a booking no longer waiting" $
         let s = (candidate "ML05A1234").rcSession
-            gate skipped liveSeats = claimGate s finding skipped liveSeats Nothing False
-         in [gate ["ML05A1234"] 0, gate [] (4 - finding.seats + 1), gate [] 0] @?= [Left ClaimSkipped, Left ClaimSeatsGone, Left ClaimCasLost],
+         in [claimGate s ["ML05A1234"] Nothing False, claimGate s [] Nothing False] @?= [Left ClaimSkipped, Left ClaimCasLost],
       testCase "a boarding is refused when the cab is no longer running, and when the booking has no ticket left to board" $
         let s = (candidate "ML05A1234").rcSession
             unused = error "the later guards are not reached"
          in map
               (either Just (const Nothing))
-              [ boardingGate "ML05A1234" s {status = PAUSED} 0 [TS.ACTIVE] Nothing unused 1,
-                boardingGate "ML05A1234" s 0 [] Nothing unused 1
+              [ boardingGate "ML05A1234" s {status = PAUSED} [TS.ACTIVE] Nothing unused,
+                boardingGate "ML05A1234" s [] Nothing unused
               ]
               @?= [Just BoardingFailed, Just BoardingFailed],
       testCase "eligible cabs come nearest first" $
@@ -341,31 +340,27 @@ tests =
       testCase "routes sort by ETA, the soonest first, routes with no cab on the way last, ties in list order" $
         sortByEta [(Just 7, "a"), (Nothing, "b"), (Just 2, "c"), (Just 7, "d"), (Nothing, "e"), (Just 0, "f")] @?= ["f", "c", "a", "d", "b", "e"],
       testCase "a picked cab holds while it is unskipped, within the wait bound, active on the route and has room, whatever the plate's spelling" $
-        ( verdict [] 0 [pickable] 0 2 "ML05A1234",
-          verdict [] 0 [pickable] 0 2 "ml-05 a1234",
-          verdict ["ML05A9999"] 0 [pickable] 0 2 "ML05A1234"
+        ( verdict [] 0 [pickable] 4 2 "ML05A1234",
+          verdict [] 0 [pickable] 4 2 "ml-05 a1234",
+          verdict ["ML05A9999"] 0 [pickable] 4 2 "ML05A1234"
         )
           @?= (Honour "ML05A1234", Honour "ML05A1234", Honour "ML05A1234"),
       testCase "a picked cab that was skipped is lost without a word, even with everything else in order" $
-        verdict ["ML05A1234"] 0 [pickable] 0 2 "ML05A1234" @?= Lost PrefSkipped,
+        verdict ["ML05A1234"] 0 [pickable] 4 2 "ML05A1234" @?= Lost PrefSkipped,
       testCase "a picked cab is lost once the rider has waited fallbackAfterSec, and not a second sooner" $
-        ( verdict [] (defaultTunables.fallbackAfterSec - 1) [pickable] 0 2 "ML05A1234",
-          verdict [] defaultTunables.fallbackAfterSec [pickable] 0 2 "ML05A1234"
+        ( verdict [] (defaultTunables.fallbackAfterSec - 1) [pickable] 4 2 "ML05A1234",
+          verdict [] defaultTunables.fallbackAfterSec [pickable] 4 2 "ML05A1234"
         )
           @?= (Honour "ML05A1234", Lost PrefTimedOut),
       testCase "a picked cab is lost when it has no active session on the route" $
-        ( verdict [] 0 [] 0 2 "ML05A1234",
-          verdict [] 0 [pickable {status = PAUSED}] 0 2 "ML05A1234",
-          verdict [] 0 [pickable {vehicleNumber = "ML05A7777"}] 0 2 "ML05A1234"
+        ( verdict [] 0 [] 4 2 "ML05A1234",
+          verdict [] 0 [pickable {status = PAUSED}] 4 2 "ML05A1234",
+          verdict [] 0 [pickable {vehicleNumber = "ML05A7777"}] 4 2 "ML05A1234"
         )
           @?= (Lost PrefOffRoute, Lost PrefOffRoute, Lost PrefOffRoute),
-      testCase "a picked cab is lost when the party no longer fits, counting walk-ups and seats taken by bookings" $
-        ( verdict [] 0 [pickable {walkupCount = 2}] 0 2 "ML05A1234",
-          verdict [] 0 [pickable {walkupCount = 3}] 0 2 "ML05A1234",
-          verdict [] 0 [pickable] 2 2 "ML05A1234",
-          verdict [] 0 [pickable] 3 2 "ML05A1234"
-        )
-          @?= (Honour "ML05A1234", Lost PrefFull, Honour "ML05A1234", Lost PrefFull),
+      testCase "a picked cab is lost when the seat engine no longer has the party's seats free for its ride" $
+        (verdict [] 0 [pickable] 2 2 "ML05A1234", verdict [] 0 [pickable] 1 2 "ML05A1234")
+          @?= (Honour "ML05A1234", Lost PrefFull),
       testCase "a cabId names the active cab with that trip, and nothing else" $
         ( cabForId "trip1" [pickable],
           cabForId "trip2" [pickable],
@@ -374,8 +369,8 @@ tests =
         )
           @?= (Just "ML05A1234", Nothing, Nothing, Nothing),
       testCase "the cab list shows a cab by its cabId and last four characters, never the plate" $ do
-        let shown = BL.unpack (encode (liveCabEntry 1 (Just 3) (Just 500) (Just stop) pickable {walkupCount = 1}))
-        ("ML05A1234" `isInfixOf` shown, "05A1234" `isInfixOf` shown, "\"cabId\":\"trip1\"" `isInfixOf` shown, "\"plateLast4\":\"1234\"" `isInfixOf` shown, "\"freeSeats\":2" `isInfixOf` shown, "\"ridersOnBoard\":2" `isInfixOf` shown)
+        let shown = BL.unpack (encode (liveCabEntry (3, 1) (Just 3) (Just 500) (Just stop) pickable))
+        ("ML05A1234" `isInfixOf` shown, "05A1234" `isInfixOf` shown, "\"cabId\":\"trip1\"" `isInfixOf` shown, "\"plateLast4\":\"1234\"" `isInfixOf` shown, "\"freeSeats\":3" `isInfixOf` shown, "\"ridersOnBoard\":1" `isInfixOf` shown)
           @?= (False, False, True, True, True, True),
       testCase "riders waiting on a route are the distinct riders with a recent finding booking" $
         ( waitingRiders 1200 t0 [(addUTCTime (-60) t0, "r1"), (addUTCTime (-120) t0, "r2"), (addUTCTime (-30) t0, "r1")] [],
@@ -477,5 +472,5 @@ tests =
   where
     pickable = (candidate "ML05A1234").rcSession
     -- skipped plates, seconds waited, the route's sessions, seats taken on the cab by bookings, party size, picked plate
-    verdict skipped waited sessions liveSeats seats =
-      preferenceVerdict defaultTunables t0 (addUTCTime (negate (fromIntegral waited)) t0) skipped sessions liveSeats seats
+    verdict skipped waited sessions freeSeats seats =
+      preferenceVerdict defaultTunables t0 (addUTCTime (negate (fromIntegral waited)) t0) skipped sessions freeSeats seats

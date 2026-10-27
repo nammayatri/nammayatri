@@ -9,7 +9,8 @@ module SharedLogic.SharedCab.Invariants
     boardedHasTrip,
     noBusTripId,
     noPaymentOnPayOnBoard,
-    seatsWithinCapacity,
+    seatedHasHold,
+    holdHasSeat,
     tripMatchesSession,
     bookingViolations,
     cabViolations,
@@ -28,10 +29,12 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils (isPayOnBoard)
-import SharedLogic.SharedCab.Booking (isSharedCabBooking, liveSeatsOnVehicle, shared)
+import SharedLogic.SharedCab.Booking (isSharedCabBooking, shared)
 import SharedLogic.SharedCab.BookingState (readAlloc)
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Keys (degradedKey)
+import SharedLogic.SharedCab.LegState (seatsHeld)
+import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (SessionStatus (ENDED))
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -44,8 +47,10 @@ data Violation
   | BoardedWithoutTrip
   | BusTripIdSet
   | PaymentOnPayOnBoard
-  | -- | held (walk-ups + booked), capacity
-    SeatsOverCapacity Int Int
+  | -- | the booking is on a cab with a ticket still held, but the seat engine holds no seat for it: the cab can be oversold
+    SeatedWithoutHold
+  | -- | the seat engine holds seats for a booking that is not on a cab any more: the cab shows full when it isn't
+    HoldWithoutSeat
   | LiveSessionWithoutTrip
   | SessionTripMismatch
   | TripWithoutLiveSession
@@ -60,21 +65,19 @@ data BookingFacts = BookingFacts
     hasAllocTimer :: Bool,
     degraded :: Bool,
     payOnBoard :: Bool,
-    paymentRows :: Int
+    paymentRows :: Int,
+    seatHold :: Bool
   }
   deriving (Show, Eq)
 
-data LiveSession = LiveSession
-  { vehicleTripId :: Text,
-    capacity :: Int,
-    walkupCount :: Int
+newtype LiveSession = LiveSession
+  { vehicleTripId :: Text
   }
   deriving (Show, Eq)
 
 data CabFacts = CabFacts
   { liveSession :: Maybe LiveSession,
-    activeTripId :: Maybe Text,
-    seatsTaken :: Int
+    activeTripId :: Maybe Text
   }
   deriving (Show, Eq)
 
@@ -96,11 +99,16 @@ noBusTripId b = flag BusTripIdSet $ isJust b.tripId
 noPaymentOnPayOnBoard :: BookingFacts -> Maybe Violation
 noPaymentOnPayOnBoard b = flag PaymentOnPayOnBoard $ b.payOnBoard && b.paymentRows > 0
 
-seatsWithinCapacity :: CabFacts -> Maybe Violation
-seatsWithinCapacity c = do
-  s <- c.liveSession
-  let held = s.walkupCount + c.seatsTaken
-  flag (SeatsOverCapacity held s.capacity) (held > s.capacity)
+-- | Seats are held exactly while the booking is on a cab with a ticket held; a degraded boarding holds none. Drift either way is
+-- Redis and the DB disagreeing, e.g. a Redis failover that lost holds.
+seated :: BookingFacts -> Bool
+seated b = b.confirmed && isJust b.vehicleNumber && seatsHeld b.ticketStatuses > 0 && not b.degraded
+
+seatedHasHold :: BookingFacts -> Maybe Violation
+seatedHasHold b = flag SeatedWithoutHold $ seated b && not b.seatHold
+
+holdHasSeat :: BookingFacts -> Maybe Violation
+holdHasSeat b = flag HoldWithoutSeat $ b.seatHold && not (seated b)
 
 tripMatchesSession :: CabFacts -> Maybe Violation
 tripMatchesSession c = case (c.liveSession, c.activeTripId) of
@@ -110,10 +118,10 @@ tripMatchesSession c = case (c.liveSession, c.activeTripId) of
   (Nothing, Nothing) -> Nothing
 
 bookingViolations :: BookingFacts -> [Violation]
-bookingViolations b = mapMaybe ($ b) [allocatedHasTimer, boardedHasTrip, noBusTripId, noPaymentOnPayOnBoard]
+bookingViolations b = mapMaybe ($ b) [allocatedHasTimer, boardedHasTrip, noBusTripId, noPaymentOnPayOnBoard, seatedHasHold, holdHasSeat]
 
 cabViolations :: CabFacts -> [Violation]
-cabViolations c = mapMaybe ($ c) [seatsWithinCapacity, tripMatchesSession]
+cabViolations c = mapMaybe ($ c) [tripMatchesSession]
 
 ruleName :: Violation -> Text
 ruleName = \case
@@ -121,7 +129,8 @@ ruleName = \case
   BoardedWithoutTrip -> "boarded_without_trip"
   BusTripIdSet -> "bus_trip_id_set"
   PaymentOnPayOnBoard -> "payment_on_pay_on_board"
-  SeatsOverCapacity {} -> "seats_over_capacity"
+  SeatedWithoutHold -> "seated_without_hold"
+  HoldWithoutSeat -> "hold_without_seat"
   LiveSessionWithoutTrip -> "live_session_without_trip"
   SessionTripMismatch -> "session_trip_mismatch"
   TripWithoutLiveSession -> "trip_without_live_session"
@@ -149,6 +158,7 @@ bookingFacts booking = do
   degradedMarker <- redisKeyExists (degradedKey booking.id)
   cashOnBoard <- isPayOnBoard booking
   payments <- QFRFSTicketBookingPayment.findAllTBPByBookingId booking.id
+  hold <- Seats.bookingHold booking.id
   pure
     BookingFacts
       { confirmed = booking.status == DFTBS.CONFIRMED,
@@ -159,7 +169,8 @@ bookingFacts booking = do
         hasAllocTimer = allocTimer,
         degraded = degradedMarker,
         payOnBoard = cashOnBoard,
-        paymentRows = length payments
+        paymentRows = length payments,
+        seatHold = isJust hold
       }
 
 checkBooking :: InvariantFlow m r => Id DFTB.FRFSTicketBooking -> m ()
@@ -175,10 +186,9 @@ checkCab plate = guarded subject $ do
   -- read-only: a flushed session shows as trip_without_live_session instead of being rebuilt by the checker
   mbSession <- Session.readSession plate
   activeTrip <- QVT.findActiveByVehicleNumber plate
-  seats <- liveSeatsOnVehicle plate
   let live = do
         s <- mfilter ((/= ENDED) . (.status)) mbSession
-        pure LiveSession {vehicleTripId = s.vehicleTripId.getId, capacity = s.capacity, walkupCount = s.walkupCount}
+        pure LiveSession {vehicleTripId = s.vehicleTripId.getId}
   let emitAs k = case (mbSession, activeTrip) of
         (Just s, _) -> Events.forSession k s
         (Nothing, Just trip) -> getCurrentTime >>= Events.emit trip.merchantOperatingCityId . Events.sessionEvent k plate trip.routeCode trip.driverId
@@ -187,8 +197,7 @@ checkCab plate = guarded subject $ do
     cabViolations
       CabFacts
         { liveSession = live,
-          activeTripId = getId . (.id) <$> activeTrip,
-          seatsTaken = seats
+          activeTripId = getId . (.id) <$> activeTrip
         }
   where
     subject = "cab " <> plate

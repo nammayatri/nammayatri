@@ -25,7 +25,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), LiveBooking (..), RankedCandidate (..), armedTimer, claimPush, claimable, skippedWhileFinding)
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
@@ -33,6 +33,7 @@ import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.Keys (fallbackPushedKey)
 import qualified SharedLogic.SharedCab.Notify as Notify
+import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -55,7 +56,8 @@ type AllocFlow m r =
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Events.EventFlow m r,
     EncFlow m r,
-    InternalEndpointFlow m r
+    InternalEndpointFlow m r,
+    HasShortDurationRetryCfg r ()
   )
 
 -- Lock order, Phase 2: target cab lock FIRST (`sharedcab:lock:{plate}`, shared with walk-up writes), then the booking
@@ -78,19 +80,18 @@ findLive bookingId = QFRFSTicketBooking.findById bookingId >>= traverse (\b -> L
 data ClaimMiss = ClaimSessionGone | ClaimSeatsGone | ClaimCasLost | ClaimSkipped
   deriving (Show, Eq)
 
--- | The claim's decision under both locks, pure: the plate was not skipped, the cab still has the seats, and the booking is still
--- waiting for a cab with no degrade marker.
-claimGate :: Session -> FindingBooking -> [Text] -> Int -> Maybe LiveBooking -> Bool -> Either ClaimMiss ()
-claimGate s booking skipped liveSeats mbLive markerAlive
+-- | The claim's decision under both locks, pure: the plate was not skipped and the booking is still waiting for a cab with no
+-- degrade marker. The seats are then held in the seat engine, which decides ClaimSeatsGone.
+claimGate :: Session -> [Text] -> Maybe LiveBooking -> Bool -> Either ClaimMiss ()
+claimGate s skipped mbLive markerAlive
   | s.vehicleNumber `elem` skipped = Left ClaimSkipped
-  | s.capacity - s.walkupCount - liveSeats < booking.seats = Left ClaimSeatsGone
   | otherwise = case mbLive of
     Just (LiveBooking b statuses) | claimable b.status b.vehicleNumber statuses markerAlive -> Right ()
     _ -> Left ClaimCasLost
 
--- | One candidate under both locks: re-read the session, recompute seats, CAS vehicleNumber, write the alloc key. A miss counts no attempt.
+-- | One candidate under both locks: re-read the session, hold the seats, CAS vehicleNumber, write the alloc key. A miss counts no attempt.
 attemptClaim ::
-  (MonadFlow m, Redis.HedisFlow m r, CacheFlow m r, EsqDBFlow m r, MonadMask m) =>
+  (Seats.SeatFlow m r, MonadMask m) =>
   Config.SharedCabTunables ->
   FindingBooking ->
   RankedCandidate ->
@@ -103,8 +104,9 @@ attemptClaim cfg booking cand =
   where
     plate = cand.rcSession.vehicleNumber
 
+-- | The seat hold is the seat guard: two bookings claiming the cab's last seat in one tick can't both win it, whatever a DB read says.
 claimUnderLocks ::
-  (MonadFlow m, Redis.HedisFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  (Seats.SeatFlow m r, MonadMask m) =>
   Config.SharedCabTunables ->
   FindingBooking ->
   RankedCandidate ->
@@ -114,17 +116,26 @@ claimUnderLocks cfg booking cand s = do
   now <- getCurrentTime
   attempts <- readAttempts booking.bookingId
   skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> readSkipped booking.bookingId
-  liveSeats <- liveSeatsOnVehicle s.vehicleNumber
   mbLive <- findLive booking.bookingId
   markerAlive <- Degraded.isMarkerAlive booking.bookingId
-  for (claimGate s booking skipped liveSeats mbLive markerAlive) $ \() -> do
-    offersMade <- readOffersMade booking.bookingId
-    QFRFSTicketBooking.updateAllocatedVehicle (Just s.vehicleNumber) booking.bookingId Nothing
-    -- the key's TTL is only a garbage-collection backstop and must outlive the stacked timers (allocKeyTtl)
-    let st = AllocationState {vehicleNumber = s.vehicleNumber, driverId = Just s.driverId, vehicleTripId = Just s.vehicleTripId.getId, allocatedAt = now, timer = armedTimer cfg now offersMade cand.rcStance}
-    writeAlloc (allocKeyTtl cfg) booking.bookingId st
-    when cfg.driverAcceptEnabled $ writeOffersMade (allocKeyTtl cfg) booking.bookingId (offersMade + 1)
-    pure st
+  case claimGate s skipped mbLive markerAlive of
+    Left miss -> pure (Left miss)
+    Right () -> do
+      -- a FINDING booking holds no seat; drop any a lost write left behind
+      Seats.releaseBooking booking.bookingId
+      Seats.holdForStops s booking.boardStopCode booking.dropStopCode booking.seats >>= \case
+        Nothing -> pure (Left ClaimSeatsGone)
+        Just held -> Right <$> (commit now held `onException` Seats.releaseHeld held)
+  where
+    commit now held = do
+      offersMade <- readOffersMade booking.bookingId
+      QFRFSTicketBooking.updateAllocatedVehicle (Just s.vehicleNumber) booking.bookingId Nothing
+      -- the key's TTL is only a garbage-collection backstop and must outlive the stacked timers (allocKeyTtl)
+      let st = AllocationState {vehicleNumber = s.vehicleNumber, driverId = Just s.driverId, vehicleTripId = Just s.vehicleTripId.getId, allocatedAt = now, timer = armedTimer cfg now offersMade cand.rcStance}
+      writeAlloc (allocKeyTtl cfg) booking.bookingId st
+      when cfg.driverAcceptEnabled $ writeOffersMade (allocKeyTtl cfg) booking.bookingId (offersMade + 1)
+      Seats.recordHold booking.bookingId held
+      pure st
 
 claimFallbackPush :: (Redis.HedisFlow m r, MonadFlow m) => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> m Bool
 claimFallbackPush cfg bookingId = shared $ Redis.tryLockRedis (fallbackPushedKey bookingId) cfg.findingTimeoutSec

@@ -182,8 +182,9 @@ setWalkup expectedVersion count s
   | count < 0 || count > s.capacity = Left InvalidWalkupCount
   | otherwise = Right $ bump s {walkupCount = count}
 
+-- | The walk-ups now hold `walkups` seats: every seat left when the cab was marked full.
 fillCab :: Int -> Session -> Session
-fillCab seatsKept s = bump s {walkupCount = max s.walkupCount (s.capacity - seatsKept)}
+fillCab walkups s = bump s {walkupCount = walkups}
 
 data WalkupSource = DriverCounted | CabFullFill
   deriving (Show, Eq)

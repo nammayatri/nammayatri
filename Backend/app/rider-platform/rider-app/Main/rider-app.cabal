@@ -741,6 +741,7 @@ library
       SharedLogic.SharedCab.RefundPolicy
       SharedLogic.SharedCab.RefundRetry
       SharedLogic.SharedCab.Schedule
+      SharedLogic.SharedCab.Seats
       SharedLogic.SharedCab.Session
       SharedLogic.SharedCab.SessionState
       SharedLogic.SharedCab.SessionView
@@ -2268,6 +2269,7 @@ test-suite rider-app-test
       SharedCabPlateTests
       SharedCabRefundPolicyTests
       SharedCabRefundRetryTests
+      SharedCabSeatTests
       SharedCabSessionTests
       SharedCabStopProgressTests
       SharedCabTicketBirthTests

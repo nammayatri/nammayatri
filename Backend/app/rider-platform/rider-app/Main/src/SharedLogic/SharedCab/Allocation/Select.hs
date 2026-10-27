@@ -148,8 +148,8 @@ isFreshPosition now maxAgeSec vi = case vi.timestamp >>= parseLtsTimestamp of
   Nothing -> False -- silent-by-absence must not read as fresh
   Just ts -> let age = diffUTCTime now ts in 0 <= age && age <= fromIntegral maxAgeSec
 
--- | Nearest first. A cab not past the board stop (LTS keeps the stop Upcoming while the cab stands at it), an optimistic seat screen
--- (Phase 2 recounts under the lock), and ETA within allocationWindowSec.
+-- | Nearest first. A cab not past the board stop (LTS keeps the stop Upcoming while the cab stands at it), big enough for the party
+-- (Phase 2 holds the seats under the lock), and ETA within allocationWindowSec.
 eligibleCandidates ::
   UTCTime ->
   Config.SharedCabTunables ->
@@ -163,7 +163,7 @@ eligibleCandidates now cfg tracking sessions booking =
     [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcUpcomingStop = stop, rcStance = cabStance cfg veh.vehicleInfo stop}
       | s <- sessions,
         s.status == ACTIVE,
-        s.capacity - s.walkupCount >= booking.seats,
+        s.capacity >= booking.seats,
         Just veh <- [findByPlate (.vehicleNumber) s.vehicleNumber tracking],
         isFreshPosition now cfg.ltsMaxAgeSec veh.vehicleInfo,
         Just stop <- [find (\u -> u.stop.stopCode == booking.boardStopCode && u.status == LT.Upcoming) =<< veh.vehicleInfo.upcomingStops],
@@ -236,15 +236,15 @@ data PreferenceVerdict = Honour Text | Lost PreferenceLoss
   deriving (Show, Eq)
 
 -- | The picked cab holds only while it was not skipped, the rider has waited less than fallbackAfterSec, the cab still has an ACTIVE session
--- on the route and room for the whole party (`liveSeats` = seats already taken on it by bookings).
+-- on the route and room for the whole party (`freeSeats` = the seat engine's free seats on it for the booking's ride).
 preferenceVerdict :: Config.SharedCabTunables -> UTCTime -> UTCTime -> [Text] -> [Session] -> Int -> Int -> Text -> PreferenceVerdict
-preferenceVerdict cfg now findingSince skipped sessions liveSeats seats plate
+preferenceVerdict cfg now findingSince skipped sessions freeSeats seats plate
   | any (samePlate plate) skipped = Lost PrefSkipped
   | fallbackTimeElapsed now findingSince cfg.fallbackAfterSec = Lost PrefTimedOut
   | otherwise = case find (\s -> s.status == ACTIVE && samePlate plate s.vehicleNumber) sessions of
     Nothing -> Lost PrefOffRoute
     Just s
-      | s.capacity - s.walkupCount - liveSeats < seats -> Lost PrefFull
+      | freeSeats < seats -> Lost PrefFull
       | otherwise -> Honour s.vehicleNumber
 
 -- | The plate of the active cab a rider's `cabId` (its trip id, which the list shows instead of the plate) names; an unknown or ended cab is none.

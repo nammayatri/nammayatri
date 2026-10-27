@@ -11,8 +11,6 @@ module SharedLogic.SharedCab.Boarding
     boardingGate,
     tryBoardSharedCab,
     boardingResponse,
-    seatCheck,
-    canBoard,
   )
 where
 
@@ -36,7 +34,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Location as JMLocation
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
-import SharedLogic.SharedCab.Booking (bookingSeats, isSharedCabBooking, liveSeatsOnVehicle, partyOf, partySizes, withBookingLock)
+import SharedLogic.SharedCab.Booking (isSharedCabBooking, partyOf, partySizes, withBookingLock)
 import SharedLogic.SharedCab.BookingState (clearAlloc)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
@@ -45,6 +43,7 @@ import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Plate (canonicalisePlate, findByPlate, samePlate)
 import qualified SharedLogic.SharedCab.RateLimit as RateLimit
 import qualified SharedLogic.SharedCab.Schedule as Schedule
+import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
@@ -177,6 +176,7 @@ degradedBoarding degradedTimeoutSec booking typedCode = do
     whenJust mbAllocatedPlate $ \plate -> do
       QBooking.updateAllocatedVehicle Nothing booking.id (Just plate)
       clearAlloc booking.id
+      Seats.releaseBooking booking.id
       -- Skips Allocation.closeLocked, so it emits allocation_closed {degraded, none} itself in the same locked block.
       now <- getCurrentTime
       Events.emit booking.merchantOperatingCityId $
@@ -193,15 +193,14 @@ degradedBoarding degradedTimeoutSec booking typedCode = do
 
 -- Lock order when two locks are needed: target-cab plate lock first, then the booking lock.
 
--- | The boarding's decision under both locks, pure: the cab is still running, the booking is still live, the cab is still the one
--- it was resolved against and has the seats. The tickets to flip are the booking's ACTIVE or INPROGRESS ones.
-boardingGate :: Text -> Session -> Int -> [TicketStatus.FRFSTicketStatus] -> Maybe Text -> DBooking.FRFSTicketBooking -> Int -> Either SharedCabBoardingError ()
-boardingGate plate fresh held eligible resolvedAgainst freshBooking party
+-- | The boarding's decision under both locks, pure: the cab is still running, the booking is still live and the cab is still the one
+-- it was resolved against. The tickets to flip are the booking's ACTIVE or INPROGRESS ones. The seats are the seat engine's call.
+boardingGate :: Text -> Session -> [TicketStatus.FRFSTicketStatus] -> Maybe Text -> DBooking.FRFSTicketBooking -> Either SharedCabBoardingError ()
+boardingGate plate fresh eligible resolvedAgainst freshBooking
   | fresh.status /= ACTIVE = Left BoardingFailed
   | null eligible = Left BoardingFailed
   | freshBooking.status /= DBookingStatus.CONFIRMED = Left BoardingFailed
   | not (bindingUnmoved plate resolvedAgainst freshBooking.vehicleNumber) = Left BoardingFailed
-  | not (canBoard fresh.capacity fresh.walkupCount held (freshBooking.vehicleNumber == Just plate) (bookingSeats party eligible)) = Left CabFull
   | otherwise = Right ()
 
 -- | The tickets a boarding flips: the booking's ACTIVE or INPROGRESS ones.
@@ -220,15 +219,22 @@ commitBoarding journeyLeg booking target mbOld =
         withBookingLock booking.id $ do
           -- Re-validate under locks. readSession, not getSession: getSession may rebuild under this same non-re-entrant plate lock.
           fresh <- Redis.withMasterRedis (Session.readSession plate) >>= fromMaybeM BoardingFailed
-          -- SEAT GUARD: capacity - walkups - app-held seats >= this booking's seats, recomputed UNDER the plate lock; refuses as CabFull.
-          held <- liveSeatsOnVehicle plate
           myTickets <- QTicket.findAllByTicketBookingId booking.id
           freshBooking <- QBooking.findById booking.id >>= fromMaybeM BoardingFailed
-          parties <- partySizes [freshBooking]
           let eligible = boardableTickets myTickets
           -- a rider who types the cab's code is in the cab: boarding an offered booking accepts it (applyBoarding clears the offer)
-          either throwError pure $ boardingGate plate fresh held (map (.status) eligible) booking.vehicleNumber freshBooking (partyOf parties freshBooking)
-          applyBoarding journeyLeg booking freshBooking fresh eligible mbOld
+          either throwError pure $ boardingGate plate fresh (map (.status) eligible) booking.vehicleNumber freshBooking
+          -- SEAT GUARD: the party's seats on this cab for its ride, held in the seat engine (CabFull if they aren't free). Seats it
+          -- already holds here are kept; seats held on another cab are given back once the boarding has landed.
+          prior <- Seats.bookingHold booking.id
+          if Seats.heldOn fresh prior
+            then applyBoarding journeyLeg booking freshBooking fresh eligible mbOld
+            else do
+              parties <- partySizes [freshBooking]
+              held <- Seats.holdForStops fresh freshBooking.fromStationCode freshBooking.toStationCode (partyOf parties freshBooking) >>= fromMaybeM CabFull
+              applyBoarding journeyLeg booking freshBooking fresh eligible mbOld `onException` Seats.releaseHeld held
+              Seats.recordHold booking.id held
+              traverse_ Seats.releaseHeld prior
 
 -- | The writes of a boarding the gate allowed, in order: tickets, then the booking's cab (CAS), the old cab's keys, the leg, the event.
 applyBoarding :: DJourneyLeg.JourneyLeg -> DBooking.FRFSTicketBooking -> DBooking.FRFSTicketBooking -> Session -> [DTicket.FRFSTicket] -> Maybe Session -> Environment.Flow ()
@@ -341,12 +347,3 @@ boardSharedCab journey journeyLeg booking mbPersonId req = do
                   reboundFrom = mbOld,
                   boardedWithoutLocation = noLocation
                 }
-
-seatCheck :: Int -> Int -> Int -> Int -> Bool
-seatCheck capacity walkups heldNet need = capacity - walkups - heldNet >= need
-
--- | `held` already counts this booking's seats when it is on this plate; those are credited back, not asked for twice.
-canBoard :: Int -> Int -> Int -> Bool -> Int -> Bool
-canBoard capacity walkups held onThisPlate need = seatCheck capacity walkups (held - own) need
-  where
-    own = if onThisPlate then need else 0

@@ -46,7 +46,8 @@ type SharedCabConfirmFlow m r =
     Metrics.CoreMetrics m,
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasShortDurationRetryCfg r ()
   )
 
 -- | The seed also revives a dead tick chain. Non-blocking (the trigger forks) and takes no plate or booking lock.

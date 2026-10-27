@@ -50,7 +50,7 @@ tests =
   testGroup
     "SharedCab session state"
     [ testCase "a cab-full fill counts no offline boardings, a driver count does" $ do
-        let full = fillCab 1 active
+        let full = fillCab 3 active
         walkupsToCount CabFullFill active full @?= 0
         walkupsToCount DriverCounted active full @?= 3,
       testCase "the driver's count never goes negative" $
@@ -98,10 +98,8 @@ tests =
         setWalkup 3 1 active @?= Right active {walkupCount = 1, version = 4},
       testCase "walk-ups above capacity are rejected" $
         setWalkup 3 5 active @?= Left InvalidWalkupCount,
-      testCase "cab full: walk-ups take every seat the boarded riders don't" $
-        fillCab 1 active {walkupCount = 1} @?= active {walkupCount = 3, version = 4},
-      testCase "cab full never lowers the walk-ups" $
-        fillCab 3 active {walkupCount = 2} @?= active {walkupCount = 2, version = 4},
+      testCase "cab full: the walk-ups are the seats they now hold" $
+        fillCab 3 active {walkupCount = 1} @?= active {walkupCount = 3, version = 4},
       testCase "END_FOR_NOW leaves the route set" $
         routeSetMoves (Just active) (endSession active) @?= RouteSetMoves ["R1"] [],
       testCase "END_FOR_NOW closes the trip with its own reason" $

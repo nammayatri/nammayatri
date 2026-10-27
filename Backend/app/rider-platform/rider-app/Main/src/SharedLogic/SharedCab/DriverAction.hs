@@ -20,13 +20,14 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Base as JM
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (RouteChanged), AllocationState, isOffered)
-import SharedLogic.SharedCab.Booking (isSharedCabBooking, markDropped, withBookingLock)
+import SharedLogic.SharedCab.Booking (isSharedCabBooking, withBookingLock)
 import SharedLogic.SharedCab.BookingState (clearAlloc, readAlloc)
 import SharedLogic.SharedCab.Cancel (CancelStage (ConfirmCancel), withSharedCabCancel)
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.LegState (isDroppable)
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.RefundPolicy (CancelBy (ByDriver))
+import SharedLogic.SharedCab.Seats (markDropped)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), ownedSession)
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket

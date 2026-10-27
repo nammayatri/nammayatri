@@ -4,6 +4,8 @@ module SharedLogic.SharedCab.Allocation.Reallocate
     closeAllocation,
     CloseResult (..),
     closeLocked,
+    CloseStep (..),
+    closeSteps,
     afterClose,
     releaseCancelledBooking,
   )
@@ -38,6 +40,7 @@ import qualified SharedLogic.SharedCab.NoShow as NoShow
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Plate (samePlate)
 import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, refundAmounts, refundWord)
+import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -70,6 +73,14 @@ closeAllocation cfg bookingId plate outcome inLock = do
   afterClose cfg bookingId plate outcome closed
   pure closed
 
+-- | A won close after its CAS: the seats go back on every close, the rider's last no-show cancelling the booking included.
+data CloseStep = GiveBackSeats | CancelForNoShows | FindAgain
+  deriving (Show, Eq)
+
+closeSteps :: Int -> Int -> Blame -> [CloseStep]
+closeSteps maxNoShows noShows blame =
+  GiveBackSeats : [if NoShow.actionAfterClose blame maxNoShows noShows == NoShow.AutoCancel then CancelForNoShows else FindAgain]
+
 -- | Inside the booking lock: CAS plate -> null (back to FINDING), clear the alloc key, bump attempts. Nothing when another closer won.
 closeLocked ::
   (MonadFlow m, Redis.HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
@@ -87,8 +98,10 @@ closeLocked cfg bookingId expectedPlate outcome =
       case blameFor outcome of
         BlameRider -> QFRFSTicketBooking.releaseAllocatedVehicle Nothing (NoShow.noShowsAfter BlameRider b.sharedCabNoShows) b.id (Just expectedPlate)
         _ -> QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate)
+      let steps = closeSteps cfg.maxNoShows b.sharedCabNoShows (blameFor outcome)
+      when (GiveBackSeats `elem` steps) $ Seats.releaseBooking bookingId
       heldTrip <- (>>= (.vehicleTripId)) <$> readAlloc bookingId
-      if NoShow.actionAfterClose (blameFor outcome) cfg.maxNoShows b.sharedCabNoShows == NoShow.AutoCancel
+      if CancelForNoShows `elem` steps
         then do
           cancelForNoShows b
           clearBookingState bookingId

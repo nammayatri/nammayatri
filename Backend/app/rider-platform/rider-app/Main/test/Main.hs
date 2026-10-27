@@ -33,6 +33,7 @@ import qualified SharedCabNotifyTests
 import qualified SharedCabPlateTests
 import qualified SharedCabRefundPolicyTests
 import qualified SharedCabRefundRetryTests
+import qualified SharedCabSeatTests
 import qualified SharedCabSessionTests
 import qualified SharedCabStopProgressTests
 import qualified SharedCabTicketBirthTests
@@ -56,4 +57,4 @@ main = do
 
   -- -- Let the Logs be flushed
   -- threadDelaySec (Seconds 10)
-  defaultMain $ testGroup "rider-app" [SharedCabPlateTests.tests, SharedCabSessionTests.tests, SharedCabLegStateTests.tests, SharedCabInvariantsTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests, SharedCabConfigTests.tests, SharedCabAllocationTests.tests, SharedCabDriverActionTests.tests, SharedCabExpiryTests.tests, SharedCabEventsTests.tests, SharedCabStopProgressTests.tests, SharedCabBoardingTests.tests, SharedCabDegradedTests.tests, SharedCabNoShowTests.tests, SharedCabDegradedSweepTests.tests, SharedCabRefundPolicyTests.tests, SharedCabTicketBirthTests.tests, SharedCabRefundRetryTests.tests, SharedCabCancelRefusalTests.tests]
+  defaultMain $ testGroup "rider-app" [SharedCabPlateTests.tests, SharedCabSessionTests.tests, SharedCabLegStateTests.tests, SharedCabInvariantsTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests, SharedCabConfigTests.tests, SharedCabAllocationTests.tests, SharedCabDriverActionTests.tests, SharedCabExpiryTests.tests, SharedCabEventsTests.tests, SharedCabStopProgressTests.tests, SharedCabBoardingTests.tests, SharedCabDegradedTests.tests, SharedCabNoShowTests.tests, SharedCabDegradedSweepTests.tests, SharedCabRefundPolicyTests.tests, SharedCabTicketBirthTests.tests, SharedCabRefundRetryTests.tests, SharedCabCancelRefusalTests.tests, SharedCabSeatTests.tests]

@@ -19,7 +19,7 @@ import Kernel.Utils.Common
 import SharedLogic.FRFSCancelJourney (cancelJourneyIfOnlyTransitLeg)
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (RouteChanged), allocationDeadline)
-import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, recordCancelReason, withBookingLock)
+import SharedLogic.SharedCab.Booking (readRiderFix, recordCancelReason, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc)
 import qualified SharedLogic.SharedCab.BookingState as BookingState
 import qualified SharedLogic.SharedCab.Config as Config
@@ -28,6 +28,8 @@ import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LegState (CancelReason (DRIVER, RIDER))
 import SharedLogic.SharedCab.RefundDecision (Refund (..), clearRefundDecision, gateByPayment, isSharedCabBooking, refundWord, setRefundDecision)
 import SharedLogic.SharedCab.RefundPolicy
+import SharedLogic.SharedCab.Seats (markDropped)
+import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -46,7 +48,7 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
     checkFresh fresh
     refund <- decide by fresh
     setRefundDecision booking.id refund
-    (cancelAction >> when (stage == ConfirmCancel) (BookingState.clearBookingState booking.id)) `finally` clearRefundDecision booking.id
+    (cancelAction >> when (stage == ConfirmCancel) (BookingState.clearBookingState booking.id >> Seats.releaseBooking booking.id)) `finally` clearRefundDecision booking.id
     pure refund
   when (stage == ConfirmCancel) $ do
     -- the leg-state surface shows why. Swallowed: the booking is cancelled by now, so a Redis hiccup here must not error a

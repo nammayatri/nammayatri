@@ -38,11 +38,12 @@ import qualified SharedLogic.SharedCab.Events as SharedCabEvents
 import qualified SharedLogic.SharedCab.LegState as SharedCabLeg
 import qualified SharedLogic.SharedCab.Lts as Lts
 import SharedLogic.SharedCab.Plate (samePlate)
+import qualified SharedLogic.SharedCab.Seats as SharedCabSeats
 import qualified SharedLogic.SharedCab.Session as SharedCabSession
 import qualified SharedLogic.SharedCab.SessionState as SharedCabSessionState
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 
-type LegFlow m r = (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadFlow m, SharedCabEvents.EventFlow m r)
+type LegFlow m r = (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadFlow m, SharedCabEvents.EventFlow m r, HasShortDurationRetryCfg r ())
 
 -- | The cities where a polled journey status shows a shared-cab leg that is not over (see 'SharedCabLeg.legNeedsChains').
 liveCabLegCities :: [JT.JourneyLegState] -> [Id DMOC.MerchantOperatingCity]
@@ -119,8 +120,8 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
         Approach.plausibleEtaToStopSec now cfg routeCode s.vehicleNumber booking.fromStationCode >>= \case
           Nothing -> pure Nothing
           Just etaSec -> do
-            live <- SharedCabBooking.liveSeatsOnVehicle s.vehicleNumber
-            pure (Just SharedCabLeg.UpcomingCab {cabId = s.vehicleTripId.getId, etaSec, freeSeats = max 0 (s.capacity - s.walkupCount - live)})
+            freeSeats <- SharedCabSeats.freeForStops s booking.fromStationCode booking.toStationCode
+            pure (Just SharedCabLeg.UpcomingCab {cabId = s.vehicleTripId.getId, etaSec, freeSeats})
       pure (SharedCabLeg.upcomingCabsOf assignedEtaSec cabs)
     _ -> pure []
   pure $

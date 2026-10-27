@@ -51,6 +51,7 @@ import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Offer as Offer
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.Schedule (ensureAllocationTick)
+import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
 import qualified SharedLogic.SharedCab.SessionView as View
@@ -235,11 +236,16 @@ postSharedCabBookingDecline bookingId mbToken req = do
 getSharedCabSession' :: Text -> Text -> Environment.Flow View.SharedCabSession
 getSharedCabSession' driver plate = ownSession driver plate >>= mkSessionResp
 
--- | Cab full: walk-ups are set first, then every unboarded allocation goes as SEAT_LOST, outside the plate lock (each release takes a booking lock).
+-- | Cab full: every unboarded allocation goes as SEAT_LOST, then walk-ups take the seats left, both under the plate lock; the releases'
+-- pushes and re-ticks go out after it.
 postSharedCabCabFull :: Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
 postSharedCabCabFull mbToken req = do
   checkToken mbToken
-  Session.markCabFull req.driverId req.vehicleNumber >>= releasing AllocTypes.SeatLost >>= checked >>= mkSessionResp
+  (full, released) <- Session.markCabFull req.driverId req.vehicleNumber (Allocation.closeUnboarded plate AllocTypes.SeatLost)
+  Allocation.afterUnboarded plate AllocTypes.SeatLost released
+  checked full >>= mkSessionResp
+  where
+    plate = canonicalisePlate req.vehicleNumber
 
 driverAction :: DriverAction -> Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
 driverAction action bookingId mbToken req = do
@@ -341,7 +347,8 @@ stopAddresses :: Id DMOC.MerchantOperatingCity -> [Text] -> Environment.Flow (Ma
 stopAddresses cityId codes =
   Map.fromList . mapMaybe (\info -> (info.stationId,) <$> info.address) <$> CQStationsExtraInformation.getBystationIdsAndCity codes cityId
 
--- | Until the tick lands: moving, next stops are the whole route. `available` is derived: capacity less walk-ups less held seats.
+-- | Until the tick lands: moving, next stops are the whole route. `available` is what the seat engine has free from the cab's next stop
+-- to the route's end: what walk-ups could still take.
 mkSessionResp :: Session -> Environment.Flow View.SharedCabSession
 mkSessionResp s = do
   integratedBppConfig <- getIntegratedBppConfig s.integratedBppConfigId
@@ -350,11 +357,12 @@ mkSessionResp s = do
   cfg <- Config.getTunables s.merchantOperatingCityId
   demand <- Demand.demandByStop cfg s.merchantOperatingCityId.getId s.routeCode (map (.stopCode) stops)
   queuedRoute <- traverse (sessionRoute integratedBppConfig) s.queuedRouteCode
-  bookedSeats <- Booking.liveSeatsOnVehicle s.vehicleNumber
   addresses <- stopAddresses integratedBppConfig.merchantOperatingCityId (map (.stopCode) stops)
   shapePolyline <- (>>= (.polyline)) <$> OTPRest.getRouteByRouteId integratedBppConfig s.routeCode
   let polyline = maybe [] KEPP.decode shapePolyline
-  vehicle <- either (const Nothing) (fmap (\v -> LatLong v.vehicleInfo.latitude v.vehicleInfo.longitude)) <$> withTryCatch "sharedCab:session:readVehiclePosition" (Lts.readRoutePosition s.routeCode s.vehicleNumber)
+  mbTrack <- either (const Nothing) identity <$> withTryCatch "sharedCab:session:readVehiclePosition" (Lts.readRoutePosition s.routeCode s.vehicleNumber)
+  let vehicle = (\v -> LatLong v.vehicleInfo.latitude v.vehicleInfo.longitude) <$> mbTrack
+  available <- Seats.freeAhead s ((.vehicleInfo) <$> mbTrack)
   riders <- liveRiderRows cfg s.vehicleTripId.getId [(stop.stopCode, stop.stopPoint) | stop <- stops] polyline addresses s.vehicleNumber
   pure
     View.SharedCabSession
@@ -365,7 +373,7 @@ mkSessionResp s = do
         movement = SessionMovementMoving,
         capacity = s.capacity,
         walkupCount = s.walkupCount,
-        available = max 0 (s.capacity - s.walkupCount - bookedSeats),
+        available,
         version = s.version,
         ridersByStop = View.groupRidersByStop [(st.stopCode, st.stopName) | st <- stops] riders,
         pendingOffers = View.pendingOffersOf [(st.stopCode, st.stopName) | st <- stops] riders,

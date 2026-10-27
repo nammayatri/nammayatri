@@ -193,7 +193,7 @@ tests =
             (skipAvailableFor ARRIVING True (Just 300), skipAvailableFor ARRIVING False (Just 60), skipAvailableFor ALLOCATED False Nothing)
               @?= (False, False, False),
           testCase "a payload from before these fields has no other cabs and no skip" $
-            fmap (\s -> (s.upcomingCabs, s.skipAvailable)) (decode "{\"state\":\"CANCELLED\",\"bookingId\":\"b1\",\"cabsComing\":0}")
+            fmap (\(s :: SharedCabLegStatus) -> (s.upcomingCabs, s.skipAvailable)) (decode "{\"state\":\"CANCELLED\",\"bookingId\":\"b1\",\"cabsComing\":0}")
               @?= Just ([], False)
         ]
     ]

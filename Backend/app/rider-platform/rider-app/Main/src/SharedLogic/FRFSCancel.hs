@@ -31,6 +31,7 @@ import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.SharedCab (isSharedCabBooking, refundWithheld)
+import qualified SharedLogic.SharedCab.Seats as SharedCabSeats
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
@@ -133,6 +134,8 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
   -- NOTE: the counters are not idempotent -- a replayed cancel callback decrements the ticket count again
   -- and rewrites settlement. That is pre-existing behaviour, left exactly as it is on main.
   releaseSeatsIfHeld booking quoteCategories
+  -- a seller's counter-cancel reaches a shared-cab booking here without passing the shared-cab cancel, which releases its own
+  when (isSharedCabBooking booking) $ SharedCabSeats.releaseBooking booking.id
   unless isCounterCancellation $ do
     -- Must stay LAST and swallowed, or a Redis error here would abort before the seat release/counter above.
     -- Design notes: scripts/testing/cancel/DESIGN.md
