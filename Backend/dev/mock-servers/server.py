@@ -209,6 +209,8 @@ class MockHandler(BaseHTTPRequestHandler):
         # ── Hit-buffer admin endpoints (must come before the /mock prefix dispatch) ──
         if path == "/mock/hits/stream":
             return self._mock_hits_stream(parsed)
+        if path == "/mock/hits" and self.command == "GET":
+            return self._mock_hits_list(parsed)
 
         # ── Mock APIs ──
         if path == "/mock/override":
@@ -230,6 +232,8 @@ class MockHandler(BaseHTTPRequestHandler):
             return self._mock_redis_set(body)
         if path == "/mock/redis/del" and self.command == "POST":
             return self._mock_redis_del(body)
+        if path == "/mock/redis/get" and self.command == "POST":
+            return self._mock_redis_get(body)
 
         # ── Generic scheduler-job trigger (for scheduler tests) ──
         if path == "/mock/scheduler/trigger" and self.command == "POST":
@@ -346,6 +350,32 @@ class MockHandler(BaseHTTPRequestHandler):
                     _STREAM_SUBSCRIBERS.remove(q)
                 except ValueError:
                     pass
+
+    def _mock_hits_list(self, parsed):
+        """GET /mock/hits?path_contains=/moengage&body_contains=<riderId>
+
+        Returns the buffered (non-admin) hits, oldest first, filtered by substring
+        matches on the path and on the JSON-encoded request body. Lets Newman assert
+        that a fire-and-forget outbound call (e.g. an event-tracking provider) was made.
+
+        Returns: {"hits": [...], "count": N}
+        """
+        from urllib.parse import parse_qs
+        params = parse_qs(parsed.query or "")
+        path_contains = params.get("path_contains", [""])[0]
+        body_contains = params.get("body_contains", [""])[0]
+        with _HITS_LOCK:
+            snapshot = list(_HITS)
+        hits = []
+        for hit in snapshot:
+            if hit.get("admin"):
+                continue
+            if path_contains and path_contains not in (hit.get("path") or ""):
+                continue
+            if body_contains and body_contains not in json.dumps(hit.get("request_body"), default=str):
+                continue
+            hits.append(hit)
+        return self._json({"hits": hits, "count": len(hits)})
 
     # ── Mock override API ──
 
@@ -754,6 +784,51 @@ class MockHandler(BaseHTTPRequestHandler):
                 except subprocess.TimeoutExpired:
                     continue
         return self._json({"deleted": deleted})
+
+    def _mock_redis_get(self, body):
+        """POST /mock/redis/get — read Redis keys matching a SCAN pattern on every cluster node.
+
+        Body:
+          {"pattern": "*EventTracking:OnboardedCityPending:<personId>"}
+          {"target": "cluster"|"standalone", "ports": [...]}  # default cluster nodes 30001-30006
+
+        A pattern (rather than an exact key) keeps callers independent of the
+        service's key prefix.
+
+        Returns: {"keys": {"<key>": "<raw value>"}, "count": N}
+        """
+        import subprocess
+
+        try:
+            data = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            return self._json({"error": "invalid JSON"}, status=400)
+
+        pattern = data.get("pattern")
+        if not pattern:
+            return self._json({"error": "pattern is required"}, status=400)
+
+        target = data.get("target", "cluster")
+        ports_default = [30001, 30002, 30003, 30004, 30005, 30006] if target == "cluster" else [6379]
+        ports = [int(p) for p in (data.get("ports") or ports_default)]
+
+        found = {}
+        for p in ports:
+            try:
+                scan = subprocess.run(["redis-cli", "-p", str(p), "--scan", "--pattern", pattern], capture_output=True, text=True, timeout=10)
+                if scan.returncode != 0:
+                    continue
+                for k in (scan.stdout or "").splitlines():
+                    k = k.strip()
+                    if not k or k in found:
+                        continue
+                    cmd = ["redis-cli", "-p", str(p)] if target != "cluster" else ["redis-cli", "-c", "-p", str(p)]
+                    g = subprocess.run(cmd + ["GET", k], capture_output=True, text=True, timeout=5)
+                    if g.returncode == 0:
+                        found[k] = (g.stdout or "").rstrip("\n")
+            except subprocess.TimeoutExpired:
+                continue
+        return self._json({"keys": found, "count": len(found)})
 
     def _mock_scheduler_clear(self, body):
         """POST /mock/scheduler/clear — purge all scheduler state for one jobType so a test starts clean.

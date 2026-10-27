@@ -1,0 +1,564 @@
+{
+  "info": {
+    "name": "OnboardedCityFlow",
+    "description": "ny_user_onboarded_city: signup marks the rider pending in Redis, the first origin serviceability call sends one Moengage event with the resolved city, and repeat (including concurrent) calls send nothing. See Rules.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "0b6f3c52-7d1e-4a8f-9e21-5c4d3b2a1f07"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "// Set envType=Local in Local env files; omit / set to 'Master' otherwise.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    console.log('[skip] mock-only request on envType=' + envType + ': ' + (pm.info && pm.info.requestName));",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "// Generate random values ONCE per collection run",
+          "if (!pm.collectionVariables.get(\"_test_rider_number\")) {",
+          "    var rNum = \"8\" + Math.floor(100000000 + Math.random() * 899999999);",
+          "    pm.collectionVariables.set(\"_test_rider_number\", rNum);",
+          "    console.log(\"Test rider:\", rNum);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "_test_rider_number",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-device",
+            "value": "Postman/Pixel 6/ANDROID v13/Google"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"NAMMA_YATRI\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Rider OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.environment.set('rider_person_id', d.person.id);",
+              "pm.environment.set('_poll_attempt', '0');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-device",
+            "value": "Postman/Pixel 6/ANDROID v13/Google"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{rider_authId}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-rider\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Assert Pending Key Set",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function busyWait(ms) { var end = Date.now() + ms; while (Date.now() < end) {} }",
+              "if (pm.environment.get('_poll_attempt') !== '0') busyWait(500);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var attempt = parseInt(pm.environment.get('_poll_attempt') || '0', 10);",
+              "if (d.count === 0 && attempt < 10) {",
+              "    pm.environment.set('_poll_attempt', String(attempt + 1));",
+              "    postman.setNextRequest('Assert Pending Key Set');",
+              "} else {",
+              "    pm.environment.set('_poll_attempt', '0');",
+              "    pm.test('signup marked the rider as onboarded-city pending', function () {",
+              "        pm.expect(d.count).to.eql(1);",
+              "    });",
+              "    pm.test('pending key holds the signup method', function () {",
+              "        pm.expect(Object.values(d.keys)[0]).to.include('MOBILENUMBER');",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/redis/get",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "redis",
+            "get"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"pattern\": \"*EventTracking:OnboardedCityPending:{{rider_person_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Origin Serviceability",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('origin is serviceable and resolves a city', function () {",
+              "    pm.expect(d.serviceable).to.eql(true);",
+              "    pm.expect(d.city).to.be.a('string');",
+              "});",
+              "pm.environment.set('_poll_attempt', '0');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          },
+          {
+            "key": "x-device",
+            "value": "Postman/Pixel 6/ANDROID v13/Google"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/serviceability/origin",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "serviceability",
+            "origin"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"location\": {\n        \"lat\": {{origin_lat}},\n        \"lon\": {{origin_lon}}\n    }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Assert Onboarded City Event Sent",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function busyWait(ms) { var end = Date.now() + ms; while (Date.now() < end) {} }",
+              "if (pm.environment.get('_poll_attempt') !== '0') busyWait(500);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function moengageActions(name) {",
+              "    var out = [];",
+              "    (pm.response.json().hits || []).forEach(function (h) {",
+              "        var b = h.request_body || {};",
+              "        if (b.customer_id !== pm.environment.get('rider_person_id')) return;",
+              "        (b.actions || []).forEach(function (a) { if (a.action === name) out.push(a); });",
+              "    });",
+              "    return out;",
+              "}",
+              "var cityEvents = moengageActions('ny_user_onboarded_city');",
+              "var attempt = parseInt(pm.environment.get('_poll_attempt') || '0', 10);",
+              "if (cityEvents.length === 0 && attempt < 10) {",
+              "    pm.environment.set('_poll_attempt', String(attempt + 1));",
+              "    postman.setNextRequest('Assert Onboarded City Event Sent');",
+              "} else {",
+              "    pm.environment.set('_poll_attempt', '0');",
+              "    pm.test('ny_user_onboarded was sent at signup', function () {",
+              "        pm.expect(moengageActions('ny_user_onboarded').length).to.eql(1);",
+              "    });",
+              "    pm.test('exactly one ny_user_onboarded_city event', function () {",
+              "        pm.expect(cityEvents.length).to.eql(1);",
+              "    });",
+              "    pm.test('event carries the resolved city and signup method', function () {",
+              "        // Events carry `show city` (e.g. \"Bangalore\", as ny_user_onboarded does), not the API's \"std:080\".",
+              "        pm.expect(cityEvents[0].attributes.city).to.eql(pm.environment.get('city'));",
+              "        pm.expect(cityEvents[0].attributes.signup_method).to.eql('MOBILENUMBER');",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/hits?path_contains=/moengage&body_contains={{rider_person_id}}",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "hits"
+          ],
+          "query": [
+            {
+              "key": "path_contains",
+              "value": "/moengage"
+            },
+            {
+              "key": "body_contains",
+              "value": "{{rider_person_id}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Assert Pending Key Cleared",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('pending key deleted after the event', function () {",
+              "    pm.expect(pm.response.json().count).to.eql(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/redis/get",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "redis",
+            "get"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"pattern\": \"*EventTracking:OnboardedCityPending:{{rider_person_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Assert Claim Key Set",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('claim key set by the sending call', function () {",
+              "    pm.expect(pm.response.json().count).to.eql(1);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/redis/get",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "redis",
+            "get"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"pattern\": \"*EventTracking:OnboardedCityClaim:{{rider_person_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Origin Serviceability (Concurrent Repeats)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Fire two more origin calls alongside this one, as the app does on the home screen.",
+              "var opts = {",
+              "    url: pm.environment.replaceIn('{{baseUrl_app}}') + '/serviceability/origin',",
+              "    method: 'POST',",
+              "    header: { 'Content-Type': 'application/json', 'token': pm.environment.get('rider_token'), 'x-device': 'Postman/Pixel 6/ANDROID v13/Google' },",
+              "    body: { mode: 'raw', raw: JSON.stringify({ location: { lat: parseFloat(pm.environment.get('origin_lat')), lon: parseFloat(pm.environment.get('origin_lon')) } }) }",
+              "};",
+              "for (var i = 0; i < 2; i++) {",
+              "    pm.sendRequest(opts, function (err, res) {",
+              "        pm.test('concurrent origin call returned 200', function () {",
+              "            pm.expect(err).to.eql(null);",
+              "            pm.expect(res.code).to.eql(200);",
+              "        });",
+              "    });",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          },
+          {
+            "key": "x-device",
+            "value": "Postman/Pixel 6/ANDROID v13/Google"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/serviceability/origin",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "serviceability",
+            "origin"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"location\": {\n        \"lat\": {{origin_lat}},\n        \"lon\": {{origin_lon}}\n    }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Assert No Repeat Event",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function busyWait(ms) { var end = Date.now() + ms; while (Date.now() < end) {} }",
+              "// Give the forked event threads of the repeat calls time to reach the mock.",
+              "busyWait(3000);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function moengageActions(name) {",
+              "    var out = [];",
+              "    (pm.response.json().hits || []).forEach(function (h) {",
+              "        var b = h.request_body || {};",
+              "        if (b.customer_id !== pm.environment.get('rider_person_id')) return;",
+              "        (b.actions || []).forEach(function (a) { if (a.action === name) out.push(a); });",
+              "    });",
+              "    return out;",
+              "}",
+              "pm.test('still exactly one ny_user_onboarded_city event', function () {",
+              "    pm.expect(moengageActions('ny_user_onboarded_city').length).to.eql(1);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/hits?path_contains=/moengage&body_contains={{rider_person_id}}",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "hits"
+          ],
+          "query": [
+            {
+              "key": "path_contains",
+              "value": "/moengage"
+            },
+            {
+              "key": "body_contains",
+              "value": "{{rider_person_id}}"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
