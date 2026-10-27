@@ -34,17 +34,23 @@ import Domain.Types.FarePolicy
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.FarePolicy as Queries
 
+-- Short TTL: clearCache also drops this entry on every pod, the TTL only bounds staleness if that propagation is missed.
+inMemCacheTtl :: Seconds
+inMemCacheTtl = 30
+
 findFarePolicyFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
-findFarePolicyFromDB id = do
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
-    Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
-    Nothing -> do
-      flip whenJust cacheFarePolicy /=<< Queries.findById id
+findFarePolicyFromDB id =
+  IM.withInMemCache [makeIdKey id] inMemCacheTtl $
+    Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
+      Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
+      Nothing -> do
+        flip whenJust cacheFarePolicy /=<< Queries.findById id
 
 cacheFarePolicy :: (CacheFlow m r) => FarePolicy -> m ()
 cacheFarePolicy fp = do
