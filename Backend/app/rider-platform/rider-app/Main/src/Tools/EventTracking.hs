@@ -6,6 +6,8 @@ module Tools.EventTracking
     trackVehicleRideCompletedEvents,
     trackPTBookingUsedEvents,
     trackPTBookingConfirmedEvents,
+    markOnboardedCityPending,
+    trackOnboardedCityIfPending,
   )
 where
 
@@ -18,9 +20,12 @@ import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Kernel.External.EventTracking as EventTracking
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
@@ -32,6 +37,7 @@ data TrackingEvent
   | UserSearched Text Double Double (Maybe Double) (Maybe Double)
   | UserRequestedQuotes Text Int
   | UserOnboarded Text Text Text -- riderId, signupMethod, city
+  | UserOnboardedCity Text Text Text -- riderId, signupMethod, city
   | VehicleRideCompleted Text Text Int HighPrecMoney -- riderId, categorySlug (cab|auto|bike), catRideCount, fare
   | VehicleFirstRideCompleted Text Text HighPrecMoney -- riderId, categorySlug, fare
   | VehicleFifthRideCompleted Text Text HighPrecMoney -- riderId, categorySlug, fare
@@ -101,6 +107,35 @@ trackEvent merchantId merchantOperatingCityId event = do
           forM_ targetProviders $ \provider ->
             sendToProvider merchantId merchantOperatingCityId provider actionName req
 
+onboardedCityPendingKey :: Id DP.Person -> Text
+onboardedCityPendingKey personId = "EventTracking:OnboardedCityPending:" <> personId.getId
+
+onboardedCityClaimKey :: Id DP.Person -> Text
+onboardedCityClaimKey personId = "EventTracking:OnboardedCityClaim:" <> personId.getId
+
+onboardedCityPendingTtlSec :: Int
+onboardedCityPendingTtlSec = 7 * 24 * 60 * 60
+
+markOnboardedCityPending :: CacheFlow m r => Id DP.Person -> Text -> m ()
+markOnboardedCityPending personId signupMethod =
+  Redis.setExp (onboardedCityPendingKey personId) signupMethod onboardedCityPendingTtlSec
+
+trackOnboardedCityIfPending ::
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Id DP.Person ->
+  Context.City ->
+  m ()
+trackOnboardedCityIfPending merchantId personId city = do
+  mbSignupMethod <- Redis.safeGet @Text (onboardedCityPendingKey personId)
+  whenJust mbSignupMethod $ \signupMethod -> do
+    claimed <- Redis.setNxExpire (onboardedCityClaimKey personId) onboardedCityPendingTtlSec True
+    when claimed $ do
+      Redis.del (onboardedCityPendingKey personId)
+      mbMerchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId city
+      whenJust mbMerchantOperatingCity $ \merchantOperatingCity ->
+        trackEvent merchantId merchantOperatingCity.id (UserOnboardedCity personId.getId signupMethod (show city))
+
 sendToProvider ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id DM.Merchant ->
@@ -150,6 +185,8 @@ eventToAction = \case
     (riderId, "ny_user_request_quotes", object ["quote_count" .= quoteCount])
   UserOnboarded riderId signupMethod city ->
     (riderId, "ny_user_onboarded", object ["signup_method" .= signupMethod, "city" .= city])
+  UserOnboardedCity riderId signupMethod city ->
+    (riderId, "ny_user_onboarded_city", object ["signup_method" .= signupMethod, "city" .= city])
   VehicleRideCompleted riderId slug catRideCount fare ->
     (riderId, "ny_" <> slug <> "_ride_completed", object ["ride_count" .= catRideCount, "fare" .= fare])
   VehicleFirstRideCompleted riderId slug fare ->
