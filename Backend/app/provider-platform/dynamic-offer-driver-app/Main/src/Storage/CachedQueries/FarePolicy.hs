@@ -73,8 +73,11 @@ clearCacheById fid = do
   -- Also drop the in-mem entries on all pods, so an update isn't masked by a stale in-process copy.
   IM.refreshInMem (makeIdKey fid)
 
+-- Clears the cache too: a policy can be deleted and re-created under the same id, and a lookup in between would have cached Nothing in memory.
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
-create = Queries.create
+create fp = do
+  Queries.create fp
+  clearCacheById fp.id
 
 delete :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m ()
 delete farePolicyId = do
