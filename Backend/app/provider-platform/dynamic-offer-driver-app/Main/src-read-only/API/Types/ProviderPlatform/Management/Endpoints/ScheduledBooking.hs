@@ -132,6 +132,10 @@ data ReallocationEventItem = ReallocationEventItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data ScheduledBookingGateSummary = ScheduledBookingGateSummary {pickupArea :: Kernel.Prelude.Text, total :: Kernel.Prelude.Int, assigned :: Kernel.Prelude.Int, unassigned :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ScheduledBookingInfoRes = ScheduledBookingInfoRes
   { transactionId :: Kernel.Prelude.Text,
     bookingId :: Kernel.Prelude.Text,
@@ -185,12 +189,17 @@ data ScheduledBookingListItem = ScheduledBookingListItem
     vehicleServiceTierName :: Kernel.Prelude.Text,
     cancellationSource :: Kernel.Prelude.Maybe CancellationSource,
     cancellationReasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    cancellationAdditionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    cancellationAdditionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pickupArea :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ScheduledBookingListRes = ScheduledBookingListRes {totalItems :: Kernel.Prelude.Int, bookings :: [ScheduledBookingListItem]}
+data ScheduledBookingListRes = ScheduledBookingListRes {totalItems :: Kernel.Prelude.Int, bookings :: [ScheduledBookingListItem], specialLocationSummary :: Kernel.Prelude.Maybe ScheduledBookingSpecialLocationSummary}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ScheduledBookingSpecialLocationSummary = ScheduledBookingSpecialLocationSummary {total :: Kernel.Prelude.Int, assigned :: Kernel.Prelude.Int, unassigned :: Kernel.Prelude.Int, gates :: [ScheduledBookingGateSummary]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -202,6 +211,9 @@ type GetScheduledBookingList =
            "limit"
            Kernel.Prelude.Int
       :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "pickupArea"
+           Kernel.Prelude.Text
       :> QueryParam
            "to"
            Kernel.Prelude.UTCTime
@@ -271,7 +283,7 @@ type PostScheduledBookingOpsNoteHelper =
   )
 
 data ScheduledBookingAPIs = ScheduledBookingAPIs
-  { getScheduledBookingList :: Kernel.Prelude.Maybe AssignmentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient ScheduledBookingListRes,
+  { getScheduledBookingList :: Kernel.Prelude.Maybe AssignmentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient ScheduledBookingListRes,
     getScheduledBookingInfo :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient ScheduledBookingInfoRes,
     getScheduledBookingDriverDistance :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverDistanceRes,
     getScheduledBookingNearbyDrivers :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe NearbyDriverSortBy -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient NearbyDriversRes,

@@ -65,6 +65,7 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool as DP
@@ -96,6 +97,10 @@ import qualified Tools.Maps as Maps
 -- | Live list keeps a started booking until it completes or is cancelled, at most a day past its start time.
 liveLookbackSeconds :: Int
 liveLookbackSeconds = 24 * 60 * 60
+
+-- | Statuses the live view shows: NEW is unassigned, TRIP_ASSIGNED is assigned (started rides included).
+liveStatuses :: [SRB.BookingStatus]
+liveStatuses = [SRB.NEW, SRB.TRIP_ASSIGNED]
 
 scheduledBookingIssuePersonId :: Id DP.Person
 scheduledBookingIssuePersonId = Id "00000000-0000-0000-0000-000000000000"
@@ -141,9 +146,10 @@ getScheduledBookingList ::
   Maybe Bool ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Text ->
   Maybe UTCTime ->
   Flow Common.ScheduledBookingListRes
-getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbIsHistory mbLimit mbOffset mbTo = do
+getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbIsHistory mbLimit mbOffset mbPickupArea mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
@@ -163,33 +169,80 @@ getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbIsHis
   when (fromTime > toTime) $ throwError (InvalidRequest "from must not be after to")
   when (fromTime < earliestAllowedFrom) $
     throwError (InvalidRequest $ "from cannot be older than " <> show (maxLookbackSeconds `div` (24 * 60 * 60)) <> " days")
-  -- History is about what happened, so it filters out no status; the live view still shows only actionable ones.
+  when (isHistory && isJust mbPickupArea) $
+    throwError (InvalidRequest "pickupArea filters the live view only")
+  mbPickupFilter <- forM mbPickupArea $ \pickupArea -> case readMaybe (T.unpack pickupArea) of
+    Just filterArea@(SL.Pickup _ _) -> pure filterArea
+    _ -> throwError (InvalidRequest $ "pickupArea must be Pickup_<specialLocationId>[_Gate_<gateId>], got: " <> pickupArea)
   let statuses = case (isHistory, mbAssignmentStatus) of
         (_, Just Common.ASSIGNED) -> [SRB.TRIP_ASSIGNED]
         (_, Just Common.UNASSIGNED) -> [SRB.NEW]
         (True, Nothing) -> [SRB.NEW, SRB.TRIP_ASSIGNED, SRB.COMPLETED, SRB.CANCELLED, SRB.REALLOCATED]
-        (False, Nothing) -> [SRB.NEW, SRB.TRIP_ASSIGNED]
+        (False, Nothing) -> liveStatuses
   -- Both views page by transaction: history includes superseded attempts, and the live booking of a
   -- scheduled transaction may itself be unscheduled (see the live branch).
-  (rows, hasMorePages, txnBookings) <-
+  (rows, hasMorePages, txnBookings, mbSummary) <-
     if isHistory
       then do
         txnIds <- QBookingLite.findScheduledTransactionIdsLite merchantOpCity.id statuses fromTime toTime (limit + 1) offset
         let pageTxnIds = take limit txnIds
         pageTxnBookings <- QBookingLite.findAllByTransactionIdsLite pageTxnIds
-        pure (latestBookingPerTransaction pageTxnBookings pageTxnIds, length txnIds > limit, pageTxnBookings)
+        pure (latestBookingPerTransaction pageTxnBookings pageTxnIds, length txnIds > limit, pageTxnBookings, Nothing)
       else do
-        scheduledBookings <- QBookingLite.findScheduledBookingsInWindowLite merchantOpCity.id (statuses <> [SRB.CANCELLED, SRB.REALLOCATED]) fromTime toTime
+        let windowStatuses = if isJust mbPickupFilter then liveStatuses else statuses
+            atSpecialLocation b = all (\filterArea -> (SL.stripGateId <$> pickupAreaOf b) == Just (SL.stripGateId filterArea)) mbPickupFilter
+            atPickupArea b = all (\filterArea -> not (SL.hasGateId filterArea) || pickupAreaOf b == Just filterArea) mbPickupFilter
+        scheduledBookings <-
+          filter atSpecialLocation
+            <$> QBookingLite.findScheduledBookingsInWindowLite merchantOpCity.id (windowStatuses <> [SRB.CANCELLED, SRB.REALLOCATED]) fromTime toTime
         let scheduledTxnIds = nub $ map (.transactionId) scheduledBookings
         allTxnBookings <- QBookingLite.findAllByTransactionIdsLite scheduledTxnIds
-        let liveRows =
-              sortOn (\b -> (b.startTime, b.id.getId)) . filter ((`elem` statuses) . (.status)) $
-                latestBookingPerTransaction allTxnBookings scheduledTxnIds
+        let latestRows = latestBookingPerTransaction allTxnBookings scheduledTxnIds
+            liveRows =
+              sortOn (\b -> (b.startTime, b.id.getId))
+                . filter (\b -> b.status `elem` statuses && atPickupArea b)
+                $ latestRows
             pageRows = take limit $ drop offset liveRows
-        pure (pageRows, length liveRows > offset + limit, allTxnBookings)
+        pure (pageRows, length liveRows > offset + limit, allTxnBookings, mkSpecialLocationSummary latestRows <$ mbPickupFilter)
   ctx <- buildListPageContext isHistory txnBookings rows
   let bookings = map (buildListItem ctx) rows
-  pure Common.ScheduledBookingListRes {totalItems = offset + length rows + (if hasMorePages then 1 else 0), bookings}
+  pure
+    Common.ScheduledBookingListRes
+      { totalItems = offset + length rows + (if hasMorePages then 1 else 0),
+        bookings,
+        specialLocationSummary = mbSummary
+      }
+
+pickupAreaOf :: QBookingLite.BookingLite -> Maybe SL.Area
+pickupAreaOf booking = do
+  bookingArea <- booking.area
+  slId <- SL.pickupSpecialZoneIdFromArea bookingArea
+  pure $ SL.Pickup (Id slId) (SL.pickupGateIdFromArea bookingArea)
+
+-- | Assigned and unassigned counts over a special location's live transactions, overall and per pickup area (gate).
+mkSpecialLocationSummary :: [QBookingLite.BookingLite] -> Common.ScheduledBookingSpecialLocationSummary
+mkSpecialLocationSummary latestRows =
+  let live = filter ((`elem` liveStatuses) . (.status)) latestRows
+      (nAssigned, nUnassigned) = countAssignment live
+      byPickupArea = Map.fromListWith (<>) [(gateArea, [b]) | b <- live, Just gateArea <- [pickupAreaOf b]]
+   in Common.ScheduledBookingSpecialLocationSummary
+        { total = nAssigned + nUnassigned,
+          assigned = nAssigned,
+          unassigned = nUnassigned,
+          gates =
+            [ Common.ScheduledBookingGateSummary
+                { pickupArea = SL.areaToText gateArea,
+                  total = gAssigned + gUnassigned,
+                  assigned = gAssigned,
+                  unassigned = gUnassigned
+                }
+              | (gateArea, gateRows) <- Map.toList byPickupArea,
+                let (gAssigned, gUnassigned) = countAssignment gateRows
+            ]
+        }
+  where
+    countAssignment bs = (countStatus SRB.TRIP_ASSIGNED bs, countStatus SRB.NEW bs)
+    countStatus st = length . filter ((== st) . (.status))
 
 -- | Each transaction's latest booking, in the given order: reallocation keeps the transactionId but mints a new bookingId.
 latestBookingPerTransaction :: [QBookingLite.BookingLite] -> [Text] -> [QBookingLite.BookingLite]
@@ -283,7 +336,8 @@ buildListItem ctx booking =
           vehicleServiceTierName = booking.vehicleServiceTierName,
           cancellationSource = castCancellationSource . (.source) <$> mbCancellation,
           cancellationReasonCode = cancellationReasonCodeText =<< mbCancellation,
-          cancellationAdditionalInfo = (.additionalInfo) =<< mbCancellation
+          cancellationAdditionalInfo = (.additionalInfo) =<< mbCancellation,
+          pickupArea = SL.areaToText <$> pickupAreaOf booking
         }
 
 -- | Latest booking of a scheduled transaction. Once any booking of a transaction is scheduled, all of
