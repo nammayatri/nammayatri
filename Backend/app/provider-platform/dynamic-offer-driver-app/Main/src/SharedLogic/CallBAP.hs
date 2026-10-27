@@ -23,6 +23,7 @@ module SharedLogic.CallBAP
     sendDriverArrivalUpdateToBAP,
     sendStopArrivalUpdateToBAP,
     sendDestinationArrivalUpdateToBAP,
+    sendDriverNearPickupUpdateToBAP,
     sendReturnTripStartedUpdateToBAP,
     sendEstimateRepetitionUpdateToBAP,
     sendRideEstimatedEndTimeRangeUpdateToBAP,
@@ -1662,6 +1663,40 @@ sendDestinationArrivalUpdateToBAP booking ride destinationArrivalTime = do
   retryConfig <- asks (.shortDurationRetryCfg)
   driverReachedDestMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverReachedDestBuildReq
   void $ callOnUpdateV2 driverReachedDestMsgV2 retryConfig merchant.id
+
+sendDriverNearPickupUpdateToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  m ()
+sendDriverNearPickupUpdateToBAP booking ride = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  when isValueAddNP $ do
+    merchant <-
+      CQM.findById booking.providerId
+        >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+    driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+    vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+    let riderPhone = Nothing
+        paymentMethodInfo = Nothing
+        paymentUrl = Nothing
+        bookingDetails = ACL.BookingDetails {..}
+        driverNearPickupBuildReq = ACL.DriverNearPickupBuildReq ACL.DDriverNearPickupReq {..}
+    retryConfig <- asks (.shortDurationRetryCfg)
+    driverNearPickupMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverNearPickupBuildReq
+    void $ callOnUpdateV2 driverNearPickupMsgV2 retryConfig merchant.id
 
 sendReturnTripStartedUpdateToBAP ::
   ( CacheFlow m r,

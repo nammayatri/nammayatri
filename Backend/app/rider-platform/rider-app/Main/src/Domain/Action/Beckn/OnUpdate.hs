@@ -38,6 +38,7 @@ module Domain.Action.Beckn.OnUpdate
     PhoneCallRequestEventReq (..),
     PhoneCallCompletedEventReq (..),
     DestinationReachedReq (..),
+    DriverNearPickupReq (..),
     ReturnTripStartedReq (..),
     EstimatedEndTimeRangeReq (..),
     ParcelImageFileUploadReq (..),
@@ -138,6 +139,7 @@ data OnUpdateReq
   | OUPhoneCallCompletedEventReq PhoneCallCompletedEventReq
   | OUEditDestError EditDestErrorReq
   | OUDestinationReachedReq DestinationReachedReq
+  | OUDriverNearPickupReq DriverNearPickupReq
   | OUReturnTripStartedReq ReturnTripStartedReq
   | OUEstimatedEndTimeRangeReq EstimatedEndTimeRangeReq
   | OUParcelImageFileUploadReq ParcelImageFileUploadReq
@@ -165,6 +167,7 @@ data ValidatedOnUpdateReq
   | OUValidatedPhoneCallCompletedEventReq ValidatedPhoneCallCompletedEventReq
   | OUValidatedEditDestError ValidatedEditDestErrorReq
   | OUValidatedDestinationReachedReq ValidatedDestinationReachedReq
+  | OUValidatedDriverNearPickupReq ValidatedDriverNearPickupReq
   | OUValidatedReturnTripStartedReq ValidatedReturnTripStartedReq
   | OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq
   | OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq
@@ -392,6 +395,15 @@ data ValidatedDestinationReachedReq = ValidatedDestinationReachedReq
     ride :: DRide.Ride,
     destinationReachedTime :: UTCTime,
     mbReturnOtp :: Maybe Text
+  }
+
+newtype DriverNearPickupReq = DriverNearPickupReq
+  { bppRideId :: Id DRide.BPPRide
+  }
+
+data ValidatedDriverNearPickupReq = ValidatedDriverNearPickupReq
+  { booking :: DRB.Booking,
+    ride :: DRide.Ride
   }
 
 data ReturnTripStartedReq = ReturnTripStartedReq
@@ -678,6 +690,12 @@ onUpdate = \case
     allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
     mapM_ QPFS.clearCache (nub $ booking.riderId : allBookingPartyIds)
     Notify.notifyToAllBookingParties allParty booking.tripCategory "DRIVER_HAS_REACHED_DESTINATION"
+  OUValidatedDriverNearPickupReq ValidatedDriverNearPickupReq {..} ->
+    -- Near pickup only tells the rider; driverArrivalTime (and waiting charges) wait for the arrival event.
+    -- The arrival status only moves forward, so the later arrival does not send this push again.
+    unless (isJust ride.driverArrivalTime) $ do
+      QPFS.clearCache booking.riderId
+      Common.updateAndNotifyDriverArrivalStatus booking ride DRide.DRIVER_REACHED
   OUValidatedReturnTripStartedReq ValidatedReturnTripStartedReq {..} -> do
     QRide.updateReturnStartedAt returnStartedAt ride.id
     allBookingParty <- QBPL.findAllActiveByBookingId booking.id
@@ -825,6 +843,11 @@ validateRequest = \case
     unless (ride.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride is not in progress"
     booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
     return $ OUValidatedDestinationReachedReq ValidatedDestinationReachedReq {..}
+  OUDriverNearPickupReq DriverNearPickupReq {..} -> do
+    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    unless (ride.status == DRide.NEW) $ throwError $ RideInvalidStatus "This ride has already started"
+    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
+    return $ OUValidatedDriverNearPickupReq ValidatedDriverNearPickupReq {..}
   OUReturnTripStartedReq ReturnTripStartedReq {..} -> do
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
     unless (ride.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride is not in progress"

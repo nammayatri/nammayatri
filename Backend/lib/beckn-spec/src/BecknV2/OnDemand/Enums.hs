@@ -108,6 +108,7 @@ data FulfillmentState
   | CHANGE_SERVICE_TIER -- Custom type only used for on-us transaction
   | ADD_BAGGAGE -- Custom type only used for on-us transaction
   | DRIVER_REACHED_DESTINATION
+  | DRIVER_NEAR_PICKUP -- Custom on-us state: driver within the pickup radius; tells the rider without starting waiting charges
   | RETURN_TRIP_STARTED
   | AWAITING_REALLOCATION -- Custom on-us state: BPP reallocating (driver detached, re-search in progress)
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
