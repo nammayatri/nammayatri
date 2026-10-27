@@ -118,7 +118,7 @@ runOrderedCommitting flowRt appEnv kc eventTime handler reportWatermark = go M.e
                   Left err -> Left ("committed offsets: " <> show err)
                   Right committedTps ->
                     let consumedTo = M.union consumed (offsetsByPartition committedTps)
-                        highBy = M.fromList [(Consumer.unPartitionId wo.woPartitionId, Consumer.unOffset wo.woHighWatermark) | wo <- highs]
+                        highBy = M.fromList [(Consumer.unPartitionId (woPartitionId wo), Consumer.unOffset (woHighWatermark wo)) | wo <- highs]
                         -- No position and no committed offset: a new group starts at
                         -- the latest offset (librdkafka's default), so it is caught up.
                         caughtUp p = maybe True (>= M.findWithDefault 0 p highBy) (M.lookup p consumedTo)
@@ -126,7 +126,7 @@ runOrderedCommitting flowRt appEnv kc eventTime handler reportWatermark = go M.e
                      in Right (Just (length highs, M.fromList [(p, m) | Consumer.PartitionId p <- parts, Just m <- [mark p]]))
           _ -> pure (Left "runOrderedCommitting expects a single topic")
 
-    offsetsByPartition tps = M.fromList [(Consumer.unPartitionId tp.tpPartition, o) | tp <- tps, Consumer.PartitionOffset o <- [tp.tpOffset]]
+    offsetsByPartition tps = M.fromList [(Consumer.unPartitionId (Consumer.tpPartition tp), o) | tp <- tps, Consumer.PartitionOffset o <- [Consumer.tpOffset tp]]
 
 -- | The librdkafka error codes live in hw-kafka-client's hidden
 -- Kafka.Internal.RdKafka module, so match on the code's shown name instead:

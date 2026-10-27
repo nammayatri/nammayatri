@@ -152,6 +152,7 @@ awaitStateWriter warn conn needed = do
   callMs <- round . (* 1000) <$> getPOSIXTime
   go (min callMs needed + stateBufferMs) 0
   where
+    go :: Integer -> Integer -> IO Integer
     go target waitedMs = do
       reply <- (Right <$> R.runRedis conn (R.hgetall (TE.encodeUtf8 writerWatermarkKey))) `catchAny` (pure . Left . show)
       let mbWm = either (const Nothing) (either (const Nothing) writerWatermarkFromHash) reply
@@ -162,6 +163,7 @@ awaitStateWriter warn conn needed = do
             warn $ "waiting " <> show waitedMs <> " ms for the state writer to reach " <> show target <> "; it is at " <> maybe "no watermark (unreadable, or not every partition reported)" show mbWm <> either (\e -> " (read failed: " <> e <> ")") (const "") reply
           CC.threadDelay (fromIntegral writerPollMs * 1000)
           go target (waitedMs + writerPollMs)
+    writerPollMs, stallWarnEveryMs :: Integer
     writerPollMs = 200
     stallWarnEveryMs = 30 * 1000
 
