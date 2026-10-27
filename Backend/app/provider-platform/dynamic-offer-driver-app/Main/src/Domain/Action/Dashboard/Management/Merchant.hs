@@ -2999,7 +2999,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
       let pricingSlabIssues =
             [ (lookupKey (head fpGroup), reason)
-              | fpGroup <- groups,
+              | fpGroup@((_, _, _, _, _, _, _, True, _) : _) <- groups,
                 Just reason <- [validateGroupPricingSlabs fpGroup]
             ]
       unless (null pricingSlabIssues) $
@@ -3008,7 +3008,9 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             "Invalid pricing slabs, rides on such a fare policy could not be ended: "
               <> show pricingSlabIssues
       let boundedAlreadyDeletedMap = Map.empty :: Map.Map Text Bool
-      (farePolicyErrors, _) <- foldlM (processFarePolicyGroup merchantOpCity allCityFareProducts) ([], boundedAlreadyDeletedMap) groups
+      (farePolicyErrors, _) <-
+        foldlM (processFarePolicyGroup merchantOpCity allCityFareProducts) ([], boundedAlreadyDeletedMap) groups
+          `finally` CQFProduct.clearCacheById merchantOpCity.id
       return $
         Common.UpsertFarePolicyResp
           { unprocessedFarePolicies = farePolicyErrors,
@@ -3250,21 +3252,14 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               -- cities / merchants) still references each one.  A per-city in-memory count
               -- would undercount policies shared across cities (e.g. cloned via
               -- postMerchantConfigOperatingCityCreate), silently orphaning them.
-              -- NOTE: Cache clearing is deferred until AFTER the new FareProduct is created
-              -- in the DB, to minimise the window where concurrent search requests could
-              -- query an empty DB state and cache empty results.
+              -- NOTE: the FareProduct cache is invalidated once for the whole upload, by the
+              -- caller after all groups ran (see postMerchantConfigFarePolicyUpsert).
               forM_ oldFareProducts $ \fp -> CQFProduct.delete fp.id
 
               id <- generateGUID
               let farePolicyId = finalFarePolicy.id
               let fareProduct = DFareProduct.FareProduct {enabled = enabled', merchantId = merchantOpCity.merchantId, merchantOperatingCityId = merchantOpCity.id, ..}
               CQFProduct.create fareProduct
-
-              -- Clear cache AFTER the new FareProduct exists in DB.  Any concurrent
-              -- request that re-populates the cache after this point will find the
-              -- new record instead of caching an empty result.
-              forM_ oldFareProducts CQFProduct.clearCache
-              CQFProduct.clearCache fareProduct
 
               scheduleDeleteUnreferencedFarePolicies merchantOpCity.merchantId merchantOpCity.id (map (.farePolicyId) oldFareProducts)
 

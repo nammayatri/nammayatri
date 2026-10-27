@@ -27,126 +27,177 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as Domain
-import Kernel.Utils.Common (CacheFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow, MonadFlow, getCurrentTimestamp)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Storage.Queries.FareProduct as Queries
 
 create :: (MonadFlow m, Esq.EsqDBFlow m r, CacheFlow m r) => FareProduct -> m ()
 create = Queries.create
 
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+-- Every FareProduct cache key of a city embeds the city's cache version, and a fare product
+-- change bumps the version instead of deleting keys. Deleting could not win against a lookup
+-- that read the DB just before the change and SET its result just after the delete: that
+-- stale entry then lived for configsExpTime. Now such a late SET lands under the old version,
+-- which nobody reads any more. Lookups must read the version BEFORE the DB, and writers bump
+-- it only AFTER their DB writes. Old keys are never deleted; they expire with their TTL.
+getCacheVersion :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m Integer
+getCacheVersion merchantOpCityId = Hedis.withCrossAppRedis $ do
+  let key = makeCacheVersionKey merchantOpCityId
+  Hedis.safeGet key >>= \case
+    Just version -> pure version
+    Nothing -> do
+      nowMs <- round <$> getCurrentTimestamp
+      void $ Hedis.setNx key (nowMs :: Integer)
+      fromMaybe nowMs <$> Hedis.safeGet key
+
+bumpCacheVersion :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+bumpCacheVersion merchantOpCityId = Hedis.runInMultiCloudRedisWrite $
+  Hedis.withCrossAppRedis $ do
+    let key = makeCacheVersionKey merchantOpCityId
+    nowMs <- round <$> getCurrentTimestamp
+    void $ Hedis.setNx key (nowMs :: Integer)
+    void $ Hedis.incr key
+
+makeCacheVersionKey :: Id MerchantOperatingCity -> Text
+makeCacheVersionKey merchantOpCityId = "driver-offer:CachedQueries:FareProduct:CacheVersion:MerchantOpCityId-" <> getId merchantOpCityId
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 findAllUnboundedFareProductForVariants :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> SL.Area -> m [FareProduct]
-findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory area =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId searchSources tripCategory area) >>= \case
-    Just a -> pure a
-    Nothing -> cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea merchantOpCityId searchSources tripCategory area /=<< runInMasterDb (Queries.findAllUnboundedFareProductForVariants merchantOpCityId area tripCategory Domain.Unbounded True searchSources)
+findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory area = do
+  version <- getCacheVersion merchantOpCityId
+  fareProducts <-
+    Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey version merchantOpCityId searchSources tripCategory area) >>= \case
+      Just a -> pure a
+      Nothing -> cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea version merchantOpCityId searchSources tripCategory area /=<< runInMasterDb (Queries.findAllUnboundedFareProductForVariants merchantOpCityId area tripCategory Domain.Unbounded True searchSources)
+  if null fareProducts && Queries.isInterCityWithCity tripCategory
+    then findAllUnboundedFareProductForVariants merchantOpCityId searchSources (Queries.removeCityFromTripCategory tripCategory) area
+    else pure fareProducts
 
-cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> SL.Area -> [FareProduct] -> m ()
-cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea merchantOpCityId searchSources tripCategory area fareProducts = do
+cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea :: (CacheFlow m r) => Integer -> Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> SL.Area -> [FareProduct] -> m ()
+cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea version merchantOpCityId searchSources tripCategory area fareProducts = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId searchSources tripCategory area) fareProducts expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey version merchantOpCityId searchSources tripCategory area) fareProducts expTime
 
-makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey :: Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> SL.Area -> Text
-makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId searchSources tripCategory area = "driver-offer:CachedQueries:Unbounded:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":SearchSource-" <> show searchSources <> ":Area-" <> show area <> ":TripCategory-" <> show tripCategory
+makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey :: Integer -> Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> SL.Area -> Text
+makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey version merchantOpCityId searchSources tripCategory area = "driver-offer:CachedQueries:Unbounded:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":Version-" <> show version <> ":SearchSource-" <> show searchSources <> ":Area-" <> show area <> ":TripCategory-" <> show tripCategory
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 findAllUnboundedFareProductForArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> SL.Area -> m [FareProduct]
-findAllUnboundedFareProductForArea merchantOpCityId searchSources area =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductByMerchantIdAndAreaKey merchantOpCityId searchSources area) >>= \case
+findAllUnboundedFareProductForArea merchantOpCityId searchSources area = do
+  version <- getCacheVersion merchantOpCityId
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductByMerchantIdAndAreaKey version merchantOpCityId searchSources area) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllUnboundedFareProductByMerchantIdAndArea merchantOpCityId searchSources area /=<< runInMasterDb (Queries.findAllUnboundedFareProductForArea merchantOpCityId area Domain.Unbounded True searchSources)
+    Nothing -> cacheAllUnboundedFareProductByMerchantIdAndArea version merchantOpCityId searchSources area /=<< runInMasterDb (Queries.findAllUnboundedFareProductForArea merchantOpCityId area Domain.Unbounded True searchSources)
 
-cacheAllUnboundedFareProductByMerchantIdAndArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> SL.Area -> [FareProduct] -> m ()
-cacheAllUnboundedFareProductByMerchantIdAndArea merchantOpCityId searchSources area fareProducts = do
+cacheAllUnboundedFareProductByMerchantIdAndArea :: (CacheFlow m r) => Integer -> Id MerchantOperatingCity -> [SearchSource] -> SL.Area -> [FareProduct] -> m ()
+cacheAllUnboundedFareProductByMerchantIdAndArea version merchantOpCityId searchSources area fareProducts = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeUnboundedFareProductByMerchantIdAndAreaKey merchantOpCityId searchSources area) fareProducts expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeUnboundedFareProductByMerchantIdAndAreaKey version merchantOpCityId searchSources area) fareProducts expTime
 
-makeUnboundedFareProductByMerchantIdAndAreaKey :: Id MerchantOperatingCity -> [SearchSource] -> SL.Area -> Text
-makeUnboundedFareProductByMerchantIdAndAreaKey merchantOpCityId searchSources area = "driver-offer:CachedQueries:Unbounded:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":SearchSource-" <> show searchSources <> ":Area-" <> show area
+makeUnboundedFareProductByMerchantIdAndAreaKey :: Integer -> Id MerchantOperatingCity -> [SearchSource] -> SL.Area -> Text
+makeUnboundedFareProductByMerchantIdAndAreaKey version merchantOpCityId searchSources area = "driver-offer:CachedQueries:Unbounded:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":Version-" <> show version <> ":SearchSource-" <> show searchSources <> ":Area-" <> show area
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 findAllFareProductByMerchantOpCityId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> m [FareProduct]
-findAllFareProductByMerchantOpCityId merchantOpCityId =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductByMerchantOpCityIdKey merchantOpCityId) >>= \case
+findAllFareProductByMerchantOpCityId merchantOpCityId = do
+  version <- getCacheVersion merchantOpCityId
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductByMerchantOpCityIdKey version merchantOpCityId) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllFareProductByMerchantOpCityId merchantOpCityId /=<< runInMasterDb (Queries.findAllFareProductByMerchantOpCityId merchantOpCityId True)
+    Nothing -> cacheAllFareProductByMerchantOpCityId version merchantOpCityId /=<< runInMasterDb (Queries.findAllFareProductByMerchantOpCityId merchantOpCityId True)
 
-cacheAllFareProductByMerchantOpCityId :: (CacheFlow m r) => Id MerchantOperatingCity -> [FareProduct] -> m ()
-cacheAllFareProductByMerchantOpCityId merchantOpCityId fareProducts = do
+cacheAllFareProductByMerchantOpCityId :: (CacheFlow m r) => Integer -> Id MerchantOperatingCity -> [FareProduct] -> m ()
+cacheAllFareProductByMerchantOpCityId version merchantOpCityId fareProducts = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeFareProductByMerchantOpCityIdKey merchantOpCityId) fareProducts expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeFareProductByMerchantOpCityIdKey version merchantOpCityId) fareProducts expTime
 
-makeFareProductByMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
-makeFareProductByMerchantOpCityIdKey merchantOpCityId = "driver-offer:CachedQueries:FareProducts:MerchantOpCityId-" <> getId merchantOpCityId
+makeFareProductByMerchantOpCityIdKey :: Integer -> Id MerchantOperatingCity -> Text
+makeFareProductByMerchantOpCityIdKey version merchantOpCityId = "driver-offer:CachedQueries:FareProducts:MerchantOpCityId-" <> getId merchantOpCityId <> ":Version-" <> show version
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 findSupportedServiceTiersByMerchantOpCityId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> m [DVST.ServiceTierType]
-findSupportedServiceTiersByMerchantOpCityId merchantOpCityId =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeSupportedServiceTiersKey merchantOpCityId) >>= \case
+findSupportedServiceTiersByMerchantOpCityId merchantOpCityId = do
+  version <- getCacheVersion merchantOpCityId
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeSupportedServiceTiersKey version merchantOpCityId) >>= \case
     Just a -> pure a
     Nothing -> do
       fareProducts <- runInMasterDb $ Queries.findAllFareProductByMerchantOpCityId merchantOpCityId True
       let tiers = nub $ map (.vehicleServiceTier) fareProducts
-      cacheSupportedServiceTiers merchantOpCityId tiers
+      cacheSupportedServiceTiers version merchantOpCityId tiers
       pure tiers
 
-cacheSupportedServiceTiers :: (CacheFlow m r) => Id MerchantOperatingCity -> [DVST.ServiceTierType] -> m ()
-cacheSupportedServiceTiers merchantOpCityId tiers = do
+cacheSupportedServiceTiers :: (CacheFlow m r) => Integer -> Id MerchantOperatingCity -> [DVST.ServiceTierType] -> m ()
+cacheSupportedServiceTiers version merchantOpCityId tiers = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeSupportedServiceTiersKey merchantOpCityId) tiers expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeSupportedServiceTiersKey version merchantOpCityId) tiers expTime
 
-makeSupportedServiceTiersKey :: Id MerchantOperatingCity -> Text
-makeSupportedServiceTiersKey merchantOpCityId = "driver-offer:CachedQueries:FareProducts:MerchantOpCityId-" <> getId merchantOpCityId <> ":SupportedServiceTiers"
+makeSupportedServiceTiersKey :: Integer -> Id MerchantOperatingCity -> Text
+makeSupportedServiceTiersKey version merchantOpCityId = "driver-offer:CachedQueries:FareProducts:MerchantOpCityId-" <> getId merchantOpCityId <> ":Version-" <> show version <> ":SupportedServiceTiers"
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 findUnboundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m (Maybe FareProduct)
-findUnboundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area) >>= \case
-    Just a -> pure a
-    Nothing -> flip whenJust (cacheUnboundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area) /=<< runInMasterDb (Queries.findUnboundedByMerchantOpCityIdVariantArea merchantOpCityId area tripCategory serviceTier Domain.Unbounded True searchSources)
+findUnboundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area = do
+  version <- getCacheVersion merchantOpCityId
+  mbFareProduct <-
+    Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductByMerchantVariantAreaKey version merchantOpCityId searchSources tripCategory serviceTier area) >>= \case
+      Just a -> pure a
+      Nothing -> flip whenJust (cacheUnboundedFareProductByMerchantVariantArea version merchantOpCityId searchSources tripCategory serviceTier area) /=<< runInMasterDb (Queries.findUnboundedByMerchantOpCityIdVariantArea merchantOpCityId area tripCategory serviceTier Domain.Unbounded True searchSources)
+  if isNothing mbFareProduct && Queries.isInterCityWithCity tripCategory
+    then findUnboundedByMerchantVariantArea merchantOpCityId searchSources (Queries.removeCityFromTripCategory tripCategory) serviceTier area
+    else pure mbFareProduct
 
-cacheUnboundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> FareProduct -> m ()
-cacheUnboundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area fareProduct = do
+cacheUnboundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Integer -> Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> FareProduct -> m ()
+cacheUnboundedFareProductByMerchantVariantArea version merchantOpCityId searchSources tripCategory serviceTier area fareProduct = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area) fareProduct expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeUnboundedFareProductByMerchantVariantAreaKey version merchantOpCityId searchSources tripCategory serviceTier area) fareProduct expTime
 
-makeUnboundedFareProductByMerchantVariantAreaKey :: Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> Text
-makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area = "driver-offer:CachedQueries:Unbounded:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":SearchSource-" <> show searchSources <> ":ServiceTier-" <> show serviceTier <> ":Area-" <> show area <> ":TripCategory-" <> show tripCategory
+makeUnboundedFareProductByMerchantVariantAreaKey :: Integer -> Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> Text
+makeUnboundedFareProductByMerchantVariantAreaKey version merchantOpCityId searchSources tripCategory serviceTier area = "driver-offer:CachedQueries:Unbounded:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":Version-" <> show version <> ":SearchSource-" <> show searchSources <> ":ServiceTier-" <> show serviceTier <> ":Area-" <> show area <> ":TripCategory-" <> show tripCategory
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 findAllBoundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m [FareProduct]
-findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area) >>= \case
-    Just a -> pure a
-    Nothing -> cacheBoundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area /=<< runInMasterDb (Queries.findAllBoundedByMerchantOpCityIdVariantArea merchantOpCityId area serviceTier tripCategory Domain.Unbounded True searchSources)
+findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area = do
+  version <- getCacheVersion merchantOpCityId
+  fareProducts <-
+    Hedis.withCrossAppRedis (Hedis.safeGet $ makeBoundedFareProductByMerchantVariantAreaKey version merchantOpCityId searchSources tripCategory serviceTier area) >>= \case
+      Just a -> pure a
+      Nothing -> cacheBoundedFareProductByMerchantVariantArea version merchantOpCityId searchSources tripCategory serviceTier area /=<< runInMasterDb (Queries.findAllBoundedByMerchantOpCityIdVariantArea merchantOpCityId area serviceTier tripCategory Domain.Unbounded True searchSources)
+  -- Same city-agnostic fallback as 'findAllUnboundedFareProductForVariants'.
+  if null fareProducts && Queries.isInterCityWithCity tripCategory
+    then findAllBoundedByMerchantVariantArea merchantOpCityId searchSources (Queries.removeCityFromTripCategory tripCategory) serviceTier area
+    else pure fareProducts
 
-cacheBoundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> [FareProduct] -> m ()
-cacheBoundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area fareProducts = do
+cacheBoundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Integer -> Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> [FareProduct] -> m ()
+cacheBoundedFareProductByMerchantVariantArea version merchantOpCityId searchSources tripCategory serviceTier area fareProducts = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area) fareProducts expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeBoundedFareProductByMerchantVariantAreaKey version merchantOpCityId searchSources tripCategory serviceTier area) fareProducts expTime
 
-makeBoundedFareProductByMerchantVariantAreaKey :: Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> Text
-makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area = "driver-offer:CachedQueries:Bounded:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":SearchSource-" <> show searchSources <> ":ServiceTier-" <> show serviceTier <> ":Area-" <> show area <> ":TripCategory-" <> show tripCategory
+makeBoundedFareProductByMerchantVariantAreaKey :: Integer -> Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> Text
+makeBoundedFareProductByMerchantVariantAreaKey version merchantOpCityId searchSources tripCategory serviceTier area = "driver-offer:CachedQueries:Bounded:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":Version-" <> show version <> ":SearchSource-" <> show searchSources <> ":ServiceTier-" <> show serviceTier <> ":Area-" <> show area <> ":TripCategory-" <> show tripCategory
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 findAllFareProductByMerchantOpCityIdAndArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> SL.Area -> m [FareProduct]
-findAllFareProductByMerchantOpCityIdAndArea merchantOpCityId area =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductByMerchantOpCityIdAndAreaKey merchantOpCityId area) >>= \case
+findAllFareProductByMerchantOpCityIdAndArea merchantOpCityId area = do
+  version <- getCacheVersion merchantOpCityId
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductByMerchantOpCityIdAndAreaKey version merchantOpCityId area) >>= \case
     Just a -> pure a
-    Nothing -> cacheFareProductByMerchantOpCityIdAndArea merchantOpCityId area /=<< runInMasterDb (Queries.findAllFareProductByMerchantOpCityIdAndArea merchantOpCityId area True)
+    Nothing -> cacheFareProductByMerchantOpCityIdAndArea version merchantOpCityId area /=<< runInMasterDb (Queries.findAllFareProductByMerchantOpCityIdAndArea merchantOpCityId area True)
 
-cacheFareProductByMerchantOpCityIdAndArea :: (CacheFlow m r) => Id MerchantOperatingCity -> SL.Area -> [FareProduct] -> m ()
-cacheFareProductByMerchantOpCityIdAndArea merchantOpCityId area fareProducts = do
+cacheFareProductByMerchantOpCityIdAndArea :: (CacheFlow m r) => Integer -> Id MerchantOperatingCity -> SL.Area -> [FareProduct] -> m ()
+cacheFareProductByMerchantOpCityIdAndArea version merchantOpCityId area fareProducts = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeFareProductByMerchantOpCityIdAndAreaKey merchantOpCityId area) fareProducts expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeFareProductByMerchantOpCityIdAndAreaKey version merchantOpCityId area) fareProducts expTime
 
-makeFareProductByMerchantOpCityIdAndAreaKey :: Id MerchantOperatingCity -> SL.Area -> Text
-makeFareProductByMerchantOpCityIdAndAreaKey merchantOpCityId area = "driver-offer:CachedQueries:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":Area-" <> show area
+makeFareProductByMerchantOpCityIdAndAreaKey :: Integer -> Id MerchantOperatingCity -> SL.Area -> Text
+makeFareProductByMerchantOpCityIdAndAreaKey version merchantOpCityId area = "driver-offer:CachedQueries:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":Version-" <> show version <> ":Area-" <> show area
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 updateFarePolicyId :: (Esq.EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id FarePolicy -> Id FareProduct -> m ()
@@ -159,25 +210,7 @@ delete :: (Esq.EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id FareProduct -> m
 delete = Queries.delete
 
 clearCache :: CacheFlow m r => FareProduct -> m ()
-clearCache FareProduct {..} = Hedis.runInMultiCloudRedisWrite $
-  Hedis.withCrossAppRedis $ do
-    let allPossibleSearchSoruces = [[ALL], [ALL, MOBILE_APP], [ALL, DASHBOARD]]
-        -- Clear cache for the city-stripped fallback tripCategory as well,
-        -- because DB queries for InterCity/CrossCity with a city fall back to
-        -- the city-agnostic variant when no city-specific results exist.
-        -- Without this, stale (often empty) cached results for the fallback
-        -- key survive an upload and block estimates.
-        tripCategoriesToClear = nub $ [tripCategory] <> [Queries.removeCityFromTripCategory tripCategory | Queries.isInterCityWithCity tripCategory]
-    allPossibleSearchSoruces `forM_` \searchSources -> do
-      forM_ tripCategoriesToClear $ \tc -> do
-        Hedis.del (makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOperatingCityId searchSources tc area)
-        Hedis.del (makeUnboundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tc vehicleServiceTier area)
-        Hedis.del (makeBoundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tc vehicleServiceTier area)
-      Hedis.del (makeUnboundedFareProductByMerchantIdAndAreaKey merchantOperatingCityId searchSources area)
-      Hedis.del (makeFareProductByMerchantOpCityIdKey merchantOperatingCityId)
-      Hedis.del (makeSupportedServiceTiersKey merchantOperatingCityId)
+clearCache fareProduct = bumpCacheVersion fareProduct.merchantOperatingCityId
 
 clearCacheById :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
-clearCacheById merchantOperatingCityId = Hedis.runInMultiCloudRedisWrite $ do
-  Hedis.del (makeFareProductByMerchantOpCityIdKey merchantOperatingCityId)
-  Hedis.del (makeSupportedServiceTiersKey merchantOperatingCityId)
+clearCacheById = bumpCacheVersion

@@ -37,7 +37,7 @@ delete (Id id) = deleteWithKV [Se.And [Se.Is Beam.id (Se.Eq id)]]
 updateFarePolicyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id FarePolicy -> Kernel.Types.Id.Id Domain.Types.FareProduct.FareProduct -> m ()
 updateFarePolicyId (Kernel.Types.Id.Id farePolicyId) (Kernel.Types.Id.Id id) = do updateWithKV [Se.Set Beam.farePolicyId farePolicyId] [Se.Is Beam.id $ Se.Eq id]
 
-findAllBoundedByMerchantOpCityIdVariantArea' ::
+findAllBoundedByMerchantOpCityIdVariantArea ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   SL.Area ->
@@ -47,7 +47,7 @@ findAllBoundedByMerchantOpCityIdVariantArea' ::
   Bool ->
   [Domain.SearchSource] ->
   m [Domain.FareProduct]
-findAllBoundedByMerchantOpCityIdVariantArea' (Id merchantOperatingCityId) area vehicleServiceTier tripCategory timeBounds enabled searchSources = do
+findAllBoundedByMerchantOpCityIdVariantArea (Id merchantOperatingCityId) area vehicleServiceTier tripCategory timeBounds enabled searchSources = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
@@ -60,26 +60,8 @@ findAllBoundedByMerchantOpCityIdVariantArea' (Id merchantOperatingCityId) area v
         ]
     ]
 
-findAllBoundedByMerchantOpCityIdVariantArea ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Id DMOC.MerchantOperatingCity ->
-  SL.Area ->
-  DVST.ServiceTierType ->
-  DTC.TripCategory ->
-  Domain.TimeBound ->
-  Bool ->
-  [Domain.SearchSource] ->
-  m [Domain.FareProduct]
-findAllBoundedByMerchantOpCityIdVariantArea (Id merchantOperatingCityId) area vehicleServiceTier tripCategory timeBounds enabled searchSources = do
-  if isInterCityWithCity tripCategory
-    then do
-      fareProducts <- findAllBoundedByMerchantOpCityIdVariantArea' (Id merchantOperatingCityId) area vehicleServiceTier tripCategory timeBounds enabled searchSources
-      if null fareProducts
-        then findAllBoundedByMerchantOpCityIdVariantArea' (Id merchantOperatingCityId) area vehicleServiceTier (removeCityFromTripCategory tripCategory) timeBounds enabled searchSources
-        else return fareProducts
-    else findAllBoundedByMerchantOpCityIdVariantArea' (Id merchantOperatingCityId) area vehicleServiceTier tripCategory timeBounds enabled searchSources
-
-findAllUnboundedFareProductForVariants' ::
+-- | Exact tripCategory match only; see 'findAllBoundedByMerchantOpCityIdVariantArea'.
+findAllUnboundedFareProductForVariants ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   SL.Area ->
@@ -88,7 +70,7 @@ findAllUnboundedFareProductForVariants' ::
   Kernel.Prelude.Bool ->
   [Domain.SearchSource] ->
   m [Domain.FareProduct]
-findAllUnboundedFareProductForVariants' merchantOperatingCityId area tripCategory timeBounds enabled searchSource = do
+findAllUnboundedFareProductForVariants merchantOperatingCityId area tripCategory timeBounds enabled searchSource = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -99,24 +81,6 @@ findAllUnboundedFareProductForVariants' merchantOperatingCityId area tripCategor
           Se.Is Beam.searchSource $ Se.In searchSource
         ]
     ]
-
-findAllUnboundedFareProductForVariants ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Id DMOC.MerchantOperatingCity ->
-  SL.Area ->
-  DTC.TripCategory ->
-  Domain.TimeBound ->
-  Kernel.Prelude.Bool ->
-  [Domain.SearchSource] ->
-  m [Domain.FareProduct]
-findAllUnboundedFareProductForVariants (Id merchantOperatingCityId) area tripCategory timeBounds enabled searchSources = do
-  if isInterCityWithCity tripCategory
-    then do
-      fareProducts <- findAllUnboundedFareProductForVariants' (Id merchantOperatingCityId) area tripCategory timeBounds enabled searchSources
-      if null fareProducts
-        then findAllUnboundedFareProductForVariants' (Id merchantOperatingCityId) area (removeCityFromTripCategory tripCategory) timeBounds enabled searchSources
-        else return fareProducts
-    else findAllUnboundedFareProductForVariants' (Id merchantOperatingCityId) area tripCategory timeBounds enabled searchSources
 
 findAllByMerchantOpCityIdAreaTripCategoryEnabled ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
