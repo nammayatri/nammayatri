@@ -103,6 +103,12 @@ isKaaliPeeliBooking booking =
       tierNameOk = "kaali peeli" `T.isInfixOf` nameLower
    in tierNameOk
 
+validateRideLocation :: (MonadThrow m, Log m) => LatLong -> m ()
+validateRideLocation point =
+  when (point.lat == 0 && point.lon == 0) $ do
+    logError "Invalid ride location (0, 0) received"
+    throwError InvalidRideLocation
+
 initializeRide ::
   Merchant ->
   DPerson.Person ->

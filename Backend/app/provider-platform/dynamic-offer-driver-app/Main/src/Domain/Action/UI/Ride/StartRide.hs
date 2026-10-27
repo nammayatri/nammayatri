@@ -80,7 +80,7 @@ import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
 import qualified SharedLogic.MetricsLabels as SML
-import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutDetailsForRide, isKaaliPeeliBooking)
+import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutDetailsForRide, isKaaliPeeliBooking, validateRideLocation)
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.SearchTryLocker as CS
@@ -237,13 +237,15 @@ startRideHandler ServiceHandle {..} rideId req = do
           when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing driverReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
           when (not (fromMaybe False ride.enableOtpLessRide) && driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
           logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          validatedPoint <- validateStartRideCoordinates driverReq.point booking
-          pure (validatedPoint, driverReq.odometer)
+          validateRideLocation driverReq.point
+          pure (driverReq.point, driverReq.odometer)
         DashboardReq dashboardReq -> do
           when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing dashboardReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
           logTagInfo "dashboard -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           case dashboardReq.point of
-            Just point -> pure (point, dashboardReq.odometer)
+            Just point -> do
+              validateRideLocation point
+              pure (point, dashboardReq.odometer)
             Nothing -> do
               driverLocation <- do
                 driverLocations <- LF.driversLocation [driverId]
@@ -397,13 +399,6 @@ startRideHandler ServiceHandle {..} rideId req = do
   where
     isValidRideStatus status = status `elem` [DRide.NEW, DRide.UPCOMING]
     isInProgress status = (status == DRide.INPROGRESS)
-
-    validateStartRideCoordinates point booking =
-      if point.lat == 0.0 && point.lon == 0.0
-        then do
-          logWarning "Invalid GPS coordinates (0.0, 0.0) received for ride start, using booking location as fallback"
-          pure $ getCoordinates booking.fromLocation
-        else pure point
 
 makeStartRideIdKey :: Id DP.Person -> Text
 makeStartRideIdKey driverId = "StartRideKey:PersonId-" <> driverId.getId

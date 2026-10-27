@@ -20,7 +20,6 @@ import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Kernel.External.Encryption (decrypt)
-import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -141,19 +140,9 @@ executeSpecialZonePayout payoutRequest = do
 
   whenJust mbRide $ \ride ->
     when (ride.status == Ride.INPROGRESS) $ do
-      let driverReq =
-            RideEnd.DriverEndRideReq
-              { endRideOtp = Nothing,
-                point = LatLong {lat = 0.0, lon = 0.0},
-                requestor = person,
-                uiDistanceCalculationWithAccuracy = Nothing,
-                uiDistanceCalculationWithoutAccuracy = Nothing,
-                odometer = Nothing,
-                driverGpsTurnedOff = Nothing,
-                manualTollCharge = Nothing
-              }
+      let cronJobReq = RideEnd.CronJobEndRideReq {point = Nothing, merchantId = merchantId}
       shandle <- RideEnd.buildEndRideHandle merchantId merchantOpCityId (Just ride.id) False
-      void $ RideEnd.driverEndRide shandle ride.id driverReq
+      void $ RideEnd.cronJobEndRide shandle ride.id cronJobReq
 
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   (ridePayoutFlow, _) <- TP.getPayoutServiceFlowForMerchant (.createPayoutOrder) TP.MerchantServiceUsageConfigOption DEMSC.RidePayoutService merchantOpCityId
@@ -275,19 +264,9 @@ executeOldSpecialZonePayout scheduledPayout = do
   case (mbRide, merchantId, merchantOpCityId) of
     (Just ride, Just mId, Just mocId) -> do
       when (ride.status == Ride.INPROGRESS) $ do
-        let driverReq =
-              RideEnd.DriverEndRideReq
-                { endRideOtp = Nothing,
-                  point = LatLong {lat = 0.0, lon = 0.0},
-                  requestor = person,
-                  uiDistanceCalculationWithAccuracy = Nothing,
-                  uiDistanceCalculationWithoutAccuracy = Nothing,
-                  odometer = Nothing,
-                  driverGpsTurnedOff = Nothing,
-                  manualTollCharge = Nothing
-                }
+        let cronJobReq = RideEnd.CronJobEndRideReq {point = Nothing, merchantId = mId}
         shandle <- RideEnd.buildEndRideHandle mId mocId (Just ride.id) False
-        void $ RideEnd.driverEndRide shandle ride.id driverReq
+        void $ RideEnd.cronJobEndRide shandle ride.id cronJobReq
     _ -> pure ()
 
   -- 3. Get payout VPA from ScheduledPayout.rcId -> DriverRidePayoutBankAccount

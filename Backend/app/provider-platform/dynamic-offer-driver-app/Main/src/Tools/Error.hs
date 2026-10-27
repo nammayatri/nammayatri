@@ -79,6 +79,21 @@ instance IsHTTPError LocationServiceabilityError where
 
 instance IsAPIError LocationServiceabilityError
 
+data RideLocationError
+  = InvalidRideLocation
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RideLocationError
+
+instance IsBaseError RideLocationError where
+  toMessage InvalidRideLocation = Just "Invalid location (0, 0) received. Device location is unavailable."
+
+instance IsHTTPError RideLocationError where
+  toErrorCode InvalidRideLocation = "INVALID_RIDE_LOCATION"
+  toHttpCode InvalidRideLocation = E400
+
+instance IsAPIError RideLocationError
+
 data FarePolicyError
   = NoFarePolicy
   | NoPerExtraKmRate
