@@ -14,6 +14,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Ride as DRide
 import Domain.Action.UI.IGM
 import qualified Domain.Action.UI.Sos as Sos
+import qualified Domain.Action.UI.SupportBot as SupportBot
 import Domain.Types.Booking
 import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
@@ -138,6 +139,7 @@ customerIssueHandle =
       mbSendChatNotification = Just (\pid payload -> Notify.notifyOnIssueChatMessage (cast pid) payload),
       mbShouldForwardChatToTicketService = Just isXyneTicketService,
       mbFetchMediaBase64 = Just fetchMediaBase64FromS3,
+      mbProbeSupportBot = Just $ \personId merchantId _mocId mbLanguage -> SupportBot.probeSupportBot (cast personId) (cast merchantId) mbLanguage,
       findIssueConfig = \mocId issueIdentifier ->
         getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) Nothing,
       mbUpdateTicketOnService = Just castUpdateTicketOnService,
@@ -635,10 +637,10 @@ updateIssueOption (personId, merchantId) issueReportId req = withFlowHandlerAPI 
 deleteIssue :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> FlowHandler APISuccess
 deleteIssue (personId, merchantId) issueReportId = withFlowHandlerAPI $ Common.deleteIssue issueReportId (cast personId, cast merchantId) CUSTOMER
 
-getIssueCategory :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> FlowHandler Common.IssueCategoryListRes
-getIssueCategory (personId, merchantId) language = withFlowHandlerAPI $ do
+getIssueCategory :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> Maybe Bool -> FlowHandler Common.IssueCategoryListRes
+getIssueCategory (personId, merchantId) language enableXyne = withFlowHandlerAPI $ do
   personCityInfo <- CQPerson.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
-  Common.getIssueCategory (cast personId, cast merchantId, cast personCityInfo.merchantOperatingCityId) language customerIssueHandle CUSTOMER
+  Common.getIssueCategory (cast personId, cast merchantId, cast personCityInfo.merchantOperatingCityId) language enableXyne customerIssueHandle CUSTOMER
 
 getIssueOption :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueCategory -> Maybe (Id Domain.IssueOption) -> Maybe (Id Domain.IssueReport) -> Maybe (Id Common.Ride) -> Maybe Language -> FlowHandler Common.IssueOptionListRes
 getIssueOption (personId, merchantId) issueCategoryId issueOptionId issueReportId mbRideId language = withFlowHandlerAPI $ do

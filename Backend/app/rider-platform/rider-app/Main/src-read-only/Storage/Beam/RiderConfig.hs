@@ -101,6 +101,7 @@ data RiderConfigT f = RiderConfigT
     enableShareNumberWithDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableSubwayFrfsSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableSupportForSafety :: B.C f Kernel.Prelude.Bool,
+    enableXyneSupportBot :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     excludedVehicleVariants :: B.C f (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType]),
     executePaymentDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     exotelAppIdMapping :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.RiderConfig.ExotelMapping),
