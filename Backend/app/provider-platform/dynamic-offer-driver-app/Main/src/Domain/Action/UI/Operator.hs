@@ -4,7 +4,7 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
-import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
@@ -19,9 +19,9 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
+import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
@@ -38,19 +38,16 @@ postOperatorConsent ::
     ) ->
     Flow APISuccess
   )
-postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
+postOperatorConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
   driverId <- fromMaybeM DriverNotFoundWithId mbDriverId
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   driverOperatorAssociation <- QDriverOperatorAssociation.findByDriverId driverId False >>= fromMaybeM (InactiveOperatorDriverAssociationNotFound driverId.getId)
   let mbOnboardingVehicleCategory = driverOperatorAssociation.onboardingVehicleCategory
   operator <- QPerson.findById (Id driverOperatorAssociation.operatorId) >>= fromMaybeM (OperatorNotFound driverOperatorAssociation.operatorId)
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
   SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id (cast driverId)) SGuard.LinkToOperator (SGuard.TargetDriver (cast driverId)) $ do
-    SA.endDriverAssociations merchantOperatingCityId transporterConfig driver
-    when (merchant.overwriteAssociation == Just True) $
-      DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig driverId
+    SA.endAssociationsForOperatorLink merchantOperatingCityId transporterConfig driver
     DOR.makeDriverReferredByOperator merchantOperatingCityId driverId operator.id
     QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{isActive = True}
     Analytics.handleDriverAnalyticsAndFlowStatus
@@ -65,6 +62,7 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
           DDriverMode.incrementFleetOperatorStatusKeyForDriver OPERATOR driverOperatorAssociation.operatorId driverInfo.driverFlowStatus
       )
     QDriverInfoInternal.updateOnboardingVehicleCategory mbOnboardingVehicleCategory driver.id
+    SOnboardingComms.setOnboardingAsWithoutLock transporterConfig driver DI.INDIVIDUAL
     unless (transporterConfig.requiresOnboardingInspection == Just True) $
       unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
         Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)

@@ -13,6 +13,7 @@
 -}
 module SharedLogic.DriverOnboarding.OnboardingComms
   ( setOnboardingAs,
+    setOnboardingAsWithoutLock,
     resetOnboardingAsIfNoFleet,
     notifyOnFleetOwnerChange,
     UnlinkInitiator (..),
@@ -80,23 +81,34 @@ fleetOwnerDriverDeclinedInviteKey :: Text
 fleetOwnerDriverDeclinedInviteKey = "FLEET_OWNER_DRIVER_DECLINED_INVITE"
 
 setOnboardingAs :: (OnboardingFlow m r, Forkable m) => DTC.TransporterConfig -> SGuard.Actor -> DP.Person -> DI.OnboardingAs -> m ()
-setOnboardingAs transporterConfig actor driver onboardingAs = do
+setOnboardingAs transporterConfig actor driver onboardingAs = setOnboardingAsHelper transporterConfig actor driver onboardingAs True
+
+-- | For callers already inside the driver's onboarding guard: the guard's lock isn't re-entrant,
+--   so this skips the guard (and its recompute, which the caller's guard runs).
+setOnboardingAsWithoutLock :: (OnboardingFlow m r, Forkable m) => DTC.TransporterConfig -> DP.Person -> DI.OnboardingAs -> m ()
+setOnboardingAsWithoutLock transporterConfig driver onboardingAs = setOnboardingAsHelper transporterConfig SGuard.None driver onboardingAs False
+
+setOnboardingAsHelper :: (OnboardingFlow m r, Forkable m) => DTC.TransporterConfig -> SGuard.Actor -> DP.Person -> DI.OnboardingAs -> Bool -> m ()
+setOnboardingAsHelper transporterConfig actor driver onboardingAs locked = do
   mbCurrent <- ((.onboardingAs) =<<) <$> QDIExtra.findById (cast driver.id)
   -- Same type again: no write and no push, but the guard still runs for its recompute.
   let onboardingAsUnchanged = mbCurrent == Just onboardingAs
   endFleetAssociationsOnLeavingFleetDriver mbCurrent
-  SGuard.withOnboardingAction transporterConfig actor SGuard.SetOnboardingAs (SGuard.TargetDriver driver.id) $
+  guarded actor SGuard.SetOnboardingAs $
     unless onboardingAsUnchanged $ QDIExtra.updateOnboardingAs (Just onboardingAs) (cast driver.id)
   unless onboardingAsUnchanged $
     fork "Onboarding as changed notification" $ do
       notifyOnOnboardingAsChange driver onboardingAs
   where
+    guarded guardActor verb body
+      | locked = SGuard.withOnboardingAction transporterConfig guardActor verb (SGuard.TargetDriver driver.id) body
+      | otherwise = body
     endFleetAssociationsOnLeavingFleetDriver mbCurrent =
       when (onboardingAs /= DI.FLEET_DRIVER) $ do
         when (mbCurrent == Just DI.FLEET_DRIVER) $ do
           associations <- QFDA.findAllByDriverIdWithStatus driver.id
           forM_ associations $ \association ->
-            SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id association.fleetOwnerId) driver.id) SGuard.UnlinkFromFleet (SGuard.TargetDriver driver.id) $ do
+            guarded (SGuard.ActorFleetAndDriver (Id association.fleetOwnerId) driver.id) SGuard.UnlinkFromFleet $ do
               QFDA.endFleetDriverAssociation association.fleetOwnerId association.driverId
               -- findAllByDriverIdWithStatus returns unexpired rows regardless of isActive, and
               -- only active ones are counted in ACTIVE_DRIVER_COUNT -- so decrement just for those,

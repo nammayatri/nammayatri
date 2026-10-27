@@ -107,6 +107,7 @@ import qualified Domain.Action.Dashboard.Driver.Notification as DDN
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
+import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
@@ -2156,7 +2157,9 @@ postDriverAssociationChange merchantShortId opCity requestorId subjectId req = d
       let changeType = case req.changeType of
             Common.ChangeFleetOperator -> SA.ChangeFleetOperator
             _ -> SA.ChangeDriverOperator
-      SA.performAssociationChange merchant merchantOpCity requestorId subjectId operatorCode changeType
+      mbLinkedOperator <- SA.performAssociationChange merchant merchantOpCity requestorId subjectId operatorCode changeType
+      whenJust mbLinkedOperator $ \operator ->
+        DOR.reassignDriverReferredByOperator merchantOpCity.id (Id subjectId) operator.id
   pure Success
 
 postDriverMembershipFeeCreate :: ShortId DM.Merchant -> Context.City -> Common.MembershipFeeCreateReq -> Flow PaymentTypes.CreateOrderResp
