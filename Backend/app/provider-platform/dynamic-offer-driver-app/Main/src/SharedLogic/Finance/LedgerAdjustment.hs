@@ -11,6 +11,7 @@ where
 import qualified API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement as API
 import Control.Applicative ((<|>))
 import qualified Dashboard.Common
+import qualified Data.Aeson as Aeson
 import Data.List (sortOn)
 import qualified Data.Ord
 import qualified Data.Text as T
@@ -38,6 +39,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance as Finance
+import Lib.Finance.Audit.Interface (AuditInput (..))
+import qualified Lib.Finance.Audit.Service as Audit
+import qualified Lib.Finance.Domain.Types.AuditEntry as AuditDomain
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping as DTdsMap
 import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest as DTdsReq
@@ -55,6 +59,7 @@ import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.TdsReimbursement as TdsReimbursement
 import qualified SharedLogic.Finance.Wallet as Wallet
 import qualified SharedLogic.Merchant as SMerchant
+import qualified Storage.Beam.LedgerAdjustmentRequest as BeamLA
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
@@ -152,6 +157,7 @@ ledgerAdjustmentSubmit merchantShortId opCity requestorId requestorName req = do
         adminMakerName
         req
     QLedgerAdjustmentRequest.create adjustmentRequest
+    logLedgerAdjustmentAudit AuditDomain.Created Nothing adjustmentRequest
     h.submitSideEffect adjustmentRequest
   pure Success
 
@@ -690,6 +696,38 @@ withLedgerAdjustmentLock lockKey action =
   Redis.whenWithLockRedisAndReturnValue lockKey 60 action
     >>= either (\() -> throwError LedgerAdjustmentInProgress) pure
 
+ledgerAdjustmentToAuditValue :: DLA.LedgerAdjustmentRequest -> Aeson.Value
+ledgerAdjustmentToAuditValue = Aeson.toJSON . toTType' @BeamLA.LedgerAdjustmentRequest
+
+logLedgerAdjustmentAudit ::
+  AuditDomain.AuditAction ->
+  Maybe DLA.LedgerAdjustmentRequest ->
+  DLA.LedgerAdjustmentRequest ->
+  Flow ()
+logLedgerAdjustmentAudit action mbBefore afterRequest = do
+  actorInfo <- asks (.actorInfo)
+  auditResult <-
+    withTryCatch "logLedgerAdjustmentAudit" $
+      Audit.logAudit
+        AuditInput
+          { entityType = AuditDomain.LedgerAdjustmentRequest,
+            entityId = afterRequest.id.getId,
+            action = action,
+            actorType = actorInfo.actorType,
+            actorId = actorInfo.actorId,
+            beforeState = ledgerAdjustmentToAuditValue <$> mbBefore,
+            afterState = Just $ ledgerAdjustmentToAuditValue afterRequest,
+            merchantId = afterRequest.merchantId.getId,
+            merchantOperatingCityId = afterRequest.merchantOperatingCityId.getId
+          }
+  case auditResult of
+    Right (Right _) -> pure ()
+    Right (Left err) -> logAuditFailure (show err)
+    Left (err :: SomeException) -> logAuditFailure (T.pack $ displayException err)
+  where
+    logAuditFailure reason =
+      logWarning $ "Failed to audit ledger adjustment request " <> afterRequest.id.getId <> " (" <> show action <> "): " <> reason
+
 --------------------------------------------------------------------------------
 -- List
 --------------------------------------------------------------------------------
@@ -829,6 +867,16 @@ ledgerAdjustmentApproveAndPost merchantShortId opCity adjustmentRequestId reques
             mbLedgerEntryId
             (Just now)
             adjustmentRequest.id
+          logLedgerAdjustmentAudit AuditDomain.Approved (Just adjustmentRequest) $
+            adjustmentRequest
+              { DLA.status = DLA.POSTED,
+                DLA.adminCheckerId = Just checkerId,
+                DLA.adminCheckerName = Just adminCheckerName,
+                DLA.errorMessage = Nothing,
+                DLA.ledgerEntryId = mbLedgerEntryId,
+                DLA.postedAt = Just now,
+                DLA.updatedAt = now
+              }
         Left (err :: SomeException) -> do
           let errMessage = T.pack (displayException err)
           logError $
@@ -842,6 +890,15 @@ ledgerAdjustmentApproveAndPost merchantShortId opCity adjustmentRequestId reques
             (Just adminCheckerName)
             (Just errMessage)
             adjustmentRequest.id
+          now <- getCurrentTime
+          logLedgerAdjustmentAudit AuditDomain.StatusChanged (Just adjustmentRequest) $
+            adjustmentRequest
+              { DLA.status = DLA.POST_FAILED,
+                DLA.adminCheckerId = Just checkerId,
+                DLA.adminCheckerName = Just adminCheckerName,
+                DLA.errorMessage = Just errMessage,
+                DLA.updatedAt = now
+              }
           throwM err
     pure Success
 
@@ -1194,6 +1251,14 @@ ledgerAdjustmentReject merchantShortId opCity adjustmentRequestId requestorId re
         (Just adminCheckerName)
         Nothing
         adjustmentRequest.id
+      now <- getCurrentTime
+      logLedgerAdjustmentAudit AuditDomain.Rejected (Just adjustmentRequest) $
+        adjustmentRequest
+          { DLA.status = DLA.REJECTED,
+            DLA.adminCheckerId = Just checkerId,
+            DLA.adminCheckerName = Just adminCheckerName,
+            DLA.updatedAt = now
+          }
       let h = categoryHandlers adjustmentRequest.category -- Per-category handler
       h.rejectSideEffect checkerId adminCheckerName adjustmentRequest
     pure Success
