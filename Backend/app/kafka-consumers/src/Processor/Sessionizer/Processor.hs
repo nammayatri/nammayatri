@@ -51,12 +51,11 @@ import qualified Prelude as P
 locationTopic :: Text
 locationTopic = "location-updates"
 
-bucketMs, maxGapMs, flushEveryMs, flushRetryMs, writerWaitTimeoutMs :: Integer
+bucketMs, maxGapMs, flushEveryMs, flushRetryMs :: Integer
 bucketMs = 5 * 60 * 1000
 maxGapMs = 300 * 1000
 flushEveryMs = 5 * 60 * 1000
 flushRetryMs = 30 * 1000
-writerWaitTimeoutMs = 30 * 1000
 
 -- | Pings stamped more than this far ahead of the wall clock, or before
 -- 'minPlausiblePingMs' (2020-01-01), are skipped: one future ping would
@@ -150,11 +149,11 @@ runSessionizer flowRt appEnv kc = do
       batchNow <- nowMs
       let withOffsets = foldl' trackOffset acc records
           (withPings, pingsAt, credits) = foldl' (takePing batchNow) (withOffsets, [], []) (filter isLocation records)
-      -- Credits look up states from their start, pings at their own time: wait
-      -- until the writer has applied both.
+      -- Credits look up states from their start, pings at their own time: wait,
+      -- however long it takes, until the writer is 'stateBufferMs' past both on
+      -- every partition, so every state change up to the batch's newest ping is applied.
       let neededMs = map (\c -> c.fromMs) credits <> map (\p -> p.pingStMs) pingsAt
-      -- Capped at now: a phone clock running ahead must not hold the batch for the full timeout.
-      wm <- if null neededMs then pure 0 else waitForWriter stateEnv (min batchNow (maximum neededMs))
+      wm <- if null neededMs then pure 0 else awaitStateWriter (flow . logWarning . ("sessionizer: " <>)) stateEnv.hedisConnection (maximum neededMs)
       withCredits <-
         if null credits
           then pure withPings
@@ -228,24 +227,11 @@ runSessionizer flowRt appEnv kc = do
           CC.threadDelay 1000000
           pingStatesRetrying stateEnv wanted
 
-    -- Block until the writer has applied events up to @needed@, or give up
-    -- after 'writerWaitTimeoutMs' (those intervals are then tagged unknown).
-    -- Read fresh every batch: the watermark also bounds which state changes
-    -- inside an interval are seen, so a stale value would drop later changes.
-    waitForWriter stateEnv needed = go 0
-      where
-        go waited = do
-          wm <- fromMaybe 0 <$> flow (inStateRedis stateEnv (Hedis.get writerWatermarkKey))
-          if wm >= needed || waited >= writerWaitTimeoutMs
-            then pure wm
-            else CC.threadDelay 200000 >> go (waited + 200)
-
     -- One pipelined round-trip: per credit, the newest history entry at or
     -- before its start plus every change inside it, turned into
-    -- (from, to, (entry ts, state)) segments covering the credit. Credits starting after
-    -- the writer watermark are one unknown segment. Changes after the
-    -- watermark are not seen yet, so the tail past it keeps the last known
-    -- state (bounded by the writer's lag).
+    -- (from, to, (entry ts, state)) segments covering the credit. The writer
+    -- is past every credit's start; only a ping stamped ahead of the clock can
+    -- start after its watermark, and is then one unknown segment.
     lookupStates stateEnv wm credits = do
       let ordered = reverse credits
       replies <-

@@ -134,8 +134,16 @@ newKafkaConsumerWith :: Consumer.Subscription -> AppEnv -> IO Consumer.KafkaCons
 newKafkaConsumerWith extraSub appEnv =
   either (error . ("Unable to open a kafka consumer: " <>) . show) id
     <$> Consumer.newConsumer
-      (appEnv.kafkaConsumerCfg.consumerProperties)
+      (appEnv.kafkaConsumerCfg.consumerProperties <> waitsOnStateWriter)
       (Consumer.topics appEnv.kafkaConsumerCfg.topicNames <> extraSub)
+  where
+    -- SESSIONIZER and DRIVER_PERFORMANCE block a batch, without a timeout,
+    -- until the state writer catches up. Past librdkafka's default 5-minute
+    -- max.poll.interval.ms the consumer would leave the group mid-window, so
+    -- allow the broker's maximum (24 h); heartbeats run on their own thread.
+    waitsOnStateWriter
+      | appEnv.consumerType `elem` [SESSIONIZER, DRIVER_PERFORMANCE] = Consumer.extraProp "max.poll.interval.ms" "86400000"
+      | otherwise = mempty
 
 commitRecord :: Consumer.KafkaConsumer -> ConsumerRecordD -> IO ()
 commitRecord kafkaConsumer cr = do
