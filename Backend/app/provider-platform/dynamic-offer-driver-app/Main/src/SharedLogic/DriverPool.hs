@@ -138,6 +138,7 @@ import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.WalletAccount (isMinBalanceEnforced)
+import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.QuickRetry (withQuickRetry)
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.ScheduledRideTopDrivers as SRTD
@@ -1008,6 +1009,7 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     parkingCharge :: Maybe HighPrecMoney,
     airportEntryFee :: Maybe HighPrecMoney,
     isAirportRequest :: Bool,
+    passengerLuggage :: Maybe SPL.PassengerLuggage,
     paymentInstrument :: Maybe MP.PaymentInstrument,
     isRental :: Bool,
     isInterCity :: Bool,
@@ -1181,6 +1183,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             parkingCharge,
             airportEntryFee,
             isAirportRequest,
+            passengerLuggage,
             isValueAddNP,
             onlinePayment,
             now,

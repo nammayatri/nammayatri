@@ -50,6 +50,8 @@ createMany = traverse_ create
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => Vehicle -> m ()
 upsert a@Vehicle {..} = do
   res <- findOneWithKV [Se.Is BeamV.registrationNo $ Se.Eq a.registrationNo]
+  -- When the RC carries no luggage capacity, the stored one stays.
+  let effectiveLuggageCapacity = luggageCapacity <|> (res >>= (.luggageCapacity))
   if isJust res
     then
       updateOneWithKV
@@ -63,7 +65,7 @@ upsert a@Vehicle {..} = do
           Se.Set BeamV.energyType energyType,
           Se.Set BeamV.registrationCategory registrationCategory,
           Se.Set BeamV.vehicleClass vehicleClass,
-          Se.Set BeamV.luggageCapacity luggageCapacity,
+          Se.Set BeamV.luggageCapacity effectiveLuggageCapacity,
           Se.Set BeamV.airConditioned airConditioned,
           Se.Set BeamV.vehicleRating vehicleRating,
           Se.Set BeamV.selectedServiceTiers selectedServiceTiers,
@@ -83,7 +85,7 @@ upsert a@Vehicle {..} = do
         LTSSync.mYManufacturing = LTSSync.Set mYManufacturing,
         LTSSync.vehicleTags = LTSSync.Set vehicleTags,
         LTSSync.airConditioned = LTSSync.Set airConditioned,
-        LTSSync.luggageCapacity = LTSSync.Set luggageCapacity,
+        LTSSync.luggageCapacity = LTSSync.Set effectiveLuggageCapacity,
         LTSSync.vehicleRating = LTSSync.Set vehicleRating
       }
 

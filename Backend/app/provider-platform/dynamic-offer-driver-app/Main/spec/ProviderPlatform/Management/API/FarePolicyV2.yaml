@@ -355,6 +355,7 @@ types:
     - driverCancellationNotAllowed: Maybe Bool
     - negotiationFareMinTolerancePct: Maybe Double
     - negotiationFareMaxTolerancePct: Maybe Double
+    - luggageFitEnabled: Maybe Bool
     - cancellationFarePolicy: Maybe FPV2CancellationFarePolicy
     - description: Maybe Text
 

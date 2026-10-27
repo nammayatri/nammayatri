@@ -94,6 +94,7 @@ import SharedLogic.Finance.Wallet (addOfferHoldsForSearchTry, getScheduledRideMi
 import SharedLogic.Finance.WalletAccount (isMinBalanceEnforced)
 import SharedLogic.GoogleTranslate
 import qualified SharedLogic.MetricsLabels as SML
+import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.Ride (offerQuoteLockKeyWithCoolDown)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
@@ -295,7 +296,7 @@ sendSearchRequestToDrivers dispatchMode isAllocatorBatch isTopUpDispatch tripQuo
     let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) tripQuoteDetail.conditionalCharges
     -- Scheduled rides: when this driver is short of the minimum balance, send that minimum so the app can guide them to recharge.
     mbScheduledRideMinWalletBalance <- getScheduledRideMinBalanceIfShort transporterConfig searchTry.isScheduled searchTry.startTime flagNow (getScheduledRideMinWalletFloorFromSnapshot tripQuoteDetail.estimateOrQuoteId) dPoolRes.driverPoolResult.driverId.getId
-    let entityData = (USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge safetyCharges tripQuoteDetail.congestionCharges tripQuoteDetail.petCharges tripQuoteDetail.priorityCharges tripQuoteDetail.tollCharges (Just transporterConfig.driverWalletConfig) mbRiderDetails transporterConfig.showRoutePerRequest) {USRD.scheduledRideMinWalletBalance = mbScheduledRideMinWalletBalance}
+    let entityData = (USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge safetyCharges tripQuoteDetail.congestionCharges tripQuoteDetail.petCharges tripQuoteDetail.priorityCharges tripQuoteDetail.tollCharges (Just transporterConfig.driverWalletConfig) mbRiderDetails transporterConfig.showRoutePerRequest tripQuoteDetail.luggageCharges) {USRD.scheduledRideMinWalletBalance = mbScheduledRideMinWalletBalance}
     Notify.cachePayloadForIOS sReqFD.clientDevice (USRD.mkSentEntityKey sReqFD.id) entityData entityData.searchRequestValidTill
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData searchTry.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData EmptyDynamicParam (Just searchTry.tripCategory)
@@ -380,6 +381,7 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
           } ::
           DFP.FullFarePolicy
   addOnCharges <- SAddOn.addOnChargesTotal searchTry.addOnData
+  mbExcessLuggageHalfUnits <- SPL.findExcessLuggageHalfUnits searchReq.merchantOperatingCityId farePolicy.vehicleServiceTier searchReq.numberOfCheckInBags searchReq.numberOfCabinBags
   fareParams <-
     Fare.calculateFareParameters
       Fare.CalculateFareParametersParams
@@ -420,6 +422,7 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
           merchantOperatingCityId = Just searchReq.merchantOperatingCityId,
           mbAdditonalChargeCategories = Nothing,
           numberOfLuggages = searchReq.numberOfLuggages,
+          excessLuggageHalfUnits = mbExcessLuggageHalfUnits,
           govtChargesRate = Just transporterConfig.taxConfig.rideGst,
           pickupGateId = searchReq.pickupGateId,
           fareSettlementType = farePolicy'.fareSettlementType,

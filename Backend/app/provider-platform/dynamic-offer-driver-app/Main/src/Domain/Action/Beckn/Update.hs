@@ -66,6 +66,7 @@ import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.ParkingFeeExemption as SPFE
+import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.Ride
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
@@ -247,6 +248,7 @@ handler (UAddBaggageReq AddBaggageReq {..}) = do
 
   let origFareParams = booking.fareParams
       origAdditionalCategories = (.chargeCategory) <$> origFareParams.conditionalCharges
+  mbExcessLuggageHalfUnits <- SPL.findExcessLuggageHalfUnits booking.merchantOperatingCityId booking.vehicleServiceTier booking.numberOfCheckInBags booking.numberOfCabinBags
   let params =
         CalculateFareParametersParams
           { farePolicy = fullFarePolicy,
@@ -286,6 +288,7 @@ handler (UAddBaggageReq AddBaggageReq {..}) = do
             merchantOperatingCityId = Just booking.merchantOperatingCityId,
             mbAdditonalChargeCategories = if null origAdditionalCategories then Nothing else Just origAdditionalCategories,
             numberOfLuggages = Just numberOfLuggages,
+            excessLuggageHalfUnits = mbExcessLuggageHalfUnits,
             govtChargesRate = Just transporterCfg.taxConfig.rideGst,
             pickupGateId = booking.pickupGateId,
             fareSettlementType = booking.fareSettlementType,
@@ -464,6 +467,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                   Just r -> QRD.findById r.id >>= \mbRideDetails -> SPFE.isParkingFeeExemptByVehicleNumber ((.vehicleNumber) <$> mbRideDetails)
                   Nothing -> pure False
                 else pure False
+            mbExcessLuggageHalfUnits <- SPL.findExcessLuggageHalfUnits booking.merchantOperatingCityId booking.vehicleServiceTier booking.numberOfCheckInBags booking.numberOfCabinBags
             fareParameters <-
               FC.calculateFareParameters
                 CalculateFareParametersParams
@@ -504,6 +508,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     merchantOperatingCityId = Just booking.merchantOperatingCityId,
                     mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
                     numberOfLuggages = booking.numberOfLuggages,
+                    excessLuggageHalfUnits = mbExcessLuggageHalfUnits,
                     govtChargesRate = Just transporterConfig.taxConfig.rideGst,
                     pickupGateId = booking.pickupGateId,
                     fareSettlementType = booking.fareSettlementType,

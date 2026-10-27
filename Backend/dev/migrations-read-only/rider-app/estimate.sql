@@ -719,3 +719,4 @@ ALTER TABLE atlas_app.estimate ADD COLUMN negative_fare_suggestion double precis
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.estimate ADD COLUMN luggage_fit_enabled boolean ;

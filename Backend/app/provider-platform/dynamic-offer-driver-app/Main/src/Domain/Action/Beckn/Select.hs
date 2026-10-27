@@ -58,6 +58,7 @@ import qualified SharedLogic.CallBAP as CallBAP
 import SharedLogic.DriverPool
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.MetricsLabels as SML
+import qualified SharedLogic.PassengerLuggage as SPL
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import qualified SharedLogic.Type as SLT
@@ -110,6 +111,9 @@ data DSelectReq = DSelectReq
     customerRating :: Maybe Centesimal,
     customerTotalRatings :: Maybe Int,
     customerGender :: Maybe DP.Gender,
+    numberOfPassengers :: Maybe Int,
+    numberOfCheckInBags :: Maybe Int,
+    numberOfCabinBags :: Maybe Int,
     businessEmailDomain :: Maybe Text,
     -- | A BAP can select more than one add-on on the same item (e.g. rider
     -- insurance plus a future second add-on) -- empty when none was
@@ -156,6 +160,11 @@ handler merchant sReq searchReq estimates addOnData = do
             -- ,estimates = estimates uncomment this line if you want to use estimates in select tag data
             }
     addNammaTags tagData searchReq
+  -- The counts are used only when every selected estimate's fare policy has the feature on.
+  let isLuggageFitEnabled estimate = (estimate.farePolicy >>= (.luggageFitEnabled)) == Just True
+      mbPassengerLuggage = if Kernel.Prelude.all isLuggageFitEnabled estimates then SPL.storedPassengerLuggage sReq.numberOfPassengers sReq.numberOfCheckInBags sReq.numberOfCabinBags else Nothing
+  -- The counts are written after the search request was loaded, so they are passed in directly.
+  let searchReqWithPassengerLuggage = searchReq {DSR.numberOfPassengers = (.passengers) <$> mbPassengerLuggage, DSR.numberOfCheckInBags = (.checkInBags) <$> mbPassengerLuggage, DSR.numberOfCabinBags = (.cabinBags) <$> mbPassengerLuggage}
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
@@ -166,7 +175,7 @@ handler merchant sReq searchReq estimates addOnData = do
           petCharges' = if sReq.isPetRide then (.petCharges) =<< estimate.farePolicy else Nothing
           businessDiscount = if sReq.billingCategory == SLT.BUSINESS then fromMaybe 0.0 estimate.businessDiscount else 0.0
           personalDiscount = if sReq.billingCategory == SLT.PERSONAL then fromMaybe 0.0 estimate.personalDiscount else 0.0
-      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee + fromMaybe 0 sReq.negativeFareAdjustment + fromMaybe 0 petCharges' - businessDiscount - personalDiscount) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges False ((.congestionCharge) =<< estimate.fareParams) petCharges' (estimate.fareParams >>= (.priorityCharges)) estimate.commissionCharges (estimate.fareParams >>= (.tollCharges)) (estimate.fareParams >>= (.govtCharges)) (estimate.fareParams >>= (.driverCancellationNotAllowed)) (estimate.fareParams >>= (.bufferedFare))
+      buildTripQuoteDetail searchReqWithPassengerLuggage estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee + fromMaybe 0 sReq.negativeFareAdjustment + fromMaybe 0 petCharges' - businessDiscount - personalDiscount) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges False ((.congestionCharge) =<< estimate.fareParams) petCharges' (estimate.fareParams >>= (.priorityCharges)) estimate.commissionCharges (estimate.fareParams >>= (.tollCharges)) (estimate.fareParams >>= (.govtCharges)) (estimate.fareParams >>= (.driverCancellationNotAllowed)) (estimate.fareParams >>= (.bufferedFare)) estimate.farePolicy estimate.fareParams
   let parcelType = (fst sReq.parcelDetails) >>= \rpt -> readMaybe @DParcel.ParcelType $ unpack rpt
       -- Quotes-first airport flow: the picked estimate carries its own gate area (e.g.
       -- Pickup_<slId>_Gate_<gateId>). Refine the SearchRequest.area/pickupGateId from
@@ -186,7 +195,10 @@ handler merchant sReq searchReq estimates addOnData = do
             DSR.preferSafetyPlus = sReq.preferSafetyPlus,
             DSR.isPetRide = sReq.isPetRide,
             DSR.area = mbEstimateArea <|> searchReq.area,
-            DSR.pickupGateId = mbEstimateGateId <|> searchReq.pickupGateId
+            DSR.pickupGateId = mbEstimateGateId <|> searchReq.pickupGateId,
+            DSR.numberOfPassengers = (.passengers) <$> mbPassengerLuggage,
+            DSR.numberOfCheckInBags = (.checkInBags) <$> mbPassengerLuggage,
+            DSR.numberOfCabinBags = (.cabinBags) <$> mbPassengerLuggage
           }
   QSR.updateMultipleByRequestId updatedSearchRequest searchReq.isScheduled
   QSR.updateByPrimaryKey updatedSearchRequest

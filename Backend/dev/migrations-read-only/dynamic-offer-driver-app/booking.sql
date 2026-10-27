@@ -296,3 +296,14 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN booking_deposit double pre
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN number_share_consent boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN number_of_check_in_bags integer ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN number_of_cabin_bags integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN number_of_passengers integer ;

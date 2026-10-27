@@ -786,14 +786,15 @@ mkParcelImageUploadedTag =
     [ Tags.PARCEL_IMAGE_UPLOADED ~= "True"
     ]
 
-mkVehicleTags :: Maybe Double -> Maybe Bool -> Maybe Bool -> Maybe [Spec.TagGroup]
-mkVehicleTags vehicleServiceTierAirConditioned' isAirConditioned driverCancellationNotAllowed =
+mkVehicleTags :: Maybe Double -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe [Spec.TagGroup]
+mkVehicleTags vehicleServiceTierAirConditioned' isAirConditioned driverCancellationNotAllowed luggageFitEnabled =
   Tags.buildTagGroups $
     -- AC tags keep their historical gating on the threshold being set; the
     -- cancellation tag must not be gated on it.
     [Tags.IS_AIR_CONDITIONED ~= show vehicleServiceTierAirConditioned | Just vehicleServiceTierAirConditioned <- [vehicleServiceTierAirConditioned']]
       <> [Tags.IS_AIR_CONDITIONED_VEHICLE ~=? (show <$> isAirConditioned) | isJust vehicleServiceTierAirConditioned']
       <> [Tags.DRIVER_CANCELLATION_NOT_ALLOWED ~=? (show <$> driverCancellationNotAllowed)]
+      <> [Tags.IS_LUGGAGE_FIT_ENABLED ~=? (show <$> luggageFitEnabled)]
 
 mkOdometerTagGroupV2 :: Maybe Centesimal -> Maybe [Spec.TagGroup]
 mkOdometerTagGroupV2 = Tags.mkSingleTagGroup Tags.START_ODOMETER_READING

@@ -155,7 +155,10 @@ mkItemTags res =
             Tags.EMAIL_DOMAIN Tags.~=? res.emailDomain,
             Tags.CUSTOMER_TIP Tags.~=? ((\charges -> show charges.getMoney) <$> res.customerExtraFee),
             Tags.NEGATIVE_FARE_ADJUSTMENT Tags.~=? ((\charges -> show charges.getMoney) <$> res.negativeFareAdjustment),
-            Tags.OTHER_SELECT_ESTIMATES Tags.~=| (not (null res.remainingEstimateBppIds), show (getId <$> res.remainingEstimateBppIds))
+            Tags.OTHER_SELECT_ESTIMATES Tags.~=| (not (null res.remainingEstimateBppIds), show (getId <$> res.remainingEstimateBppIds)),
+            Tags.NUMBER_OF_PASSENGERS Tags.~=? (show <$> res.numberOfPassengers),
+            Tags.NUMBER_OF_CHECKIN_BAGS Tags.~=? (show <$> res.numberOfCheckInBags),
+            Tags.NUMBER_OF_CABIN_BAGS Tags.~=? (show <$> res.numberOfCabinBags)
           ]
       deliveryTags = mkSelectResDetailsTagGroup res
    in fromMaybe [] baseTags <> deliveryTags

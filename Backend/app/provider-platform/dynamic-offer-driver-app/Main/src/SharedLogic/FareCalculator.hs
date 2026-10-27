@@ -565,6 +565,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories],
     numberOfLuggages :: Maybe Int,
+    -- | Half-units of luggage above the tier's trunk, each charged at half the per-luggage rate.
+    excessLuggageHalfUnits :: Maybe Int,
     govtChargesRate :: Maybe DTC.GstBreakup, -- from TaxConfig.rideGst; summed inside calculateFareParameters
     pickupGateId :: Maybe Text, -- Optional airport pickup gate id; used by V2 to apply airport entry fee
     fareSettlementType :: Maybe SL.FareSettlementType,
@@ -625,8 +627,10 @@ calculateFareParametersHandler params = do
       serviceChargeResult = capComponentMb ServiceChargeComponent fp.serviceCharge
       priorityChargesResult = capComponentMb PriorityChargeComponent fp.priorityCharges
       -- petCharges = if params.isPetRide then fp.petCharges else Nothing
-      luggageCharge = capComponentMb LuggageChargeComponent $ case (fp.perLuggageCharge, params.numberOfLuggages) of
-        (Just perLuggageCharge, Just numberOfLuggages) -> Just $ perLuggageCharge * fromIntegral numberOfLuggages
+      -- Stored counts replace the plain luggage count, so only the luggage above the trunk is charged.
+      luggageCharge = capComponentMb LuggageChargeComponent $ case (fp.perLuggageCharge, params.numberOfLuggages, params.excessLuggageHalfUnits) of
+        (mbPerLuggageCharge, _, Just excessHalfUnits) -> DFP.perUnitLuggageCharge fp.luggageFitEnabled mbPerLuggageCharge >>= \perLuggageCharge -> if excessHalfUnits > 0 then Just $ perLuggageCharge * fromRational (toRational excessHalfUnits / 2) else Nothing
+        (Just perLuggageCharge, Just numberOfLuggages, Nothing) -> Just $ perLuggageCharge * fromIntegral numberOfLuggages
         _ -> Nothing
       returnFeeCharge = capComponentMb ReturnFeeChargeComponent $ case fp.returnFee of
         Just (DFP.ReturnFeeFixed fee) -> Just fee

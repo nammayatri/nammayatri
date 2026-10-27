@@ -70,6 +70,7 @@ import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
 import qualified SharedLogic.ParkingFeeExemption as SPFE
+import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.Pricing
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
@@ -186,6 +187,7 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
       then SPFE.isParkingFeeExemptForDriver driver.id
       else pure False
   addOnCharges <- SAddOn.addOnChargesTotal searchTry.addOnData
+  mbExcessLuggageHalfUnits <- SPL.findExcessLuggageHalfUnits merchantOpCityId sReqFD.vehicleServiceTier searchReq.numberOfCheckInBags searchReq.numberOfCabinBags
   fareParams <- do
     FC.calculateFareParameters
       CalculateFareParametersParams
@@ -225,6 +227,7 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
           merchantOperatingCityId = Just merchantOpCityId,
           mbAdditonalChargeCategories = Just sReqFD.conditionalCharges,
           numberOfLuggages = searchReq.numberOfLuggages,
+          excessLuggageHalfUnits = mbExcessLuggageHalfUnits,
           govtChargesRate = Just transporterConfig.taxConfig.rideGst,
           pickupGateId = searchReq.pickupGateId,
           fareSettlementType = farePolicy'.fareSettlementType,

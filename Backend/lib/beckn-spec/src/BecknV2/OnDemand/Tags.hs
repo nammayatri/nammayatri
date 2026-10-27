@@ -395,6 +395,9 @@ data BecknTag
   | DRIVER_ALLOWANCE
   | AIRPORT_CONVENIENCE_FEE
   | NUMBER_OF_LUGGAGE
+  | NUMBER_OF_PASSENGERS
+  | NUMBER_OF_CHECKIN_BAGS
+  | NUMBER_OF_CABIN_BAGS
   | -- ## Payment tags ##
     -- SETTLEMENT_TERMS
     SETTLEMENT_WINDOW
@@ -553,6 +556,7 @@ data BecknTag
     IS_AIR_CONDITIONED -- deprecated
   | IS_AIR_CONDITIONED_VEHICLE
   | DRIVER_CANCELLATION_NOT_ALLOWED
+  | IS_LUGGAGE_FIT_ENABLED
   | IS_FORWARD_BATCH_ENABLED
   | -- rating tags
     RIDER_PHONE_NUMBER
@@ -639,6 +643,7 @@ instance CompleteTag BecknTag where
     IS_AIR_CONDITIONED -> True
     IS_AIR_CONDITIONED_VEHICLE -> True
     DRIVER_CANCELLATION_NOT_ALLOWED -> True
+    IS_LUGGAGE_FIT_ENABLED -> True
     SPECIAL_LOCATION_TAG -> True
     SMART_TIP_REASON -> True
     MAX_ESTIMATED_DISTANCE -> True
@@ -647,6 +652,9 @@ instance CompleteTag BecknTag where
   -- getDescriptor :: tags -> (description, shortDescription)
   getTagDescriptor tag = uncurry (Spec.Descriptor (Just . T.pack $ show tag) Nothing) $ case tag of
     NUMBER_OF_LUGGAGE -> (Just "Luggage Count", Nothing)
+    NUMBER_OF_PASSENGERS -> (Just "Passenger Count", Nothing)
+    NUMBER_OF_CHECKIN_BAGS -> (Just "Check-in Bag Count", Nothing)
+    NUMBER_OF_CABIN_BAGS -> (Just "Cabin Bag Count", Nothing)
     DISTANCE_INFO_IN_M -> (Just "Distance Information In Meters", Nothing)
     DURATION_INFO_IN_S -> (Just "Duration Information In Seconds", Nothing)
     RETURN_TIME -> (Just "Return time in UTC", Nothing)
@@ -714,6 +722,9 @@ instance CompleteTag BecknTag where
     WAYPOINTS -> ROUTE_INFO
     MULTIPLE_ROUTES -> ROUTE_INFO
     NUMBER_OF_LUGGAGE -> SEARCH_REQUEST_INFO
+    NUMBER_OF_PASSENGERS -> SEARCH_REQUEST_INFO
+    NUMBER_OF_CHECKIN_BAGS -> SEARCH_REQUEST_INFO
+    NUMBER_OF_CABIN_BAGS -> SEARCH_REQUEST_INFO
     DRIVER_IDENTITY -> DRIVER_IDENTIFIER
     BUYER_FINDER_FEES_PERCENTAGE -> BAP_TERMS
     SETTLEMENT_AMOUNT -> BPP_TERMS
@@ -822,6 +833,7 @@ instance CompleteTag BecknTag where
     IS_AIR_CONDITIONED -> VEHICLE_INFO
     IS_AIR_CONDITIONED_VEHICLE -> VEHICLE_INFO
     DRIVER_CANCELLATION_NOT_ALLOWED -> VEHICLE_INFO
+    IS_LUGGAGE_FIT_ENABLED -> VEHICLE_INFO
     VEHICLE_ICON_URL -> VEHICLE_INFO
     -- Estimated end time range tags
     ESTIMATED_END_TIME_RANGE_START -> ESTIMATED_END_TIME_RANGE

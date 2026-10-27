@@ -87,6 +87,7 @@ tfQuotesInfo provider fulfillments validTill item = do
   vehicleServiceTierAirConditioned_ <- Beckn.OnDemand.Utils.OnSearch.getVehicleServiceTierAirConditioned provider item
   isAirConditioned_ <- Beckn.OnDemand.Utils.OnSearch.getIsAirConditioned provider item
   driverCancellationNotAllowed_ <- Beckn.OnDemand.Utils.OnSearch.getDriverCancellationNotAllowed provider item
+  luggageFitEnabled_ <- Beckn.OnDemand.Utils.OnSearch.getLuggageFitEnabled provider item
   let mbServiceTierType = Beckn.OnDemand.Utils.OnSearch.getServiceTierType item
       mbServiceTierName = Beckn.OnDemand.Utils.OnSearch.getServiceTierName item
       vehicleCategory = BecknV2.OnDemand.Utils.Common.mapVariantToVehicle vehicleVariant_
@@ -159,6 +160,7 @@ tfQuotesInfo provider fulfillments validTill item = do
               personalDiscountInfo = personalDiscountInfo_,
               isAirConditioned = isAirConditioned_,
               driverCancellationNotAllowed = driverCancellationNotAllowed_,
+              luggageFitEnabled = luggageFitEnabled_,
               isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_,
               isBlockedRoute = isBlockedRoute_,
               tollChargesInfo = tollChargesInfo_,

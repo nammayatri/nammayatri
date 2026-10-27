@@ -70,6 +70,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     driverCancellationNotAllowed :: Maybe Bool,
+    luggageFitEnabled :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierLuggageCapacity :: Maybe Int,
     validTill :: UTCTime,

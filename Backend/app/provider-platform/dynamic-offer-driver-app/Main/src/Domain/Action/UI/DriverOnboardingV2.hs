@@ -427,6 +427,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   merchantOperatingCityId = Just merchantOperatingCityId,
                   mbAdditonalChargeCategories = Nothing,
                   numberOfLuggages = Nothing,
+                  excessLuggageHalfUnits = Nothing,
                   govtChargesRate = transporterConfig <&> (.taxConfig.rideGst),
                   pickupGateId = Nothing,
                   fareSettlementType = fullFarePolicy.fareSettlementType,

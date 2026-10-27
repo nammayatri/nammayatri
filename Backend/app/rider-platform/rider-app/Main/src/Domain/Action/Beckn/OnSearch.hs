@@ -168,6 +168,7 @@ data EstimateInfo = EstimateInfo
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     driverCancellationNotAllowed :: Maybe Bool,
+    luggageFitEnabled :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierLuggageCapacity :: Maybe Int,
     specialLocationName :: Maybe Text,
@@ -427,6 +428,9 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
                 preferSafetyPlus = Nothing,
                 driverPreference = Nothing,
                 selectedOfferId = Nothing,
+                numberOfPassengers = Nothing,
+                numberOfCheckInBags = Nothing,
+                numberOfCabinBags = Nothing,
                 -- A reserved ride is never a walk-and-save shadow: its standing pickup is
                 -- one the customer already committed to, so no endpoint has moved to name.
                 suggestedPickupAddress = Nothing,

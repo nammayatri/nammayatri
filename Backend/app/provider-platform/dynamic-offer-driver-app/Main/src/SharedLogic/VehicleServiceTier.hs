@@ -67,7 +67,6 @@ selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle vehicleSe
     mapUsageRestriction :: DVST.VehicleServiceTier -> (DVST.VehicleServiceTier, Bool)
     mapUsageRestriction vehicleServiceTier = do
       let _seatingCapacityCheck = compareNumber vehicle.capacity vehicleServiceTier.seatingCapacity
-          luggageCapacityCheck = compareNumber vehicle.luggageCapacity vehicleServiceTier.luggageCapacity
           airConditionedCheck =
             (vehicleServiceTier.vehicleCategory == Just VC.AMBULANCE)
               || ( (compareNumber vehicleServiceTier.airConditionedThreshold driverInfo.airConditionScore)
@@ -92,7 +91,7 @@ selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle vehicleSe
                  in (null allowed || any (`elem` allowed) regions) && not (any (`elem` notAllowed) regions)
               _ -> True
 
-      let usageRestricted = not (luggageCapacityCheck && airConditionedCheck && driverRatingCheck && vehicleRatingCheck && mfcCheck && cancellationRateCheck && regionCheck)
+      let usageRestricted = not (airConditionedCheck && driverRatingCheck && vehicleRatingCheck && mfcCheck && cancellationRateCheck && regionCheck)
       (vehicleServiceTier, usageRestricted)
 
     filterVehicleTier vehicleServiceTier = case mode of
