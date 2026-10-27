@@ -2953,7 +2953,8 @@ clearDriverDues ::
   Maybe ClearManualSelectedDues ->
   Maybe SPayment.DeepLinkData ->
   m ClearDuesRes
-clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq mbDeepLinkData = do
+-- Locked per driver so a concurrent call cannot read a half-written invoice and order only part of its fees.
+clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq mbDeepLinkData = Redis.withWaitAndLockRedis (DDF.clearDuesLockKey personId.getId) 60 100000 $ do
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
@@ -3029,7 +3030,7 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
           QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE invoice.id
           return (Nothing, driverFeeIds, [])
         else
-          if length currentDueDriverFee <= length invoices
+          if length currentDueDriverFee == length invoices
             then do
               return (Just (invoice.id, invoice.invoiceShortId), currentDueDriverFee, (driverFees <&> getId . (.id)) \\ (invoices <&> getId . (.driverFeeId)))
             else do
