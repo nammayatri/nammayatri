@@ -59,6 +59,7 @@ import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverOnboarding.Common as SOnbCommon
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -142,7 +143,7 @@ addIndividualOrFleetSeekerDrivers merchantShortId opCity onboardingAs file = do
       (person, isNew) <- fetchOrCreatePerson merchantOpCity req_
       -- Only the OTP flow may change an existing driver's type, so bulk leaves existing numbers untouched.
       unless isNew $ throwError (InvalidRequest "Driver already exists")
-      SOnboardingComms.setOnboardingAs transporterConfig person (castCommonOnboardingAsToDomain onboardingAs)
+      SOnboardingComms.setOnboardingAs transporterConfig SGuard.None person (castCommonOnboardingAsToDomain onboardingAs)
       fork "Sending onboarding link SMS to Driver" $
         SOnbCommon.sendOnboardingLinkSms merchantOpCity transporterConfig person Nothing
       pure person.id

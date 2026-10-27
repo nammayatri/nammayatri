@@ -1575,7 +1575,7 @@ postDriverLinkToFleet (mbDriverId, merchantId, merchantOperatingCityId) req = do
         Nothing -> do
           let requestReason = fromMaybe "Driver requested to join fleet" req.requestReason
           driver <- PersonQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-          SOnboardingComms.setOnboardingAs transporterConfig driver DI.FLEET_DRIVER
+          SOnboardingComms.setOnboardingAs transporterConfig SGuard.None driver DI.FLEET_DRIVER
           SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver req.fleetOwnerId driverId) SGuard.LinkToFleet (SGuard.TargetDriver driverId) $
             FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason) (Just merchantId) (Just merchantOperatingCityId) (pure ()) -- created inactive: not part of ACTIVE_DRIVER_COUNT
   return Success

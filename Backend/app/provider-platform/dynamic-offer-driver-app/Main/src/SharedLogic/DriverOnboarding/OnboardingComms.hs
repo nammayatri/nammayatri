@@ -79,13 +79,13 @@ driverDeclinedFleetInviteKey = "DRIVER_DECLINED_FLEET_INVITE"
 fleetOwnerDriverDeclinedInviteKey :: Text
 fleetOwnerDriverDeclinedInviteKey = "FLEET_OWNER_DRIVER_DECLINED_INVITE"
 
-setOnboardingAs :: (OnboardingFlow m r, Forkable m) => DTC.TransporterConfig -> DP.Person -> DI.OnboardingAs -> m ()
-setOnboardingAs transporterConfig driver onboardingAs = do
+setOnboardingAs :: (OnboardingFlow m r, Forkable m) => DTC.TransporterConfig -> SGuard.Actor -> DP.Person -> DI.OnboardingAs -> m ()
+setOnboardingAs transporterConfig actor driver onboardingAs = do
   mbCurrent <- ((.onboardingAs) =<<) <$> QDIExtra.findById (cast driver.id)
   -- Same type again: no write and no push, but the guard still runs for its recompute.
   let onboardingAsUnchanged = mbCurrent == Just onboardingAs
   endFleetAssociationsOnLeavingFleetDriver mbCurrent
-  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.SetOnboardingAs (SGuard.TargetDriver driver.id) $
+  SGuard.withOnboardingAction transporterConfig actor SGuard.SetOnboardingAs (SGuard.TargetDriver driver.id) $
     unless onboardingAsUnchanged $ QDIExtra.updateOnboardingAs (Just onboardingAs) (cast driver.id)
   unless onboardingAsUnchanged $
     fork "Onboarding as changed notification" $ do
@@ -114,7 +114,7 @@ resetOnboardingAsIfNoFleet transporterConfig driverId = do
   when (null associations && transporterConfig.lookingForFleetSupported /= Just True) $ do
     mbDriver <- QPerson.findById driverId
     whenJust mbDriver $ \driver ->
-      setOnboardingAs transporterConfig driver DI.INDIVIDUAL
+      setOnboardingAs transporterConfig SGuard.None driver DI.INDIVIDUAL
 
 notifyOnOnboardingAsChange :: OnboardingFlow m r => DP.Person -> DI.OnboardingAs -> m ()
 notifyOnOnboardingAsChange driver onboardingAs = do
