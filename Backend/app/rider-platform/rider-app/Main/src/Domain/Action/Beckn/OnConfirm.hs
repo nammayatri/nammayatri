@@ -125,6 +125,7 @@ data RideAssignedInfo = RideAssignedInfo
     isSafetyPlus :: Bool,
     isTierUpgrade :: Bool,
     assignedServiceTierName :: Maybe Text,
+    betterDriverAbortRadiusMeters :: Maybe Meters,
     bppInvoiceProviderInfo :: BPPInvoiceProviderInfo
   }
 

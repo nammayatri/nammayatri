@@ -257,7 +257,8 @@ tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig fulfi
       vehicleAgeTagGroup = if isValueAddNP then Utils.mkVehicleAgeTagGroupV2 vehicleAge else Nothing
       isSafetyPlusTagGroup = if isValueAddNP then Utils.mkIsSafetyPlusTagGroupV2 isSafetyPlus else Nothing
       tierUpgradeTagGroup = if isValueAddNP then Utils.mkTierUpgradeTagGroupV2 isTierUpgrade assignedServiceTierType assignedServiceTierName else Nothing
-      tagGroups = currentRideDropLocation <> arrivalTimeTagGroup <> vehicleAgeTagGroup <> isSafetyPlusTagGroup <> tierUpgradeTagGroup
+      betterDriverAbortRadiusTagGroup = if isValueAddNP then Utils.mkBetterDriverAbortRadiusTagGroupV2 betterDriverAbortRadiusMeters else Nothing
+      tagGroups = currentRideDropLocation <> arrivalTimeTagGroup <> vehicleAgeTagGroup <> isSafetyPlusTagGroup <> tierUpgradeTagGroup <> betterDriverAbortRadiusTagGroup
       quote = Utils.tfQuotation isValueAddNP booking
       farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
       items = UtilsOU.tfItems ride booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId

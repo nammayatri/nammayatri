@@ -338,7 +338,8 @@ data OneShotAssignReq = OneShotAssignReq
     isTierUpgrade :: Bool,
     assignedServiceTierName :: Maybe Text,
     billingCategory :: SLT.BillingCategory,
-    oldBppBookingId :: Maybe Text
+    oldBppBookingId :: Maybe Text,
+    betterDriverAbortRadiusMeters :: Maybe Meters
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

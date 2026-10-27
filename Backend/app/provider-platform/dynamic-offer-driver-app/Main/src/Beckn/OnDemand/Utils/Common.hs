@@ -1512,6 +1512,13 @@ mkTierUpgradeTagGroupV2 isTierUpgrade mbAssignedTierType mbAssignedTierName
         Tags.ASSIGNED_SERVICE_TIER_NAME ~=? mbAssignedTierName
       ]
 
+mkBetterDriverAbortRadiusTagGroupV2 :: Maybe Meters -> Maybe [Spec.TagGroup]
+mkBetterDriverAbortRadiusTagGroupV2 mbAbortRadius =
+  mbAbortRadius >>= \radius ->
+    Tags.buildTagGroups
+      [ Tags.BETTER_DRIVER_ABORT_RADIUS_METERS ~= show radius.getMeters
+      ]
+
 mkForwardBatchTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
 mkForwardBatchTagGroupV2 previousRideDropLocation' =
   previousRideDropLocation' >>= \previousRideDropLocation ->

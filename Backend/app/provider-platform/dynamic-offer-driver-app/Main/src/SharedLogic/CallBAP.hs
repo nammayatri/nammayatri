@@ -639,6 +639,7 @@ rideAssignedCommonPrefetched prefetch booking ride driver veh = do
             if isUpgrade then (.name) <$> mbAssignedCfg else Nothing
           )
       _ -> pure (False, Nothing, Nothing)
+  let betterDriverAbortRadiusMeters = highPrecMetersToMeters <$> (mbTransporterConfig >>= (.betterDriverProximityAbortRadiusMeters))
   pure $ (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
   where
     extractRCManufacturerModel :: Idfy.VerificationResponse -> Maybe Text

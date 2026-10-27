@@ -79,7 +79,8 @@ data OneShotAssignReq = OneShotAssignReq
     isTierUpgrade :: Bool,
     assignedServiceTierName :: Maybe Text,
     billingCategory :: BillingCategory,
-    oldBppBookingId :: Maybe Text
+    oldBppBookingId :: Maybe Text,
+    betterDriverAbortRadiusMeters :: Maybe Meters
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -310,7 +311,8 @@ processAssignment req = do
                 isInitiatedByCronJob = False,
                 isBetterDriverSwap = isJust req.oldBppBookingId,
                 isTierUpgrade = req.isTierUpgrade,
-                assignedServiceTierName = req.assignedServiceTierName
+                assignedServiceTierName = req.assignedServiceTierName,
+                betterDriverAbortRadiusMeters = req.betterDriverAbortRadiusMeters
               },
           isDriverBirthDay = req.driverDetails.isDriverBirthDay,
           isFreeRide = req.isFreeRide,

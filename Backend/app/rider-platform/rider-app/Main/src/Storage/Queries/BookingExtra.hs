@@ -447,6 +447,12 @@ updateEligibleForBetterDriverSearch bookingId eligible now =
     ]
     [Se.Is BeamB.id (Se.Eq (getId bookingId))]
 
+updateBetterDriverAbortRadiusMeters :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Int -> m ()
+updateBetterDriverAbortRadiusMeters bookingId radiusMeters =
+  updateWithKV
+    [Se.Set BeamB.betterDriverAbortRadiusMeters (Just radiusMeters)]
+    [Se.Is BeamB.id (Se.Eq (getId bookingId))]
+
 -- | Set on the OLD booking after a swap: the new Booking the rider switches to.
 updateSupersededByBookingId :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe (Id Booking) -> m ()
 updateSupersededByBookingId bookingId supersededByBookingId =
