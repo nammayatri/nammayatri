@@ -149,7 +149,7 @@ import qualified Tools.PaymentNudge as PaymentNudge
 
 -- create order -----------------------------------------------------
 createOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id INV.Invoice -> Flow Payment.CreateOrderResp
-createOrder (driverId, merchantId, opCityId) invoiceId = do
+createOrder (driverId, merchantId, opCityId) invoiceId = Redis.withWaitAndLockRedis (clearDuesLockKey driverId.getId) 60 100000 $ do
   invoices <- B.runInReplica $ QIN.findAllByInvoiceId invoiceId
   driverFees <- (B.runInReplica . QDF.findById . (.driverFeeId)) `mapM` invoices
   let mbServiceName = listToMaybe invoices <&> (.serviceName)
