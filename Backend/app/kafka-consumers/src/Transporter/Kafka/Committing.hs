@@ -4,8 +4,11 @@
 --   * messages are handled one at a time, in order, and a failing message is
 --     retried until it succeeds, so nothing is skipped;
 --   * offsets are committed explicitly, only after messages are handled;
---   * a watermark (epoch ms) is reported: the oldest last-handled event time
---     across partitions, or the current time whenever the consumer is caught up.
+--   * a watermark (epoch ms) is reported per owned partition, about once a
+--     second: the current time when the partition is caught up (consumed up to
+--     the broker's high watermark), else the last handled event time on it.
+--     Readers take the minimum over every partition of the topic, so with
+--     several replicas none can report for partitions it does not own.
 module Transporter.Kafka.Committing
   ( runOrderedCommitting,
     isRdKafkaError,
@@ -22,20 +25,20 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Environment
 import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
+import Kafka.Metadata (WatermarkOffsets (..), watermarkOffsets)
 import Kafka.Types (KafkaError)
 import Kernel.Prelude
 import Kernel.Types.Flow
 import Kernel.Utils.Common hiding (id)
 import qualified Prelude as P
 
--- | Commit and report the watermark after this many handled messages.
-progressEvery :: Int
-progressEvery = 100
+-- | Commit and report the watermark at most this often (ms).
+progressEveryMs :: Integer
+progressEveryMs = 1000
 
--- | While idle, commit and report at most this often (ms), instead of on every
--- empty poll.
-idleProgressEveryMs :: Integer
-idleProgressEveryMs = 1000
+-- | Broker round trips for the watermark (high offsets, committed offsets).
+brokerTimeout :: Consumer.Timeout
+brokerTimeout = Consumer.Timeout 5000
 
 runOrderedCommitting ::
   (FromJSON event) =>
@@ -45,34 +48,32 @@ runOrderedCommitting ::
   -- | event time, epoch ms
   (event -> Integer) ->
   (event -> Flow ()) ->
-  -- | report the watermark, epoch ms
-  (Integer -> Flow ()) ->
+  -- | report the watermark: the topic's partition count, and epoch ms per
+  -- owned partition (a partition with no known mark is left out)
+  (Int -> M.Map Int Integer -> Flow ()) ->
   IO ()
-runOrderedCommitting flowRt appEnv kc eventTime handler reportWatermark = go M.empty 0 0
+runOrderedCommitting flowRt appEnv kc eventTime handler reportWatermark = go M.empty 0
   where
     flow = runFlowR flowRt appEnv
-    go lastByPartition handled lastIdleReport = do
+    -- lastByPartition: the event time of the last message handled per partition.
+    go lastByPartition lastProgress = do
       polled <- Consumer.pollMessage kc (Consumer.Timeout 500)
-      case polled of
-        Left err | isRdKafkaError "RdKafkaRespErrTimedOut" err -> do
-          -- Nothing pending: every partition is caught up.
-          nowMs <- round . (* 1000) <$> getPOSIXTime
-          if nowMs - lastIdleReport >= idleProgressEveryMs
-            then progress nowMs >> go M.empty 0 nowMs
-            else go M.empty 0 lastIdleReport
+      lastByPartition' <- case polled of
+        Left err | isRdKafkaError "RdKafkaRespErrTimedOut" err -> pure lastByPartition
         Left err -> do
           flow $ logError $ "kafka poll error: " <> show err
-          go lastByPartition handled lastIdleReport
+          pure lastByPartition
         Right cr -> case A.decode . LBS.fromStrict =<< Consumer.crValue cr of
           Nothing -> do
             flow $ logError $ "skipping undecodable message at offset " <> show (Consumer.crOffset cr)
-            go lastByPartition handled lastIdleReport
+            pure lastByPartition
           Just event -> do
             handleWithRetry event
-            let lastByPartition' = M.insert (Consumer.crPartition cr) (eventTime event) lastByPartition
-            if handled + 1 >= progressEvery
-              then progress (minimum (M.elems lastByPartition')) >> go lastByPartition' 0 lastIdleReport
-              else go lastByPartition' (handled + 1) lastIdleReport
+            pure (M.insert (Consumer.unPartitionId (Consumer.crPartition cr)) (eventTime event) lastByPartition)
+      nowMs <- round . (* 1000) <$> getPOSIXTime
+      if nowMs - lastProgress >= progressEveryMs
+        then progress nowMs lastByPartition' >> go lastByPartition' nowMs
+        else go lastByPartition' lastProgress
 
     handleWithRetry event =
       flow (handler event) `E.catch` \(e :: E.SomeException) -> do
@@ -80,14 +81,52 @@ runOrderedCommitting flowRt appEnv kc eventTime handler reportWatermark = go M.e
         CC.threadDelay 1000000
         handleWithRetry event
 
-    progress watermark = do
+    progress nowMs lastByPartition = do
       commitErr <- Consumer.commitAllOffsets Consumer.OffsetCommit kc
       case commitErr of
         Just err | isRdKafkaError "RdKafkaRespErrNoOffset" err -> pure () -- nothing consumed since the last commit
         Just err -> flow $ logError $ "offset commit failed: " <> show err
         Nothing -> pure ()
-      flow (reportWatermark watermark) `E.catch` \(e :: E.SomeException) ->
-        flow $ logError $ "watermark update failed: " <> show e
+      marks <- partitionMarks nowMs lastByPartition `E.catch` \(e :: E.SomeException) -> pure (Left (show e))
+      case marks of
+        Left err -> flow $ logError $ "watermark not reported: " <> err
+        Right Nothing -> pure () -- no partitions assigned
+        Right (Just (partitionCount, byPartition)) ->
+          flow (reportWatermark partitionCount byPartition) `E.catch` \(e :: E.SomeException) ->
+            flow $ logError $ "watermark update failed: " <> show e
+
+    -- @nowMs@ is taken before the high offsets are read, so a caught-up
+    -- partition has handled every message that reached the broker by then.
+    partitionMarks :: Integer -> M.Map Int Integer -> IO (Either Text (Maybe (Int, M.Map Int Integer)))
+    partitionMarks nowMs lastByPartition =
+      Consumer.assignment kc >>= \case
+        Left err -> pure (Left (show err))
+        Right assigned -> case M.toList (M.filter (not . null) assigned) of
+          [] -> pure (Right Nothing)
+          [(topic, parts)] -> do
+            highsE <- sequence <$> watermarkOffsets kc brokerTimeout topic
+            positionsE <- Consumer.position kc [(topic, p) | p <- parts]
+            case (highsE, positionsE) of
+              (Left err, _) -> pure (Left ("high offsets: " <> show err))
+              (_, Left err) -> pure (Left ("positions: " <> show err))
+              (Right highs, Right positions) -> do
+                let consumed = offsetsByPartition positions
+                    unconsumed = [(topic, p) | p <- parts, not (M.member (Consumer.unPartitionId p) consumed)]
+                -- Nothing consumed yet on a partition since the assignment: fall back to its committed offset.
+                committedE <- if null unconsumed then pure (Right []) else Consumer.committed kc brokerTimeout unconsumed
+                pure $ case committedE of
+                  Left err -> Left ("committed offsets: " <> show err)
+                  Right committedTps ->
+                    let consumedTo = M.union consumed (offsetsByPartition committedTps)
+                        highBy = M.fromList [(Consumer.unPartitionId wo.woPartitionId, Consumer.unOffset wo.woHighWatermark) | wo <- highs]
+                        -- No position and no committed offset: a new group starts at
+                        -- the latest offset (librdkafka's default), so it is caught up.
+                        caughtUp p = maybe True (>= M.findWithDefault 0 p highBy) (M.lookup p consumedTo)
+                        mark p = if caughtUp p then Just nowMs else M.lookup p lastByPartition
+                     in Right (Just (length highs, M.fromList [(p, m) | Consumer.PartitionId p <- parts, Just m <- [mark p]]))
+          _ -> pure (Left "runOrderedCommitting expects a single topic")
+
+    offsetsByPartition tps = M.fromList [(Consumer.unPartitionId tp.tpPartition, o) | tp <- tps, Consumer.PartitionOffset o <- [tp.tpOffset]]
 
 -- | The librdkafka error codes live in hw-kafka-client's hidden
 -- Kafka.Internal.RdKafka module, so match on the code's shown name instead:

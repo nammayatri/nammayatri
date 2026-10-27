@@ -106,8 +106,16 @@ newKafkaConsumer :: AppEnv -> IO Consumer.KafkaConsumer
 newKafkaConsumer appEnv =
   either (error . ("Unable to open a kafka consumer: " <>) . show) id
     <$> Consumer.newConsumer
-      (appEnv.kafkaConsumerCfg.consumerProperties)
+      (appEnv.kafkaConsumerCfg.consumerProperties <> waitsOnStateWriter)
       (Consumer.topics appEnv.kafkaConsumerCfg.topicNames)
+  where
+    -- SESSIONIZER and DRIVER_PERFORMANCE block a batch, without a timeout,
+    -- until the state writer catches up. Past librdkafka's default 5-minute
+    -- max.poll.interval.ms the consumer would leave the group mid-window, so
+    -- allow the broker's maximum (24 h); heartbeats run on their own thread.
+    waitsOnStateWriter
+      | appEnv.consumerType `elem` [SESSIONIZER, DRIVER_PERFORMANCE] = Consumer.extraProp "max.poll.interval.ms" "86400000"
+      | otherwise = mempty
 
 ------------------------------------------------------------
 -- Consumer-type → Dhall config name
