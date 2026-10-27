@@ -196,7 +196,8 @@ data BookingDetails = BookingDetails
     -- not "driver assigned". False on every other path.
     isBetterDriverSwap :: Bool,
     isTierUpgrade :: Bool,
-    assignedServiceTierName :: Maybe Text
+    assignedServiceTierName :: Maybe Text,
+    betterDriverAbortRadiusMeters :: Maybe Meters
   }
 
 data RideAssignedReq = RideAssignedReq
@@ -783,6 +784,7 @@ rideAssignedReqHandler req = do
                 draw <- randomRIO (0 :: Double, 1)
                 pure (draw < probability)
       QRBE.updateEligibleForBetterDriverSearch booking.id eligibleForBetterDriverSearch now
+      whenJust betterDriverAbortRadiusMeters $ \radius -> QRBE.updateBetterDriverAbortRadiusMeters booking.id radius.getMeters
       QRide.createRide ride
       QPFS.clearCache booking.riderId
       fork "Increment assigned count for customer cancellation rate" $ do

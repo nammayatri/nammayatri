@@ -256,7 +256,8 @@ buildOneShotAssignPayload prefetch booking ride driver vehicle driverQuote = do
         isTierUpgrade = rideAssignedReq.isTierUpgrade,
         assignedServiceTierName = rideAssignedReq.assignedServiceTierName,
         billingCategory = booking.billingCategory,
-        oldBppBookingId = Nothing
+        oldBppBookingId = Nothing,
+        betterDriverAbortRadiusMeters = rideAssignedReq.betterDriverAbortRadiusMeters
       }
 
 -- | The same payload getDriverRideById serves for this ride, built from the entities

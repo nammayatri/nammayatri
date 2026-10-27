@@ -601,3 +601,8 @@ ALTER TABLE atlas_app.booking ADD COLUMN eligible_for_better_driver_search boole
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN superseded_by_booking_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN better_driver_abort_radius_meters integer ;

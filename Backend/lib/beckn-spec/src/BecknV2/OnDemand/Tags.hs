@@ -620,6 +620,7 @@ data BecknTag
     IS_TIER_UPGRADE -- GENERAL_INFO: "true" iff assigned tier ranks above booked tier
   | ASSIGNED_SERVICE_TIER_TYPE -- GENERAL_INFO: assigned tier enum (e.g. "SEDAN")
   | ASSIGNED_SERVICE_TIER_NAME -- GENERAL_INFO: merchant-configured display name (e.g. "Sedan")
+  | BETTER_DRIVER_ABORT_RADIUS_METERS
   | PICKUP_ADDRESS
   | DROP_ADDRESS
   deriving (Show, Eq, Generic, ToJSON, FromJSON, Bounded, Enum)
@@ -858,6 +859,7 @@ instance CompleteTag BecknTag where
     IS_TIER_UPGRADE -> GENERAL_INFO
     ASSIGNED_SERVICE_TIER_TYPE -> GENERAL_INFO
     ASSIGNED_SERVICE_TIER_NAME -> GENERAL_INFO
+    BETTER_DRIVER_ABORT_RADIUS_METERS -> GENERAL_INFO
     -- Fare policy tags
     MIN_FARE -> FARE_POLICY
     MIN_FARE_DISTANCE_KM -> FARE_POLICY

@@ -268,6 +268,7 @@ Booking:
     multimodalSearchRequestId: Maybe Text
     # Rollout dice, rolled once at ride-assignment time and never re-rolled.
     eligibleForBetterDriverSearch: Maybe Bool
+    betterDriverAbortRadiusMeters: Maybe Int
     # Set on the OLD booking after a swap: the new Booking to switch to. Untyped to
     # avoid a self-import.
     supersededByBookingId: Maybe Text
