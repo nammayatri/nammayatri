@@ -26,6 +26,7 @@ module Beckn.ACL.Common.Order
     tfCancelReqToOrder,
     tfArrivedReqToOrder,
     tfReachedDestinationReqToOrder,
+    tfNearPickupReqToOrder,
     tfReturnTripStartedReqToOrder,
   )
 where
@@ -428,6 +429,28 @@ tfReachedDestinationReqToOrder OU.DDriverReachedDestinationReq {..} = do
   let BookingDetails {..} = bookingDetails
       driverReachedDestinationTags = Utils.mkDriverReachedDestinationTagGroup isValueAddNP destinationArrivalTime ride.returnOtp
   fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing driverReachedDestinationTags Nothing False False Nothing (Just $ show EventEnum.DRIVER_REACHED_DESTINATION) isValueAddNP Nothing False 0
+  pure $
+    Spec.Order
+      { orderDocuments = Nothing,
+        orderId = Just $ booking.id.getId,
+        orderFulfillments = Just [fulfillment],
+        orderBilling = Nothing,
+        orderCancellation = Nothing,
+        orderCancellationTerms = Nothing,
+        orderItems = Nothing,
+        orderPayments = Nothing,
+        orderProvider = Nothing,
+        orderQuote = Nothing,
+        orderTags = Nothing,
+        orderStatus = Nothing,
+        orderCreatedAt = Just booking.createdAt,
+        orderUpdatedAt = Just booking.updatedAt
+      }
+
+tfNearPickupReqToOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => OU.DDriverNearPickupReq -> m Spec.Order
+tfNearPickupReqToOrder OU.DDriverNearPickupReq {..} = do
+  let BookingDetails {..} = bookingDetails
+  fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show EventEnum.DRIVER_NEAR_PICKUP) isValueAddNP Nothing False 0
   pure $
     Spec.Order
       { orderDocuments = Nothing,

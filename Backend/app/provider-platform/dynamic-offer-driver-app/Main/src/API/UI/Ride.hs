@@ -96,7 +96,7 @@ type API =
                     :> Capture "rideId" (Id Ride.Ride)
                     :> "arrived"
                     :> "pickup"
-                    :> ReqBody '[JSON] LatLong
+                    :> ReqBody '[JSON] DRide.ArrivedAtPickupReq
                     :> Post '[JSON] APISuccess
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
@@ -340,7 +340,7 @@ getDriverRideById ::
   FlowHandler RideCommon.DriverRideRes
 getDriverRideById (driverId, _, mocId) rideId mbFinanceData = withFlowHandlerAPI $ DRide.getDriverRideById driverId (Just mocId) rideId mbFinanceData
 
-arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
+arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> DRide.ArrivedAtPickupReq -> FlowHandler APISuccess
 arrivedAtPickup (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req
 
 arrivedAtStop :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess

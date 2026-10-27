@@ -15,6 +15,8 @@
 module Domain.Action.UI.Ride
   ( DriverRideListRes (..),
     OTPRideReq (..),
+    ArrivedAtPickupReq (..),
+    ArrivalStage (..),
     UploadOdometerReq (..),
     UploadOdometerResp (..),
     DeliveryImageUploadReq (..),
@@ -191,6 +193,18 @@ data OTPRideReq = OTPRideReq
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+-- NEAR tells the rider the driver is at pickup without starting waiting charges;
+-- ARRIVED (or no stage, from older apps) is the arrival that records driverArrivalTime.
+data ArrivalStage = NEAR | ARRIVED
+  deriving (Eq, Show, Generic, FromJSON, ToJSON, ToSchema)
+
+data ArrivedAtPickupReq = ArrivedAtPickupReq
+  { lat :: Double,
+    lon :: Double,
+    stage :: Maybe ArrivalStage
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 newtype DriverRideListRes = DriverRideListRes
   { list :: [RideCommon.DriverRideRes]
   }
@@ -274,26 +288,32 @@ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels trans
   let goHomeReqId = ride.driverGoHomeRequestId
   RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling (transporterConfig >>= DTC.showRoutePerRequest)
 
-arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig], HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl], Hedis.HedisLTSFlowEnv r, Alloc.SchedulerJobFlow r) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig], HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl], Hedis.HedisLTSFlowEnv r, Alloc.SchedulerJobFlow r) => Id DRide.Ride -> ArrivedAtPickupReq -> m APISuccess
 arrivedAtPickup rideId req = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus ("The ride has already started." <> Text.pack (show ride.status))
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let pickupLoc = getCoordinates booking.fromLocation
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  let distance = distanceBetweenInMeters req pickupLoc
+  let distance = distanceBetweenInMeters (LatLong req.lat req.lon) pickupLoc
   unless (distance < transporterConfig.arrivedPickupThreshold) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
-  unless (isJust ride.driverArrivalTime) $ do
-    now <- getCurrentTime
-    -- Notify the BAP BEFORE committing driverArrivalTime: with the write first, a
-    -- failed on_update makes the driver's retry a silent no-op (flag already set)
-    -- and the customer never learns the driver arrived. Notify-then-write keeps the
-    -- retry meaningful; the BAP-side arrival handler is idempotent on redelivery.
-    BP.sendDriverArrivalUpdateToBAP booking ride (Just now)
-    QRide.updateArrival rideId now
-    -- Extra Fare Mitigation warning --
-    driverInfo <- runInReplica $ QDI.findById ride.driverId >>= fromMaybeM (DriverNotFound ride.driverId.getId)
-    when (fromMaybe False driverInfo.extraFareMitigationFlag) $ fork "Extra Fare Mitigation Warning" $ notifyDriverOnExtraFareWarning ride.driverId ride.merchantOperatingCityId
+  let markArrived = do
+        now <- getCurrentTime
+        -- Notify the BAP BEFORE committing driverArrivalTime: with the write first, a
+        -- failed on_update makes the driver's retry a silent no-op (flag already set)
+        -- and the customer never learns the driver arrived. Notify-then-write keeps the
+        -- retry meaningful; the BAP-side arrival handler is idempotent on redelivery.
+        BP.sendDriverArrivalUpdateToBAP booking ride (Just now)
+        QRide.updateArrival rideId now
+        -- Extra Fare Mitigation warning --
+        driverInfo <- runInReplica $ QDI.findById ride.driverId >>= fromMaybeM (DriverNotFound ride.driverId.getId)
+        when (fromMaybe False driverInfo.extraFareMitigationFlag) $ fork "Extra Fare Mitigation Warning" $ notifyDriverOnExtraFareWarning ride.driverId ride.merchantOperatingCityId
+  unless (isJust ride.driverArrivalTime) $
+    case req.stage of
+      -- Tells the rider only: driverArrivalTime (and so waiting charges) waits for the ARRIVED call.
+      Just NEAR -> fork "Driver Near Pickup Update To BAP" $ BP.sendDriverNearPickupUpdateToBAP booking ride
+      Just ARRIVED -> markArrived
+      Nothing -> markArrived
 
   pure Success
   where

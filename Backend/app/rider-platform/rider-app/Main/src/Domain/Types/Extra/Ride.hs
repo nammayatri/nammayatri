@@ -49,6 +49,7 @@ data RideAPIEntity = RideAPIEntity
     computedPriceWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     createdAt :: Kernel.Prelude.UTCTime,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    driverArrivalStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.DriverArrivalStatus,
     billingCategory :: SLT.BillingCategory,
     driverImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverName :: Kernel.Prelude.Text,

@@ -631,7 +631,9 @@ updateDriverArrivalStatus newStatus (Id rideId) = do
   updateOneWithKV
     [Se.Set BeamR.driverArrivalStatus newStatus, Se.Set BeamR.updatedAt _now]
     ( [Se.Is BeamR.id $ Se.Eq rideId]
-        <> maybe [] (\s -> [Se.Is BeamR.driverArrivalStatus $ Se.In s]) possiblePredecessors
+        -- No status yet counts as the lowest step, matching updateAndNotifyDriverArrivalStatus, so a
+        -- ride the tracking service never marked on-the-way can still move straight to REACHED.
+        <> maybe [] (\s -> [Se.Or [Se.Is BeamR.driverArrivalStatus $ Se.Eq Nothing, Se.Is BeamR.driverArrivalStatus $ Se.In s]]) possiblePredecessors
     )
   where
     possiblePredecessors =

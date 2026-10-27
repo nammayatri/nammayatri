@@ -264,6 +264,7 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     talkedWithDriver :: Bool,
     estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange,
     driverArrivalTime :: Maybe UTCTime,
+    driverArrivalStatus :: Maybe DRide.DriverArrivalStatus,
     destinationReachedAt :: Maybe UTCTime,
     returnStartedAt :: Maybe UTCTime,
     sosStatus :: Maybe SafetyDSos.SosStatus,
@@ -732,6 +733,7 @@ buildBookingStatusAPIEntity booking = do
       rideStatus = fmap (.status) mbActiveRide
       estimatedEndTimeRange = mbActiveRide >>= (.estimatedEndTimeRange)
       driverArrivalTime = mbActiveRide >>= (.driverArrivalTime)
+      driverArrivalStatus = mbActiveRide >>= (.driverArrivalStatus)
       destinationReachedTime = mbActiveRide >>= (.destinationReachedAt)
       returnStartedAt = mbActiveRide >>= (.returnStartedAt)
       talkedWithDriver = fromMaybe False (mbActiveRide >>= (.talkedWithDriver))
@@ -753,7 +755,7 @@ buildBookingStatusAPIEntity booking = do
         Nothing -> pure ()
       pure mbPending
     _ -> pure Nothing
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime returnStartedAt sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea) Nothing tollChargeApproval booking.eligibleForBetterDriverSearch (Id <$> booking.supersededByBookingId)
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime driverArrivalStatus destinationReachedTime returnStartedAt sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea) Nothing tollChargeApproval booking.eligibleForBetterDriverSearch (Id <$> booking.supersededByBookingId)
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
