@@ -10,8 +10,11 @@ module SharedLogic.DriverFleetOperatorAssociation
     checkFleetDriverAssociationIgnoringActive,
     checkFleetOperatorAssociation,
     checkDriverOperatorAssociation,
+    ensureDriverNotActiveElsewhere,
     resolveOperatorByCode,
     associateDriverWithOperator,
+    linkDriverToOperator,
+    endAssociationsForOperatorLink,
     sendOperatorDeepLinkForAuth,
     adjustOperatorAnalytics,
     AssociationChangeType (..),
@@ -19,8 +22,11 @@ module SharedLogic.DriverFleetOperatorAssociation
   )
 where
 
+import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverOperatorAssociation as DDOA
 import qualified Domain.Types.FleetOperatorAssociation as DFOA
 import qualified Domain.Types.Merchant as DM
@@ -46,9 +52,11 @@ import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Association.Change as AC
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
@@ -247,6 +255,14 @@ checkFleetDriverAssociationIgnoringActive fleetId driverId = do
   mbAssoc <- QFDA.findByDriverIdAndFleetOwnerIdWithStatus driverId fleetId.getId
   return $ isJust mbAssoc
 
+-- | For a requestor holding the driver only through a pending invite: moving the driver would end
+--   another fleet's or operator's active link without its consent, so it is refused.
+ensureDriverNotActiveElsewhere :: Id DP.Person -> Flow ()
+ensureDriverNotActiveElsewhere driverId = do
+  hasActiveFleetLink <- not . null <$> QFDA.findAllByDriverId driverId True
+  isActiveElsewhere <- if hasActiveFleetLink then pure True else isJust <$> QDOA.findByDriverId driverId True
+  when isActiveElsewhere $ throwError (InvalidRequest "Driver is associated with another fleet or operator")
+
 checkFleetOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
 checkFleetOperatorAssociation fleetId operatorId = do
   mbAssoc <- QFOA.findByFleetIdAndOperatorId fleetId.getId operatorId.getId True
@@ -273,6 +289,38 @@ associateDriverWithOperator merchant moc person operator isNew driverMobile mbVe
   QDOA.createDriverOperatorAssociationIfNotExists moc person.id operator.id (fromMaybe DVC.CAR mbVehicleCategory) False
   fork "Sending Operator Consent SMS to Driver" $
     sendOperatorDeepLinkForAuth person driverMobile moc.merchantId moc.id moc.country operator
+
+-- | Links the driver to the operator as ACTIVE, without the consent step: what postOperatorConsent
+--   does, minus the driver notification. Remaining active fleet/operator links and pending links to
+--   other operators end; a pending link to this operator is activated in place. Caller holds the
+--   driver's onboarding lock and owns the new operator's +1 analytics and the referral.
+linkDriverToOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> TransporterConfig -> DP.Person -> DP.Person -> Flow ()
+linkDriverToOperator merchant moc transporterConfig driver operator = do
+  checkForDriverAssociationOverwrite merchant driver.id
+  endAssociationsForOperatorLink moc.id transporterConfig driver
+  pendingAssocs <- QDOA.findAllByDriverId driver.id False
+  let isForOperator assoc = assoc.operatorId == operator.id.getId
+  forM_ (nub $ (.operatorId) <$> filter (not . isForOperator) pendingAssocs) $ \otherOperatorId ->
+    QDOA.endOperatorDriverAssociation otherOperatorId driver.id
+  mbVehicleCategory <- (>>= (.onboardingVehicleCategory)) <$> QDI.findById (cast driver.id)
+  case find isForOperator pendingAssocs of
+    Just pending -> QDOA.activateById pending.id mbVehicleCategory
+    Nothing -> do
+      assoc <- makeDriverOperatorAssociation merchant.id moc.id driver.id operator.id.getId defaultAssociationEnd True
+      QDOA.create assoc {DDOA.onboardingVehicleCategory = mbVehicleCategory}
+  SOnboardingComms.setOnboardingAsWithoutLock transporterConfig driver DI.INDIVIDUAL
+  -- Same as postOperatorConsent: cities without the unified recompute enable on linking.
+  unless (transporterConfig.requiresOnboardingInspection == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+    Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driver.id True (Just True)
+
+-- | Ends the driver's active fleet/operator links before an operator link. The vehicle goes only
+--   when the driver leaves a fleet (it is the fleet's); from an operator or from no link it stays.
+endAssociationsForOperatorLink :: Id DMOC.MerchantOperatingCity -> TransporterConfig -> DP.Person -> Flow ()
+endAssociationsForOperatorLink merchantOpCityId transporterConfig driver = do
+  leavesFleet <- not . null <$> QFDA.findAllByDriverId driver.id True
+  endDriverAssociations merchantOpCityId transporterConfig driver
+  when leavesFleet $
+    DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig driver.id
 
 sendOperatorDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.Country -> DP.Person -> Flow ()
 sendOperatorDeepLinkForAuth person mobileNumber merchantId merchantOpCityId country operator = do
@@ -318,6 +366,7 @@ fleetOperatorAssociationLockKey fleetOwnerId = "FleetOperatorAssociationChange:"
 -- Mandatory operatorCode, mirroring the admin-triggered association-change requirements:
 -- new operator must be specified up front, old deactivation + new activation happen
 -- in the same logical (lock-guarded) block, and same-operator requests are a no-op.
+-- Returns the operator a driver was newly linked to, for the caller's referral attribution.
 performAssociationChange ::
   DM.Merchant ->
   DMOC.MerchantOperatingCity ->
@@ -325,37 +374,70 @@ performAssociationChange ::
   Text ->
   Text ->
   AssociationChangeType ->
-  Flow ()
+  Flow (Maybe DP.Person)
 performAssociationChange merchant merchantOpCity requestorId subjectId operatorCode changeType = do
   let merchantOpCityId = merchantOpCity.id
   persons <- QP.findAllByPersonIdsAndMerchantOpsCityId [Id subjectId, Id requestorId] merchantOpCityId
   subject <- find (\p -> p.id == Id subjectId) persons & fromMaybeM (PersonDoesNotExist subjectId)
   unless (merchant.id == subject.merchantId && merchantOpCityId == subject.merchantOperatingCityId) $
     throwError (PersonDoesNotExist subjectId)
-  when (subjectId /= requestorId) $
-    whenJust (find (\p -> p.id == Id requestorId) persons) $ \requestor -> do
-      isValid <- isAssociationBetweenTwoPerson requestor subject
-      unless isValid $ throwError AccessDenied
+  let mbRequestor = find (\p -> p.id == Id requestorId) persons
+  -- A driver change runs this under the driver's onboarding lock instead (changeDriverOperator).
+  case changeType of
+    ChangeFleetOperator -> ensureRequestorMayChange mbRequestor subject
+    ChangeDriverOperator -> pure ()
   newOperator <- resolveOperatorByCode merchantOpCityId operatorCode
+  unless (subject.role `elem` allowedSubjectRoles changeType) $
+    throwError (InvalidRequest $ "Subject role " <> show subject.role <> " is not allowed for this association change")
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case changeType of
-    ChangeDriverOperator -> changeDriverOperator merchant merchantOpCity transporterConfig subject newOperator
-    ChangeFleetOperator -> changeFleetOperator merchant merchantOpCity transporterConfig subject newOperator
-  pure ()
+    ChangeDriverOperator -> changeDriverOperator merchant merchantOpCity transporterConfig mbRequestor subject newOperator
+    ChangeFleetOperator -> Nothing <$ changeFleetOperator merchant merchantOpCity transporterConfig subject newOperator
   where
-    changeDriverOperator merchant' moc' transporterConfig subject newOperator = do
+    -- The requestor must be associated with the subject; admins (not persons here) and self-changes skip it.
+    ensureRequestorMayChange mbRequestor subject =
+      when (subjectId /= requestorId) $
+        whenJust mbRequestor $ \requestor -> do
+          isValid <- isAssociationBetweenTwoPerson requestor subject
+          unless isValid $ throwError AccessDenied
+
+    -- isAssociationBetweenTwoPerson lets a fleet act on a driver it only invited; such a fleet can't
+    -- move a driver who is active elsewhere. Operators need an active link there already.
+    ensurePendingFleetMayMove mbRequestor personId =
+      when (subjectId /= requestorId) $
+        whenJust mbRequestor $ \requestor ->
+          when (requestor.role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $ do
+            isActiveInRequestorFleet <- checkFleetDriverAssociation requestor.id personId
+            unless isActiveInRequestorFleet $ ensureDriverNotActiveElsewhere personId
+
+    -- Only driver -> operator and fleet -> operator links exist. isAssociationBetweenTwoPerson checks who may
+    -- make the change; this checks what gets linked (no operator -> operator, no fleet owner as a driver).
+    allowedSubjectRoles = \case
+      ChangeDriverOperator -> [DP.DRIVER]
+      ChangeFleetOperator -> [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
+
+    -- Moves the driver as a whole, like the fleet/operator removal APIs: active fleet and operator
+    -- links end, and the new operator link is created active (no consent). Ownership and the current
+    -- link are read under the onboarding lock, so a concurrent consent or move can't change them after.
+    changeDriverOperator merchant' moc' transporterConfig mbRequestor subject newOperator = do
       let personId = subject.id
-      Redis.withLockRedis (driverOperatorAssociationLockKey personId) 10 $ do
-        mbActiveAssociation <- QDOA.findByDriverId personId True
-        case mbActiveAssociation of
-          Just old | old.operatorId == newOperator.id.getId -> pure ()
-          _ -> do
-            AC.withAssociation (AC.guardNoLiveRideByDriver personId) $ do
+      Redis.withLockRedisAndReturnValue (driverOperatorAssociationLockKey personId) 10 $ do
+        -- Nothing: already with this operator. Just mbOld: moved, from mbOld's operator if any.
+        mbMove <- SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.UnlinkFromOperator (SGuard.TargetDriver personId) $ do
+          ensureRequestorMayChange mbRequestor subject
+          mbActiveAssociation <- QDOA.findByDriverId personId True
+          case mbActiveAssociation of
+            Just old | old.operatorId == newOperator.id.getId -> pure Nothing
+            _ -> do
+              ensurePendingFleetMayMove mbRequestor personId
               whenJust mbActiveAssociation $ \old -> QDOA.endOperatorDriverAssociation old.operatorId personId
-              driverMobile <- maybe (pure "unknown") decrypt subject.mobileNumber
-              associateDriverWithOperator merchant' moc' subject newOperator False driverMobile Nothing
-            whenJust mbActiveAssociation $ \old -> adjustOperatorAnalytics transporterConfig personId old.operatorId (-1)
-            adjustOperatorAnalytics transporterConfig personId newOperator.id.getId 1
+              linkDriverToOperator merchant' moc' transporterConfig subject newOperator
+              pure (Just mbActiveAssociation)
+        -- Analytics after the guard's recompute, as before.
+        forM mbMove $ \mbOld -> do
+          whenJust mbOld $ \old -> adjustOperatorAnalytics transporterConfig personId old.operatorId (-1)
+          adjustOperatorAnalytics transporterConfig personId newOperator.id.getId 1
+          pure newOperator
 
     changeFleetOperator merchant' moc' transporterConfig subject newOperator = do
       let fleetOwnerId = subject.id.getId

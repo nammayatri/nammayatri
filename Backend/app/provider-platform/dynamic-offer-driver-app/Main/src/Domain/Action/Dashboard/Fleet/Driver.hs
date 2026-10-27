@@ -1270,13 +1270,20 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
       mbNewOperator <- forM operatorCode $ SA.resolveOperatorByCode merchantOpCityId
 
       Redis.withLockRedis (driverAssociationC personId) 10 $ do
-        -- Check if there's an active association before ending it
-        mbActiveAssociation <- FDV.findByDriverIdAndFleetOwnerId personId entityId True
-        SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id entityId) personId) SGuard.UnlinkFromFleet (SGuard.TargetDriver personId) $ do
-          DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig personId
+        mbActiveAssociation <- SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id entityId) personId) SGuard.UnlinkFromFleet (SGuard.TargetDriver personId) $ do
+          -- Check if there's an active association before ending it (under the onboarding lock, so a
+          -- consent that just completed is seen)
+          mbActive <- FDV.findByDriverIdAndFleetOwnerId personId entityId True
+          when (isNothing mbActive) $
+            ensureRequestorHoldsDriver mbNewOperator personId =<< SA.checkFleetDriverAssociationIgnoringActive (Id entityId) personId
+          -- The vehicle goes only if the driver was in this fleet; a pending invite doesn't make it the fleet's.
+          when (isJust mbActive) $
+            DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig personId
           FDV.endFleetDriverAssociation entityId personId
-          whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
-        SOnboardingComms.resetOnboardingAsIfNoFleet transporterConfig personId
+          whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity transporterConfig personId
+          pure mbActive
+        -- With a new operator the link already marked the driver INDIVIDUAL.
+        when (isNothing mbNewOperator) $ SOnboardingComms.resetOnboardingAsIfNoFleet transporterConfig personId
         -- Only decrement analytics if there was an active association
         when (isJust mbActiveAssociation) $ do
           Analytics.handleDriverAnalyticsAndFlowStatus
@@ -1290,7 +1297,9 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
                 DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
             )
         -- Increment analytics for the new operator association, if one was created
-        whenJust mbNewOperator $ \newOperator -> adjustOperatorAnalytics transporterConfig personId newOperator.id.getId 1
+        whenJust mbNewOperator $ \newOperator -> do
+          adjustOperatorAnalytics transporterConfig personId newOperator.id.getId 1
+          DOR.reassignDriverReferredByOperator merchantOpCityId personId newOperator.id
         when (isJust mbActiveAssociation) $
           fork "Driver fleet unlink notification" $ do
             driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -1302,22 +1311,31 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
         Just newOperator | newOperator.id.getId == entityId -> throwError (InvalidRequest "Driver is already associated with this operator")
         _ ->
           Redis.withLockRedis (driverAssociationC personId) 10 $ do
-            -- Check if there's an active association before ending it
-            mbActiveAssociation <- DOV.findByDriverIdAndOperatorId personId (Id entityId) True
             SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id entityId) personId) SGuard.UnlinkFromOperator (SGuard.TargetDriver personId) $ do
+              -- Check if there's an active association before ending it (under the onboarding lock)
+              mbActiveAssociation <- DOV.findByDriverIdAndOperatorId personId (Id entityId) True
+              when (isNothing mbActiveAssociation) $
+                ensureRequestorHoldsDriver mbNewOperator personId . isJust =<< DOV.findByDriverIdAndOperatorId personId (Id entityId) False
               DOV.endOperatorDriverAssociation entityId personId
-              whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
+              whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity transporterConfig personId
               when (isJust mbActiveAssociation) $ adjustOperatorAnalytics transporterConfig personId entityId (-1)
               whenJust mbNewOperator $ \newOperator -> adjustOperatorAnalytics transporterConfig personId newOperator.id.getId 1
+            whenJust mbNewOperator $ \newOperator -> DOR.reassignDriverReferredByOperator merchantOpCityId personId newOperator.id
     _ -> throwError (InvalidRequest "Invalid Data")
   pure Success
   where
     driverAssociationC personId = "DriverOperatorAssociationChange:" <> personId.getId
 
-    linkDriverToNewOperator merchant moc personId newOperator = do
+    linkDriverToNewOperator merchant moc transporterConfig personId newOperator = do
       driverPerson <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      driverMobile <- mapM decrypt driverPerson.mobileNumber >>= fromMaybeM (InvalidRequest "Driver mobile number not found")
-      SA.associateDriverWithOperator merchant moc driverPerson newOperator False driverMobile Nothing
+      SA.linkDriverToOperator merchant moc transporterConfig driverPerson newOperator
+
+    -- For a requestor without an active link: only a pending invite lets it remove the driver, and it
+    -- can't move a driver who is active elsewhere to an operator (the move would end that link).
+    -- Called under the onboarding lock, so a concurrent move or consent can't change the holder after it.
+    ensureRequestorHoldsDriver mbNewOperator personId hasPendingLink = do
+      unless hasPendingLink $ throwError (InvalidRequest "Driver is not associated with the requestor")
+      whenJust mbNewOperator $ \_ -> SA.ensureDriverNotActiveElsewhere personId
 
     adjustOperatorAnalytics = SA.adjustOperatorAnalytics
 
@@ -4504,6 +4522,7 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) driverId) SGuard.ActivateToFleet (SGuard.TargetDriver driverId) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig driver
         QFDV.approveFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
+        SOnboardingComms.setOnboardingAsWithoutLock transporterConfig driver DI.FLEET_DRIVER
         when (merchant.overwriteAssociation == Just True) $ do
           DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig driverId
         fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver driverId merchantOpCityId

@@ -27,6 +27,7 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.Alert
 import Domain.Types.Common
 import qualified Domain.Types.DriverInformation as DDI
@@ -525,7 +526,11 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
     SA.endDriverAssociations merchantOperatingCityId transporterConfig driver
     mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId driverId
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
+    -- A fleet driver drives the fleet's vehicle when the city blocks own RCs for fleet drivers.
+    when (transporterConfig.blockDriverOwnRCForFleetDrivers == Just True) $
+      DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig driverId
     FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
+    SOnboardingComms.setOnboardingAsWithoutLock transporterConfig driver DDI.FLEET_DRIVER
     fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver driverId merchantOperatingCityId
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId
     Analytics.handleDriverAnalyticsAndFlowStatus

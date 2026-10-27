@@ -44,6 +44,7 @@ import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
 import qualified Domain.Types.DocumentReminderHistory as DRH
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverGstin as DDGST
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DDPC
 import qualified Domain.Types.DriverSSN as DDSSN
@@ -80,6 +81,7 @@ import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VDocs
@@ -683,9 +685,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
     Just authId -> do
       smsCfg <- asks (.smsCfg)
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
-        SA.endDriverAssociations merchantOpCityId transporterConfig person
-        when (merchant.overwriteAssociation == Just True) $
-          DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
+        SA.endAssociationsForOperatorLink merchantOpCityId transporterConfig person
 
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
       let regId = Id authId :: Id SR.RegistrationToken
@@ -720,9 +720,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       when (otp /= req.otp) $ throwError InvalidOtp
 
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
-        SA.endDriverAssociations merchantOpCityId transporterConfig person
-        when (merchant.overwriteAssociation == Just True) $
-          DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
+        SA.endAssociationsForOperatorLink merchantOpCityId transporterConfig person
         verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
 
   pure Success
@@ -1389,6 +1387,7 @@ verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person t
 
   assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId DomainRC.defaultAssociationEnd True
   QDOA.create assoc
+  SOnboardingComms.setOnboardingAsWithoutLock transporterConfig person DI.INDIVIDUAL
   Analytics.handleDriverAnalyticsAndFlowStatus
     transporterConfig
     person.id
