@@ -688,6 +688,22 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
               cardType = req.cardType
             }
 
+-- | Redis can keep a pre-charge status for a paid Juspay order after a lost concurrent write; repair only from that status (a status that lands meanwhile, e.g. AUTO_REFUNDED, wins), then re-read.
+repairStaleChargedStatus :: BeamFlow m r => DOrder.PaymentOrder -> m DOrder.PaymentOrder
+repairStaleChargedStatus order
+  | order.status == Payment.CHARGED = pure order
+  | order.serviceProvider /= Payment.Juspay = pure order
+  | order.status `notElem` preChargeStatuses = pure order
+  | otherwise =
+    HQTransaction.findEarliestChargedTransactionByOrderId order.id >>= \case
+      Nothing -> pure order
+      Just txn -> do
+        logError $ "Order " <> order.id.getId <> " reads " <> show order.status <> " but transaction " <> txn.id.getId <> " is CHARGED; repairing the order status before refund"
+        QOrder.updateStatusIfIn order.id preChargeStatuses Payment.CHARGED
+        fromMaybe order <$> QOrder.findById order.id
+  where
+    preChargeStatuses = [Payment.NEW, Payment.STARTED, Payment.PENDING_VBV, Payment.AUTHORIZING]
+
 -- | Unified refund service. Replaces both createRefundService and initiateStripeRefundService.
 -- Caller must enforce any refund_request-level invariants (e.g. single-in-flight) before calling;
 -- this service only discriminates Stripe attempts via req.refundsId.
@@ -701,7 +717,7 @@ refundPaymentService ::
   (PInterface.RefundPaymentReq -> m PInterface.RefundPaymentResp) ->
   m (Maybe PInterface.RefundPaymentResp)
 refundPaymentService req refundCall = do
-  order <- QOrder.findById req.orderId >>= fromMaybeM (PaymentOrderDoesNotExist req.orderId.getId)
+  order <- QOrder.findById req.orderId >>= fromMaybeM (PaymentOrderDoesNotExist req.orderId.getId) >>= repairStaleChargedStatus
   unless (order.status == Payment.CHARGED) $
     throwError (InvalidRequest $ "Order status for refund should be CHARGED, but got: " <> show order.status)
   Redis.whenWithLockRedisAndReturnValue (refundProccessingKey order.shortId.getShortId) 60 (processRefund order) >>= \case
@@ -1858,7 +1874,9 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall = do
       maybe
         (updateOrderTransaction merchantOpCityId order orderTxn Nothing)
         ( \transactionUUID' ->
-            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction merchantOpCityId order orderTxn Nothing
+            Redis.withWaitAndLockRedis (txnProccessingKey transactionUUID') 60 2000 $ do
+              freshOrder <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
+              updateOrderTransaction merchantOpCityId freshOrder orderTxn Nothing
         )
         transactionUUID -- should we put it in fork ?
       return $
@@ -1916,8 +1934,10 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall = do
         maybe
           (updateOrderTransaction merchantOpCityId order orderTxn Nothing)
           ( \transactionUUID' ->
-              Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $
-                updateOrderTransaction merchantOpCityId order orderTxn Nothing
+              -- Wait, never skip (a skip lets updateEffectiveAmount's whole-row Redis rewrite below restore a pre-charge status), and decide from the stored order: the copy read before the gateway call can predate a webhook's CHARGED write.
+              Redis.withWaitAndLockRedis (txnProccessingKey transactionUUID') 60 2000 $ do
+                freshOrder <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
+                updateOrderTransaction merchantOpCityId freshOrder orderTxn Nothing
           )
           txnObj.txnUuid
       mapM_ (upsertRefundStatus merchantOpCityId order) refunds

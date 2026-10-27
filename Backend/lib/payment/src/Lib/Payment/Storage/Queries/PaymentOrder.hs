@@ -110,6 +110,17 @@ updateStatusToExpired orderId = do
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
 
+updateStatusIfIn :: BeamFlow m r => Id DOrder.PaymentOrder -> [Payment.TransactionStatus] -> Payment.TransactionStatus -> m ()
+updateStatusIfIn orderId fromStatuses status = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPO.status status,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [ Se.Is BeamPO.id $ Se.Eq $ getId orderId,
+      Se.Is BeamPO.status $ Se.In fromStatuses
+    ]
+
 updateStatus :: BeamFlow m r => Id DOrder.PaymentOrder -> Text -> Payment.TransactionStatus -> m ()
 updateStatus orderId paymentServiceOrderId status = do
   now <- getCurrentTime
