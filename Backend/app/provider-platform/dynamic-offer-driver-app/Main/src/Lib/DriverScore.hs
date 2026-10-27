@@ -341,6 +341,7 @@ createDriverStat currency distanceUnit driverId = do
             totalPayoutEarnings = 0.0,
             totalPayoutAmountPaid = Nothing,
             totalValidActivatedRides = 0,
+            totalValidRides = 0,
             totalReferralCounts = 0,
             d2cReferralCount = 0,
             d2dReferralCount = 0,
