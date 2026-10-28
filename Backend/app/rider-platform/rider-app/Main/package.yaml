@@ -202,6 +202,7 @@ library:
     - utils
     - external
     - communication-engine
+    - gtfs-data-server
 
 executables:
   rider-app-exe:

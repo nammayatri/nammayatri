@@ -1962,6 +1962,7 @@ library
     , filepath
     , finance-kernel
     , geohash ==1.0.1
+    , gtfs-data-server
     , hashable
     , haskell-cac
     , hedis
