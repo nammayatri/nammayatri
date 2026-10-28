@@ -460,6 +460,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.upgradeTierDropRetentionTime upgradeTierDropRetentionTime,
       Se.Set Beam.useCategoryBasedVerificationPriorityList useCategoryBasedVerificationPriorityList,
       Se.Set Beam.useDBForAnalytics useDBForAnalytics,
+      Se.Set Beam.useKaptureAsSourceForOngoingIssues useKaptureAsSourceForOngoingIssues,
       Se.Set Beam.useOfferListCache useOfferListCache,
       Se.Set Beam.useSilentFCMForForwardBatch useSilentFCMForForwardBatch,
       Se.Set Beam.useSurgeConfigPricing useSurgeConfigPricing,

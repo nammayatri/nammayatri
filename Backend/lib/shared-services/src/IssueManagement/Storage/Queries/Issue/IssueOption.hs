@@ -90,6 +90,9 @@ findAllByCategoryId (Id issueCategoryId) =
 findByIGMIssueSubCategory :: BeamFlow m r => Maybe Spec.IssueSubCategory -> m (Maybe IssueOption)
 findByIGMIssueSubCategory igmSubCategory = findOneWithKV [Is BeamIO.igmSubCategory $ Eq igmSubCategory]
 
+findByLabelAndCategoryId :: BeamFlow m r => Text -> Id IssueCategory -> m (Maybe IssueOption)
+findByLabelAndCategoryId labelText issueCategoryId = findOneWithKV [And [Is BeamIO.label $ Eq (Just labelText), Is BeamIO.issueCategoryId $ Eq (Just (getId issueCategoryId))]]
+
 updatePriority :: BeamFlow m r => Id IssueOption -> Int -> m ()
 updatePriority issueOptionId priority =
   updateWithKV

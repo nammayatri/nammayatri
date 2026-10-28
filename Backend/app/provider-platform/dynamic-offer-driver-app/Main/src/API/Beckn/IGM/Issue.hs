@@ -47,7 +47,8 @@ issue :: Id Common.Merchant -> SignatureAuthResult -> Spec.IssueReq -> FlowHandl
 issue merchantId authResult issueReq = withFlowHandlerAPIForSubscriber authResult.subscriber.subscriber_id $ do
   bapId <- issueReq.context.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
   isValueAddNP <- CQVAN.isValueAddNP bapId
-  BI.issue (cast merchantId) issueReq AUI.driverIssueHandle Common.DRIVER isValueAddNP
+  let identifier = if isValueAddNP then Common.DRIVER else Common.IGM
+  BI.issue (cast merchantId) issueReq AUI.driverIssueHandle identifier isValueAddNP
 
 onIssue :: Id Common.Merchant -> SignatureAuthResult -> Spec.OnIssueReq -> FlowHandler Spec.AckResponse
 onIssue merchantId authResult onIssueReq = withFlowHandlerAPIForSubscriber authResult.subscriber.subscriber_id $ BI.onIssue (cast merchantId) onIssueReq AUI.driverIssueHandle Common.DRIVER

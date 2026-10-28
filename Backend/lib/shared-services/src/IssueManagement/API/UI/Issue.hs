@@ -51,3 +51,6 @@ type IssueAPI =
       :> "chat"
       :> "state"
       :> Common.ChatStateAPI
+    :<|> Capture "issueId" (Id Domain.IssueReport)
+      :> "ticketDetails"
+      :> Common.IssueTicketDetailsAPI

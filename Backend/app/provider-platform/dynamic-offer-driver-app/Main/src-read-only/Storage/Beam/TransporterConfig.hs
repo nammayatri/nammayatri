@@ -372,6 +372,7 @@ data TransporterConfigT f = TransporterConfigT
     upgradeTierDropRetentionTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     useCategoryBasedVerificationPriorityList :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     useDBForAnalytics :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    useKaptureAsSourceForOngoingIssues :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     useOfferListCache :: B.C f Kernel.Prelude.Bool,
     useSilentFCMForForwardBatch :: B.C f Kernel.Prelude.Bool,
     useSurgeConfigPricing :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

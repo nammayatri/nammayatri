@@ -36,12 +36,13 @@ import Sequelize.SQLObject (SQLObject (..), ToSQLObject (convertToSQLObject))
 import Servant hiding (Summary)
 import qualified Text.Show
 
-data Identifier = CUSTOMER | DRIVER
+data Identifier = CUSTOMER | DRIVER | IGM
   deriving (Generic, Read, Eq)
 
 instance Show Identifier where
   show CUSTOMER = "Customer"
   show DRIVER = "Driver"
+  show IGM = "Igm"
 
 data Ride = Ride
   { id :: Id Ride,
@@ -242,6 +243,11 @@ $(mkBeamInstancesForEnumAndList ''VehicleVariant)
 $(mkBeamInstancesForEnum ''IssueStatus)
 $(mkHttpInstancesForEnum ''IssueStatus)
 $(mkBeamInstancesForEnum ''CustomerResponse)
+
+data IssueFlowType = ON_US | OFF_US
+  deriving (Show, Read, Generic, Eq, Ord, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''IssueFlowType)
 
 data ChatType = IssueMessage | IssueOption | MediaFile | IssueDescription
   deriving (Generic, FromJSON, ToSchema, ToJSON, Show, Read, Eq, Ord)

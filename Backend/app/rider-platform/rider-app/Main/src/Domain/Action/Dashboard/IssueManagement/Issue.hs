@@ -44,6 +44,7 @@ module Domain.Action.Dashboard.IssueManagement.Issue
     postIssueApiIntegrationTest,
     getIssueFlowSimulate,
     postIssueChatUpload,
+    getIssueTicketDetails,
   )
 where
 
@@ -64,6 +65,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueReport
+import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -509,3 +511,9 @@ getIssueFlowSimulate ::
   Environment.Flow IssueManagement.Common.UI.Issue.IssueOptionListRes
 getIssueFlowSimulate (Kernel.Types.Id.ShortId merchantShortId) city mbOptionId mbRideId mbSessionId categoryId =
   DIssue.getIssueFlowSimulate (Kernel.Types.Id.ShortId merchantShortId) city categoryId mbOptionId mbRideId mbSessionId dashboardIssueHandle Common.CUSTOMER
+
+getIssueTicketDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> Environment.Flow IssueManagement.Common.UI.Issue.IssueTicketDetailsRes)
+getIssueTicketDetails (Kernel.Types.Id.ShortId merchantShortId) opCity issueReportId = do
+  issueReport <- QIR.findById issueReportId >>= Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Issue report not found")
+  void $ DIssue.checkMerchantCityAccess (Kernel.Types.Id.ShortId merchantShortId) opCity issueReport Nothing dashboardIssueHandle
+  DAI.getTicketDetails issueReportId dashboardIssueHandle True

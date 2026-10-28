@@ -91,8 +91,8 @@ updateIsActive issueCategoryId isActive = do
     ]
     [Is BeamIC.id $ Eq (getId issueCategoryId)]
 
-findByIGMIssueCategory :: BeamFlow m r => Text -> m (Maybe IssueCategory)
-findByIGMIssueCategory igmCategory = findOneWithKV [Is BeamIC.igmCategory $ Eq $ Just igmCategory]
+findByIGMIssueCategory :: BeamFlow m r => Text -> Id Merchant -> Id MerchantOperatingCity -> m (Maybe IssueCategory)
+findByIGMIssueCategory igmCategory (Id mId) (Id mocId) = findOneWithKV [And [Is BeamIC.igmCategory $ Eq $ Just igmCategory, Is BeamIC.merchantId $ Eq mId, Is BeamIC.merchantOperatingCityId $ Eq mocId]]
 
 findByNameAndMerchantOpCityId :: BeamFlow m r => Text -> Id MerchantOperatingCity -> m (Maybe IssueCategory)
 findByNameAndMerchantOpCityId categoryName merchantOpCityId = findOneWithKV [And [Is BeamIC.category $ Eq categoryName, Is BeamIC.merchantOperatingCityId $ Eq (getId merchantOpCityId)]]

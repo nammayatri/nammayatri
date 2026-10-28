@@ -2160,3 +2160,24 @@ notifyPickupNoShow merchantOpCityId driverId entityData = do
   case grpcResult of
     Left e -> logWarning $ "GRPC pickup zone no-show notification failed for driver " <> driverId.getId <> ": " <> show e
     Right _ -> pure ()
+
+notifyTicketCreated ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  Text ->
+  m ()
+notifyTicketCreated merchantOpCityId driver category = do
+  let notifKey = "TICKET_CREATED_" <> T.toUpper category
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId notifKey Nothing Nothing (Just $ fromMaybe ENGLISH driver.language) Nothing
+  when (isNothing mbMerchantPN) $ logError $ "MISSED_FCM - " <> notifKey
+  whenJust mbMerchantPN $ \merchantPN -> do
+    let title = merchantPN.title
+        body = merchantPN.body
+    notifyDriverWithProviders merchantOpCityId Notification.DRIVER_NOTIFY title body driver driver.deviceToken Nothing EmptyDynamicParam
