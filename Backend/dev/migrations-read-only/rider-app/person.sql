@@ -324,3 +324,9 @@ ALTER TABLE atlas_app.person ADD COLUMN accepted_policies text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person ADD COLUMN comms_consent boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN email_verified boolean ;
+ALTER TABLE atlas_app.person ADD COLUMN email_source text ;

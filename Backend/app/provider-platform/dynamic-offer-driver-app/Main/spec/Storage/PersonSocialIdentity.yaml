@@ -1,0 +1,93 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  Person: Domain.Types.Person
+  EncryptedField: Kernel.External.Encryption
+  AsEncrypted: Kernel.External.Encryption
+
+PersonSocialIdentity:
+  tableName: person_social_identity
+
+  derives: "Generic, Show"
+
+  types:
+    SocialLoginProvider:
+      enum: "GOOGLE, APPLE"
+
+  fields:
+    id: Id PersonSocialIdentity
+    personId: Id Person
+    merchantId: Id Merchant
+    provider: SocialLoginProvider
+    issuer: Text
+    providerSubject: Text
+    clientId: Text
+    email: Maybe (EncryptedField 'AsEncrypted Text)
+    isPrivateEmail: Bool
+    appleRefreshToken: Maybe (EncryptedField 'AsEncrypted Text)
+    lastLoginAt: Maybe UTCTime
+    validTill: UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    email: Maybe Text
+    appleRefreshToken: Maybe Text
+
+  sqlType:
+    issuer: text
+    providerSubject: text
+    clientId: text
+    email: text
+    appleRefreshToken: text
+
+  fromTType:
+    email: Encrypted <$> email|E
+    appleRefreshToken: Encrypted <$> appleRefreshToken|E
+
+  toTType:
+    email: email <&> unEncrypted|E
+    appleRefreshToken: appleRefreshToken <&> unEncrypted|E
+
+  constraints:
+    id: PrimaryKey
+    personId: SecondaryKey
+    providerSubject: SecondaryKey
+
+  extraIndexes:
+    - columns: [merchantId, provider, providerSubject]
+      unique: true
+    - columns: [personId, provider]
+      unique: true
+
+  queries:
+    findByMerchantIdAndProviderAndSubject:
+      kvFunction: findOneWithKV
+      where:
+        and: [providerSubject, provider, merchantId]
+
+    findAllByPersonId:
+      kvFunction: findAllWithKV
+      where: personId
+
+    findByPersonIdAndProvider:
+      kvFunction: findOneWithKV
+      where:
+        and: [personId, provider]
+
+    deleteByPersonIdAndProvider:
+      kvFunction: deleteWithKV
+      where:
+        and: [personId, provider]
+
+    deleteAllByPersonId:
+      kvFunction: deleteWithKV
+      where: personId
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
+  extraOperations:
+    - GENERATE_INDEXES

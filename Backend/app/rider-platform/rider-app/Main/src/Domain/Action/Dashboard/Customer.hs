@@ -67,6 +67,7 @@ import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Person as SLP
+import qualified SharedLogic.SocialLogin as SSocialLogin
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person as CQPerson
@@ -95,6 +96,7 @@ deleteCustomerDelete merchantShortId opCity customerId = do
   unless (null bookings) $ throwError (InvalidRequest "Can't delete customer, has a valid booking in past.")
   dues <- SPayment.getDuesForPerson person
   when (dues.totalDueAmount > 0) $ throwError (PersonHasPendingDues dues.totalDueAmount)
+  SSocialLogin.deleteSocialIdentities personId
   _ <- QP.deleteById personId
   QPFS.clearCache personId
   _ <- QSRL.deleteAllByRiderId personId

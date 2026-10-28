@@ -631,7 +631,7 @@ in  { esqDBCfg
     , coreVersion = "0.9.4"
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/dynamic-offer-driver-app.log"
+        //  { logFilePath = "${common.logDir}/dynamic-offer-driver-app.log"
             , logRawSql = True
             }
     , googleTranslateUrl = common.googleTranslateUrl
@@ -700,6 +700,7 @@ in  { esqDBCfg
     , singleBatchProcessingTempDelay = +2
     , ondcTokenMap = sec.ondcTokenMap
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
+    , socialLoginConfig = common.socialLoginConfig
     , quoteRespondCoolDown = +10
     , sosAlertsTopicARN
     , slackNotificationConfig

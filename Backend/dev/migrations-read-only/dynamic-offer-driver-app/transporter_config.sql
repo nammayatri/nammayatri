@@ -1288,5 +1288,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN ride_evidence_c
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN show_route_per_request boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_email_count_window2 json ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_email_count_window1 json ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_email_count_threshold2 integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_email_count_threshold1 integer ;
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_config json ;
