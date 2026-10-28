@@ -265,27 +265,31 @@ seed_mg_dashboard_access() {
             continue
         fi
         echo "Applying $(basename "$sql")..."
-        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -f "$sql" > /dev/null 2>&1 \
-            || echo "WARNING: failed to apply $sql  (manual: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -f $sql)"
+        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$sql" > /dev/null 2>&1 \
+            || echo "WARNING: failed to apply $sql  (manual: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -v ON_ERROR_STOP=1 -f $sql)"
     done
 }
 
-# The MG tables must exist before the driver app serves MG requests. Skipped when mg_enrollment is present.
+# The MG tables must exist before the driver app serves MG requests. Each table file is applied only
+# while its own table is missing (the files are not idempotent), and stops at its first error so a
+# half-applied file is reported instead of hidden. A table left half-created by a failed run has to be
+# dropped before the next run.
 seed_mg_tables() {
-    local present
-    present=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -tAc \
-        "SELECT to_regclass('atlas_driver_offer_bpp.mg_enrollment') IS NOT NULL" 2>/dev/null)
-    if [ "$present" = "t" ]; then
-        return 0
-    fi
-    echo "Creating minimum-guarantee tables (atlas_driver_offer_bpp.mg_*)..."
+    local sql table present
     for sql in "${MG_TABLE_SQLS[@]}"; do
+        table="$(basename "$sql" .sql)"
+        present=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -tAc \
+            "SELECT to_regclass('atlas_driver_offer_bpp.$table') IS NOT NULL" 2>/dev/null)
+        if [ "$present" = "t" ]; then
+            continue
+        fi
         if [ ! -f "$sql" ]; then
             echo "WARNING: MG table SQL not found: $sql"
             continue
         fi
-        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -f "$sql" > /dev/null 2>&1 \
-            || echo "WARNING: failed to apply $sql  (manual: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -f $sql)"
+        echo "Creating atlas_driver_offer_bpp.$table..."
+        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$sql" > /dev/null 2>&1 \
+            || echo "WARNING: failed to apply $sql  (if the table was half-created, drop it first; manual: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -v ON_ERROR_STOP=1 -f $sql)"
     done
 }
 

@@ -42,6 +42,7 @@ import qualified Domain.Types.Person as DP
 import Environment
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
@@ -306,36 +307,42 @@ notifyInvitees campaign = do
         Left err -> logError $ "MG invite notification failed for driver " <> eligibility.driverId.getId <> ": " <> show err
         Right () -> QMgEl.updateNotifiedAtById (Just now) eligibility.id
 
+statusLockKey :: Id DCommon.MgCampaign -> Text
+statusLockKey campaignId = "MgCampaignStatus:" <> campaignId.getId
+
 postMinimumGuaranteeStatus :: ShortId DM.Merchant -> Context.City -> Id DCommon.MgCampaign -> Common.MgCampaignStatusReq -> Flow APISuccess
 postMinimumGuaranteeStatus merchantShortId opCity reqCampaignId req = do
   (merchant, merchantOpCity) <- resolveCity merchantShortId opCity
-  campaign <- findScopedCampaign merchantOpCity (cast reqCampaignId)
-  case (campaign.status, req.status) of
-    (DMgC.DRAFT, DMgC.PUBLISHED) -> do
-      windows <- QMgW.findAllByCampaignId campaign.id
-      when (null windows) $ throwError (InvalidRequest "A campaign needs at least one window before it can be published")
-      today <- localToday merchantOpCity
-      when (campaign.endDate < today) $ throwError (InvalidRequest "endDate is already in the past")
-      QMgC.updateStatusById DMgC.PUBLISHED campaign.id
-      -- the campaign's own settlement chain, first run in 15 minutes
-      createJobIn @_ @'MinimumGuaranteeSettlement (Just merchant.id) (Just merchantOpCity.id) 900 $
-        MinimumGuaranteeSettlementJobData {merchantId = merchant.id, merchantOperatingCityId = merchantOpCity.id, campaignId = campaign.id}
-      notifyInvitees campaign {DMgC.status = DMgC.PUBLISHED}
-    (DMgC.PUBLISHED, DMgC.PAUSED) -> do
-      QMgC.updateStatusById DMgC.PAUSED campaign.id
-      -- drivers inside a window stop being force-assigned for the pause
-      setMgCampaignPaused campaign.id True
-    (DMgC.PAUSED, DMgC.PUBLISHED) -> do
-      QMgC.updateStatusById DMgC.PUBLISHED campaign.id
-      setMgCampaignPaused campaign.id False
-    (from, DMgC.CANCELLED)
-      | from `elem` [DMgC.DRAFT, DMgC.PUBLISHED, DMgC.PAUSED] -> do
-        QMgC.updateStatusById DMgC.CANCELLED campaign.id
-        setMgCampaignPaused campaign.id False
-        -- days that are over are still settled by the campaign's job; today and later are called off
+  -- two admins changing one campaign's status at once must not both act on the same current status
+  -- (a double publish would start two settlement chains), so the read and the change are serialised
+  Redis.withWaitOnLockRedisWithExpiry (statusLockKey reqCampaignId) 10 60 $ do
+    campaign <- findScopedCampaign merchantOpCity (cast reqCampaignId)
+    case (campaign.status, req.status) of
+      (DMgC.DRAFT, DMgC.PUBLISHED) -> do
+        windows <- QMgW.findAllByCampaignId campaign.id
+        when (null windows) $ throwError (InvalidRequest "A campaign needs at least one window before it can be published")
         today <- localToday merchantOpCity
-        cancelUpcomingEnrollments campaign today
-    (from, to) -> throwError (InvalidRequest $ "transition " <> show from <> " -> " <> show to <> " is not allowed")
+        when (campaign.endDate < today) $ throwError (InvalidRequest "endDate is already in the past")
+        QMgC.updateStatusById DMgC.PUBLISHED campaign.id
+        -- the campaign's own settlement chain, first run in 15 minutes
+        createJobIn @_ @'MinimumGuaranteeSettlement (Just merchant.id) (Just merchantOpCity.id) 900 $
+          MinimumGuaranteeSettlementJobData {merchantId = merchant.id, merchantOperatingCityId = merchantOpCity.id, campaignId = campaign.id}
+        notifyInvitees campaign {DMgC.status = DMgC.PUBLISHED}
+      (DMgC.PUBLISHED, DMgC.PAUSED) -> do
+        QMgC.updateStatusById DMgC.PAUSED campaign.id
+        -- drivers inside a window stop being force-assigned for the pause
+        setMgCampaignPaused campaign.id True
+      (DMgC.PAUSED, DMgC.PUBLISHED) -> do
+        QMgC.updateStatusById DMgC.PUBLISHED campaign.id
+        setMgCampaignPaused campaign.id False
+      (from, DMgC.CANCELLED)
+        | from `elem` [DMgC.DRAFT, DMgC.PUBLISHED, DMgC.PAUSED] -> do
+          QMgC.updateStatusById DMgC.CANCELLED campaign.id
+          setMgCampaignPaused campaign.id False
+          -- days that are over are still settled by the campaign's job; today and later are called off
+          today <- localToday merchantOpCity
+          cancelUpcomingEnrollments campaign today
+      (from, to) -> throwError (InvalidRequest $ "transition " <> show from <> " -> " <> show to <> " is not allowed")
   pure Success
 
 postMinimumGuaranteeExtend :: ShortId DM.Merchant -> Context.City -> Id DCommon.MgCampaign -> Common.MgCampaignExtendReq -> Flow APISuccess

@@ -36,6 +36,7 @@ module SharedLogic.MinimumGuarantee.Rules
 where
 
 import Data.List (sortOn)
+import Data.Ord (Down (..))
 import Data.Time (Day, UTCTime (..), addDays, addUTCTime, diffUTCTime, timeOfDayToTime, timeToTimeOfDay, utctDay)
 import qualified Domain.Types.Extra.MgEnrollment as DEME
 import qualified Domain.Types.MgCampaignRule as DMR
@@ -101,7 +102,7 @@ overlapSeconds from to spans = sum (map overlap spans)
 -- validated on save to start at 0, so a value below every slab (0% here) is only a safe default.
 slabPercent :: [DMR.MgSlab] -> Int -> Int
 slabPercent slabs v =
-  maybe 0 (.percent) . listToMaybe . reverse . sortOn (.fromValue) $ filter (\s -> s.fromValue <= v) slabs
+  maybe 0 (.percent) . listToMaybe . sortOn (Down . (.fromValue)) $ filter (\s -> s.fromValue <= v) slabs
 
 -- | The value of a metric for the day. Break time counts whole minutes only.
 metricValue :: DMR.MgMetric -> DEME.MgMetrics -> Int

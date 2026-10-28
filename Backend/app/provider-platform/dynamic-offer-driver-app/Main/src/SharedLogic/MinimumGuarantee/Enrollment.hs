@@ -144,8 +144,10 @@ optInForDay actorId driverId campaignId periodDate = do
                 }
         -- the day's guarantee is reserved against the campaign budget before anything is promised
         reserveBudget campaign
+        -- the context goes in before the row: the row is the last step, so once it is written nothing
+        -- after it can fail and leave an enrolled day that no hook can see; any earlier failure takes
+        -- the context and the reservation back
         ( do
-            maybe (QMgE.create enrollment) (const (QMgE.updateByPrimaryKey enrollment)) existing
             registerMgCtx
               driverId
               MgDayCtx
@@ -156,8 +158,9 @@ optInForDay actorId driverId campaignId periodDate = do
                   spans,
                   expiresAt = addUTCTime (fromIntegral (campaign.settlementGraceMinutes * 60)) lastEnd
                 }
+            maybe (QMgE.create enrollment) (const (QMgE.updateByPrimaryKey enrollment)) existing
           )
-          `C.onException` releaseBudget campaign
+          `C.onException` (unregisterMgCtx driverId newId >> releaseBudget campaign)
         pure enrollment
 
 -- | Calls off every enrollment of a cancelled campaign from `fromDay` (today) on: no top-up, no
@@ -170,11 +173,15 @@ cancelUpcomingEnrollments campaign fromDay = do
   rows <- QMgEx.findAllUpcomingFromDay campaign.id fromDay cancelBatchLimit
   when (length rows >= cancelBatchLimit) $
     logWarning $ "MG campaign " <> campaign.id.getId <> ": " <> show cancelBatchLimit <> " enrollments cancelled in one pass; cancel again to handle the rest"
-  forM_ rows $ \enrollment ->
-    withMgDriverLock enrollment.driverId $ do
-      QMgE.updateByPrimaryKey enrollment {DMgE.status = DMgE.CANCELLED_BY_ADMIN}
-      unregisterMgCtx enrollment.driverId enrollment.id
-      releaseBudget campaign
+  forM_ rows $ \row ->
+    withMgDriverLock row.driverId $ do
+      -- the row was read before the lock: a ride end or the settlement job may have changed it since
+      mbCurrent <- QMgE.findByPrimaryKey row.id
+      whenJust mbCurrent $ \enrollment ->
+        when (enrollment.status == DMgE.UPCOMING) $ do
+          QMgE.updateByPrimaryKey enrollment {DMgE.status = DMgE.CANCELLED_BY_ADMIN}
+          unregisterMgCtx enrollment.driverId enrollment.id
+          releaseBudget campaign
 
 cancelBatchLimit :: Int
 cancelBatchLimit = 20000

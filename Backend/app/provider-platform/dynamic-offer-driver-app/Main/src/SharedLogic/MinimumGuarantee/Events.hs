@@ -196,11 +196,9 @@ onFleetChanged driverId = do
   now <- getCurrentTime
   withLiveDays driverId $ \ctx enrollment campaign _rules -> do
     let beforeWindows = maybe False (now <) (spanStartOf ctx)
-    if beforeWindows || insideProgramWindow now ctx
-      then
-        let policy = if beforeWindows then DMgC.CANCEL else campaign.onFleetChange
-         in disqualifyOrCancelDay now campaign policy ctx enrollment
-      else pure ()
+    when (beforeWindows || insideProgramWindow now ctx) $
+      let policy = if beforeWindows then DMgC.CANCEL else campaign.onFleetChange
+       in disqualifyOrCancelDay now campaign policy ctx enrollment
 
 -- | Ends a day without a top-up. DISQUALIFY is a violation; CANCEL (and BLOCK reaching here, which
 -- only happens if a change slipped past the check) is an admin-style cancellation. The day leaves

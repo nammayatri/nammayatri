@@ -457,11 +457,18 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('List 200', function () { pm.response.to.have.status(200); });",
+                  "var tries = Number(pm.collectionVariables.get('_test_mg_list_tries') || 0);",
                   "var c = pm.response.json().campaigns.find(function (x) { return x.campaignId === pm.environment.get('mg_campaign_id'); });",
-                  "pm.test('campaign listed (newest first, first page)', function () { pm.expect(c).to.not.be.undefined; });",
-                  "pm.test('status DRAFT', function () { pm.expect(c.status).to.eql('DRAFT'); });",
-                  "pm.test('createdBy recorded', function () { pm.expect(c.createdBy).to.be.a('string').and.not.empty; });",
-                  "pm.test('two windows, two rules', function () { pm.expect(c.windows.length).to.eql(2); pm.expect(c.rules.length).to.eql(2); });"
+                  "if (!c && tries < 20) {",
+                  "  // the list is read by city, which the key-value layer cannot serve: the row is visible once the drainer has flushed it",
+                  "  pm.collectionVariables.set('_test_mg_list_tries', tries + 1);",
+                  "  postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.test('campaign listed (newest first, first page)', function () { pm.expect(c).to.not.be.undefined; });",
+                  "  pm.test('status DRAFT', function () { pm.expect(c.status).to.eql('DRAFT'); });",
+                  "  pm.test('createdBy recorded', function () { pm.expect(c.createdBy).to.be.a('string').and.not.empty; });",
+                  "  pm.test('two windows, two rules', function () { pm.expect(c.windows.length).to.eql(2); pm.expect(c.rules.length).to.eql(2); });",
+                  "}"
                 ]
               }
             },
@@ -470,8 +477,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// the list is read by city, which the key-value layer cannot serve: give the drainer time to flush the new row",
-                  "setTimeout(function () {}, 10000);"
+                  "setTimeout(function () {}, 3000);"
                 ]
               }
             }
@@ -839,39 +845,6 @@
                 "exec": [
                   "pm.test('terms not accepted -> 400', function () { pm.response.to.have.status(400); });",
                   "pm.test('error mentions: terms must be accepted', function () { pm.expect(pm.response.text()).to.include(\"terms must be accepted\"); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Driver Opt-in beyond tomorrow rejected",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "token",
-                "value": "{{driver_token}}"
-              }
-            ],
-            "url": "{{baseURL_namma_P}}/driver/mg/optIn",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"campaignId\": \"{{mg_campaign_id}}\",\n  \"date\": \"{{_test_mg_day_after}}\",\n  \"acceptTerms\": true\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('day after tomorrow -> 400', function () { pm.response.to.have.status(400); });",
-                  "pm.test('error mentions: outside the campaign dates', function () { pm.expect(pm.response.text()).to.include(\"outside the campaign dates\"); });"
                 ]
               }
             }
@@ -1328,6 +1301,39 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Extend 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Driver Opt-in beyond tomorrow rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{driver_token}}"
+              }
+            ],
+            "url": "{{baseURL_namma_P}}/driver/mg/optIn",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"campaignId\": \"{{mg_campaign_id}}\",\n  \"date\": \"{{_test_mg_day_after}}\",\n  \"acceptTerms\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('day after tomorrow -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: today and tomorrow only', function () { pm.expect(pm.response.text()).to.include(\"today and tomorrow only\"); });"
                 ]
               }
             }
