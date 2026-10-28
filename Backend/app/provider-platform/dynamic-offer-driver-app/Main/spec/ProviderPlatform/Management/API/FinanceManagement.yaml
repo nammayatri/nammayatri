@@ -274,6 +274,8 @@ apis:
       auth: ApiAuthV2
       params:
         adjustmentRequestId: Id LedgerAdjustmentRequest
+      request:
+        type: LedgerAdjustmentRejectReq
       response:
         type: APISuccess
       migrate:
@@ -702,6 +704,9 @@ types:
     - referenceId: Maybe Text
     - documentId: Maybe (Id Image)
     - documentFileExtension: Maybe Text
+  LedgerAdjustmentRejectReq:
+    - rejectionReason: Text
+    - derive: "'HideSecrets"
   LedgerAdjustmentListRes:
     - summary: Summary
     - adjustmentRequests: [LedgerAdjustmentItem]
@@ -725,6 +730,8 @@ types:
     - createdAt: UTCTime
     - updatedAt: UTCTime
     - postedAt: Maybe UTCTime
+    - rejectionReason: Maybe Text
+    - rejectedAt: Maybe UTCTime
 
   # ----- Payout list -----
   PayoutListRes:

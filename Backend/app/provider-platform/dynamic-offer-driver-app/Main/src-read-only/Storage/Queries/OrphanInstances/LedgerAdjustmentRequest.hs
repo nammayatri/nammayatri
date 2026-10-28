@@ -36,6 +36,7 @@ instance FromTType' Beam.LedgerAdjustmentRequest Domain.Types.LedgerAdjustmentRe
             postedAt = postedAt,
             referenceId = referenceId,
             referenceType = referenceType,
+            rejectionReason = rejectionReason,
             status = status,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -63,6 +64,7 @@ instance ToTType' Beam.LedgerAdjustmentRequest Domain.Types.LedgerAdjustmentRequ
         Beam.postedAt = postedAt,
         Beam.referenceId = referenceId,
         Beam.referenceType = referenceType,
+        Beam.rejectionReason = rejectionReason,
         Beam.status = status,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

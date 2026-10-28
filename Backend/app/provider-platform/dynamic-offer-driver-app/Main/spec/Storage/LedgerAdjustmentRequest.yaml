@@ -45,6 +45,7 @@ LedgerAdjustmentRequest:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     postedAt: Maybe UTCTime
+    rejectionReason: Maybe Text
 
   constraints:
     id: PrimaryKey
@@ -74,6 +75,11 @@ LedgerAdjustmentRequest:
     updateStatusAndChecker:
       kvFunction: updateOneWithKV
       params: [status, adminCheckerId, adminCheckerName, errorMessage]
+      where: id
+
+    updateStatusCheckerAndRejectionReason:
+      kvFunction: updateOneWithKV
+      params: [status, adminCheckerId, adminCheckerName, rejectionReason]
       where: id
 
   excludedDefaultQueries:

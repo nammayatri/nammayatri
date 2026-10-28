@@ -17,6 +17,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
 import qualified Lib.Finance.Core.Types
@@ -190,7 +191,9 @@ data LedgerAdjustmentItem = LedgerAdjustmentItem
     ledgerEntryId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime,
-    postedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+    postedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    rejectionReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rejectedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -198,6 +201,13 @@ data LedgerAdjustmentItem = LedgerAdjustmentItem
 data LedgerAdjustmentListRes = LedgerAdjustmentListRes {summary :: Dashboard.Common.Summary, adjustmentRequests :: [LedgerAdjustmentItem]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LedgerAdjustmentRejectReq = LedgerAdjustmentRejectReq {rejectionReason :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets LedgerAdjustmentRejectReq where
+  hideSecrets = Kernel.Prelude.identity
 
 data LinkedRideItem = LinkedRideItem {rideId :: Kernel.Prelude.Text, bookingId :: Kernel.Prelude.Text, rideCreatedAt :: Kernel.Prelude.UTCTime, rideSubscriptionDebitAmount :: Kernel.Types.Common.HighPrecMoney}
   deriving stock (Generic)
@@ -1133,6 +1143,7 @@ type PostFinanceManagementFinanceAdjustmentReject =
            "adjustmentRequestId"
            (Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest)
       :> "reject"
+      :> ReqBody '[JSON] LedgerAdjustmentRejectReq
       :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
@@ -1146,6 +1157,9 @@ type PostFinanceManagementFinanceAdjustmentRejectHelper =
       :> MandatoryQueryParam
            "requestorName"
            Kernel.Prelude.Text
+      :> ReqBody
+           '[JSON]
+           LedgerAdjustmentRejectReq
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -1339,7 +1353,7 @@ data FinanceManagementAPIs = FinanceManagementAPIs
     postFinanceManagementFinanceAdjustmentSubmit :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> SubmitLedgerAdjustmentReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getFinanceManagementFinanceAdjustmentList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest) -> Kernel.Prelude.Maybe AdjustmentRequestStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe AdjustmentCategory -> Kernel.Prelude.Maybe AdjustmentDirection -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient LedgerAdjustmentListRes,
     postFinanceManagementFinanceAdjustmentApprove :: Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postFinanceManagementFinanceAdjustmentReject :: Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postFinanceManagementFinanceAdjustmentReject :: Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> LedgerAdjustmentRejectReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getFinanceManagementFinanceSapJournals :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.SapJournalEntry.JournalEntryStatus -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.SapJournalEntry.TransactionType -> EulerHS.Types.EulerClient SapJournalListRes,
     getFinanceManagementFinanceSapJournalsTransactions :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Lib.Finance.Domain.Types.SapJournalEntry.TransactionType -> EulerHS.Types.EulerClient SapJournalTransactionsRes,
     postFinanceManagementTdsReimbursementRequestSubmit :: Kernel.Prelude.Text -> TdsReimbursementRequestSubmitReq -> EulerHS.Types.EulerClient TdsReimbursementRequestSubmitRes,

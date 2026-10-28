@@ -24,3 +24,9 @@ ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN status t
 ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN rejection_reason text ;

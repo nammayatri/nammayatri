@@ -2570,6 +2570,7 @@ postFinanceManagementFinanceAdjustmentReject ::
   Id Dashboard.Common.LedgerAdjustmentRequest ->
   Text ->
   Text ->
+  API.LedgerAdjustmentRejectReq ->
   Flow APISuccess
-postFinanceManagementFinanceAdjustmentReject merchantShortId opCity adjustmentRequestId =
-  LedgerAdjustment.ledgerAdjustmentReject merchantShortId opCity (cast @Dashboard.Common.LedgerAdjustmentRequest @DLAR.LedgerAdjustmentRequest adjustmentRequestId)
+postFinanceManagementFinanceAdjustmentReject merchantShortId opCity adjustmentRequestId requestorId requestorName req =
+  LedgerAdjustment.ledgerAdjustmentReject merchantShortId opCity (cast @Dashboard.Common.LedgerAdjustmentRequest @DLAR.LedgerAdjustmentRequest adjustmentRequestId) requestorId requestorName req.rejectionReason
