@@ -28,6 +28,7 @@ import qualified API.Types.ProviderPlatform.Management.Message
 import qualified API.Types.ProviderPlatform.Management.NammaTag
 import qualified API.Types.ProviderPlatform.Management.Notification
 import qualified API.Types.ProviderPlatform.Management.Payout
+import qualified API.Types.ProviderPlatform.Management.Person
 import qualified API.Types.ProviderPlatform.Management.PlanManagement
 import qualified API.Types.ProviderPlatform.Management.PolicyDocument
 import qualified API.Types.ProviderPlatform.Management.Pricing
@@ -78,6 +79,7 @@ data ManagementUserActionType
   | NAMMA_TAG API.Types.ProviderPlatform.Management.NammaTag.NammaTagUserActionType
   | NOTIFICATION API.Types.ProviderPlatform.Management.Notification.NotificationUserActionType
   | PAYOUT API.Types.ProviderPlatform.Management.Payout.PayoutUserActionType
+  | PERSON API.Types.ProviderPlatform.Management.Person.PersonUserActionType
   | PLAN_MANAGEMENT API.Types.ProviderPlatform.Management.PlanManagement.PlanManagementUserActionType
   | POLICY_DOCUMENT API.Types.ProviderPlatform.Management.PolicyDocument.PolicyDocumentUserActionType
   | PRICING API.Types.ProviderPlatform.Management.Pricing.PricingUserActionType
@@ -125,6 +127,7 @@ instance Text.Show.Show ManagementUserActionType where
     NAMMA_TAG e -> "NAMMA_TAG/" <> show e
     NOTIFICATION e -> "NOTIFICATION/" <> show e
     PAYOUT e -> "PAYOUT/" <> show e
+    PERSON e -> "PERSON/" <> show e
     PLAN_MANAGEMENT e -> "PLAN_MANAGEMENT/" <> show e
     POLICY_DOCUMENT e -> "POLICY_DOCUMENT/" <> show e
     PRICING e -> "PRICING/" <> show e
@@ -362,6 +365,15 @@ instance Text.Read.Read ManagementUserActionType where
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
                ]
+            ++ [ ( PERSON v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "PERSON/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( PLAN_MANAGEMENT v1,
                    r2
                  )
@@ -520,4 +532,4 @@ instance Text.Read.Read ManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [(''ManagementUserActionType)])
+$(Data.Singletons.TH.genSingletons [''ManagementUserActionType])
