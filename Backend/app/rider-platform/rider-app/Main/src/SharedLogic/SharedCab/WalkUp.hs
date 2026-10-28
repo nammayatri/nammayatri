@@ -324,7 +324,7 @@ sharedCabRouteServiceability person cabIbc mbPlate legReqs = do
             schedules = []
           }
     pure ApiTypes.LegRouteWithLiveVehicle {legOrder = legReq.legOrder, routeWithLiveVehicles = routes}
-  pure ApiTypes.RouteServiceabilityResp {legs, effectiveStops = Nothing, alternateRouteCodes = Nothing}
+  pure ApiTypes.RouteServiceabilityResp {legs, effectiveStops = Nothing, alternateRouteCodes = Nothing, pickEnabled = Nothing}
   where
     mkLiveCab :: UTCTime -> Text -> LT.VehicleInfo -> ApiTypes.LiveVehicleInfo
     mkLiveCab now plate vi =
@@ -342,5 +342,7 @@ sharedCabRouteServiceability person cabIbc mbPlate legReqs = do
           seatSelectionType = Nothing,
           isUpcomingTrip = Nothing,
           previousRouteId = Nothing,
-          bearing = Nothing
+          bearing = Nothing,
+          availableSeats = Nothing,
+          occupiedSeats = Nothing
         }

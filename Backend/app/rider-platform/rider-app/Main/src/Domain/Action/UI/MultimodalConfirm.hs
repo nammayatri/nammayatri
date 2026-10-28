@@ -2295,7 +2295,9 @@ postMultimodalRouteServiceabilityBus (mbPersonId, merchantId) mbAllPassingRoutes
                       vehicleVariant = mbVehicleVariant,
                       seatSelectionType = seatSelType,
                       isUpcomingTrip = Nothing,
-                      previousRouteId = Nothing
+                      previousRouteId = Nothing,
+                      availableSeats = Nothing,
+                      occupiedSeats = Nothing
                     }
             _ -> return Nothing
         Just singleBus -> do
@@ -2324,7 +2326,9 @@ postMultimodalRouteServiceabilityBus (mbPersonId, merchantId) mbAllPassingRoutes
                       vehicleVariant = mbVehicleVariant,
                       seatSelectionType = seatSelType,
                       isUpcomingTrip = singleBus.busData.is_upcoming_trip,
-                      previousRouteId = singleBus.busData.previous_route_id
+                      previousRouteId = singleBus.busData.previous_route_id,
+                      availableSeats = Nothing,
+                      occupiedSeats = Nothing
                     }
       -- Return response with schedules (always) and live vehicle (if available)
       pure $
@@ -2346,6 +2350,7 @@ postMultimodalRouteServiceabilityBus (mbPersonId, merchantId) mbAllPassingRoutes
                   ]
               }
           ]
+          Nothing
 
     extractSourceDestLatLng :: Text -> Text -> RouteServiceabilityContext -> Environment.Flow (LatLngV2, LatLngV2)
     extractSourceDestLatLng srcCode destCode routeServiceabilityContext = do
@@ -2442,7 +2447,7 @@ postMultimodalRouteServiceabilityBus (mbPersonId, merchantId) mbAllPassingRoutes
       Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
     getRouteServiceability mEffStops mAlternateRouteCodes userRequestedCodes ctx legs = do
       legRoutes <- JMU.measureLatency (enrichResolvedLegs ctx userRequestedCodes legs) ("enrichResolvedLegs legsCount=" <> show (length legs))
-      pure $ ApiTypes.RouteServiceabilityResp mAlternateRouteCodes mEffStops legRoutes
+      pure $ ApiTypes.RouteServiceabilityResp mAlternateRouteCodes mEffStops legRoutes Nothing
 
     handleDirectRoute ::
       RouteServiceabilityContext ->

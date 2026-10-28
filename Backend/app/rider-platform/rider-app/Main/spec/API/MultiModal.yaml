@@ -381,6 +381,8 @@ types:
     isUpcomingTrip: Maybe Bool
     previousRouteId: Maybe Text
     bearing: Maybe Int
+    availableSeats: Maybe Int
+    occupiedSeats: Maybe Int
 
   AlternateRouteDetails:
     routeCode: Text
@@ -412,6 +414,7 @@ types:
     legs: [LegRouteWithLiveVehicle]
     effectiveStops: Maybe EffectiveStops
     alternateRouteCodes: "Maybe [Text]"
+    pickEnabled: Maybe Bool
 
   RouteCodesWithLeg:
     legOrder: Int
