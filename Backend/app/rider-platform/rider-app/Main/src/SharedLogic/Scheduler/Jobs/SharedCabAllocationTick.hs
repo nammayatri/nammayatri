@@ -17,7 +17,7 @@ import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, allocationPass)
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled, tickChainContinues)
 import SharedLogic.SharedCab.FindingTimeout (CancelFlow, cancelTimedOutFindings)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
-import SharedLogic.SharedCab.Schedule (ChainName (..), chainsSeededBy, claimTickRun, claimedTick, ensureExpiryJob, ownAllocationChain, scheduleNextTick, withCityTickLease)
+import SharedLogic.SharedCab.Schedule (claimTickRun, claimedTick, ensureExpiryJob, ownAllocationChain, scheduleNextTick, withCityTickLease)
 import SharedLogic.SharedCab.StopProgress (runStopProgress)
 import Storage.Beam.SchedulerJob ()
 
@@ -62,9 +62,8 @@ sharedCabAllocationTick Job {jobInfo} = do
           -- after the lease, so the refund's network calls never hold up the city's tick
           liftIO (readIORef liveRef) >>= cancelTimedOutFindings merchantOperatingCityId
           -- the expiry chain's watchdog: a lost expiry job would otherwise wait for the stream reclaim
-          when (ExpiryChain `elem` chainsSeededBy AllocationChain) $
-            withTryCatch "sharedCab:allocationWatchesExpiry" (ensureExpiryJob merchantId merchantOperatingCityId)
-              >>= either (logError . ("sharedCab tick: expiry watchdog failed: " <>) . show) pure
+          withTryCatch "sharedCab:allocationWatchesExpiry" (ensureExpiryJob merchantId merchantOperatingCityId)
+            >>= either (logError . ("sharedCab tick: expiry watchdog failed: " <>) . show) pure
       )
       (liftIO (readIORef keepGoingRef) >>= \keepGoing -> when keepGoing (scheduleNextTick merchantId merchantOperatingCityId chainId))
   pure Complete

@@ -18,8 +18,6 @@ module SharedLogic.SharedCab.Schedule
     ensureExpiryJob,
     WatchPlan (..),
     SeedSource (..),
-    ChainName (..),
-    chainsSeededBy,
     allocationSeedWanted,
     watchPlan,
     reseedAllocationTick,
@@ -204,18 +202,6 @@ watchPlan enabled liveBookings liveTrips pendingRefunds =
     { seedAllocation = allocationSeedWanted Watchdog enabled liveBookings,
       seedSweep = liveBookings > 0 || liveTrips > 0 || pendingRefunds > 0
     }
-
-data ChainName = AllocationChain | ExpiryChain | SweepChain
-  deriving (Eq, Show)
-
--- | The chain pairs: each running tick re-seeds these, a set-if-absent on their guards. The allocation tick (every few seconds,
--- alive whenever the city has demand) watches the expiry chain; the expiry tick watches the other two when there is work for them
--- ('watchPlan'); the sweep tick, alive only while it has something to sweep, watches the expiry chain. The accepted gap: if the
--- allocation and expiry jobs are lost together, only the stream reclaim (about 10 minutes) or new demand revives them.
-chainsSeededBy :: ChainName -> [ChainName]
-chainsSeededBy AllocationChain = [ExpiryChain]
-chainsSeededBy ExpiryChain = [AllocationChain, SweepChain]
-chainsSeededBy SweepChain = [ExpiryChain]
 
 -- | Who is asking for an allocation chain: new demand (a confirm or a session open) only while the city is switched on; the
 -- watchdog whenever a booking is live, switched on or not.
