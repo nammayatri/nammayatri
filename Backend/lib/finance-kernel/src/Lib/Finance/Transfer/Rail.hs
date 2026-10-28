@@ -16,7 +16,6 @@ module Lib.Finance.Transfer.Rail
   ( TransferRail (..),
     RailRegistry,
     lookupRail,
-    HoldOrdering (..),
     RailSubmission (..),
     RailSubmitResult (..),
     RailCollectRequest (..),
@@ -32,15 +31,6 @@ import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id (Id)
 import Lib.Finance.Domain.Types.Account (Account, CounterpartyType)
 import Lib.Finance.Domain.Types.Transfer (RailKey, Transfer, TransferMetadata)
-
--- | When the ledger hold is posted relative to the rail call.
---     HoldThenSubmit — HDFC bulk style: money is parked first, the file goes later;
---       a rejected submit reverses the hold (full compensation).
---     SubmitThenHold — Juspay/Stripe style: the partner is called first; a hold
---       failure AFTER an accepted submit flips the transfer to NEEDS_REVIEW
---       (replacing today's logError-and-forget, which left the money double-spendable).
-data HoldOrdering = HoldThenSubmit | SubmitThenHold
-  deriving (Eq, Show, Generic)
 
 -- | What the kernel tells a rail when submitting. Deliberately minimal: per-call
 --   domain context (VPA, phone, remarks) lives in the submit closure the domain built.
@@ -72,25 +62,33 @@ data RailSubmitResult
     RailRejected {reason :: Text}
   | -- | unknown outcome (timeout, 5xx): hold is kept, transfer goes to NEEDS_REVIEW
     RailAmbiguous {reason :: Text}
-  | -- | accepted locally, sent later (bulk file); batch status check resolves it
+  | -- | already in flight or terminal on the rail, nothing new was sent: keep the money
+    --   parked and let the status check resolve it
     RailDeferred {railStatus :: Text}
+  | -- | recorded locally as an order, nothing sent to any partner yet (bulk: the file goes
+    --   out later). Unlike 'RailAccepted' the order can still be dropped, so if the ledger
+    --   hold then fails the kernel fails the transfer and releases its entries instead of
+    --   parking it for review; the domain cancels the queued order.
+    RailQueued {railOrderId :: Text, railStatus :: Text}
   deriving (Eq, Show, Generic)
 
--- | What the kernel asks an INBOUND rail for: a collectable payment order. When
---   'reuseRailOrderId' is set, the rail must RE-FETCH that order's payload (same open
---   intent, same amount) instead of creating a new one — rails must be idempotent here.
+-- | What the kernel asks an INBOUND rail for: a collectable payment order. The kernel holds no reuse policy:
+--   it hands over the account's still-open intents and the domain's closure decides whether to re-serve one
+--   of them (re-fetching its payload; rails must be idempotent there) or to create a new order.
 data RailCollectRequest = RailCollectRequest
   { submission :: RailSubmission,
-    reuseRailOrderId :: Maybe Text
+    openIntents :: [Transfer]
   }
   deriving (Generic)
 
 -- | The rail's order id (becomes transfer.referenceId + railOrderId, and is what the
 --   webhook later correlates on) plus the opaque payload the client app needs to
---   collect the money (SDK payload).
+--   collect the money (SDK payload), and the open intents' order ids this order replaces
+--   (the kernel marks those FAILED, SUPERSEDED_BY_NEW_INTENT).
 data RailCollectResult = RailCollectResult
   { railOrderId :: Text,
-    payload :: Aeson.Value
+    payload :: Aeson.Value,
+    replacesOrderIds :: [Text]
   }
   deriving (Generic)
 
@@ -108,7 +106,6 @@ data TransferOutcome
 data TransferRail m = TransferRail
   { -- | registry key, stored on the transfer row
     railKey :: RailKey,
-    holdOrdering :: HoldOrdering,
     submit :: RailSubmission -> m RailSubmitResult,
     -- | fresh raw rail status for a transfer; Nothing = this rail can't poll
     --   per-transfer (e.g. bulk items resolve via the batch check)

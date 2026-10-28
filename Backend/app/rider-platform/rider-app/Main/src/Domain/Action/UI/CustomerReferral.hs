@@ -208,7 +208,7 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
           -- kernel transfer — the only money path. Not-submitted just logs: PersonStats
           -- stays Processing, same as a failed direct call before.
           let submitViaKernel =
-                Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated <&> \case
+                Payout.createPayoutServiceWithStatusCheck (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated <&> \case
                   (_, Just payoutOrder) -> RailAccepted {railOrderId = payoutOrder.orderId, railStatus = show payoutOrder.status}
                   (Just _, Nothing) -> RailAmbiguous "payout order missing after create"
                   (Nothing, Nothing) -> RailAmbiguous "no response from payout service"

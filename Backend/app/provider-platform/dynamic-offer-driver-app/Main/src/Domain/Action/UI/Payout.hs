@@ -25,6 +25,7 @@ module Domain.Action.UI.Payout
     payoutSettlementActionWith,
     settleDriverWalletPayoutLedger,
     settleDriverWalletPayoutLedgerFor,
+    settleWalletPayoutAcceptedAsPaid,
     refreshPayoutOrderWithSettlement,
     stripePayoutWebhookHandler,
     stripeTestPayoutWebhookHandler,
@@ -437,7 +438,7 @@ reportContradictionAfterSuccess merchantOperatingCityId payoutStatus amount payo
       QTransfer.findByReference walletReferencePayout payoutRequestId >>= \case
         Just transfer
           | transfer.status `elem` [DTransfer.SUCCEEDED, DTransfer.NEEDS_REVIEW] ->
-            Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
+            Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey driverId.getId) 10 10 50000 $ do
               payoutConfig <- getPayoutConfigForCustomer merchantOperatingCityId payoutOrder.customerId
               -- the provider's current word, same as the normal settlement re-polls
               (updPayoutStatus, _) <- callPayoutServiceAction payoutOrder.orderId driverId payoutConfig
@@ -454,6 +455,23 @@ reportContradictionAfterSuccess merchantOperatingCityId payoutStatus amount payo
       Rail.OutcomeFailed _ -> True
       Rail.OutcomeReversed _ -> True
       _ -> False
+
+-- | Ops accepted a wallet payout the partner had already reported as paid and a later contradiction parked.
+--   The order already says SUCCESS, so the normal settlement would treat this as a contradiction and do
+--   nothing; the ledger is told the payout succeeded directly, under the wallet lock.
+settleWalletPayoutAcceptedAsPaid ::
+  (PayoutSettlementFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  DPayoutOrder.PayoutOrder ->
+  m ()
+settleWalletPayoutAcceptedAsPaid merchantOperatingCityId payoutOrder = do
+  let driverId = Id payoutOrder.customerId
+  whenJust (listToMaybe (fromMaybe [] payoutOrder.entityIds)) $ \payoutRequestId ->
+    Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey driverId.getId) 10 10 50000 $ do
+      payoutReq <- QPR.findById (Id payoutRequestId) >>= fromMaybeM (InternalError ("PayoutRequest not found: " <> payoutRequestId))
+      person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+      settleDriverWalletPayoutLedger merchantOperatingCityId payoutOrder person transporterConfig payoutReq payoutOrder.amount.amount Payout.SUCCESS
 
 settleSpecialZonePayout ::
   (PayoutSettlementFlow m r) =>
@@ -670,7 +688,7 @@ settleDriverWalletPayoutLedgerFor merchantOperatingCityId merchantId person tran
     QTransfer.findByReference walletReferencePayout payoutReq.id.getId >>= \case
       Just t -> pure t
       Nothing -> backfillPreMigrationPayoutTransfer counterparty driverId.getId merchantOperatingCityId transporterConfig payoutReq amount
-  let rail = Rails.settlementRailByKey (fromMaybe Rails.juspayPayoutRailKey transfer.railKey)
+  let rail = Rails.settlementRailByKey (fromMaybe DTransfer.JUSPAY_PAYOUT transfer.railKey)
   void $
     TransferOutcome.applyRailStatus runFinance rail walletPayoutLedgerRefs walletCtx transfer.id (show updPayoutStatus)
       >>= fromEitherM (\err -> InternalError ("Failed to apply payout outcome for transfer " <> transfer.id.getId <> ": " <> show err))
@@ -703,7 +721,7 @@ backfillPreMigrationPayoutTransfer counterparty ownerId merchantOperatingCityId 
   Backfill.backfillTransfer
     Backfill.BackfillSpec
       { direction = DTransfer.OUTBOUND,
-        railKey = Rails.juspayPayoutRailKey, -- classification is rail-agnostic at settle time
+        railKey = DTransfer.JUSPAY_PAYOUT, -- classification is rail-agnostic at settle time
         railOrderId = payoutReq.payoutTransactionId,
         accountId = account.id,
         amount = amount,
@@ -754,8 +772,20 @@ refreshPayoutOrderWithSettlement payoutOrder =
             merchantId = Id payoutOrder.merchantId
         payoutConfig <- getPayoutConfigForCustomer merchantOpCityId payoutOrder.customerId
         let callAction = callPayoutServiceActionForRefresh merchantId merchantOpCityId payoutOrder.entityName
-        (updPayoutStatus, _) <- callAction payoutOrder.orderId (Id payoutOrder.customerId) payoutConfig
-        runPayoutSettlement merchantId merchantOpCityId updPayoutStatus payoutOrder.amount.amount payoutOrder callAction
+        -- The partner says it never received this order (only ever accepted for an order whose create call
+        -- threw): nothing was sent. The order is closed as failed and every status call that follows,
+        -- including the one inside the settlement, answers FAILURE so the usual failure settlement frees
+        -- the held money.
+        let callActionNeverReceived oid driverId' cfg =
+              withTryCatch "payoutOrderStatus" (callAction oid driverId' cfg) >>= \case
+                Right res -> pure res
+                Left err
+                  | PayoutRequest.isOrderNotFoundAtPartner err -> do
+                    closed <- PayoutRequest.markPayoutOrderNeverReceived payoutOrder
+                    if closed then pure (Payout.FAILURE, oid) else throwM err
+                  | otherwise -> throwM err
+        (updPayoutStatus, _) <- callActionNeverReceived payoutOrder.orderId (Id payoutOrder.customerId) payoutConfig
+        runPayoutSettlement merchantId merchantOpCityId updPayoutStatus payoutOrder.amount.amount payoutOrder callActionNeverReceived
         QPayoutOrder.findByOrderId payoutOrder.orderId >>= \case
           Nothing -> throwError $ PayoutOrderNotFound payoutOrder.orderId
           Just finalOrder -> pure finalOrder

@@ -1660,7 +1660,7 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
           -- Locked (post-cutoff) balance straight from the kernel breakdown: policy,
           -- cutoff and eligibility all resolve inside the kernel — this handler only
           -- asks for the number (TDS reimbursements count as redeemable straight away).
-          lockedBalance <- (.nonRedeemable) <$> FinanceBalance.getBalanceBreakdownWith WalletService.alwaysRedeemableWalletRefs account []
+          lockedBalance <- (.nonRedeemable) <$> FinanceBalance.getBalanceAmountsWith WalletService.alwaysRedeemableWalletRefs account []
 
           -- Get last wallet update time from latest ledger entry
           mbLatestEntry <- LedgerService.getLatestEntryByAccount account.id

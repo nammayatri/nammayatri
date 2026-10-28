@@ -148,7 +148,7 @@ callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
             -- was submitted (confirmed rejection / kernel gate), the booking keeps its
             -- bounded retry accounting so the next batch can try again.
             let submitViaKernel =
-                  Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated <&> \case
+                  Payout.createPayoutServiceWithStatusCheck (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated <&> \case
                     (_, Just payoutOrder) -> RailAccepted {railOrderId = payoutOrder.orderId, railStatus = show payoutOrder.status}
                     (Just _, Nothing) -> RailAmbiguous "payout order missing after create"
                     (Nothing, Nothing) -> RailAmbiguous "no response from payout service"
@@ -179,7 +179,7 @@ callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
               -- manual verification immediately so ops sees it (transfer row has detail).
               ( \reason -> do
                   logError $ "metro cashback payout parked for booking " <> booking.id.getId <> ": " <> reason
-                  Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey booking.id.getId) 3 3 $
+                  Redis.withWaitAndLockRedisWithTimeout (DAP.payoutProcessingLockKey booking.id.getId) 3 3 50000 $
                     QFTB.updatePayoutStatusById (Just MANUAL_VERIFICATION) booking.id
               )
         Nothing -> do
