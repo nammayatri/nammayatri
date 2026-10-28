@@ -228,6 +228,7 @@ import qualified SharedLogic.FleetDriverSettings as FDS
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
+import qualified SharedLogic.SocialLogin as SSL
 import qualified SharedLogic.VehicleServiceTier as SVST
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.DashboardAlert ()
@@ -2556,11 +2557,14 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   encNewPhoneNumber <- forM req.mobileNo encrypt
-  let updDriver =
+  let emailChanged = isJust req.email && (SSL.normalizeEmail <$> req.email) /= (SSL.normalizeEmail <$> driver.email)
+      updDriver =
         driver
           { DP.mobileCountryCode = Just mobileCountryCode,
             DP.mobileNumber = encNewPhoneNumber,
             DP.email = req.email,
+            DP.emailVerified = if emailChanged then Just False else driver.emailVerified,
+            DP.emailSource = if emailChanged then Nothing else driver.emailSource,
             DP.firstName = fromMaybe driver.firstName req.firstName,
             DP.lastName = req.lastName
           }
@@ -2587,6 +2591,7 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
         QPerson.updatePersonRole personId (DRegV2.castFleetTypeToRole newFleetType)
 
   QPerson.updateFleetOwnerDetails personId updDriver
+  when emailChanged $ SSL.unlinkIdentitiesWithOtherEmail personId req.email
   pure Success
 
 ---------------------------------------------------------------------
@@ -4693,16 +4698,20 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
           encNewPhoneNumber <- encrypt reqMobileNo
           pure (Just countryCode, Just encNewPhoneNumber)
 
-    let updDriver =
+    let emailChanged = isJust req.email && (SSL.normalizeEmail <$> req.email) /= (SSL.normalizeEmail <$> driver.email)
+        updDriver =
           driver
             { DP.firstName = fromMaybe driver.firstName req.firstName,
               DP.lastName = req.lastName <|> driver.lastName,
               DP.gender = fromMaybe driver.gender mbGender,
               DP.email = req.email <|> driver.email,
+              DP.emailVerified = if emailChanged then Just False else driver.emailVerified,
+              DP.emailSource = if emailChanged then Nothing else driver.emailSource,
               DP.mobileCountryCode = newMobileCountryCode,
               DP.mobileNumber = newMobileNumber
             }
     QPerson.updatePersonDetails updDriver
+    when emailChanged $ SSL.unlinkIdentitiesWithOtherEmail personId req.email
 
   -- Driver can update driver-info fields; fleet owner can update fleet-info fields.
   -- Run this block if ANY relevant field (driver or fleet) is present.

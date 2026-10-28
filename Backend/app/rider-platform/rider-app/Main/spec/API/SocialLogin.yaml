@@ -7,6 +7,8 @@ module: SocialLogin
 types:
   OAuthProvider:
     enum: "Google, IOS"
+  SocialLoginStatus:
+    enum: "LOGGED_IN, LINK_REQUIRED"
   SocialLoginReq:
     name: Maybe Text
     email: Maybe Text
@@ -26,6 +28,39 @@ types:
     lastName: Maybe Text
     mobileNumber: Maybe Text
     mobileCountryCode: Maybe Text
+  SocialLoginV2Req:
+    tokenId: Text
+    oauthProvider: OAuthProvider
+    merchantShortId: ShortId Merchant
+    nonce: Maybe Text
+    authorizationCode: Maybe Text
+  SocialLoginV2Res:
+    status: SocialLoginStatus
+    token: Maybe Text
+    linkToken: Maybe Text
+  EmailAuthV2Req:
+    email: Text
+    merchantShortId: ShortId Merchant
+  EmailAuthV2Res:
+    authId: Text
+    attempts: Int
+  EmailAuthVerifyV2Req:
+    otp: Text
+    deviceToken: Text
+  SocialLinkReq:
+    tokenId: Text
+    oauthProvider: OAuthProvider
+    nonce: Maybe Text
+    authorizationCode: Maybe Text
+  SocialUnlinkReq:
+    oauthProvider: OAuthProvider
+  LinkedSocialAccount:
+    oauthProvider: OAuthProvider
+    email: Maybe Text
+    isPrivateEmail: Bool
+    validTill: UTCTime
+  LinkedSocialAccountsRes:
+    accounts: "[LinkedSocialAccount]"
 apis:
   - POST:
       endpoint: /social/login
@@ -41,3 +76,47 @@ apis:
         type: API.Types.UI.SocialLogin.SocialUpdateProfileReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+  - POST:
+      endpoint: /social/login/v2
+      auth: NoAuth
+      request:
+        type: API.Types.UI.SocialLogin.SocialLoginV2Req
+      response:
+        type: API.Types.UI.SocialLogin.SocialLoginV2Res
+  - POST:
+      endpoint: /auth/email/v2
+      auth: NoAuth
+      headers:
+        x-forwarded-for: Text
+      request:
+        type: API.Types.UI.SocialLogin.EmailAuthV2Req
+      response:
+        type: API.Types.UI.SocialLogin.EmailAuthV2Res
+  - POST:
+      endpoint: /auth/email/{authId}/verify/v2
+      auth: NoAuth
+      params:
+        authId: Text
+      request:
+        type: API.Types.UI.SocialLogin.EmailAuthVerifyV2Req
+      response:
+        type: API.Types.UI.SocialLogin.SocialLoginV2Res
+  - POST:
+      endpoint: /social/link
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.SocialLogin.SocialLinkReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+  - POST:
+      endpoint: /social/unlink
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.SocialLogin.SocialUnlinkReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+  - GET:
+      endpoint: /social/linkedAccounts
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.SocialLogin.LinkedSocialAccountsRes

@@ -35,6 +35,8 @@ data PersonAPIEntity = PersonAPIEntity
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     email :: Maybe Text,
+    emailVerified :: Maybe Bool,
+    emailSource :: Maybe EmailSource,
     maskedMobileNumber :: Maybe Text,
     maskedDeviceToken :: Maybe Text,
     hasTakenRide :: Bool,

@@ -27,7 +27,8 @@ in      base
         , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9995)
         , loggerConfig =
                 base.loggerConfig
-            //  { logFilePath = "/tmp/kafka-consumers-ride-events.log"
+            //  { logFilePath =
+                    "${common.logDir}/kafka-consumers-ride-events.log"
                 , logRawSql = True
                 }
         }

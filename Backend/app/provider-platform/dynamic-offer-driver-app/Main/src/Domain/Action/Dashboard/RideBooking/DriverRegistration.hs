@@ -84,7 +84,8 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
       DReg.AuthVerifyReq
         { otp = req.otp,
           deviceToken = req.deviceToken,
-          whatsappNotificationEnroll = Nothing
+          whatsappNotificationEnroll = Nothing,
+          socialLinkToken = Nothing
         }
       Nothing
   when (not mbFleet && req.isOnboardingFlow == Just True) $

@@ -40,7 +40,8 @@ in  { hedisCfg = rcfg
       , signatureExpiry = common.signatureExpiry
       }
     , loggerConfig =
-        common.loggerConfig // { logFilePath = "/tmp/beckn-gateway.log" }
+            common.loggerConfig
+        //  { logFilePath = "${common.logDir}/beckn-gateway.log" }
     , graceTerminationPeriod = +90
     , httpClientOptions = common.httpClientOptions
     , shortDurationRetryCfg = common.shortDurationRetryCfg

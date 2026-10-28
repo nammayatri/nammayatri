@@ -93,6 +93,7 @@ Merchant:
     stuckRideAutoCancellationBuffer: Maybe Seconds
     cloudType: Maybe CloudType
     cloudBaseUrl: Maybe BaseUrl
+    socialIdentityValidityInDays: Maybe Int
 
   excludedFields:
     - merchantId

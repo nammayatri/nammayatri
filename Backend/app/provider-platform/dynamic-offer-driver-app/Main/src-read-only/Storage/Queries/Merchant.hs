@@ -89,6 +89,7 @@ updateByPrimaryKey (Domain.Types.Merchant.Merchant {..}) = do
       Se.Set Beam.signatureExpiry signatureExpiry,
       Se.Set Beam.signingPrivateKey signingPrivateKey,
       Se.Set Beam.signingPublicKey signingPublicKey,
+      Se.Set Beam.socialIdentityValidityInDays socialIdentityValidityInDays,
       Se.Set Beam.state state,
       Se.Set Beam.status status,
       Se.Set Beam.subscriberId (Kernel.Types.Id.getShortId subscriberId),

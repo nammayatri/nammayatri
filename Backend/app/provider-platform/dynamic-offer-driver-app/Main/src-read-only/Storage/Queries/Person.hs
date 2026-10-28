@@ -123,6 +123,8 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.deviceToken deviceToken,
       Se.Set Beam.driverTag (Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType driverTag),
       Se.Set Beam.email email,
+      Se.Set Beam.emailSource emailSource,
+      Se.Set Beam.emailVerified emailVerified,
       Se.Set Beam.faceImageId (Kernel.Types.Id.getId <$> faceImageId),
       Se.Set Beam.firstName firstName,
       Se.Set Beam.gender gender,

@@ -42,6 +42,10 @@ Person:
       enum: "ALWAYS_SHARE, SHARE_WITH_TIME_CONSTRAINTS, NEVER_SHARE"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
+    EmailSource:
+      enum: "SOCIAL_GOOGLE, SOCIAL_APPLE, SOCIAL_APPLE_PRIVATE_RELAY, OTP"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
   fields:
     id : Id Person
     firstName : Maybe Text
@@ -51,6 +55,8 @@ Person:
     gender : Gender
     identifierType : IdentifierType
     email : Maybe (EncryptedHashedField e Text)
+    emailVerified : Maybe Bool
+    emailSource : Maybe EmailSource
     businessEmail : Maybe (EncryptedHashedField e Text)
     businessProfileVerified : Maybe Bool
     mobileNumber : Maybe (EncryptedHashedField e Text)
@@ -141,6 +147,7 @@ Person:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Gender>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <RideShareOptions>
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RideShareOptions>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <EmailSource>
 
   beamFields:
     mobileNumber:
