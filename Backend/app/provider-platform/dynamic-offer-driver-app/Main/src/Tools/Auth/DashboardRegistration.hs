@@ -38,13 +38,16 @@ module Tools.Auth.DashboardRegistration
     dashboardPersonApprovedBy,
     updateDashboardPersonLanguage,
     listUnverifiedDashboardAccounts,
+    listMerchantScopedPersons,
     assertOperatorRegistrable,
     registerOperatorDashboardPerson,
   )
 where
 
 import qualified API.Types.ProviderPlatform.Management.Account as CommonAccount
+import qualified API.Types.ProviderPlatform.Management.Person as CommonPerson
 import qualified Dashboard.Common as CommonDashboard
+import Data.List (groupBy, nub, sortOn)
 import qualified Data.Text as T
 import qualified "lib-dashboard" Domain.Action.Dashboard.Registration as DRegistration
 import qualified "lib-dashboard" Domain.Types.Merchant as DDashboardMerchant
@@ -52,7 +55,7 @@ import qualified "lib-dashboard" Domain.Types.Person as DDashboardPerson
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
 import qualified "lib-dashboard" Domain.Types.ServerName as DTServer
 import Kernel.Beam.Functions (runInDashboardDb)
-import Kernel.External.Encryption (decrypt, encrypt)
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -64,6 +67,7 @@ import "lib-dashboard" Storage.Beam.BeamFlow (BeamFlow)
 import "lib-dashboard" Storage.Beam.SchemaInstances ()
 import qualified "lib-dashboard" Storage.Queries.Merchant as QDashboardMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QDashboardAccess
+import qualified "lib-dashboard" Storage.Queries.MerchantPair as QDashboardMerchantPair
 import qualified "lib-dashboard" Storage.Queries.Person as QDashboardPerson
 import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QDashboardRegToken
 import qualified "lib-dashboard" Storage.Queries.Role as QDashboardRole
@@ -346,6 +350,93 @@ listUnverifiedDashboardAccounts mbFromDate mbToDate mbMobileNumber mbStatus mbLi
             rejectionReason = person.rejectionReason,
             rejectedAt = person.rejectedAt
           }
+
+-- | Merchant-scoped dashboard-person search backing
+-- @GET /direct-dashboard/{merchantId}/{city}/.../person/list@.
+--
+-- The merchant short-id and operating city come from the route path. We resolve
+-- the requested dashboard merchant and its logical pair through @merchant_pair@
+-- (so NAMMA_YATRI pulls in NAMMA_YATRI_PARTNER and vice versa) and list the
+-- dashboard persons holding @merchant_access@ to either merchant in that city.
+-- Mirrors the unscoped @/admin/person/list@ response shape, so the per-person
+-- merchant/city access columns are populated identically. Runs entirely against
+-- atlas_dashboard via 'runInDashboardDb'.
+listMerchantScopedPersons ::
+  forall m r.
+  RegistrationFlow m r =>
+  Text ->
+  City.City ->
+  Maybe Text ->
+  Maybe Int ->
+  Maybe Int ->
+  m CommonPerson.ListPersonRes
+listMerchantScopedPersons merchantShortId city mbSearchStringRaw mbLimit mbOffset = runInDashboardDb $ do
+  merchant <- merchantByShortId merchantShortId
+  mbPair <- QDashboardMerchantPair.findByMerchantId merchant.id
+  let pairIds = maybe [] (\pair -> catMaybes [pair.bapMerchantId, pair.bppMerchantId]) mbPair
+      merchantIds = nub (merchant.id : pairIds)
+  let mbSearchString = (T.strip <$> mbSearchStringRaw) >>= \s -> if T.null s then Nothing else Just s
+  mbSearchStrDBHash <- traverse (getDbHash . T.toLower) mbSearchString
+  rows <-
+    QDashboardPerson.findAllByMerchantsAndCityWithLimitOffset
+      merchantIds
+      city
+      mbSearchString
+      mbSearchStrDBHash
+      (toInteger <$> mbLimit)
+      (toInteger <$> mbOffset)
+  list <- traverse toPersonAPIEntity rows
+  pure
+    CommonPerson.ListPersonRes
+      { list,
+        summary = CommonDashboard.Summary {totalCount = 10000, count = length list}
+      }
+  where
+    -- Explicit signature keeps decrypt's encTools constraint resolvable against r,
+    -- matching listUnverifiedDashboardAccounts above.
+    toPersonAPIEntity ::
+      (DDashboardPerson.Person, DDashboardRole.Role, [ShortId DDashboardMerchant.Merchant], [City.City]) ->
+      m CommonPerson.PersonAPIEntity
+    toPersonAPIEntity (person, role, merchantAccessShortIds, cities) = do
+      mobileNumber <- decrypt person.mobileNumber
+      email <- traverse decrypt person.email
+      pure
+        CommonPerson.PersonAPIEntity
+          { id = Id person.id.getId,
+            firstName = person.firstName,
+            lastName = person.lastName,
+            role =
+              CommonAccount.RoleAPIEntity
+                { id = Id role.id.getId,
+                  name = role.name,
+                  dashboardAccessType = castAccessType role.dashboardAccessType,
+                  description = role.description
+                },
+            email,
+            mobileNumber,
+            mobileCountryCode = person.mobileCountryCode,
+            availableMerchants = recastShortId <$> nub merchantAccessShortIds,
+            availableCitiesForMerchant = Just (makeAvailableCitiesForMerchant merchantAccessShortIds cities),
+            registeredAt = person.createdAt,
+            verified = person.verified,
+            receiveNotification = person.receiveNotification,
+            language = person.language
+          }
+
+    recastShortId :: ShortId DDashboardMerchant.Merchant -> ShortId CommonDashboard.Merchant
+    recastShortId = ShortId . getShortId
+
+    -- Parallel (merchant, city) access rows grouped into one entry per merchant.
+    makeAvailableCitiesForMerchant ::
+      [ShortId DDashboardMerchant.Merchant] -> [City.City] -> [CommonPerson.AvailableCitiesForMerchant]
+    makeAvailableCitiesForMerchant merchantAccessShortIds cities =
+      let merchantCityList = sortOn fst $ zip merchantAccessShortIds cities
+          groupedByMerchant = groupBy (\a b -> fst a == fst b) merchantCityList
+       in mapMaybe toEntry groupedByMerchant
+      where
+        toEntry [] = Nothing
+        toEntry grp@((merchantSId, _) : _) =
+          Just $ CommonPerson.AvailableCitiesForMerchant (recastShortId merchantSId) (map snd grp)
 
 -- | Pre-flight every deterministic precondition of the dashboard-side operator
 -- write, before the application server allocates the person.

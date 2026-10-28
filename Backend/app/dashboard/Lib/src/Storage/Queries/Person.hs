@@ -336,7 +336,7 @@ findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personI
       B.select $
         B.limit_ limitVal $
           B.offset_ offsetVal $
-            B.orderBy_ (\(person, _, _) -> B.desc_ person.createdAt) $
+            B.orderBy_ (\(person, _, _) -> (B.desc_ person.createdAt, B.asc_ person.id)) $
               B.filter_'
                 ( \(person, _role, _) ->
                     ( maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.lower_ (B.concat_ [person.firstName, B.val_ " ", person.lastName]) `B.like_` B.val_ ("%" <> T.toLower (escapeLikeLiteral searchString) <> "%"))) mbSearchString
@@ -362,26 +362,88 @@ findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personI
   where
     limitVal = fromMaybe 100 mbLimit
     offsetVal = fromMaybe 0 mbOffset
-    groupByPerson ::
-      [(Person, Role, Maybe MerchantAccess)] ->
-      [(Person, Role, [ShortId Merchant.Merchant], [City.City])]
-    groupByPerson inputList =
-      map processGroup $ groupByPerson' inputList
 
-    groupByPerson' ::
-      [(Person, Role, Maybe MerchantAccess)] ->
-      [NonEmpty (Person, Role, Maybe MerchantAccess)]
-    groupByPerson' = NE.groupBy ((==) `on` (\(p, _, _) -> p.id))
+-- Collapse the left-joined (person, role, merchant_access) rows into one entry per
+-- person, gathering that person's merchant short-ids and operating cities. Shared by
+-- the unscoped listing and the merchant-scoped one so both surface the same access data.
+groupByPerson ::
+  [(Person, Role, Maybe MerchantAccess)] ->
+  [(Person, Role, [ShortId Merchant.Merchant], [City.City])]
+groupByPerson inputList =
+  map processGroup $ groupByPersonRows inputList
 
-    processGroup ::
-      NonEmpty (Person, Role, Maybe MerchantAccess) ->
-      (Person, Role, [ShortId Merchant.Merchant], [City.City])
-    processGroup group =
-      let (person, role, _) = NE.head group
-          merchantAccessList = mapMaybe (\(_, _, ma) -> ma) $ toList group
-          cities = merchantAccessList <&> (.operatingCity)
-          merchantIds = merchantAccessList <&> MerchantAccess.merchantShortId
-       in (person, role, merchantIds, cities)
+groupByPersonRows ::
+  [(Person, Role, Maybe MerchantAccess)] ->
+  [NonEmpty (Person, Role, Maybe MerchantAccess)]
+groupByPersonRows = NE.groupBy ((==) `on` (\(p, _, _) -> p.id))
+
+processGroup ::
+  NonEmpty (Person, Role, Maybe MerchantAccess) ->
+  (Person, Role, [ShortId Merchant.Merchant], [City.City])
+processGroup group =
+  let (person, role, _) = NE.head group
+      merchantAccessList = mapMaybe (\(_, _, ma) -> ma) $ toList group
+      cities = merchantAccessList <&> (.operatingCity)
+      merchantIds = merchantAccessList <&> MerchantAccess.merchantShortId
+   in (person, role, merchantIds, cities)
+
+-- Merchant-scoped person search. A person is in scope when they hold a merchant_access
+-- row for one of the given merchants in the given operating city; callers pass the
+-- requested merchant together with its logical pair (resolved via merchant_pair), so a
+-- primary merchant and its _PARTNER side return one combined list. The left join still
+-- collects every access each person holds, so availableMerchants/cities match the
+-- unscoped findAllWithLimitOffset exactly. Search clause is identical to the unscoped one.
+findAllByMerchantsAndCityWithLimitOffset ::
+  BeamFlow m r =>
+  [Id Merchant.Merchant] ->
+  City.City ->
+  Maybe Text ->
+  Maybe DbHash ->
+  Maybe Integer ->
+  Maybe Integer ->
+  m [(Person, Role, [ShortId Merchant.Merchant], [City.City])]
+findAllByMerchantsAndCityWithLimitOffset merchantIds city mbSearchString mbSearchStrDBHash mbLimit mbOffset = do
+  dbConf <- getReplicaBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.limit_ limitVal $
+          B.offset_ offsetVal $
+            B.orderBy_ (\(person, _, _) -> (B.desc_ person.createdAt, B.asc_ person.id)) $
+              B.filter_'
+                ( \(person, _role, _) ->
+                    ( maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.lower_ (B.concat_ [person.firstName, B.val_ " ", person.lastName]) `B.like_` B.val_ ("%" <> T.toLower (escapeLikeLiteral searchString) <> "%"))) mbSearchString
+                        B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ searchStrDBHash) mbSearchStrDBHash
+                        B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.emailHash B.==?. B.val_ (Just searchStrDBHash)) mbSearchStrDBHash
+                    )
+                      B.&&?. B.sqlBool_
+                        ( B.exists_ $ do
+                            access <- B.all_ (SBC.merchantAccess SBC.atlasDB)
+                            B.guard_'
+                              ( BeamMA.personId access B.==?. BeamP.id person
+                                  B.&&?. B.sqlBool_ (BeamMA.merchantId access `B.in_` (B.val_ . getId <$> merchantIds))
+                                  B.&&?. BeamMA.operatingCity access B.==?. B.val_ city
+                              )
+                            pure access
+                        )
+                )
+                $ do
+                  person <- B.all_ (SBC.person SBC.atlasDB)
+                  role <- B.join_' (SBC.role SBC.atlasDB) (\role -> BeamP.roleId person B.==?. BeamR.id role)
+                  merchantAccess <- B.leftJoin_' (B.all_ $ SBC.merchantAccess SBC.atlasDB) (\merchantAccess -> BeamP.id person B.==?. BeamMA.personId merchantAccess)
+                  pure (person, role, merchantAccess)
+  case res of
+    Right res' -> do
+      finalRes <- forM res' $ \(person, role, mbMerchantAccess) -> runMaybeT $ do
+        p <- MaybeT $ fromTType' person
+        r <- MaybeT $ fromTType' role
+        ma <- forM mbMerchantAccess (MaybeT . fromTType')
+        pure (p, r, ma)
+      pure $ groupByPerson $ catMaybes finalRes
+    Left _ -> pure []
+  where
+    limitVal = fromMaybe 100 mbLimit
+    offsetVal = fromMaybe 0 mbOffset
 
 -- Interpolated into a LIKE pattern, so unescaped %/_ act as wildcards; a bare "%" matched every row.
 escapeLikeLiteral :: Text -> Text
