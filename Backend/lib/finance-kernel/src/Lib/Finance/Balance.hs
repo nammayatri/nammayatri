@@ -21,6 +21,7 @@ module Lib.Finance.Balance
     ResolvedTransferAmount (..),
     getBalanceBreakdown,
     getBalanceBreakdownWith,
+    getBalanceAmountsWith,
     getBalanceBreakdownById,
     resolveTransferAmount,
     withAccountBalanceLock,
@@ -38,7 +39,7 @@ import Lib.Finance.Domain.Types.Account (Account (..), AccountType (PayoutLiabil
 import Lib.Finance.Domain.Types.FinanceAccountConfig (FeeBearer (..), FeeSpec)
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntry)
 import Lib.Finance.Error.Types
-import Lib.Finance.Ledger.Service (getPayoutEligibilityDataWith)
+import Lib.Finance.Ledger.Service (getPayoutEligibilityAmountsWith, getPayoutEligibilityDataWith)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.Account as QAccount
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
@@ -108,7 +109,28 @@ getBalanceBreakdownWith ::
   Account ->
   [Text] ->
   m BalanceBreakdown
-getBalanceBreakdownWith alwaysRedeemableRefs account legacyOfferHoldKeys = do
+getBalanceBreakdownWith = breakdownWith True
+
+-- | 'getBalanceBreakdownWith' for callers that read only the numbers (available,
+--   redeemable, holds, ...): 'redeemableEntries' is always empty, and the unbounded
+--   read of the wallet's unsettled history is skipped. Every figure equals the one
+--   'getBalanceBreakdownWith' returns.
+getBalanceAmountsWith ::
+  (BeamFlow.BeamFlow m r) =>
+  [Text] ->
+  Account ->
+  [Text] ->
+  m BalanceBreakdown
+getBalanceAmountsWith = breakdownWith False
+
+breakdownWith ::
+  (BeamFlow.BeamFlow m r) =>
+  Bool -> -- also load the entries a payout of 'redeemable' would cover
+  [Text] ->
+  Account ->
+  [Text] ->
+  m BalanceBreakdown
+breakdownWith withEntries alwaysRedeemableRefs account legacyOfferHoldKeys = do
   cfg <- getAccountConfigForAccount account
   pendingHolds <- QLedgerExtra.sumPendingByFromAccount account.id
   offerHolds <- sum <$> mapM getOfferHoldTotalAtKey (offerHoldKeyForAccount account.id : legacyOfferHoldKeys)
@@ -119,7 +141,8 @@ getBalanceBreakdownWith alwaysRedeemableRefs account legacyOfferHoldKeys = do
   -- still the full unsettled set (callers like cashback need the entry list even when
   -- the class has no cutoff policy).
   let cutoffAt = (`cutoffTimeFor` now) <$> cfg.redeemableCutoff
-  elig <- getPayoutEligibilityDataWith alwaysRedeemableRefs account.id account.balance (fromMaybe now cutoffAt) now
+  let eligibilityOf = if withEntries then getPayoutEligibilityDataWith else getPayoutEligibilityAmountsWith
+  elig <- eligibilityOf alwaysRedeemableRefs account.id account.balance (fromMaybe now cutoffAt) now
   let available = max 0 (elig.redeemableBalance - pendingHolds - offerHolds - cfg.minRetainedBalance)
   pure
     BalanceBreakdown

@@ -12,16 +12,35 @@ module Lib.Payment.Payout.HoldRelease
     recheckStatus,
     closedStatusAfterRelease,
     releasedByAdminPrefix,
+    ParkedTransfer (..),
+    ManualDecision (..),
+    listParkedTransfers,
+    loadParkedTransfer,
+    closeOrderByDecision,
   )
 where
 
 import qualified Data.Text as T
 import qualified Kernel.External.Payout.Interface as Payout
 import Kernel.Prelude
+import Kernel.Types.Error (GenericError (InvalidRequest))
+import Kernel.Types.Id (Id (..))
+import Kernel.Utils.Common (MonadFlow, fromMaybeM, throwError)
+import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.Transfer as DT
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
+import qualified Lib.Finance.Storage.Queries.Account as QFAccount
+import qualified Lib.Finance.Storage.Queries.Transfer as QT
+import qualified Lib.Finance.Storage.Queries.TransferExtra as QTE
+import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
+import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import Lib.Payment.Payout.Bulk.Resolve (allOrdersFinal, unsettledCount)
 import Lib.Payment.Payout.Bulk.Submit (batchRejectedPrefix, gatewayRefusedPrefix)
+import Lib.Payment.Payout.StatusCheck (isPayoutOrderSuccess, isTerminalPayoutOrderStatus)
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 
 -- | Which payout flow a request went through.
 data PayoutFlow
@@ -135,3 +154,84 @@ closedStatusAfterRelease batch orderStatuses requestStatuses
   | not (allOrdersFinal batch.itemCount orderStatuses) || unsettledCount requestStatuses > 0 = Nothing
   | batchNeverTaken batch = Just DPayoutBatch.SUBMIT_FAILED
   | otherwise = Just DPayoutBatch.COMPLETED
+
+-- ---------------------------------------------------------------------------
+-- Transfers the finance kernel parked as NEEDS_REVIEW (money may be with the partner)
+-- ---------------------------------------------------------------------------
+
+-- | A parked transfer with the owner of its account, for the ops list.
+data ParkedTransfer = ParkedTransfer
+  { transfer :: DT.Transfer,
+    ownerType :: Maybe Text,
+    ownerId :: Maybe Text
+  }
+
+-- | One page of the merchant city's transfers awaiting review, most recently touched first.
+listParkedTransfers ::
+  (FinanceBeamFlow.BeamFlow m r) =>
+  Text -> -- merchant id
+  Text -> -- merchant operating city id
+  Int ->
+  Int ->
+  m [ParkedTransfer]
+listParkedTransfers merchantId cityId limit offset = do
+  rows <- QTE.findAllByMerchantAndStatus merchantId (Just cityId) [DT.NEEDS_REVIEW] (Just limit) (Just offset)
+  forM rows $ \t -> do
+    mbAccount <- QFAccount.findById t.accountId
+    pure
+      ParkedTransfer
+        { transfer = t,
+          ownerType = show <$> (mbAccount >>= (.counterpartyType)),
+          ownerId = mbAccount >>= (.counterpartyId)
+        }
+
+-- | The transfer to act on: it must belong to this merchant city and still be awaiting review.
+loadParkedTransfer ::
+  (FinanceBeamFlow.BeamFlow m r, MonadFlow m) =>
+  Text -> -- merchant id
+  Text -> -- merchant operating city id
+  Text -> -- transfer id
+  m DT.Transfer
+loadParkedTransfer merchantId cityId transferId =
+  QT.findById (Id transferId) >>= \case
+    Just t | t.merchantId == merchantId && t.merchantOperatingCityId == cityId -> do
+      unless (t.status == DT.NEEDS_REVIEW) $
+        throwError $ InvalidRequest ("Transfer " <> transferId <> " is " <> show t.status <> ", not awaiting review")
+      pure t
+    _ -> throwError $ InvalidRequest ("Transfer not found: " <> transferId)
+
+-- | What ops decided about a parked payout.
+data ManualDecision = ManualSucceeded | ManualFailed
+  deriving (Eq, Show)
+
+-- | Record ops' decision on the payout order itself (who and why) and on its payout request, and return the
+--   status the normal settlement should now apply. An order the partner already ended is left as it is when
+--   the decision agrees with it, so a half-finished settlement can be retried. Two decisions overrule it:
+--   "paid" over a partner failure that arrived after the money went out (the order was sent, so ops may know
+--   better), and nothing else. "Failed" over a paid order is refused, and so is "paid" over an order that
+--   was never sent, because the ledger would then move money the partner did not.
+closeOrderByDecision ::
+  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r, MonadFlow m) =>
+  PayoutOrder.PayoutOrder ->
+  ManualDecision ->
+  Text -> -- who
+  Text -> -- why
+  m Payout.PayoutOrderStatus
+closeOrderByDecision stale decision actor reason = do
+  order <- QPayoutOrder.findByOrderId stale.orderId >>= fromMaybeM (InvalidRequest ("Payout order not found: " <> stale.orderId))
+  let (status, decidedPaid) = case decision of
+        ManualSucceeded -> (Payout.SUCCESS, True)
+        ManualFailed -> (Payout.FAILURE, False)
+      neverSent = order.responseCode `elem` [Just "NOT_SENT", Just "E09"]
+      close = do
+        QPayoutOrder.updateBulkSettled status order.transferStatus order.settlementRef order.settlementRefType (Just "MANUAL") (Just (T.take 500 ("Resolved manually by " <> actor <> ": " <> reason))) order.id
+        DPayment.updatePayoutRequestStatusFromOrder order status
+  if
+      | not (isTerminalPayoutOrderStatus order.status) -> close
+      | isPayoutOrderSuccess order.status == decidedPaid -> pure ()
+      | decidedPaid && not neverSent -> close
+      | otherwise ->
+        throwError . InvalidRequest $
+          "The payout order is already " <> show order.status
+            <> (if decidedPaid then " and it was never sent to the partner, so it cannot be marked paid." else "; it was paid, so it cannot be marked failed here. Mark it succeeded to accept it as paid.")
+  pure status

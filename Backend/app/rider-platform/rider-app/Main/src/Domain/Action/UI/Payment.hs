@@ -45,6 +45,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 -- import Data.Aeson (defaultOptions, withObject, (.:?))
 import Data.Aeson.Types ()
+import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.OpenApi ()
 import qualified Data.Text
 import qualified Domain.Action.Beckn.OnInit as DOnInit
@@ -98,6 +99,9 @@ import Kernel.Types.Id
 import Kernel.Types.Servant (RawByteString (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Domain.Types.Transfer as DT
+import qualified Lib.Finance.Transfer.Inbound as Inbound
+import qualified Lib.Finance.Transfer.Rail as Rail
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -112,6 +116,7 @@ import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
+import qualified SharedLogic.Finance.Rails as FinanceRails
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Utils as SLUtils
@@ -372,7 +377,7 @@ createBookingDepositPaymentOrder booking isMockPayment = do
       let mintLockKey = "BookingDeposit:OrderMint:" <> booking.id.getId
       eRes <-
         Redis.whenWithLockRedisAndReturnValue mintLockKey 120 $
-          withTryCatch "bookingDeposit:mintOrder" (mint shortfall attempts)
+          withTryCatch "bookingDeposit:mintOrder" (mintViaKernel shortfall attempts)
       case eRes of
         Left () -> do
           logInfo $ "Booking fee order mint already in flight for " <> booking.id.getId <> "; not issuing a second gateway call"
@@ -381,9 +386,44 @@ createBookingDepositPaymentOrder booking isMockPayment = do
           logError $ "Booking fee order mint failed for " <> booking.id.getId <> ": " <> show err
           pure BookingDepositOrderUnavailable
         Right (Right res) -> pure res
+    -- The kernel owns the payment's intent (gate, the order's transfer row, its status); the closure below is
+    -- how this domain creates or re-serves the gateway order, as the driver's topup rail does.
+    mintViaKernel shortfall attempts =
+      BookingDeposit.depositTopupAccount booking.riderId booking.merchantId booking.merchantOperatingCityId >>= \case
+        Nothing -> BookingDepositOrderUnavailable <$ logError ("Booking fee wallet account unavailable for " <> booking.id.getId)
+        Just account -> do
+          outcomeRef <- liftIO (newIORef Nothing)
+          let collect _req = do
+                res <- mint shortfall attempts
+                liftIO (writeIORef outcomeRef (Just res))
+                case res of
+                  BookingDepositOrderReady orderResp -> do
+                    latest <- listToMaybe <$> QBookingPayment.findAllByBookingIdAndServiceType booking.id DOrder.BookingDeposit
+                    attempt <- fromMaybeM (InternalError "Booking fee attempt missing after order mint") latest
+                    -- one live order per booking: the reuse rule above is the rider's own, and no other booking's order is replaced
+                    pure Rail.RailCollectResult {railOrderId = attempt.paymentOrderId.getId, payload = toJSON orderResp, replacesOrderIds = []}
+                  -- no order to serve: stop the intent here; the outcome is read back from outcomeRef
+                  _ -> throwError (InternalError "Booking fee order not issued")
+          issued <-
+            withTryCatch "bookingDeposit:initiateTransferIn" $
+              Inbound.initiateTransferIn
+                (FinanceRails.mkDepositInboundRail collect)
+                Inbound.InboundSpec
+                  { amount = shortfall,
+                    referenceType = FinanceRails.depositTopupTransferRefType,
+                    accountId = account.id,
+                    metadata = DT.emptyTransferMetadata
+                  }
+          liftIO (readIORef outcomeRef) >>= \case
+            -- the closure ran: its outcome stands, ready or not
+            Just outcome -> pure outcome
+            -- the kernel stopped before the closure (top-up disabled, account trouble) or the closure itself threw
+            Nothing -> do
+              logError $ "Booking fee intent not issued for " <> booking.id.getId <> ": " <> either show (either show (const "no order")) issued
+              pure BookingDepositOrderUnavailable
     mint shortfall attempts =
       case listToMaybe attempts of
-        -- Reused even when its amount no longer equals the shortfall: replacing a live order leaves two
+        -- Reused even when its oka no longer equals the shortfall: replacing a live order leaves two
         -- payable orders. A surplus is credited and returned by the booking's per-order refund.
         Just row | row.status == DBP.PENDING -> do
           mbOrd <- QOrder.findById row.paymentOrderId
@@ -392,6 +432,7 @@ createBookingDepositPaymentOrder booking isMockPayment = do
           if maybe False (\o -> o.status `elem` [Payment.CANCELLED, Payment.AUTO_REFUNDED]) mbOrd
             then do
               QBookingPayment.updateStatusById DBP.FAILED row.id
+              FinanceRails.updateDepositTopupTransferStatus row.paymentOrderId.getId Nothing DT.FAILED
               freshMint shortfall
             else reuseOrMint shortfall row
         _ -> freshMint shortfall
@@ -416,6 +457,7 @@ createBookingDepositPaymentOrder booking isMockPayment = do
                   pure BookingDepositOrderProcessing
                 else do
                   QBookingPayment.updateStatusById DBP.FAILED row.id
+                  FinanceRails.updateDepositTopupTransferStatus row.paymentOrderId.getId Nothing DT.FAILED
                   logInfo $ "Booking fee order " <> row.paymentOrderId.getId <> " can no longer be paid from this session (" <> show ((.status) <$> ordNow) <> "); minting fresh order for " <> booking.id.getId
                   freshMint shortfall
             else do
@@ -525,8 +567,9 @@ bookingDepositOrderStatusHandler suppressConfirm orderId _merchantId paymentStat
     _ -> do
       -- A failed transaction leaves the order open (a retry on it can still be CHARGED), so the
       -- attempt stays PENDING and keeps being synced; only a dead order closes it.
-      when (BookingDeposit.isDeadDepositOrder status) $
+      when (BookingDeposit.isDeadDepositOrder status) $ do
         setAttemptStatus orderId DBP.FAILED
+        FinanceRails.updateDepositTopupTransferStatus orderId.getId (Just (show status)) DT.FAILED
       pure (DPayment.FulfillmentPending, Nothing, Nothing)
   where
     settleCharged = do

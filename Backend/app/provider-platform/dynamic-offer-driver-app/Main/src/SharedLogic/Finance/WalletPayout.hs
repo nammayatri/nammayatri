@@ -245,8 +245,8 @@ data PayoutPrefetch = PayoutPrefetch
   }
 
 -- | Create the request and order for one beneficiary and hold the amount, so a second payout cannot
---   see the same money. Juspay/Stripe call the partner and then hold; the bulk rail holds first and
---   gives the money back if the payout does not go ahead.
+--   see the same money. Every rail submits first and holds after; the bulk rail's submit only writes the
+--   order locally, so a failed hold fails that order again (see the FAILED branch below).
 initiateWalletPayoutWith ::
   ( EncFlow m r,
     CacheFlow m r,
@@ -409,6 +409,8 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
         Right transfer -> case transfer.status of
           DTransfer.FAILED -> do
             -- Kernel already compensated: hold reversed, covered entries released.
+            -- A bulk order was only written locally; a failed hold must not leave it in the batch.
+            failBulkOrderIfAny mbBatchId pr.id (payoutNotSentPrefix <> fromMaybe "FAILED" transfer.lastError)
             failRequest pr.id (payoutNotSentPrefix <> fromMaybe "FAILED" transfer.lastError)
             logError $ "Wallet payout not sent for " <> ctx.driverId.getId <> " | payoutRequest " <> pr.id.getId <> ": " <> fromMaybe "FAILED" transfer.lastError
             pure Nothing

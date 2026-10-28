@@ -59,6 +59,7 @@ module Lib.Finance.Ledger.Service
     PayoutEligibility (..),
     getPayoutEligibilityData,
     getPayoutEligibilityDataWith,
+    getPayoutEligibilityAmountsWith,
     entryNetForAccount,
 
     -- * Settlement reservation (Option A — DB-level in-flight guard)
@@ -1055,9 +1056,35 @@ getPayoutEligibilityDataWith ::
   UTCTime -> -- payout cutoff time
   UTCTime -> -- current time (upper bound)
   m PayoutEligibility
-getPayoutEligibilityDataWith alwaysRedeemableRefs accountId walletBalance cutoff now = do
+getPayoutEligibilityDataWith = payoutEligibility True
+
+-- | The amounts of 'getPayoutEligibilityDataWith' without the covered-entry list:
+--   'redeemableEntries' is always empty. The entries before the cut-off are the only
+--   unbounded read (a wallet that never pays out keeps them all), and they feed nothing
+--   but that list: 'nonRedeemableBalance' and 'redeemableBalance' come from the entries
+--   after the cut-off alone. Use this where only the numbers are needed.
+getPayoutEligibilityAmountsWith ::
+  (BeamFlow.BeamFlow m r) =>
+  [Text] ->
+  Id Account ->
+  HighPrecMoney ->
+  UTCTime ->
+  UTCTime ->
+  m PayoutEligibility
+getPayoutEligibilityAmountsWith = payoutEligibility False
+
+payoutEligibility ::
+  (BeamFlow.BeamFlow m r) =>
+  Bool -> -- also load the entries a payout would cover
+  [Text] ->
+  Id Account ->
+  HighPrecMoney ->
+  UTCTime ->
+  UTCTime ->
+  m PayoutEligibility
+payoutEligibility withEntries alwaysRedeemableRefs accountId walletBalance cutoff now = do
   unsettledAbove <- findUnsettledByAccountAfterTime accountId cutoff now
-  redeemableBelow <- findUnsettledByAccountBeforeTime accountId cutoff
+  redeemableBelow <- if withEntries then findUnsettledByAccountBeforeTime accountId cutoff else pure []
   let (redeemableAbove, heldAbove) = partition (\e -> e.referenceType `elem` alwaysRedeemableRefs) unsettledAbove
       netAbove = sum (map (entryNetForAccount accountId) heldAbove)
       nonRedeemableBalance = max 0 (min walletBalance netAbove)
@@ -1066,7 +1093,7 @@ getPayoutEligibilityDataWith alwaysRedeemableRefs accountId walletBalance cutoff
       { walletBalance,
         nonRedeemableBalance,
         redeemableBalance = max 0 (walletBalance - nonRedeemableBalance),
-        redeemableEntries = redeemableBelow <> redeemableAbove
+        redeemableEntries = if withEntries then redeemableBelow <> redeemableAbove else []
       }
 
 --------------------------------------------------------------------------------

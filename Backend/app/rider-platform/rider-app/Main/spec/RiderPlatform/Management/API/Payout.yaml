@@ -13,7 +13,41 @@ default:
       - requestorId: Text
     actorInfo: requestorId
 
-types: {}
+types:
+  # ----- Transfers parked for review (finance_transfer status NEEDS_REVIEW) -----
+  TransferReviewListRes:
+    - items: [TransferReviewItem]
+  TransferReviewItem:
+    - transferId: Text
+    - direction: Text
+    - railKey: Maybe Text
+    - referenceType: Text
+    - referenceId: Text
+    - railOrderId: Maybe Text
+    - railStatus: Maybe Text
+    - amount: HighPrecMoney
+    - feeAmount: HighPrecMoney
+    - currency: Currency
+    - ownerType: Maybe Text
+    - ownerId: Maybe Text
+    - lastError: Maybe Text
+    - attemptCount: Int
+    - holdEntryId: Maybe Text
+    - entryIds: [Text]
+    - coveredEntryIds: [Text]
+    - canResolve: Bool
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  TransferResolveAction:
+    - enum: "RECHECK, MARK_SUCCEEDED, MARK_FAILED"
+  TransferResolveReq:
+    - action: TransferResolveAction
+    - reason: Text
+    - derive: "'HideSecrets"
+  TransferResolveRes:
+    - transferId: Text
+    - status: Text
+    - message: Text
 
 apis:
   - GET:
@@ -23,3 +57,31 @@ apis:
         payoutOrderId: Text
       response:
         type: PayoutOrderResp
+
+  # Transfers the finance kernel parked because the outcome is unknown or contradictory (money may be with the
+  # partner). Lists them with what ops needs to decide; canResolve is False for rows the actions below do not
+  # cover (inbound topups, refunds).
+  - GET:
+      endpoint: /transfer/needsReview
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: TransferReviewListRes
+      migrate:
+        capability: finance.payout.read
+
+  # RECHECK asks the partner again and settles through the normal path. MARK_SUCCEEDED / MARK_FAILED record
+  # ops' decision (reason required): succeeded settles the payout, failed gives the held money back.
+  - POST:
+      endpoint: /transfer/{transferId}/resolve
+      auth: ApiAuthV2
+      params:
+        transferId: Text
+      request:
+        type: TransferResolveReq
+      response:
+        type: TransferResolveRes
+      migrate:
+        capability: finance.payout.write

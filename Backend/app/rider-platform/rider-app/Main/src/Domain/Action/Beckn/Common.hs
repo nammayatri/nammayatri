@@ -2055,7 +2055,7 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
             -- transfer — the only money path. A not-submitted outcome just logs: the
             -- PersonStats status stays Processing, same as a failed direct call before.
             let submitViaKernel =
-                  Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated <&> \case
+                  Payout.createPayoutServiceWithStatusCheck (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated <&> \case
                     (_, Just payoutOrder) -> RailAccepted {railOrderId = payoutOrder.orderId, railStatus = show payoutOrder.status}
                     (Just _, Nothing) -> RailAmbiguous "payout order missing after create"
                     (Nothing, Nothing) -> RailAmbiguous "no response from payout service"

@@ -53,7 +53,7 @@ transferInternal runFinance spec
     QT.findByReference spec.referenceType spec.referenceId >>= \case
       Just existing -> pure (Right existing)
       Nothing -> do
-        breakdown <- getBalanceBreakdown spec.fromAccount spec.legacyOfferHoldKeys
+        breakdown <- getBalanceAmountsWith [] spec.fromAccount spec.legacyOfferHoldKeys
         let resolvedE = case spec.amount of
               AllAvailable -> Right breakdown.available
               Exact amt

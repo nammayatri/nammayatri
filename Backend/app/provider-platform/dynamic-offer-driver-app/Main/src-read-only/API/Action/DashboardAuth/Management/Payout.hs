@@ -8,10 +8,12 @@ module API.Action.DashboardAuth.Management.Payout
 where
 
 import qualified API.Types.ProviderPlatform.Management.Payout
+import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Data.Time
 import qualified Domain.Action.Dashboard.Management.Payout
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -28,119 +30,133 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("payout" :> (GetPayoutPayoutHistory :<|> GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutOrder :<|> GetPayoutPayoutScheduledPayoutConfig :<|> GetPayoutPayout :<|> PostPayoutPayoutRetry :<|> PostPayoutPayoutCancel :<|> PostPayoutPayoutCash :<|> PostPayoutPayoutVpaDelete :<|> PostPayoutPayoutVpaUpdate :<|> PostPayoutPayoutVpaRefundRegistration :<|> PostPayoutPayoutScheduledPayoutConfigUpsert :<|> GetPayoutAdhocLookup :<|> PostPayoutAdhocInitiate :<|> GetPayoutBatchList :<|> GetPayoutBatchOrders :<|> GetPayoutExcluded :<|> PostPayoutPayoutReleaseHold :<|> PostPayoutBatchRecheck))
+type API = ("payout" :> (GetPayoutPayoutHistory :<|> GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutOrder :<|> GetPayoutPayoutScheduledPayoutConfig :<|> GetPayoutPayout :<|> PostPayoutPayoutRetry :<|> PostPayoutPayoutCancel :<|> PostPayoutPayoutCash :<|> PostPayoutPayoutVpaDelete :<|> PostPayoutPayoutVpaUpdate :<|> PostPayoutPayoutVpaRefundRegistration :<|> PostPayoutPayoutScheduledPayoutConfigUpsert :<|> GetPayoutAdhocLookup :<|> PostPayoutAdhocInitiate :<|> GetPayoutBatchList :<|> GetPayoutBatchOrders :<|> GetPayoutExcluded :<|> PostPayoutPayoutReleaseHold :<|> PostPayoutBatchRecheck :<|> GetPayoutTransferNeedsReview :<|> PostPayoutTransferResolve))
 
 type GetPayoutPayoutHistory =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT_HISTORY"
       :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutHistory
   )
 
 type GetPayoutPayoutReferralHistory =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT_REFERRAL_HISTORY"
       :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutReferralHistory
   )
 
-type GetPayoutPayoutOrder = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT_ORDER" :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutOrder)
+type GetPayoutPayoutOrder = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT_ORDER" :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutOrder)
 
 type GetPayoutPayoutScheduledPayoutConfig =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT_SCHEDULED_PAYOUT_CONFIG"
       :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutScheduledPayoutConfig
   )
 
-type GetPayoutPayout = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT" :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayout)
+type GetPayoutPayout = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT" :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayout)
 
 type PostPayoutPayoutRetry =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_RETRY"
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutRetry
   )
 
 type PostPayoutPayoutCancel =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_CANCEL"
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutCancel
   )
 
-type PostPayoutPayoutCash = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_CASH" :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutCash)
+type PostPayoutPayoutCash = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_CASH" :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutCash)
 
 type PostPayoutPayoutVpaDelete =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_VPA_DELETE"
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutVpaDelete
   )
 
 type PostPayoutPayoutVpaUpdate =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_VPA_UPDATE"
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutVpaUpdate
   )
 
 type PostPayoutPayoutVpaRefundRegistration =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_VPA_REFUND_REGISTRATION"
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutVpaRefundRegistration
   )
 
 type PostPayoutPayoutScheduledPayoutConfigUpsert =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_SCHEDULED_PAYOUT_CONFIG_UPSERT"
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutScheduledPayoutConfigUpsert
   )
 
-type GetPayoutAdhocLookup = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_ADHOC_LOOKUP" :> API.Types.ProviderPlatform.Management.Payout.GetPayoutAdhocLookup)
+type GetPayoutAdhocLookup = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_ADHOC_LOOKUP" :> API.Types.ProviderPlatform.Management.Payout.GetPayoutAdhocLookup)
 
 type PostPayoutAdhocInitiate =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_ADHOC_INITIATE"
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutAdhocInitiate
   )
 
-type GetPayoutBatchList = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_BATCH_LIST" :> API.Types.ProviderPlatform.Management.Payout.GetPayoutBatchList)
+type GetPayoutBatchList = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_BATCH_LIST" :> API.Types.ProviderPlatform.Management.Payout.GetPayoutBatchList)
 
-type GetPayoutBatchOrders = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_BATCH_ORDERS" :> API.Types.ProviderPlatform.Management.Payout.GetPayoutBatchOrders)
+type GetPayoutBatchOrders = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_BATCH_ORDERS" :> API.Types.ProviderPlatform.Management.Payout.GetPayoutBatchOrders)
 
-type GetPayoutExcluded = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_EXCLUDED" :> API.Types.ProviderPlatform.Management.Payout.GetPayoutExcluded)
+type GetPayoutExcluded = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_EXCLUDED" :> API.Types.ProviderPlatform.Management.Payout.GetPayoutExcluded)
 
 type PostPayoutPayoutReleaseHold =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_RELEASE_HOLD"
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutReleaseHold
   )
 
 type PostPayoutBatchRecheck =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_BATCH_RECHECK"
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutBatchRecheck
   )
 
-handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPayoutPayoutHistory merchantId city :<|> getPayoutPayoutReferralHistory merchantId city :<|> getPayoutPayoutOrder merchantId city :<|> getPayoutPayoutScheduledPayoutConfig merchantId city :<|> getPayoutPayout merchantId city :<|> postPayoutPayoutRetry merchantId city :<|> postPayoutPayoutCancel merchantId city :<|> postPayoutPayoutCash merchantId city :<|> postPayoutPayoutVpaDelete merchantId city :<|> postPayoutPayoutVpaUpdate merchantId city :<|> postPayoutPayoutVpaRefundRegistration merchantId city :<|> postPayoutPayoutScheduledPayoutConfigUpsert merchantId city :<|> getPayoutAdhocLookup merchantId city :<|> postPayoutAdhocInitiate merchantId city :<|> getPayoutBatchList merchantId city :<|> getPayoutBatchOrders merchantId city :<|> getPayoutExcluded merchantId city :<|> postPayoutPayoutReleaseHold merchantId city :<|> postPayoutBatchRecheck merchantId city
+type GetPayoutTransferNeedsReview =
+  ( DashboardUserAuth
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      "PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_TRANSFER_NEEDS_REVIEW"
+      :> API.Types.ProviderPlatform.Management.Payout.GetPayoutTransferNeedsReview
+  )
 
-getPayoutPayoutHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler Lib.Payment.API.Payout.Types.PayoutHistoryRes)
+type PostPayoutTransferResolve =
+  ( DashboardUserAuth
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_TRANSFER_RESOLVE"
+      :> API.Types.ProviderPlatform.Management.Payout.PostPayoutTransferResolve
+  )
+
+handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
+handler merchantId city = getPayoutPayoutHistory merchantId city :<|> getPayoutPayoutReferralHistory merchantId city :<|> getPayoutPayoutOrder merchantId city :<|> getPayoutPayoutScheduledPayoutConfig merchantId city :<|> getPayoutPayout merchantId city :<|> postPayoutPayoutRetry merchantId city :<|> postPayoutPayoutCancel merchantId city :<|> postPayoutPayoutCash merchantId city :<|> postPayoutPayoutVpaDelete merchantId city :<|> postPayoutPayoutVpaUpdate merchantId city :<|> postPayoutPayoutVpaRefundRegistration merchantId city :<|> postPayoutPayoutScheduledPayoutConfigUpsert merchantId city :<|> getPayoutAdhocLookup merchantId city :<|> postPayoutAdhocInitiate merchantId city :<|> getPayoutBatchList merchantId city :<|> getPayoutBatchOrders merchantId city :<|> getPayoutExcluded merchantId city :<|> postPayoutPayoutReleaseHold merchantId city :<|> postPayoutBatchRecheck merchantId city :<|> getPayoutTransferNeedsReview merchantId city :<|> postPayoutTransferResolve merchantId city
+
+getPayoutPayoutHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler Lib.Payment.API.Payout.Types.PayoutHistoryRes)
 getPayoutPayoutHistory a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a8 $ Domain.Action.Dashboard.Management.Payout.getPayoutPayoutHistory a10 a9 a7 a6 a5 a4 a3 a2 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a8))
 
-getPayoutPayoutReferralHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.PayoutReferralHistoryRes)
+getPayoutPayoutReferralHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe ((Kernel.Types.Id.Id Dashboard.Common.Driver)) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.PayoutReferralHistoryRes)
 getPayoutPayoutReferralHistory a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a10 $ Domain.Action.Dashboard.Management.Payout.getPayoutPayoutReferralHistory a12 a11 a9 a8 a7 a6 a5 a4 a3 a2 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a10))
 
 getPayoutPayoutOrder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler Lib.Payment.API.Payout.Types.PayoutOrderResp)
 getPayoutPayoutOrder a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Payout.getPayoutPayoutOrder a4 a3 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2))
 
-getPayoutPayoutScheduledPayoutConfig :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.ScheduledPayoutConfigViewResp)
+getPayoutPayoutScheduledPayoutConfig :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.ScheduledPayoutConfigViewResp)
 getPayoutPayoutScheduledPayoutConfig a16 a15 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a14 $ Domain.Action.Dashboard.Management.Payout.getPayoutPayoutScheduledPayoutConfig a16 a15 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a14))
 
 getPayoutPayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> Environment.FlowHandler Lib.Payment.API.Payout.Types.PayoutRequestResp)
@@ -202,29 +218,29 @@ postPayoutPayoutScheduledPayoutConfigUpsert a4 a3 a2 a1 =
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Payout.postPayoutPayoutScheduledPayoutConfigUpsert a4 a3 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)) a1
     )
 
-getPayoutAdhocLookup :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.AdhocPayoutLookupResp)
+getPayoutAdhocLookup :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.AdhocPayoutLookupResp)
 getPayoutAdhocLookup a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.Payout.getPayoutAdhocLookup a6 a5 a3 a2 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a4))
 
 postPayoutAdhocInitiate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Payout.AdhocPayoutInitiateReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.AdhocPayoutInitiateResp)
 postPayoutAdhocInitiate a4 a3 a2 a1 =
-  withDashboardFlowHandlerAPI
+  withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_ADHOC_INITIATE" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Payout.postPayoutAdhocInitiate a4 a3 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)) a1
     )
 
-getPayoutBatchList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchOrigin -> Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchRail -> Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchStatus -> Data.Time.Day -> Data.Time.Day -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.PayoutBatchListRes)
+getPayoutBatchList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchOrigin) -> Kernel.Prelude.Maybe (Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchRail) -> Kernel.Prelude.Maybe (Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchStatus) -> Data.Time.Day -> Data.Time.Day -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.PayoutBatchListRes)
 getPayoutBatchList a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a8 $ Domain.Action.Dashboard.Management.Payout.getPayoutBatchList a10 a9 a7 a6 a5 a4 a3 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a8)) a2 a1
 
 getPayoutBatchOrders :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.PayoutBatchOrdersRes)
 getPayoutBatchOrders a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Payout.getPayoutBatchOrders a4 a3 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2))
 
-getPayoutExcluded :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Time.Day -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.PayoutExcludedRes)
+getPayoutExcluded :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Data.Time.Day) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.PayoutExcludedRes)
 getPayoutExcluded a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.Dashboard.Management.Payout.getPayoutExcluded a7 a6 a4 a3 a2 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a5))
 
 postPayoutPayoutReleaseHold :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Payout.PayoutReleaseHoldReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.PayoutReleaseHoldResp)
 postPayoutPayoutReleaseHold a4 a3 a2 a1 =
-  withDashboardFlowHandlerAPI
+  withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_RELEASE_HOLD" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Payout.postPayoutPayoutReleaseHold a4 a3 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)) a1
@@ -232,8 +248,19 @@ postPayoutPayoutReleaseHold a4 a3 a2 a1 =
 
 postPayoutBatchRecheck :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.Payout.PayoutBatchRecheckReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPayoutBatchRecheck a5 a4 a3 a2 a1 =
-  withDashboardFlowHandlerAPI
+  withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_BATCH_RECHECK" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Payout.postPayoutBatchRecheck a5 a4 a2 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3)) a1
+    )
+
+getPayoutTransferNeedsReview :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.TransferReviewListRes)
+getPayoutTransferNeedsReview a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Payout.getPayoutTransferNeedsReview a5 a4 a2 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3))
+
+postPayoutTransferResolve :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.Payout.TransferResolveReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.TransferResolveRes)
+postPayoutTransferResolve a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_TRANSFER_RESOLVE" a3 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Payout.postPayoutTransferResolve a5 a4 a2 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3)) a1
     )
