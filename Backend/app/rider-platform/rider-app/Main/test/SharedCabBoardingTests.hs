@@ -62,8 +62,13 @@ tests =
             cabProximity now 10 (Just (ago 30, cab)) (Just stop) [at 1 stop] @?= Just (RiderDistance 0),
           testCase "the rider's point closest in time to the ping counts, not the newest" $
             cabProximity now 10 (Just (ago 6, cab)) (Just stop) [at 6 cab, at 1 stop] @?= Just (RiderDistance 0),
-          testCase "a rider point older than the bar is no location" $
-            cabProximity now 10 (Just (ago 2, cab)) (Just stop) [at 20 cab] @?= Just NoRecentRiderPoint,
+          testCase "the cab ping takes the 10 s bar; the rider's point keeps 300 s" $
+            [ cabProximity now 10 (Just (ago 9, cab)) Nothing [at 9 cab],
+              cabProximity now 10 (Just (ago 11, cab)) Nothing [at 11 cab],
+              cabProximity now 10 (Just (ago 2, cab)) Nothing [at 200 cab],
+              cabProximity now 10 (Just (ago 2, cab)) Nothing [at 301 cab]
+            ]
+              @?= [Just (RiderDistance 0), Nothing, Just (RiderDistance 0), Just NoRecentRiderPoint],
           testCase "no ping and no stop is no anchor" $
             cabProximity now 10 Nothing Nothing [at 1 cab] @?= Nothing
         ],

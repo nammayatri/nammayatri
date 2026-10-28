@@ -137,10 +137,14 @@ lookupCabPing session = do
 -- | The bus boarding match against the cab's ping, or against the boarding stop (as if pinged now) when the cab has no fresh ping;
 -- Nothing when there is neither.
 cabProximity :: UTCTime -> NominalDiffTime -> Maybe (UTCTime, LatLong) -> Maybe LatLong -> [API.RiderLocationReq] -> Maybe VehicleProximity
-cabProximity now maxAge mbPing mbStop riderPoints =
+cabProximity now maxPingAge mbPing mbStop riderPoints =
   mfilter (/= StaleVehiclePing) (near <$> mbPing) <|> (near . (now,) <$> mbStop)
   where
-    near ping = riderNearVehicle now maxAge ping riderPoints
+    near ping = riderNearVehicle now maxPingAge riderPointMaxAge ping riderPoints
+
+-- | Only the cab's ping takes the bus bar: the rider app's location cadence during cab boarding is not known to be under it.
+riderPointMaxAge :: NominalDiffTime
+riderPointMaxAge = 300
 
 -- | Left -> proximity hold; Right -> pass. Ladder: journey location stream, then request lat/lon (pending a MultiModal.yaml
 -- addition), then no location: allocated cab / direct board pass flagged, re-bind is a hard fail.

@@ -106,7 +106,7 @@ checkRiderNearBusFRFS vehicleNumber mbRouteCode mbBookingTripId mbBookingStartTi
           -- system's relative ranking across many candidate buses and tolerates more slop than a moving
           -- bus's position staying meaningfully close to boardingMatchRadiusInMeters.
           let maxPingAgeSeconds = fromMaybe 10.0 riderConfig.boardingBusPingMaxAgeSeconds
-          case riderNearVehicle now (realToFrac maxPingAgeSeconds) (busPingTime, LatLong busData.latitude busData.longitude) riderLocationHistory of
+          case riderNearVehicle now (realToFrac maxPingAgeSeconds) (realToFrac maxPingAgeSeconds) (busPingTime, LatLong busData.latitude busData.longitude) riderLocationHistory of
             StaleVehiclePing -> pure (False, Nothing, Just "NO_LIVE_BUS_DATA")
             NoRecentRiderPoint -> pure (False, Nothing, Just "NO_RECENT_RIDER_LOCATION")
             RiderDistance distanceMeters -> do
@@ -142,15 +142,15 @@ checkRiderNearBusFRFS vehicleNumber mbRouteCode mbBookingTripId mbBookingStartTi
 data VehicleProximity = StaleVehiclePing | NoRecentRiderPoint | RiderDistance Double
   deriving (Show, Eq)
 
--- | The boarding match on one vehicle ping: the ping must be younger than `maxAge`, and the rider's point closest in time to it
--- (among points younger than `maxAge`) gives the distance. The same freshness bar applies to the rider side: picking "whichever
--- point is closest in time to the ping" from the whole history can otherwise let an old-but-coincidentally-aligned rider point
--- win over a genuinely current one. Filtered against server time, not the client-supplied currTime, since a client clock can be
--- skewed.
-riderNearVehicle :: UTCTime -> NominalDiffTime -> (UTCTime, LatLong) -> [APITypes.RiderLocationReq] -> VehicleProximity
-riderNearVehicle now maxAge (pingTime, vehicleLoc) riderPoints
-  | abs (Time.diffUTCTime now pingTime) >= maxAge = StaleVehiclePing
-  | otherwise = case filter (\p -> abs (Time.diffUTCTime now p.currTime) < maxAge) riderPoints of
+-- | The boarding match on one vehicle ping: the ping must be younger than `maxPingAge`, and the rider's point closest in time to it
+-- (among points younger than `maxRiderAge`) gives the distance. The bus applies its ping bar to the rider side too: picking
+-- "whichever point is closest in time to the ping" from the whole history can otherwise let an old-but-coincidentally-aligned rider
+-- point win over a genuinely current one. Filtered against server time, not the client-supplied currTime, since a client clock can
+-- be skewed.
+riderNearVehicle :: UTCTime -> NominalDiffTime -> NominalDiffTime -> (UTCTime, LatLong) -> [APITypes.RiderLocationReq] -> VehicleProximity
+riderNearVehicle now maxPingAge maxRiderAge (pingTime, vehicleLoc) riderPoints
+  | abs (Time.diffUTCTime now pingTime) >= maxPingAge = StaleVehiclePing
+  | otherwise = case filter (\p -> abs (Time.diffUTCTime now p.currTime) < maxRiderAge) riderPoints of
     [] -> NoRecentRiderPoint
     recent ->
       let closestPoint = minimumBy (comparing (\p -> abs (Time.diffUTCTime p.currTime pingTime))) recent
