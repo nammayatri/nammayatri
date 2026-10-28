@@ -78,7 +78,6 @@ candidate plate =
             walkupCount = 0,
             status = ACTIVE,
             pauseReason = Nothing,
-            consecutiveMisses = 0,
             version = 0,
             startedAt = t0,
             vehicleTripId = Id "trip1"

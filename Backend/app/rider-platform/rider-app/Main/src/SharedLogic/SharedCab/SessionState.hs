@@ -81,7 +81,6 @@ data Session = Session
     walkupCount :: Int,
     status :: SessionStatus,
     pauseReason :: Maybe PauseReason,
-    consecutiveMisses :: Int,
     version :: Int,
     startedAt :: UTCTime,
     vehicleTripId :: Id DVT.VehicleTrip
@@ -147,7 +146,6 @@ newSession req tripId now prior =
       walkupCount = 0,
       status = ACTIVE,
       pauseReason = Nothing,
-      consecutiveMisses = 0,
       version = maybe 1 ((+ 1) . (.version)) prior,
       startedAt = now,
       vehicleTripId = tripId
@@ -174,7 +172,7 @@ pauseSession reason s
 resumeSession :: Session -> Either SharedCabSessionError Session
 resumeSession s
   | s.status /= PAUSED = Left SessionNotPaused
-  | otherwise = Right $ bump s {status = ACTIVE, pauseReason = Nothing, consecutiveMisses = 0}
+  | otherwise = Right $ bump s {status = ACTIVE, pauseReason = Nothing}
 
 setWalkup :: Int -> Int -> Session -> Either SharedCabSessionError Session
 setWalkup expectedVersion count s
@@ -273,7 +271,6 @@ sessionFromTrip trip now =
         DVT.PAUSED -> PAUSED
         _ -> ACTIVE,
       pauseReason = Nothing,
-      consecutiveMisses = 0,
       version = floor (utcTimeToPOSIXSeconds now),
       startedAt = trip.startedAt,
       vehicleTripId = trip.id

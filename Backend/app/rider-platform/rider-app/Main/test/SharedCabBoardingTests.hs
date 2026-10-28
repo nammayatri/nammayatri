@@ -103,7 +103,6 @@ tests =
           walkupCount = 0,
           status = ACTIVE,
           pauseReason = Nothing,
-          consecutiveMisses = 0,
           version = 1,
           startedAt = now,
           vehicleTripId = Id "trip1"
