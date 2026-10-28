@@ -262,6 +262,24 @@ getAllFarePoliciesProduct mbPricingTime merchantId merchantOpCityId isDashboard 
   dpInputsList <- resolveSearchDpInputs transporterConfig fromlocaton mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance merchantOpCityId mbDpInputsSharing [trip]
   buildFarePoliciesProduct transporterConfig merchantOpCityId fromlocaton mbToLocation txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion configsInExperimentVersions dpInputsList trip
 
+-- | Every trip category of one search. The dynamic-pricing inputs depend only on the
+-- pickup/drop and the vehicle category, never on the trip category, so they are
+-- resolved once for the union of the trip categories' vehicle categories -- one Redis
+-- fetch, one toss and one publish per search instead of one per trip category.
+getAllFarePoliciesProducts :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) => Maybe UTCTime -> Id Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> LatLong -> Maybe LatLong -> Maybe (Id SL.SpecialLocation) -> Maybe (Id SL.SpecialLocation) -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> [DTC.TripCategory] -> [LYT.ConfigVersionMap] -> Maybe DpInputsSharing -> m [FarePoliciesProduct]
+getAllFarePoliciesProducts mbPricingTime merchantId merchantOpCityId isDashboard fromlocaton mbToLocation mbFromSpecialLocationId mbToSpecialLocationId txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion tripCategories configsInExperimentVersions mbDpInputsSharing = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  -- As with the per-trip-category fan-out this replaces, a trip category that fails is
+  -- dropped ('mapConcurrently' keeps only successes) rather than failing the search.
+  trips <- mapConcurrently (resolveTripFareProducts mbPricingTime merchantId merchantOpCityId isDashboard fromlocaton mbToLocation mbFromSpecialLocationId mbToSpecialLocationId) tripCategories
+  (pricedTrips, dpInputsList) <-
+    withTryCatch "resolveSearchDpInputs" (resolveSearchDpInputs transporterConfig fromlocaton mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance merchantOpCityId mbDpInputsSharing trips) <&> \case
+      Right inputs -> (trips, inputs)
+      -- Previously this failure was raised inside each dynamic-pricing trip category's own
+      -- fan-out branch, so exactly those trip categories were dropped. Keep it that way.
+      Left _ -> (List.filter (not . isDynamicPricingTripCategory . (.tripCategory)) trips, [])
+  mapConcurrently (buildFarePoliciesProduct transporterConfig merchantOpCityId fromlocaton mbToLocation txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion configsInExperimentVersions dpInputsList) pricedTrips
+
 -- | A trip category's fare products, each with its (cached) vehicle-service-tier item,
 -- resolved once and reused both for the dynamic-pricing inputs and inside 'getFullFarePolicy'.
 data TripFareProducts = TripFareProducts
