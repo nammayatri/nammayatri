@@ -13,14 +13,18 @@ module SharedLogic.SharedCab.Demand
   )
 where
 
+import qualified Data.Aeson as A
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Database.Redis as RawRedis
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.SharedCabSession as SCS
 import qualified Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Storage.InMem as IM
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Booking (findingOnRoute)
@@ -57,7 +61,7 @@ sharedCabBoardStops routes =
     ]
 
 data StopDemand = StopDemand {waiting :: Int, searching :: Int}
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, ToJSON)
 
 -- | A FINDING booking still counts as waiting for the city's findingTimeoutSec after it was made.
 isRecentFinding :: Int -> UTCTime -> UTCTime -> Bool
@@ -107,12 +111,23 @@ searchedAt cityId now stopCode =
 
 -- | Per board stop of the route: riders whose booking is FINDING (and not past the city's findingTimeoutSec),
 -- and riders who searched in the window without booking.
-demandByStop :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Config.SharedCabTunables -> Text -> Text -> [Text] -> m (Map.Map Text StopDemand)
-demandByStop cfg cityId routeCode stopCodes = do
+-- | Kept 3 s in memory per city and route: every driver on the route polls it.
+demandByStop :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, CoreMetrics m) => Config.SharedCabTunables -> Text -> Text -> [Text] -> m (Map.Map Text StopDemand)
+demandByStop cfg cityId routeCode stopCodes = IM.withInMemCache ["SharedCabDemand", cityId, routeCode] 3 $ do
   now <- getCurrentTime
   finding <- recentFinding cfg now cityId routeCode
-  searched <- forM stopCodes $ \stopCode -> (stopCode,) <$> searchedAt cityId now stopCode
+  searched <- searchedAtStops cityId now stopCodes
   pure $ tallyDemand [(b.fromStationCode, b.riderId.getId) | b <- finding] searched
+
+-- | Every stop's search buckets in one pipelined round trip; a failed read counts no searches.
+searchedAtStops :: (CacheFlow m r, MonadFlow m) => Text -> UTCTime -> [Text] -> m [(Text, Set.Set Text)]
+searchedAtStops cityId now stopCodes = do
+  let keys = [(stopCode, demandKey cityId stopCode (bucketOf now - i)) | stopCode <- stopCodes, i <- [0 .. bucketCount - 1]]
+  replies <- Redis.withMasterRedis $ do
+    prefixed <- traverse (Redis.buildKey . snd) keys
+    Redis.runPipelined "sharedCabDemandSearches" RawRedis.smembers prefixed
+  let members = either (const (map (const []) keys)) (map (either (const []) (mapMaybe A.decodeStrict))) replies
+  pure [(stopCode, Set.unions [Set.fromList ms | ((code, _), ms) <- zip keys members, code == stopCode]) | stopCode <- stopCodes]
 
 tallyDemand :: [(Text, Text)] -> [(Text, Set.Set Text)] -> Map.Map Text StopDemand
 tallyDemand findingRiders searchedByStop =
