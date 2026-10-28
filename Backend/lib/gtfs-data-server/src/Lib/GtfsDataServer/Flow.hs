@@ -1,11 +1,18 @@
 module Lib.GtfsDataServer.Flow where
 
+import Data.Time (Day)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Lib.GtfsDataServer.API.Nandi as NandiAPI
 import Lib.GtfsDataServer.Types
+import Network.HTTP.Types (Status (..))
+import Servant.Client (ClientError (..), ResponseF (..))
+
+isNotFoundResponse :: ClientError -> Bool
+isNotFoundResponse (FailureResponse _ res) = statusCode (responseStatusCode res) == 404
+isNotFoundResponse _ = False
 
 getRouteStopMappingByRouteCode :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m [RouteStopMappingInMemoryServer]
 getRouteStopMappingByRouteCode baseUrl gtfsId routeCode =
@@ -92,3 +99,51 @@ getStopCode baseUrl gtfsId providerStopCode =
 gimsVerifyConductor :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> GimsVerifyReq -> m GimsVerifyResp
 gimsVerifyConductor baseUrl gtfsId req =
   withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorVerify gtfsId req) "gimsVerifyConductor" NandiAPI.operatorVerifyAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_GIMS_VERIFY_CONDUCTOR_API") baseUrl)
+
+-- Nothing on a 404: GIMS distinguishes FEED_NOT_FOUND / FLEET_NOT_FOUND there, and callers turn
+-- the absence into their own domain error.
+getFleetOperationV2 :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m (Maybe FleetOperationInfo)
+getFleetOperationV2 baseUrl gtfsId fleetNo =
+  withShortRetry $
+    callAPI baseUrl (NandiAPI.getNandiFleetOperationV2 gtfsId fleetNo) "getFleetOperationV2" NandiAPI.nandiFleetOperationV2API >>= \case
+      Right response -> pure (Just response)
+      Left err
+        | isNotFoundResponse err -> pure Nothing
+        | otherwise -> throwError $ ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_FLEET_OPERATION_V2_API") baseUrl err
+
+getDepotsV2 :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [DepotInfo]
+getDepotsV2 baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiDepotsV2 gtfsId) "getDepotsV2" NandiAPI.nandiDepotsV2API >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_DEPOTS_V2_API") baseUrl)
+
+getDepotByIdV2 :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m (Maybe DepotInfo)
+getDepotByIdV2 baseUrl gtfsId depotId =
+  withShortRetry $
+    callAPI baseUrl (NandiAPI.getNandiDepotByIdV2 gtfsId depotId) "getDepotByIdV2" NandiAPI.nandiDepotByIdV2API >>= \case
+      Right response -> pure (Just response)
+      Left err
+        | isNotFoundResponse err -> pure Nothing
+        | otherwise -> throwError $ ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_DEPOT_BY_ID_V2_API") baseUrl err
+
+getDepotVehiclesV2 :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> Maybe Text -> m [DepotVehicleInfo]
+getDepotVehiclesV2 baseUrl gtfsId depotId mbStatus =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiDepotVehiclesV2 gtfsId depotId mbStatus) "getDepotVehiclesV2" NandiAPI.nandiDepotVehiclesV2API >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_DEPOT_VEHICLES_V2_API") baseUrl)
+
+getFleetVehiclesV2 :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Maybe Text -> m [DepotVehicleInfo]
+getFleetVehiclesV2 baseUrl gtfsId mbStatus =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiFleetVehiclesV2 gtfsId mbStatus) "getFleetVehiclesV2" NandiAPI.nandiFleetVehiclesV2API >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_FLEET_VEHICLES_V2_API") baseUrl)
+
+getDepotWaybillsV2 :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> Day -> Maybe Int -> Maybe Int -> Maybe Text -> m MonitoringAssignments
+getDepotWaybillsV2 baseUrl gtfsId depotId serviceDate page pageSize query =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiDepotWaybillsV2 gtfsId depotId serviceDate page pageSize query) "getDepotWaybillsV2" NandiAPI.nandiDepotWaybillsV2API >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_DEPOT_WAYBILLS_V2_API") baseUrl)
+
+getDepotRoutesV2 :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> Day -> Maybe Int -> Maybe Int -> Maybe Text -> m MonitoringRoutes
+getDepotRoutesV2 baseUrl gtfsId depotId serviceDate page pageSize query =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiDepotRoutesV2 gtfsId depotId serviceDate page pageSize query) "getDepotRoutesV2" NandiAPI.nandiDepotRoutesV2API >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_DEPOT_ROUTES_V2_API") baseUrl)
+
+getDepotCrewV2 :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> Day -> Maybe Int -> Maybe Int -> Maybe Text -> m MonitoringCrewPage
+getDepotCrewV2 baseUrl gtfsId depotId serviceDate page pageSize query =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiDepotCrewV2 gtfsId depotId serviceDate page pageSize query) "getDepotCrewV2" NandiAPI.nandiDepotCrewV2API >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_DEPOT_CREW_V2_API") baseUrl)
+
+getDepotOverviewV2 :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> Day -> m MonitoringOverview
+getDepotOverviewV2 baseUrl gtfsId depotId serviceDate =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiDepotOverviewV2 gtfsId depotId serviceDate) "getDepotOverviewV2" NandiAPI.nandiDepotOverviewV2API >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_DEPOT_OVERVIEW_V2_API") baseUrl)

@@ -15,3 +15,27 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"TransitOperatorSetScheduleTripRepeat","migration":"capability","param":"transit-operations.master.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'transit-operations.master.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_SET_SCHEDULE_TRIP_REPEAT' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"TransitOperatorGetDepotsV2","migration":"capability","param":"transit-operations.master.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'transit-operations.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_DEPOTS_V2' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"TransitOperatorGetDepotVehicles","migration":"capability","param":"transit-operations.master.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'transit-operations.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_DEPOT_VEHICLES' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"TransitOperatorGetFleetVehiclesV2","migration":"capability","param":"transit-operations.master.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'transit-operations.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_FLEET_VEHICLES_V2' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"TransitOperatorGetDepotWaybills","migration":"capability","param":"transit-operations.master.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'transit-operations.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_DEPOT_WAYBILLS' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"TransitOperatorGetDepotOverview","migration":"capability","param":"transit-operations.master.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'transit-operations.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_DEPOT_OVERVIEW' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"TransitOperatorGetDepotRoutes","migration":"capability","param":"transit-operations.master.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'transit-operations.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_DEPOT_ROUTES' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"TransitOperatorGetDepotCrew","migration":"capability","param":"transit-operations.master.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'transit-operations.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_DEPOT_CREW' ) ON CONFLICT DO NOTHING;

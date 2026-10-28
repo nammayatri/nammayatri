@@ -4,9 +4,11 @@ module Lib.GtfsDataServer.Types where
 
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
+import Data.Map.Strict (Map)
 import Data.OpenApi ()
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Time (Day)
 import Data.Time.Clock (addUTCTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import Kernel.External.Maps (HasCoordinates (..))
@@ -510,3 +512,162 @@ data GimsEmployeeLoginResp = GimsEmployeeLoginResp
     role :: Maybe GimsEmployeeRole
   }
   deriving (Generic, FromJSON, ToJSON, Show)
+
+-- | v2 depot identity. @depot_id@ is the stable key we persist; @depot_code@ is a display short
+-- code that is nullable and not unique across depots, so it is never used as a key.
+data DepotInfo = DepotInfo
+  { depot_id :: Text,
+    depot_code :: Maybe Text,
+    depot_name :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data DepotVehicleInfo = DepotVehicleInfo
+  { fleet_no :: Text,
+    vehicle_no :: Maybe Text,
+    status :: Maybe Text,
+    service_type :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+-- | A fleet's current operating state. Only @depot_id@ is guaranteed: everything else is null when
+-- the bus has no open waybill, which GIMS returns as a 200 since it is a normal state, not an error.
+data FleetOperationInfo = FleetOperationInfo
+  { depot_id :: Text,
+    depot_name :: Maybe Text,
+    waybill_no :: Maybe Text,
+    schedule_no :: Maybe Text,
+    conductor_code :: Maybe Text,
+    driver_code :: Maybe Text,
+    service_type :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+-- Dated source assignments; raw vehicle aliases and trip flags are not GPS evidence.
+data MonitoringAssignmentTrip = MonitoringAssignmentTrip
+  { tripId :: Text,
+    routeId :: Maybe Text,
+    routeNumber :: Maybe Text,
+    routeName :: Maybe Text,
+    direction :: Maybe Text,
+    tripNumber :: Int,
+    tripOrder :: Int,
+    tripType :: Maybe Text,
+    scheduledStart :: Maybe Text,
+    scheduledEnd :: Maybe Text,
+    recordedActive :: Bool,
+    recordedCompleted :: Maybe Bool,
+    actualStart :: Maybe Text,
+    actualEnd :: Maybe Text,
+    plannedKm :: Maybe Double
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data MonitoringAssignment = MonitoringAssignment
+  { waybillId :: Text,
+    waybillNo :: Maybe Text,
+    depotId :: Text,
+    serviceDate :: Day,
+    vehicleIdentifier :: Maybe Text,
+    driverToken :: Maybe Text,
+    conductorToken :: Maybe Text,
+    scheduleNo :: Maybe Text,
+    status :: Maybe Text,
+    isFlexi :: Bool,
+    updatedAt :: Maybe UTCTime,
+    trips :: [MonitoringAssignmentTrip]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data MonitoringAssignments = MonitoringAssignments
+  { depotId :: Text,
+    serviceDate :: Day,
+    source :: Text,
+    observedAt :: UTCTime,
+    rows :: [MonitoringAssignment],
+    total :: Int,
+    page :: Int,
+    pageSize :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data MonitoringRoute = MonitoringRoute
+  { routeId :: Text,
+    routeNumber :: Maybe Text,
+    routeName :: Maybe Text,
+    direction :: Maybe Text,
+    scheduledSchedules :: Int,
+    allocatedWaybills :: Int,
+    allocatedVehicles :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data MonitoringRoutes = MonitoringRoutes
+  { depotId :: Text,
+    serviceDate :: Day,
+    source :: Text,
+    observedAt :: UTCTime,
+    rows :: [MonitoringRoute],
+    total :: Int,
+    page :: Int,
+    pageSize :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+-- Roster assignment for the day, not attendance. No names or contacts.
+data MonitoringCrew = MonitoringCrew
+  { employeeId :: Text,
+    token :: Maybe Text,
+    designation :: Maybe Text,
+    masterStatus :: Maybe Text,
+    assignedWaybills :: Int,
+    assignedRoles :: [Text]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data MonitoringCrewPage = MonitoringCrewPage
+  { depotId :: Text,
+    serviceDate :: Day,
+    source :: Text,
+    observedAt :: UTCTime,
+    rows :: [MonitoringCrew],
+    total :: Int,
+    page :: Int,
+    pageSize :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data MonitoringOverview = MonitoringOverview
+  { depotId :: Text,
+    serviceDate :: Day,
+    source :: Text,
+    observedAt :: UTCTime,
+    registeredVehicles :: Int,
+    waybills :: Int,
+    allocatedVehicleIdentifiers :: Int,
+    matchedVehicles :: Int,
+    otherDepotVehicles :: Int,
+    unmatchedVehicleIdentifiers :: Int,
+    rosteredCrew :: Int,
+    assignedCrewTokens :: Int,
+    unrosteredCrewTokens :: Int,
+    waybillsByStatus :: Map Text Int,
+    scheduledRoutes :: Int,
+    allocatedRoutes :: Int,
+    plannedTrips :: Int,
+    startedTrips :: Int,
+    completedTrips :: Int,
+    activeTrips :: Int,
+    overdueUnstartedTrips :: Maybe Int,
+    tripsByHour :: [MonitoringTripHour]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+-- Trips by planned start hour (IST); started/completed come from source-recorded times.
+data MonitoringTripHour = MonitoringTripHour
+  { hour :: Int,
+    planned :: Int,
+    started :: Int,
+    completed :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
