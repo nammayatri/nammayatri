@@ -20,6 +20,7 @@ import Data.Time (addUTCTime, diffUTCTime)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
+import Lib.GateInfo.Geometry (pointToSegmentMeters)
 
 data StopProgressConfig = StopProgressConfig
   { atStopRadiusM :: Double,
@@ -99,15 +100,4 @@ metersFromPolyline :: [LatLong] -> LatLong -> Maybe Double
 metersFromPolyline route p = case route of
   [] -> Nothing
   [only] -> Just (meters p only)
-  _ -> Just . minimum $ zipWith segment route (drop 1 route)
-  where
-    earthR = 6371000
-    toXY q = ((q.lon - p.lon) * cos (p.lat * pi / 180) * earthR * pi / 180, (q.lat - p.lat) * earthR * pi / 180)
-    segment a b =
-      let (ax, ay) = toXY a
-          (bx, by) = toXY b
-          (dx, dy) = (bx - ax, by - ay)
-          len2 = dx * dx + dy * dy
-          t = if len2 == 0 then 0 else max 0 (min 1 (- (ax * dx + ay * dy) / len2))
-          (cx, cy) = (ax + t * dx, ay + t * dy)
-       in sqrt (cx * cx + cy * cy)
+  _ -> Just . minimum $ zipWith (pointToSegmentMeters p) route (drop 1 route)
