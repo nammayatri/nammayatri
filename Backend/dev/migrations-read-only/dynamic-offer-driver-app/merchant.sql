@@ -94,3 +94,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN business_id text ;
 
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN cloud_type text ;
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN cloud_base_url text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN social_identity_validity_in_days integer ;

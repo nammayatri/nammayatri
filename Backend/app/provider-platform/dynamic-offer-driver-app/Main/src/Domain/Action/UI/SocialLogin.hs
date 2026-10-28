@@ -13,17 +13,24 @@ import qualified Domain.Types.RegistrationToken as SR
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption (encrypt, getDbHash)
+import Kernel.External.Encryption (DbHash, decrypt, getDbHash)
 import qualified Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Types.Status (statusCode)
+import qualified SharedLogic.OTP as SOTP
+import qualified SharedLogic.SocialLogin as SSL
 import qualified Storage.CachedQueries.Merchant as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as PQ
+import qualified Storage.Queries.PersonSocialIdentity as QPSI
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Error
 
@@ -142,30 +149,182 @@ postSocialUpdateProfile ::
   )
 postSocialUpdateProfile (mbPersonId, merchantId, _) req = do
   personId <- maybe (throwError $ InternalError "Not Implemented for dashboard") pure mbPersonId
-  encNewPhoneNumber <- mapM encrypt req.mobileNumber
   person <- PQ.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  case req.mobileNumber of
-    Just mobileNumber -> do
-      mobileNumberHash <- getDbHash mobileNumber
-      let countryCode = fromMaybe "+91" req.mobileCountryCode
-      PQ.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchantId SP.DRIVER >>= \case
-        Just existingPerson
-          | personId /= existingPerson.id ->
-            throwError $ DriverMobileAlreadyExists (show req.mobileNumber)
-        _ -> return ()
-    _ -> return ()
+  whenJust req.mobileNumber $ \mobileNumber -> do
+    mobileNumberHash <- getDbHash mobileNumber
+    unless ((person.mobileNumber <&> (.hash)) == Just mobileNumberHash) $
+      throwError $ InvalidRequest "Mobile number can only be changed through OTP verification"
   PQ.findByEmailAndMerchantIdAndRole (Just req.email) merchantId SP.DRIVER >>= \case
     Just existingPerson
       | personId /= existingPerson.id ->
         throwError $ DriverEmailAlreadyExists (show req.email)
     _ -> return ()
+  let emailChanged = (SSL.normalizeEmail <$> person.email) /= Just (SSL.normalizeEmail req.email)
+  when (emailChanged && isJust person.email && SSL.hasTrustedEmail person) $
+    throwError $ InvalidRequest "Email can only be changed through OTP verification"
   let updatedPerson =
         person
-          { SP.mobileCountryCode = req.mobileCountryCode <|> person.mobileCountryCode,
-            SP.mobileNumber = encNewPhoneNumber <|> person.mobileNumber,
-            SP.firstName = fromMaybe person.firstName req.firstName,
+          { SP.firstName = fromMaybe person.firstName req.firstName,
             SP.lastName = req.lastName <|> person.lastName,
-            SP.email = Just req.email
+            SP.email = Just req.email,
+            SP.emailVerified = if emailChanged then Just False else person.emailVerified,
+            SP.emailSource = if emailChanged then Nothing else person.emailSource
           }
   PQ.updatePersonDetails updatedPerson
+  when emailChanged $ SSL.unlinkIdentitiesWithOtherEmail personId (Just req.email)
   pure Kernel.Types.APISuccess.Success
+
+postSocialLoginV2 :: SL.SocialLoginV2Req -> Environment.Flow SL.SocialLoginV2Res
+postSocialLoginV2 req = do
+  merchant <- CQMOC.findByShortId req.merchantShortId >>= fromMaybeM (MerchantDoesNotExist req.merchantShortId.getShortId)
+  verifiedLogin <- SSL.verifySocialToken req.oauthProvider req.nonce req.authorizationCode req.tokenId
+  now <- getCurrentTime
+  mbIdentity <- SSL.findIdentity merchant.id verifiedLogin
+  case mbIdentity of
+    Just socialIdentity | socialIdentity.validTill > now -> do
+      person <- PQ.findById socialIdentity.personId >>= fromMaybeM (PersonDoesNotExist socialIdentity.personId.getId)
+      SSL.recordLogin socialIdentity verifiedLogin
+      loggedIn person
+    _ -> do
+      mbPerson <- if isJust mbIdentity then pure Nothing else SSL.findAccountByTrustedEmail merchant.id SP.DRIVER (SSL.trustedEmail verifiedLogin)
+      case mbPerson of
+        Just person -> do
+          void $ SSL.linkIdentity person verifiedLogin
+          loggedIn person
+        Nothing -> linkRequired <$> SSL.storePendingLink merchant.id verifiedLogin
+
+loggedIn :: SP.Person -> Environment.Flow SL.SocialLoginV2Res
+loggedIn person = do
+  DR.cleanCachedTokens person.id
+  QR.deleteByPersonId (getId person.id)
+  token <- makeOAuthSession person.id.getId person.merchantId.getId person.merchantOperatingCityId.getId
+  QR.create token
+  pure SL.SocialLoginV2Res {status = SL.LOGGED_IN, token = Just token.token, linkToken = Nothing}
+
+linkRequired :: Text -> SL.SocialLoginV2Res
+linkRequired linkToken = SL.SocialLoginV2Res {status = SL.LINK_REQUIRED, token = Nothing, linkToken = Just linkToken}
+
+makeOAuthSession :: Text -> Text -> Text -> Environment.Flow SR.RegistrationToken
+makeOAuthSession entityId merchantId merchantOpCityId = do
+  sessionCfg <- asks (.smsCfg.sessionConfig)
+  session <- makeSession entityId merchantId merchantOpCityId
+  pure session {SR.attempts = sessionCfg.attempts, SR.authExpiry = sessionCfg.authExpiry, SR.tokenExpiry = sessionCfg.tokenExpiry}
+
+data PendingEmailAuth = PendingEmailAuth
+  { pendingMerchantId :: Id Domain.Types.Merchant.Merchant,
+    pendingEmail :: Text,
+    pendingOtpHash :: DbHash,
+    pendingMaxAttempts :: Int
+  }
+  deriving (Generic, ToJSON, FromJSON)
+
+pendingEmailAuthKey :: Text -> Text
+pendingEmailAuthKey authId = "SocialLogin:PendingEmailAuth:" <> authId
+
+pendingEmailAuthAttemptsKey :: Text -> Text
+pendingEmailAuthAttemptsKey authId = "SocialLogin:PendingEmailAuthAttempts:" <> authId
+
+postAuthEmailV2 :: Maybe Text -> SL.EmailAuthV2Req -> Environment.Flow SL.EmailAuthV2Res
+postAuthEmailV2 mbXForwardedFor req = do
+  unless (SSL.isWellFormedEmail req.email) $ throwError (InvalidRequest "Invalid email address")
+  merchant <- CQMOC.findByShortId req.merchantShortId >>= fromMaybeM (MerchantDoesNotExist req.merchantShortId.getShortId)
+  emailHash <- getDbHash (SSL.normalizeEmail req.email)
+  checkSlidingWindowLimit ("SocialLogin:EmailAuthHits:" <> merchant.id.getId <> ":" <> show emailHash)
+  SSL.findAccountByTrustedEmail merchant.id SP.DRIVER (Just req.email) >>= \case
+    Just person -> do
+      authRes <- DR.auth False (emailAuthReq merchant req (fromMaybe req.email person.email)) Nothing Nothing Nothing Nothing Nothing Nothing Nothing mbXForwardedFor
+      pure SL.EmailAuthV2Res {authId = authRes.authId.getId, attempts = authRes.attempts}
+    Nothing -> do
+      merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id req.merchantOperatingCity >>= fromMaybeM (MerchantOperatingCityNotFound $ show req.merchantOperatingCity)
+      mbClientIP <- DR.extractClientIP mbXForwardedFor
+      whenJust mbClientIP $ \clientIP -> do
+        ipBlocked <- DR.isIPBlocked merchantOpCity.id.getId clientIP
+        when ipBlocked $ throwError IpHitsLimitExceeded
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+      whenJust mbClientIP $ \clientIP ->
+        fork "Driver Email Auth IP Fraud Check" $ DR.checkAndUpdateAuthFraudByIP merchantOpCity.id.getId clientIP transporterConfig
+      unless (req.email `elem` transporterConfig.fakeOtpEmails) $
+        SSL.enforceEmailOtpLimit req.email transporterConfig
+      smsCfg <- asks (.smsCfg)
+      let sessionCfg = smsCfg.sessionConfig
+      authId <- generateGUID
+      let mbFakeOtp = if req.email `elem` transporterConfig.fakeOtpEmails then Just "7891" else show <$> smsCfg.useFakeSms
+      otp <- maybe generateOTPCode pure mbFakeOtp
+      otpHash <- getDbHash otp
+      Redis.setExp (pendingEmailAuthKey authId) PendingEmailAuth {pendingMerchantId = merchant.id, pendingEmail = req.email, pendingOtpHash = otpHash, pendingMaxAttempts = sessionCfg.attempts} (sessionCfg.authExpiry * 60)
+      when (isNothing mbFakeOtp) $
+        SOTP.sendOTP SOTP.EMAIL otp (Id authId) merchant.id merchantOpCity.id Nothing Nothing (Just req.email) Nothing
+      pure SL.EmailAuthV2Res {authId, attempts = sessionCfg.attempts}
+
+emailAuthReq :: Domain.Types.Merchant.Merchant -> SL.EmailAuthV2Req -> Text -> DR.AuthReq
+emailAuthReq merchant req authEmail =
+  DR.AuthReq
+    { mobileNumber = Nothing,
+      mobileCountryCode = Nothing,
+      name = Nothing,
+      merchantId = merchant.id.getId,
+      merchantOperatingCity = Just req.merchantOperatingCity,
+      email = Just authEmail,
+      identifierType = Just SP.EMAIL,
+      registrationLat = Nothing,
+      registrationLon = Nothing,
+      otpChannel = Nothing,
+      password = Nothing,
+      employeeId = Nothing,
+      isOperatorReq = Nothing
+    }
+
+postAuthEmailVerifyV2 :: Text -> SL.EmailAuthVerifyV2Req -> Environment.Flow SL.SocialLoginV2Res
+postAuthEmailVerifyV2 authId req =
+  Redis.safeGet (pendingEmailAuthKey authId) >>= \case
+    Just (pending :: PendingEmailAuth) -> do
+      sessionCfg <- asks (.smsCfg.sessionConfig)
+      attemptsUsed <- Redis.incr (pendingEmailAuthAttemptsKey authId)
+      when (attemptsUsed == 1) $ Redis.expire (pendingEmailAuthAttemptsKey authId) (sessionCfg.authExpiry * 60)
+      when (attemptsUsed > fromIntegral pending.pendingMaxAttempts) $ throwError (AuthBlocked "Too many incorrect attempts")
+      otpHash <- getDbHash req.otp
+      unless (otpHash == pending.pendingOtpHash) $ throwError InvalidAuthData
+      Redis.del (pendingEmailAuthKey authId)
+      linkRequired <$> SSL.storePendingEmailLink pending.pendingMerchantId pending.pendingEmail
+    Nothing -> do
+      verifyRes <-
+        DR.verify
+          (Id authId)
+          DR.AuthVerifyReq
+            { otp = req.otp,
+              deviceToken = req.deviceToken,
+              whatsappNotificationEnroll = Nothing,
+              socialLinkToken = Nothing
+            }
+          Nothing
+      pure SL.SocialLoginV2Res {status = SL.LOGGED_IN, token = Just verifyRes.token, linkToken = Nothing}
+
+type ProviderAuth =
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  )
+
+postSocialLink :: ProviderAuth -> SL.SocialLinkReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postSocialLink (mbPersonId, _, _) req = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- PQ.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  verifiedLogin <- SSL.verifySocialToken req.oauthProvider req.nonce req.authorizationCode req.tokenId
+  void $ SSL.linkIdentity person verifiedLogin
+  pure Kernel.Types.APISuccess.Success
+
+postSocialUnlink :: ProviderAuth -> SL.SocialUnlinkReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postSocialUnlink (mbPersonId, _, _) req = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  SSL.unlinkProvider personId (SSL.toDomainProvider req.oauthProvider)
+  pure Kernel.Types.APISuccess.Success
+
+getSocialLinkedAccounts :: ProviderAuth -> Environment.Flow SL.LinkedSocialAccountsRes
+getSocialLinkedAccounts (mbPersonId, _, _) = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  identities <- QPSI.findAllByPersonId personId
+  accounts <-
+    forM identities $ \socialIdentity -> do
+      email <- mapM decrypt socialIdentity.email
+      pure SL.LinkedSocialAccount {oauthProvider = SSL.toApiProvider socialIdentity.provider, email, isPrivateEmail = socialIdentity.isPrivateEmail, validTill = socialIdentity.validTill}
+  pure SL.LinkedSocialAccountsRes {accounts}

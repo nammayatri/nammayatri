@@ -12,7 +12,11 @@ import qualified Kernel.Types.SlidingWindowCounters
 import qualified Tools.Beam.UtilsTH
 
 data MerchantConfig = MerchantConfig
-  { authPhoneNumberCountThreshold1 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+  { authEmailCountThreshold1 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    authEmailCountThreshold2 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    authEmailCountWindow1 :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
+    authEmailCountWindow2 :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
+    authPhoneNumberCountThreshold1 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     authPhoneNumberCountThreshold2 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     authPhoneNumberCountWindow1 :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     authPhoneNumberCountWindow2 :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
@@ -34,4 +38,4 @@ data MerchantConfig = MerchantConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     updatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

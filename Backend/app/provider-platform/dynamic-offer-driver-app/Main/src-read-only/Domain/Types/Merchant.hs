@@ -49,6 +49,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     signatureExpiry :: Kernel.Prelude.Int,
     signingPrivateKey :: Kernel.Prelude.Maybe Kernel.Types.Base64.Base64,
     signingPublicKey :: Kernel.Types.Base64.Base64,
+    socialIdentityValidityInDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     state :: Kernel.Types.Beckn.Context.IndianState,
     status :: Domain.Types.Merchant.Status,
     subscriberId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Subscriber,
@@ -74,7 +75,7 @@ data Status = PENDING_VERIFICATION | APPROVED | REJECTED deriving (Eq, Ord, Show
 
 data Subscriber = Subscriber {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-type Merchant = MerchantD ('Safe)
+type Merchant = MerchantD 'Safe
 
 instance FromJSON (MerchantD 'Unsafe)
 
@@ -84,6 +85,6 @@ instance FromJSON (MerchantD 'Safe)
 
 instance ToJSON (MerchantD 'Safe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''Status))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Status)
 
-$(mkHttpInstancesForEnum (''Status))
+$(mkHttpInstancesForEnum ''Status)

@@ -36,6 +36,10 @@ Person:
       enum: "MALE, FEMALE, OTHER, UNKNOWN, PREFER_NOT_TO_SAY, NON_BINARY"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
+    EmailSource:
+      enum: "SOCIAL_GOOGLE, SOCIAL_APPLE, SOCIAL_APPLE_PRIVATE_RELAY, OTP"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
   fields:
     id : Id Person
     firstName : Text
@@ -47,6 +51,8 @@ Person:
     languagesSpoken : "Maybe [Text]"
     identifierType : IdentifierType
     email : Maybe Text
+    emailVerified : Maybe Bool
+    emailSource : Maybe EmailSource
     mobileNumber : Maybe (EncryptedHashedField e Text)
     maskedMobileDigits: Maybe Text
     mobileCountryCode : Maybe Text
@@ -91,6 +97,7 @@ Person:
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <IdentifierType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <Gender>
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <Gender>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <EmailSource>
 
   beamFields:
     mobileNumber:

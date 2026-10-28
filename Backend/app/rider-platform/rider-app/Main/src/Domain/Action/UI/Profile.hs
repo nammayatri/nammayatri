@@ -85,10 +85,12 @@ import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Types.Validation
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
@@ -109,9 +111,11 @@ import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified SharedLogic.Referral as Referral
 import qualified SharedLogic.RiderConsentPush as RCP
+import qualified SharedLogic.SocialLogin as SSL
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Storage.Queries.Booking as QBooking
@@ -183,7 +187,9 @@ data ProfileRes = ProfileRes
     profilePicture :: Maybe Text,
     paymentMode :: Maybe DMPM.PaymentMode,
     blockedUntil :: Maybe UTCTime,
-    pendingLegalPolicies :: Maybe [PolicyDoc.PendingLegalPolicy]
+    pendingLegalPolicies :: Maybe [PolicyDoc.PendingLegalPolicy],
+    mobileNumberRequired :: Bool,
+    isEmailVerified :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -416,10 +422,12 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
       QPerson.unblockIfExpired personId
   fork "Check customer cancellation rate blocking" $ CCR.nudgeOrBlockCustomer riderConfig person
   pendingLegalPolicies <- PolicyDoc.computePendingLegalPolicies person riderConfig
+  let mobileNumberRequired = isNothing person.mobileNumber && person.identifierType `elem` [Person.MOBILENUMBER, Person.EMAIL]
+      isEmailVerified = isJust person.email && SSL.hasTrustedEmail person
   logInfo "[Profile.getPersonDetails] calling makeProfileRes (includes getGtfsVersion)"
-  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage pendingLegalPolicies
+  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage pendingLegalPolicies mobileNumberRequired isEmailVerified
   where
-    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam pendingLegalPolicies = do
+    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam pendingLegalPolicies mobileNumberRequired isEmailVerified = do
       logInfo $ "[Profile.makeProfileRes] calling getGtfsVersion for " <> show (length integratedBPPConfigs) <> " configs"
       gtfsVersion <-
         withTryCatch "getGtfsVersion:getPersonDetails" (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
@@ -472,7 +480,7 @@ marketingEvents req = do
   triggerMarketingParamEventPreLogin marketingParams
   pure APISuccess.Success
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EventStreamFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> m APISuccess.APISuccess
+updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EventStreamFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], SSL.SocialLoginFlowM m r) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> m APISuccess.APISuccess
 updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId = do
   mPerson <- join <$> QPerson.findByEmailAndMerchantId merchantId `mapM` req.email
   whenJust mPerson (\person -> when (person.id /= personId) $ throwError PersonEmailExists)
@@ -481,6 +489,12 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
   deploymentVersion <- asks (.version)
   cloudType <- asks (.cloudType)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbCurrentEmail <- mapM decrypt person.email
+  let isEmailChange = case req.email of
+        Just newEmail -> (SSL.normalizeEmail <$> mbCurrentEmail) /= Just (SSL.normalizeEmail newEmail)
+        Nothing -> False
+  when (isEmailChange && isJust person.email && SSL.hasTrustedEmail person) $
+    throwError $ InvalidRequest "Email can only be changed through OTP verification"
   when (isNothing person.clientId && isJust mbClientId) $ QPerson.updateClientId mbClientId personId
   fork "Triggering kafka marketing params event for person" $
     case req.marketingParams of
@@ -497,7 +511,7 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       req.firstName
       req.middleName
       req.lastName
-      mbEncEmail
+      (if isEmailChange then mbEncEmail else Nothing)
       mbEncBusinessEmail
       req.deviceToken
       req.notificationToken
@@ -524,6 +538,9 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       Nothing
       Nothing
       cloudType
+  whenJust req.email $ \newEmail ->
+    when isEmailChange $
+      SSL.unlinkIdentitiesWithOtherEmail personId (Just newEmail)
   whenJust req.firebaseAppInstanceId $ \appInstanceId ->
     when (person.firebaseAppInstanceId /= Just appInstanceId) $
       QPerson.updateFirebaseAppInstanceId (Just appInstanceId) personId
@@ -855,7 +872,7 @@ data AuthData = AuthData
   deriving (Generic, Show, FromJSON, ToJSON)
 
 triggerUpdateAuthDataOtp ::
-  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools, "apiRateLimitOptions" ::: APIRateLimitOptions],
     HasField "emailServiceConfig" r Email.Types.EmailServiceConfig,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -896,6 +913,10 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
       existingPerson <- QPerson.findByEmailAndMerchantId person.merchantId receiverEmail
       whenJust existingPerson $ \existing ->
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
+      checkSlidingWindowLimit ("BAP:Profile:updateAuthEmailOtp:" <> personId.getId <> ":hitsCount")
+      when (isNothing person.useFakeOtp) $ do
+        merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
+        SSL.enforceEmailOtpLimit merchantConfigs receiverEmail
       storeAndSendOTP generatedOtpCode identifierType personId person smsCfg useFakeOtpM otpChannel riderConfig req Nothing Nothing (Just receiverEmail)
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
     SP.CONDUCTORTOKEN -> throwError $ InvalidRequest "ConductorToken identifier is not supported"
@@ -958,7 +979,8 @@ verifyUpdateAuthDataOtp ::
     EsqDBFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
-    HasFlowEnv m r '["version" ::: DeploymentVersion]
+    HasFlowEnv m r '["version" ::: DeploymentVersion],
+    SSL.SocialLoginFlowM m r
   ) =>
   (Id Person.Person, Id Merchant.Merchant) ->
   VerifyUpdateAuthOTPReq ->
@@ -997,7 +1019,8 @@ verifyUpdateAuthDataOtp (personId, merchantId) req = do
       whenJust existingPerson $ \existing ->
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
       encryptedValue <- encrypt storedEmail
-      QPersonExtra.updateEmailByPersonId personId encryptedValue
+      QPersonExtra.updateVerifiedEmail personId encryptedValue SP.OTP
+      SSL.unlinkIdentitiesWithOtherEmail personId (Just storedEmail)
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
     SP.CONDUCTORTOKEN -> throwError $ InvalidRequest "Conductor identifier is not supported"
 

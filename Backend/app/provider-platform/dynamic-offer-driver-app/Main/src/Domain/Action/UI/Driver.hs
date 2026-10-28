@@ -531,7 +531,8 @@ data DriverInformationRes = DriverInformationRes
     operatorBadgeToken :: Maybe Text,
     nomineeDob :: Maybe Day,
     approved :: Maybe Bool,
-    preferredMapProvider :: Maybe DriverInfo.MapProvider
+    preferredMapProvider :: Maybe DriverInfo.MapProvider,
+    mobileNumberRequired :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -621,7 +622,8 @@ data DriverEntityRes = DriverEntityRes
     subscriptionCreditBalance :: Maybe HighPrecMoney,
     role :: SP.Role,
     operatorBadgeToken :: Maybe Text,
-    nomineeDob :: Maybe Day
+    nomineeDob :: Maybe Day,
+    mobileNumberRequired :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -1429,6 +1431,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId, identit
   return $
     DriverEntityRes
       { id = person.id,
+        mobileNumberRequired = isNothing person.mobileNumber && person.identifierType `elem` [SP.MOBILENUMBER, SP.EMAIL],
         firstName = person.firstName,
         middleName = person.middleName,
         lastName = person.lastName,
