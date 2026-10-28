@@ -41,13 +41,14 @@ import Lib.Finance.Domain.Types.Account (AccountType (Liability), CounterpartyTy
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Domain.Types.Transfer as DT
 import Lib.Finance.FinanceM (runFinance)
+import qualified Lib.Finance.FinanceM as FinM
 import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..), findActivePayoutHold)
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Finance.Storage.Queries.Transfer as QTransfer
 import qualified Lib.Finance.Storage.Queries.TransferExtra as QTransferExtra
 import qualified Lib.Finance.Transfer.Backfill as Backfill
-import Lib.Finance.Transfer.Outbound (OutboundSpec (..), initiateTransferOut)
+import Lib.Finance.Transfer.Outbound (OutboundAccrual (..), OutboundSpec (..), initiateTransferOutWithAccrual)
 import Lib.Finance.Transfer.Outcome (applyRailStatus)
 import Lib.Finance.Transfer.Rail
 import qualified Lib.Finance.Transfer.RailStatus as RailStatus
@@ -76,7 +77,6 @@ riderJuspayStatusRail :: (PaymentBeamFlow.BeamFlow m r) => TransferRail m
 riderJuspayStatusRail =
   TransferRail
     { railKey = riderJuspayPayoutRailKey,
-      holdOrdering = SubmitThenHold,
       submit = \_ -> pure (RailAmbiguous "status-only rail: submit not supported"),
       pollStatus = \t -> case t.railOrderId of
         Nothing -> pure Nothing
@@ -97,7 +97,6 @@ cashbackSubmitRail ::
 cashbackSubmitRail submission payoutRequest payoutCall afterPayoutOrderCreated =
   TransferRail
     { railKey = riderJuspayPayoutRailKey,
-      holdOrdering = SubmitThenHold,
       submit = \_ -> do
         outcome <- PayoutRequest.executePayoutRequestWithOutcome submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated
         pure $ case outcome of
@@ -119,7 +118,6 @@ awardPayoutRail :: (PaymentBeamFlow.BeamFlow m r) => m RailSubmitResult -> Trans
 awardPayoutRail submitAction =
   TransferRail
     { railKey = riderJuspayPayoutRailKey,
-      holdOrdering = SubmitThenHold,
       submit = const submitAction,
       pollStatus = \t -> case t.railOrderId of
         Nothing -> pure Nothing
@@ -155,62 +153,62 @@ runAwardPayoutTransfer ::
 runAwardPayoutTransfer merchantId merchantOpCityId currency riderId orderId accrualReferenceId amount accrualRefType transferRefType refs submitAction onNotSubmitted onParked = do
   let ctx = RidePaymentFinance.buildRiderFinanceCtx merchantId merchantOpCityId currency True riderId orderId Nothing Nothing Nothing
       accrualCtx = RidePaymentFinance.buildRiderFinanceCtx merchantId merchantOpCityId currency True riderId accrualReferenceId Nothing Nothing Nothing
-  -- Idempotent accrual: a retry of the same award (same anchor) reuses the existing
-  -- leg instead of granting the amount twice.
-  existingAccrual <- filter (\e -> isNothing e.reversalOf) <$> LedgerService.getEntriesByReference accrualRefType accrualReferenceId
-  accrualRes <-
-    if null existingAccrual
-      then RidePaymentFinance.createSettledAwardAccrualLeg accrualCtx amount accrualRefType
-      else pure (Right (map (.id) existingAccrual))
-  case accrualRes of
+  -- The wallet account is resolved (created on a rider's first award) before the transfer so
+  -- the kernel can lock it; the award credit itself is posted by the kernel inside that lock.
+  runFinance ctx (FinM.account FinM.OwnerLiability) >>= \case
     Left err -> do
-      logError $ "award payout " <> orderId <> ": accrual leg failed: " <> show err
-      onNotSubmitted ("ACCRUAL_FAILED: " <> show err)
-    Right accrualIds ->
-      RidePaymentFinance.getWalletAccountByOwner RIDER riderId >>= \case
-        Nothing -> do
-          logError $ "award payout " <> orderId <> ": no wallet account after accrual"
-          onNotSubmitted "NO_WALLET_ACCOUNT"
-        Just account -> do
-          res <-
-            initiateTransferOut
-              runFinance
-              (awardPayoutRail submitAction)
-              OutboundSpec
-                { ctx = ctx,
-                  account = account,
-                  amount = FinanceBalance.Exact amount,
-                  referenceType = transferRefType,
-                  referenceId = orderId,
-                  ledgerRefs = refs,
-                  instant = True,
-                  legacyOfferHoldKeys = [],
-                  alwaysRedeemableRefs = [],
-                  coveredEntryIds = Just accrualIds,
-                  holdLedgerMetadata = Nothing,
-                  metadata = DT.emptyTransferMetadata {DT.coveredRefs = Just [DT.CoveredRef {refType = accrualRefType, amount = amount}]}
-                }
-          case res of
-            Left err -> do
-              -- Pre-row rejection: nothing was sent and no hold exists, but the accrual
-              -- WAS posted. Left standing it would be a phantom wallet credit (spendable
-              -- via booking deposits) that nobody paid in — reverse any accrual minted
-              -- by THIS call (a reused accrual belongs to the retry chain and stays).
-              when (null existingAccrual) $
-                forM_ accrualIds $ \accrualId ->
-                  LedgerService.createReversal accrualId ("AWARD_PAYOUT_NOT_STARTED: " <> show err)
-                    >>= either (\e -> logError $ "award payout " <> orderId <> ": accrual reversal failed: " <> show e) (const (pure ()))
-              logError $ "award payout " <> orderId <> ": kernel transfer rejected: " <> show err
-              onNotSubmitted ("KERNEL_REJECTED: " <> show err)
-            Right t -> do
-              logInfo $ "award payout " <> orderId <> " transfer " <> t.id.getId <> " status " <> show t.status
-              when (t.status == DT.FAILED) $
-                -- rail confirmed nothing was sent; hold already reversed by the kernel
-                onNotSubmitted ("RAIL_REJECTED: " <> fromMaybe "-" t.lastError)
-              when (t.status == DT.NEEDS_REVIEW) $
-                -- parked: the submit outcome is unknown, money may be with the partner.
-                -- Never retried (that's how double-pays happen) — escalate instead.
-                onParked ("PARKED_FOR_REVIEW: " <> fromMaybe "-" t.lastError)
+      logError $ "award payout " <> orderId <> ": no wallet account: " <> show err
+      onNotSubmitted ("NO_WALLET_ACCOUNT: " <> show err)
+    Right (account, _) -> do
+      let -- Idempotent: a retry of the same award (same anchor) reuses the existing leg instead
+          -- of granting the amount twice. A credit minted by this call is taken back by the
+          -- kernel if the transfer is rejected or fails, so it is never left spendable
+          -- (booking deposits read the same wallet); a reused one stays with the retry chain.
+          accrual =
+            OutboundAccrual
+              { postAccrual = do
+                  entries <- LedgerService.getEntriesByReference accrualRefType accrualReferenceId
+                  -- a credit the kernel already took back (rejected earlier attempt) does not count
+                  let reversedIds = mapMaybe (.reversalOf) entries
+                      liveAccrual = [e | e <- entries, isNothing e.reversalOf, e.id `notElem` reversedIds]
+                  if null liveAccrual
+                    then fmap (\ids -> (ids, True)) <$> RidePaymentFinance.createSettledAwardAccrualLeg accrualCtx amount accrualRefType
+                    else pure (Right (map (.id) liveAccrual, False))
+              }
+      res <-
+        initiateTransferOutWithAccrual
+          runFinance
+          (awardPayoutRail submitAction)
+          (Just accrual)
+          OutboundSpec
+            { ctx = ctx,
+              account = account,
+              amount = FinanceBalance.Exact amount,
+              referenceType = transferRefType,
+              referenceId = orderId,
+              ledgerRefs = refs,
+              instant = True,
+              legacyOfferHoldKeys = [],
+              alwaysRedeemableRefs = [],
+              -- the kernel covers the credit it posts
+              coveredEntryIds = Nothing,
+              holdLedgerMetadata = Nothing,
+              metadata = DT.emptyTransferMetadata {DT.coveredRefs = Just [DT.CoveredRef {refType = accrualRefType, amount = amount}]}
+            }
+      case res of
+        Left err -> do
+          -- Nothing was sent and no hold exists; the kernel already took back a credit it minted.
+          logError $ "award payout " <> orderId <> ": kernel transfer rejected: " <> show err
+          onNotSubmitted ("KERNEL_REJECTED: " <> show err)
+        Right t -> do
+          logInfo $ "award payout " <> orderId <> " transfer " <> t.id.getId <> " status " <> show t.status
+          when (t.status == DT.FAILED) $
+            -- rail confirmed nothing was sent; hold already reversed by the kernel, and so was the credit
+            onNotSubmitted ("RAIL_REJECTED: " <> fromMaybe "-" t.lastError)
+          when (t.status == DT.NEEDS_REVIEW) $
+            -- parked: the submit outcome is unknown, money may be with the partner.
+            -- Never retried (that's how double-pays happen) — escalate instead.
+            onParked ("PARKED_FOR_REVIEW: " <> fromMaybe "-" t.lastError)
 
 -- | Settle a payout outcome through the kernel transfer. Pre-migration payouts have no
 --   transfer row; one is minted from the domain's process record (backfill-on-read) so

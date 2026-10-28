@@ -1076,13 +1076,17 @@ eligibilityFromBreakdown accountId breakdown =
 -- | Eligibility for a wallet account. Callers pass WHOSE account; everything else —
 --   cutoff, policy, in-flight amounts — resolves inside the kernel. Nobody outside
 --   this module computes or passes cutoffs.
+--
+--   Balances only: 'redeemableEntryIds' stays empty and 'merchantTransferAmount' 0, which
+--   skips the read of the wallet's whole unsettled history. A payout, which has to name the
+--   entries it covers, goes through 'computePayoutableBalance' instead.
 getPayoutEligibilityData ::
   (BeamFlow m r) =>
   Text -> -- owner id (for the legacy offer-hold key)
   Account ->
   m WalletPayoutEligibility
 getPayoutEligibilityData ownerId walletAccount = do
-  breakdown <- FinanceBalance.getBalanceBreakdownWith alwaysRedeemableWalletRefs walletAccount [makeWalletOfferHoldsKey ownerId]
+  breakdown <- FinanceBalance.getBalanceAmountsWith alwaysRedeemableWalletRefs walletAccount [makeWalletOfferHoldsKey ownerId]
   pure $ eligibilityFromBreakdown walletAccount.id breakdown
 
 -- | What a wallet payout may pay right now, and how it was arrived at.

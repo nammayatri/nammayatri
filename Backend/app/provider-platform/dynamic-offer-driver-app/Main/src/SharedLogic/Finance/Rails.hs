@@ -81,7 +81,7 @@ classifyPaymentTransactionStatus = RailStatus.classifyJuspayTransactionStatus
 -- | The wallet payout rail for one specific PayoutRequest: the submit closure executes
 --   that request through lib/payment exactly as before (PayoutOrder row, PR status
 --   history), so dashboards keep working — those statuses are now derived, not
---   authoritative. The kernel decides ordering from 'holdOrdering'.
+--   authoritative. The kernel submits first and holds after, for every rail.
 mkWalletPayoutRail ::
   ( EncFlow m r,
     PaymentBeamFlow.BeamFlow m r,
@@ -99,14 +99,16 @@ mkWalletPayoutRail ::
 mkWalletPayoutRail payoutServiceFlow payoutRequest mbTransferAmount currency payoutCall afterOrderCreated onConfirmedRejection =
   Rail.TransferRail
     { railKey = railKeyForFlow payoutServiceFlow,
-      holdOrdering = case payoutServiceFlow of
-        IPayout.BulkFlow -> Rail.HoldThenSubmit
-        _ -> Rail.SubmitThenHold,
       submit = \_submission -> do
         outcome <- PayoutRequest.executePayoutRequestWithOutcome mbTransferAmount currency payoutServiceFlow payoutRequest payoutCall afterOrderCreated
         case outcome of
-          PayoutRequest.Executed order ->
-            pure Rail.RailAccepted {railOrderId = order.orderId, railStatus = show order.status}
+          -- Bulk has no per-order partner call: the order is only written locally and goes out
+          -- in the batch file, so it can still be dropped if the hold then fails.
+          PayoutRequest.Executed order
+            | payoutServiceFlow == IPayout.BulkFlow ->
+              pure Rail.RailQueued {railOrderId = order.orderId, railStatus = show order.status}
+            | otherwise ->
+              pure Rail.RailAccepted {railOrderId = order.orderId, railStatus = show order.status}
           PayoutRequest.ConfirmedFailure msg -> do
             onConfirmedRejection msg
             pure (Rail.RailRejected msg)
@@ -130,7 +132,6 @@ settlementRailByKey :: (Applicative m) => DT.RailKey -> Rail.TransferRail m
 settlementRailByKey key =
   Rail.TransferRail
     { railKey = key,
-      holdOrdering = Rail.SubmitThenHold,
       submit = \_ -> pure (Rail.RailAmbiguous "settlement-time rail cannot submit"),
       pollStatus = \_ -> pure Nothing,
       classifyStatus = classifyPayoutOrderStatus,
@@ -161,7 +162,6 @@ mkJuspayPgInboundRail ::
 mkJuspayPgInboundRail driverId merchantId mocId onOrderResp =
   Rail.TransferRail
     { railKey = juspayPgRailKey,
-      holdOrdering = Rail.SubmitThenHold,
       submit = \_ -> pure (Rail.RailDeferred "COLLECTION_RAIL"),
       pollStatus = \_ -> pure Nothing,
       classifyStatus = \_ -> Rail.OutcomePending,

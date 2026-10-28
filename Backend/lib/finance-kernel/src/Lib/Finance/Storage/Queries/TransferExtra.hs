@@ -1,8 +1,10 @@
 module Lib.Finance.Storage.Queries.TransferExtra where
 
 import qualified Data.Aeson
+import qualified Data.Text as T
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime)
 import qualified Lib.Finance.Domain.Types.Account
@@ -123,6 +125,32 @@ findOutboundByAccountSince accountId since =
           Se.Is Beam.createdAt $ Se.GreaterThanOrEq since
         ]
     ]
+
+-- | Total of the account's OUTBOUND transfers whose money the balance does not show yet:
+--   CREATED with no hold posted (a rail call about to move it; only rows created at/after
+--   the given instant), and NEEDS_REVIEW rows parked because the hold failed after an
+--   accepted submit (the partner may hold the money; no time limit, ops resolve them).
+--   Other NEEDS_REVIEW rows carry no wallet outflow of their own and are ignored.
+sumUnheldOutboundSince ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  Kernel.Prelude.UTCTime ->
+  m HighPrecMoney
+sumUnheldOutboundSince accountId since = do
+  rows <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.accountId $ Se.Eq (Kernel.Types.Id.getId accountId),
+            Se.Is Beam.direction $ Se.Eq Domain.OUTBOUND,
+            Se.Or
+              [ Se.And [Se.Is Beam.status $ Se.Eq Domain.CREATED, Se.Is Beam.createdAt $ Se.GreaterThanOrEq since],
+                Se.Is Beam.status $ Se.Eq Domain.NEEDS_REVIEW
+              ]
+          ]
+      ]
+  pure $ sum [t.amount | t <- rows, isNothing t.holdEntryId, t.status == Domain.CREATED || holdFailedAfterSubmit t]
+  where
+    holdFailedAfterSubmit t = "HOLD_FAILED_AFTER_SUBMIT" `T.isPrefixOf` fromMaybe "" t.lastError
 
 -- | One page of an account's transfers, newest first, optionally one direction.
 --   Sorting and paging happen at the DB (accountId index) — never load an account's

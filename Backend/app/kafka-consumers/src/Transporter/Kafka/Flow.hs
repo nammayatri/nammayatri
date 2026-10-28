@@ -29,6 +29,7 @@ import Environment
 import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
 import Kernel.Prelude
+import Kernel.Types.Flow (runFlowR)
 import Kernel.Utils.Common hiding (id)
 import qualified Streamly.Internal.Data.Fold as SF
 import qualified Streamly.Internal.Data.Stream.IsStream as S

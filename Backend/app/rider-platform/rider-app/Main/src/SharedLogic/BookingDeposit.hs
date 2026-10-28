@@ -145,7 +145,7 @@ getAvailableBalance riderId = do
   case mbAcc of
     Nothing -> pure 0
     Just acc -> do
-      breakdown <- FinanceBalance.getBalanceBreakdown acc []
+      breakdown <- FinanceBalance.getBalanceAmountsWith [] acc []
       pure breakdown.available
 
 hasCreditForOrder :: (CacheFlow m r, EsqDBFlow m r) => Text -> m Bool
