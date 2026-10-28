@@ -94,8 +94,16 @@ findById (Id issueReportId) = findOneWithKV [And [Is BeamIR.id $ Eq issueReportI
 findByShortId :: BeamFlow m r => ShortId IssueReport -> m (Maybe IssueReport)
 findByShortId (ShortId issueReportShortId) = findOneWithKV [And [Is BeamIR.shortId $ Eq $ Just issueReportShortId, Is BeamIR.deleted $ Eq False]]
 
-findAllByPerson :: BeamFlow m r => Id Person -> m [IssueReport]
-findAllByPerson (Id personId) = findAllWithOptionsKV [And [Is BeamIR.personId $ Eq personId, Is BeamIR.deleted $ Eq False]] (Desc BeamIR.updatedAt) Nothing Nothing
+findAllByPerson :: BeamFlow m r => Id Person -> Maybe [IssueStatus] -> Maybe Int -> Maybe Int -> m [IssueReport]
+findAllByPerson (Id personId) mbStatuses mbLimit mbOffset =
+  findAllWithOptionsKV
+    [ And $
+        [Is BeamIR.personId $ Eq personId, Is BeamIR.deleted $ Eq False]
+          <> maybe [] (\statuses -> [Is BeamIR.status $ In statuses]) mbStatuses
+    ]
+    (Desc BeamIR.updatedAt)
+    mbLimit
+    mbOffset
 
 findAllByPersonAndRideId :: BeamFlow m r => Id Person -> Id Ride -> m [IssueReport]
 findAllByPersonAndRideId (Id personId) (Id rideId) = findAllWithOptionsKV [And [Is BeamIR.personId $ Eq personId, Is BeamIR.rideId $ Eq (Just rideId), Is BeamIR.deleted $ Eq False]] (Desc BeamIR.updatedAt) Nothing Nothing
@@ -193,6 +201,9 @@ updateTicketFormFields issueId formFields = do
 findByTicketId :: BeamFlow m r => Text -> m (Maybe IssueReport)
 findByTicketId ticketId = findOneWithKV [Is BeamIR.ticketId $ Eq (Just ticketId)]
 
+findAllByTicketIds :: BeamFlow m r => [Text] -> m [IssueReport]
+findAllByTicketIds ticketIds = findAllWithKV [Is BeamIR.ticketId $ In (map Just ticketIds)]
+
 -- | Matches 'ticket_id' first; falls back to 'additional_ticket_ids'
 -- (secondary provider) when that misses.
 findByTicketIdOrAdditional :: BeamFlow m r => Text -> m (Maybe IssueReport)
@@ -243,6 +254,7 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             reopenedCount = fromMaybe 0 reopenedCount,
             customerResponse = customerResponse,
             ticketFormFields = ticketFormFields >>= parseFormFields,
+            issueFlowType = issueFlowType,
             ..
           }
     where
@@ -278,6 +290,7 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.becknIssueId = becknIssueId,
         BeamIR.reopenedCount = Just reopenedCount,
         BeamIR.customerResponse = customerResponse,
+        BeamIR.issueFlowType = issueFlowType,
         BeamIR.submitLabel = submitLabel,
         BeamIR.ticketFormFields = A.toJSON <$> ticketFormFields
       }

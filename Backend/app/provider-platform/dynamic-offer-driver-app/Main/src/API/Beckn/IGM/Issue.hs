@@ -24,9 +24,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Servant
-import qualified Tools.Fields as Fields
+import Servant hiding (throwError)
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Tools.Fields as Fields
 
 type API = BI.IssueAPI
 
@@ -47,8 +47,11 @@ handler = onDemandHandler :<|> publicTransportHandler
 issue :: Id Common.Merchant -> SignatureAuthResult -> Spec.IssueReq -> FlowHandler Spec.AckResponse
 issue merchantId authResult issueReq = withFlowHandlerAPIForSubscriber authResult.subscriber.subscriber_id $ do
   bapId <- issueReq.context.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
+  unless (authResult.subscriber.subscriber_id == bapId) $
+    throwError $ InvalidRequest "BAP ID mismatch with authenticated subscriber"
   isValueAddNP <- CQVAN.isValueAddNP bapId
-  BI.issue (cast merchantId) issueReq AUI.driverIssueHandle Common.DRIVER isValueAddNP
+  let identifier = if isValueAddNP then Common.DRIVER else Common.IGM
+  BI.issue (cast merchantId) issueReq AUI.driverIssueHandle identifier isValueAddNP
 
 onIssue :: Id Common.Merchant -> SignatureAuthResult -> Spec.OnIssueReq -> FlowHandler Spec.AckResponse
 onIssue merchantId authResult onIssueReq = withFlowHandlerAPIForSubscriber authResult.subscriber.subscriber_id $ BI.onIssue (cast merchantId) onIssueReq AUI.driverIssueHandle Common.DRIVER
@@ -56,6 +59,8 @@ onIssue merchantId authResult onIssueReq = withFlowHandlerAPIForSubscriber authR
 issueStatus :: Id Common.Merchant -> SignatureAuthResult -> Spec.IssueStatusReq -> FlowHandler Spec.AckResponse
 issueStatus merchantId authResult issueStatusReq = withFlowHandlerAPIForSubscriber authResult.subscriber.subscriber_id $ do
   bapId <- issueStatusReq.issueStatusReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
+  unless (authResult.subscriber.subscriber_id == bapId) $
+    throwError $ InvalidRequest "BAP ID mismatch with authenticated subscriber"
   isValueAddNP <- CQVAN.isValueAddNP bapId
   BI.issueStatus (cast merchantId) issueStatusReq AUI.driverIssueHandle Common.DRIVER isValueAddNP
 

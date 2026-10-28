@@ -872,40 +872,6 @@ data TestApiIntegrationRes = TestApiIntegrationRes
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
--- IGM Dashboard Types
-
-data IGMIssueDashboardResolveReq = IGMIssueDashboardResolveReq
-  { resolutionShortDesc :: Maybe Text,
-    resolutionLongDesc :: Maybe Text,
-    resolutionActionTriggered :: Maybe Text,
-    resolutionRefundAmount :: Maybe Text
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance HideSecrets IGMIssueDashboardResolveReq where
-  hideSecrets = identity
-
-data RaiseIssuePayload = RaiseIssuePayload
-  { source :: Text,
-    domain :: Text,
-    category :: Text,
-    subCategory :: Maybe Text,
-    orderId :: Text,
-    shortDesc :: Text,
-    longDesc :: Maybe Text,
-    issueType :: Maybe Text,
-    customerName :: Maybe Text,
-    customerPhone :: Maybe Text,
-    customerEmail :: Maybe Text,
-    transactionId :: Maybe Text
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance HideSecrets RaiseIssuePayload where
-  hideSecrets = identity
-
 data IgmRespondentActionPayload = IgmRespondentActionPayload
   { action :: Spec.RespondentActions,
     shortDesc :: Text,

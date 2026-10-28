@@ -1670,6 +1670,7 @@ TransporterConfig:
     sharedCabDailyTripTarget: Maybe Int
     sharedCabTripEarningsTarget: Maybe HighPrecMoney
     enableManualArrival: Maybe Bool # When True, the driver marks arrival in the app: LTS never auto-marks the driver as reached, scheduled-ride activation doesn't auto-arrive, and arrivedAtPickup skips the arrivedPickupThreshold distance check
+    useKaptureAsSourceForOngoingIssues: Maybe Bool
 
   beamType:
     currency: Maybe Currency

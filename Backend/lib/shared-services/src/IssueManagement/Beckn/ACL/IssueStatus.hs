@@ -12,7 +12,6 @@ import qualified IssueManagement.Domain.Action.Beckn.IssueStatus as DIssueStatus
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as Fields
-import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 
 buildIssueStatusReq ::

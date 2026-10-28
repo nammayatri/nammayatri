@@ -9,7 +9,7 @@ SET config_json = (
             jsonb_set(
               jsonb_set(
                 config_json::text::jsonb,
-                '{flowVariant}', '"MSILKapture"'
+                '{flowVariant}', '"PerApiAuthKapture"'
               ),
               '{addTicketAuth}', '"0.1.0|1|NPZPbB2O8BITmdi4/ml0ROzo7N8yD5fd2+uKQ9atXmzFiLmFRYAjlkh5hHhLyuZfbgyer3DHlHcdnSRjFFxLLXPUxzTipT6Nm/MfYGJEFWI8qprqlafznZ1p0h7kJFxzUrinDDLB4Em5F019RL2nTz3ew+t4uZM="'
             ),

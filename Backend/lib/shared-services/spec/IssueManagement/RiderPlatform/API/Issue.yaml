@@ -7,6 +7,7 @@ imports:
   TestApiIntegrationReq: IssueManagement.Common.Dashboard.Issue
   TestApiIntegrationRes: IssueManagement.Common.Dashboard.Issue
   IssueOptionListRes: IssueManagement.Common.UI.Issue
+  IssueTicketDetailsRes: IssueManagement.Common.UI.Issue
   CategoryType: IssueManagement.Domain.Types.Issue.IssueCategory
   IssueMessage: IssueManagement.Domain.Types.Issue.IssueMessage
   IssueReport: IssueManagement.Domain.Types.Issue.IssueReport
@@ -519,6 +520,16 @@ apis:
         type: IssueOptionListRes
       migrate:
         capability: system-config.customer_issue_config.read
+  - GET: # GetIssueTicketDetailsAPI
+      endpoint: /{issueReportId}/ticketDetails
+      name: GetIssueTicketDetails
+      auth: ApiAuthV2
+      params:
+        issueReportId: Id IssueReport
+      response:
+        type: IssueTicketDetailsRes
+      migrate:
+        capability: city-operations.customer_issue.read
 # Did not generated any types because we need to use common types for rider and provider dashboard
 types: {}
 

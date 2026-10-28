@@ -24,10 +24,10 @@ import IssueManagement.Domain.Action.UI.Issue
 import qualified IssueManagement.Domain.Action.UI.Issue as Common
 import IssueManagement.Domain.Types.Issue.IGMConfig
 import qualified IssueManagement.Domain.Types.Issue.IGMIssue as DIGM
+import qualified IssueManagement.Domain.Types.Issue.IGMIssueAction as DIGA
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as Fields
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as Fields
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as Fields
-import qualified IssueManagement.Domain.Types.Issue.IGMIssueAction as DIGA
 import IssueManagement.Storage.BeamFlow
 import qualified IssueManagement.Storage.Queries.Issue.IGMConfig as QIGMConfig
 import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
@@ -148,9 +148,14 @@ validateRequest ::
 validateRequest merchantId DIssue {issueCategory = mbIssueCategory, issueTypeText = mbIssueTypeText, bookingId = mbBookingId, ..} iHandle = do
   merchant <- iHandle.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mbExistingIssue <- QIGM.findByPrimaryKey (Id issueId)
+  whenJust mbExistingIssue $ \existingIssue ->
+    when (existingIssue.issueRaisedByMerchant /= Just bapId) $
+      throwError (InvalidRequest "BAP is not authorized to access this issue")
   let resolvedBookingId = mbBookingId <|> ((.bookingId) <$> mbExistingIssue)
   bookingIdText <- resolvedBookingId & fromMaybeM (InvalidRequest "BookingId not found")
   booking <- iHandle.findByBookingId (Id bookingIdText) >>= fromMaybeM (BookingDoesNotExist bookingIdText)
+  unless (booking.bapId == Just bapId) $
+    throwError (InvalidRequest "BAP is not authorized for this booking")
   merchantOperatingCity <- iHandle.findMOCityById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
   let resolvedIssueTypeText = mbIssueTypeText <|> (show . (.issueType) <$> mbExistingIssue)
       issueCategory = mbIssueCategory <|> (mbExistingIssue >>= (.igmCategory))
@@ -172,20 +177,21 @@ handler ::
   ) =>
   ValidatedDIssue ->
   ServiceHandle m ->
+  Identifier ->
   m (Maybe IssueRes)
-handler ValidatedDIssue {..} iHandle = do
+handler ValidatedDIssue {..} iHandle identifier = do
   now <- getCurrentTime
   if isValueAddNP
     then
       Just <$> case issueStatus of
-        DIGM.OPEN -> openBecknIssue ValidatedDIssue {..} iHandle
+        DIGM.OPEN -> openBecknIssue ValidatedDIssue {..} iHandle identifier
         DIGM.ESCALATED -> escalateBecknIssue ValidatedDIssue {..} now iHandle
         DIGM.CLOSED -> closeBecknIssue ValidatedDIssue {..} now iHandle
         DIGM.RESOLVED -> throwError $ InvalidRequest "Issue already resolved"
     else case issueStatus of
       DIGM.OPEN
         | issueType == DIGM.GRIEVANCE -> Just <$> escalateBecknIssue ValidatedDIssue {..} now iHandle
-        | otherwise -> Just <$> openBecknIssue ValidatedDIssue {..} iHandle
+        | otherwise -> Just <$> openBecknIssue ValidatedDIssue {..} iHandle identifier
       DIGM.CLOSED -> closeBecknIssue ValidatedDIssue {..} now iHandle $> Nothing
       _ -> throwError $ InvalidRequest "Invalid issue status, must be OPEN or CLOSED"
 
@@ -197,8 +203,9 @@ openBecknIssue ::
   ) =>
   ValidatedDIssue ->
   ServiceHandle m ->
+  Identifier ->
   m IssueRes
-openBecknIssue dIssue@ValidatedDIssue {..} iHandle = do
+openBecknIssue dIssue@ValidatedDIssue {..} iHandle identifier = do
   let (rName, rPhone, rEmail, rpName, rpPhone, rpEmail) = mkResContactFields igmConfig
   existingIssue <- QIGM.findByPrimaryKey (Id issueId)
   case existingIssue of
@@ -226,7 +233,7 @@ openBecknIssue dIssue@ValidatedDIssue {..} iHandle = do
             isValueAddNP = isValueAddNP,
             ..
           }
-    Nothing -> openBecknIssueNew dIssue iHandle
+    Nothing -> openBecknIssueNew dIssue iHandle identifier
 
 openBecknIssueNew ::
   ( EsqDBReplicaFlow m r,
@@ -236,14 +243,15 @@ openBecknIssueNew ::
   ) =>
   ValidatedDIssue ->
   ServiceHandle m ->
+  Identifier ->
   m IssueRes
-openBecknIssueNew dIssue@ValidatedDIssue {..} iHandle = do
+openBecknIssueNew dIssue@ValidatedDIssue {..} iHandle identifier = do
   let OffUsIssueDetails {..} = offUsDetails
       (rName, rPhone, rEmail, rpName, rpPhone, rpEmail) = mkResContactFields igmConfig
   ride <- iHandle.findOneByBookingId booking.id merchant.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
   driverId <- fromMaybeM (RideFieldNotPresent "Driver not found") $ ride.driverId
   issueCategoryText <- issueCategory & fromMaybeM (InvalidRequest "IssueCategory is required for new issues")
-  category <- QIC.findByIGMIssueCategory issueCategoryText >>= fromMaybeM (InvalidRequest "Issue Category not found or unsupported")
+  category <- QIC.findByIGMIssueCategory issueCategoryText merchant.id merchantOperatingCity.id >>= fromMaybeM (InvalidRequest "Issue Category not found or unsupported")
   transactionId <- case (isValueAddNP, contextTxnId) of
     (False, Just txnId) -> pure txnId
     _ -> generateGUID
@@ -301,8 +309,9 @@ openBecknIssueNew dIssue@ValidatedDIssue {..} iHandle = do
   let optionId = mbOption <&> (.id)
       description = fromMaybe (maybe "No description provided" (.option) mbOption) descShort
   let shouldCreateTicket = fromMaybe True igmConfig.createTicketOnIssueRaise
-      issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId (Just category.id) description Nothing (Just shouldCreateTicket) Nothing Nothing Nothing Nothing Nothing
-  void $ Common.createIssueReport (cast driverId, cast dIssue.merchant.id) Nothing issueReport iHandle Common.DRIVER (Just issueId)
+      issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId (Just category.id) description Nothing (Just shouldCreateTicket) Nothing Nothing Nothing Nothing Nothing Nothing
+  let issueFlowType = if isValueAddNP then Just ON_US else Just OFF_US
+  void $ Common.createIssueReport (cast driverId, cast dIssue.merchant.id) Nothing issueReport iHandle identifier (Just issueId) issueFlowType
   let issueRes =
         IssueRes
           { issueId = issueId,
@@ -341,11 +350,12 @@ escalateBecknIssue ValidatedDIssue {..} now iHandle = do
   igmIssue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
   unless (igmIssue.issueStatus == DIGM.OPEN) $
     throwError $ InvalidRequest "Issue can only be escalated from OPEN status"
-  let updatedIssue =
+  let resolvedUpdatedAt = fromMaybe now issueUpdatedAt
+      updatedIssue =
         igmIssue
           { DIGM.issueStatus = DIGM.OPEN,
             DIGM.issueType = DIGM.GRIEVANCE,
-            DIGM.updatedAt = fromMaybe now issueUpdatedAt
+            DIGM.updatedAt = resolvedUpdatedAt
           }
   QIGM.updateByPrimaryKey updatedIssue
   storeNewComplainantActions issueId complainantActions False
@@ -366,7 +376,7 @@ escalateBecknIssue ValidatedDIssue {..} now iHandle = do
             resolutionProviderPhone = rpPhone,
             resolutionProviderEmail = rpEmail,
             createdAt = UTCTimeRFC3339 igmIssue.createdAt,
-            updatedAt = UTCTimeRFC3339 now,
+            updatedAt = UTCTimeRFC3339 resolvedUpdatedAt,
             merchantOperatingCity = merchantOperatingCity,
             domain = igmIssue.domain,
             isValueAddNP = isValueAddNP,
@@ -391,10 +401,11 @@ closeBecknIssue ValidatedDIssue {..} now iHandle = do
   when (igmIssue.issueStatus == DIGM.CLOSED) $
     throwError $ InvalidRequest "Issue is already closed"
   let alreadyResolved = igmIssue.respondentAction == Just (show Spec.RESOLVED)
+      resolvedUpdatedAt = fromMaybe now issueUpdatedAt
       updatedIssue =
         igmIssue
           { DIGM.issueStatus = DIGM.CLOSED,
-            DIGM.updatedAt = fromMaybe now issueUpdatedAt,
+            DIGM.updatedAt = resolvedUpdatedAt,
             DIGM.respondentAction = Just $ show Spec.RESOLVED
           }
   QIGM.updateByPrimaryKey updatedIssue
@@ -416,7 +427,7 @@ closeBecknIssue ValidatedDIssue {..} now iHandle = do
             resolutionProviderPhone = rpPhone,
             resolutionProviderEmail = rpEmail,
             createdAt = UTCTimeRFC3339 igmIssue.createdAt,
-            updatedAt = UTCTimeRFC3339 now,
+            updatedAt = UTCTimeRFC3339 resolvedUpdatedAt,
             merchantOperatingCity = merchantOperatingCity,
             domain = igmIssue.domain,
             isValueAddNP = isValueAddNP,

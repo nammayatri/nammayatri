@@ -37,12 +37,13 @@ import Sequelize.SQLObject (SQLObject (..), ToSQLObject (convertToSQLObject))
 import Servant hiding (Summary)
 import qualified Text.Show
 
-data Identifier = CUSTOMER | DRIVER
+data Identifier = CUSTOMER | DRIVER | IGM
   deriving (Generic, Read, Eq)
 
 instance Show Identifier where
   show CUSTOMER = "Customer"
   show DRIVER = "Driver"
+  show IGM = "Igm"
 
 data Ride = Ride
   { id :: Id Ride,
@@ -271,6 +272,11 @@ $(mkBeamInstancesForEnum ''IssueStatus)
 $(mkHttpInstancesForEnum ''IssueStatus)
 $(mkBeamInstancesForEnum ''CustomerResponse)
 
+data IssueFlowType = ON_US | OFF_US
+  deriving (Show, Read, Generic, Eq, Ord, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''IssueFlowType)
+
 data ChatType = IssueMessage | IssueOption | MediaFile | IssueDescription
   deriving (Generic, FromJSON, ToSchema, ToJSON, Show, Read, Eq, Ord)
 
@@ -336,6 +342,19 @@ data MerchantConfig = MerchantConfig
 
 allLanguages :: [Language]
 allLanguages = [minBound .. maxBound]
+
+data IssueListType = ISSUES_ONGOING | ISSUES_COMPLETED
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance FromHttpApiData IssueListType where
+  parseUrlPiece "ONGOING" = Right ISSUES_ONGOING
+  parseUrlPiece "COMPLETED" = Right ISSUES_COMPLETED
+  parseUrlPiece _ = Left "Invalid IssueListType. Expected ONGOING or COMPLETED"
+
+instance ToHttpApiData IssueListType where
+  toUrlPiece ISSUES_ONGOING = "ONGOING"
+  toUrlPiece ISSUES_COMPLETED = "COMPLETED"
 
 data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE | SYNC_BOOKING | EXTRA_FARE_MITIGATION | DRUNK_AND_DRIVE_VIOLATION | UNHYGIENIC_VEHICLE | VEHICLE_UNSAFE
   deriving stock (Show, Eq, Generic, Enum, Bounded)
