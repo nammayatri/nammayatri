@@ -169,12 +169,14 @@ findAllByOwnerAndServiceNameWithPagination' ::
   SubscriptionOwnerType ->
   ServiceNames ->
   Maybe SubscriptionPurchaseStatus ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Maybe Int ->
   Maybe Int ->
   m [SubscriptionPurchase]
-findAllByOwnerAndServiceNameWithPagination' merchantOpCityId ownerId ownerType serviceName mbStatus mbAmountMin mbAmountMax limit offset =
+findAllByOwnerAndServiceNameWithPagination' merchantOpCityId ownerId ownerType serviceName mbStatus mbFrom mbTo mbAmountMin mbAmountMax limit offset =
   findAllWithOptionsKV
     [ Se.And
         ( [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
@@ -183,6 +185,8 @@ findAllByOwnerAndServiceNameWithPagination' merchantOpCityId ownerId ownerType s
             Se.Is Beam.serviceName $ Se.Eq serviceName
           ]
             <> [Se.Is Beam.status $ Se.Eq status | Just status <- [mbStatus]]
+            <> [Se.Is Beam.purchaseTimestamp $ Se.GreaterThanOrEq t | Just t <- [mbFrom]]
+            <> [Se.Is Beam.purchaseTimestamp $ Se.LessThanOrEq t | Just t <- [mbTo]]
             <> [Se.Is Beam.planFee $ Se.GreaterThanOrEq amt | Just amt <- [mbAmountMin]]
             <> [Se.Is Beam.planFee $ Se.LessThanOrEq amt | Just amt <- [mbAmountMax]]
         )
