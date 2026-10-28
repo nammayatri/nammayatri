@@ -35,6 +35,7 @@ data LedgerAdjustmentRequest = LedgerAdjustmentRequest
     postedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     referenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referenceType :: Kernel.Prelude.Text,
+    rejectionReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Domain.Types.LedgerAdjustmentRequest.AdjustmentRequestStatus,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

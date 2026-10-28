@@ -740,6 +740,7 @@ buildLedgerAdjustmentRequest adjustmentRequestId merchantOpCity personId categor
         merchantId = merchantOpCity.merchantId,
         merchantOperatingCityId = merchantOpCity.id,
         postedAt = Nothing,
+        rejectionReason = Nothing,
         createdAt = now,
         updatedAt = now
       }
@@ -866,7 +867,10 @@ mkLedgerAdjustmentItem DLA.LedgerAdjustmentRequest {..} =
       ledgerEntryId = getId <$> ledgerEntryId,
       createdAt,
       updatedAt,
-      postedAt
+      postedAt,
+      rejectionReason,
+      -- REJECTED is terminal, so the reject is the row's last update.
+      rejectedAt = if status == DLA.REJECTED then Just updatedAt else Nothing
     }
 
 --------------------------------------------------------------------------------
@@ -1274,9 +1278,15 @@ ledgerAdjustmentReject ::
   Id DLA.LedgerAdjustmentRequest ->
   Text ->
   Text ->
+  Text ->
   Flow APISuccess
-ledgerAdjustmentReject merchantShortId opCity adjustmentRequestId requestorId requestorName =
+ledgerAdjustmentReject merchantShortId opCity adjustmentRequestId requestorId requestorName rawRejectionReason =
   withLogTag ("adjustmentRequestId_" <> adjustmentRequestId.getId) $ do
+    let rejectionReason = T.strip rawRejectionReason
+    when (T.null rejectionReason) $
+      throwError (InvalidRequest "rejectionReason must not be empty")
+    when (T.length rejectionReason > maxRejectionReasonLength) $
+      throwError (InvalidRequest $ "rejectionReason must be at most " <> show maxRejectionReasonLength <> " characters")
     merchant <- SMerchant.findMerchantByShortId merchantShortId
     merchantOpCity <-
       CQMOC.findByMerchantIdAndCity merchant.id opCity
@@ -1302,11 +1312,11 @@ ledgerAdjustmentReject merchantShortId opCity adjustmentRequestId requestorId re
       mbAdminChecker <- QP.findById (Id @DP.Person requestorId)
       let adminCheckerName = mkAdminName requestorName mbAdminChecker
           checkerId = Id @DP.Person requestorId
-      QLedgerAdjustmentRequest.updateStatusAndChecker
+      QLedgerAdjustmentRequest.updateStatusCheckerAndRejectionReason
         DLA.REJECTED
         (Just checkerId)
         (Just adminCheckerName)
-        Nothing
+        (Just rejectionReason)
         adjustmentRequest.id
       now <- getCurrentTime
       logLedgerAdjustmentAudit AuditDomain.Rejected (Just adjustmentRequest) $
@@ -1314,17 +1324,21 @@ ledgerAdjustmentReject merchantShortId opCity adjustmentRequestId requestorId re
           { DLA.status = DLA.REJECTED,
             DLA.adminCheckerId = Just checkerId,
             DLA.adminCheckerName = Just adminCheckerName,
+            DLA.rejectionReason = Just rejectionReason,
             DLA.updatedAt = now
           }
       let h = categoryHandlers adjustmentRequest.category -- Per-category handler
-      h.rejectSideEffect checkerId adminCheckerName adjustmentRequest
+      h.rejectSideEffect checkerId adminCheckerName adjustmentRequest {DLA.rejectionReason = Just rejectionReason}
     pure Success
+
+maxRejectionReasonLength :: Int
+maxRejectionReasonLength = 100
 
 noopRejectSideEffect :: RejectLedgerAdjustmentSideEffect
 noopRejectSideEffect _ _ _ = pure ()
 
--- | Currently we don't have reimbursement request reject api, hence adj reject is currently the only admin path to close a PENDING cert claim,
---   so we mark the TDS request REJECTED (FO can resubmit for the same Q/AY).
+-- | The TDS reject API refuses claims that already have an adjustment, so rejecting the adjustment closes the PENDING cert claim
+--   with the checker's reason (FO can resubmit for the same Q/AY).
 rejectTdsReimbursementSideEffect :: RejectLedgerAdjustmentSideEffect
 rejectTdsReimbursementSideEffect checkerId adminCheckerName adjustmentRequest = do
   whenJust adjustmentRequest.referenceId $ \referenceId -> do
@@ -1334,7 +1348,7 @@ rejectTdsReimbursementSideEffect checkerId adminCheckerName adjustmentRequest = 
         -- Denormalize checker onto the TDS request row so the list API can filter/display without a join.
         QTdsReq.updateStatusRejectionReasonAndAdminChecker
           DTdsReq.REJECTED
-          (Just "Rejected via ledger adjustment")
+          adjustmentRequest.rejectionReason
           (Just checkerId.getId)
           (Just adminCheckerName)
           tdsRequest.id

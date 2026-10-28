@@ -64,6 +64,20 @@ updateStatusCheckerAndPostResult status adminCheckerId adminCheckerName errorMes
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateStatusCheckerAndRejectionReason ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.LedgerAdjustmentRequest.AdjustmentRequestStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.LedgerAdjustmentRequest.LedgerAdjustmentRequest -> m ())
+updateStatusCheckerAndRejectionReason status adminCheckerId adminCheckerName rejectionReason id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.status status,
+      Se.Set Beam.adminCheckerId (Kernel.Types.Id.getId <$> adminCheckerId),
+      Se.Set Beam.adminCheckerName adminCheckerName,
+      Se.Set Beam.rejectionReason rejectionReason,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.LedgerAdjustmentRequest.LedgerAdjustmentRequest -> m (Maybe Domain.Types.LedgerAdjustmentRequest.LedgerAdjustmentRequest))

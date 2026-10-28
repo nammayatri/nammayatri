@@ -246,12 +246,12 @@ postFinanceManagementFinanceAdjustmentApprove a4 a3 a2 a1 =
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.FinanceManagement.postFinanceManagementFinanceAdjustmentApprove a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) (Tools.Auth.DashboardUserAuth.dashboardRequestorName a2)
     )
 
-postFinanceManagementFinanceAdjustmentReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postFinanceManagementFinanceAdjustmentReject a4 a3 a2 a1 =
+postFinanceManagementFinanceAdjustmentReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest -> API.Types.ProviderPlatform.Management.FinanceManagement.LedgerAdjustmentRejectReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFinanceManagementFinanceAdjustmentReject a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
-        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_FINANCE_ADJUSTMENT_REJECT" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.FinanceManagement.postFinanceManagementFinanceAdjustmentReject a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) (Tools.Auth.DashboardUserAuth.dashboardRequestorName a2)
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_FINANCE_ADJUSTMENT_REJECT" a3 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.FinanceManagement.postFinanceManagementFinanceAdjustmentReject a5 a4 a2 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3) (Tools.Auth.DashboardUserAuth.dashboardRequestorName a3) a1
     )
 
 getFinanceManagementFinanceSapJournals :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.SapJournalEntry.JournalEntryStatus -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.SapJournalEntry.TransactionType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.SapJournalListRes)
