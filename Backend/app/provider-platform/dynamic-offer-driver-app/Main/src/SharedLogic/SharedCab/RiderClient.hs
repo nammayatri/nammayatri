@@ -22,6 +22,8 @@ module SharedLogic.SharedCab.RiderClient
     getRiderCallNumber,
     BAPMessageReq (..),
     postRiderMessage,
+    riderClientTimeoutMs,
+    prepareRiderClientHttpManager,
   )
 where
 
@@ -29,12 +31,15 @@ import API.Types.UI.SharedCab
 import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
 import EulerHS.Types (EulerClient, client)
+import qualified EulerHS.Types as ET
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Utils.Common hiding (Error)
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import qualified Kernel.Utils.Servant.Client as EC
+import qualified Network.HTTP.Client as Http
+import qualified Network.HTTP.Client.TLS as Http
 import Servant hiding (throwError)
 import Tools.Error (BapProxyError (..))
 
@@ -171,7 +176,18 @@ sessionProbeClient = client (Proxy @(SessionAPI Aeson.Value))
 callRider :: (BAPFlow m r, SanitizedUrl api, ToJSON a) => BaseUrl -> Text -> EulerClient a -> Proxy api -> m a
 callRider internalUrl desc eulerClient api = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @BapProxyError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl eulerClient desc api
+  EC.callApiUnwrappingApiError (identity @BapProxyError) (Just (ET.ManagerSelector riderClientManagerKey)) (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl eulerClient desc api
+
+-- | Every driver action waits on one call to rider-app: a slow rider-app fails it in 5 s instead of the default client timeout.
+riderClientTimeoutMs :: Int
+riderClientTimeoutMs = 5000
+
+riderClientManagerKey :: Text
+riderClientManagerKey = "shared-cab-rider-client"
+
+prepareRiderClientHttpManager :: HM.HashMap Text Http.ManagerSettings
+prepareRiderClientHttpManager =
+  HM.singleton riderClientManagerKey $ Http.tlsManagerSettings {Http.managerResponseTimeout = Http.responseTimeoutMicro (riderClientTimeoutMs * 1000)}
 
 getSharedCabRoutes :: BAPFlow m r => Text -> BaseUrl -> Text -> Double -> Double -> m SharedCabRoutesResp
 getSharedCabRoutes apiKey internalUrl agencyId lat lon = do

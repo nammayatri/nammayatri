@@ -117,6 +117,9 @@ sweepCity mocId =
 -- | The refund pass, on this chain's claim/lease wiring with its own per-tick claim: re-attempts FindingTimeout.startRefund per marked
 -- booking, bumps the count on failure, ops-alerts after `maxRefundRetryAttempts`. Decides from the payment evidence BEFORE any
 -- startRefund, so an already-started refund is never started twice; a missing payment row is terminal.
+refundRetryBatch :: Int
+refundRetryBatch = 50
+
 refundPass ::
   SweepFlow m r c =>
   Id DMOC.MerchantOperatingCity ->
@@ -127,7 +130,9 @@ refundPass mocId = do
   if not claimed
     then pure (if null pending then PassEmpty else PassBusy)
     else do
-      pendingAfter <- (sum :: [Int] -> Int) <$> forM pending (\bookingId -> withTryCatch "sharedCab:refundRetry" (retryOne bookingId) >>= either (\err -> 1 <$ logError ("shared-cab refund retry failed for booking " <> bookingId.getId <> ": " <> show err)) pure)
+      -- a capped batch per pass, so a payment outage's backlog never stretches one pass; the rest wait for the next
+      let (batch, later) = splitAt refundRetryBatch pending
+      pendingAfter <- (+ length later) . (sum :: [Int] -> Int) <$> forM batch (\bookingId -> withTryCatch "sharedCab:refundRetry" (retryOne bookingId) >>= either (\err -> 1 <$ logError ("shared-cab refund retry failed for booking " <> bookingId.getId <> ": " <> show err)) pure)
       logInfo $ "sharedCab degraded sweep: city=" <> mocId.getId <> " refund pending=" <> show pendingAfter
       pure $ if pendingAfter == 0 then PassEmpty else PassBusy
   where

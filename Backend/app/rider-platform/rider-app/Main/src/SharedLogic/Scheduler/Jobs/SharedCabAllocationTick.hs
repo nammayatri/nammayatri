@@ -51,6 +51,12 @@ sharedCabAllocationTick Job {jobInfo} = do
     liveRef <- liftIO $ newIORef []
     -- stays True unless the lease was held, so a throwing tick reschedules as usual
     gotLeaseRef <- liftIO $ newIORef True
+    scheduledRef <- liftIO $ newIORef False
+    let scheduleNext = do
+          keepGoing <- liftIO (readIORef keepGoingRef)
+          gotLease <- liftIO (readIORef gotLeaseRef)
+          liftIO (writeIORef scheduledRef True)
+          when keepGoing (scheduleNextTick merchantId merchantOperatingCityId chainId gotLease leaseMisses)
     claimedTick
       (claimTickRun merchantOperatingCityId leaseMisses)
       ( do
@@ -63,15 +69,13 @@ sharedCabAllocationTick Job {jobInfo} = do
                 liftIO (writeIORef keepGoingRef (tickChainContinues enabled (length live)))
                 runStopProgress merchantOperatingCityId live positions
           liftIO (writeIORef gotLeaseRef gotLease)
+          -- before the refunds' payment calls, so a slow gateway never delays the city's next tick
+          scheduleNext
           -- after the lease, so the refund's network calls never hold up the city's tick
           liftIO (readIORef liveRef) >>= cancelTimedOutFindings merchantOperatingCityId
           -- the expiry chain's watchdog: a lost expiry job would otherwise wait for the stream reclaim
           withTryCatch "sharedCab:allocationWatchesExpiry" (ensureExpiryJob merchantId merchantOperatingCityId)
             >>= either (logError . ("sharedCab tick: expiry watchdog failed: " <>) . show) pure
       )
-      ( do
-          keepGoing <- liftIO (readIORef keepGoingRef)
-          gotLease <- liftIO (readIORef gotLeaseRef)
-          when keepGoing (scheduleNextTick merchantId merchantOperatingCityId chainId gotLease leaseMisses)
-      )
+      (liftIO (readIORef scheduledRef) >>= \scheduled -> unless scheduled scheduleNext)
   pure Complete
