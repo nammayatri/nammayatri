@@ -39,6 +39,7 @@ import "rider-app" SharedLogic.SharedCab.Interest (bestEffort, windowStart)
 import "rider-app" SharedLogic.SharedCab.Offer (AcceptDecision (..), DeclineDecision (..), decideAccept, decideDecline)
 import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..))
 import "rider-app" SharedLogic.SharedCab.RefundPolicy (cancellableStatus)
+import "rider-app" SharedLogic.SharedCab.RouteSnapshot (SnapshotRead (..), snapshotRead)
 import "rider-app" SharedLogic.SharedCab.Schedule (chainsAliveDue, claimedTick, nextTickAfter)
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE, PAUSED))
 import "rider-app" SharedLogic.SharedCab.WalkUp (cabVehicle)
@@ -133,6 +134,16 @@ tests =
           @?= [(3, Nothing), (3, Nothing), (1, Just 1), (1, Just 2), (1, Just 3), (3, Nothing)],
       testCase "a rider poll reseeds the city's chains only when it opened the 30 s window" $
         (chainsAliveDue t0 t0, chainsAliveDue (addUTCTime 5 t0) t0) @?= (True, False),
+      testCase "route snapshot: nothing built yet is rebuilt inline" $
+        snapshotRead t0 Nothing False @?= Rebuild,
+      testCase "route snapshot: under 2 s old is served, rebuild running or not" $
+        (snapshotRead (addUTCTime 1 t0) (Just t0) False, snapshotRead (addUTCTime 1 t0) (Just t0) True) @?= (Serve, Serve),
+      testCase "route snapshot: stale with nobody rebuilding is rebuilt by this request" $
+        snapshotRead (addUTCTime 5 t0) (Just t0) False @?= Rebuild,
+      testCase "route snapshot: stale while another request rebuilds is served as is" $
+        snapshotRead (addUTCTime 5 t0) (Just t0) True @?= ServeStaleNoRebuild,
+      testCase "route snapshot: 10 s old is never served, even while another request rebuilds" $
+        snapshotRead (addUTCTime 10 t0) (Just t0) True @?= Rebuild,
       testCase "a tick item that throws is reported and the next one still runs" $ do
         ran <- newIORef []
         failed <- newIORef []
