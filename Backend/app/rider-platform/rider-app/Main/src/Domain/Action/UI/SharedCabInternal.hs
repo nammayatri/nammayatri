@@ -116,7 +116,6 @@ getSharedCabRoutes agencyId driverLat driverLon mbToken = do
             fromStop = maybe "" (.stopName) (listToMaybe stops),
             toStop = routeDirection stops,
             distanceKm = Just (distanceKm route stops),
-            isStandRoute = False,
             waitingCount,
             searchingCount,
             stops = [View.sessionStopOf s.stopCode s.stopName s.stopPoint | s <- stops],
@@ -379,9 +378,7 @@ mkSessionResp s = do
         stops = [View.sessionStopOf st.stopCode st.stopName st.stopPoint | st <- stops],
         shapePolyline,
         vehicle,
-        demandAhead = Demand.demandAheadRows [(st.stopCode, st.stopName) | st <- stops] demand,
-        lowDemandCard = Nothing,
-        offRoute = Nothing
+        demandAhead = Demand.demandAheadRows [(st.stopCode, st.stopName) | st <- stops] demand
       }
 
 -- | The rider's number for a driver-initiated masked call; only for the driver whose live cab holds the booking, inside the call window.

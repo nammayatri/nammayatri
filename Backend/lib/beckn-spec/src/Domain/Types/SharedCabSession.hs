@@ -63,7 +63,6 @@ data SharedCabRoute = SharedCabRoute
     fromStop :: Text,
     toStop :: Text,
     distanceKm :: Maybe Double,
-    isStandRoute :: Bool,
     -- | Riders with a booking still waiting for a cab on this route.
     waitingCount :: Int,
     -- | Riders who searched for a cab at one of the route's stops in the last 15 minutes without booking.
@@ -152,23 +151,6 @@ data DemandAtStop = DemandAtStop
 instance FromJSON DemandAtStop where
   parseJSON = genericParseJSON defaultOptions . withDefaults [("stopCode", String "")]
 
-data LowDemandAlternative = LowDemandAlternative
-  { routeCode :: Text,
-    name :: Text,
-    riders :: Int,
-    windowMin :: Int,
-    distanceKm :: Double
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-newtype LowDemandCard = LowDemandCard {alternatives :: [LowDemandAlternative]}
-  deriving (Show, Eq, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-newtype OffRoute = OffRoute {nearestRoutes :: [SharedCabRoute]}
-  deriving (Show, Eq, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data SharedCabSession = SharedCabSession
   { route :: SessionRoute,
     queuedRoute :: Maybe SessionRoute,
@@ -185,9 +167,7 @@ data SharedCabSession = SharedCabSession
     stops :: [SessionStop],
     shapePolyline :: Maybe Text,
     vehicle :: Maybe LatLong,
-    demandAhead :: [DemandAtStop],
-    lowDemandCard :: Maybe LowDemandCard,
-    offRoute :: Maybe OffRoute
+    demandAhead :: [DemandAtStop]
   }
   deriving (Show, Eq, Generic, ToJSON, ToSchema)
 
