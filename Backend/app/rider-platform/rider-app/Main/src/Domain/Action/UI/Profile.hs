@@ -183,7 +183,8 @@ data ProfileRes = ProfileRes
     profilePicture :: Maybe Text,
     paymentMode :: Maybe DMPM.PaymentMode,
     blockedUntil :: Maybe UTCTime,
-    pendingLegalPolicies :: Maybe [PolicyDoc.PendingLegalPolicy]
+    pendingLegalPolicies :: Maybe [PolicyDoc.PendingLegalPolicy],
+    commsConsent :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
