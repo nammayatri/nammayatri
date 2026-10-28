@@ -15,6 +15,7 @@ import qualified "rider-app" Domain.Types.VehicleTrip as DVT
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Common (Seconds (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
+import "rider-app" SharedLogic.SharedCab.JourneyLeg (sessionOnTrip)
 import "rider-app" SharedLogic.SharedCab.Session (stranded)
 import "rider-app" SharedLogic.SharedCab.SessionState
 import qualified "rider-app" SharedLogic.SharedCab.SessionView as View
@@ -50,7 +51,12 @@ tests :: TestTree
 tests =
   testGroup
     "SharedCab session state"
-    [ testCase "a chat message is stripped and must be 1 to 500 characters" $
+    [ testCase "the leg shows a cab's position and driver only on the trip the rider boarded (any trip before boarding)" $
+        map
+          (fmap (.driverId) . uncurry sessionOnTrip)
+          [(Nothing, Just active), (Just "trip1", Just active), (Just "trip0", Just active), (Nothing, Just active {status = ENDED}), (Nothing, Nothing)]
+          @?= [Just "d1", Just "d1", Nothing, Nothing, Nothing],
+      testCase "a chat message is stripped and must be 1 to 500 characters" $
         map
           (either (const Nothing) (Just . T.length) . chatMessageBody)
           ["  on my way  ", T.replicate 500 "a", T.replicate 501 "a", "   "]

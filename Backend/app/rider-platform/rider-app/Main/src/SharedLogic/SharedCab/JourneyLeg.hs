@@ -4,6 +4,7 @@ module SharedLogic.SharedCab.JourneyLeg
   ( getSharedCabLegState,
     liveCabLegCities,
     noBookingLegState,
+    sessionOnTrip,
   )
 where
 
@@ -81,8 +82,10 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   findingSince <- readFindingSince booking.id booking.createdAt
   attempts <- readAttempts booking.id
   preference <- (,) . fmap (T.takeEnd 4) <$> readPreferred booking.id <*> readPreferenceDropped booking.id
-  cabTrack <- readCabTrack now cfg booking mbSession
-  mbDriverInfo <- readLiveDriverInfo mbSession
+  -- the cab's position, driver and contact only while the plate runs the trip the rider boarded on
+  let tripSession = sessionOnTrip (getId <$> booking.vehicleTripId) mbSession
+  cabTrack <- readCabTrack now cfg booking tripSession
+  mbDriverInfo <- readLiveDriverInfo tripSession
   let hasLiveSession = maybe False ((/= SharedCabSessionState.ENDED) . (.status)) mbSession
       (trackingStatus, trackingStatusLastUpdatedAt) = maybe (JMStateTypes.InPlan, now) (\(_, ts, tsAt) -> (ts, tsAt)) (listToMaybe trackingStatuses)
       arrivalDeadline = mbAllocState >>= allocationDeadline
@@ -95,8 +98,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
             findingSince,
             fallbackAfterSec = cfg.fallbackAfterSec
           }
-  let onThisTrip session = session.status /= SharedCabSessionState.ENDED && SharedCabLeg.tripMatches (getId <$> booking.vehicleTripId) session.vehicleTripId.getId
-      inWindow = maybe False onThisTrip mbSession && maybe False SharedCabLeg.callWindowState mbState
+  let inWindow = isJust tripSession && maybe False SharedCabLeg.callWindowState mbState
   maskedCall <- if cfg.callEnabled && inWindow then SharedCabCall.maskedCallNumber booking.merchantOperatingCityId else pure Nothing
   let chatChannel = if cfg.chatEnabled && inWindow then Just booking.id.getId else Nothing
   -- where the rider is while a cab is on its way decides the blame if it passes the stop
@@ -142,6 +144,10 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
         }
   where
     mbRouteCode = listToMaybe journeyLeg.routeDetails >>= (.routeGtfsId) <&> gtfsIdtoDomainCode
+
+-- | The plate's session while it is not ENDED and runs the booking's trip (any trip before boarding).
+sessionOnTrip :: Maybe Text -> Maybe SharedCabSessionState.Session -> Maybe SharedCabSessionState.Session
+sessionOnTrip bookingTrip = mfilter (\s -> s.status /= SharedCabSessionState.ENDED && SharedCabLeg.tripMatches bookingTrip s.vehicleTripId.getId)
 
 -- | The live session's cab fix and ETAs, from one read of the route's LTS hash (what the allocator reads); any miss is Nothing.
 readCabTrack :: LegFlow m r => UTCTime -> Config.SharedCabTunables -> DFRFSTicketBooking.FRFSTicketBooking -> Maybe SharedCabSessionState.Session -> m (Maybe CabTrack)
