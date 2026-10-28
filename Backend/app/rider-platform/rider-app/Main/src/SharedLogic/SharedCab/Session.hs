@@ -6,6 +6,7 @@ module SharedLogic.SharedCab.Session
     pause,
     resume,
     getSession,
+    getSessionFresh,
     readSession,
     CabDriverInfo (..),
     setCabDriverInfo,
@@ -28,6 +29,8 @@ import qualified Domain.Types.VehicleTrip as DVT
 import qualified Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Storage.InMem as IM
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Utils.Common
 import Lib.Scheduler (JobCreator)
 import SharedLogic.SharedCab.Booking (ridersOnBoard, shared)
@@ -75,14 +78,27 @@ withCabLock rawPlate body = let plate = canonicalisePlate rawPlate in withPlateL
 readSession :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe Session)
 readSession = shared . Redis.safeGet . sessionKey
 
--- | After a Redis flush the live vehicle_trip restores the session (ACTIVE or PAUSED recovers, absent means the run ended).
-getSession :: (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m, JobCreator r m) => Text -> m (Maybe Session)
-getSession rawPlate =
+-- | After a Redis flush the live vehicle_trip restores the session (ACTIVE or PAUSED recovers, absent means the run ended). An idle
+-- driver's poll finds no trip without taking the plate lock, and that answer is kept 10 s per plate.
+getSession :: (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m, JobCreator r m, CoreMetrics m) => Text -> m (Maybe Session)
+getSession = getSessionWith True
+
+-- | For a select: a cached answer must never hide the trip of a plate that is starting a run.
+getSessionFresh :: (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m, JobCreator r m, CoreMetrics m) => Text -> m (Maybe Session)
+getSessionFresh = getSessionWith False
+
+getSessionWith :: (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m, JobCreator r m, CoreMetrics m) => Bool -> Text -> m (Maybe Session)
+getSessionWith cached rawPlate =
   readSession plate >>= \case
     Just s -> pure (Just s)
-    Nothing -> withPlateLock plate $ readSession plate >>= maybe recover (pure . Just)
+    Nothing -> do
+      hasLiveTrip <- if cached then IM.withInMemCache ["SharedCabPlateHasTrip", plate] 10 liveTrip else liveTrip
+      case sessionMissAction hasLiveTrip of
+        NoLiveTrip -> pure Nothing
+        RestoreUnderLock -> withPlateLock plate $ readSession plate >>= maybe recover (pure . Just)
   where
     plate = canonicalisePlate rawPlate
+    liveTrip = isJust <$> QVT.findActiveByVehicleNumber plate
     recover = QVT.findActiveByVehicleNumber plate >>= traverse rebuild
     rebuild trip = do
       s <- sessionFromTrip trip <$> getCurrentTime

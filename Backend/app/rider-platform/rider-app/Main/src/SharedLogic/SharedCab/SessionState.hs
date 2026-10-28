@@ -36,6 +36,8 @@ module SharedLogic.SharedCab.SessionState
     SessionRead (..),
     RouteMember (..),
     routeMember,
+    SessionMiss (..),
+    sessionMissAction,
   )
 where
 
@@ -76,6 +78,14 @@ routeMember route = \case
     | otherwise -> StaleMember
   SessionAbsent -> StaleMember
   SessionUnreadable -> UnknownMember
+
+-- | A plate with no session key: with no live trip there is nothing to restore and no lock to take; a live trip is restored under
+-- the plate lock.
+data SessionMiss = NoLiveTrip | RestoreUnderLock
+  deriving (Show, Eq)
+
+sessionMissAction :: Bool -> SessionMiss
+sessionMissAction hasLiveTrip = if hasLiveTrip then RestoreUnderLock else NoLiveTrip
 
 data SelectRouteMode = AfterLastDrop | Force
   deriving (Show, Eq, Generic)

@@ -51,7 +51,9 @@ tests :: TestTree
 tests =
   testGroup
     "SharedCab session state"
-    [ testCase "a route-set member is dropped only when its session is gone or off the route, never on a failed read" $
+    [ testCase "a plate with no session key takes the plate lock only when it has a live trip to restore" $
+        map sessionMissAction [False, True] @?= [NoLiveTrip, RestoreUnderLock],
+      testCase "a route-set member is dropped only when its session is gone or off the route, never on a failed read" $
         map
           (routeMember "R1")
           [SessionAt active, SessionAt active {routeCode = "R2"}, SessionAt active {status = PAUSED}, SessionAbsent, SessionUnreadable]

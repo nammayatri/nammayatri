@@ -136,7 +136,7 @@ postSharedCabRouteSelect :: Maybe Text -> API.SelectRouteReq -> Environment.Flow
 postSharedCabRouteSelect mbToken req = do
   checkToken mbToken
   integratedBppConfig <- getIntegratedBppConfigByAgency req.agencyId
-  priorRoute <- fmap (.routeCode) . mfilter ((/= ENDED) . (.status)) <$> Session.getSession req.vehicleNumber
+  priorRoute <- fmap (.routeCode) . mfilter ((/= ENDED) . (.status)) <$> Session.getSessionFresh req.vehicleNumber
   selected <-
     Session.selectRoute
       req.mode
