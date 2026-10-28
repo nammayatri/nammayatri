@@ -981,7 +981,6 @@ library
       Storage.Queries.TranslationsExtra
       Storage.Queries.UiRiderConfigExtra
       Storage.Queries.VehicleRouteMappingExtra
-      Storage.Queries.VehicleTripExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.ActorInfo

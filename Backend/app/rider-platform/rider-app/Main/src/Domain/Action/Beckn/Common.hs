@@ -2090,8 +2090,7 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
             referredByEarningsPayoutStatus = Nothing,
             backlogPayoutStatus = Nothing,
             backlogPayoutAmount = 0,
-            isBackfilled = Just False,
-            sharedCabNoShows = 0
+            isBackfilled = Just False
           }
 
     getExpirationSeconds timeDiffFromUtc = do

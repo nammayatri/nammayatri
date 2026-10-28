@@ -28,7 +28,6 @@ data PersonStats = PersonStats
     referralEarnings :: Kernel.Types.Common.HighPrecMoney,
     referredByEarnings :: Kernel.Types.Common.HighPrecMoney,
     referredByEarningsPayoutStatus :: Kernel.Prelude.Maybe Domain.Types.PersonStats.PayoutStatus,
-    sharedCabNoShows :: Kernel.Prelude.Int,
     ticketsBookedInEvent :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
     userCancelledRides :: Kernel.Prelude.Int,

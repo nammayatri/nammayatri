@@ -45,7 +45,6 @@ import SharedLogic.SharedCab.Config (SharedCabTunables)
 data AllocationState = AllocationState
   { vehicleNumber :: Text, -- canonical plate of the cab holding the booking right now
     driverId :: Maybe Text, -- who drove it at claim (the session's driver, read under the plate lock): who a driver miss is charged to
-    vehicleTripId :: Maybe Text, -- the session's trip at claim: where a driver miss is counted, even if the plate is on another trip by close time
     allocatedAt :: UTCTime,
     timer :: Timer
   }

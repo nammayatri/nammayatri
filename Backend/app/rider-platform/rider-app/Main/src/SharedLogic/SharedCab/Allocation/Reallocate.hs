@@ -43,8 +43,7 @@ import qualified Storage.Queries.Person as QPerson
 
 data Closed = Closed
   { closedCity :: Id DMOC.MerchantOperatingCity,
-    result :: CloseResult,
-    heldTrip :: Maybe Text -- the trip the allocation was made to, from its alloc key
+    result :: CloseResult
   }
 
 data CloseResult
@@ -94,14 +93,13 @@ closeLocked cfg bookingId expectedPlate outcome =
         _ -> QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate)
       let steps = closeSteps cfg.maxNoShows b.sharedCabNoShows (blameFor outcome)
       when (GiveBackSeats `elem` steps) $ Seats.releaseBooking bookingId
-      heldTrip <- (>>= (.vehicleTripId)) <$> readAlloc bookingId
       if CancelForNoShows `elem` steps
         then do
           cancelForNoShows b
           clearBookingState bookingId
-          pure Closed {closedCity = b.merchantOperatingCityId, result = AutoCancelled, heldTrip}
-        else reallocate b heldTrip
-    reallocate b heldTrip = do
+          pure Closed {closedCity = b.merchantOperatingCityId, result = AutoCancelled}
+        else reallocate b
+    reallocate b = do
       clearAlloc bookingId
       when (skipsPlateOnClose outcome) $ addSkipped (allocKeyTtl cfg) bookingId expectedPlate
       -- Known limitation: a Redis flush resets attempts.
@@ -114,7 +112,7 @@ closeLocked cfg bookingId expectedPlate outcome =
       when (attemptsNow < cfg.maxAttempts) $ shared $ Redis.del (fallbackPushedKey bookingId)
       when fallbackJustTriggered $
         logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); fallback surface"
-      pure Closed {closedCity = b.merchantOperatingCityId, result = if fallbackJustTriggered then ReallocatedIntoFallback else Reallocated, heldTrip}
+      pure Closed {closedCity = b.merchantOperatingCityId, result = if fallbackJustTriggered then ReallocatedIntoFallback else Reallocated}
 
 -- | The rider's last allowed no-show: cancelled by the system, fare kept (marking it refund-pending would make the payment
 -- service refund). SMS and Google Wallet flips are skipped: they need the API Flow the scheduler env lacks. The row flips
@@ -142,10 +140,8 @@ releaseCancelledBooking b = do
 
 afterClose :: AllocFlow m r => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> Maybe Closed -> m ()
 afterClose cfg bookingId plate outcome closed =
-  whenJust closed $ \Closed {result, heldTrip} -> do
+  whenJust closed $ \Closed {result} -> do
     mbBooking <- QFRFSTicketBooking.findById bookingId
-    withTryCatch "sharedCabMisses" (NoShow.record (blameFor outcome) (mbBooking <&> (.riderId)) (Id <$> heldTrip))
-      >>= either (\e -> logError $ "shared-cab miss count bump failed for booking " <> bookingId.getId <> ": " <> show e) pure
     case result of
       AutoCancelled -> do
         mapM_ (\b -> Notify.notifyBookingCancelled b.sharedCabNoShows b) mbBooking

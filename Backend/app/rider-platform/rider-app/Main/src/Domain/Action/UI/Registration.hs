@@ -1112,8 +1112,7 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
             referredByEarningsPayoutStatus = Nothing,
             backlogPayoutStatus = Nothing,
             backlogPayoutAmount = 0,
-            isBackfilled = Just False,
-            sharedCabNoShows = 0
+            isBackfilled = Just False
           }
 
 checkPersonExists :: (CacheFlow m r, EsqDBFlow m r) => Text -> m SP.Person

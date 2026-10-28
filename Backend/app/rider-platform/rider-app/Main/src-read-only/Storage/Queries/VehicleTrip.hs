@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.VehicleTrip (module Storage.Queries.VehicleTrip, module ReExport) where
+module Storage.Queries.VehicleTrip (module Storage.Queries.VehicleTrip) where
 
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleTrip
@@ -15,7 +15,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.VehicleTrip as Beam
-import Storage.Queries.VehicleTripExtra as ReExport
+import Storage.Queries.OrphanInstances.VehicleTrip
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleTrip.VehicleTrip -> m ())
 create = createWithKV
@@ -96,7 +96,6 @@ updateByPrimaryKey (Domain.Types.VehicleTrip.VehicleTrip {..}) = do
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.missedPickups (Kernel.Prelude.Just missedPickups),
       Se.Set Beam.movingAt movingAt,
       Se.Set Beam.offlineBoardings offlineBoardings,
       Se.Set Beam.reachedEndAt reachedEndAt,

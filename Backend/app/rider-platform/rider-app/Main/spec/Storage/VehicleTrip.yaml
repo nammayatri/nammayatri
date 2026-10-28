@@ -25,7 +25,6 @@ VehicleTrip:
     endedAt: Maybe UTCTime
     endReason: Maybe VehicleTripEndReason
     offlineBoardings: Int
-    missedPickups: Int
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -40,15 +39,6 @@ VehicleTrip:
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VehicleTripStatus>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VehicleTripEndReason>
-
-  beamType:
-    missedPickups: Maybe Int
-
-  fromTType:
-    missedPickups: Kernel.Prelude.fromMaybe 0|I
-
-  toTType:
-    missedPickups: Kernel.Prelude.Just|I
 
   sqlType:
     serviceTierType: text
@@ -126,10 +116,8 @@ VehicleTrip:
 
   default:
     offlineBoardings: "0"
-    missedPickups: "0"
     createdAt: "CURRENT_TIMESTAMP"
     updatedAt: "CURRENT_TIMESTAMP"
 
   extraOperations:
     - GENERATE_INDEXES
-    - EXTRA_QUERY_FILE
