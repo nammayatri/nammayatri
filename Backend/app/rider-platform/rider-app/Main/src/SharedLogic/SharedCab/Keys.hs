@@ -61,8 +61,8 @@ plateLockKey plate = "sharedcab:lock:" <> plate
 offRouteKey :: Text -> Text
 offRouteKey plate = "sharedcab:offroute:" <> plate
 
-noLocationKey :: Text -> Text -> Text
-noLocationKey plate istDay = "sharedcab:noloc:" <> plate <> ":" <> istDay
+noLocationKey :: Text -> Text
+noLocationKey plate = "sharedcab:noloc:" <> plate
 
 bookingLockKey :: BookingId -> Text
 bookingLockKey bookingId = "sharedcab:lock:booking:" <> bookingId.getId

@@ -339,7 +339,7 @@ boardSharedCab journey journeyLeg booking mbPersonId req = do
           commitBoarding journeyLeg booking target mbOld
           -- no rider location counts against the VEHICLE's IST-day counter, so a driver feeding codes to non-app riders shows up per vehicle
           when noLocation $
-            void $ RateLimit.recordNoLocationBoarding tunables.noLocationSpotBookingsPerVehiclePerDay (canonicalisePlate target.vehicleNumber)
+            RateLimit.recordNoLocationBoarding tunables.noLocationSpotBookingsPerVehiclePerDay (canonicalisePlate target.vehicleNumber)
           -- TODO: re-fare if the re-bound route differs.
           pure $
             SharedCabBoarded

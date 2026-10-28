@@ -6,50 +6,28 @@ module SharedLogic.SharedCab.RateLimit
   )
 where
 
-import qualified Data.Text as T
-import Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import SharedLogic.SharedCab.Booking (shared)
 import SharedLogic.SharedCab.Keys (boardAttemptsKey, noLocationKey)
 import Tools.Error
-
-boardAttemptWindowSec :: Int
-boardAttemptWindowSec = 10 * 60
-
-istDayStamp :: UTCTime -> Text
-istDayStamp = T.pack . formatTime defaultTimeLocale "%Y%m%d" . addUTCTime 19800
 
 -- | <= boardAttemptsPer10Min. Over the limit is the SAME generic BoardingFailed: the client must not be able to tell a
 -- rate-limited probe from a wrong code.
 enforceBoardingAttemptLimit :: (Redis.HedisFlow m r, MonadFlow m) => Int -> Id DBooking.FRFSTicketBooking -> m ()
 enforceBoardingAttemptLimit boardAttemptsPer10Min bookingId =
-  shared $ do
-    -- the TTL is set with the key, so an INCR can never leave a counter that lives forever
-    void $ Redis.setNxExpire key boardAttemptWindowSec (0 :: Integer)
-    attempts <- Redis.incr key
-    when (attempts > fromIntegral boardAttemptsPer10Min) $
-      throwError BoardingFailed
-  where
-    key = boardAttemptsKey bookingId
+  unlessM (shared $ slidingWindowLimiter (boardAttemptsKey bookingId) boardAttemptsPer10Min (10 * 60)) $
+    throwError BoardingFailed
 
--- | One no-location boarding against the vehicle's day count (a driver feeding codes to non-app riders shows up per vehicle,
--- not per rider). Logs the ops flag once the count crosses noLocationSpotBookingsPerVehiclePerDay.
-recordNoLocationBoarding :: (Redis.HedisFlow m r, MonadFlow m) => Int -> Text -> m Integer
+-- | One no-location boarding against the vehicle's count over the last day (a driver feeding codes to non-app riders shows up per
+-- vehicle, not per rider). Logs the ops flag from the noLocationSpotBookingsPerVehiclePerDay-th one on.
+recordNoLocationBoarding :: (Redis.HedisFlow m r, MonadFlow m) => Int -> Text -> m ()
 recordNoLocationBoarding noLocationSpotBookingsPerVehiclePerDay plate = do
-  now <- getCurrentTime
-  let key = noLocationKey plate (istDayStamp now)
-  count <-
-    shared $ do
-      void $ Redis.setNxExpire key (2 * 24 * 60 * 60) (0 :: Integer)
-      Redis.incrby key 1
-  when (count >= fromIntegral noLocationSpotBookingsPerVehiclePerDay) $
+  belowThreshold <- shared $ slidingWindowLimiter (noLocationKey plate) (noLocationSpotBookingsPerVehiclePerDay - 1) (24 * 60 * 60)
+  unless belowThreshold $
     logWarning $
-      "sharedcab:ops-flag: vehicle " <> plate <> " at " <> show count
-        <> " no-location boardings today (threshold "
-        <> show noLocationSpotBookingsPerVehiclePerDay
-        <> ")"
-  pure count
+      "sharedcab:ops-flag: vehicle " <> plate <> " has at least " <> show noLocationSpotBookingsPerVehiclePerDay <> " no-location boardings in the last day"
