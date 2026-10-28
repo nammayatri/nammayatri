@@ -1,7 +1,6 @@
 -- | Shared-cab boarding engine: code resolution, proximity ladder, re-bind and degraded boarding.
 module SharedLogic.SharedCab.Boarding
   ( SharedCabBoardOutcome (..),
-    BoardingSummary (..),
     boardingCodeMatches,
     UnknownCodeStep (..),
     unknownCodeStep,
@@ -57,18 +56,11 @@ import Tools.Error
 
 data SharedCabBoardOutcome
   = -- | Boarding committed: ticket INPROGRESS, booking pointed at the cab.
-    SharedCabBoarded BoardingSummary
+    SharedCabBoarded
   | -- | the typed code matched no ACTIVE cab and the rider confirmed (forceCheckIn) —
     SharedCabDegraded
   | -- | Soft proximity miss: caller turns this into `boardingConfirmationRequired = True`
     SharedCabProximityHold (Maybe Double) Text
-  deriving (Show, Generic)
-
-data BoardingSummary = BoardingSummary
-  { boardedSession :: Session,
-    reboundFrom :: Maybe Session,
-    boardedWithoutLocation :: Bool
-  }
   deriving (Show, Generic)
 
 boardingCodeMatches :: Text -> Text -> Bool
@@ -284,7 +276,7 @@ firstUse :: [TicketStatus.FRFSTicketStatus] -> SharedCabBoardOutcome -> Bool
 firstUse ticketsBefore outcome = boarded && not (any (`elem` [TicketStatus.INPROGRESS, TicketStatus.USED]) ticketsBefore)
   where
     boarded = case outcome of
-      SharedCabBoarded _ -> True
+      SharedCabBoarded -> True
       SharedCabDegraded -> True
       SharedCabProximityHold _ _ -> False
 
@@ -296,7 +288,7 @@ boardingResponse outcome journeyInfoResp = case outcome of
         API.boardingDistanceFromBusMeters = holdDistanceMeters,
         API.boardingConfirmationReason = Just holdReason
       }
-  SharedCabBoarded _ -> journeyInfoResp
+  SharedCabBoarded -> journeyInfoResp
   SharedCabDegraded -> journeyInfoResp
 
 boardSharedCab ::
@@ -332,19 +324,9 @@ boardSharedCab journey journeyLeg booking mbPersonId req = do
       case mbCase of
         Left (mbDist, reason) -> pure $ SharedCabProximityHold mbDist reason
         Right (_mbDist, noLocation) -> do
-          mbOld <-
-            if isRebind
-              then join <$> traverse Session.getSession booking.vehicleNumber
-              else pure Nothing
           commitBoarding journeyLeg booking target
           -- no rider location counts against the VEHICLE's IST-day counter, so a driver feeding codes to non-app riders shows up per vehicle
           when noLocation $
             RateLimit.recordNoLocationBoarding tunables.noLocationSpotBookingsPerVehiclePerDay (canonicalisePlate target.vehicleNumber)
           -- TODO: re-fare if the re-bound route differs.
-          pure $
-            SharedCabBoarded
-              BoardingSummary
-                { boardedSession = target,
-                  reboundFrom = mbOld,
-                  boardedWithoutLocation = noLocation
-                }
+          pure SharedCabBoarded

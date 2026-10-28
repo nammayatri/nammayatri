@@ -3,14 +3,11 @@
 module SharedCabBoardingTests (tests) where
 
 import "rider-app" API.Types.UI.MultimodalConfirm (RiderLocationReq (..))
-import "beckn-spec" BecknV2.FRFS.Enums (ServiceTierType (AC))
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import Kernel.External.Maps.Types (LatLong (..))
-import "mobility-core" Kernel.Types.Id (Id (..))
 import "rider-app" Lib.JourneyLeg.Common.FRFSJourneyUtils (VehicleProximity (..), riderNearVehicle)
-import "rider-app" SharedLogic.SharedCab.Boarding (BoardingSummary (..), SharedCabBoardOutcome (..), UnknownCodeStep (..), bindingUnmoved, cabProximity, firstUse, forceHonoured, forcedNoLocation, unknownCodeStep)
-import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
+import "rider-app" SharedLogic.SharedCab.Boarding (SharedCabBoardOutcome (..), UnknownCodeStep (..), bindingUnmoved, cabProximity, firstUse, forceHonoured, forcedNoLocation, unknownCodeStep)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -88,25 +85,7 @@ tests =
         ]
     ]
   where
-    boarded = SharedCabBoarded BoardingSummary {boardedSession = session, reboundFrom = Nothing, boardedWithoutLocation = False}
-    session =
-      Session
-        { driverId = "d1",
-          vehicleNumber = "ML05A1234",
-          merchantId = Id "m",
-          merchantOperatingCityId = Id "moc",
-          integratedBppConfigId = Id "ibc",
-          serviceTierType = AC,
-          routeCode = "R1",
-          queuedRouteCode = Nothing,
-          capacity = 4,
-          walkupCount = 0,
-          status = ACTIVE,
-          pauseReason = Nothing,
-          version = 1,
-          startedAt = now,
-          vehicleTripId = Id "trip1"
-        }
+    boarded = SharedCabBoarded
     now = UTCTime (fromGregorian 2026 10 28) 36000
     ago sec = addUTCTime (negate sec) now
     at sec latLong = RiderLocationReq {currTime = ago sec, latLong}
