@@ -27,13 +27,14 @@ readRoutePositions routeCode = do
     A.Success info -> pure (Just (LT.VehicleTrackingOnRouteResp plate info))
     A.Error err -> Nothing <$ logWarning ("shared-cab tick: dropping LTS field " <> plate <> " on route " <> routeCode <> ": " <> T.pack err)
 
+-- | One cab's position; an LTS read failure is Nothing, like a cab with no position.
 readRoutePosition ::
   (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Text ->
   Text ->
   m (Maybe LT.VehicleTrackingOnRouteResp)
 readRoutePosition routeCode plate = do
-  fields <- Redis.runInMultiCloudLTSRedisForListFromReplica $ maybeToList <$> Redis.hGet @A.Value (routeKey routeCode) plate
+  fields <- either (const []) identity <$> withTryCatch "sharedCab:readRoutePosition" (Redis.runInMultiCloudLTSRedisForListFromReplica $ maybeToList <$> Redis.hGet @A.Value (routeKey routeCode) plate)
   pure $ case listToMaybe fields of
     Just raw | A.Success info <- A.fromJSON raw -> Just (LT.VehicleTrackingOnRouteResp plate info)
     _ -> Nothing

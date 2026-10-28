@@ -85,7 +85,7 @@ acceptOffer driver rawPlate bookingId = do
     plate = canonicalisePlate rawPlate
     -- where the cab stands now decides the timer; without a fresh fix the wait is bounded like an away cab's
     cabStanceNow cfg now routeCode boardStopCode = do
-      mbTrack <- either (const Nothing) identity <$> withTryCatch "sharedCab:offer:readRoutePosition" (Lts.readRoutePosition routeCode plate)
+      mbTrack <- Lts.readRoutePosition routeCode plate
       pure . fromMaybe CabAway $ do
         track <- mbTrack
         guard (isFreshPosition now cfg.ltsMaxAgeSec track.vehicleInfo)

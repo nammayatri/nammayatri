@@ -148,9 +148,7 @@ readCabTrack :: LegFlow m r => UTCTime -> Config.SharedCabTunables -> DFRFSTicke
 readCabTrack now cfg booking = \case
   Just session
     | session.status /= SharedCabSessionState.ENDED -> do
-      mbCabTracking <-
-        withTryCatch "sharedCab:legState:readCabTracking" (Lts.readRoutePosition session.routeCode session.vehicleNumber)
-          <&> either (const Nothing) identity
+      mbCabTracking <- Lts.readRoutePosition session.routeCode session.vehicleNumber
       pure $ do
         veh <- mbCabTracking
         guard (Select.isFreshPosition now cfg.ltsMaxAgeSec veh.vehicleInfo)

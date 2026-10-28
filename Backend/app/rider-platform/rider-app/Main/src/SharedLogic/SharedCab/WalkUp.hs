@@ -282,7 +282,7 @@ trackStopRoutes mbPersonId stopCode mbRouteCodes =
       mbRoute <- OTPRest.getRouteByRouteId cabIbc code
       sessions <- Session.activeSessionsOnRoute code
       cabs <- fmap catMaybes . forM sessions $ \sess -> do
-        mbTrack <- either (const Nothing) identity <$> withTryCatch "sharedCab:trackStop:readRoutePosition" (Lts.readRoutePosition code sess.vehicleNumber)
+        mbTrack <- Lts.readRoutePosition code sess.vehicleNumber
         pure $ do
           track <- mbTrack
           u <- Nearby.cabStopEta now cfg stopCode (fromMaybe (LatLong track.vehicleInfo.latitude track.vehicleInfo.longitude) stopPoint) track
@@ -323,7 +323,7 @@ sharedCabRouteServiceability person cabIbc req legReqs = do
       let wanted = filter (\(sess :: Session) -> maybe True (\plate -> sess.vehicleNumber == canonicalisePlate plate) req.vehicleNumber) sessions
           boardStop = req.sourceStopCode >>= \stopCode -> (stopCode,) . (.stopPoint) <$> find ((== stopCode) . (.stopCode)) stops
       cabs <- forM wanted $ \sess -> do
-        mbTrack <- either (const Nothing) identity <$> withTryCatch "sharedCab:routeServiceability:readRoutePosition" (Lts.readRoutePosition code sess.vehicleNumber)
+        mbTrack <- Lts.readRoutePosition code sess.vehicleNumber
         load <- Seats.riderLoad Seats.redisEngine (Seats.cabSeatsOn (map (.stopCode) stops) sess) req.sourceStopCode req.destinationStopCode ((.vehicleInfo) <$> mbTrack)
         pure (cabVehicle now cfg (isJust req.vehicleNumber) boardStop load sess mbTrack)
       let (scheduled, live) = partitionEithers cabs

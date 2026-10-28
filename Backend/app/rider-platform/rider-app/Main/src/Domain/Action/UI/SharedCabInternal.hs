@@ -358,7 +358,7 @@ mkSessionResp s = do
   addresses <- stopAddresses integratedBppConfig.merchantOperatingCityId (map (.stopCode) stops)
   shapePolyline <- (>>= (.polyline)) <$> OTPRest.getRouteByRouteId integratedBppConfig s.routeCode
   let polyline = maybe [] KEPP.decode shapePolyline
-  mbTrack <- either (const Nothing) identity <$> withTryCatch "sharedCab:session:readVehiclePosition" (Lts.readRoutePosition s.routeCode s.vehicleNumber)
+  mbTrack <- Lts.readRoutePosition s.routeCode s.vehicleNumber
   let vehicle = (\v -> LatLong v.vehicleInfo.latitude v.vehicleInfo.longitude) <$> mbTrack
   available <- Seats.freeAhead s ((.vehicleInfo) <$> mbTrack)
   riders <- liveRiderRows cfg s.vehicleTripId.getId [(stop.stopCode, stop.stopPoint) | stop <- stops] polyline addresses s.vehicleNumber

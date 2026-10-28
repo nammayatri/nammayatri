@@ -16,17 +16,13 @@ import qualified SharedLogic.SharedCab.Nearby as Nearby
 
 type ApproachFlow m r = (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r)
 
-readTrack :: ApproachFlow m r => Text -> Text -> m (Maybe LT.VehicleTrackingOnRouteResp)
-readTrack routeCode plate =
-  either (const Nothing) identity <$> withTryCatch "sharedCab:approach:readRoutePosition" (Lts.readRoutePosition routeCode plate)
-
 secondsTo :: UTCTime -> LT.UpcomingStop -> Int
 secondsTo now u = max 0 (floor (diffUTCTime u.eta now))
 
 -- | LTS's own ETA for a cab with a fresh fix whose stop is still ahead of it; none otherwise. No plausibility check: the rider's assigned cab.
 etaToStopSec :: ApproachFlow m r => UTCTime -> Config.SharedCabTunables -> Text -> Text -> Text -> m (Maybe Int)
 etaToStopSec now cfg routeCode plate stopCode = do
-  mbTrack <- readTrack routeCode plate
+  mbTrack <- Lts.readRoutePosition routeCode plate
   pure $ do
     track <- mbTrack
     guard (Select.isFreshPosition now cfg.ltsMaxAgeSec track.vehicleInfo)
@@ -36,7 +32,7 @@ etaToStopSec now cfg routeCode plate stopCode = do
 -- | The same, only when the cab counts like an allocation candidate: its distance to the stop can back the ETA.
 plausibleEtaToStopSec :: ApproachFlow m r => UTCTime -> Config.SharedCabTunables -> Text -> Text -> Text -> m (Maybe Int)
 plausibleEtaToStopSec now cfg routeCode plate stopCode = do
-  mbTrack <- readTrack routeCode plate
+  mbTrack <- Lts.readRoutePosition routeCode plate
   pure $ do
     track <- mbTrack
     entry <- find (\s -> s.stop.stopCode == stopCode) =<< track.vehicleInfo.upcomingStops

@@ -240,7 +240,7 @@ setWalkups :: (SeatFlow m r, Redis.HedisLTSFlowEnv r) => Session -> Int -> m Int
 setWalkups s wanted = do
   c <- cabSeats s
   holds <- walkupHolds c.tripId
-  mbTrack <- either (const Nothing) identity <$> withTryCatch "sharedCab:seats:readRoutePosition" (Lts.readRoutePosition s.routeCode s.vehicleNumber)
+  mbTrack <- Lts.readRoutePosition s.routeCode s.vehicleNumber
   kept <- adjustWalkups redisEngine c (nextStopIdx c ((.vehicleInfo) <$> mbTrack)) wanted holds
   shared $ Redis.setExp (walkupSeatsKey c.tripId) kept seatTtlSec
   pure (length kept)
