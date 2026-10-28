@@ -50,6 +50,7 @@ imports:
   KnowledgeCenterSopTypesConfig: Domain.Types.Extra.TransporterConfig
   TdsConfig: Domain.Types.Extra.TransporterConfig
   RecomputePolicy: Domain.Types.Extra.TransporterConfig
+  FareBreakupNode: Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
   TripCategory: Domain.Types.Trip
   IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
@@ -1310,6 +1311,7 @@ TransporterConfig:
     checkImageExtractionForDashboard: Bool
     searchRepeatLimit: Int
     scheduledRideSearchRepeatLimit: Int
+    fareBreakupConfig: Maybe FareBreakupNode # driver earnings: tree of lines under FARE_PAID_BY_CUSTOMER; Nothing = no sub-breakup. Written only via the dashboard config/fareBreakup API, which validates it
     fareRecomputePolicy: Maybe RecomputePolicy # THE recompute config: unified nested policy; absent fields fall back to code defaults (RecomputeDecision.mkRecomputeConfig). Legacy scattered columns are no longer read -- backfill before deploy (dev/sql-seed/fare-recompute-policy-backfill.sql)
     minLocationAccuracy: Double
     driverPaymentCycleBuffer: NominalDiffTime
@@ -1658,6 +1660,7 @@ TransporterConfig:
     recentScheduledBookingsSafeLimit: Maybe Int
     minDistanceForStopFcm: Maybe HighPrecMeters
     fareRecomputePolicy: Maybe Value
+    fareBreakupConfig: Maybe Value
     allowedReferralEntities: "Maybe [Text]"
     enableOverchargingBlocker: Maybe Bool
     normalRideBulkLocUpdateBatchSize: Maybe Integer
@@ -1772,6 +1775,7 @@ TransporterConfig:
     recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
     fareRecomputePolicy: Kernel.Prelude.toJSON <$> fareRecomputePolicy|E
+    fareBreakupConfig: Kernel.Prelude.toJSON <$> fareBreakupConfig|E
     allowedReferralEntities: Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities)|E
     bulkWaiveOffLimit: Just bulkWaiveOffLimit|E
     preProcessDocumentIdentifiers: Just preProcessDocumentIdentifiers|E
@@ -1897,6 +1901,8 @@ TransporterConfig:
     minDistanceForStopFcm: fromMaybe 100 minDistanceForStopFcm|E
     fareRecomputePolicy: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< fareRecomputePolicy|E
+    fareBreakupConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< fareBreakupConfig|E
     allowedReferralEntities: maybe [] (mapMaybe (readMaybe . Data.Text.unpack))
       allowedReferralEntities|E
     bulkWaiveOffLimit: fromMaybe 200 bulkWaiveOffLimit|E
@@ -2003,6 +2009,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: json
     demandHotspotsConfig: json
     fareRecomputePolicy: json
+    fareBreakupConfig: json
     manualTollChargeConfig: json
     rideEvidenceConfig: json
     issueBreachConfig: json
@@ -2286,6 +2293,10 @@ TransporterConfig:
         - manualTollChargeConfig
         - rideEvidenceConfig
         - showRoutePerRequest
+    updateFareBreakupConfig:
+      kvFunction: updateOneWithKV
+      params: [fareBreakupConfig]
+      where: merchantOperatingCityId
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId

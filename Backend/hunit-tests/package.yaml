@@ -51,6 +51,7 @@ dependencies:
   - beckn-services
   - beckn-spec
   - shared-services
+  - special-zone-a
 
 default-extensions:
   - ConstraintKinds
@@ -101,6 +102,7 @@ library:
     - RewardsEvaluatorTests
     - RewardsCouponTemplatedTests
     - RewardsCouponPoolTests
+    - FareBreakupTests
 
 executables:
   hunit-tests:

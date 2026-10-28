@@ -16,6 +16,7 @@ module Main where
 
 import qualified CsvSanitizationTests
 import qualified Dashboard (dashboardUnitTests)
+import qualified FareBreakupTests
 import qualified FareRecomputeDecisionTests
 import qualified FileManagementUnitTests
 import qualified RewardsCouponPoolTests
@@ -54,5 +55,9 @@ main = do
           "End Ride Fare Recompute"
           [ FareRecomputeDecisionTests.tests,
             TollDecisionTests.tests
+          ],
+        testGroup
+          "Driver Earnings"
+          [ FareBreakupTests.tests
           ]
       ]

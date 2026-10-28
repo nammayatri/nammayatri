@@ -718,6 +718,7 @@ library
       SharedLogic.External.LocationTrackingService.Flow
       SharedLogic.External.LocationTrackingService.Types
       SharedLogic.FareAdjustment
+      SharedLogic.FareBreakup
       SharedLogic.FareCalculator
       SharedLogic.FarePolicy
       SharedLogic.FareProduct

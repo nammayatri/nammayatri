@@ -42,6 +42,7 @@ library
       RewardsEvaluatorTests
       RewardsCouponTemplatedTests
       RewardsCouponPoolTests
+      FareBreakupTests
   hs-source-dirs:
       src
   default-extensions:
@@ -98,6 +99,7 @@ library
     , record-hasfield
     , rider-app
     , shared-services
+    , special-zone-a
     , string-conversions
     , tasty
     , tasty-hspec
@@ -174,6 +176,7 @@ executable hunit-tests
     , record-hasfield
     , rider-app
     , shared-services
+    , special-zone-a
     , string-conversions
     , tasty
     , tasty-hspec
