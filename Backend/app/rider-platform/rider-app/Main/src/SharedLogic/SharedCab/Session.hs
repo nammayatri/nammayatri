@@ -74,6 +74,10 @@ lockTtlSec = 30
 withPlateLock :: (Redis.HedisFlow m r, MonadMask m, MonadFlow m) => Text -> m a -> m a
 withPlateLock plate = withOwnedLock "plateLock" (plateLockKey plate) lockTtlSec 25000
 
+-- | The plate lock on the canonical spelling of a plate; the body gets that plate.
+withCabLock :: (Redis.HedisFlow m r, MonadMask m, MonadFlow m) => Text -> (Text -> m a) -> m a
+withCabLock rawPlate body = let plate = canonicalisePlate rawPlate in withPlateLock plate (body plate)
+
 readSession :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe Session)
 readSession = shared . Redis.safeGet . sessionKey
 
@@ -243,7 +247,7 @@ selectRoute mode req = withPlateLock plate $ do
 
 -- | Applies an `afterLastDrop` route change once no rider is left; True when it switched (the caller then releases the old route's allocations, outside this lock).
 applyQueuedRoute :: (LtsFlow m r c, MonadMask m) => Text -> m Bool
-applyQueuedRoute rawPlate = withPlateLock plate $ do
+applyQueuedRoute rawPlate = withCabLock rawPlate $ \plate -> do
   mbSession <- readSession plate
   case mbSession of
     Just s | Just queued <- s.queuedRouteCode,
@@ -251,11 +255,9 @@ applyQueuedRoute rawPlate = withPlateLock plate $ do
       onBoard <- ridersOnBoard plate
       if null onBoard then True <$ switchTo DVT.ROUTE_CHANGED queued s else pure False
     _ -> pure False
-  where
-    plate = canonicalisePlate rawPlate
 
 endRoute :: Text -> Text -> Bool -> EndRouteAction -> Environment.Flow Session
-endRoute driver rawPlate forced action = withPlateLock plate $ do
+endRoute driver rawPlate forced action = withCabLock rawPlate $ \plate -> do
   s <- readSession plate >>= liftSession . ownedSession driver
   onBoard <- ridersOnBoard plate
   unless (forced || null onBoard) $ throwError (RidersOnBoard (length onBoard))
@@ -266,27 +268,21 @@ endRoute driver rawPlate forced action = withPlateLock plate $ do
       s' <$ mapM_ (Notify.notifyRouteChange returnRoute) onBoard
     _ -> do
       finish (endActionReason action) s
-  where
-    plate = canonicalisePlate rawPlate
 
 expire :: (LtsFlow m r c, MonadMask m) => Text -> m Session
 expire rawPlate =
-  withPlateLock plate $
+  withCabLock rawPlate $ \plate ->
     readSession plate >>= \case
       Just s | s.status /= ENDED -> finish DVT.SESSION_TIMEOUT s
       _ -> throwError SessionNotFound
-  where
-    plate = canonicalisePlate rawPlate
 
 -- | System-initiated: no driver check. Mirrored to the trip row so flush recovery restores PAUSED.
 pause :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => Text -> PauseReason -> m Session
-pause rawPlate reason = withPlateLock plate $ do
+pause rawPlate reason = withCabLock rawPlate $ \plate -> do
   prior <- readSession plate
   s <- liftSession $ maybe (Left SessionNotFound) (pauseSession reason) prior
   QVT.updateStatus DVT.PAUSED s.vehicleTripId
   saveSession prior s
-  where
-    plate = canonicalisePlate rawPlate
 
 resume :: Text -> Text -> Environment.Flow Session
 resume driver rawPlate = do
@@ -302,29 +298,25 @@ resume driver rawPlate = do
     plate = canonicalisePlate rawPlate
 
 setWalkupCount :: Text -> Text -> Int -> Int -> Environment.Flow Session
-setWalkupCount driver rawPlate expectedVersion count = withPlateLock plate $ do
+setWalkupCount driver rawPlate expectedVersion count = withCabLock rawPlate $ \plate -> do
   prior <- readSession plate
   s <- liftSession $ ownedSession driver prior
   requireSharedCabEnabled s.merchantOperatingCityId
   s' <- liftSession $ setWalkup expectedVersion count s
   held <- Seats.setWalkups s count
   saveWalkups DriverCounted prior s s' {walkupCount = held}
-  where
-    plate = canonicalisePlate rawPlate
 
 -- | Cab full: `releaseUnboarded` (the unboarded allocations going) runs under the plate lock, then walk-ups take every seat left,
 -- so no claim lands in between. Its result comes back for the caller to send the releases' effects outside the lock.
 markCabFull :: Text -> Text -> Environment.Flow a -> Environment.Flow (Session, a)
 markCabFull driver rawPlate releaseUnboarded = do
-  (full, released) <- withPlateLock plate $ do
+  (full, released) <- withCabLock rawPlate $ \plate -> do
     prior <- readSession plate
     s <- liftSession $ ownedSession driver prior
     released <- releaseUnboarded
     held <- Seats.setWalkups s s.capacity
     (,released) <$> saveWalkups CabFullFill prior s (fillCab held s)
   pure (full, released)
-  where
-    plate = canonicalisePlate rawPlate
 
 saveWalkups :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => WalkupSource -> Maybe Session -> Session -> Session -> m Session
 saveWalkups source prior s s' = do
