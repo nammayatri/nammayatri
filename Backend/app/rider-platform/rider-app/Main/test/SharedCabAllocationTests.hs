@@ -26,7 +26,7 @@ import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
 import "rider-app" SharedLogic.SharedCab.Allocation (eachIsolated, mergeLive)
 import "rider-app" SharedLogic.SharedCab.Allocation.Claim (ClaimMiss (..), claimGate)
-import "rider-app" SharedLogic.SharedCab.Allocation.Select (CabStance (..), ClaimPush (..), FindingBooking (..), Phase (..), PreferenceLoss (..), PreferenceVerdict (..), RankedCandidate (..), armedTimer, cabForId, claimPush, claimTimer, claimable, closable, crossedMaxAttempts, eligibleCandidates, etaPlausible, isFreshPosition, isRescheduledChild, movingCab, onlyPreferred, phase, preferenceVerdict, silentCab, silentReleaseMult, skippedWhileFinding, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation.Select (CabStance (..), ClaimPush (..), FindingBooking (..), Phase (..), PreferenceLoss (..), PreferenceVerdict (..), RankedCandidate (..), armedTimer, cabForId, claimPush, claimTimer, claimable, closable, crossedMaxAttempts, eligibleCandidates, etaPlausible, isFreshPosition, isRescheduledChild, movingCab, onlyPreferred, phase, preferenceVerdict, silentCab, silentReleaseMult, skippedWhileFinding, withRoomFor, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.Approach (cabStopEta)
 import "rider-app" SharedLogic.SharedCab.Boarding (boardingGate)
@@ -123,6 +123,11 @@ tests =
         (liveSince cityLiveWindowSec t0, liveSince plateLiveWindowSec t0) @?= (addUTCTime (-6 * 3600) t0, addUTCTime (-17 * 3600) t0),
       testCase "the tick's live set is every plated booking plus the waiting ones, the plated row winning for one claimed in between" $
         mergeLive fst [(1 :: Int, Nothing), (2, Nothing)] [(2, Just "P2" :: Maybe Text), (3, Just "P3")] @?= [(2, Just "P2"), (3, Just "P3"), (1, Nothing)],
+      testCase "a cab without room for the party over its ride is no candidate; a party that fits one cab only gets that one" $
+        let free = Map.fromList [("FULL", 0), ("ONE", 1), ("TWO", 2)]
+            freeFor sess = Map.findWithDefault 0 sess.vehicleNumber free
+         in (map (.rcSession.vehicleNumber) (withRoomFor freeFor 1 (map candidate ["FULL", "ONE", "TWO"])), map (.rcSession.vehicleNumber) (withRoomFor freeFor 2 (map candidate ["FULL", "ONE", "TWO"])))
+              @?= (["ONE", "TWO"], ["TWO"]),
       testCase "a tick item that throws is reported and the next one still runs" $ do
         ran <- newIORef []
         failed <- newIORef []

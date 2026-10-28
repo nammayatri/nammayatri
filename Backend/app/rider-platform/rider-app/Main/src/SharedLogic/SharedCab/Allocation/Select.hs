@@ -14,6 +14,7 @@ module SharedLogic.SharedCab.Allocation.Select
     CabStance (..),
     isFreshPosition,
     eligibleCandidates,
+    withRoomFor,
     cabStance,
     etaPlausible,
     claimTimer,
@@ -122,6 +123,10 @@ closable expectedPlate status mbPlate statuses = phase status mbPlate statuses =
 -- | The under-lock gate of a claim: still live, no cab, nobody boarded, no degrade marker (a degraded boarding can land after the tick read FINDING).
 claimable :: FRFSTicketBookingStatus -> Maybe Text -> [DFRFSTicket.FRFSTicketStatus] -> Bool -> Bool
 claimable status mbPlate statuses markerAlive = phase status mbPlate statuses == Finding && all (== DFRFSTicket.ACTIVE) statuses && not markerAlive
+
+-- | Candidates with room for the party over its ride, before any lock is taken; the claim still holds the seats under its locks.
+withRoomFor :: (Session -> Int) -> Int -> [RankedCandidate] -> [RankedCandidate]
+withRoomFor freeFor party = filter ((>= party) . freeFor . (.rcSession))
 
 data RankedCandidate = RankedCandidate
   { rcSession :: Session,

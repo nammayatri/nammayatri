@@ -29,7 +29,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFallbackPush, claimFirst, liveBookingsOf)
 import SharedLogic.SharedCab.Allocation.Reallocate (Closed (..), afterClose, closeAllocation, closeLocked)
-import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), PreferenceLoss (..), PreferenceVerdict (..), RankedCandidate, allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, onlyPreferred, preferenceVerdict, silentCab, skippedWhileFinding, withoutSkipped)
+import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), PreferenceLoss (..), PreferenceVerdict (..), RankedCandidate, allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, onlyPreferred, preferenceVerdict, silentCab, skippedWhileFinding, withRoomFor, withoutSkipped)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (cityLiveWindowSec, liveSince, partyOf, partySizes, plateLiveWindowSec, withBookingLock)
 import SharedLogic.SharedCab.BookingState
@@ -39,9 +39,9 @@ import SharedLogic.SharedCab.LegState (fallbackTimeElapsed)
 import SharedLogic.SharedCab.Lts (readRoutePositions)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Plate (samePlate)
+import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
 import SharedLogic.SharedCab.Schedule (withCityTickLease)
 import qualified SharedLogic.SharedCab.Seats as Seats
-import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session, SessionStatus (ACTIVE))
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
@@ -168,11 +168,19 @@ claimFindings cfg now live positionsByRoute = do
   pushTimeFallbacks cfg now findings
   forM_ (groupAllOn (.routeCode) (map snd findings)) $ \(routeCode, bookings) ->
     whenJust (lookup routeCode positionsByRoute) $ \positions -> do
-      sessions <- Session.activeSessionsOnRoute routeCode
+      snapshot <- RouteSnapshot.routeSnapshot routeCode
+      let sessions = map (.session) snapshot
+      -- the route's stops in sequence, shared by its cabs
+      routeSeats <- traverse Seats.cabSeats (listToMaybe sessions)
       flip (eachIsolated (withTryCatch "sharedCabClaim") failed) bookings $ \booking -> do
         attempts <- readAttempts booking.bookingId
         skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> readSkipped booking.bookingId
-        candidates <- narrowToPreferred cfg now sessions booking (withoutSkipped skipped (eligibleCandidates now cfg positions sessions booking))
+        let freeFor s = fromMaybe 0 $ do
+              cab <- find ((== s.vehicleNumber) . (.session.vehicleNumber)) snapshot
+              range <- routeSeats >>= \seats -> Seats.bookingRange seats booking.boardStopCode booking.dropStopCode
+              pure (Seats.freeOverBitmaps (RouteSnapshot.cabBitmapsOf cab) range)
+            roomy = withRoomFor freeFor booking.seats (eligibleCandidates now cfg positions sessions booking)
+        candidates <- narrowToPreferred cfg now sessions booking (withoutSkipped skipped roomy)
         void $ claimFirst cfg booking candidates
   where
     failed booking e = logError $ "shared-cab tick: claim failed for booking " <> booking.bookingId.getId <> ": " <> show e
