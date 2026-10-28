@@ -13,14 +13,14 @@ HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
 
-# the app's stop search: two stop codes, no route. This city runs a bus fleet too, so the bus path answers it, never with cab routes.
+# the app's stop search: two stop codes, no route. The cab feed's routes between them answer it, not the bus path.
 POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
 Content-Type: application/json
 {"sourceStopCode": "SC_POLO", "destinationStopCode": "SC_NONGTHYMMAI", "allowClusteredStops": true}
-HTTP *
+HTTP 200
 [Asserts]
-body not contains "{{route_a}}"
+jsonpath "$.legs[0].routeWithLiveVehicles[0].routeCode" == "{{route_a}}"
 
 # the route list's data: a cab route says SHARED_CAB to a client that declares the tier, and says nothing to one that does not
 GET {{base_url}}/v2/publicTransport/data

@@ -1,5 +1,5 @@
-# The Share Ride screen asks for nearby buses on every visit: no live bus is an empty list, not an error. Picking a stop asks which
-# routes pass it; the cab feed answers that only in a city with no bus fleet, and this one (Chennai) runs chennai_data_bus.
+# A city whose only BUS-category config is the shared-cab feed has no bus fleet. The Share Ride screen asks for nearby buses on every
+# visit (an empty list, not an error), and picking a stop asks which routes pass it (the cab routes, not an error).
 # Needs --variable token=<rider token>.
 
 POST {{base_url}}/v2/identifyNearByBus
@@ -10,11 +10,11 @@ HTTP 200
 [Asserts]
 jsonpath "$.buses" count == 0
 
-# a stop picked on its own, in a city with a bus fleet: the bus path answers, never with the cab feed's routes
+# a stop picked on its own: the routes of the cab feed that pass it
 POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
 Content-Type: application/json
 {"sourceStopCode": "{{stop_code}}"}
-HTTP *
+HTTP 200
 [Asserts]
-body not contains "{{stop_route}}"
+jsonpath "$.legs[0].routeWithLiveVehicles[*].routeCode" includes "{{stop_route}}"
