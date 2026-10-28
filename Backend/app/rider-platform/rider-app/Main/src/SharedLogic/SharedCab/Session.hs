@@ -13,7 +13,6 @@ module SharedLogic.SharedCab.Session
     readCabDriverInfo,
     withPlateLock,
     activeSessionsOnRoute,
-    filterCabLegs,
     setWalkupCount,
     markCabFull,
     expire,
@@ -23,24 +22,20 @@ where
 
 import qualified Data.Aeson as A
 import qualified Database.Redis as RawRedis
-import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DBookingStatus
-import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.VehicleTrip as DVT
 import qualified Environment
-import qualified Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import Lib.Scheduler (JobCreator)
 import SharedLogic.SharedCab.Booking (ridersOnBoard, shared)
 import qualified SharedLogic.SharedCab.Booking as Booking
 import qualified SharedLogic.SharedCab.Degraded as Degraded
-import SharedLogic.SharedCab.Enabled (cabItineraryShown, requireSharedCabEnabled, sharedCabEnabled)
+import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
 import SharedLogic.SharedCab.Keys (driverInfoKey, plateLockKey, routeKey, sessionKey)
-import SharedLogic.SharedCab.LegState (isSharedCabAgency, seatsHeld)
+import SharedLogic.SharedCab.LegState (seatsHeld)
 import SharedLogic.SharedCab.Lock (withOwnedLock)
 import SharedLogic.SharedCab.LtsAttach
 import qualified SharedLogic.SharedCab.Notify as Notify
@@ -147,20 +142,6 @@ readSessionStrict plate =
     Left _ -> SessionUnreadable
     Right Nothing -> SessionAbsent
     Right (Just raw) -> maybe SessionUnreadable SessionAt (A.decodeStrict raw)
-
--- | A shared-cab itinerary is shown only while a cab is running its route. TODO: also require the cab not to have passed the board stop.
-filterCabLegs :: (Redis.HedisFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> [MultiModalTypes.MultiModalLeg] -> m (Maybe [MultiModalTypes.MultiModalLeg])
-filterCabLegs cityId legs = case filter isSharedCabLeg legs of
-  [] -> pure (Just legs)
-  cabLegs -> do
-    enabled <- sharedCabEnabled cityId
-    cabsComing <- mapM hasCabComing cabLegs
-    pure $ if cabItineraryShown enabled cabsComing then Just (filter (not . isSharedCabLeg) legs) else Nothing
-  where
-    isSharedCabLeg leg = maybe False isSharedCabAgency (leg.agency >>= (.gtfsId))
-    hasCabComing leg =
-      maybe (return False) (fmap (not . null) . activeSessionsOnRoute . gtfsIdtoDomainCode) $
-        listToMaybe leg.routeDetails >>= (.gtfsId)
 
 liftSession :: MonadFlow m => Either SharedCabSessionError a -> m a
 liftSession = either throwError pure

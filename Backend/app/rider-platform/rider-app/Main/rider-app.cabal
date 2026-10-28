@@ -737,6 +737,7 @@ library
       SharedLogic.SharedCab.RefundDecision
       SharedLogic.SharedCab.RefundPolicy
       SharedLogic.SharedCab.RefundRetry
+      SharedLogic.SharedCab.RouteSnapshot
       SharedLogic.SharedCab.Schedule
       SharedLogic.SharedCab.Seats
       SharedLogic.SharedCab.Session

@@ -16,10 +16,15 @@ POST {{base_url}}/v2/multimodalSearch
 token: {{token}}
 Content-Type: application/json
 initateJourney: false
+[Options]
+retry: 5
+retry-interval: 1000ms
 {"fareProductType": "ONE_WAY", "contents": {"origin": {"gps": {"lat": {{from_lat}}, "lon": {{from_lon}}}, "address": {"title": "board"}}, "destination": {"gps": {"lat": {{to_lat}}, "lon": {{to_lon}}}, "address": {"title": "drop"}}, "doMultimodalSearch": true, "stops": []}}
 HTTP 200
 [Captures]
 journeyId: jsonpath "$.journeys[0].journeyId"
+[Asserts]
+jsonpath "$.journeys[*].journeyLegs[*].routeDetails[?(@.routeCode == '{{route_a}}')]" exists
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/initiate
 token: {{token}}

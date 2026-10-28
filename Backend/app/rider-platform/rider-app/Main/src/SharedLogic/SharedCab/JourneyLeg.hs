@@ -22,6 +22,7 @@ import qualified Domain.Types.Trip as DTrip
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JLTypes
@@ -38,12 +39,13 @@ import qualified SharedLogic.SharedCab.Degraded as SharedCabDegraded
 import qualified SharedLogic.SharedCab.LegState as SharedCabLeg
 import qualified SharedLogic.SharedCab.Lts as Lts
 import SharedLogic.SharedCab.Plate (samePlate)
+import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
 import qualified SharedLogic.SharedCab.Seats as SharedCabSeats
 import qualified SharedLogic.SharedCab.Session as SharedCabSession
 import qualified SharedLogic.SharedCab.SessionState as SharedCabSessionState
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 
-type LegFlow m r = (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadFlow m, HasShortDurationRetryCfg r ())
+type LegFlow m r = (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadFlow m, HasShortDurationRetryCfg r (), CoreMetrics m)
 
 -- | The cities where a polled journey status shows a shared-cab leg that is not over (see 'SharedCabLeg.legNeedsChains').
 liveCabLegCities :: [JT.JourneyLegState] -> [Id DMOC.MerchantOperatingCity]
@@ -76,7 +78,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   let shown = visiblePlate mbAllocState booking.vehicleNumber
       visibleBooking = booking {DFRFSTicketBooking.vehicleNumber = shown}
   mbSession <- maybe (pure Nothing) SharedCabSession.readSession shown
-  cabsComing <- maybe (pure 0) (fmap length . SharedCabSession.activeSessionsOnRoute) mbRouteCode
+  cabsComing <- maybe (pure 0) (fmap length . RouteSnapshot.routeSnapshot) mbRouteCode
   -- the fallback gate and the arrival deadline both live in the cross-app Redis cell the allocation tick writes to
   cfg <- Config.getTunables booking.merchantOperatingCityId
   findingSince <- readFindingSince booking.id booking.createdAt
@@ -116,13 +118,14 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
       skipAvailable = maybe False (\st -> SharedCabLeg.skipAvailableFor st skipUsed assignedEtaSec) mbState
   upcomingCabs <- case (shown, mbRouteCode) of
     (Just plate, Just routeCode) | approaching -> do
-      sessions <- SharedCabSession.activeSessionsOnRoute routeCode
-      cabs <- fmap catMaybes . forM [s | s <- sessions, not (samePlate plate s.vehicleNumber)] $ \s ->
-        Approach.plausibleEtaToStopSec now cfg routeCode s.vehicleNumber booking.fromStationCode >>= \case
+      snapshot <- RouteSnapshot.routeSnapshot routeCode
+      cabs <- fmap catMaybes . forM [c | c <- snapshot, not (samePlate plate c.session.vehicleNumber)] $ \c ->
+        case Approach.plausibleEtaFrom now cfg booking.fromStationCode =<< c.track of
           Nothing -> pure Nothing
           Just etaSec -> do
-            freeSeats <- SharedCabSeats.freeForStops s booking.fromStationCode booking.toStationCode
-            pure (Just SharedCabLeg.UpcomingCab {cabId = s.vehicleTripId.getId, etaSec, freeSeats})
+            seats <- SharedCabSeats.cabSeats c.session
+            let freeSeats = maybe 0 (SharedCabSeats.freeOverBitmaps (RouteSnapshot.cabBitmapsOf c)) (SharedCabSeats.bookingRange seats booking.fromStationCode booking.toStationCode)
+            pure (Just SharedCabLeg.UpcomingCab {cabId = c.session.vehicleTripId.getId, etaSec, freeSeats})
       pure (SharedCabLeg.upcomingCabsOf assignedEtaSec cabs)
     _ -> pure []
   pure $

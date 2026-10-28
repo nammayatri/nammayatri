@@ -6,6 +6,9 @@
 module SharedCabSeatTests (tests) where
 
 import Control.Monad (when)
+import Data.Bits (setBit)
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import Data.IORef (IORef, atomicModifyIORef', modifyIORef', newIORef, readIORef)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust, isNothing)
@@ -16,7 +19,7 @@ import qualified "rider-app" Domain.Types.Seat as Seat
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.FRFSSeatBooking (SeatHoldMeta (..))
+import "rider-app" SharedLogic.FRFSSeatBooking (SeatHoldMeta (..), bitmapsOrNone)
 import "rider-app" SharedLogic.SharedCab.Allocation.Reallocate (CloseStep (..), closeSteps)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types (Blame (..))
 import "rider-app" SharedLogic.SharedCab.Seats
@@ -156,14 +159,17 @@ tests =
          in (nextStopIdx c (at [("S0", LT.Reached), ("S1", LT.Reached), ("S2", LT.Upcoming), ("S3", LT.Upcoming)]), nextStopIdx c Nothing, nextStopIdx c (at []))
               @?= (2, 0, 0),
       testCase "a rider sees the seats free for their [board, drop), else from board to the route's end, and the seats taken at the cab's next stop" $
-        withEngine $ \engine _ -> do
-          let a = cab "tripA" 4
-              atS1 = Just (vehicle [LT.UpcomingStop (LT.Stop "S1" nowhere "S1" 0 0 0) t0 LT.Upcoming Nothing])
-              load board dropStop = riderLoad engine a board dropStop atS1
-          _ <- holdRange engine a (0, 2) 2
-          _ <- holdRange engine a (3, 4) 1
-          views <- mapM (uncurry load) [(Just "S0", Just "S2"), (Just "S2", Just "S3"), (Just "S2", Nothing), (Nothing, Nothing), (Just "S3", Just "S1")]
-          views @?= [(2, 2), (4, 2), (3, 2), (2, 2), (3, 2)],
+        let a = cab "tripA" 4
+            atS1 = Just (vehicle [LT.UpcomingStop (LT.Stop "S1" nowhere "S1" 0 0 0) t0 LT.Upcoming Nothing])
+            -- seats 1 and 2 held over [0, 2), seat 1 again over [3, 4): one read of the cab's four bitmaps
+            bitmaps = [Just (bitmapOf [0, 1, 3]), Just (bitmapOf [0, 1]), Nothing, Just (bitmapOf [])]
+            load board dropStop = riderLoad a bitmaps board dropStop atS1
+         in map (uncurry load) [(Just "S0", Just "S2"), (Just "S2", Just "S3"), (Just "S2", Nothing), (Nothing, Nothing), (Just "S3", Just "S1")]
+              @?= [(2, 2), (4, 2), (3, 2), (2, 2), (3, 2)],
+      testCase "seats free over a range come from the bitmaps alone: a missing bitmap is a seat never held" $
+        map (freeOverBitmaps [Just (bitmapOf [0, 1, 3]), Just (bitmapOf [9]), Nothing]) [(0, 2), (2, 3), (3, 4), (0, 10)] @?= [2, 3, 2, 1],
+      testCase "a failed bitmap read reads as no bitmap for every seat, as a failed GET per seat did" $
+        (bitmapsOrNone 3 (Left ()), bitmapsOrNone 2 (Right [Just "x", Nothing] :: Either () [Maybe ByteString])) @?= (replicate 3 Nothing, [Just "x", Nothing]),
       testCase "the model engine refuses a hold that overlaps by one stop" $
         withEngine $ \engine _ -> do
           let a = cab "tripA" 1
@@ -173,6 +179,8 @@ tests =
     ]
   where
     t0 = UTCTime (fromGregorian 2026 10 27) 36000
+    -- the seat engine's layout: stop i is bit 7 - i mod 8 of byte i div 8
+    bitmapOf idxs = BS.pack [foldl setBit 0 [7 - i `mod` 8 | i <- idxs, i `div` 8 == byte] | byte <- [0 .. maximum (0 : map (`div` 8) idxs)]]
     nowhere = LatLong 0 0
     vehicle stops =
       LT.VehicleInfo

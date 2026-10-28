@@ -26,10 +26,15 @@ POST {{base_url}}/v2/multimodalSearch
 token: {{token}}
 Content-Type: application/json
 initateJourney: false
+[Options]
+retry: 5
+retry-interval: 1000ms
 {"fareProductType": "ONE_WAY", "contents": {"origin": {"gps": {"lat": {{from_lat}}, "lon": {{from_lon}}}, "address": {"title": "board"}}, "destination": {"gps": {"lat": {{to_lat}}, "lon": {{to_lon}}}, "address": {"title": "drop"}}, "doMultimodalSearch": true, "stops": []}}
 HTTP 200
 [Captures]
 journeyId: jsonpath "$.journeys[0].journeyId"
+[Asserts]
+jsonpath "$.journeys[*].journeyLegs[*].routeDetails[?(@.routeCode == '{{route_a}}')]" exists
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/initiate
 token: {{token}}
@@ -76,6 +81,10 @@ jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleModel" == "{{ve
 POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
 Content-Type: application/json
+# the cab list reads a route snapshot cached up to 2 s per pod
+[Options]
+retry: 5
+retry-interval: 1000ms
 {"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
@@ -131,6 +140,10 @@ jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "DROPPED"
 POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
 Content-Type: application/json
+# the cab list reads a route snapshot cached up to 2 s per pod
+[Options]
+retry: 5
+retry-interval: 1000ms
 {"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
@@ -143,10 +156,15 @@ POST {{base_url}}/v2/multimodalSearch
 token: {{token}}
 Content-Type: application/json
 initateJourney: false
+[Options]
+retry: 5
+retry-interval: 1000ms
 {"fareProductType": "ONE_WAY", "contents": {"origin": {"gps": {"lat": {{from_lat}}, "lon": {{from_lon}}}, "address": {"title": "board"}}, "destination": {"gps": {"lat": {{to_lat}}, "lon": {{to_lon}}}, "address": {"title": "drop"}}, "doMultimodalSearch": true, "stops": []}}
 HTTP 200
 [Captures]
 journeyId: jsonpath "$.journeys[0].journeyId"
+[Asserts]
+jsonpath "$.journeys[*].journeyLegs[*].routeDetails[?(@.routeCode == '{{route_a}}')]" exists
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/initiate
 token: {{token}}
@@ -218,6 +236,10 @@ jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{p
 POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
 Content-Type: application/json
+# the cab list reads a route snapshot cached up to 2 s per pod
+[Options]
+retry: 5
+retry-interval: 1000ms
 {"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
@@ -259,10 +281,15 @@ POST {{base_url}}/v2/multimodalSearch
 token: {{token}}
 Content-Type: application/json
 initateJourney: false
+[Options]
+retry: 5
+retry-interval: 1000ms
 {"fareProductType": "ONE_WAY", "contents": {"origin": {"gps": {"lat": {{from_lat}}, "lon": {{from_lon}}}, "address": {"title": "board"}}, "destination": {"gps": {"lat": {{to_lat}}, "lon": {{to_lon}}}, "address": {"title": "drop"}}, "doMultimodalSearch": true, "stops": []}}
 HTTP 200
 [Captures]
 journeyId: jsonpath "$.journeys[0].journeyId"
+[Asserts]
+jsonpath "$.journeys[*].journeyLegs[*].routeDetails[?(@.routeCode == '{{route_a}}')]" exists
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/initiate
 token: {{token}}
@@ -307,6 +334,10 @@ jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{p
 POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
 Content-Type: application/json
+# the cab list reads a route snapshot cached up to 2 s per pod
+[Options]
+retry: 5
+retry-interval: 1000ms
 {"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]

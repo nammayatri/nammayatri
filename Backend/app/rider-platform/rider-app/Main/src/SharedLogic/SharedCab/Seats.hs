@@ -30,12 +30,15 @@ module SharedLogic.SharedCab.Seats
     freeForStops,
     freeAhead,
     riderLoad,
+    freeOverBitmaps,
+    cabBitmaps,
     setWalkups,
     clearWalkups,
     carryOver,
   )
 where
 
+import Data.ByteString (ByteString)
 import Data.List (elemIndex, sortOn)
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
@@ -51,7 +54,7 @@ import SharedLogic.SharedCab.Booking (shared, withBookingLock)
 import SharedLogic.SharedCab.Keys (seatHoldKey, walkupSeatsKey)
 import qualified SharedLogic.SharedCab.Lts as Lts
 import SharedLogic.SharedCab.RefundDecision (readRefundDecision)
-import SharedLogic.SharedCab.SessionState (Session)
+import SharedLogic.SharedCab.SessionState (Session (..))
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -224,13 +227,19 @@ freeAhead s mbVehicle = do
 
 -- | A rider's view of a cab: seats free for their [board, drop) when the route serves it, else from `mbBoard` (else from the cab's
 -- next stop) to the route's end; and seats taken at the next stop.
-riderLoad :: Monad m => SeatEngine m -> CabSeats -> Maybe Text -> Maybe Text -> Maybe LT.VehicleInfo -> m (Int, Int)
-riderLoad engine c mbBoard mbDrop mbVehicle = do
+riderLoad :: CabSeats -> [Maybe ByteString] -> Maybe Text -> Maybe Text -> Maybe LT.VehicleInfo -> (Int, Int)
+riderLoad c bitmaps mbBoard mbDrop mbVehicle =
   let next = nextStopIdx c mbVehicle
       toEnd = (fromMaybe next (mbBoard >>= stopIndex c), routeEnd c)
-  free <- freeOver engine c (fromMaybe toEnd (join (bookingRange c <$> mbBoard <*> mbDrop)))
-  freeHere <- freeOver engine c (next, next + 1)
-  pure (free, c.capacity - freeHere)
+   in (freeOverBitmaps bitmaps (fromMaybe toEnd (join (bookingRange c <$> mbBoard <*> mbDrop))), c.capacity - freeOverBitmaps bitmaps (next, next + 1))
+
+-- | Seats free for the whole of [from, to) in one read of a cab's bitmaps (no bitmap: a seat never held).
+freeOverBitmaps :: [Maybe ByteString] -> (Int, Int) -> Int
+freeOverBitmaps bitmaps (fromIdx, toIdx) = length (filter (maybe True (\bs -> SeatBooking.isRangeFree bs fromIdx toIdx)) bitmaps)
+
+-- | A cab's seat bitmaps, seat 1 to capacity, in one read: every display number of the cab comes from them.
+cabBitmaps :: (MonadFlow m, Redis.HedisFlow m r) => Session -> m [Maybe ByteString]
+cabBitmaps s = crossApp $ SeatBooking.seatBitmaps s.vehicleTripId.getId (virtualSeats (cabSeatsOn [] s))
 
 walkupHolds :: (MonadFlow m, Redis.HedisFlow m r) => Text -> m [SeatHoldMeta]
 walkupHolds tripId = fromMaybe [] <$> shared (Redis.safeGet (walkupSeatsKey tripId))

@@ -2,6 +2,7 @@
 module SharedLogic.SharedCab.Approach
   ( etaToStopSec,
     plausibleEtaToStopSec,
+    plausibleEtaFrom,
     cabStopEta,
   )
 where
@@ -32,12 +33,12 @@ etaToStopSec now cfg routeCode plate stopCode = do
 
 -- | The same, only when the cab counts like an allocation candidate: its distance to the stop can back the ETA.
 plausibleEtaToStopSec :: ApproachFlow m r => UTCTime -> Config.SharedCabTunables -> Text -> Text -> Text -> m (Maybe Int)
-plausibleEtaToStopSec now cfg routeCode plate stopCode = do
-  mbTrack <- Lts.readRoutePosition routeCode plate
-  pure $ do
-    track <- mbTrack
-    entry <- find (\s -> s.stop.stopCode == stopCode) =<< track.vehicleInfo.upcomingStops
-    secondsTo now <$> cabStopEta now cfg stopCode entry.stop.coordinate track
+plausibleEtaToStopSec now cfg routeCode plate stopCode = (>>= plausibleEtaFrom now cfg stopCode) <$> Lts.readRoutePosition routeCode plate
+
+plausibleEtaFrom :: UTCTime -> Config.SharedCabTunables -> Text -> LT.VehicleTrackingOnRouteResp -> Maybe Int
+plausibleEtaFrom now cfg stopCode track = do
+  entry <- find (\s -> s.stop.stopCode == stopCode) =<< track.vehicleInfo.upcomingStops
+  secondsTo now <$> cabStopEta now cfg stopCode entry.stop.coordinate track
 
 -- | The cab's entry for the stop when it counts as approaching it: a fresh fix, the stop still Upcoming, an ETA its distance can back.
 cabStopEta :: UTCTime -> Config.SharedCabTunables -> Text -> LatLong -> LT.VehicleTrackingOnRouteResp -> Maybe LT.UpcomingStop

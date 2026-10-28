@@ -54,6 +54,7 @@ import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Offer as Offer
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.RateLimit (enforceChatMessageLimit)
+import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
 import SharedLogic.SharedCab.Schedule (ensureAllocationTick)
 import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
@@ -180,8 +181,9 @@ releasing outcome s = s <$ Allocation.releaseUnboarded s.vehicleNumber outcome
 ownSession :: Text -> Text -> Environment.Flow Session
 ownSession driver plate = Session.getSession plate >>= either throwError pure . ownedSession driver
 
+-- | The driver's session poll reads the cab's fix and seats from the route snapshot; an action's reply reads them fresh.
 getSharedCabSession :: Text -> Text -> Maybe Text -> Environment.Flow View.SharedCabSession
-getSharedCabSession driver plate mbToken = checkToken mbToken >> getSharedCabSession' driver plate
+getSharedCabSession driver plate mbToken = checkToken mbToken >> ownSession driver plate >>= mkSessionRespFrom CachedCab
 
 postSharedCabSeats :: Maybe Text -> API.SeatsReq -> Environment.Flow View.SharedCabSession
 postSharedCabSeats mbToken req = do
@@ -347,8 +349,13 @@ stopAddresses cityId codes =
 
 -- | Until the tick lands: moving, next stops are the whole route. `available` is what the seat engine has free from the cab's next stop
 -- to the route's end: what walk-ups could still take.
+data CabReads = FreshCab | CachedCab
+
 mkSessionResp :: Session -> Environment.Flow View.SharedCabSession
-mkSessionResp s = do
+mkSessionResp = mkSessionRespFrom FreshCab
+
+mkSessionRespFrom :: CabReads -> Session -> Environment.Flow View.SharedCabSession
+mkSessionRespFrom cabReads s = do
   integratedBppConfig <- getIntegratedBppConfig s.integratedBppConfigId
   route <- sessionRoute integratedBppConfig s.routeCode
   stops <- routeStops integratedBppConfig s.routeCode
@@ -358,9 +365,18 @@ mkSessionResp s = do
   addresses <- stopAddresses integratedBppConfig.merchantOperatingCityId (map (.stopCode) stops)
   shapePolyline <- (>>= (.polyline)) <$> OTPRest.getRouteByRouteId integratedBppConfig s.routeCode
   let polyline = maybe [] KEPP.decode shapePolyline
-  mbTrack <- Lts.readRoutePosition s.routeCode s.vehicleNumber
+  snapshotCab <- case cabReads of
+    CachedCab -> find ((== s.vehicleNumber) . (.session.vehicleNumber)) <$> RouteSnapshot.routeSnapshot s.routeCode
+    FreshCab -> pure Nothing
+  -- a cab missing from the snapshot (PAUSED, or not yet in it) is read fresh
+  (mbTrack, available) <- case snapshotCab of
+    Just c -> do
+      seats <- Seats.cabSeats s
+      pure (c.track, Seats.freeOverBitmaps (RouteSnapshot.cabBitmapsOf c) (Seats.nextStopIdx seats ((.vehicleInfo) <$> c.track), Seats.routeEnd seats))
+    Nothing -> do
+      mbTrack <- Lts.readRoutePosition s.routeCode s.vehicleNumber
+      (mbTrack,) <$> Seats.freeAhead s ((.vehicleInfo) <$> mbTrack)
   let vehicle = (\v -> LatLong v.vehicleInfo.latitude v.vehicleInfo.longitude) <$> mbTrack
-  available <- Seats.freeAhead s ((.vehicleInfo) <$> mbTrack)
   riders <- liveRiderRows cfg s.vehicleTripId.getId [(stop.stopCode, stop.stopPoint) | stop <- stops] polyline addresses s.vehicleNumber
   pure
     View.SharedCabSession

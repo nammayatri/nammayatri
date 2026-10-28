@@ -53,9 +53,9 @@ import qualified SharedLogic.SharedCab.Demand as Demand
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled, sharedCabEnabled)
 import SharedLogic.SharedCab.Interest (bestEffort, recordInterest)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency)
-import qualified SharedLogic.SharedCab.Lts as Lts
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.RateLimit (enforceStickerCodeLimit)
+import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
 import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
@@ -144,7 +144,7 @@ chooseWalkUp busVehicleFound resolution
 liveSharedCabByCode :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow CodeResolution
 liveSharedCabByCode integratedBppConfig code = do
   routes <- OTPRest.getRoutesByGtfsId integratedBppConfig
-  plates <- concatMap (map (.vehicleNumber)) <$> mapM (Session.activeSessionsOnRoute . (.code)) routes
+  plates <- concatMap (map (.session.vehicleNumber)) <$> mapM (RouteSnapshot.routeSnapshot . (.code)) routes
   pure (resolveCode code plates)
 
 -- | A live cab as the bus builder's live vehicle: its route on its feed, tagged SHARED_CAB. A cab has no waybill or schedule.
@@ -287,13 +287,11 @@ trackStopRoutes mbPersonId stopCode mbRouteCodes =
   where
     passingRoute cabIbc now cfg stopPoint code = do
       mbRoute <- OTPRest.getRouteByRouteId cabIbc code
-      sessions <- Session.activeSessionsOnRoute code
-      cabs <- fmap catMaybes . forM sessions $ \sess -> do
-        mbTrack <- Lts.readRoutePosition code sess.vehicleNumber
-        pure $ do
-          track <- mbTrack
-          u <- Approach.cabStopEta now cfg stopCode (fromMaybe (LatLong track.vehicleInfo.latitude track.vehicleInfo.longitude) stopPoint) track
-          pure (passingCab sess.vehicleNumber (stopEta now u))
+      snapshot <- RouteSnapshot.routeSnapshot code
+      let cabs = flip mapMaybe snapshot $ \c -> do
+            track <- c.track
+            u <- Approach.cabStopEta now cfg stopCode (fromMaybe (LatLong track.vehicleInfo.latitude track.vehicleInfo.longitude) stopPoint) track
+            pure (passingCab c.session.vehicleNumber (stopEta now u))
       stops <- OTPRest.getRouteStopMappingByRouteCode code cabIbc
       pure
         ApiTypes.PassingRoutes
@@ -330,14 +328,13 @@ sharedCabRouteServiceability person cabIbc req legReqs = do
     routes <- forM (nub legReq.routeCodes) $ \code -> do
       mbRoute <- OTPRest.getRouteByRouteId cabIbc code
       stops <- sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode code cabIbc
-      sessions <- Session.activeSessionsOnRoute code
-      let wanted = filter (\(sess :: Session) -> maybe True (\plate -> sess.vehicleNumber == canonicalisePlate plate) req.vehicleNumber) sessions
+      snapshot <- RouteSnapshot.routeSnapshot code
+      let wanted = filter (\c -> maybe True (\plate -> c.session.vehicleNumber == canonicalisePlate plate) req.vehicleNumber) snapshot
           boardStop = req.sourceStopCode >>= \stopCode -> (stopCode,) . (.stopPoint) <$> find ((== stopCode) . (.stopCode)) stops
-      cabs <- forM wanted $ \sess -> do
-        mbTrack <- Lts.readRoutePosition code sess.vehicleNumber
-        load <- Seats.riderLoad Seats.redisEngine (Seats.cabSeatsOn (map (.stopCode) stops) sess) req.sourceStopCode req.destinationStopCode ((.vehicleInfo) <$> mbTrack)
-        pure (cabVehicle now cfg (isJust req.vehicleNumber) boardStop load sess mbTrack)
-      let (scheduled, live) = partitionEithers cabs
+          cabOf c =
+            let load = Seats.riderLoad (Seats.cabSeatsOn (map (.stopCode) stops) c.session) (RouteSnapshot.cabBitmapsOf c) req.sourceStopCode req.destinationStopCode ((.vehicleInfo) <$> c.track)
+             in cabVehicle now cfg (isJust req.vehicleNumber) boardStop load c.session c.track
+          (scheduled, live) = partitionEithers (map cabOf wanted)
           boardEta v = (.arrivalTimeUnix) <$> (find (\e -> Just e.stopCode == req.sourceStopCode) =<< v.eta)
       pure
         ApiTypes.RouteWithLiveVehicle
