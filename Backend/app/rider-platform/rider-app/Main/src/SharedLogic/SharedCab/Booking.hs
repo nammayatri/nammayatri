@@ -23,11 +23,11 @@ module SharedLogic.SharedCab.Booking
   )
 where
 
-import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Map.Strict as Map
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -113,10 +113,8 @@ recordCancelReason bookingId reason = shared $ Redis.setExp (cancelReasonKey boo
 readCancelReason :: (Redis.HedisFlow m r, MonadFlow m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe CancelReason)
 readCancelReason = shared . Redis.safeGet . cancelReasonKey
 
-findingOnRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
-findingOnRoute routeCode =
-  filter (isNothing . (.vehicleNumber))
-    <$> QFRFSTicketBooking.findAllByRouteCodeAndServiceTierTypeAndStatus (Just routeCode) (Just Spec.SHARED_CAB) DFRFSTicketBookingStatus.CONFIRMED
+findingOnRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
+findingOnRoute = QFRFSTicketBooking.findSharedCabFindingOnRoute
 
 -- | Statuses that still hold a seat or can come to; terminal: FAILED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, RESCHEDULED.
 nonTerminalStatuses :: [DFRFSTicketBookingStatus.FRFSTicketBookingStatus]

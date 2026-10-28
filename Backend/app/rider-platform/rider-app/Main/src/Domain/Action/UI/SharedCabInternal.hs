@@ -125,7 +125,7 @@ getSharedCabRoutes agencyId driverLat driverLon mbToken = do
           }
   integratedBppConfig <- getIntegratedBppConfigByAgency agencyId
   cfg <- Config.getTunables integratedBppConfig.merchantOperatingCityId
-  waiting <- mapM (Demand.waitingOnRoute cfg . (.code) . fst) routes
+  waiting <- mapM (Demand.waitingOnRoute cfg integratedBppConfig.merchantOperatingCityId.getId . (.code) . fst) routes
   searching <- forM routes $ \(route, stops) -> Demand.searchingOnRoute cfg integratedBppConfig.merchantOperatingCityId.getId route.code (map (.stopCode) stops)
   pure API.SharedCabRoutesResp {routes = sortOn (.distanceKm) (zipWith toResp (zip routes waiting) searching)}
 

@@ -194,6 +194,23 @@ findAllConfirmedByWaybillNo waybillNo = do
         ]
     ]
 
+-- | A route's FINDING shared-cab bookings in a city: CONFIRMED with no cab yet. The predicates are ddl 1582's partial index's.
+findSharedCabFindingOnRoute ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Text ->
+  m [FRFSTicketBooking]
+findSharedCabFindingOnRoute merchantOperatingCityId routeCode =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.vehicleNumber $ Se.Eq Nothing,
+          Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED,
+          Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB),
+          Se.Is Beam.routeCode $ Se.Eq (Just routeCode),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId
+        ]
+    ]
+
 -- | A city's CONFIRMED shared-cab bookings touched since `since`: the tick's live set without the city's ride history.
 findSharedCabCityUpdatedSince ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

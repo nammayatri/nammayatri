@@ -21,6 +21,7 @@ import qualified Domain.Types.SharedCabSession as SCS
 import qualified Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Booking (findingOnRoute)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -69,10 +70,10 @@ waitingRiders findingTimeoutSec now bookings interested =
   Set.size (Set.fromList ([rider | (createdAt, rider) <- bookings, isRecentFinding findingTimeoutSec now createdAt] <> interested))
 
 -- | Riders waiting on the route for a cab: the driver's pre-start route cards.
-waitingOnRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Redis.HedisFlow m r, MonadCatch m) => Config.SharedCabTunables -> Text -> m Int
-waitingOnRoute cfg routeCode = do
+waitingOnRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Redis.HedisFlow m r, MonadCatch m) => Config.SharedCabTunables -> Text -> Text -> m Int
+waitingOnRoute cfg cityId routeCode = do
   now <- getCurrentTime
-  finding <- map (\(b :: DFRFSTicketBooking.FRFSTicketBooking) -> (b.createdAt, b.riderId.getId)) <$> findingOnRoute routeCode
+  finding <- map (\(b :: DFRFSTicketBooking.FRFSTicketBooking) -> (b.createdAt, b.riderId.getId)) <$> findingOnRoute (Id cityId) routeCode
   interested <- fromMaybe [] <$> bestEffort (logError . ("shared-cab interest read failed: " <>)) (interestedRiders cfg routeCode)
   pure (waitingRiders cfg.findingTimeoutSec now finding interested)
 
@@ -92,12 +93,12 @@ searchingRiders searchedPerStop waiting = Set.size (Set.unions searchedPerStop `
 searchingOnRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Config.SharedCabTunables -> Text -> Text -> [Text] -> m Int
 searchingOnRoute cfg cityId routeCode stopCodes = do
   now <- getCurrentTime
-  finding <- recentFinding cfg now routeCode
+  finding <- recentFinding cfg now cityId routeCode
   searched <- mapM (searchedAt cityId now) stopCodes
   pure (searchingRiders searched (Set.fromList [b.riderId.getId | b <- finding]))
 
-recentFinding :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Config.SharedCabTunables -> UTCTime -> Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
-recentFinding cfg now routeCode = filter (\b -> isRecentFinding cfg.findingTimeoutSec now b.createdAt) <$> findingOnRoute routeCode
+recentFinding :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Config.SharedCabTunables -> UTCTime -> Text -> Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
+recentFinding cfg now cityId routeCode = filter (\b -> isRecentFinding cfg.findingTimeoutSec now b.createdAt) <$> findingOnRoute (Id cityId) routeCode
 
 -- | Riders who searched at the stop in the last bucketCount buckets.
 searchedAt :: (CacheFlow m r, MonadFlow m) => Text -> UTCTime -> Text -> m (Set.Set Text)
@@ -109,7 +110,7 @@ searchedAt cityId now stopCode =
 demandByStop :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Config.SharedCabTunables -> Text -> Text -> [Text] -> m (Map.Map Text StopDemand)
 demandByStop cfg cityId routeCode stopCodes = do
   now <- getCurrentTime
-  finding <- recentFinding cfg now routeCode
+  finding <- recentFinding cfg now cityId routeCode
   searched <- forM stopCodes $ \stopCode -> (stopCode,) <$> searchedAt cityId now stopCode
   pure $ tallyDemand [(b.fromStationCode, b.riderId.getId) | b <- finding] searched
 
