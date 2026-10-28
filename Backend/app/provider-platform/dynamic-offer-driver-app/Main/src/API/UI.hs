@@ -26,6 +26,7 @@ import qualified API.Action.UI.CancellationReasonLookup as CancellationReasonLoo
 import qualified API.Action.UI.DemandHotspots as DemandHotspots
 import qualified API.Action.UI.Dispatcher as Dispatcher
 import qualified API.Action.UI.DriverAreaPreference as DriverAreaPreference
+import qualified API.Action.UI.DriverCommunication as DriverCommunication
 import qualified API.Action.UI.DriverDocument as DriverDocument
 import qualified API.Action.UI.DriverFyEarnings as DriverFyEarnings
 import qualified API.Action.UI.DriverIncentiveCoins as DriverIncentiveCoins
@@ -208,6 +209,7 @@ type API =
            :<|> Aarokya.API
            :<|> LiwipStore.API
            :<|> FRFSFleetOperator.API
+           :<|> DriverCommunication.API
            :<|> FleetEngineToken.API
            :<|> DriverDocument.API
            :<|> DriverAreaPreference.API
@@ -303,6 +305,7 @@ handler =
     :<|> Aarokya.handler
     :<|> LiwipStore.handler
     :<|> FRFSFleetOperator.handler
+    :<|> DriverCommunication.handler
     :<|> FleetEngineToken.handler
     :<|> DriverDocument.handler
     :<|> DriverAreaPreference.handler

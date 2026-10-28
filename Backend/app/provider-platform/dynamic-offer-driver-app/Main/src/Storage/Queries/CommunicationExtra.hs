@@ -125,3 +125,11 @@ updateCommunication commId mbTitle mbBody mbHtmlBody mbContentType mbChannels mb
 
 deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Communication.Communication -> m ()
 deleteById commId = deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId commId)]
+
+-- | Batched so a driver's feed does not issue one lookup per delivery row.
+findAllByIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Kernel.Types.Id.Id Domain.Types.Communication.Communication] ->
+  m [Domain.Types.Communication.Communication]
+findAllByIds [] = pure []
+findAllByIds ids = findAllWithKV [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> ids)]

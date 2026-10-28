@@ -27,6 +27,7 @@ import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
 import Storage.Beam.CommonDriverOnboardingDocuments
 import Storage.Beam.Communication
+import Storage.Beam.CommunicationDelivery
 import Storage.Beam.DepotManager (DepotManagerT, depotManagerTable)
 import Storage.Beam.DriverFee
 import Storage.Beam.DriverFyEarnings
@@ -119,6 +120,7 @@ atlasDB =
         fleetBookingInformation = fleetBookingInformationTable,
         fleetRcDailyStats = fleetRcDailyStatsTable,
         communication = communicationTable,
+        communicationDelivery = communicationDeliveryTable,
         commonDriverOnboardingDocuments = commonDriverOnboardingDocumentsTable,
         subscriptionPurchase = subscriptionPurchaseTable,
         indirectTaxTransaction = BeamITT.indirectTaxTransactionTable,
@@ -175,6 +177,7 @@ data AtlasDB f = AtlasDB
     fleetBookingInformation :: f (B.TableEntity FleetBookingInformationT),
     fleetRcDailyStats :: f (B.TableEntity FleetRcDailyStatsT),
     communication :: f (B.TableEntity CommunicationT),
+    communicationDelivery :: f (B.TableEntity CommunicationDeliveryT),
     commonDriverOnboardingDocuments :: f (B.TableEntity CommonDriverOnboardingDocumentsT),
     subscriptionPurchase :: f (B.TableEntity SubscriptionPurchaseT),
     indirectTaxTransaction :: f (B.TableEntity BeamITT.IndirectTaxTransactionT),

@@ -4,9 +4,11 @@
 module Storage.Queries.CommunicationDeliveryExtra where
 
 import Data.Time (Day, UTCTime (..), addDays)
+import qualified Database.Beam as B
 import qualified Domain.Types.Communication
 import qualified Domain.Types.CommunicationDelivery
 import qualified Domain.Types.Person
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -14,8 +16,16 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.CommunicationDelivery as Beam
 import Storage.Queries.OrphanInstances.CommunicationDelivery
+
+effectiveRecipientFeedLimit :: Maybe Int -> Int
+effectiveRecipientFeedLimit mbLimit = min 50 $ max 1 $ fromMaybe 10 mbLimit
+
+-- | Bounds the badge read: a driver who never opens the app would otherwise make every feed call scan their whole delivery history.
+unreadBadgeCap :: Int
+unreadBadgeCap = 100
 
 findByRecipientIdWithChannel ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -27,8 +37,8 @@ findByRecipientIdWithChannel ::
   Maybe Day ->
   m [Domain.Types.CommunicationDelivery.CommunicationDelivery]
 findByRecipientIdWithChannel recipientId mbChannel mbLimit mbOffset mbFromDate mbToDate = do
-  let limitVal = min 50 $ fromMaybe 10 mbLimit
-      offsetVal = fromMaybe 0 mbOffset
+  let limitVal = effectiveRecipientFeedLimit mbLimit
+      offsetVal = max 0 $ fromMaybe 0 mbOffset
       dateFilters = case (mbFromDate, mbToDate) of
         (Just fromDate, Just toDate) ->
           [ Se.Is Beam.createdAt $ Se.GreaterThanOrEq (UTCTime fromDate 0),
@@ -85,3 +95,23 @@ deleteByCommunicationId ::
   m ()
 deleteByCommunicationId commId =
   deleteWithKV [Se.Is Beam.communicationId $ Se.Eq (Kernel.Types.Id.getId commId)]
+
+countUnreadByRecipientIdAndChannel ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Domain.Types.Communication.ChannelType ->
+  m Int
+countUnreadByRecipientIdAndChannel recipientId channel = do
+  -- Counted through KV like the feed itself; a SQL aggregate misses the driver's own just-written readAt until the drainer flushes.
+  unread :: [Domain.Types.CommunicationDelivery.CommunicationDelivery] <-
+    findAllWithOptionsKV
+      [ Se.And
+          [ Se.Is Beam.recipientId $ Se.Eq (Kernel.Types.Id.getId recipientId),
+            Se.Is Beam.channel $ Se.Eq channel,
+            Se.Is Beam.readAt $ Se.Eq Nothing
+          ]
+      ]
+      (Se.Desc Beam.createdAt)
+      (Just unreadBadgeCap)
+      Nothing
+  pure $ length unread
