@@ -34,7 +34,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Common.FRFSJourneyUtils (VehicleProximity (..), riderNearVehicle)
 import qualified Lib.JourneyModule.Location as JMLocation
-import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.SharedCab.Allocation.Types (parseLtsTimestamp)
 import SharedLogic.SharedCab.Booking (isSharedCabBooking, partyOf, partySizes, withBookingLock)
 import SharedLogic.SharedCab.BookingState (clearAlloc)
@@ -42,6 +41,7 @@ import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
 import qualified SharedLogic.SharedCab.Events as Events
+import qualified SharedLogic.SharedCab.Lts as Lts
 import SharedLogic.SharedCab.Plate (canonicalisePlate, findByPlate, samePlate)
 import qualified SharedLogic.SharedCab.RateLimit as RateLimit
 import qualified SharedLogic.SharedCab.Schedule as Schedule
@@ -125,9 +125,7 @@ sessionServesBoardDrop booking session = do
 
 lookupCabPing :: Session -> Environment.Flow (Maybe (UTCTime, LatLong))
 lookupCabPing session = do
-  outcome <-
-    withTryCatch "lookupCabPing" $
-      LTSFlow.vehicleTrackingOnRoute (LTSFlow.ByRoute session.routeCode)
+  outcome <- withTryCatch "lookupCabPing" $ Lts.readRoutePositions session.routeCode
   pure $ case outcome of
     Left _ -> Nothing -- LTS outage behaves identically to NO_LIVE_CAB_DATA (8.2 ladder floor)
     Right tracked -> do

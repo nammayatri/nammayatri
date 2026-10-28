@@ -26,7 +26,6 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
-import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Select as Select
@@ -38,6 +37,7 @@ import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Demand as Demand
 import SharedLogic.SharedCab.Interest (bestEffort)
 import SharedLogic.SharedCab.LegState (SkipVerdict (..), decideRiderSkip)
+import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Nearby as Nearby
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Seats as Seats
@@ -73,7 +73,7 @@ getSharedCabRoutes (mbPersonId, _) = do
 -- | A failed LTS read means no cab is seen on the route, not a failed list.
 liveCabsOnRoute :: Text -> Environment.Flow [LT.VehicleTrackingOnRouteResp]
 liveCabsOnRoute routeCode =
-  withTryCatch "sharedCab:vehicleTrackingOnRoute" (LF.vehicleTrackingOnRoute (LF.ByRoute routeCode)) >>= \case
+  withTryCatch "sharedCab:vehicleTrackingOnRoute" (Lts.readRoutePositions routeCode) >>= \case
     Left err -> [] <$ logError ("shared-cab route " <> routeCode <> ": LTS read failed: " <> show err)
     Right cabs -> pure cabs
 

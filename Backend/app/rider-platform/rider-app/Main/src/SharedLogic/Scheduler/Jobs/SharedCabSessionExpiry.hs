@@ -16,12 +16,12 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
-import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.JobScheduler
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (SessionClosed), parseLtsTimestamp)
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
 import qualified SharedLogic.SharedCab.Events as Events
+import qualified SharedLogic.SharedCab.Lts as Lts
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import qualified SharedLogic.SharedCab.RefundRetry as RefundRetry
 import SharedLogic.SharedCab.Schedule (claimExpiryRun, claimedTick, ensureDegradedSweep, ownExpiryChain, reseedAllocationTick, scheduleNextExpiry, watchPlan)
@@ -75,9 +75,9 @@ expireSilentSessions mocId = do
       Right () -> pure ()
 
 -- | plate → latest ping on the route, or Nothing if LTS couldn't be read.
-lastPings :: LtsFlow m r c => UTCTime -> Text -> m (Maybe (Text, M.Map Text Ping))
+lastPings :: (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => UTCTime -> Text -> m (Maybe (Text, M.Map Text Ping))
 lastPings now route =
-  withTryCatch "sharedCab:trackVehicles" (LTS.vehicleTrackingOnRoute (LTS.ByRoute route)) >>= \case
+  withTryCatch "sharedCab:trackVehicles" (Lts.readRoutePositions route) >>= \case
     Left err -> do
       logError $ "sharedCab expiry: LTS read failed for route " <> route <> ", skipping it: " <> show err
       pure Nothing
