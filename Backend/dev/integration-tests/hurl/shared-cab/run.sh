@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the shared-cab scenarios against a live rider-app. usage: run.sh [driver|flush|rider|boarding|callchat|calloff|tripcheck|nearbybus|all] (default all)
+# Runs the shared-cab scenarios against a live rider-app. usage: run.sh [driver|flush|rider|boarding|callchat|calloff|tripcheck|nearbybus|journeyowner|all] (default all)
 # ENV (default local.env) picks the variables file; REDIS_CLI (default redis-cli) reaches the rider-app's Redis for the flush
 # step (a local cluster needs REDIS_CLI="redis-cli -c -p 30001"). Local setup is documented in README.md, not done here:
 # seed/*.sql applied, the apps' Redis config caches cleared (each app has its own key prefix) and the processes restarted,
@@ -57,6 +57,12 @@ quantity() { clean; h --variable token="$(token)" quantity-flow.hurl; }
 callchat() { clean; h --variable token="$(token)" call-chat-flow.hurl; }
 nearbybus() { h --variable token="$(token)" nearby-bus.hurl; }
 standalone() { clean; h --variable token="$(token)" standalone-flow.hurl; }
+# A second rider (RIDER_B_MOBILE, default 9000000032) must be refused on the hurl rider's journey.
+journeyowner() {
+  clean
+  tok_b=$(hurl --variables-file "$env" --variable mobileNumber="${RIDER_B_MOBILE:-9000000032}" --variable deviceToken=hurl-shared-cab-b login.hurl | jq -r .token)
+  h --variable token="$(token)" --variable token_b="$tok_b" journey-owner.hurl
+}
 # SUSPEND_CMD / RESUME_CMD flip rider_config.shared_cab_enabled and refresh the rider-app and scheduler config caches (they cache for
 # an hour, so locally that is the UPDATE plus a restart; see README). The flow needs shared_cab_finding_timeout_sec = 25 for the city.
 suspended() {
@@ -110,6 +116,7 @@ case ${1:-all} in
   calloff) calloff ;;
   suspended) suspended ;;
   quantity) quantity ;;
+  journeyowner) journeyowner ;;
   all) driver; flush; rider; boarding; standalone; quantity ;;
-  *) echo "usage: $0 [clean|driver|flush|rider|boarding|standalone|quantity|suspended|all]"; exit 2 ;;
+  *) echo "usage: $0 [clean|driver|flush|rider|boarding|standalone|quantity|journeyowner|suspended|all]"; exit 2 ;;
 esac
