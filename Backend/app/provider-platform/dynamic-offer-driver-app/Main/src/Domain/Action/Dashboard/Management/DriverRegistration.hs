@@ -49,6 +49,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
   )
 where
 
+import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as CommonFleet
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.UI.DriverOnboardingV2
@@ -3468,29 +3469,40 @@ postDriverRegistrationAddVehicles merchantShortId opCity driverId mbAutoApprove 
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (driver.role == DP.DRIVER && driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCityId) $
     throwError (PersonDoesNotExist personId.getId)
-  -- Without a photo an RC can only be created from the row's details, which the register door honours only where the city allows it.
-  unless (transporterConfig.allowDashboardToPassVehicleDetails == Just True) $
-    throwError (InvalidRequest "Vehicle details from the dashboard are not enabled for this city")
   rows <- BulkUpload.readVehiclesCsv transporterConfig merchantOpCity req.file
+  let autoApproved = mbAutoApprove == Just True && transporterConfig.autoApproveOnAdminUpload == Just True
   -- The driver in the path owns every row, so the file's driver phone column is ignored.
   let registerRow (rcReq, mbFleetNo) = do
         whenJust mbFleetNo $ \_ -> throwError (InvalidRequest "Fleet phone number is not applicable for adding vehicles under a driver")
-        when (isNothing rcReq.vehicleDetails) $ throwError (InvalidRequest "Manufacturer, model and colour are required")
+        -- Where the city takes vehicle details from the dashboard the row must carry them; elsewhere the number alone goes to the verifier.
+        when (transporterConfig.allowDashboardToPassVehicleDetails == Just True && isNothing rcReq.vehicleDetails) $
+          throwError (InvalidRequest "Manufacturer, model and colour are required")
+        let addVehicleReq = BulkUpload.convertToAddVehicleReq rcReq
+        runRequestValidation (CommonFleet.validateAddVehicleReq transporterConfig.preProcessDocumentIdentifiers) addVehicleReq
         -- Bulk only creates vehicles; an existing plate is linked through the dashboard, as the single add does.
         mbExistingRC <- QRC.findLastVehicleRCWrapper rcReq.vehicleRegistrationCertNumber
         whenJust mbExistingRC $ \_ -> throwError (InvalidRequest "RC already exists for this vehicle number")
         imageId <- createBulkRcPlaceholderImage personId merchant.id merchantOpCityId
+        let vehicleReq = (addVehicleReq :: CommonFleet.AddVehicleReq) {CommonFleet.imageId = Just (cast imageId)}
         registered <-
           withTryCatch "register:postDriverRegistrationAddVehicles" $
-            postDriverRegistrationDocumentRegisterWithVerifiedBy DPan.DASHBOARD merchantShortId opCity driverId mbAutoApprove $
-              Common.DocumentRegisterReq {metadata = Common.RCData ((rcReq :: Common.RegisterRCReq) {Common.imageId = cast imageId})}
+            DCommon.runVerifyRCFlow False personId merchant merchantOpCityId opCity transporterConfig vehicleReq False True autoApproved Nothing
         case registered of
-          Right _ -> pure ()
+          Right () -> pure ()
           Left err -> do
             -- A row refused before its RC existed leaves no image behind; an image an RC already holds stays, as after a failed approve.
             mbRc <- QRC.findByAnyImageId imageId
             when (isNothing mbRc) $ QImage.deleteByIdAndPerson imageId personId
             throwM err
+        -- Only an RC built from the row's details exists at this point; one sent for external verification is settled by the verifier's answer.
+        let mbVehicleDetails = DCommon.mkDashboardVehicleDetails transporterConfig vehicleReq
+        -- An approved row's flags are recomputed by the approve; any other row refreshes them, as a single document register does.
+        if autoApproved && isJust mbVehicleDetails
+          then
+            void $
+              postDriverRegistrationDocumentsUpdate merchantShortId opCity $
+                Common.Approve (Common.RC (mkRCApproveDetails (cast imageId) vehicleReq.registrationNo mbVehicleDetails))
+          else refreshOnboardingFlags personId
   unprocessedEntities <-
     foldlM
       ( \unprocessed (rcReq, _, _, _, mbFleetNo, _) ->

@@ -122,7 +122,7 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
-import Domain.Action.Dashboard.Common.BulkUpload (DriverDetails (..), castCommonOnboardingAsToDomain, checkAndUpdateAddDriverLimit, fetchOrCreatePerson, processDriverRows, readDriversCsv, readVehiclesCsv, validateDriverName)
+import Domain.Action.Dashboard.Common.BulkUpload (DriverDetails (..), castCommonOnboardingAsToDomain, checkAndUpdateAddDriverLimit, convertToAddVehicleReq, fetchOrCreatePerson, processDriverRows, readDriversCsv, readVehiclesCsv, validateDriverName)
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegV2
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
@@ -3936,35 +3936,6 @@ clearFleetMemberCache fleetMemberId mbFleetOwnerId = mapM_ Redis.del [key1, key2
 
 clearFleetMemberCacheMultiple :: Text -> [Text] -> Flow ()
 clearFleetMemberCacheMultiple fleetMemberId fleetOwnerIds = mapM_ (clearFleetMemberCache fleetMemberId . Just) fleetOwnerIds
-
--- Helper function to convert RegisterRCReq to AddVehicleReq
-convertToAddVehicleReq :: Common.RegisterRCReq -> Common.AddVehicleReq
-convertToAddVehicleReq rcReq =
-  Common.AddVehicleReq
-    { registrationNo = rcReq.vehicleRegistrationCertNumber,
-      vehicleClass = fromMaybe "" rcReq.vehicleClass,
-      capacity = Nothing,
-      colour = maybe "" (.vehicleColour) rcReq.vehicleDetails,
-      energyType = Nothing,
-      model = maybe "" (.vehicleModel) rcReq.vehicleDetails,
-      make = maybe "" (.vehicleManufacturer) rcReq.vehicleDetails,
-      airConditioned = rcReq.airConditioned,
-      driverName = Nothing,
-      -- The add-vehicle helper sets a placeholder image created under the fleet owner or driver the vehicle is added to.
-      imageId = Nothing,
-      imageId2 = rcReq.imageId2,
-      vehicleCategory = rcReq.vehicleCategory,
-      oxygen = rcReq.oxygen,
-      ventilator = rcReq.ventilator,
-      dateOfRegistration = rcReq.dateOfRegistration,
-      mYManufacturing = Nothing,
-      vehicleModelYear = rcReq.vehicleDetails >>= (.vehicleModelYear),
-      skipFleetChecks = Nothing,
-      vehicleTags = Nothing,
-      fuelType = Nothing,
-      udinNumber = rcReq.udinNumber,
-      previousRcNumber = rcReq.previousRcNumber
-    }
 
 getDriverDashboardInternalHelperGetFleetOwnerId :: (ShortId DM.Merchant -> Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow Text)
 getDriverDashboardInternalHelperGetFleetOwnerId _ _ mbFleetOwnerId memberPersonId = getFleetOwnerId memberPersonId mbFleetOwnerId
