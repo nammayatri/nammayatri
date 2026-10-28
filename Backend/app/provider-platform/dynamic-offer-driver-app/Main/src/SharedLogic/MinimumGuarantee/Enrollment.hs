@@ -166,22 +166,25 @@ optInForDay actorId driverId campaignId periodDate = do
 -- | Calls off every enrollment of a cancelled campaign from `fromDay` (today) on: no top-up, no
 -- violation. Days before `fromDay` are over and are still settled by the campaign's job.
 --
--- One pass over at most 'cancelBatchLimit' rows. A pass that finds the limit reached is logged, and
--- cancelling the campaign again handles the rest.
+-- Works in batches of at most 'cancelBatchLimit' rows and reads the next batch while one comes back
+-- full. A full batch that cancelled nothing (every row had changed in the meantime) ends the loop, so
+-- stale reads cannot keep it running.
 cancelUpcomingEnrollments :: MgEventFlow m r => DMgC.MgCampaign -> Day -> m ()
 cancelUpcomingEnrollments campaign fromDay = do
   rows <- QMgEx.findAllUpcomingFromDay campaign.id fromDay cancelBatchLimit
-  when (length rows >= cancelBatchLimit) $
-    logWarning $ "MG campaign " <> campaign.id.getId <> ": " <> show cancelBatchLimit <> " enrollments cancelled in one pass; cancel again to handle the rest"
-  forM_ rows $ \row ->
+  cancelled <- forM rows $ \row ->
     withMgDriverLock row.driverId $ do
       -- the row was read before the lock: a ride end or the settlement job may have changed it since
       mbCurrent <- QMgE.findByPrimaryKey row.id
-      whenJust mbCurrent $ \enrollment ->
-        when (enrollment.status == DMgE.UPCOMING) $ do
+      case mbCurrent of
+        Just enrollment | enrollment.status == DMgE.UPCOMING -> do
           QMgE.updateByPrimaryKey enrollment {DMgE.status = DMgE.CANCELLED_BY_ADMIN}
           unregisterMgCtx enrollment.driverId enrollment.id
           releaseBudget campaign
+          pure True
+        _ -> pure False
+  when (length rows >= cancelBatchLimit && or cancelled) $
+    cancelUpcomingEnrollments campaign fromDay
 
 cancelBatchLimit :: Int
 cancelBatchLimit = 20000

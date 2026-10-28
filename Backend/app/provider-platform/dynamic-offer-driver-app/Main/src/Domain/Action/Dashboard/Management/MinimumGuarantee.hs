@@ -27,6 +27,7 @@ module Domain.Action.Dashboard.Management.MinimumGuarantee
 where
 
 import qualified API.Types.ProviderPlatform.Management.MinimumGuarantee as Common
+import qualified Control.Monad.Catch as C
 import qualified Dashboard.Common as DCommon
 import Data.List (nub, sortOn)
 import qualified Data.Text as T
@@ -324,9 +325,13 @@ postMinimumGuaranteeStatus merchantShortId opCity reqCampaignId req = do
         today <- localToday merchantOpCity
         when (campaign.endDate < today) $ throwError (InvalidRequest "endDate is already in the past")
         QMgC.updateStatusById DMgC.PUBLISHED campaign.id
-        -- the campaign's own settlement chain, first run in 15 minutes
-        createJobIn @_ @'MinimumGuaranteeSettlement (Just merchant.id) (Just merchantOpCity.id) 900 $
-          MinimumGuaranteeSettlementJobData {merchantId = merchant.id, merchantOperatingCityId = merchantOpCity.id, campaignId = campaign.id}
+        -- the campaign's own settlement chain, first run in 15 minutes. A published campaign without
+        -- its job would never settle and no later request could start it, so a failure here puts the
+        -- campaign back to DRAFT and the publish can be retried.
+        ( createJobIn @_ @'MinimumGuaranteeSettlement (Just merchant.id) (Just merchantOpCity.id) 900 $
+            MinimumGuaranteeSettlementJobData {merchantId = merchant.id, merchantOperatingCityId = merchantOpCity.id, campaignId = campaign.id}
+          )
+          `C.onException` QMgC.updateStatusById DMgC.DRAFT campaign.id
         notifyInvitees campaign {DMgC.status = DMgC.PUBLISHED}
       (DMgC.PUBLISHED, DMgC.PAUSED) -> do
         QMgC.updateStatusById DMgC.PAUSED campaign.id
