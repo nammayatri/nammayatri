@@ -264,6 +264,7 @@ data AuthVerifyReq = AuthVerifyReq
     deviceToken :: Text,
     whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods,
     userPasswordString :: Maybe Text,
+    commsConsent :: Maybe Bool,
     socialLinkToken :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -880,7 +881,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         cloudType = mbCloudType,
         operatorBadgeToken = mbOperatorBadgeToken,
         clientId = Nothing,
-        acceptedPolicies = Nothing
+        acceptedPolicies = Nothing,
+        commsConsent = Nothing
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -984,6 +986,7 @@ verify tokenId req mbClientId mbXForwardedFor = do
       unlinkedPerson <- checkPersonExists entityId
       SSL.linkPendingIdentity unlinkedPerson linkToken
       checkPersonExists entityId
+  whenJust req.commsConsent $ \commsConsent -> PersonExtra.updateCommsConsent person.id commsConsent
   when (isNothing person.clientId && isJust mbClientId) $ Person.updateClientId mbClientId person.id
   let deviceToken = Just req.deviceToken
   personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken deviceToken)

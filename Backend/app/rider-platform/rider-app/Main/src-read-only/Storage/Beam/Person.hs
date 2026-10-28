@@ -49,6 +49,7 @@ data PersonT f = PersonT
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType),
     comments :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    commsConsent :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currentCity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City),
     customerNammaTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
