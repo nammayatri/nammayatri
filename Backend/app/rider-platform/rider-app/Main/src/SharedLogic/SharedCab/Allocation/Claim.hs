@@ -128,7 +128,7 @@ claimUnderLocks cfg booking cand s = do
       offersMade <- readOffersMade booking.bookingId
       QFRFSTicketBooking.updateAllocatedVehicle (Just s.vehicleNumber) booking.bookingId Nothing
       -- the key's TTL is only a garbage-collection backstop and must outlive the stacked timers (allocKeyTtl)
-      let st = AllocationState {vehicleNumber = s.vehicleNumber, driverId = Just s.driverId, allocatedAt = now, timer = armedTimer cfg now offersMade cand.rcStance}
+      let st = AllocationState {vehicleNumber = s.vehicleNumber, timer = armedTimer cfg now offersMade cand.rcStance}
       writeAlloc (allocKeyTtl cfg) booking.bookingId st
       when cfg.driverAcceptEnabled $ writeOffersMade (allocKeyTtl cfg) booking.bookingId (offersMade + 1)
       Seats.recordHold booking.bookingId held

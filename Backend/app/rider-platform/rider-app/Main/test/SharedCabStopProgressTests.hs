@@ -69,7 +69,7 @@ tests =
         )
           @?= (Just (after 90), Nothing, Nothing, Nothing, Nothing),
       testCase "moving timer: an away timer running at the stop is never replaced by the rider-blamed moving timer; a stand or moving timer is not either" $
-        let st timer = AllocationState {vehicleNumber = "P1", driverId = Nothing, allocatedAt = t0, timer}
+        let st timer = AllocationState {vehicleNumber = "P1", timer}
             armedWith timer = armMovingTimer cfg t0 (runningTimerDeadline (st timer)) (Just (fix 25.6195 [stopAt 5 False, stopAt 6 False])) "S5"
          in map armedWith [NoTimer, StandTimer (after 30), MovingTimer (after 30), AwayTimer (after 30)]
               @?= [Just (after 90), Nothing, Nothing, Nothing]

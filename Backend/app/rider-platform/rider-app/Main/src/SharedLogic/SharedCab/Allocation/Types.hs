@@ -44,8 +44,6 @@ import SharedLogic.SharedCab.Config (SharedCabTunables)
 -- no timer, and the tick clears a stand or away timer once the cab moves.
 data AllocationState = AllocationState
   { vehicleNumber :: Text, -- canonical plate of the cab holding the booking right now
-    driverId :: Maybe Text, -- who drove it at claim (the session's driver, read under the plate lock): who a driver miss is charged to
-    allocatedAt :: UTCTime,
     timer :: Timer
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
