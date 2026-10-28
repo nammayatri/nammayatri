@@ -708,7 +708,6 @@ library
       SharedLogic.SharedCab.Allocation.Claim
       SharedLogic.SharedCab.Allocation.Reallocate
       SharedLogic.SharedCab.Allocation.Select
-      SharedLogic.SharedCab.Allocation.Timers
       SharedLogic.SharedCab.Allocation.Types
       SharedLogic.SharedCab.Approach
       SharedLogic.SharedCab.Boarding
@@ -730,7 +729,6 @@ library
       SharedLogic.SharedCab.Lock
       SharedLogic.SharedCab.Lts
       SharedLogic.SharedCab.LtsAttach
-      SharedLogic.SharedCab.Nearby
       SharedLogic.SharedCab.NoShow
       SharedLogic.SharedCab.Notify
       SharedLogic.SharedCab.Offer

@@ -16,6 +16,7 @@ module SharedLogic.SharedCab.Allocation
 where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative ((<|>))
 import Control.Monad.Extra (whenJustM)
 import Data.List (nub)
 import qualified Domain.Types.FRFSTicketBooking as DFTB
@@ -25,15 +26,15 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFirst, liveBookingsOf)
+import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFallbackPush, claimFirst, liveBookingsOf)
 import SharedLogic.SharedCab.Allocation.Reallocate (Closed (..), afterClose, closeAllocation, closeLocked)
 import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), PreferenceLoss (..), PreferenceVerdict (..), RankedCandidate, allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, onlyPreferred, preferenceVerdict, silentCab, skippedWhileFinding, withoutSkipped)
-import SharedLogic.SharedCab.Allocation.Timers (expireTimers, pushTimeFallbacks)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (partyOf, partySizes, withBookingLock)
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
+import SharedLogic.SharedCab.LegState (fallbackTimeElapsed)
 import SharedLogic.SharedCab.Lts (readRoutePositions)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Plate (samePlate)
@@ -184,3 +185,30 @@ narrowToPreferred cfg now sessions booking candidates =
       PrefFull -> Just Notify.SEAT_LOST
       PrefTimedOut -> Just Notify.CAB_PULLED
       PrefOffRoute -> Just Notify.CAB_PULLED
+
+-- | A timed-out or key-less ALLOCATED booking goes back to FINDING, decided under the booking lock so a claim still writing its key is not mistaken for lost.
+expireTimers ::
+  AllocFlow m r =>
+  Config.SharedCabTunables ->
+  UTCTime ->
+  (Text -> Text -> Bool) -> -- plate moving on route, per fresh LTS positions
+  (Text -> Text -> Bool) -> -- plate silent on route
+  [LiveBooking] ->
+  m ()
+expireTimers cfg now movingOn silentOn live =
+  forM_ [(lb.booking, plate) | lb <- live, Just plate <- [allocatedPlate lb]] $ \(b, plate) -> do
+    result <- withBookingLock b.id $ do
+      mbState <- readAlloc b.id
+      case timerExpiry now mbState <|> (CabSilent <$ guard (maybe False (silentOn plate) b.routeCode)) of
+        Just outcome -> fmap (outcome,) <$> closeLocked cfg b.id plate outcome
+        Nothing -> do
+          whenJust mbState $ \st ->
+            when (clearOnMove st.timer /= st.timer && maybe False (movingOn plate) b.routeCode) $ do
+              writeAlloc (allocKeyTtl cfg) b.id st {timer = clearOnMove st.timer}
+          pure Nothing
+    whenJust result $ \(outcome, closedInfo) -> afterClose cfg b.id plate outcome (Just closedInfo)
+
+pushTimeFallbacks :: AllocFlow m r => Config.SharedCabTunables -> UTCTime -> [(DFTB.FRFSTicketBooking, FindingBooking)] -> m ()
+pushTimeFallbacks cfg now findings =
+  forM_ [b | (b, fb) <- findings, fallbackTimeElapsed now fb.findingSince cfg.fallbackAfterSec] $ \b ->
+    whenM (claimFallbackPush cfg b.id) $ Notify.notifyBoardAny b

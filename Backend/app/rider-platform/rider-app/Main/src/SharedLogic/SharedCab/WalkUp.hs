@@ -46,13 +46,13 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab.Allocation.Select as Select
 import SharedLogic.SharedCab.Allocation.Types (parseLtsTimestamp)
+import qualified SharedLogic.SharedCab.Approach as Approach
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Demand as Demand
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled, sharedCabEnabled)
 import SharedLogic.SharedCab.Interest (bestEffort, recordInterest)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import qualified SharedLogic.SharedCab.Lts as Lts
-import qualified SharedLogic.SharedCab.Nearby as Nearby
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
@@ -285,7 +285,7 @@ trackStopRoutes mbPersonId stopCode mbRouteCodes =
         mbTrack <- Lts.readRoutePosition code sess.vehicleNumber
         pure $ do
           track <- mbTrack
-          u <- Nearby.cabStopEta now cfg stopCode (fromMaybe (LatLong track.vehicleInfo.latitude track.vehicleInfo.longitude) stopPoint) track
+          u <- Approach.cabStopEta now cfg stopCode (fromMaybe (LatLong track.vehicleInfo.latitude track.vehicleInfo.longitude) stopPoint) track
           pure
             ApiTypes.PassingVehicleInfo
               { vehicleNumber = sess.vehicleNumber,
@@ -396,6 +396,6 @@ cabVehicle now cfg namedByPlate mbBoardStop (freeSeats, ridersOnBoard) s = \case
     shownPlate = if namedByPlate then s.vehicleNumber else T.takeEnd 4 s.vehicleNumber
     fixTime vi = fromMaybe now (vi.timestamp >>= parseLtsTimestamp)
     believable track u = case mbBoardStop of
-      Just (stopCode, stopPoint) | u.stop.stopCode == stopCode -> isJust (Nearby.cabStopEta now cfg stopCode stopPoint track)
+      Just (stopCode, stopPoint) | u.stop.stopCode == stopCode -> isJust (Approach.cabStopEta now cfg stopCode stopPoint track)
       _ -> True
     stopEta u = CQMMB.BusStopETA u.stop.stopCode (Just u.stop.name) u.eta (floor (utcTimeToPOSIXSeconds u.eta)) (Just (max 0 (floor (diffUTCTime u.eta now))))

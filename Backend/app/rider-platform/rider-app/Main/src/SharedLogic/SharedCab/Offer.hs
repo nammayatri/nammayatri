@@ -1,6 +1,6 @@
 -- | With the city's driverAcceptEnabled a claim is an offer: the seat is held, the rider hears nothing, and the driver accepts or declines
 -- within the offer timer. Accepting arms the timer the claim would have armed and sends the rider the pushes that were held back;
--- declining (or letting it lapse, in Allocation.Timers) closes the allocation as DriverDeclined / OfferTimeout.
+-- declining (or letting it lapse, in Allocation) closes the allocation as DriverDeclined / OfferTimeout.
 module SharedLogic.SharedCab.Offer
   ( AcceptDecision (..),
     DeclineDecision (..),
