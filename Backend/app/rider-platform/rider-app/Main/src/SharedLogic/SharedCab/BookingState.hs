@@ -38,73 +38,69 @@ type BookingId = Id DFTB.FRFSTicketBooking
 
 type StateFlow m r = (Redis.HedisFlow m r, MonadFlow m)
 
-allocField, attemptsField, findingSinceField, skippedField, preferredField, preferenceDroppedField, offersField, riderSkipUsedField :: Text
-allocField = "alloc"
-attemptsField = "attempts"
-findingSinceField = "findingSince"
-skippedField = "skipped"
-preferredField = "preferred"
-preferenceDroppedField = "preferredDropped"
-offersField = "offers"
-riderSkipUsedField = "riderSkipUsed"
-
-readAlloc :: StateFlow m r => BookingId -> m (Maybe AllocationState)
-readAlloc bookingId = shared $ Redis.hGet (bookingStateKey bookingId) allocField
+readField :: (StateFlow m r, FromJSON a) => BookingId -> Text -> m (Maybe a)
+readField bookingId = shared . Redis.hGet (bookingStateKey bookingId)
 
 -- | Every write sets the hash's TTL, so it is the TTL of the latest writer.
+writeField :: (StateFlow m r, ToJSON a) => Int -> BookingId -> Text -> a -> m ()
+writeField ttl bookingId field value = shared $ Redis.hSetExp (bookingStateKey bookingId) field value ttl
+
+readAlloc :: StateFlow m r => BookingId -> m (Maybe AllocationState)
+readAlloc bookingId = readField bookingId "alloc"
+
 writeAlloc :: StateFlow m r => Int -> BookingId -> AllocationState -> m ()
-writeAlloc ttl bookingId st = shared $ Redis.hSetExp (bookingStateKey bookingId) allocField st ttl
+writeAlloc ttl bookingId = writeField ttl bookingId "alloc"
 
 clearAlloc :: StateFlow m r => BookingId -> m ()
-clearAlloc bookingId = shared $ Redis.hDel (bookingStateKey bookingId) [allocField]
+clearAlloc bookingId = shared $ Redis.hDel (bookingStateKey bookingId) ["alloc"]
 
 readAttempts :: StateFlow m r => BookingId -> m Int
-readAttempts bookingId = shared $ fromMaybe 0 <$> Redis.hGet (bookingStateKey bookingId) attemptsField
+readAttempts bookingId = fromMaybe 0 <$> readField bookingId "attempts"
 
 writeAttempts :: StateFlow m r => Int -> BookingId -> Int -> m ()
-writeAttempts ttl bookingId attempts = shared $ Redis.hSetExp (bookingStateKey bookingId) attemptsField attempts ttl
+writeAttempts ttl bookingId = writeField ttl bookingId "attempts"
 
 readFindingSince :: StateFlow m r => BookingId -> UTCTime -> m UTCTime
-readFindingSince bookingId createdAt = shared $ fromMaybe createdAt <$> Redis.hGet (bookingStateKey bookingId) findingSinceField
+readFindingSince bookingId createdAt = fromMaybe createdAt <$> readField bookingId "findingSince"
 
 writeFindingSince :: StateFlow m r => Int -> BookingId -> UTCTime -> m ()
-writeFindingSince ttl bookingId since = shared $ Redis.hSetExp (bookingStateKey bookingId) findingSinceField since ttl
+writeFindingSince ttl bookingId = writeField ttl bookingId "findingSince"
 
 readSkipped :: StateFlow m r => BookingId -> m [Text]
-readSkipped bookingId = shared $ fromMaybe [] <$> Redis.hGet (bookingStateKey bookingId) skippedField
+readSkipped bookingId = fromMaybe [] <$> readField bookingId "skipped"
 
 -- | Read-modify-write: call it under the booking lock, like every other writer of the booking's state.
 addSkipped :: StateFlow m r => Int -> BookingId -> Text -> m ()
 addSkipped ttl bookingId plate = do
   skipped <- readSkipped bookingId
-  shared $ Redis.hSetExp (bookingStateKey bookingId) skippedField (nub (plate : skipped)) ttl
+  writeField ttl bookingId "skipped" (nub (plate : skipped))
 
 -- | The rider has used the one skip this booking allows.
 readRiderSkipUsed :: StateFlow m r => BookingId -> m Bool
-readRiderSkipUsed bookingId = shared $ fromMaybe False <$> Redis.hGet (bookingStateKey bookingId) riderSkipUsedField
+readRiderSkipUsed bookingId = fromMaybe False <$> readField bookingId "riderSkipUsed"
 
 writeRiderSkipUsed :: StateFlow m r => Int -> BookingId -> m ()
-writeRiderSkipUsed ttl bookingId = shared $ Redis.hSetExp (bookingStateKey bookingId) riderSkipUsedField True ttl
+writeRiderSkipUsed ttl bookingId = writeField ttl bookingId "riderSkipUsed" True
 
 -- | How many offers this booking has had (the next one's length depends on it).
 readOffersMade :: StateFlow m r => BookingId -> m Int
-readOffersMade bookingId = shared $ fromMaybe 0 <$> Redis.hGet (bookingStateKey bookingId) offersField
+readOffersMade bookingId = fromMaybe 0 <$> readField bookingId "offers"
 
 writeOffersMade :: StateFlow m r => Int -> BookingId -> Int -> m ()
-writeOffersMade ttl bookingId n = shared $ Redis.hSetExp (bookingStateKey bookingId) offersField n ttl
+writeOffersMade ttl bookingId = writeField ttl bookingId "offers"
 
 -- | The plate the rider picked at booking. It stays after the preference is dropped so the leg can say which cab was replaced.
 readPreferred :: StateFlow m r => BookingId -> m (Maybe Text)
-readPreferred bookingId = shared $ Redis.hGet (bookingStateKey bookingId) preferredField
+readPreferred bookingId = readField bookingId "preferred"
 
 writePreferred :: StateFlow m r => Int -> BookingId -> Text -> m ()
-writePreferred ttl bookingId plate = shared $ Redis.hSetExp (bookingStateKey bookingId) preferredField plate ttl
+writePreferred ttl bookingId = writeField ttl bookingId "preferred"
 
 readPreferenceDropped :: StateFlow m r => BookingId -> m Bool
-readPreferenceDropped bookingId = shared $ fromMaybe False <$> Redis.hGet (bookingStateKey bookingId) preferenceDroppedField
+readPreferenceDropped bookingId = fromMaybe False <$> readField bookingId "preferredDropped"
 
 writePreferenceDropped :: StateFlow m r => Int -> BookingId -> m ()
-writePreferenceDropped ttl bookingId = shared $ Redis.hSetExp (bookingStateKey bookingId) preferenceDroppedField True ttl
+writePreferenceDropped ttl bookingId = writeField ttl bookingId "preferredDropped" True
 
 -- | The booking is done with allocation (cancelled or finished): the hash and the fallback-push flag go.
 clearBookingState :: StateFlow m r => BookingId -> m ()
