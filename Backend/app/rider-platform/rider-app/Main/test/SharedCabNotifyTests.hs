@@ -25,7 +25,6 @@ tests =
                 "SHARED_CAB_REASSIGNED",
                 "SHARED_CAB_BOARD_ANY",
                 "SHARED_CAB_ROUTE_CHANGE",
-                "SHARED_CAB_DROP_CONFIRM",
                 "SHARED_CAB_BOOKING_CANCELLED",
                 "SHARED_CAB_FINDING_TIMEOUT"
               ],

@@ -30,8 +30,7 @@ CROSS JOIN (VALUES
     ('SHARED_CAB_ARRIVING', 'Your shared cab is here', 'Cab {#vehicleNumber#} is at {#boardStop#}. Enter the code inside the cab to board.'),
     ('SHARED_CAB_REASSIGNED', 'Finding you another cab', 'Your cab could not take you. We are finding another cab to {#dropStop#}.'),
     ('SHARED_CAB_BOARD_ANY', 'Board any shared cab', 'Board any shared cab to {#dropStop#} at {#boardStop#} and enter the code inside it.'),
-    ('SHARED_CAB_ROUTE_CHANGE', 'Your cab is changing route', 'Cab {#vehicleNumber#} will not go on to {#dropStop#}. Get down at the next common stop.'),
-    ('SHARED_CAB_DROP_CONFIRM', 'Did you get down?', 'Tap "I got down" once you are off the cab.')
+    ('SHARED_CAB_ROUTE_CHANGE', 'Your cab is changing route', 'Cab {#vehicleNumber#} will not go on to {#dropStop#}. Get down at the next common stop.')
 ) AS copy (key, title, body)
 WHERE EXISTS (
     SELECT 1
