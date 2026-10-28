@@ -31,13 +31,10 @@ where
 import API.Types.UI.SharedCab
 import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as T
 import EulerHS.Types (EulerClient, client)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.APISuccess (APISuccess)
-import Kernel.Types.Error (ExternalAPICallError (..))
-import qualified Kernel.Types.Error.BaseError.HTTPError.CallAPIError as CallAPIError
 import Kernel.Utils.Common hiding (Error)
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import qualified Kernel.Utils.Servant.Client as EC
@@ -196,29 +193,14 @@ selectSharedCabRoute apiKey internalUrl req = do
   logInfo $ "CallSharedCabBAP: Selecting route " <> req.routeCode <> " for driverId: " <> req.driverId
   callRider internalUrl "SelectSharedCabRoute" (client (Proxy @SelectRouteAPI) (Just apiKey) req) (Proxy @SelectRouteAPI)
 
--- | No live session arrives as SHARED_CAB_SESSION_NOT_FOUND in the error body (not a bare status), so this decodes the APIError
--- envelope and checks the errorCode; every other error re-throws verbatim. It inlines callApiUnwrappingApiError's two halves
--- because the NOT_FOUND branch needs the decoded error value.
+-- | No live session arrives as SHARED_CAB_SESSION_NOT_FOUND in the error body (not a bare status); every other error re-throws verbatim.
 getSharedCabSession :: BAPFlow m r => Text -> BaseUrl -> Text -> Text -> m (Maybe SharedCabSession)
 getSharedCabSession apiKey internalUrl driverId vehicleNumber = do
   logInfo $ "CallSharedCabBAP: Getting session for driverId: " <> driverId
-  internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  newInternalUrl <-
-    HM.foldrWithKey
-      ( \k v acc ->
-          if T.isInfixOf (showBaseUrl k) (showBaseUrl internalUrl)
-            then parseBaseUrl (T.replace (showBaseUrl k) (showBaseUrl v) (showBaseUrl internalUrl))
-            else acc
-      )
-      (pure internalUrl)
-      internalEndPointHashMap
-  res <- EC.callApiExtractingApiError Nothing newInternalUrl (sessionClient driverId vehicleNumber (Just apiKey)) "GetSharedCabSession" (Proxy @(SessionAPI (Maybe SharedCabSession)))
-  case res of
-    Right mbSession -> pure mbSession
-    Left (CallAPIError.RawError clientError) -> throwError $ ExternalAPICallError (Just "BAP_INTERNAL_API_ERROR") internalUrl clientError
-    Left (CallAPIError.APIError err@(BapProxyResponseError _ code _ _))
-      | code == sessionNotFoundErrorCode -> pure Nothing
-      | otherwise -> throwError err
+  callRider internalUrl "GetSharedCabSession" (sessionClient driverId vehicleNumber (Just apiKey)) (Proxy @(SessionAPI (Maybe SharedCabSession)))
+    `catch` \case
+      BapProxyResponseError _ code _ _ | code == sessionNotFoundErrorCode -> pure Nothing
+      err -> throwError err
 
 sessionNotFoundErrorCode :: Text
 sessionNotFoundErrorCode = "SHARED_CAB_SESSION_NOT_FOUND"
