@@ -48,6 +48,7 @@ import qualified API.Action.UI.LmsModule as LmsModule
 import qualified API.Action.UI.Merchant as Merchant
 import qualified API.Action.UI.MerchantDocument as MerchantDocument
 import qualified API.Action.UI.MeterRide as MeterRide
+import qualified API.Action.UI.MinimumGuarantee as MinimumGuarantee
 import qualified API.Action.UI.OperationHub as OH
 import qualified API.Action.UI.Operator as Operator
 import qualified API.Action.UI.PaymentCustomer as PaymentCustomer
@@ -75,7 +76,6 @@ import qualified API.Action.UI.VehicleDetails as VehicleDetails
 import qualified API.Action.UI.WMB as WMB
 import qualified API.FleetEngineToken as FleetEngineToken
 import qualified API.UI.Aarokya as Aarokya
-import qualified API.UI.LiwipStore as LiwipStore
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.CancellationReason as CancellationReason
@@ -91,6 +91,7 @@ import qualified API.UI.IncentiveJourney as IncentiveJourney
 import qualified API.UI.Issue as Issue
 import qualified API.UI.KioskLocation as KioskLocation
 import qualified API.UI.LeaderBoard as LeaderBoard
+import qualified API.UI.LiwipStore as LiwipStore
 import qualified API.UI.Maps as Maps
 import qualified API.UI.Message as Message
 import qualified API.UI.OnMessage as OnMessage
@@ -208,6 +209,7 @@ type API =
            :<|> Aarokya.API
            :<|> LiwipStore.API
            :<|> FRFSFleetOperator.API
+           :<|> MinimumGuarantee.API
            :<|> FleetEngineToken.API
            :<|> DriverDocument.API
            :<|> DriverAreaPreference.API
@@ -303,6 +305,7 @@ handler =
     :<|> Aarokya.handler
     :<|> LiwipStore.handler
     :<|> FRFSFleetOperator.handler
+    :<|> MinimumGuarantee.handler
     :<|> FleetEngineToken.handler
     :<|> DriverDocument.handler
     :<|> DriverAreaPreference.handler

@@ -33,6 +33,7 @@ import Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MerchantServiceConfig (ServiceName)
 import qualified Domain.Types.Message as DMessage
+import qualified Domain.Types.MgCampaign as DMgC
 import Domain.Types.Overlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as Plan
@@ -114,6 +115,7 @@ data AllocatorJobType
   | CheckPickupZoneArrival
   | TriggerSpecialZoneNotify
   | ScheduledTDSDistribution
+  | MinimumGuaranteeSettlement
   | IffcoTokioInsurance
   | AggregatedCommissionInvoiceCreation
   | SAPSubscriptionPurchaseDispatch
@@ -199,6 +201,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
   restoreAnyJobInfo STriggerSpecialZoneNotify jobData = AnyJobInfo <$> restoreJobInfo STriggerSpecialZoneNotify jobData
   restoreAnyJobInfo SScheduledTDSDistribution jobData = AnyJobInfo <$> restoreJobInfo SScheduledTDSDistribution jobData
+  restoreAnyJobInfo SMinimumGuaranteeSettlement jobData = AnyJobInfo <$> restoreJobInfo SMinimumGuaranteeSettlement jobData
   restoreAnyJobInfo SIffcoTokioInsurance jobData = AnyJobInfo <$> restoreJobInfo SIffcoTokioInsurance jobData
   restoreAnyJobInfo SAggregatedCommissionInvoiceCreation jobData = AnyJobInfo <$> restoreJobInfo SAggregatedCommissionInvoiceCreation jobData
   restoreAnyJobInfo SSAPSubscriptionPurchaseDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPSubscriptionPurchaseDispatch jobData
@@ -833,6 +836,19 @@ data ScheduledTDSDistributionJobData = ScheduledTDSDistributionJobData
 instance JobInfoProcessor 'ScheduledTDSDistribution
 
 type instance JobContent 'ScheduledTDSDistribution = ScheduledTDSDistributionJobData
+
+-- | One self-rescheduling chain per Minimum Guarantee campaign: settles the campaign's days once
+-- their last window end + grace has passed.
+data MinimumGuaranteeSettlementJobData = MinimumGuaranteeSettlementJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    campaignId :: Id DMgC.MgCampaign
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'MinimumGuaranteeSettlement
+
+type instance JobContent 'MinimumGuaranteeSettlement = MinimumGuaranteeSettlementJobData
 
 data IffcoTokioInsuranceJobData = IffcoTokioInsuranceJobData
   { merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,

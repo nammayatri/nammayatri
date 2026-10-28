@@ -48,6 +48,7 @@ import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.IncentiveJourney as SLJourney
+import qualified SharedLogic.MinimumGuarantee.Events as MGEvents
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.Person as QP
@@ -80,6 +81,12 @@ processRideEndedCoinsAndJourney ::
   m ()
 processRideEndedCoinsAndJourney ride booking thresholdConfig = do
   let driverId = ride.driverId
+  -- Minimum Guarantee campaigns count this ride towards the driver's day. First, and isolated, so
+  -- neither a failure here nor the coin/journey branches below can affect the other.
+  mgResult <- withTryCatch "processRideEndedMinimumGuarantee" $ MGEvents.onRideEnded ride
+  case mgResult of
+    Left err -> logError $ "Minimum guarantee ride-ended hook failed for rideId " <> ride.id.getId <> ": " <> show err
+    Right _ -> pure ()
   mbDriver <- QP.findById driverId
   now <- getCurrentTime
   shouldFlagRiderForRepeatCustomerFraud <- computeShouldFlagRiderForRepeatCustomerFraud driverId booking thresholdConfig now ride

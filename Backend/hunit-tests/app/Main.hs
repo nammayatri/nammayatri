@@ -18,6 +18,7 @@ import qualified CsvSanitizationTests
 import qualified Dashboard (dashboardUnitTests)
 import qualified FareRecomputeDecisionTests
 import qualified FileManagementUnitTests
+import qualified MinimumGuaranteeRulesTests
 import qualified RewardsCouponPoolTests
 import qualified RewardsCouponTemplatedTests
 import qualified RewardsEvaluatorTests
@@ -49,6 +50,10 @@ main = do
           [ RewardsEvaluatorTests.tests,
             RewardsCouponTemplatedTests.tests,
             RewardsCouponPoolTests.tests
+          ],
+        testGroup
+          "Minimum Guarantee"
+          [ MinimumGuaranteeRulesTests.tests
           ],
         testGroup
           "End Ride Fare Recompute"

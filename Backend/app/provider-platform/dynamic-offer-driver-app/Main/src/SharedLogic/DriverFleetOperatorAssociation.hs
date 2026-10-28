@@ -47,6 +47,7 @@ import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Association.Change as AC
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.MinimumGuarantee.Events as MGEvents
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
@@ -99,6 +100,9 @@ endDriverAssociations merchantOpCityId transporterConfig driver = do
   driverMobile <- maybe (pure "unknown") decrypt driver.mobileNumber
   existingFDAssociations <- QFDA.findAllByDriverId driver.id True
   unless (null existingFDAssociations) $ do
+    -- Minimum Guarantee campaigns: a campaign set to BLOCK refuses the change while the driver is
+    -- inside the day's windows.
+    MGEvents.checkFleetChangeAllowed driver.id
     forM_ existingFDAssociations $ \existingAssociation -> do
       logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
       QFDA.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId
@@ -115,6 +119,12 @@ endDriverAssociations merchantOpCityId transporterConfig driver = do
 
       fork "Driver fleet unlink notification" $
         SOnboardingComms.notifyOnDriverFleetUnlink merchantOpCityId driver existingAssociation.fleetOwnerId SOnboardingComms.ByFleetOwner
+
+    -- Minimum Guarantee campaigns: apply the campaign's fleet-change policy to the driver's day.
+    mgResult <- withTryCatch "endDriverAssociations:minimumGuarantee" $ MGEvents.onFleetChanged driver.id
+    case mgResult of
+      Left err -> logError $ "Minimum guarantee fleet-change hook failed for driverId " <> driver.id.getId <> ": " <> show err
+      Right _ -> pure ()
 
   existingDOAssociations <- QDOA.findAllByDriverId driver.id True
   unless (null existingDOAssociations) $ do

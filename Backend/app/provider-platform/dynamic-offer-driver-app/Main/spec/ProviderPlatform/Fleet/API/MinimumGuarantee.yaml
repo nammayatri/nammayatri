@@ -1,0 +1,113 @@
+imports:
+  City: Kernel.Types.Beckn.Context
+  Day: Data.Time
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  Person: Dashboard.Common
+  MgEnrollmentStatus: Domain.Types.MgEnrollment
+  MgCampaign: Dashboard.Common
+
+module: MinimumGuarantee
+apiPrefix: fleet
+
+# Minimum Guarantee (MG) campaigns, fleet owner side. A fleet driver is opted in or out for a day
+# by the fleet owner, who is then paid the driver's top-up. Only drivers invited to the campaign
+# can be opted in.
+apis:
+  - GET: # campaigns the fleet's drivers are invited to, with each driver's opt-in status for today and tomorrow
+      name: getMinimumGuaranteeInvitations
+      endpoint: /minimumGuarantee/invitations
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: FleetMgInvitationsRes
+      migrate:
+        capability: fleet.driver.read
+      helperApi:
+        - GET:
+            endpoint: /minimumGuarantee/invitations/{requestorId}
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            query:
+              - fleetOwnerId: Text
+              - limit: Int
+              - offset: Int
+            response:
+              type: FleetMgInvitationsRes
+  - POST: # opt fleet drivers in for a day (today or tomorrow); drivers that cannot be opted in are reported, not fatal
+      name: postMinimumGuaranteeOptIn
+      endpoint: /minimumGuarantee/optIn
+      auth: ApiAuthV2
+      request:
+        type: FleetMgOptReq
+      response:
+        type: FleetMgOptRes
+      migrate:
+        capability: fleet.driver.write
+      helperApi:
+        - POST:
+            endpoint: /minimumGuarantee/optIn/{requestorId}
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            request:
+              type: FleetMgOptReq
+            response:
+              type: FleetMgOptRes
+  - POST: # opt fleet drivers out of a day, until that day's first window starts
+      name: postMinimumGuaranteeOptOut
+      endpoint: /minimumGuarantee/optOut
+      auth: ApiAuthV2
+      request:
+        type: FleetMgOptReq
+      response:
+        type: FleetMgOptRes
+      migrate:
+        capability: fleet.driver.write
+      helperApi:
+        - POST:
+            endpoint: /minimumGuarantee/optOut/{requestorId}
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            request:
+              type: FleetMgOptReq
+            response:
+              type: FleetMgOptRes
+
+types:
+  FleetMgDriverDay:
+    - driverId: Text
+    - date: Day
+    # the day's enrollment status when the driver is opted in
+    - status: Maybe MgEnrollmentStatus
+    - canOptIn: Bool
+  FleetMgInvitation:
+    - campaignId: Id MgCampaign
+    - name: Text
+    - startDate: Day
+    - endDate: Day
+    - guaranteeAmount: HighPrecMoney
+    - currency: Currency
+    - drivers: "[FleetMgDriverDay]"
+  FleetMgInvitationsRes:
+    - invitations: "[FleetMgInvitation]"
+  FleetMgOptReq:
+    - fleetOwnerId: Maybe Text
+    - campaignId: Id MgCampaign
+    - driverIds: "[Text]"
+    - date: Day
+    # opting in: the fleet owner accepts the campaign terms for these drivers
+    - acceptTerms: Bool
+    - derive: "'HideSecrets"
+  FleetMgOptRes:
+    - done: "[Text]"
+    # driver id and why, for each driver that could not be opted in or out
+    - failed: "[FleetMgFailure]"
+  FleetMgFailure:
+    - driverId: Text
+    - reason: Text

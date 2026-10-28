@@ -1,0 +1,23 @@
+CREATE TABLE atlas_driver_offer_bpp.mg_enrollment ();
+
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN beneficiary_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN beneficiary_type text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN campaign_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN driver_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN events text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN ledger_entry_id text ;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN metrics text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN opted_in_at timestamp with time zone NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN opted_in_by character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN payout_percent integer ;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN period_date date NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN settled_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN terms_accepted_at timestamp with time zone NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN top_up_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD PRIMARY KEY ( id);
+ALTER TABLE atlas_driver_offer_bpp.mg_enrollment ADD CONSTRAINT mg_enrollment_unique_idx_campaign_id_driver_id_period_date UNIQUE (campaign_id, driver_id, period_date);
+CREATE INDEX CONCURRENTLY mg_enrollment_idx_campaign_id_period_date_status ON atlas_driver_offer_bpp.mg_enrollment USING btree (campaign_id, period_date, status);

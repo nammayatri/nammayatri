@@ -105,6 +105,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified SharedLogic.MinimumGuarantee.Events as MGEvents
 import qualified Storage.CachedQueries.CancellationConsequenceMatrix as CQCCM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
@@ -248,6 +249,7 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     applyDriverCancellationRateCount ctx.driver
     applyAutoAcceptCancellationBehaviour
     applyAvailableForRidesRevocation
+    applyMinimumGuaranteeCancellation
   case resultE of
     Left err -> logError $ "applyImmediateConsequences failed for rideId " <> ctx.ride.id.getId <> ": " <> show err
     Right _ -> pure ()
@@ -316,6 +318,17 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
         void $ SCR.incrementCancelledCount ctx.ride.driverId windowSize
       when (ctx.source == SBCR.ByUser && countsTowardCount) $
         DP.incrementCancellationCount ctx.ride.merchantOperatingCityId ctx.ride.driverId
+
+    -- Minimum Guarantee campaigns: a cancellation judged to be the driver's fault counts against
+    -- the driver's day. Never lets a failure here reach the steps above or the cancel itself.
+    -- Same test as the driver cancellation count: the fault verdict when the city has fault rules,
+    -- otherwise whether the driver cancelled.
+    applyMinimumGuaranteeCancellation =
+      when (maybe (ctx.source == SBCR.ByDriver) ((== CancellationFault.DriverAtFault) . (.atFault)) ctx.decision.faultVerdict) $ do
+        mgResult <- withTryCatch "applyMinimumGuaranteeCancellation" $ MGEvents.onDriverAtFaultCancellation ctx.ride.driverId ctx.ride.id
+        case mgResult of
+          Left err -> logError $ "Minimum guarantee cancellation hook failed for rideId " <> ctx.ride.id.getId <> ": " <> show err
+          Right _ -> pure ()
 
     applyAutoAcceptCancellationBehaviour =
       when (ctx.booking.isAutoAccepted == Just True) $

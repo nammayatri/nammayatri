@@ -227,6 +227,7 @@ import SharedLogic.Fleet (getFleetOwnerId, getFleetOwnerIds, getFleetOwnersInfoM
 import qualified SharedLogic.FleetDriverSettings as FDS
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.MinimumGuarantee.Events as MGEvents
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
 import qualified SharedLogic.VehicleServiceTier as SVST
 import qualified SharedLogic.WMB as WMB
@@ -1263,6 +1264,9 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
       when (merchant.overwriteAssociation == Just True && isNothing operatorCode) $ throwError (InvalidRequest "operatorCode is required")
       DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
       mbNewOperator <- forM operatorCode $ SA.resolveOperatorByCode merchantOpCityId
+      -- Minimum Guarantee campaigns: a campaign set to BLOCK refuses the removal while the driver
+      -- is inside the day's windows.
+      MGEvents.checkFleetChangeAllowed personId
 
       Redis.withLockRedis (driverAssociationC personId) 10 $ do
         -- Check if there's an active association before ending it
@@ -1272,6 +1276,12 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           FDV.endFleetDriverAssociation entityId personId
           whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
         SOnboardingComms.resetOnboardingAsIfNoFleet transporterConfig personId
+        -- Minimum Guarantee campaigns: apply the campaign's fleet-change policy to the driver's day.
+        when (isJust mbActiveAssociation) $ do
+          mgResult <- withTryCatch "postDriverFleetRemoveDriver:minimumGuarantee" $ MGEvents.onFleetChanged personId
+          case mgResult of
+            Left err -> logError $ "Minimum guarantee fleet-change hook failed for driverId " <> personId.getId <> ": " <> show err
+            Right _ -> pure ()
         -- Only decrement analytics if there was an active association
         when (isJust mbActiveAssociation) $ do
           Analytics.handleDriverAnalyticsAndFlowStatus

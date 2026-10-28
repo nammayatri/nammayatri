@@ -1,0 +1,31 @@
+imports:
+  MgCampaign: Domain.Types.MgCampaign
+  TimeOfDay: Data.Time
+
+# One recurring daily time slot of an MgCampaign, in the city's local time. The same slots apply
+# on every day of the campaign. Windows of a campaign must not overlap (validated on save).
+MgCampaignWindow:
+  tableName: mg_campaign_window
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  fields:
+    id: Id MgCampaignWindow
+    campaignId: Id MgCampaign
+    startTime: TimeOfDay
+    endTime: TimeOfDay
+
+  constraints:
+    id: PrimaryKey
+    campaignId: SecondaryKey
+
+  queries:
+    findAllByCampaignId:
+      kvFunction: findAllWithKV
+      where: campaignId
+
+    # DRAFT campaigns only: the dashboard replaces the whole window set on save
+    deleteByCampaignId:
+      kvFunction: deleteWithKV
+      where: campaignId
+
+  excludedFields: [merchantId, merchantOperatingCityId]

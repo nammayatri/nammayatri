@@ -1,0 +1,124 @@
+imports:
+  MgCampaign: Domain.Types.MgCampaign
+  Person: Domain.Types.Person
+  HighPrecMoney: Kernel.Types.Common
+  MgMetrics: Domain.Types.Extra.MgEnrollment
+
+# One driver's participation in one local day of an MgCampaign. Created when the driver (or, for a
+# fleet driver, the fleet owner) opts in for that day, so there is no start-of-day job. Unique on
+# (campaignId, driverId, periodDate).
+#
+# The windows of the day are the campaign's MgCampaignWindow slots applied to periodDate. "Is the
+# day active / settled yet" is derived from the clock and the campaign (last window end + grace);
+# no end time is stored.
+#
+# `metrics` (MgMetrics, a hand-written payload type: the generator would flatten a plain record field
+# into one column per field) holds every counter the rules need, event-based (cancellations, breaks) and ride-based
+# (rides, distance, earned). A ride is counted at end-ride when its tripStartTime fell inside a
+# window; countedRideIds makes that idempotent. All updates to a row happen under a per-driver lock.
+MgEnrollment:
+  tableName: mg_enrollment
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  types:
+    # UPCOMING also covers "active"/"completed": those follow from the clock. SETTLED and
+    # DISQUALIFIED are terminal once the settlement job has run (DISQUALIFIED may be set earlier by
+    # a limit rule reaching 0%).
+    MgEnrollmentStatus:
+      enum: "UPCOMING, SETTLED, DISQUALIFIED, OPTED_OUT, CANCELLED_BY_ADMIN"
+    MgBeneficiaryType:
+      enum: "DRIVER, FLEET_OWNER"
+    # Constructor names are distinct from MgEnrollmentStatus (DISQUALIFIED, SETTLED, ...) so both
+    # can be imported unqualified.
+    MgEventType:
+      enum: "BREAK_STARTED, BREAK_ENDED, DRIVER_CANCELLED, RIDE_COUNTED, FLEET_CHANGED, DAY_DISQUALIFIED, DAY_CANCELLED_BY_ADMIN, DAY_SETTLED"
+    # One entry of the enrollment's audit log; the log is capped (oldest entries dropped).
+    MgEvent:
+      occurredAt: UTCTime
+      eventType: MgEventType
+      # short human-readable detail, e.g. "ride r_9912"
+      detail: Maybe Text
+      # payout percent after this event, when it changed
+      payoutPercentAfter: Maybe Int
+
+  fields:
+    id: Id MgEnrollment
+    campaignId: Id MgCampaign
+    driverId: Id Person
+    # the local day this row covers
+    periodDate: Day
+    status: MgEnrollmentStatus
+    # who is credited: whoever opted the driver in (the fleet owner for a fleet driver). Re-checked at settlement.
+    beneficiaryType: MgBeneficiaryType
+    beneficiaryId: Text
+    optedInAt: UTCTime
+    # the driver, or the fleet owner who opted a fleet driver in
+    optedInBy: Id Person
+    termsAcceptedAt: UTCTime
+    metrics: MgMetrics
+    # lowest slab percent so far (live for the driver app, final at settlement)
+    payoutPercent: Maybe Int
+    topUpAmount: Maybe HighPrecMoney
+    # short audit log for disputes, capped
+    events: "[MgEvent]"
+    ledgerEntryId: Maybe Text
+    settledAt: Maybe UTCTime
+
+  constraints:
+    id: PrimaryKey
+    # "!" forces the secondary key: campaignId and driverId are read by the hand-written
+    # MgEnrollmentExtra queries (sweeper, JSON-column updates), not only by YAML queries below.
+    campaignId: "!SecondaryKey"
+    driverId: "!SecondaryKey"
+
+  # metrics / events are each stored as ONE JSON text value, see FareAdjustment for why
+  beamType:
+    metrics: Text
+    events: Text
+
+  toTType:
+    metrics: Kernel.Utils.Text.encodeToText metrics|E
+    events: Kernel.Utils.Text.encodeToText events|E
+
+  fromTType:
+    metrics: (fromMaybe Domain.Types.Extra.MgEnrollment.emptyMgMetrics (Kernel.Utils.Text.decodeFromText metrics))|E
+    events: (fromMaybe [] (Kernel.Utils.Text.decodeFromText events))|E
+
+  sqlType:
+    metrics: text
+    events: text
+
+  queries:
+    # opt-in dedupe and the driver app's "today" screen
+    findByCampaignIdDriverIdAndPeriodDate:
+      kvFunction: findOneWithKV
+      where:
+        and: [campaignId, driverId, periodDate]
+
+    findAllByDriverIdAndPeriodDate:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, periodDate]
+
+    # dashboard: enrollments of a campaign day
+    findAllByCampaignIdAndPeriodDate:
+      kvFunction: findAllWithKV
+      where:
+        and: [campaignId, periodDate]
+
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+
+  # sweeper index: due rows of a campaign are (status = UPCOMING, periodDate <= cutoff date)
+  extraIndexes:
+    - columns: [campaignId, driverId, periodDate]
+      unique: true
+    - columns: [campaignId, status, periodDate]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  excludedFields: [merchantId, merchantOperatingCityId]

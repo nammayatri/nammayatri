@@ -1,0 +1,70 @@
+imports:
+  MgCampaign: Domain.Types.MgCampaign
+  HighPrecMoney: Kernel.Types.Common
+
+# One restriction of an MgCampaign: a metric plus slabs mapping the metric's value for the day to
+# a payout percent. The day's payout percent is the lowest percent across all rules.
+#   CANCELLATIONS    - limit: driver-fault cancellations inside a window (event counter)
+#   BREAK_MINUTES    - limit: offline/silent time inside the windows (event counter)
+#   RIDES_COMPLETED  - target: rides that started inside a window and completed
+#   DISTANCE_KM      - target: distance of those rides
+# Limit metrics only grow, so reaching a 0% slab disqualifies the day immediately. Target metrics
+# are judged at settlement.
+MgCampaignRule:
+  tableName: mg_campaign_rule
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  types:
+    MgMetric:
+      enum: "CANCELLATIONS, BREAK_MINUTES, RIDES_COMPLETED, DISTANCE_KM"
+    # A slab starts at fromValue and runs until the next slab's fromValue; the last slab is
+    # open-ended. percent is the share of the shortfall paid, in [0, 100].
+    MgSlab:
+      fromValue: Int
+      percent: Int
+    # A ride counts towards RIDES_COMPLETED / DISTANCE_KM only if it meets every bound that is set.
+    MgRuleParams:
+      minRideDistanceMeters: Maybe Int
+      minRideFare: Maybe HighPrecMoney
+
+  fields:
+    id: Id MgCampaignRule
+    campaignId: Id MgCampaign
+    metric: MgMetric
+    # e.g. minimum distance/fare for a ride to count towards RIDES_COMPLETED
+    params: Maybe MgRuleParams
+    # validated on save: first slab starts at 0, fromValues strictly increase, percent in [0, 100]
+    slabs: "[MgSlab]"
+
+  constraints:
+    id: PrimaryKey
+    campaignId: SecondaryKey
+
+  # params / slabs are each stored as ONE JSON text value, see FareAdjustment for why
+  beamType:
+    params: Maybe Text
+    slabs: Text
+
+  toTType:
+    params: (Kernel.Utils.Text.encodeToText <$> params)|E
+    slabs: Kernel.Utils.Text.encodeToText slabs|E
+
+  fromTType:
+    params: (params >>= Kernel.Utils.Text.decodeFromText)|E
+    slabs: (fromMaybe [] (Kernel.Utils.Text.decodeFromText slabs))|E
+
+  sqlType:
+    params: text
+    slabs: text
+
+  queries:
+    findAllByCampaignId:
+      kvFunction: findAllWithKV
+      where: campaignId
+
+    # DRAFT campaigns only: the dashboard replaces the whole rule set on save
+    deleteByCampaignId:
+      kvFunction: deleteWithKV
+      where: campaignId
+
+  excludedFields: [merchantId, merchantOperatingCityId]

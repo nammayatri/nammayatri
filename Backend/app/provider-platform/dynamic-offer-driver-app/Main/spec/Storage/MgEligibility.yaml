@@ -1,0 +1,59 @@
+imports:
+  MgCampaign: Domain.Types.MgCampaign
+  Person: Domain.Types.Person
+
+# Invitation of a driver to an MgCampaign. Only invited drivers can be opted in, and only for
+# days inside the campaign dates. Opt-in itself is daily and lives on MgEnrollment.
+# Unique on (campaignId, driverId).
+MgEligibility:
+  tableName: mg_eligibility
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  types:
+    MgEligibilitySource:
+      enum: "DASHBOARD_UPLOAD, RULE"
+
+  fields:
+    id: Id MgEligibility
+    campaignId: Id MgCampaign
+    driverId: Id Person
+    source: MgEligibilitySource
+    # why the driver was picked, e.g. "52 rides/week, 4.8 rating, 93% acceptance, last 14 days"
+    reason: Maybe Text
+    invitedAt: UTCTime
+    notifiedAt: Maybe UTCTime
+
+  constraints:
+    id: PrimaryKey
+    campaignId: SecondaryKey
+    # "!" forces the secondary key: driverId is read by the hand-written paged queries in
+    # MgEligibilityExtra, not by a YAML query
+    driverId: "!SecondaryKey"
+
+  queries:
+    findByCampaignIdAndDriverId:
+      kvFunction: findOneWithKV
+      where:
+        and: [campaignId, driverId]
+
+    # dashboard: invite list of a campaign
+    findAllByCampaignId:
+      kvFunction: findAllWithKV
+      where: campaignId
+
+    updateNotifiedAtById:
+      kvFunction: updateOneWithKV
+      params: [notifiedAt]
+      where: id
+
+  extraIndexes:
+    - columns: [campaignId, driverId]
+      unique: true
+    # the driver's invitations, newest first, paged
+    - columns: [driverId, invitedAt]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  excludedFields: [merchantId, merchantOperatingCityId]

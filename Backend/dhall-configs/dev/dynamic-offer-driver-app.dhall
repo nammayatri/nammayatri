@@ -340,6 +340,7 @@ let AllocatorJobType =
       | PgSettlementIngestion
       | CheckPickupZoneArrival
       | ScheduledTDSDistribution
+      | MinimumGuaranteeSettlement
       | IffcoTokioInsurance
       | AggregatedCommissionInvoiceCreation
       | TriggerSpecialZoneNotify
@@ -439,6 +440,9 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.PgSettlementIngestion, mapValue = True }
       , { mapKey = AllocatorJobType.CheckPickupZoneArrival, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledTDSDistribution, mapValue = True }
+      , { mapKey = AllocatorJobType.MinimumGuaranteeSettlement
+        , mapValue = True
+        }
       , { mapKey = AllocatorJobType.IffcoTokioInsurance, mapValue = True }
       , { mapKey = AllocatorJobType.AggregatedCommissionInvoiceCreation
         , mapValue = True

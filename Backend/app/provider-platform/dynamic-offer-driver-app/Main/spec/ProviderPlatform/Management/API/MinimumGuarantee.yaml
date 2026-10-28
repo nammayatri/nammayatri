@@ -1,0 +1,190 @@
+
+imports:
+  MgFrequency: Domain.Types.MgCampaign
+  MgCampaignStatus: Domain.Types.MgCampaign
+  MgFleetChangePolicy: Domain.Types.MgCampaign
+  MgMetric: Domain.Types.MgCampaignRule
+  MgEnrollmentStatus: Domain.Types.MgEnrollment
+  MgBeneficiaryType: Domain.Types.MgEnrollment
+  MgSlab: Domain.Types.MgCampaignRule
+  MgRuleParams: Domain.Types.MgCampaignRule
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  Day: Data.Time
+  TimeOfDay: Data.Time
+  VehicleCategory: Dashboard.Common
+  MgCampaign: Dashboard.Common
+
+module: MinimumGuarantee
+
+# Minimum Guarantee (MG) campaigns, admin side. A campaign runs once per day between startDate and
+# endDate; opted-in drivers are guaranteed `guaranteeAmount` across the day's windows and the
+# shortfall is credited to their wallet (or the fleet owner's), scaled by the lowest slab percent
+# across the campaign's rules. Terms (guarantee, windows, rules, switches) are editable in DRAFT
+# only; once PUBLISHED only the end date, the budget and the status may change.
+apis:
+  - GET: # campaigns of the city, newest first, paged
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: MgCampaignListRes
+      migrate:
+        capability: system-config.coins.read
+  - POST: # create a DRAFT campaign with its windows and rules; createdBy is the authenticated dashboard user
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: MgCampaignReq
+      response:
+        type: MgCampaignRes
+      migrate:
+        capability: system-config.coins.write
+      helperApi:
+        - POST:
+            endpoint: /create/{requestorId}
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            request:
+              type: MgCampaignReq
+            response:
+              type: MgCampaignRes
+  - POST: # replace all terms of a DRAFT campaign
+      endpoint: /{campaignId}/update
+      auth: ApiAuthV2
+      params:
+        campaignId: Id MgCampaign
+      request:
+        type: MgCampaignReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.coins.write
+  - POST: # invite drivers; already-invited drivers are skipped. Invited drivers are notified.
+      endpoint: /{campaignId}/invite
+      auth: ApiAuthV2
+      params:
+        campaignId: Id MgCampaign
+      request:
+        type: MgInviteReq
+      response:
+        type: MgInviteRes
+      migrate:
+        capability: system-config.coins.write
+  - POST: # DRAFT -> PUBLISHED, PUBLISHED <-> PAUSED, DRAFT|PUBLISHED|PAUSED -> CANCELLED
+      endpoint: /{campaignId}/status
+      auth: ApiAuthV2
+      params:
+        campaignId: Id MgCampaign
+      request:
+        type: MgCampaignStatusReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.coins.write
+  - POST: # the only terms that change after publishing
+      endpoint: /{campaignId}/extend
+      auth: ApiAuthV2
+      params:
+        campaignId: Id MgCampaign
+      request:
+        type: MgCampaignExtendReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.coins.write
+  - GET: # every driver's enrollment of one day
+      endpoint: /{campaignId}/enrollments
+      auth: ApiAuthV2
+      params:
+        campaignId: Id MgCampaign
+      query:
+        - date: Day
+      response:
+        type: MgEnrollmentListRes
+      migrate:
+        capability: system-config.coins.read
+
+types:
+  MgWindow:
+    - startTime: TimeOfDay
+    - endTime: TimeOfDay
+  MgRule:
+    - metric: MgMetric
+    - params: Maybe MgRuleParams
+    - slabs: "[MgSlab]"
+  MgCampaignInfo:
+    - campaignId: Id MgCampaign
+    - name: Text
+    - description: Maybe Text
+    - vehicleCategories: "[VehicleCategory]"
+    - startDate: Day
+    - endDate: Day
+    - frequency: MgFrequency
+    - guaranteeAmount: HighPrecMoney
+    - currency: Currency
+    - forceAssign: Bool
+    - optInCutoffMinutes: Int
+    - settlementGraceMinutes: Int
+    - onFleetChange: MgFleetChangePolicy
+    - maxBudget: Maybe HighPrecMoney
+    - status: MgCampaignStatus
+    - createdBy: Text
+    - createdAt: UTCTime
+    - windows: "[MgWindow]"
+    - rules: "[MgRule]"
+  MgCampaignListRes:
+    - campaigns: "[MgCampaignInfo]"
+  MgCampaignReq:
+    - name: Text
+    - description: Maybe Text
+    - vehicleCategories: "[VehicleCategory]"
+    - startDate: Day
+    - endDate: Day
+    - guaranteeAmount: HighPrecMoney
+    - currency: Currency
+    - forceAssign: Bool
+    - optInCutoffMinutes: Int
+    - settlementGraceMinutes: Int
+    - onFleetChange: MgFleetChangePolicy
+    - maxBudget: Maybe HighPrecMoney
+    - windows: "[MgWindow]"
+    - rules: "[MgRule]"
+    - derive: "'HideSecrets"
+  MgCampaignRes:
+    - campaignId: Id MgCampaign
+  MgInvitee:
+    - driverId: Text
+    - reason: Maybe Text
+  MgInviteReq:
+    - invitees: "[MgInvitee]"
+    - derive: "'HideSecrets"
+  MgInviteRes:
+    - invited: Int
+    - skipped: Int
+  MgCampaignStatusReq:
+    - status: MgCampaignStatus
+    - derive: "'HideSecrets"
+  MgCampaignExtendReq:
+    - endDate: Day
+    - maxBudget: Maybe HighPrecMoney
+    - derive: "'HideSecrets"
+  MgEnrollmentItem:
+    - driverId: Text
+    - periodDate: Day
+    - status: MgEnrollmentStatus
+    - beneficiaryType: MgBeneficiaryType
+    - beneficiaryId: Text
+    - earned: HighPrecMoney
+    - rides: Int
+    - distanceKm: Int
+    - breakMinutes: Int
+    - cancellations: Int
+    - payoutPercent: Maybe Int
+    - topUpAmount: Maybe HighPrecMoney
+    - ledgerEntryId: Maybe Text
+  MgEnrollmentListRes:
+    - enrollments: "[MgEnrollmentItem]"
