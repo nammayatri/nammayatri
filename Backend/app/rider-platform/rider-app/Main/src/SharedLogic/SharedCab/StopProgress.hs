@@ -2,6 +2,8 @@
 -- drop auto-end and off-route pause. Decisions live in `StopProgress.Rules`.
 module SharedLogic.SharedCab.StopProgress
   ( runStopProgress,
+    bookingsByPlate,
+    groupByKey,
   )
 where
 
@@ -15,6 +17,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -25,7 +28,7 @@ import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), Allocatio
 import SharedLogic.SharedCab.Booking (boardedTouchDue, readRiderFix, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.Config as Config
-import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, offRouteKey)
+import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, offRouteKey, sessionKey)
 import SharedLogic.SharedCab.Lts (readRoutePositions)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import qualified SharedLogic.SharedCab.Notify as Notify
@@ -63,8 +66,10 @@ runStopProgress ::
 runStopProgress cityId live positionsByRoute = do
   cfg <- Config.getTunables cityId
   trips <- QVT.findAllLiveByMerchantOperatingCityId cityId
-  sessions <- filter ((/= ENDED) . (.status)) . catMaybes <$> mapM (Session.readSession . (.vehicleNumber)) trips
+  -- one pipelined MGET (grouped by slot) for every live cab's session
+  sessions <- filter ((/= ENDED) . (.status)) <$> shared (Redis.mGetCluster (map (sessionKey . (.vehicleNumber)) trips))
   now <- getCurrentTime
+  let byPlate = bookingsByPlate live
   forM_ (M.toList $ M.fromListWith (<>) [(s.routeCode, [s]) | s <- sessions]) $ \(routeCode, cabs) -> do
     positions <- case lookup routeCode positionsByRoute of
       Just read' -> pure read'
@@ -75,11 +80,22 @@ runStopProgress cityId live positionsByRoute = do
     eachIsolated
       (withTryCatch "sharedCabStopProgressCab")
       (\s e -> logError $ "shared-cab stop progress failed for cab " <> s.vehicleNumber <> ": " <> show e)
-      (stepCab cfg now live positions route)
+      (\s -> stepCab cfg now (M.findWithDefault [] s.vehicleNumber byPlate) positions route s)
       cabs
 
-routePolyline :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> m [LatLong]
-routePolyline cityId routeCode = maybe [] KEPP.decode . (>>= (.polyline)) <$> QRoutePolylines.getByRouteIdAndCity routeCode cityId
+-- | Kept in memory for 5 min, a missing row included: no shared-cab route has one today, and a miss was a DB read every tick.
+routePolyline :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Metrics.CoreMetrics m) => Id DMOC.MerchantOperatingCity -> Text -> m [LatLong]
+routePolyline cityId routeCode =
+  maybe [] KEPP.decode . (>>= (.polyline))
+    <$> IM.withInMemCache ["SharedCabRoutePolyline", cityId.getId, routeCode] 300 (QRoutePolylines.getByRouteIdAndCity routeCode cityId)
+
+-- | The tick's live bookings by their cab, built once per tick instead of a scan of all of them per cab.
+bookingsByPlate :: [LiveBooking] -> M.Map Text [LiveBooking]
+bookingsByPlate = groupByKey (.booking.vehicleNumber)
+
+-- | Items by key, in their order; an item without a key is left out.
+groupByKey :: Ord k => (a -> Maybe k) -> [a] -> M.Map k [a]
+groupByKey keyOf xs = M.fromListWith (flip (<>)) [(k, [x]) | x <- xs, Just k <- [keyOf x]]
 
 stepCab ::
   StopProgressFlow m r c =>
@@ -90,12 +106,11 @@ stepCab ::
   [LatLong] ->
   Session ->
   m ()
-stepCab cfg now live positions route s = do
+stepCab cfg now bookings positions route s = do
   let plate = s.vehicleNumber
       mbInfo = (.vehicleInfo) <$> findByPlate (.vehicleNumber) plate positions
       mbCab = cabFix <$> mbInfo
       freshCab = mfilter (const $ any (isFreshPosition now cfg.ltsMaxAgeSec) mbInfo) mbCab
-      bookings = [lb | lb <- live, lb.booking.vehicleNumber == Just plate]
       awaiting = [lb.booking | lb <- bookings, DFRFSTicket.ACTIVE `elem` lb.ticketStatuses, DFRFSTicket.INPROGRESS `notElem` lb.ticketStatuses]
       onBoard = [lb.booking | lb <- bookings, DFRFSTicket.INPROGRESS `elem` lb.ticketStatuses]
   -- an offered booking is not the rider's yet: the cab passing its stop is nobody's miss
