@@ -340,7 +340,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     --------------------TO DO ----------------------- Dependency on other people changes
     -----------1. Add a check for forward dispatch ride -----------------
     -----------2. Add a check for last location timestamp of driver ----------------- LTS dependency
-    hasAdvancedRide <- maybe (pure False) (\r -> QDI.findById (cast r.driverId) <&> maybe False (.hasAdvanceBooking)) mbRide
+    let isEditingAdvanceRide r = r.status == DRide.NEW && r.isAdvanceBooking
+    hasAdvancedRide <- maybe (pure False) (\r -> if isEditingAdvanceRide r then pure False else QDI.findById (cast r.driverId) <&> maybe False (.hasAdvanceBooking)) mbRide
     if hasAdvancedRide
       then sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Driver has an upcoming ride near your drop location. "
       else do
@@ -552,9 +553,11 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                   then do
                     newEstimatedDistance <- bookingUpdateReq.estimatedDistance & fromMaybeM (InternalError $ "No estimated distance found for bookingUpdateReq with Id :" <> bookingUpdateReq.id.getId)
                     oldEstimatedDistance <- bookingUpdateReq.oldEstimatedDistance & fromMaybeM (InternalError $ "No estimated distance found for booking with Id :" <> booking.id.getId)
+                    hasAdvanceBooking <- QDI.findById person.id <&> maybe False (.hasAdvanceBooking)
                     let entityData =
                           Notify.UpdateLocationNotificationReq
                             { rideId = ride.id,
+                              hasAdvanceBooking,
                               origin = Nothing,
                               destination = Just dropLocation,
                               stops = Nothing,
@@ -568,13 +571,14 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                               validTill = bookingUpdateReq.validTill
                             }
                     overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory booking.merchantOperatingCityId "UPDATE_LOC_FCM" (fromMaybe ENGLISH person.language) (Just udf1) Nothing Nothing >>= fromMaybeM (InternalError "Overlay not found for UPDATE_LOC_FCM")
-                    let locationLat = if ride.status == DRide.INPROGRESS then dropLocation.lat else ride.fromLocation.lat
-                        locationLon = if ride.status == DRide.INPROGRESS then dropLocation.lon else ride.fromLocation.lon
-                        actions2 = map (mkActions2 bookingUpdateReq.id.getId locationLat locationLon) overlay.actions2
+                    let isRideInProgress = ride.status == DRide.INPROGRESS
+                        overlayActions2 = if isRideInProgress then overlay.actions2 else map withoutNavigate overlay.actions2
+                        actions2 = map (mkActions2 bookingUpdateReq.id.getId dropLocation.lat dropLocation.lon) overlayActions2
                         secondaryActions2 = fmap (map (mkSecondaryActions2 bookingUpdateReq.id.getId)) overlay.secondaryActions2
-                        overlay' = overlay{actions2, secondaryActions2}
+                        okButtonText = if isRideInProgress then overlay.okButtonText else Just "Accept"
+                        overlay' = overlay{actions2, secondaryActions2, okButtonText}
                     Notify.sendUpdateLocOverlay merchantOperatingCity.id person (Notify.mkOverlayReq overlay') entityData
-                  else void $ EditBooking.postEditResult (Just person.id, merchantOperatingCity.merchantId, merchantOperatingCity.id) bookingUpdateReq.id (EditBooking.EditBookingRespondAPIReq {action = EditBooking.ACCEPT})
+                  else void $ EditBooking.postEditResult (Just person.id, merchantOperatingCity.merchantId, merchantOperatingCity.id) bookingUpdateReq.id (EditBooking.EditBookingRespondAPIReq {action = EditBooking.ACCEPT, isTimeout = Nothing})
               _ -> EditBooking.postEditResultNoRide booking bookingUpdateReq dropLocation
           _ -> throwError (InvalidRequest "Invalid status for edit location request")
   where
@@ -633,6 +637,16 @@ mkActions2 bookingUpdateReqId lat long action = do
         _ -> action.primaryAction
   let dependentActions' = map (mkActions2 bookingUpdateReqId lat long) action.dependentActions
   FCM.FCMActions {primaryAction = primaryAction', dependentActions = dependentActions'}
+
+-- | Drops NAVIGATE from an overlay action's dependents, so accepting a drop edit before the trip starts does not open navigation.
+withoutNavigate :: FCM.FCMActions -> FCM.FCMActions
+withoutNavigate action = do
+  let dependentActions' = map withoutNavigate $ filter (not . isNavigate . (.primaryAction)) action.dependentActions
+  FCM.FCMActions {primaryAction = action.primaryAction, dependentActions = dependentActions'}
+  where
+    isNavigate = \case
+      FCM.NAVIGATE _ -> True
+      _ -> False
 
 mkSecondaryActions2 :: Text -> FCM.FCMActions -> FCM.FCMActions
 mkSecondaryActions2 bookingUpdateReqId action = do
