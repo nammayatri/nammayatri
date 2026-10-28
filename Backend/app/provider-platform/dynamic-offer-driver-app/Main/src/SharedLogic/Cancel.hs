@@ -187,8 +187,16 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
         -- as the reallocation instead of starting a duplicate.
         Just betterDriverSearchTry -> do
           QST.promoteBetterDriverSearchToReallocation betterDriverSearchTry.id
+          notifyBapOfPromotedReallocation transporterConfig driverQuote
           return True
         Nothing -> performDynamicOfferReallocation' transporterConfig driverQuote searchReq searchTry
+
+    notifyBapOfPromotedReallocation transporterConfig driverQuote =
+      when (isValueAddNP && transporterConfig.enableBppReallocation /= Just True) $ do
+        updateResult <- withTryCatch "sendEstimateRepetitionUpdateToBAP:promoteBetterDriverSearch" $ BP.sendEstimateRepetitionUpdateToBAP booking ride driverQuote.estimateId bookingCReason.source driver vehicle
+        case updateResult of
+          Left err -> logError $ "Reallocation update to BAP failed after promoting better-driver search for bookingId " <> booking.id.getId <> ": " <> show err
+          Right _ -> fork "FleetEngine: cancel old trip on promoted reallocation" $ FleetEngine.notifyTripCancelled booking.merchantOperatingCityId ride.id
 
     performDynamicOfferReallocation' transporterConfig driverQuote searchReq searchTry = do
       let searchBlacklistTtl = fromMaybe 3600 transporterConfig.driverSearchBlacklistDurationSeconds
