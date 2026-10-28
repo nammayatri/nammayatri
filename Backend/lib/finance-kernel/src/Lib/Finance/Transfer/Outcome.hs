@@ -62,12 +62,18 @@ applyTransferOutcome runFinance refs ctx transferId mbRaw outcome =
         DT.INBOUND -> case outcome of
           OutcomeSucceeded -> pure $ Left $ TransferError INBOUND_REQUIRES_RECIPE "use Lib.Finance.Transfer.Inbound.applyInboundTransferOutcome"
           _ -> bumpNonLedgerStatus t mbRaw outcome
-        DT.OUTBOUND -> withAccountBalanceLock t.accountId 10 $ case outcome of
-          OutcomeSucceeded -> settleOutboundSuccess runFinance refs ctx t mbRaw
-          OutcomeFailed reason -> settleOutboundFailure runFinance refs ctx t mbRaw reason
-          OutcomeReversed reason -> settleOutboundReversed refs ctx t mbRaw reason
-          OutcomePending -> bumpNonLedgerStatus t mbRaw outcome
-          OutcomeNeedsReview _ -> bumpNonLedgerStatus t mbRaw outcome
+        -- Re-read under the lock: a webhook and a manual status fetch can race, and the
+        -- row read above may already be settled by the other one.
+        DT.OUTBOUND ->
+          withAccountBalanceLock t.accountId 10 $
+            QT.findById transferId >>= \case
+              Nothing -> pure $ Left $ TransferError TRANSFER_NOT_FOUND transferId.getId
+              Just fresh -> case outcome of
+                OutcomeSucceeded -> settleOutboundSuccess runFinance refs ctx fresh mbRaw
+                OutcomeFailed reason -> settleOutboundFailure runFinance refs ctx fresh mbRaw reason
+                OutcomeReversed reason -> settleOutboundReversed refs ctx fresh mbRaw reason
+                OutcomePending -> bumpNonLedgerStatus fresh mbRaw outcome
+                OutcomeNeedsReview _ -> bumpNonLedgerStatus fresh mbRaw outcome
 
 settleOutboundSuccess ::
   (BeamFlow.BeamFlow m r, HasActorInfo m r) =>

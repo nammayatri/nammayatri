@@ -8,11 +8,7 @@
   payout status vocabulary is interpreted for wallet money.
 -}
 module SharedLogic.Finance.Rails
-  ( juspayPayoutRailKey,
-    stripePayoutRailKey,
-    hdfcBulkRailKey,
-    juspayPgRailKey,
-    railKeyForFlow,
+  ( railKeyForFlow,
     classifyPayoutOrderStatus,
     classifyPaymentTransactionStatus,
     mkWalletPayoutRail,
@@ -46,6 +42,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Lib.Payment.Payout.Request as PayoutRequest
+import Lib.Payment.Payout.StatusCheck (isPayoutOrderFailed)
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import SharedLogic.Payment (applyPseudoClientId)
@@ -54,17 +51,12 @@ import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Payment as TPayment
 
-juspayPayoutRailKey, stripePayoutRailKey, hdfcBulkRailKey, juspayPgRailKey :: DT.RailKey
-juspayPayoutRailKey = DT.JUSPAY_PAYOUT
-stripePayoutRailKey = DT.STRIPE_PAYOUT
-hdfcBulkRailKey = DT.HDFC_BULK
-juspayPgRailKey = DT.JUSPAY_PG
-
+-- | The rail keys are the kernel's own enum ('DT.RailKey'); the domain only picks one.
 railKeyForFlow :: IPayout.PayoutServiceFlow -> DT.RailKey
 railKeyForFlow = \case
-  IPayout.JuspayFlow -> juspayPayoutRailKey
-  IPayout.StripeFlow -> stripePayoutRailKey
-  IPayout.BulkFlow -> hdfcBulkRailKey
+  IPayout.JuspayFlow -> DT.JUSPAY_PAYOUT
+  IPayout.StripeFlow -> DT.STRIPE_PAYOUT
+  IPayout.BulkFlow -> DT.HDFC_BULK
 
 -- | THE Juspay payout status mapping. Total: an unparseable status is nobody's guess,
 --   so it goes to review instead of being treated as pending forever.
@@ -81,7 +73,7 @@ classifyPaymentTransactionStatus = RailStatus.classifyJuspayTransactionStatus
 -- | The wallet payout rail for one specific PayoutRequest: the submit closure executes
 --   that request through lib/payment exactly as before (PayoutOrder row, PR status
 --   history), so dashboards keep working — those statuses are now derived, not
---   authoritative. The kernel decides ordering from 'holdOrdering'.
+--   authoritative. The kernel submits first and holds after, for every rail.
 mkWalletPayoutRail ::
   ( EncFlow m r,
     PaymentBeamFlow.BeamFlow m r,
@@ -99,14 +91,20 @@ mkWalletPayoutRail ::
 mkWalletPayoutRail payoutServiceFlow payoutRequest mbTransferAmount currency payoutCall afterOrderCreated onConfirmedRejection =
   Rail.TransferRail
     { railKey = railKeyForFlow payoutServiceFlow,
-      holdOrdering = case payoutServiceFlow of
-        IPayout.BulkFlow -> Rail.HoldThenSubmit
-        _ -> Rail.SubmitThenHold,
       submit = \_submission -> do
         outcome <- PayoutRequest.executePayoutRequestWithOutcome mbTransferAmount currency payoutServiceFlow payoutRequest payoutCall afterOrderCreated
         case outcome of
-          PayoutRequest.Executed order ->
-            pure Rail.RailAccepted {railOrderId = order.orderId, railStatus = show order.status}
+          -- Bulk has no per-order partner call: the order is only written locally and goes out
+          -- in the batch file, so it can still be dropped if the hold then fails.
+          PayoutRequest.Executed order
+            | payoutServiceFlow == IPayout.BulkFlow ->
+              pure Rail.RailQueued {railOrderId = order.orderId, railStatus = show order.status}
+            -- Stripe's interface turns any error after the platform transfer into a FAILURE with no payout
+            -- id. The transfer may have moved money, so it goes to review, not in flight with a failed status.
+            | payoutServiceFlow == IPayout.StripeFlow && isNothing order.idAssignedByServiceProvider && isPayoutOrderFailed order.status ->
+              pure (Rail.RailAmbiguous ("Stripe payout call failed after the platform transfer: " <> show order.status))
+            | otherwise ->
+              pure Rail.RailAccepted {railOrderId = order.orderId, railStatus = show order.status}
           PayoutRequest.ConfirmedFailure msg -> do
             onConfirmedRejection msg
             pure (Rail.RailRejected msg)
@@ -130,7 +128,6 @@ settlementRailByKey :: (Applicative m) => DT.RailKey -> Rail.TransferRail m
 settlementRailByKey key =
   Rail.TransferRail
     { railKey = key,
-      holdOrdering = Rail.SubmitThenHold,
       submit = \_ -> pure (Rail.RailAmbiguous "settlement-time rail cannot submit"),
       pollStatus = \_ -> pure Nothing,
       classifyStatus = classifyPayoutOrderStatus,
@@ -160,15 +157,22 @@ mkJuspayPgInboundRail ::
   Rail.TransferRail m
 mkJuspayPgInboundRail driverId merchantId mocId onOrderResp =
   Rail.TransferRail
-    { railKey = juspayPgRailKey,
-      holdOrdering = Rail.SubmitThenHold,
+    { railKey = DT.JUSPAY_PG,
       submit = \_ -> pure (Rail.RailDeferred "COLLECTION_RAIL"),
       pollStatus = \_ -> pure Nothing,
       classifyStatus = \_ -> Rail.OutcomePending,
       collectPayload = Just $ \req -> do
-        (resp, orderId) <- createTopupOrder (driverId, merchantId, mocId) req.submission.netAmount (Id <$> req.reuseRailOrderId)
+        -- one live topup order per wallet: re-serve the open one of the same amount, else create a new
+        -- order, which replaces every other open one
+        let mbReuse = listToMaybe [t | t <- req.openIntents, t.amount == req.submission.netAmount]
+        (resp, orderId) <- createTopupOrder (driverId, merchantId, mocId) req.submission.netAmount (Id . (.referenceId) <$> mbReuse)
         onOrderResp resp
-        pure Rail.RailCollectResult {railOrderId = orderId.getId, payload = A.toJSON resp}
+        pure
+          Rail.RailCollectResult
+            { railOrderId = orderId.getId,
+              payload = A.toJSON resp,
+              replacesOrderIds = [t.referenceId | t <- req.openIntents, t.referenceId /= orderId.getId]
+            }
     }
 
 -- | PSP-speak only, deliberately NOT exported: the one place that knows how to create

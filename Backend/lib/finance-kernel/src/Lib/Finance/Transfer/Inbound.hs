@@ -25,7 +25,6 @@ where
 import qualified Data.Aeson as Aeson
 import Data.List (nub)
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import qualified Lib.Finance.AccountConfig as AccountConfig
@@ -77,12 +76,11 @@ data InboundSpec = InboundSpec
   }
   deriving (Generic)
 
--- | The WHOLE recharge process, kernel-owned: gate on the class's transferInEnabled,
---   reuse the open intent when the amount matches (the rail re-fetches that order's
---   payload), supersede stale open intents, otherwise have the rail create a fresh
---   payment order — its id becomes (referenceId, railOrderId), which is what the
---   webhook later correlates on. The domain contributes only the rail closure and
---   which account to credit; it never creates payment orders or tracks intent status.
+-- | The recharge process the kernel runs for every domain: gate on the class's transferInEnabled, hand the
+--   rail closure the account's open intents, and track whatever order the closure serves (a row keyed on its
+--   id; the open intents it reports as replaced are superseded). Whether to re-serve an open order or create a
+--   new one, and what the domain's order looks like, is the closure's: the domain contributes only that
+--   closure and which account to credit.
 initiateTransferIn ::
   (BeamFlow.BeamFlow m r) =>
   TransferRail m ->
@@ -103,17 +101,7 @@ initiateTransferIn rail spec
             else do
               transferId <- Id <$> generateGUID
               openIntents <- QTE.findOpenInboundByAccountAndRefType spec.accountId spec.referenceType
-              let mbReuse = listToMaybe [t | t <- openIntents, t.amount == spec.amount]
-              -- Exactly one live intent per (account, referenceType): anything open that
-              -- is not being reused is superseded (the old EXPIRED semantics).
-              forM_ [t | t <- openIntents, Just t.id /= ((.id) <$> mbReuse)] $ \old ->
-                QTE.updateStatusById DT.FAILED Nothing (Just "SUPERSEDED_BY_NEW_INTENT") old.id
-              result <-
-                collect
-                  RailCollectRequest
-                    { submission = toSubmission account (maybe transferId (.id) mbReuse) ((.referenceId) <$> mbReuse),
-                      reuseRailOrderId = (.referenceId) <$> mbReuse
-                    }
+              result <- collect RailCollectRequest {submission = toSubmission account transferId, openIntents}
               -- A crash between collect and the insert below leaves an orphan payment
               -- order; the webhook backfill covers a payment landing on it, and the
               -- next initiate simply mints a fresh order.
@@ -149,27 +137,19 @@ initiateTransferIn rail spec
                             }
                     QT.create row
                     pure $ Right (row, result.payload)
-              case mbReuse of
-                -- Genuine reuse: the rail re-fetched the SAME order.
-                Just existing
-                  | existing.referenceId == result.railOrderId ->
-                    pure $ Right (existing, result.payload)
-                -- The rail minted a NEW order despite the reuse request (the reused
-                -- order's auth token had expired and the rail retried fresh): the old
-                -- intent is dead — supersede it and key a fresh row on the new order,
-                -- or the returned orderId would not match its own payload and the
-                -- zombie intent would be reused forever.
-                Just existing -> do
-                  QTE.updateStatusById DT.FAILED Nothing (Just "SUPERSEDED_BY_NEW_INTENT") existing.id
-                  mintRow
+              -- The order the rail served is the live intent: keep its row, or key a fresh one on it. The open
+              -- intents it reports as replaced are superseded only now, so a failed collect leaves them alone.
+              forM_ [t | t <- openIntents, t.referenceId `elem` result.replacesOrderIds, t.referenceId /= result.railOrderId] $ \old ->
+                QTE.updateStatusById DT.FAILED Nothing (Just "SUPERSEDED_BY_NEW_INTENT") old.id
+              QT.findByReference spec.referenceType result.railOrderId >>= \case
+                Just existing -> pure $ Right (existing, result.payload)
                 Nothing -> mintRow
   where
-    -- For a fresh intent referenceId is unknown until the rail mints the order; it is
-    -- only populated on reuse. Collect closures must key on amount + reuseRailOrderId
-    -- and carry their own person context — the submission describes the credited
-    -- account (counterparty fallback: the merchant-side SELLER, for the rare
+    -- The order id is unknown until the rail serves one, so the submission carries none; closures key on
+    -- the amount and the open intents they are handed, and carry their own person context. The submission
+    -- describes the credited account (counterparty fallback: the merchant-side SELLER, for the rare
     -- counterparty-less account).
-    toSubmission account transferId mbRefId =
+    toSubmission account transferId =
       RailSubmission
         { transferId = transferId,
           netAmount = spec.amount,
@@ -180,7 +160,7 @@ initiateTransferIn rail spec
           counterpartyId = fromMaybe account.merchantId account.counterpartyId,
           accountId = spec.accountId,
           referenceType = spec.referenceType,
-          referenceId = fromMaybe "" mbRefId,
+          referenceId = "",
           metadata = spec.metadata,
           merchantId = account.merchantId,
           merchantOperatingCityId = account.merchantOperatingCityId
@@ -189,7 +169,7 @@ initiateTransferIn rail spec
 -- | Apply what the rail said about an inbound transfer. On OutcomeSucceeded the recipe
 --   legs (+ invoice) are posted exactly once; everything else is a status move.
 applyInboundTransferOutcome ::
-  (BeamFlow.BeamFlow m r, Redis.HedisFlow m r, HasActorInfo m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   RunFinance m ->
   FinanceCtx ->
   CreditRecipe ->
