@@ -34,7 +34,6 @@ import qualified API.Internal.NotificationWebhook as NotificationWebhook
 import qualified API.Internal.PersonCreate as PersonCreate
 import qualified API.Internal.PickupInstruction as PickupInstruction
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
-import qualified API.Internal.ProdLoopStatus as ProdLoopStatus
 import qualified API.Internal.QuoteRespond as QuoteRespond
 import qualified API.Internal.RadarXyneWebhook as RadarXyneWebhook
 import qualified API.Internal.RefundLedger as RefundLedger
@@ -51,7 +50,6 @@ import qualified API.Internal.SpecialLocationUpsert as SpecialLocationUpsert
 import qualified API.Internal.StopDetection as StopDetection
 import qualified API.Internal.TollChargeApproval as TollChargeApproval
 import qualified API.Internal.TollList as TollList
-import qualified API.Internal.TollUpsert as TollUpsert
 import qualified API.Internal.VehicleServiceTierList as VehicleServiceTierList
 import qualified API.Internal.VerifyEmailUpdate as VerifyEmailUpdate
 import qualified API.Internal.ViolationDetection as ViolationDetection
@@ -86,7 +84,6 @@ type API =
            :<|> Multimodal.API
            :<|> DriverReachedDestination.API
            :<|> QuoteRespond.API
-           :<|> ProdLoopStatus.API
            :<|> DriverSourceDeparted.API
            :<|> ViolationDetection.API
            :<|> RideFeedback.API
@@ -97,7 +94,6 @@ type API =
            :<|> SpecialLocationList.API
            :<|> SpecialLocationUpsert.API
            :<|> TollList.API
-           :<|> TollUpsert.API
            :<|> TollChargeApproval.API
            :<|> GeometryList.API
            :<|> GeometryUpdate.API
@@ -144,7 +140,6 @@ handler env =
     :<|> Multimodal.handler
     :<|> DriverReachedDestination.handler
     :<|> QuoteRespond.handler
-    :<|> ProdLoopStatus.handler
     :<|> DriverSourceDeparted.handler
     :<|> ViolationDetection.handler
     :<|> RideFeedback.handler
@@ -155,7 +150,6 @@ handler env =
     :<|> SpecialLocationList.handler
     :<|> SpecialLocationUpsert.handler
     :<|> TollList.handler
-    :<|> TollUpsert.handler
     :<|> TollChargeApproval.handler
     :<|> GeometryList.handler
     :<|> GeometryUpdate.handler
