@@ -1108,13 +1108,13 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
           rcReq
   case mbRequestedPerson of
     Nothing -> do
-      -- A row without phone numbers goes under the fleet named in the request; the owner's own
-      -- number stands in for the fleet_phone_no column.
+      -- A row without phone numbers goes under the fleet named in the request; the owner's own number and country code stand in.
       mbFleetNoFallback <- forM req.fleetOwnerId $ \fleetOwnerId -> do
         FleetAccess.FleetOwnerInfo {fleetOwner} <- FleetAccess.checkRequestorAccessToFleet False Nothing fleetOwnerId
         unless (fleetOwner.merchantId == merchant.id && fleetOwner.merchantOperatingCityId == merchantOpCity.id) $
           throwError (FleetOwnerNotFound fleetOwnerId)
-        mapM decrypt fleetOwner.mobileNumber >>= fromMaybeM (InvalidRequest "Fleet owner has no mobile number")
+        fleetNo <- mapM decrypt fleetOwner.mobileNumber >>= fromMaybeM (InvalidRequest "Fleet owner has no mobile number")
+        pure (fleetNo, fleetOwner.mobileCountryCode)
       let autoApproved = transporterConfig.autoApproveOnAdminUpload == Just True
       unprocessedRCAdditionEntities <- processVehicle (processVehicleByOperatorOrAdmin merchant transporterConfig merchantOpCity requestorId mbFleetNoFallback autoApproved)
       pure Common.APISuccessWithUnprocessedEntities {unprocessedEntities = unprocessedRCAdditionEntities}
@@ -1174,15 +1174,15 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
         Nothing -> pure $ Left $ "Person do not have a mobile number " <> requestedPerson.id.getId
         Just mobileNumber ->
           case (mbFleetNo, mbDriverNo) of
-            (Nothing, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq mobileNumber Nothing (Just Common.FLEET) merchantOpCity False -- Add vehicles under requested fleet
+            (Nothing, Nothing) -> handleAddVehicleWithTry merchant transporterConfig (requestedPerson.mobileCountryCode <|> mbCountryCode) requestorId registerRcReq mobileNumber Nothing (Just Common.FLEET) merchantOpCity False -- Add vehicles under requested fleet
             (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just mobileNumber) (Just DCommonRole.DRIVER) merchantOpCity False -- Map driver <-> vehicle under requested fleet
             (_, _) -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Invalid request"
 
-    processVehicleByOperatorOrAdmin :: DM.Merchant -> DTCConfig.TransporterConfig -> DMOC.MerchantOperatingCity -> Text -> Maybe Text -> Bool -> (Common.RegisterRCReq, Maybe Text, Maybe Text, Maybe Text) -> Flow (Either Text ())
+    processVehicleByOperatorOrAdmin :: DM.Merchant -> DTCConfig.TransporterConfig -> DMOC.MerchantOperatingCity -> Text -> Maybe (Text, Maybe Text) -> Bool -> (Common.RegisterRCReq, Maybe Text, Maybe Text, Maybe Text) -> Flow (Either Text ())
     processVehicleByOperatorOrAdmin merchant transporterConfig merchantOpCity requestorId mbFleetNoFallback autoApproved (registerRcReq, mbCountryCode, mbFleetNo, mbDriverNo) =
       case (mbFleetNo, mbDriverNo) of
         (Nothing, Nothing) -> case mbFleetNoFallback of
-          Just fleetNo -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq fleetNo (Just fleetNo) (Just Common.FLEET) merchantOpCity autoApproved -- Add vehicles under the fleet named in the request
+          Just (fleetNo, mbFleetCountryCode) -> handleAddVehicleWithTry merchant transporterConfig (mbFleetCountryCode <|> mbCountryCode) requestorId registerRcReq fleetNo (Just fleetNo) (Just Common.FLEET) merchantOpCity autoApproved -- Add vehicles under the fleet named in the request
           Nothing -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Neither fleet nor driver phone number provided"
         (Just fleetNo, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq fleetNo (Just fleetNo) (Just Common.FLEET) merchantOpCity autoApproved -- Add vehicles under fleet
         (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo Nothing (Just DCommonRole.DRIVER) merchantOpCity autoApproved -- Add vehicles under DCO
