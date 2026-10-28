@@ -33,6 +33,9 @@ module SharedLogic.SharedCab.SessionState
     readPing,
     lastSeenFor,
     sessionTtlSec,
+    SessionRead (..),
+    RouteMember (..),
+    routeMember,
   )
 where
 
@@ -57,6 +60,22 @@ import Tools.Error (SharedCabSessionError (..))
 -- | How long a session lives without a write; a plate's bookings are written during its session.
 sessionTtlSec :: Int
 sessionTtlSec = 16 * 60 * 60
+
+-- | A session key's read that tells a missing key from a failed read: a Redis error or an undecodable value is not "no session".
+data SessionRead = SessionAbsent | SessionAt Session | SessionUnreadable
+
+data RouteMember = LiveMember Session | StaleMember | UnknownMember
+  deriving (Show, Eq)
+
+-- | A route-set member is dropped only on a positive answer: no session key, or a session that isn't ACTIVE on this route. A read
+-- that failed keeps the member (an overloaded Redis must not take live cabs off their route).
+routeMember :: Text -> SessionRead -> RouteMember
+routeMember route = \case
+  SessionAt s
+    | s.status == ACTIVE && s.routeCode == route -> LiveMember s
+    | otherwise -> StaleMember
+  SessionAbsent -> StaleMember
+  SessionUnreadable -> UnknownMember
 
 data SelectRouteMode = AfterLastDrop | Force
   deriving (Show, Eq, Generic)

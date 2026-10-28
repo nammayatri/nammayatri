@@ -51,7 +51,12 @@ tests :: TestTree
 tests =
   testGroup
     "SharedCab session state"
-    [ testCase "the leg shows a cab's position and driver only on the trip the rider boarded (any trip before boarding)" $
+    [ testCase "a route-set member is dropped only when its session is gone or off the route, never on a failed read" $
+        map
+          (routeMember "R1")
+          [SessionAt active, SessionAt active {routeCode = "R2"}, SessionAt active {status = PAUSED}, SessionAbsent, SessionUnreadable]
+          @?= [LiveMember active, StaleMember, StaleMember, StaleMember, UnknownMember],
+      testCase "the leg shows a cab's position and driver only on the trip the rider boarded (any trip before boarding)" $
         map
           (fmap (.driverId) . uncurry sessionOnTrip)
           [(Nothing, Just active), (Just "trip1", Just active), (Just "trip0", Just active), (Nothing, Just active {status = ENDED}), (Nothing, Nothing)]

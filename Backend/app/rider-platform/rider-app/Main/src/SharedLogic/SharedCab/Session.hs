@@ -21,6 +21,8 @@ module SharedLogic.SharedCab.Session
   )
 where
 
+import qualified Data.Aeson as A
+import qualified Database.Redis as RawRedis
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DBookingStatus
@@ -125,16 +127,26 @@ activeSessionsOnRoute route = do
   catMaybes <$> mapM keepOrRepair plates
   where
     keepOrRepair plate =
-      readSession plate >>= \case
-        Just s | s.status == ACTIVE && s.routeCode == route -> pure (Just s)
-        _ -> repair plate >> pure Nothing
+      routeMember route <$> readSessionStrict plate >>= \case
+        LiveMember s -> pure (Just s)
+        StaleMember -> repair plate >> pure Nothing
+        UnknownMember -> Nothing <$ logWarning ("sharedCab: session of " <> plate <> " on " <> route <> " unreadable, route-set repair skipped")
     repair plate =
       withTryCatch "sharedCab:repairRouteSet" (withPlateLock plate (reread plate))
         >>= either (\e -> logWarning $ "sharedCab: route-set repair of " <> plate <> " on " <> route <> " skipped: " <> show e) pure
     reread plate =
-      readSession plate >>= \case
-        Just s | s.status == ACTIVE && s.routeCode == route -> pure ()
-        _ -> void $ shared $ Redis.srem (routeKey route) [plate]
+      routeMember route <$> readSessionStrict plate >>= \case
+        StaleMember -> void $ shared $ Redis.srem (routeKey route) [plate]
+        _ -> pure ()
+
+-- | 'readSession' answers Nothing for a missing key, a failed read and an undecodable value alike (and deletes the last); the route-set
+-- repair needs them apart.
+readSessionStrict :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m SessionRead
+readSessionStrict plate =
+  withTryCatch "sharedCab:readSessionStrict" (shared $ Redis.runWithPrefix (sessionKey plate) RawRedis.get) <&> \case
+    Left _ -> SessionUnreadable
+    Right Nothing -> SessionAbsent
+    Right (Just raw) -> maybe SessionUnreadable SessionAt (A.decodeStrict raw)
 
 -- | A shared-cab itinerary is shown only while a cab is running its route. TODO: also require the cab not to have passed the board stop.
 filterCabLegs :: (Redis.HedisFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> [MultiModalTypes.MultiModalLeg] -> m (Maybe [MultiModalTypes.MultiModalLeg])
