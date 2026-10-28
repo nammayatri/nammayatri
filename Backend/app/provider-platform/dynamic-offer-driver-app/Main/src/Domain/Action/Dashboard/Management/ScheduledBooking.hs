@@ -740,10 +740,12 @@ getOrCreateScheduledBookingIssueReport booking =
               ticketBookingId = Nothing,
               categoryName = Nothing,
               subCategoryName = Nothing,
-              botLabel = Nothing
+              botLabel = Nothing,
+              triggerNotification = Nothing
             }
           AUI.driverIssueHandle
           Issue.DRIVER
+          Nothing
           Nothing
       pure response.issueReportId
 

@@ -46,6 +46,7 @@ data IssueReport = IssueReport
     -- ACCEPT  : customer marked the resolution satisfactory (issue moved to CLOSED).
     -- ESCALATE: customer was not satisfied (drove the reopen-prompt branch).
     customerResponse :: Maybe CustomerResponse,
+    issueFlowType :: Maybe IssueFlowType,
     submitLabel :: Maybe Text,
     ticketFormFields :: Maybe (Map.Map Text Text)
   }

@@ -49,6 +49,7 @@ data IssueReportT f = IssueReportT
     becknIssueId :: B.C f (Maybe Text),
     reopenedCount :: B.C f (Maybe Int),
     customerResponse :: B.C f (Maybe Domain.CustomerResponse),
+    issueFlowType :: B.C f (Maybe Domain.IssueFlowType),
     submitLabel :: B.C f (Maybe Text),
     ticketFormFields :: B.C f (Maybe A.Value)
   }

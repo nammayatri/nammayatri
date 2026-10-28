@@ -90,8 +90,9 @@ getDefaultMerchantOperatingCityId issueHandle identifier =
     <&> (.id)
   where
     shortId = case identifier of
-      DRIVER -> ShortId "NAMMA_YATRI_PARTNER"
       CUSTOMER -> ShortId "NAMMA_YATRI"
+      DRIVER -> ShortId "NAMMA_YATRI_PARTNER"
+      IGM -> ShortId "NAMMA_YATRI_PARTNER"
 
 checkMerchantCityAccess :: BeamFlow m r => ShortId Merchant -> Context.City -> DIR.IssueReport -> Maybe Person -> ServiceHandle m -> m MerchantOperatingCity
 checkMerchantCityAccess merchantShortId opCity issueReport mbPerson issueHandle = do
@@ -291,6 +292,7 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
             reopenedCount = 0,
             becknIssueId = Nothing,
             customerResponse = Nothing,
+            issueFlowType = Nothing,
             submitLabel = Nothing,
             additionalTicketIds = Nothing,
             ticketFormFields = Nothing,
@@ -436,8 +438,8 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
         issueHandle.findIssueConfig merchantOpCityId identifier
           >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
       issueChats <- case identifier of
-        DRIVER -> return Nothing
         CUSTOMER -> Just <$> UIR.recreateIssueChats issueReport issueConfig Nothing ENGLISH identifier
+        _ -> return Nothing
       unread <- B.runInReplica $ QCM.countUnread issueReport.id DCM.SENDER_RIDER
       pure $
         Common.IssueInfoDRes
@@ -489,7 +491,9 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
         }
 
 issueUpdate ::
-  BeamFlow m r =>
+  ( BeamFlow m r,
+    EncFlow m r
+  ) =>
   ShortId Merchant ->
   Context.City ->
   Id DIR.IssueReport ->
@@ -506,21 +510,35 @@ issueUpdate merchantShortId opCity issueReportId issueHandle identifier req = do
   Redis.withWaitAndLockRedis (UIR.makeIssueReportKey issueReportId) 60 50000 $ do
     issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
     merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
-    -- When the agent flips the issue to RESOLVED (or CLOSED) we must mirror what the
-    -- external TSP webhook path does: append the configured agent-resolved chat messages
-    -- so the customer's app sees the satisfaction prompt. Without this the prompt was
-    -- only ever surfaced when the legacy Kapture webhook fired.
-    effectiveStatus <- case req.status of
-      Just newStatus
-        | newStatus `elem` [RESOLVED, CLOSED] && issueReport.status /= newStatus -> do
-          -- Re-resolution starts a fresh satisfaction round: clear any stale
-          -- customerResponse so the agent UI doesn't keep showing a previous
-          -- ESCALATE/ACCEPT badge against the new prompt.
-          QIR.clearCustomerResponse issueReportId
-          Just <$> appendAgentResolvedChats issueReport newStatus merchantOpCity.id identifier issueHandle
-      _ -> pure req.status
+    issueConfig <- issueHandle.findIssueConfig merchantOpCity.id identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCity.id.getId)
+    effectiveStatus <-
+      if issueConfig.shouldSyncStatusWithTicketService
+        then do
+          -- When shouldSyncStatusWithTicketService is true, skip chat messages and comments,
+          -- and sync the status directly with the ticket service (Kapture) before updating the issue report.
+          whenJust req.status $ \newStatus -> do
+            let kaptureStatus = case newStatus of
+                  RESOLVED -> TIT.Solved
+                  CLOSED -> TIT.Closed
+                  _ -> TIT.Open
+            UIR.updateTicketStatus issueReport kaptureStatus (cast merchantOpCity.merchantId) merchantOpCity.id issueHandle identifier (show newStatus)
+          pure req.status
+        else -- When the agent flips the issue to RESOLVED (or CLOSED) we must mirror what the
+        -- external TSP webhook path does: append the configured agent-resolved chat messages
+        -- so the customer's app sees the satisfaction prompt. Without this the prompt was
+        -- only ever surfaced when the legacy Kapture webhook fired.
+        case req.status of
+          Just newStatus
+            | newStatus `elem` [RESOLVED, CLOSED] && issueReport.status /= newStatus -> do
+              -- Re-resolution starts a fresh satisfaction round: clear any stale
+              -- customerResponse so the agent UI doesn't keep showing a previous
+              -- ESCALATE/ACCEPT badge against the new prompt.
+              QIR.clearCustomerResponse issueReportId
+              Just <$> appendAgentResolvedChats issueReport newStatus merchantOpCity.id identifier issueHandle
+          _ -> pure req.status
     QIR.updateStatusAssignee issueReportId effectiveStatus req.assignee
-    whenJust req.assignee $ \assignee -> mkIssueAssigneeUpdateComment assignee merchantOpCity
+    unless issueConfig.shouldSyncStatusWithTicketService $
+      whenJust req.assignee $ \assignee -> mkIssueAssigneeUpdateComment assignee merchantOpCity
     -- Push an FCM to the rider/driver if the status actually changed. Reuses the
     -- existing chat-notification hook (CHAT_MESSAGE FCM category) so merchants
     -- don't need to configure a new template — the body carries a status-update
@@ -671,6 +689,7 @@ issueChatUpload merchantShortId opCity issueHandle req identifier = do
   let identifierPath = case identifier of
         CUSTOMER -> "operator-customer"
         DRIVER -> "operator-driver"
+        IGM -> "operator-driver"
   UIR.mediaUploadToS3 config.mediaFileSizeUpperLimit config.mediaFileUrlPattern req "issue-media" identifierPath
 
 ticketStatusCallBack ::
@@ -691,12 +710,13 @@ ticketStatusCallBack reqJson issueHandle identifier = do
   req <- A.decode (A.encode reqJson) & fromMaybeM (InvalidRequest "Failed to parse TicketStatusCallBackReq")
   logError ("Parsed TicketStatusCallBackReq - " <> show req)
   Redis.withWaitAndLockRedisWithTimeout (issueTicketExecLockKey req.ticketId) 10 30 50000 $ do
-    issueReport <- B.runInMasterDbAndRedis $ QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
-    let isOffUs = isJust issueReport.becknIssueId
+    mbIssueReport <- B.runInMasterDbAndRedis $ QIR.findByTicketId req.ticketId
+    let isOffUs = maybe False (\ir -> ir.issueFlowType == Just OFF_US && isJust ir.becknIssueId) mbIssueReport
     transformedStatus <- transformKaptureStatus isOffUs req
     let mbResolution = req.resolution
     case transformedStatus of
       RESOLVED -> do
+        issueReport <- mbIssueReport & fromMaybeM (TicketDoesNotExist req.ticketId)
         person <- issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonNotFound issueReport.personId.getId)
         merchantOpCityId <-
           maybe
@@ -722,8 +742,11 @@ ticketStatusCallBack reqJson issueHandle identifier = do
         QIR.updateIssueStatus req.ticketId effectiveStatus
       PENDING_EXTERNAL -> case (req.subStatus, req.queue, issueHandle.mbSendUnattendedTicketAlert) of
         (Just "Unattended", Just "SOS", Just sendUnattendedTicketAlert) -> sendUnattendedTicketAlert req.ticketId
-        _ -> QIR.updateIssueStatus req.ticketId transformedStatus
+        _ -> do
+          _issueReport <- mbIssueReport & fromMaybeM (TicketDoesNotExist req.ticketId)
+          QIR.updateIssueStatus req.ticketId transformedStatus
       IN_PROGRESS -> do
+        issueReport <- mbIssueReport & fromMaybeM (TicketDoesNotExist req.ticketId)
         when isOffUs $ do
           updateIGMIssueResolution issueReport Spec.PROCESSING mbResolution
           triggerOnIssueStatusForOffUs issueReport Spec.PROCESSING issueHandle
@@ -2670,6 +2693,7 @@ igmIssueGetTrail merchantShortId opCity issueReportId issueHandle = do
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  void $ checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
   case issueReport.becknIssueId of
     Just becknId -> do
       igmIssue <- QIGM.findByPrimaryKey (Id becknId) >>= fromMaybeM (InvalidRequest "IGM issue record not found")
@@ -2783,11 +2807,11 @@ igmIssueTriggerActionUpdate merchantShortId opCity issueReportId issueHandle req
       msgId <- generateGUID
       onIssueStatusReq <- ISACL.buildOnIssueStatusReq txnId msgId bapId (showBaseUrl bapUri) issueStatusRes
       void $ CallAPI.callOnIssueStatus onIssueStatusReq bapUri merchant
-      whenJust reportStatus $ \s -> QIR.updateStatusAssignee issueReportId (Just s) issueReport.assignee
       let kaptureStatus = case req.action of
             Spec.RESOLVED -> TIT.Solved
             _ -> TIT.Pending
       UIR.updateTicketStatus issueReport kaptureStatus (cast merchantOpCity.merchantId) merchantOpCity.id issueHandle DRIVER (show req.action)
+      whenJust reportStatus $ \s -> QIR.updateStatusAssignee issueReportId (Just s) issueReport.assignee
       let updatedIgm =
             igmIssue
               { DIGM.respondentAction = Just $ show req.action,
@@ -2815,8 +2839,8 @@ recordRespondentActionTrail ::
 recordRespondentActionTrail becknIssueId action actionSummary now igmIssue igmConfig merchant = do
   existingActions <- QIGA.findAllByIgmIssueIdAndType (Id becknIssueId) DIGA.RESPONDENT
   let actionText = show action
-      existingKeys = map (\a -> (a.action, a.updatedAt)) existingActions
-  unless ((actionText, now) `elem` existingKeys) $ do
+      existingKeys = map (\a -> (a.action, a.shortDesc)) existingActions
+  unless ((actionText, Just actionSummary) `elem` existingKeys) $ do
     actionId <- generateGUID
     let (rName, rPhone, rEmail) =
           ( fromMaybe igmConfig.groName igmConfig.respondentName,

@@ -29,6 +29,7 @@ import Kernel.Types.CacheFlow as Reexport
 import Kernel.Types.Common
 import Kernel.Types.HideSecrets as Reexport
 import Kernel.Types.Id
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 ---------------------------------------------------------
 -- issue category list --------------------------------
@@ -58,6 +59,19 @@ newtype IssueCategoryListRes = IssueCategoryListRes
 
 ---------------------------------------------------------
 -- issues list --------------------------------------
+
+data IssueListType = ISSUES_ONGOING | ISSUES_COMPLETED
+  deriving stock (Eq, Show, Generic, Read)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance FromHttpApiData IssueListType where
+  parseUrlPiece "ONGOING" = Right ISSUES_ONGOING
+  parseUrlPiece "COMPLETED" = Right ISSUES_COMPLETED
+  parseUrlPiece _ = Left "Invalid IssueListType. Expected ONGOING or COMPLETED"
+
+instance ToHttpApiData IssueListType where
+  toUrlPiece ISSUES_ONGOING = "ONGOING"
+  toUrlPiece ISSUES_COMPLETED = "COMPLETED"
 
 data IssueReportListResponse = IssueReportListResponse
   { issues :: [IssueReportListItem],

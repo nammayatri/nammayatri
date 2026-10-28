@@ -1361,3 +1361,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN events_window_s
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_manual_arrival boolean  default false;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN shared_run_config json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_kapture_as_source_for_ongoing_issues boolean ;
