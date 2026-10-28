@@ -12,6 +12,7 @@ module SharedLogic.SharedCab.Allocation
     afterUnboarded,
     allocationPass,
     cityLiveBookings,
+    mergeLive,
   )
 where
 
@@ -48,8 +49,17 @@ cityLiveBookings ::
   Id DMOC.MerchantOperatingCity ->
   m [LiveBooking]
 cityLiveBookings cityId = do
+  finding <- QFRFSTicketBooking.findSharedCabFindingInCity cityId
   now <- getCurrentTime
-  QFRFSTicketBooking.findSharedCabCityUpdatedSince cityId (liveSince cityLiveWindowSec now) >>= liveBookingsOf
+  plated <- QFRFSTicketBooking.findSharedCabPlatedCityUpdatedSince cityId (liveSince cityLiveWindowSec now)
+  liveBookingsOf (mergeLive (.id) finding plated)
+
+-- | The tick's two reads: riders still waiting (no window) and bookings with a cab (recent ones). A booking claimed between the two
+-- reads comes back from both; its plated row is the newer.
+mergeLive :: Eq k => (a -> k) -> [a] -> [a] -> [a]
+mergeLive key finding plated = plated <> filter ((`notElem` platedKeys) . key) finding
+  where
+    platedKeys = map key plated
 
 -- | Idempotent close: whoever loses the booking CAS emits nothing.
 releaseSharedCabAllocation ::
