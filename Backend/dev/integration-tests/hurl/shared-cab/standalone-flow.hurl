@@ -13,14 +13,14 @@ HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
 
-# the app's stop search: two stop codes, no route. The cab feed's routes between them answer it, not the bus path.
+# the app's stop search: two stop codes, no route. This city runs a bus fleet too, so the bus path answers it, never with cab routes.
 POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
 Content-Type: application/json
 {"sourceStopCode": "SC_POLO", "destinationStopCode": "SC_NONGTHYMMAI", "allowClusteredStops": true}
-HTTP 200
+HTTP *
 [Asserts]
-jsonpath "$.legs[0].routeWithLiveVehicles[0].routeCode" == "{{route_a}}"
+body not contains "{{route_a}}"
 
 # the route list's data: a cab route says SHARED_CAB to a client that declares the tier, and says nothing to one that does not
 GET {{base_url}}/v2/publicTransport/data
@@ -115,7 +115,8 @@ POST {{base_url}}/v2/frfs/booking/{{bookingId}}/cancel
 token: {{token}}
 HTTP 200
 
-# opening the cab route from search: route serviceability answers from the cabs live on it (its own feed, not the bus one)
+# opening the cab route from search: route serviceability answers from the cabs live on it (its own feed, not the bus one), each
+# named by its trip and the plate's last four, never the plate
 POST {{base_url}}/v2/multimodal/routeServiceability?allPassingRoutes=false
 token: {{token}}
 Content-Type: application/json
@@ -125,9 +126,13 @@ retry-interval: 2000ms
 {"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
-jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[?(@.number == '{{plate}}')].number" == "{{plate}}"
-jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[?(@.number == '{{plate}}')].serviceTierType" == "SHARED_CAB"
-jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[?(@.number == '{{plate}}')].position.lat" isFloat
+jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[?(@.number == '{{plate_code}}')].serviceTierType" == "SHARED_CAB"
+jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[?(@.number == '{{plate_code}}')].position.lat" isFloat
+jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[?(@.number == '{{plate_code}}')].currentTripId" isString
+jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[?(@.number == '{{plate_code}}')].availableSeats" isInteger
+jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[?(@.number == '{{plate_code}}')].occupiedSeats" isInteger
+jsonpath "$.pickEnabled" isBoolean
+body not contains "{{plate}}"
 
 # and narrowed to the booked cab by its plate (the tracking screen's call)
 POST {{base_url}}/v2/multimodal/routeServiceability?allPassingRoutes=false

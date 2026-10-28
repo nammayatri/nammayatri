@@ -59,11 +59,13 @@ jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" matches "^(ALLO
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{plate}}"
 
 # both seats are held against the cab
-GET {{base_url}}/v2/sharedCab/routes/{{route_a}}
+POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
+Content-Type: application/json
+{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
-jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" == 2
+jsonpath "$.legs[0].routeWithLiveVehicles[0]..[?(@.number == '{{plate_code}}' || @.vehicleNumber == '{{plate_code}}')].availableSeats" == 2
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/subleg/1/setOnboardedVehicleDetails
 token: {{token}}
@@ -79,11 +81,13 @@ HTTP 200
 [Asserts]
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "BOARDED"
 
-GET {{base_url}}/v2/sharedCab/routes/{{route_a}}
+POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
+Content-Type: application/json
+{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
-jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" == 2
+jsonpath "$.legs[0].routeWithLiveVehicles[0]..[?(@.number == '{{plate_code}}' || @.vehicleNumber == '{{plate_code}}')].availableSeats" == 2
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/subleg/1/setStatus/Completed
 token: {{token}}
@@ -91,11 +95,13 @@ HTTP 200
 [Asserts]
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "DROPPED"
 
-GET {{base_url}}/v2/sharedCab/routes/{{route_a}}
+POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
+Content-Type: application/json
+{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
-jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" == 4
+jsonpath "$.legs[0].routeWithLiveVehicles[0]..[?(@.number == '{{plate_code}}' || @.vehicleNumber == '{{plate_code}}')].availableSeats" == 4
 
 POST {{base_url}}/internal/sharedCab/route/end
 token: {{internal_key}}
@@ -225,11 +231,13 @@ Content-Type: application/json
 {"reason": "OTHER"}
 HTTP 200
 
-GET {{base_url}}/v2/sharedCab/routes/{{route_a}}
+POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
+Content-Type: application/json
+{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
-jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" == 4
+jsonpath "$.legs[0].routeWithLiveVehicles[0]..[?(@.number == '{{plate_code}}' || @.vehicleNumber == '{{plate_code}}')].availableSeats" == 4
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/cancel
 token: {{token}}

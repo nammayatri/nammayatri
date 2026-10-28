@@ -73,11 +73,13 @@ jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.driverName" == "{{driv
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleModel" == "{{vehicle_model}}"
 
 # The allocated seat already counts against the cab
-GET {{base_url}}/v2/sharedCab/routes/{{route_a}}
+POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
+Content-Type: application/json
+{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
-jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" == 3
+jsonpath "$.legs[0].routeWithLiveVehicles[0]..[?(@.number == '{{plate_code}}' || @.vehicleNumber == '{{plate_code}}')].availableSeats" == 3
 
 # A code that matches no cab on the route: the rider is asked to confirm an unlisted cab (retry with forceCheckIn boards degraded)
 POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/subleg/1/setOnboardedVehicleDetails
@@ -126,11 +128,13 @@ HTTP 200
 [Asserts]
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "DROPPED"
 
-GET {{base_url}}/v2/sharedCab/routes/{{route_a}}
+POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
+Content-Type: application/json
+{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
-jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" == 4
+jsonpath "$.legs[0].routeWithLiveVehicles[0]..[?(@.number == '{{plate_code}}' || @.vehicleNumber == '{{plate_code}}')].availableSeats" == 4
 
 # ---- 2. wrong cab -> re-bind ----
 # Allocate to cab A while it is the only cab, then bring cab B on and board B with B's code.
@@ -211,12 +215,14 @@ jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "BOARDED"
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{plate_b}}"
 
 # A's seat freed itself; B holds it
-GET {{base_url}}/v2/sharedCab/routes/{{route_a}}
+POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
+Content-Type: application/json
+{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
-jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" == 4
-jsonpath "$.cabs[?(@.plateLast4 == '{{plate_b_code}}')].freeSeats" == 3
+jsonpath "$.legs[0].routeWithLiveVehicles[0]..[?(@.number == '{{plate_code}}' || @.vehicleNumber == '{{plate_code}}')].availableSeats" == 4
+jsonpath "$.legs[0].routeWithLiveVehicles[0]..[?(@.number == '{{plate_b_code}}' || @.vehicleNumber == '{{plate_b_code}}')].availableSeats" == 3
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/subleg/1/setStatus/Completed
 token: {{token}}
@@ -298,11 +304,13 @@ HTTP 200
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "BOARDED"
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{plate}}"
 
-GET {{base_url}}/v2/sharedCab/routes/{{route_a}}
+POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
+Content-Type: application/json
+{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
-jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" == 3
+jsonpath "$.legs[0].routeWithLiveVehicles[0]..[?(@.number == '{{plate_code}}' || @.vehicleNumber == '{{plate_code}}')].availableSeats" == 3
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/subleg/1/setStatus/Completed
 token: {{token}}

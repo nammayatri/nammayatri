@@ -21,7 +21,8 @@ FROM atlas_driver_offer_bpp.integrated_bpp_config WHERE agency_key='chennai_bus'
 ON CONFLICT DO NOTHING;
 UPDATE atlas_app.integrated_bpp_config SET agency_key='shillong_shared_cab:SHARED_CAB' WHERE id=md5('e2e-shared-cab-ibc')::uuid::text; UPDATE atlas_driver_offer_bpp.integrated_bpp_config SET agency_key='shillong_shared_cab:SHARED_CAB' WHERE id=md5('e2e-shared-cab-ibc')::uuid::text; -- R62: agency_key must match across DBs
 
--- /v2/sharedCab/routes/{code} looks for a BUS + APPLICATION config for the shared-cab agency: a second rider row.
+-- /v2/sharedCab/routes and the cab answer of /v2/multimodal/routeServiceability look for a BUS + APPLICATION config for the shared-cab
+-- agency: a second rider row.
 INSERT INTO atlas_app.integrated_bpp_config (id, agency_key, domain, feed_key, merchant_id, merchant_operating_city_id, platform_type, config_json, vehicle_category, created_at, updated_at)
 SELECT md5('e2e-shared-cab-ibc-app')::uuid::text, agency_key, domain, feed_key, merchant_id, merchant_operating_city_id, 'APPLICATION', config_json, vehicle_category, now(), now()
 FROM atlas_app.integrated_bpp_config WHERE id = md5('e2e-shared-cab-ibc')::uuid::text
