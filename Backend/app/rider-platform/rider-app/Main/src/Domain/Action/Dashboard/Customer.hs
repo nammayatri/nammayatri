@@ -316,8 +316,7 @@ postCustomerPersonId merchantShortId _ req = do
       csvData <- liftIO $ BS.readFile csvFile
       case decodeByName (LBS.fromStrict csvData) of
         Left err -> throwError (InvalidRequest $ show err)
-        Right (_, v) -> pure $ mapMaybe (Common.mobileNumber :: Common.PersonMobileNumberIdsCsvRow -> Maybe Text) $ V.toList v
-
+        Right (_, v) -> pure $ mapMaybe ((.mobileNumber) :: Common.PersonMobileNumberIdsCsvRow -> Maybe Text) $ V.toList v
     processChunk :: Id DM.Merchant -> [Text] -> Flow [Common.PersonRes]
     processChunk merchantId chunk = do
       mobile <- QP.findPersonIdsByPhoneNumberAndMerchantId merchantId chunk

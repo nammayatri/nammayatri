@@ -197,11 +197,13 @@ signPlaintext pt = do
     Right sig -> pure $ TE.decodeUtf8 (B64.encode sig)
 
 encodePrivateKeyPem :: RSA.PrivateKey -> Text
-encodePrivateKeyPem priv = TE.decodeUtf8 $ PKCS8.writeKeyFileToMemory PKCS8.PKCS8Format [PrivKeyRSA priv]
+encodePrivateKeyPem priv = TE.decodeUtf8 $ PKCS8.writeKeyFileToMemory PKCS8.PKCS8Format [PKCS8.keyPairFromPrivKey $ PrivKeyRSA priv]
 
 parsePrivateKeyPem :: Text -> Maybe RSA.PrivateKey
 parsePrivateKeyPem pem = case PKCS8.readKeyFileFromMemory (TE.encodeUtf8 pem) of
-  (PKCS8.Unprotected (PrivKeyRSA k) : _) -> Just k
+  (PKCS8.Unprotected kp : _) -> case PKCS8.keyPairToPrivKey kp of
+    PrivKeyRSA k -> Just k
+    _ -> Nothing
   _ -> Nothing
 
 getSvpPublicKey :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => m Text

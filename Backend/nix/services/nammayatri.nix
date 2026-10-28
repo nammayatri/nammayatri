@@ -1105,7 +1105,7 @@ in
               };
               command = pkgs.writeShellApplication {
                 name = "db-manager-backend";
-                runtimeInputs = [ pkgs.nodejs_20 pkgs.coreutils ];
+                runtimeInputs = [ pkgs.nodejs_22 pkgs.coreutils ];
                 text = ''
                   DBJSON='{"primary":{"cloudName":"local","db_configs":[{"name":"bap","label":"Rider (atlas_app)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_app"],"defaultSchema":"atlas_app"},{"name":"bpp","label":"Driver (atlas_driver_offer_bpp)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_driver_offer_bpp"],"defaultSchema":"atlas_driver_offer_bpp"},{"name":"dashboard","label":"Dashboard (atlas_dashboard)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_dashboard"],"defaultSchema":"atlas_dashboard"}]},"secondary":[],"history":{"host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev"}}'
                   DATABASE_CONFIGS=$(printf '%s' "$DBJSON" | base64 | tr -d '\n')

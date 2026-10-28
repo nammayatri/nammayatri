@@ -127,9 +127,10 @@ pointInPolygon _ [] = False
 pointInPolygon p (outer : holes) = pointInRing p outer && not (any (pointInRing p) holes)
   where
     pointInRing :: LatLong -> [LatLong] -> Bool
+    pointInRing _ [] = False
     pointInRing _ ring | length ring < 3 = False
-    pointInRing (LatLong y x) ring =
-      foldl' step False (zip ring (drop 1 ring ++ [head ring]))
+    pointInRing (LatLong y x) ring@(r0 : _rs) =
+      foldl' step False (zip ring (drop 1 ring ++ [r0]))
       where
         step inside (LatLong y1 x1, LatLong y2 x2)
           | y1 == y2 = inside
@@ -139,9 +140,10 @@ pointInPolygon p (outer : holes) = pointInRing p outer && not (any (pointInRing 
           | otherwise = inside
 
 ringEdges :: [LatLong] -> [LineSegment]
-ringEdges ring
+ringEdges [] = []
+ringEdges ring@(r0 : _rs)
   | length ring < 2 = []
-  | otherwise = zipWith LineSegment ring (drop 1 ring ++ [head ring])
+  | otherwise = zipWith LineSegment ring (drop 1 ring ++ [r0])
 
 lineSegmentIntersectsPolygonBoundary :: LineSegment -> [[LatLong]] -> Bool
 lineSegmentIntersectsPolygonBoundary routeSegment rings =
