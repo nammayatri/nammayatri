@@ -47,7 +47,6 @@ import qualified API.Action.UI.RideFeedback as RideFeedback
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.RiderLocation as RiderLocation
 import qualified API.Action.UI.RiderPreferences as RiderPreferences
-import qualified API.Action.UI.SVP as SVP
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.SupportBot as SupportBot
@@ -208,7 +207,6 @@ type API =
            :<|> EDCMachine.API
            :<|> PartnerBookingStatement.API
            :<|> PassDetails.API
-           :<|> SVP.API
            :<|> ChangeServiceTier.API
            :<|> AddBaggage.API
            :<|> ZendeskSdkToken.API
@@ -352,7 +350,6 @@ handler =
     :<|> EDCMachine.handler
     :<|> PartnerBookingStatement.handler
     :<|> PassDetails.handler
-    :<|> SVP.handler
     :<|> ChangeServiceTier.handler
     :<|> AddBaggage.handler
     :<|> ZendeskSdkToken.handler
