@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- | driver-app -> rider-app client for the shared-cab internal API (/internal/sharedCab/*). Every call maps the rider app's
--- APIError envelope onto SharedCabBAPError, so the driver app surfaces the rider app's errorCode and HTTP status unchanged.
+-- APIError envelope onto BapProxyError, so the driver app surfaces the rider app's errorCode and HTTP status unchanged.
 module SharedLogic.SharedCab.RiderClient
   ( BAPFlow,
     SessionAPI,
@@ -42,7 +42,7 @@ import Kernel.Utils.Common hiding (Error)
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import qualified Kernel.Utils.Servant.Client as EC
 import Servant hiding (throwError)
-import Tools.Error (SharedCabBAPError (..))
+import Tools.Error (BapProxyError (..))
 
 type BAPFlow m r =
   ( MonadFlow m,
@@ -184,7 +184,7 @@ sessionProbeClient = client (Proxy @(SessionAPI Aeson.Value))
 callRider :: (BAPFlow m r, SanitizedUrl api, ToJSON a) => BaseUrl -> Text -> EulerClient a -> Proxy api -> m a
 callRider internalUrl desc eulerClient api = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl eulerClient desc api
+  EC.callApiUnwrappingApiError (identity @BapProxyError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl eulerClient desc api
 
 getSharedCabRoutes :: BAPFlow m r => Text -> BaseUrl -> Text -> Double -> Double -> m SharedCabRoutesResp
 getSharedCabRoutes apiKey internalUrl agencyId lat lon = do
@@ -216,8 +216,8 @@ getSharedCabSession apiKey internalUrl driverId vehicleNumber = do
   case res of
     Right mbSession -> pure mbSession
     Left (CallAPIError.RawError clientError) -> throwError $ ExternalAPICallError (Just "BAP_INTERNAL_API_ERROR") internalUrl clientError
-    Left (CallAPIError.APIError err)
-      | fromBAPErrorCode err == sessionNotFoundErrorCode -> pure Nothing
+    Left (CallAPIError.APIError err@(BapProxyResponseError _ code _ _))
+      | code == sessionNotFoundErrorCode -> pure Nothing
       | otherwise -> throwError err
 
 sessionNotFoundErrorCode :: Text

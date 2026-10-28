@@ -2620,33 +2620,7 @@ instance IsHTTPError BapProxyError where
 instance IsAPIError BapProxyError where
   toPayload (BapProxyResponseError _ _ _ payload) = payload
 
--- | Rider-app "/internal/sharedCab/*" API error, carried across verbatim: the proxy re-throws a JSON APIError envelope with
--- the SAME errorCode, message/payload and HTTP status instead of an opaque 500. The status rides in the value because
--- 'toHttpCode' and 'fromResponse' are both pure over the decoded type.
-data SharedCabBAPError = SharedCabBAPError
-  { fromBAPErrorCode :: Text,
-    fromBAPErrorMessage :: Maybe Text,
-    fromBAPErrorPayload :: Value,
-    fromBAPHttpCode :: HttpCode
-  }
-  deriving (Show, Generic)
-
-instanceExceptionWithParent 'HTTPException ''SharedCabBAPError
-
-instance FromResponse SharedCabBAPError where
+instance FromResponse BapProxyError where
   fromResponse (Response status _ _ body) = do
-    APIError errorCodeValue errorMessageValue errorPayloadValue <- decode body
-    pure $ SharedCabBAPError errorCodeValue errorMessageValue errorPayloadValue (codeToHttpCodeWith500Default (HTTP.statusCode status))
-
-instance IsBaseError SharedCabBAPError where
-  toMessage = fromBAPErrorMessage
-
-instance IsHTTPError SharedCabBAPError where
-  toErrorCode = fromBAPErrorCode
-  toHttpCode = fromBAPHttpCode
-
-instance IsAPIError SharedCabBAPError where
-  toPayload = fromBAPErrorPayload
-
-instance IsBecknAPIError SharedCabBAPError where
-  toType _ = DOMAIN_ERROR
+    APIError code message payload <- decode body
+    pure $ BapProxyResponseError (codeToHttpCodeWith500Default (HTTP.statusCode status)) code message payload
