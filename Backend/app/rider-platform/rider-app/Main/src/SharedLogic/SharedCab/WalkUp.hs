@@ -16,6 +16,7 @@ module SharedLogic.SharedCab.WalkUp
     findSharedCabConfig,
     walkUpVehicleData,
     routeServiceability,
+    cabVehicle,
     trackStopRoutes,
   )
 where
@@ -25,6 +26,7 @@ import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Char as Char
+import Data.Either (partitionEithers)
 import Data.List (nub, sortOn)
 import Data.Ord (Down (..))
 import qualified Data.Text as T
@@ -42,6 +44,7 @@ import qualified Lib.JourneyModule.Utils as JLU
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab.Allocation.Select as Select
+import SharedLogic.SharedCab.Allocation.Types (parseLtsTimestamp)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Demand as Demand
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled, sharedCabEnabled)
@@ -50,6 +53,7 @@ import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Nearby as Nearby
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
+import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
@@ -217,7 +221,7 @@ routeServiceability mbPersonId req =
   findSharedCabRoutes >>= \case
     Just (cabIbc, legReqs, feedRouteCodes)
       | cabRouteRequest feedRouteCodes (concatMap (.routeCodes) legReqs) ->
-        authenticateRider >>= \person -> Just <$> sharedCabRouteServiceability person cabIbc req.vehicleNumber legReqs
+        authenticateRider >>= \person -> Just <$> sharedCabRouteServiceability person cabIbc req legReqs
     _ -> pure Nothing
   where
     authenticateRider = do
@@ -296,53 +300,96 @@ trackStopRoutes mbPersonId stopCode mbRouteCodes =
 sharedCabRouteServiceability ::
   DP.Person ->
   DIBC.IntegratedBPPConfig ->
-  Maybe Text ->
+  ApiTypes.RouteServiceabilityReq ->
   [ApiTypes.RouteCodesWithLeg] ->
   Environment.Flow ApiTypes.RouteServiceabilityResp
-sharedCabRouteServiceability person cabIbc mbPlate legReqs = do
+sharedCabRouteServiceability person cabIbc req legReqs = do
   now <- getCurrentTime
   cfg <- Config.getTunables person.merchantOperatingCityId
+  -- opening the cab list for a boarding stop is a search for a cab there
+  whenJust req.sourceStopCode $ \stopCode ->
+    void $ bestEffort (logError . ("shared-cab search not recorded: " <>)) (Demand.recordSearch cabIbc.merchantOperatingCityId.getId person.id.getId stopCode)
   legs <- forM legReqs $ \legReq -> do
     routes <- forM (nub legReq.routeCodes) $ \code -> do
       mbRoute <- OTPRest.getRouteByRouteId cabIbc code
+      stops <- sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode code cabIbc
       sessions <- Session.activeSessionsOnRoute code
-      let wanted = filter (\(sess :: Session) -> maybe True (\plate -> sess.vehicleNumber == canonicalisePlate plate) mbPlate) sessions
-      vehicles <- fmap catMaybes . forM wanted $ \sess -> do
+      let wanted = filter (\(sess :: Session) -> maybe True (\plate -> sess.vehicleNumber == canonicalisePlate plate) req.vehicleNumber) sessions
+          boardStop = req.sourceStopCode >>= \stopCode -> (stopCode,) . (.stopPoint) <$> find ((== stopCode) . (.stopCode)) stops
+      cabs <- forM wanted $ \sess -> do
         mbTrack <- either (const Nothing) identity <$> withTryCatch "sharedCab:routeServiceability:readRoutePosition" (Lts.readRoutePosition code sess.vehicleNumber)
-        pure $ do
-          track <- mbTrack
-          guard (Select.isFreshPosition now cfg.ltsMaxAgeSec track.vehicleInfo)
-          pure (mkLiveCab now sess.vehicleNumber track.vehicleInfo)
+        load <- Seats.riderLoad Seats.redisEngine (Seats.cabSeatsOn (map (.stopCode) stops) sess) req.sourceStopCode req.destinationStopCode ((.vehicleInfo) <$> mbTrack)
+        pure (cabVehicle now cfg (isJust req.vehicleNumber) boardStop load sess mbTrack)
+      let (scheduled, live) = partitionEithers cabs
+          boardEta v = (.arrivalTimeUnix) <$> (find (\e -> Just e.stopCode == req.sourceStopCode) =<< v.eta)
       pure
         ApiTypes.RouteWithLiveVehicle
           { routeCode = code,
             routeShortName = maybe code (.shortName) mbRoute,
             overrideSourceStopCode = Nothing,
             overrideDestinationStopCode = Nothing,
-            liveVehicles = vehicles,
+            liveVehicles = sortOn (\v -> (isNothing (boardEta v), boardEta v)) live,
             routeTag = Nothing,
-            schedules = []
+            schedules = scheduled
           }
     pure ApiTypes.LegRouteWithLiveVehicle {legOrder = legReq.legOrder, routeWithLiveVehicles = routes}
-  pure ApiTypes.RouteServiceabilityResp {legs, effectiveStops = Nothing, alternateRouteCodes = Nothing, pickEnabled = Nothing}
-  where
-    mkLiveCab :: UTCTime -> Text -> LT.VehicleInfo -> ApiTypes.LiveVehicleInfo
-    mkLiveCab now plate vi =
-      ApiTypes.LiveVehicleInfo
-        { number = plate,
+  pure ApiTypes.RouteServiceabilityResp {legs, effectiveStops = Nothing, alternateRouteCodes = Nothing, pickEnabled = Just cfg.pickEnabled}
+
+-- | One cab in the rider's route view, named by its trip (the pick's cabId) and the plate's last four characters; the whole plate only
+-- when the request asks for that cab by it. A fresh fix lists it live, the board stop's ETA kept only when the allocator would believe
+-- it. A cab without a fresh fix stays listed, and pickable, as a schedule.
+cabVehicle ::
+  UTCTime ->
+  Config.SharedCabTunables ->
+  Bool ->
+  Maybe (Text, LatLong) ->
+  (Int, Int) ->
+  Session ->
+  Maybe LT.VehicleTrackingOnRouteResp ->
+  Either ApiTypes.ScheduledVehicleInfo ApiTypes.LiveVehicleInfo
+cabVehicle now cfg namedByPlate mbBoardStop (freeSeats, ridersOnBoard) s = \case
+  Just track
+    | Select.isFreshPosition now cfg.ltsMaxAgeSec track.vehicleInfo ->
+      Right
+        ApiTypes.LiveVehicleInfo
+          { number = shownPlate,
+            vehicleTagNumber = Nothing,
+            currentTripId = Just s.vehicleTripId.getId,
+            serviceTierType = Spec.SHARED_CAB,
+            vehicleVariant = Nothing,
+            serviceTierName = Nothing,
+            locationUTCTimestamp = fixTime track.vehicleInfo,
+            eta = Just [stopEta u | u <- fromMaybe [] track.vehicleInfo.upcomingStops, u.status == LT.Upcoming, believable track u],
+            position = LatLong track.vehicleInfo.latitude track.vehicleInfo.longitude,
+            serviceSubTypes = Nothing,
+            seatSelectionType = Nothing,
+            isUpcomingTrip = Nothing,
+            previousRouteId = Nothing,
+            bearing = Nothing,
+            availableSeats = Just freeSeats,
+            occupiedSeats = Just ridersOnBoard
+          }
+  mbTrack ->
+    Left
+      ApiTypes.ScheduledVehicleInfo
+        { vehicleNumber = shownPlate,
           vehicleTagNumber = Nothing,
-          currentTripId = Nothing,
-          serviceTierType = Spec.SHARED_CAB,
           vehicleVariant = Nothing,
+          tripId = Just s.vehicleTripId.getId,
+          isActiveTrip = Nothing,
+          serviceTierType = Spec.SHARED_CAB,
           serviceTierName = Nothing,
-          locationUTCTimestamp = now,
-          eta = Just [CQMMB.BusStopETA u.stop.stopCode (Just u.stop.name) u.eta (floor (utcTimeToPOSIXSeconds u.eta)) (Just (max 0 (floor (diffUTCTime u.eta now)))) | u <- fromMaybe [] vi.upcomingStops, u.status == LT.Upcoming],
-          position = LatLong vi.latitude vi.longitude,
+          locationUTCTimestamp = fixTime . (.vehicleInfo) <$> mbTrack,
+          eta = Nothing,
+          position = (\track -> LatLong track.vehicleInfo.latitude track.vehicleInfo.longitude) <$> mbTrack,
           serviceSubTypes = Nothing,
-          seatSelectionType = Nothing,
-          isUpcomingTrip = Nothing,
-          previousRouteId = Nothing,
-          bearing = Nothing,
-          availableSeats = Nothing,
-          occupiedSeats = Nothing
+          availableSeats = Just freeSeats,
+          seatSelectionType = Nothing
         }
+  where
+    shownPlate = if namedByPlate then s.vehicleNumber else T.takeEnd 4 s.vehicleNumber
+    fixTime vi = fromMaybe now (vi.timestamp >>= parseLtsTimestamp)
+    believable track u = case mbBoardStop of
+      Just (stopCode, stopPoint) | u.stop.stopCode == stopCode -> isJust (Nearby.cabStopEta now cfg stopCode stopPoint track)
+      _ -> True
+    stopEta u = CQMMB.BusStopETA u.stop.stopCode (Just u.stop.name) u.eta (floor (utcTimeToPOSIXSeconds u.eta)) (Just (max 0 (floor (diffUTCTime u.eta now))))

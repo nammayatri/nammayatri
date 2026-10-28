@@ -3,6 +3,7 @@
 
 module SharedCabAllocationTests (tests) where
 
+import qualified "rider-app" API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified "rider-app" API.Types.UI.SharedCab as API
 import "beckn-spec" BecknV2.FRFS.Enums (ServiceTierType (AC))
 import Control.Exception (IOException, throwIO, try)
@@ -11,6 +12,7 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.IORef (modifyIORef, newIORef, readIORef, writeIORef)
 import Data.List (isInfixOf)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -37,6 +39,7 @@ import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..))
 import "rider-app" SharedLogic.SharedCab.RefundPolicy (cancellableStatus)
 import "rider-app" SharedLogic.SharedCab.Schedule (claimedTick)
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE, PAUSED))
+import "rider-app" SharedLogic.SharedCab.WalkUp (cabVehicle)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import "rider-app" Tools.Error (SharedCabBoardingError (..), SharedCabDriverActionError (..))
@@ -368,6 +371,28 @@ tests =
           cabForId "trip1" []
         )
           @?= (Just "ML05A1234", Nothing, Nothing, Nothing),
+      testCase "the route view never carries a cab's full plate, live or listed without a fix; a plate the rider names comes back whole" $ do
+        let shown named = BL.unpack . encode . cabVehicle t0 defaultTunables named (Just ("S1", stop)) (3, 1) pickable
+            fresh = Just (cabFixEta 120 "ML05A1234" stop (Just 5) 10)
+        ( map (("05A1234" `isInfixOf`) . shown False) [fresh, Nothing],
+          map (("\"1234\"" `isInfixOf`) . shown False) [fresh, Nothing],
+          map (("\"ML05A1234\"" `isInfixOf`) . shown True) [fresh, Nothing]
+          )
+          @?= ([False, False], [True, True], [True, True]),
+      testCase "a cab with a fresh fix is live with its trip and seats; one with a stale fix or none stays listed, pickable by its trip" $
+        let entry = cabVehicle t0 defaultTunables False (Just ("S1", stop)) (3, 1) pickable
+            summary = either (\v -> ("schedule", v.tripId, v.availableSeats, Nothing, isJust v.position)) (\v -> ("live", v.currentTripId, v.availableSeats, v.occupiedSeats, True))
+         in map (summary . entry) [Just (cabFixEta 120 "ML05A1234" stop (Just 5) 10), Just (cabFixEta 120 "ML05A1234" stop (Just 5) 3600), Nothing]
+              @?= [ ("live", Just "trip1", Just 3, Just 1, True),
+                    ("schedule", Just "trip1", Just 3, Nothing, True),
+                    ("schedule", Just "trip1", Just 3, Nothing, False)
+                  ],
+      testCase "a live cab's board-stop ETA is dropped when its distance can't back it; its other stops keep theirs" $
+        let twoStops pos = (cabFixEta 30 "ML05A1234" pos (Just 5) 10) {LT.vehicleInfo = (cabFixEta 30 "ML05A1234" pos (Just 5) 10).vehicleInfo {LT.upcomingStops = Just [LT.UpcomingStop (LT.Stop "S1" stop "S1" 1 0 0) (addUTCTime 30 t0) LT.Upcoming Nothing, LT.UpcomingStop (LT.Stop "S2" stop "S2" 2 0 0) (addUTCTime 600 t0) LT.Upcoming Nothing]}}
+            etaStops board pos = either (const Nothing) (fmap (map (.stopCode)) . (.eta)) (cabVehicle t0 defaultTunables False board (3, 1) pickable (Just (twoStops pos)))
+            tooFar = LatLong 25.6690 91.8930
+         in (etaStops (Just ("S1", stop)) tooFar, etaStops (Just ("S1", stop)) stop, etaStops Nothing tooFar)
+              @?= (Just ["S2"], Just ["S1", "S2"], Just ["S1", "S2"]),
       testCase "the cab list shows a cab by its cabId and last four characters, never the plate" $ do
         let shown = BL.unpack (encode (liveCabEntry (3, 1) (Just 3) (Just 500) (Just stop) pickable))
         ("ML05A1234" `isInfixOf` shown, "05A1234" `isInfixOf` shown, "\"cabId\":\"trip1\"" `isInfixOf` shown, "\"plateLast4\":\"1234\"" `isInfixOf` shown, "\"freeSeats\":3" `isInfixOf` shown, "\"ridersOnBoard\":1" `isInfixOf` shown)

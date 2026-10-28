@@ -155,6 +155,15 @@ tests =
             at stops = Just (vehicle [LT.UpcomingStop (LT.Stop code nowhere code 0 0 0) t0 status Nothing | (code, status) <- stops])
          in (nextStopIdx c (at [("S0", LT.Reached), ("S1", LT.Reached), ("S2", LT.Upcoming), ("S3", LT.Upcoming)]), nextStopIdx c Nothing, nextStopIdx c (at []))
               @?= (2, 0, 0),
+      testCase "a rider sees the seats free for their [board, drop), else from board to the route's end, and the seats taken at the cab's next stop" $
+        withEngine $ \engine _ -> do
+          let a = cab "tripA" 4
+              atS1 = Just (vehicle [LT.UpcomingStop (LT.Stop "S1" nowhere "S1" 0 0 0) t0 LT.Upcoming Nothing])
+              load board dropStop = riderLoad engine a board dropStop atS1
+          _ <- holdRange engine a (0, 2) 2
+          _ <- holdRange engine a (3, 4) 1
+          views <- mapM (uncurry load) [(Just "S0", Just "S2"), (Just "S2", Just "S3"), (Just "S2", Nothing), (Nothing, Nothing), (Just "S3", Just "S1")]
+          views @?= [(2, 2), (4, 2), (3, 2), (2, 2), (3, 2)],
       testCase "the model engine refuses a hold that overlaps by one stop" $
         withEngine $ \engine _ -> do
           let a = cab "tripA" 1

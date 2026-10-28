@@ -18,6 +18,7 @@ module SharedLogic.SharedCab.Seats
     adjustWalkups,
     SeatFlow,
     cabSeats,
+    cabSeatsOn,
     holdForStops,
     releaseHeld,
     heldOn,
@@ -29,6 +30,7 @@ module SharedLogic.SharedCab.Seats
     freeForStops,
     freeAhead,
     cabLoad,
+    riderLoad,
     setWalkups,
     clearWalkups,
     carryOver,
@@ -162,7 +164,11 @@ cabSeats :: SeatFlow m r => Session -> m CabSeats
 cabSeats s = do
   integratedBppConfig <- CQIBC.findById s.integratedBppConfigId >>= fromMaybeM IntegratedBPPConfigNotFound
   stops <- sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode s.routeCode integratedBppConfig
-  pure CabSeats {tripId = s.vehicleTripId.getId, capacity = s.capacity, stopCodes = map (.stopCode) stops}
+  pure (cabSeatsOn (map (.stopCode) stops) s)
+
+-- | A session's seats on its route's stops, given in sequence: a route's cabs share one stop read.
+cabSeatsOn :: [Text] -> Session -> CabSeats
+cabSeatsOn stopCodes s = CabSeats {tripId = s.vehicleTripId.getId, capacity = s.capacity, stopCodes}
 
 -- | Seats for a party riding `board` to `drop` on the session's cab; the caller records them once its own writes land.
 holdForStops :: SeatFlow m r => Session -> Text -> Text -> Int -> m (Maybe SeatHoldMeta)
@@ -220,13 +226,17 @@ freeAhead s mbVehicle = do
   c <- cabSeats s
   freeOver redisEngine c (nextStopIdx c mbVehicle, routeEnd c)
 
--- | A rider's view of a cab: seats free from `mbBoard` (else from the cab's next stop) to the route's end, and seats taken at the next stop.
 cabLoad :: SeatFlow m r => Session -> Maybe Text -> Maybe LT.VehicleInfo -> m (Int, Int)
-cabLoad s mbBoard mbVehicle = do
-  c <- cabSeats s
+cabLoad s mbBoard mbVehicle = cabSeats s >>= \c -> riderLoad redisEngine c mbBoard Nothing mbVehicle
+
+-- | A rider's view of a cab: seats free for their [board, drop) when the route serves it, else from `mbBoard` (else from the cab's
+-- next stop) to the route's end; and seats taken at the next stop.
+riderLoad :: Monad m => SeatEngine m -> CabSeats -> Maybe Text -> Maybe Text -> Maybe LT.VehicleInfo -> m (Int, Int)
+riderLoad engine c mbBoard mbDrop mbVehicle = do
   let next = nextStopIdx c mbVehicle
-  free <- freeOver redisEngine c (fromMaybe next (mbBoard >>= stopIndex c), routeEnd c)
-  freeHere <- freeOver redisEngine c (next, next + 1)
+      toEnd = (fromMaybe next (mbBoard >>= stopIndex c), routeEnd c)
+  free <- freeOver engine c (fromMaybe toEnd (join (bookingRange c <$> mbBoard <*> mbDrop)))
+  freeHere <- freeOver engine c (next, next + 1)
   pure (free, c.capacity - freeHere)
 
 walkupHolds :: (MonadFlow m, Redis.HedisFlow m r) => Text -> m [SeatHoldMeta]
