@@ -356,8 +356,11 @@ postDriverFleetAddVehicleHelper isBulkUpload callerMayAutoApprove merchantShortI
   unless (merchant.id == merchantId && merchantOpCityId == entityDetails.merchantOperatingCityId) $ throwError (PersonDoesNotExist entityDetails.id.getId)
   (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails merchant.fleetOwnerEnabledCheck
   rc <- RCQuery.findLastVehicleRCWrapper req.registrationNo
-  -- A bulk row has no photo: its RC gets the shared placeholder image so review, versions and approval work.
   let mbVehicleDetails = DCommon.mkDashboardVehicleDetails transporterConfig req
+  -- Bulk rows only create vehicles; an existing plate is refused before any placeholder image exists.
+  when (isBulkUpload && isJust mbVehicleDetails && isJust rc) $
+    throwError (InvalidRequest "RC already exists for this vehicle number")
+  -- A bulk row has no photo: its RC gets the shared placeholder image so review, versions and approval work.
   mbPlaceholderImageId <-
     if isBulkUpload
       then Just <$> createBulkRcPlaceholderImage getEntityData.id merchant.id merchantOpCityId
