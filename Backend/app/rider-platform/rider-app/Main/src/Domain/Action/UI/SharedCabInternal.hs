@@ -6,6 +6,8 @@ module Domain.Action.UI.SharedCabInternal
     postSharedCabRouteEnd,
     postSharedCabResume,
     getSharedCabTrips,
+    tripDayWindow,
+    onCityDay,
     postSharedCabBookingCancel,
     postSharedCabBookingBoardedWithoutCode,
     postSharedCabBookingDropped,
@@ -37,6 +39,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Types as AllocTypes
 import qualified SharedLogic.SharedCab.Booking as Booking
@@ -58,6 +61,7 @@ import qualified SharedLogic.SharedCab.SessionView as View
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.StationsExtraInformation as CQStationsExtraInformation
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.IntegratedBPPConfigExtra as QIBCExtra
@@ -257,12 +261,12 @@ driverAction action bookingId mbToken req = do
 getSharedCabTrips :: Day -> Text -> Maybe Text -> Environment.Flow API.SharedCabTripsResp
 getSharedCabTrips date driver mbToken = do
   checkToken mbToken
-  let istOffset = 19800 -- UTC+05:30: a trip's calendar day is the IST day
-      lastSecondOfDay = 86399
-      istMidnight = addUTCTime (negate istOffset) (UTCTime date 0)
-  trips <- QVT.findAllByDriverIdAndStartedAtRange Nothing Nothing driver istMidnight (addUTCTime lastSecondOfDay istMidnight)
+  let (from, to) = tripDayWindow date
+  candidates <- QVT.findAllByDriverIdAndStartedAtRange Nothing Nothing driver from to
+  trips <- filterM (\trip -> (\offset -> onCityDay date offset trip.startedAt) <$> cityUtcOffset trip.merchantOperatingCityId) candidates
   pure API.SharedCabTripsResp {trips = map mkTrip trips}
   where
+    cityUtcOffset cityId = maybe (Seconds 19800) (.timeDiffFromUtc) <$> getConfig (RiderConfigDimensions {merchantOperatingCityId = cityId.getId}) Nothing
     mkTrip (trip :: DVT.VehicleTrip) =
       API.SharedCabTrip
         { id = trip.id,
@@ -273,6 +277,13 @@ getSharedCabTrips date driver mbToken = do
           endReason = trip.endReason,
           offlineBoardings = trip.offlineBoardings
         }
+
+-- | A trip's calendar day is its city's local day. Every UTC offset is under a day, so the day lies inside the UTC day either side.
+tripDayWindow :: Day -> (UTCTime, UTCTime)
+tripDayWindow date = (addUTCTime (-86400) (UTCTime date 0), addUTCTime (2 * 86400 - 1) (UTCTime date 0))
+
+onCityDay :: Day -> Seconds -> UTCTime -> Bool
+onCityDay date utcOffset startedAt = utctDay (addUTCTime (secondsToNominalDiffTime utcOffset) startedAt) == date
 
 sessionRoute :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow View.SessionRoute
 sessionRoute integratedBppConfig code = do

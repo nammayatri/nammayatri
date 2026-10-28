@@ -28,12 +28,14 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Allocator (SharedCabReconcilerJobData (..))
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
 import qualified SharedLogic.SharedCab.Flag as SharedCabFlag
 import qualified SharedLogic.SharedCab.ReconcilerSeed as SharedCabSeed
 import qualified SharedLogic.SharedCab.RiderClient as SharedCabBAP
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformationExtra as QDriverInformationExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -154,10 +156,11 @@ resumeSharedCab (personId, _merchantId, _merchantOpCityId) = do
       }
 
 getSharedCabTrips :: DriverAuthInfo -> Maybe Day -> Flow SharedCabTripsResp
-getSharedCabTrips (personId, _merchantId, _merchantOpCityId) mbDate = do
+getSharedCabTrips (personId, _merchantId, merchantOpCityId) mbDate = do
   _ <- validateSharedCabDriver personId
   bap <- bapInternal
-  now <- getCurrentTime
-  let istOffset = 19800 -- UTC+05:30: a trip's calendar day is the IST day
-      todayIST = utctDay (addUTCTime istOffset now)
-  SharedCabBAP.getSharedCabTrips bap.apiKey bap.url personId.getId (show (fromMaybe todayIST mbDate))
+  transporterConfig <-
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+      >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  today <- utctDay <$> getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  SharedCabBAP.getSharedCabTrips bap.apiKey bap.url personId.getId (show (fromMaybe today mbDate))

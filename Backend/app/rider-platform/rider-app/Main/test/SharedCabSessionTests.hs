@@ -8,9 +8,11 @@ import Data.Aeson (decode, encode)
 import qualified Data.ByteString.Lazy.Char8 as BLC
 import Data.Text (Text)
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
+import "rider-app" Domain.Action.UI.SharedCabInternal (onCityDay, tripDayWindow)
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import qualified "rider-app" Domain.Types.VehicleTrip as DVT
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
+import "mobility-core" Kernel.Types.Common (Seconds (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.SharedCab.Events as Events
 import "rider-app" SharedLogic.SharedCab.Session (endDropBy, stranded)
@@ -49,7 +51,13 @@ tests :: TestTree
 tests =
   testGroup
     "SharedCab session state"
-    [ testCase "a cab-full fill counts no offline boardings, a driver count does" $ do
+    [ testCase "a trip's day is its city's local day, found inside the window" $ do
+        let date = fromGregorian 2026 9 25
+            lateUtc = UTCTime (fromGregorian 2026 9 24) (20 * 3600) -- 01:30 on the 25th at +05:30
+            (from, to) = tripDayWindow date
+        [onCityDay date (Seconds 19800) lateUtc, onCityDay date (Seconds 0) lateUtc, onCityDay date (Seconds (-18000)) (UTCTime date (23 * 3600))] @?= [True, False, True]
+        (from <= lateUtc && lateUtc <= to) @?= True,
+      testCase "a cab-full fill counts no offline boardings, a driver count does" $ do
         let full = fillCab 3 active
         walkupsToCount CabFullFill active full @?= 0
         walkupsToCount DriverCounted active full @?= 3,
