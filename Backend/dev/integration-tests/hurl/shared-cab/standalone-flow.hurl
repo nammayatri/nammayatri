@@ -93,12 +93,12 @@ GET {{base_url}}/v2/frfs/route/{{route_a}}?city=std:044&vehicleType=%22BUS%22&pl
 token: {{token}}
 HTTP 200
 [Asserts]
-jsonpath "$.stops" count == 5
-jsonpath "$.totalStops" == 5
+jsonpath "$.stops" count == 10
+jsonpath "$.totalStops" == 10
 jsonpath "$.stops[0].code" == "SC_POLO"
-jsonpath "$.stops[4].code" == "SC_NONGTHYMMAI"
+jsonpath "$.stops[9].code" == "SC_NONGTHYMMAI"
 jsonpath "$.stops[0].lat" isFloat
-jsonpath "$.waypoints" count == 5
+jsonpath "$.waypoints" count == 10
 jsonpath "$.waypoints[0].lat" isFloat
 
 # the rider app's own request shape for the same read (MULTIMODAL platform, lower-case city, trailing slash)
@@ -106,9 +106,9 @@ GET {{base_url}}/v2/frfs/route/{{route_a}}/?city=chennai&platformType=%22MULTIMO
 token: {{token}}
 HTTP 200
 [Asserts]
-jsonpath "$.stops" count == 5
+jsonpath "$.stops" count == 10
 jsonpath "$.stops[0].code" == "SC_POLO"
-jsonpath "$.waypoints" count == 5
+jsonpath "$.waypoints" count == 10
 
 # release the seat the booking holds, so later flows start from an empty cab
 POST {{base_url}}/v2/frfs/booking/{{bookingId}}/cancel
