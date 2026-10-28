@@ -37,6 +37,13 @@ imports:
   Value: Data.Aeson
   FilePath: EulerHS.Prelude
   APISuccess: Kernel.Types.APISuccess
+  DepotInfo: Lib.GtfsDataServer.Types
+  DepotVehicleInfo: Lib.GtfsDataServer.Types
+  MonitoringAssignments: Lib.GtfsDataServer.Types
+  MonitoringOverview: Lib.GtfsDataServer.Types
+  MonitoringRoutes: Lib.GtfsDataServer.Types
+  MonitoringCrewPage: Lib.GtfsDataServer.Types
+  Day: Data.Time
 
 importPackageOverrides:
   BecknV2.OnDemand.Enums: "beckn-spec"
@@ -495,6 +502,110 @@ apis:
         type: SetScheduleTripRepeatReq
       response:
         type: ScheduleTripRepeatConfig
+
+  # Depot view (Transit tab): depots and registered buses from GIMS v2; the day's waybills and counts from the depot-monitoring reads.
+  - GET:
+      endpoint: /v2/depots
+      name: TransitOperatorGetDepotsV2
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[DepotInfo]"
+
+  - GET:
+      endpoint: /depot/{depotId}/vehicles
+      name: TransitOperatorGetDepotVehicles
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      params:
+        depotId: Text
+      response:
+        type: "[DepotVehicleInfo]"
+
+  - GET:
+      endpoint: /v2/vehicles
+      name: TransitOperatorGetFleetVehiclesV2
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[DepotVehicleInfo]"
+
+  - GET:
+      endpoint: /depot/{depotId}/waybills
+      name: TransitOperatorGetDepotWaybills
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        serviceDate: Day
+      params:
+        depotId: Text
+      query:
+        page: Int
+        pageSize: Int
+        q: Text
+      response:
+        type: MonitoringAssignments
+
+  - GET:
+      endpoint: /depot/{depotId}/overview
+      name: TransitOperatorGetDepotOverview
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        serviceDate: Day
+      params:
+        depotId: Text
+      response:
+        type: MonitoringOverview
+
+  - GET:
+      endpoint: /depot/{depotId}/routes
+      name: TransitOperatorGetDepotRoutes
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        serviceDate: Day
+      params:
+        depotId: Text
+      query:
+        page: Int
+        pageSize: Int
+        q: Text
+      response:
+        type: MonitoringRoutes
+
+  - GET:
+      endpoint: /depot/{depotId}/crew
+      name: TransitOperatorGetDepotCrew
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        serviceDate: Day
+      params:
+        depotId: Text
+      query:
+        page: Int
+        pageSize: Int
+        q: Text
+      response:
+        type: MonitoringCrewPage
 
 types:
   DeviceVehicleMappingListRes:

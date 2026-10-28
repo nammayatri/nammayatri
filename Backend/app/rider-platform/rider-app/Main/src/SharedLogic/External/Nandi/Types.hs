@@ -1233,7 +1233,8 @@ data NandiRoute = NandiRoute
     route_name :: Maybe Text,
     route_direction :: Maybe Text,
     start_point_id :: Value,
-    end_point_id :: Value
+    end_point_id :: Value,
+    route_distance :: Maybe Double
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
