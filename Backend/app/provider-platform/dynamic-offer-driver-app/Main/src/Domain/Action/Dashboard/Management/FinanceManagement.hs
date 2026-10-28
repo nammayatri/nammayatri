@@ -267,6 +267,8 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
         ownerType
         serviceName
         mbStatusVal
+        mbFrom
+        mbTo
         mbAmountMin
         mbAmountMax
         (Just limit)
