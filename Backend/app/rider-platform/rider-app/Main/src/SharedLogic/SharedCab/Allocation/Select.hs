@@ -56,7 +56,6 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation.Types
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.LegState (fallbackReached, fallbackTimeElapsed)
-import SharedLogic.SharedCab.Plate (findByPlate, samePlate)
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 
 data FindingBooking = FindingBooking
@@ -171,7 +170,7 @@ eligibleCandidates now cfg tracking sessions booking =
       | s <- sessions,
         s.status == ACTIVE,
         s.capacity >= booking.seats,
-        Just veh <- [findByPlate (.vehicleNumber) s.vehicleNumber tracking],
+        Just veh <- [find ((== s.vehicleNumber) . (.vehicleNumber)) tracking],
         isFreshPosition now cfg.ltsMaxAgeSec veh.vehicleInfo,
         Just stop <- [find (\u -> u.stop.stopCode == booking.boardStopCode && u.status == LT.Upcoming) =<< veh.vehicleInfo.upcomingStops],
         let etaSec = max 0 (floor (diffUTCTime stop.eta now)),
@@ -224,7 +223,7 @@ silentReleaseMult = 5
 silentCab :: UTCTime -> Int -> Text -> [LT.VehicleTrackingOnRouteResp] -> Bool
 silentCab now maxAgeSec plate tracking =
   any (isFreshPosition now maxAgeSec . (.vehicleInfo)) tracking
-    && maybe True (not . isFreshPosition now (silentReleaseMult * maxAgeSec) . (.vehicleInfo)) (findByPlate (.vehicleNumber) plate tracking)
+    && maybe True (not . isFreshPosition now (silentReleaseMult * maxAgeSec) . (.vehicleInfo)) (find ((== plate) . (.vehicleNumber)) tracking)
 
 withoutSkipped :: [Text] -> [RankedCandidate] -> [RankedCandidate]
 withoutSkipped skipped = filter ((`notElem` skipped) . (.rcSession.vehicleNumber))
@@ -246,9 +245,9 @@ data PreferenceVerdict = Honour Text | Lost PreferenceLoss
 -- on the route and room for the whole party (`freeSeats` = the seat engine's free seats on it for the booking's ride).
 preferenceVerdict :: Config.SharedCabTunables -> UTCTime -> UTCTime -> [Text] -> [Session] -> Int -> Int -> Text -> PreferenceVerdict
 preferenceVerdict cfg now findingSince skipped sessions freeSeats seats plate
-  | any (samePlate plate) skipped = Lost PrefSkipped
+  | plate `elem` skipped = Lost PrefSkipped
   | fallbackTimeElapsed now findingSince cfg.fallbackAfterSec = Lost PrefTimedOut
-  | otherwise = case find (\s -> s.status == ACTIVE && samePlate plate s.vehicleNumber) sessions of
+  | otherwise = case find (\s -> s.status == ACTIVE && plate == s.vehicleNumber) sessions of
     Nothing -> Lost PrefOffRoute
     Just s
       | freeSeats < seats -> Lost PrefFull
@@ -260,7 +259,7 @@ cabForId cabId sessions = listToMaybe [s.vehicleNumber | s <- sessions, s.status
 
 -- | While the preference holds, no other cab is a candidate.
 onlyPreferred :: Text -> [RankedCandidate] -> [RankedCandidate]
-onlyPreferred plate = filter (samePlate plate . (.rcSession.vehicleNumber))
+onlyPreferred plate = filter ((== plate) . (.rcSession.vehicleNumber))
 
 -- | A rescheduled booking is a child of the one it replaced; the parent already counted the rider's tickets.
 isRescheduledChild :: Maybe parent -> Bool
@@ -279,4 +278,4 @@ groupAllOn f = map (\grp -> (f (NE.head grp), NE.toList grp)) . NE.groupBy ((==)
 -- | A fresh, moving report for the plate: its stand timer is cleared rather than expired.
 movingCab :: UTCTime -> Int -> Text -> [LT.VehicleTrackingOnRouteResp] -> Bool
 movingCab now maxAgeSec plate =
-  any (\vt -> samePlate vt.vehicleNumber plate && isFreshPosition now maxAgeSec vt.vehicleInfo && isMovingSpeed vt.vehicleInfo.speed)
+  any (\vt -> vt.vehicleNumber == plate && isFreshPosition now maxAgeSec vt.vehicleInfo && isMovingSpeed vt.vehicleInfo.speed)

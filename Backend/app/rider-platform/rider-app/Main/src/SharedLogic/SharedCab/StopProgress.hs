@@ -31,7 +31,6 @@ import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, offRouteKey, sessi
 import SharedLogic.SharedCab.Lts (readRoutePositions)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import qualified SharedLogic.SharedCab.Notify as Notify
-import SharedLogic.SharedCab.Plate (findByPlate)
 import SharedLogic.SharedCab.Seats (markDropped)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (PauseReason (OFF_ROUTE), Session (..), SessionStatus (..))
@@ -103,7 +102,7 @@ stepCab ::
   m ()
 stepCab cfg now bookings positions route s = do
   let plate = s.vehicleNumber
-      mbInfo = (.vehicleInfo) <$> findByPlate (.vehicleNumber) plate positions
+      mbInfo = (.vehicleInfo) <$> find ((== plate) . (.vehicleNumber)) positions
       mbCab = cabFix <$> mbInfo
       freshCab = mfilter (const $ any (isFreshPosition now cfg.ltsMaxAgeSec) mbInfo) mbCab
       awaiting = [lb.booking | lb <- bookings, DFRFSTicket.ACTIVE `elem` lb.ticketStatuses, DFRFSTicket.INPROGRESS `notElem` lb.ticketStatuses]

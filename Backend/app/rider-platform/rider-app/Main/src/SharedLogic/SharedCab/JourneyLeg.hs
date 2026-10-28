@@ -38,7 +38,6 @@ import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as SharedCabDegraded
 import qualified SharedLogic.SharedCab.LegState as SharedCabLeg
 import qualified SharedLogic.SharedCab.Lts as Lts
-import SharedLogic.SharedCab.Plate (samePlate)
 import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
 import qualified SharedLogic.SharedCab.Seats as SharedCabSeats
 import qualified SharedLogic.SharedCab.Session as SharedCabSession
@@ -126,7 +125,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
       let approachingCabs =
             [ (c, etaSec)
               | c <- snapshot,
-                not (samePlate plate c.session.vehicleNumber),
+                plate /= c.session.vehicleNumber,
                 Just etaSec <- [Approach.plausibleEtaFrom now cfg booking.fromStationCode =<< c.track]
             ]
       forM (SharedCabLeg.nearestAfter snd assignedEtaSec approachingCabs) $ \(c, etaSec) -> do

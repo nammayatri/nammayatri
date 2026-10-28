@@ -38,7 +38,6 @@ import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
 import SharedLogic.SharedCab.LegState (fallbackTimeElapsed)
 import SharedLogic.SharedCab.Lts (readRoutePositions)
 import qualified SharedLogic.SharedCab.Notify as Notify
-import SharedLogic.SharedCab.Plate (samePlate)
 import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
 import SharedLogic.SharedCab.Schedule (withCityTickLease)
 import qualified SharedLogic.SharedCab.Seats as Seats
@@ -207,7 +206,7 @@ narrowToPreferred cfg now sessions booking candidates =
         True -> pure candidates
         False -> do
           skipped <- readSkipped booking.bookingId
-          freeSeats <- case find (\s -> s.status == ACTIVE && samePlate plate s.vehicleNumber) sessions of
+          freeSeats <- case find (\s -> s.status == ACTIVE && plate == s.vehicleNumber) sessions of
             Just s -> Seats.freeForStops s booking.boardStopCode booking.dropStopCode
             Nothing -> pure 0
           case preferenceVerdict cfg now booking.findingSince skipped sessions freeSeats booking.seats plate of

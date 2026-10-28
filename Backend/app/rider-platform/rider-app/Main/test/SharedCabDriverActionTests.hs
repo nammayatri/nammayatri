@@ -33,8 +33,7 @@ tests =
         "boarded without code (D5)"
         [ testCase "a waiting seat boards" $ decide DriverBoarded (Just plate) [ACTIVE] @?= Right (),
           testCase "a repeat tap is a no-op, not an error" $ decide DriverBoarded (Just plate) [INPROGRESS] @?= Right (),
-          testCase "nothing held" $ decide DriverBoarded (Just plate) [CANCELLED] @?= Left BookingNotLive,
-          testCase "plate compared in canonical form" $ decide DriverBoarded (Just "ml 05-a 9999") [ACTIVE] @?= Right ()
+          testCase "nothing held" $ decide DriverBoarded (Just plate) [CANCELLED] @?= Left BookingNotLive
         ],
       testGroup
         "dropped (D7)"

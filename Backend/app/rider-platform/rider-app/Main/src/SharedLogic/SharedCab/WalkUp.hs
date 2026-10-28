@@ -53,7 +53,6 @@ import qualified SharedLogic.SharedCab.Demand as Demand
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled, sharedCabEnabled)
 import SharedLogic.SharedCab.Interest (bestEffort, recordInterest)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency)
-import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.RateLimit (enforceStickerCodeLimit)
 import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
 import qualified SharedLogic.SharedCab.Seats as Seats
@@ -66,7 +65,7 @@ import qualified Storage.Queries.Person as QP
 import Tools.Error
 
 liveSharedCab :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe Session)
-liveSharedCab plate = mfilter ((== ACTIVE) . (.status)) <$> Session.readSession (canonicalisePlate plate)
+liveSharedCab plate = mfilter ((== ACTIVE) . (.status)) <$> Session.readSession plate
 
 isStickerCode :: Text -> Bool
 isStickerCode code = T.length code == 4 && T.all Char.isDigit code
@@ -329,7 +328,7 @@ sharedCabRouteServiceability person cabIbc req legReqs = do
       mbRoute <- OTPRest.getRouteByRouteId cabIbc code
       stops <- sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode code cabIbc
       snapshot <- RouteSnapshot.routeSnapshot code
-      let wanted = filter (\c -> maybe True (\plate -> c.session.vehicleNumber == canonicalisePlate plate) req.vehicleNumber) snapshot
+      let wanted = filter (\c -> maybe True (\plate -> c.session.vehicleNumber == plate) req.vehicleNumber) snapshot
           boardStop = req.sourceStopCode >>= \stopCode -> (stopCode,) . (.stopPoint) <$> find ((== stopCode) . (.stopCode)) stops
           cabOf c =
             let load = Seats.riderLoad (Seats.cabSeatsOn (map (.stopCode) stops) c.session) (RouteSnapshot.cabBitmapsOf c) req.sourceStopCode req.destinationStopCode ((.vehicleInfo) <$> c.track)

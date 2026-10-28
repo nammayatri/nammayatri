@@ -42,7 +42,6 @@ import SharedLogic.SharedCab.LegState (seatsHeld)
 import SharedLogic.SharedCab.Lock (withOwnedLock)
 import SharedLogic.SharedCab.LtsAttach
 import qualified SharedLogic.SharedCab.Notify as Notify
-import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.Schedule (ensureDegradedSweep, ensureExpiryJob)
 import qualified SharedLogic.SharedCab.Seats as Seats
 import SharedLogic.SharedCab.SessionState
@@ -72,9 +71,6 @@ withPlateLock :: (Redis.HedisFlow m r, MonadMask m, MonadFlow m) => Text -> m a 
 withPlateLock plate = withOwnedLock "plateLock" (plateLockKey plate) lockTtlSec 25000
 
 -- | The plate lock on the canonical spelling of a plate; the body gets that plate.
-withCabLock :: (Redis.HedisFlow m r, MonadMask m, MonadFlow m) => Text -> (Text -> m a) -> m a
-withCabLock rawPlate body = let plate = canonicalisePlate rawPlate in withPlateLock plate (body plate)
-
 readSession :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe Session)
 readSession = shared . Redis.safeGet . sessionKey
 
@@ -88,7 +84,7 @@ getSessionFresh :: (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m, Jo
 getSessionFresh = getSessionWith False
 
 getSessionWith :: (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m, JobCreator r m, CoreMetrics m) => Bool -> Text -> m (Maybe Session)
-getSessionWith cached rawPlate =
+getSessionWith cached plate =
   readSession plate >>= \case
     Just s -> pure (Just s)
     Nothing -> do
@@ -97,7 +93,6 @@ getSessionWith cached rawPlate =
         NoLiveTrip -> pure Nothing
         RestoreUnderLock -> withPlateLock plate $ readSession plate >>= maybe recover (pure . Just)
   where
-    plate = canonicalisePlate rawPlate
     liveTrip = isJust <$> QVT.findActiveByVehicleNumber plate
     recover = QVT.findActiveByVehicleNumber plate >>= traverse rebuild
     rebuild trip = do
@@ -250,11 +245,11 @@ selectRoute mode req = withPlateLock plate $ do
         Right () -> pure ()
       pure (Right opened)
   where
-    plate = canonicalisePlate req.vehicleNumber
+    plate = req.vehicleNumber
 
 -- | Applies an `afterLastDrop` route change once no rider is left; True when it switched (the caller then releases the old route's allocations, outside this lock).
 applyQueuedRoute :: (LtsFlow m r c, MonadMask m) => Text -> m Bool
-applyQueuedRoute rawPlate = withCabLock rawPlate $ \plate -> do
+applyQueuedRoute plate = withPlateLock plate $ do
   mbSession <- readSession plate
   case mbSession of
     Just s | Just queued <- s.queuedRouteCode,
@@ -264,7 +259,7 @@ applyQueuedRoute rawPlate = withCabLock rawPlate $ \plate -> do
     _ -> pure False
 
 endRoute :: Text -> Text -> Bool -> EndRouteAction -> Environment.Flow Session
-endRoute driver rawPlate forced action = withCabLock rawPlate $ \plate -> do
+endRoute driver plate forced action = withPlateLock plate $ do
   s <- readSession plate >>= liftSession . ownedSession driver
   onBoard <- ridersOnBoard plate
   unless (forced || null onBoard) $ throwError (RidersOnBoard (length onBoard))
@@ -277,22 +272,22 @@ endRoute driver rawPlate forced action = withCabLock rawPlate $ \plate -> do
       finish (endActionReason action) s
 
 expire :: (LtsFlow m r c, MonadMask m) => Text -> m Session
-expire rawPlate =
-  withCabLock rawPlate $ \plate ->
+expire plate =
+  withPlateLock plate $
     readSession plate >>= \case
       Just s | s.status /= ENDED -> finish DVT.SESSION_TIMEOUT s
       _ -> throwError SessionNotFound
 
 -- | System-initiated: no driver check. Mirrored to the trip row so flush recovery restores PAUSED.
 pause :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => Text -> PauseReason -> m Session
-pause rawPlate reason = withCabLock rawPlate $ \plate -> do
+pause plate reason = withPlateLock plate $ do
   prior <- readSession plate
   s <- liftSession $ maybe (Left SessionNotFound) (pauseSession reason) prior
   QVT.updateStatus DVT.PAUSED s.vehicleTripId
   saveSession prior s
 
 resume :: Text -> Text -> Environment.Flow Session
-resume driver rawPlate = do
+resume driver plate = do
   resumed <- withPlateLock plate $ do
     prior <- readSession plate
     owned <- liftSession $ ownedSession driver prior
@@ -301,11 +296,9 @@ resume driver rawPlate = do
     QVT.updateStatus DVT.ACTIVE s.vehicleTripId
     saveSession prior s
   resumed <$ ensureExpiryJob resumed.merchantId resumed.merchantOperatingCityId
-  where
-    plate = canonicalisePlate rawPlate
 
 setWalkupCount :: Text -> Text -> Int -> Int -> Environment.Flow Session
-setWalkupCount driver rawPlate expectedVersion count = withCabLock rawPlate $ \plate -> do
+setWalkupCount driver plate expectedVersion count = withPlateLock plate $ do
   prior <- readSession plate
   s <- liftSession $ ownedSession driver prior
   requireSharedCabEnabled s.merchantOperatingCityId
@@ -316,8 +309,8 @@ setWalkupCount driver rawPlate expectedVersion count = withCabLock rawPlate $ \p
 -- | Cab full: `releaseUnboarded` (the unboarded allocations going) runs under the plate lock, then walk-ups take every seat left,
 -- so no claim lands in between. Its result comes back for the caller to send the releases' effects outside the lock.
 markCabFull :: Text -> Text -> Environment.Flow a -> Environment.Flow (Session, a)
-markCabFull driver rawPlate releaseUnboarded = do
-  (full, released) <- withCabLock rawPlate $ \plate -> do
+markCabFull driver plate releaseUnboarded = do
+  (full, released) <- withPlateLock plate $ do
     prior <- readSession plate
     s <- liftSession $ ownedSession driver prior
     released <- releaseUnboarded
@@ -335,7 +328,7 @@ saveWalkups source prior s s' = do
 
 -- | End a rider `finish` couldn't drop. Plate lock serialises with `finish` and re-open; plate -> booking lock order.
 dropStrandedRider :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => DFRFSTicketBooking.FRFSTicketBooking -> m Bool
-dropStrandedRider booking = case canonicalisePlate <$> booking.vehicleNumber of
+dropStrandedRider booking = case booking.vehicleNumber of
   Nothing -> pure False
   Just plate ->
     ifStranded (isStranded plate booking) . withPlateLock plate $ do

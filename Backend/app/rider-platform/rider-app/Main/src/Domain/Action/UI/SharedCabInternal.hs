@@ -52,7 +52,6 @@ import SharedLogic.SharedCab.DriverAction (DriverAction (..), runDriverAction)
 import qualified SharedLogic.SharedCab.LegState as LegState
 import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Offer as Offer
-import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.RateLimit (enforceChatMessageLimit)
 import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
 import SharedLogic.SharedCab.Schedule (ensureAllocationTick)
@@ -242,7 +241,7 @@ postSharedCabCabFull mbToken req = do
   Allocation.afterUnboarded plate AllocTypes.SeatLost released
   mkSessionResp full
   where
-    plate = canonicalisePlate req.vehicleNumber
+    plate = req.vehicleNumber
 
 driverAction :: DriverAction -> Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
 driverAction action bookingId mbToken req = do
@@ -408,7 +407,7 @@ getSharedCabBookingCallNumber bookingId driverId vehicleNumber mbToken = do
   unless cfg.callEnabled $ throwError SharedCabCallDisabled
   mbSession <- SharedCabCall.liveSession cfg.callEnabled booking
   case mbSession of
-    Just s | s.driverId == driverId, s.vehicleNumber == canonicalisePlate vehicleNumber -> API.RiderCallNumberResp <$> SharedCabCall.riderCallNumber booking
+    Just s | s.driverId == driverId, s.vehicleNumber == vehicleNumber -> API.RiderCallNumberResp <$> SharedCabCall.riderCallNumber booking
     _ -> throwError SharedCabCallNotAvailable
 
 -- | A driver's chat message to a rider's cab chat as a push. Same authorisation as the call (the city's chat switch instead), so
@@ -421,7 +420,7 @@ postSharedCabBookingMessage bookingId mbToken req = do
   unless cfg.chatEnabled $ throwError SharedCabChatDisabled
   mbSession <- SharedCabCall.liveSession cfg.chatEnabled booking
   case mbSession of
-    Just s | s.driverId == req.driverId, s.vehicleNumber == canonicalisePlate req.vehicleNumber -> pure ()
+    Just s | s.driverId == req.driverId, s.vehicleNumber == req.vehicleNumber -> pure ()
     _ -> throwError SharedCabChatNotAvailable
   message <- either (throwError . InvalidRequest) pure (chatMessageBody req.message)
   enforceChatMessageLimit bookingId req.driverId

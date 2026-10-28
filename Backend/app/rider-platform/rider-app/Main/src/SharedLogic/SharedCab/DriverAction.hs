@@ -24,7 +24,6 @@ import SharedLogic.SharedCab.Booking (isSharedCabBooking, withBookingLock)
 import SharedLogic.SharedCab.BookingState (clearAlloc, readAlloc)
 import SharedLogic.SharedCab.Cancel (CancelStage (ConfirmCancel), withSharedCabCancel)
 import SharedLogic.SharedCab.LegState (isDroppable)
-import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.RefundPolicy (CancelBy (ByDriver))
 import SharedLogic.SharedCab.Seats (markDropped)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -47,7 +46,7 @@ data DriverAction
 -- a seat still held (a repeat tap is a no-op); a drop needs a seat on board.
 decideDriverAction :: DriverAction -> Text -> Maybe Text -> [DFRFSTicket.FRFSTicketStatus] -> Either SharedCabDriverActionError ()
 decideDriverAction action plate bookingPlate tickets
-  | (canonicalisePlate <$> bookingPlate) /= Just plate = Left BookingNotOnThisCab
+  | bookingPlate /= Just plate = Left BookingNotOnThisCab
   | otherwise = case action of
     DriverCancel
       | boarded -> Left BookingAlreadyBoarded
@@ -73,7 +72,7 @@ requireReason mbReason = maybe (Left CancelReasonRequired) Right (mfilter (not .
 -- | Plate lock, then booking lock; the driver must own the cab's live session. A drop may apply an `afterLastDrop` route
 -- change, so re-read the session after.
 runDriverAction :: DriverAction -> Text -> Text -> Maybe Text -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow Session
-runDriverAction action driver rawPlate mbReason bookingId = do
+runDriverAction action driver plate mbReason bookingId = do
   mbCancelReason <- case action of
     DriverCancel -> Just <$> either throwError pure (requireReason mbReason)
     _ -> pure Nothing
@@ -102,7 +101,6 @@ runDriverAction action driver rawPlate mbReason bookingId = do
     when switched $ Allocation.releaseUnboarded plate RouteChanged
   Session.getSession plate >>= fromMaybeM SessionNotFound
   where
-    plate = canonicalisePlate rawPlate
     -- the booking lock inside re-decides (a boarding since the plate lock flips a ticket, and the cancel is refused)
     cancelByDriver reason booking = do
       leg <- QJourneyLeg.findByLegSearchId (Just booking.searchId.getId) >>= fromMaybeM (InvalidRequest "No journey leg for this booking")
@@ -110,7 +108,7 @@ runDriverAction action driver rawPlate mbReason bookingId = do
         JM.cancelLeg leg (SCR.CancellationReasonCode "") False Nothing
     stillOnThisCab fresh = do
       unless (fresh.status == DFRFSTicketBookingStatus.CONFIRMED) $ throwError BookingNotLive
-      unless ((canonicalisePlate <$> fresh.vehicleNumber) == Just plate) $ throwError BookingNotOnThisCab
+      unless (fresh.vehicleNumber == Just plate) $ throwError BookingNotOnThisCab
     decide booking = do
       mbAlloc <- readAlloc booking.id
       when (offerBlocks action mbAlloc) $ throwError BookingNotLive

@@ -732,7 +732,6 @@ library
       SharedLogic.SharedCab.NoShow
       SharedLogic.SharedCab.Notify
       SharedLogic.SharedCab.Offer
-      SharedLogic.SharedCab.Plate
       SharedLogic.SharedCab.RateLimit
       SharedLogic.SharedCab.RefundDecision
       SharedLogic.SharedCab.RefundPolicy
@@ -2262,13 +2261,13 @@ test-suite rider-app-test
       SharedCabLockTests
       SharedCabNoShowTests
       SharedCabNotifyTests
-      SharedCabPlateTests
       SharedCabRefundPolicyTests
       SharedCabRefundRetryTests
       SharedCabSeatTests
       SharedCabSessionTests
       SharedCabStopProgressTests
       SharedCabTicketBirthTests
+      SharedCabWalkUpTests
       Paths_rider_app
   hs-source-dirs:
       test

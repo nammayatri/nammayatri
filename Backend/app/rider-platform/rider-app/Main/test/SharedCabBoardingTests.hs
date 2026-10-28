@@ -7,7 +7,7 @@ import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import Kernel.External.Maps.Types (LatLong (..))
 import "rider-app" Lib.JourneyLeg.Common.FRFSJourneyUtils (VehicleProximity (..), riderNearVehicle)
-import "rider-app" SharedLogic.SharedCab.Boarding (SharedCabBoardOutcome (..), UnknownCodeStep (..), bindingUnmoved, cabProximity, firstUse, forceHonoured, forcedNoLocation, unknownCodeStep)
+import "rider-app" SharedLogic.SharedCab.Boarding (SharedCabBoardOutcome (..), UnknownCodeStep (..), bindingUnmoved, boardingCodeMatches, cabProximity, firstUse, forceHonoured, forcedNoLocation, unknownCodeStep)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -16,7 +16,12 @@ tests :: TestTree
 tests =
   testGroup
     "SharedCab boarding"
-    [ testGroup
+    [ testCase "a typed code matches its cab whatever the rider's case, spaces or punctuation; four characters or fewer match the plate's end" $
+        map
+          (uncurry boardingCodeMatches)
+          [("ml05a1234", "ML05A1234"), ("ML 05-A 1234", "ML05A1234"), ("1234", "ML05A1234"), ("1235", "ML05A1234"), ("ML05B1234", "ML05A1234")]
+          @?= [True, True, True, False, False],
+      testGroup
         "unknown code"
         [ testCase "no confirm: asks, never boards" $
             unknownCodeStep Nothing @?= AskToConfirmUnlisted,

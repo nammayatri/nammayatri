@@ -56,7 +56,6 @@ import Domain.Types.SharedCabSession (PauseReason (..), SessionMovement (..), Se
 import qualified Domain.Types.VehicleTrip as DVT
 import Kernel.Prelude
 import Kernel.Types.Id
-import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import Tools.Error (SharedCabSessionError (..))
 
 -- | How long a session lives without a write; a plate's bookings are written during its session.
@@ -169,7 +168,7 @@ newSession :: OpenSessionReq -> Id DVT.VehicleTrip -> UTCTime -> Maybe Session -
 newSession req tripId now prior =
   Session
     { driverId = req.driverId,
-      vehicleNumber = canonicalisePlate req.vehicleNumber,
+      vehicleNumber = req.vehicleNumber,
       merchantId = req.merchantId,
       merchantOperatingCityId = req.merchantOperatingCityId,
       integratedBppConfigId = req.integratedBppConfigId,

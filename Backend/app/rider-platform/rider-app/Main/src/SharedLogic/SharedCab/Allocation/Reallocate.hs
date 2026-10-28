@@ -33,7 +33,6 @@ import SharedLogic.SharedCab.Keys (fallbackPushedKey)
 import SharedLogic.SharedCab.LegState (CancelReason (NO_SHOW_CAP))
 import qualified SharedLogic.SharedCab.NoShow as NoShow
 import qualified SharedLogic.SharedCab.Notify as Notify
-import SharedLogic.SharedCab.Plate (samePlate)
 import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, refundAmounts)
 import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
@@ -162,7 +161,7 @@ onOfferLost bookingId plate mbBooking = do
     pickedLost = do
       mbPreferred <- readPreferred bookingId
       dropped <- readPreferenceDropped bookingId
-      when (maybe False (samePlate plate) mbPreferred && not dropped) $ do
+      when (mbPreferred == Just plate && not dropped) $ do
         cfg <- Config.getTunables . (.merchantOperatingCityId) =<< maybe (throwError (InternalError "booking gone")) pure mbBooking
         writePreferenceDropped (allocKeyTtl cfg) bookingId
         mapM_ (Notify.notifyReassigned Notify.CAB_PULLED) mbBooking

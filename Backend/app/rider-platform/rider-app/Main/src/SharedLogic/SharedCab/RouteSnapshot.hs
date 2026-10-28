@@ -27,7 +27,6 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Enabled (cabItineraryShown, sharedCabEnabled)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import qualified SharedLogic.SharedCab.Lts as Lts
-import SharedLogic.SharedCab.Plate (findByPlate)
 import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..))
@@ -101,7 +100,7 @@ buildSnapshot routeCode = do
   positions <- either (const []) identity <$> withTryCatch "sharedCab:snapshot:positions" (Lts.readRoutePositions routeCode)
   forM sessions $ \s -> do
     bitmaps <- Seats.cabBitmaps s
-    pure SnapshotCab {session = s, track = findByPlate (.vehicleNumber) s.vehicleNumber positions, bitmaps}
+    pure SnapshotCab {session = s, track = find ((== s.vehicleNumber) . (.vehicleNumber)) positions, bitmaps}
 
 -- | A shared-cab itinerary is shown only while a cab is running its route. TODO: also require the cab not to have passed the board stop.
 filterCabLegs :: (Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadMask m) => Id DMOC.MerchantOperatingCity -> [MultiModalTypes.MultiModalLeg] -> m (Maybe [MultiModalTypes.MultiModalLeg])

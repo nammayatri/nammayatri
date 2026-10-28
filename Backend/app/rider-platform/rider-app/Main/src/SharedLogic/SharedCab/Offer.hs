@@ -25,7 +25,6 @@ import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Notify as Notify
-import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), ownedSession)
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -41,7 +40,7 @@ data DeclineDecision = DeclineNow | AlreadyClosed
 decideAccept :: UTCTime -> Text -> Maybe Text -> Maybe AllocationState -> Either SharedCabDriverActionError AcceptDecision
 decideAccept now plate bookingPlate mbAlloc
   | isNothing bookingPlate = Left OfferExpired
-  | (canonicalisePlate <$> bookingPlate) /= Just plate = Left BookingNotOnThisCab
+  | bookingPlate /= Just plate = Left BookingNotOnThisCab
   | otherwise = case mbAlloc of
     Nothing -> Left OfferExpired
     Just st -> case st.timer of
@@ -54,7 +53,7 @@ decideAccept now plate bookingPlate mbAlloc
 decideDecline :: Text -> Maybe Text -> Maybe AllocationState -> Either SharedCabDriverActionError DeclineDecision
 decideDecline plate bookingPlate mbAlloc
   | isNothing bookingPlate = Right AlreadyClosed
-  | (canonicalisePlate <$> bookingPlate) /= Just plate = Left BookingNotOnThisCab
+  | bookingPlate /= Just plate = Left BookingNotOnThisCab
   | otherwise = case mbAlloc of
     Nothing -> Right AlreadyClosed
     Just st
@@ -62,7 +61,7 @@ decideDecline plate bookingPlate mbAlloc
       | otherwise -> Left BookingNotOffered
 
 acceptOffer :: Text -> Text -> Id DFTB.FRFSTicketBooking -> Environment.Flow Session
-acceptOffer driver rawPlate bookingId = do
+acceptOffer driver plate bookingId = do
   accepted <- Session.withPlateLock plate $ do
     s <- Session.readSession plate >>= either throwError pure . ownedSession driver
     withBookingLock bookingId $ do
@@ -82,7 +81,6 @@ acceptOffer driver rawPlate bookingId = do
     PushAssigned -> Notify.notifyAssigned plate booking
   Session.getSession plate >>= fromMaybeM SessionNotFound
   where
-    plate = canonicalisePlate rawPlate
     -- where the cab stands now decides the timer; without a fresh fix the wait is bounded like an away cab's
     cabStanceNow cfg now routeCode boardStopCode = do
       mbTrack <- Lts.readRoutePosition routeCode plate
@@ -93,7 +91,7 @@ acceptOffer driver rawPlate bookingId = do
         pure (cabStance cfg track.vehicleInfo stop)
 
 declineOffer :: Text -> Text -> Id DFTB.FRFSTicketBooking -> Environment.Flow Session
-declineOffer driver rawPlate bookingId = do
+declineOffer driver plate bookingId = do
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM BookingNotOnThisCab
   cfg <- Config.getTunables booking.merchantOperatingCityId
   decision <- Session.withPlateLock plate $ do
@@ -105,4 +103,3 @@ declineOffer driver rawPlate bookingId = do
   when (decision == DeclineNow) . void $ Allocation.releaseSharedCabAllocation cfg bookingId plate DriverDeclined
   Session.getSession plate >>= fromMaybeM SessionNotFound
   where
-    plate = canonicalisePlate rawPlate

@@ -244,11 +244,6 @@ tests =
               silentCab t0 60 "P1" []
             ]
               @?= [False, False, True, True, False, False],
-      testCase "a cab whose LTS position spells the plate differently is still eligible and still silent-checked" $
-        ( map (\c -> c.rcSession.vehicleNumber) (eligibleCandidates t0 defaultTunables [cabFix "p 1" nearStop (Just 0) 5] [(candidate "P1").rcSession] finding),
-          movingCab t0 60 "P1" [cabFix "p 1" nearStop (Just 8) 5]
-        )
-          @?= (["P1"], True),
       testCase "a booking is Finding with no cab and a ticket to serve, AllocatedTo while every ticket is unboarded, NotWaiting otherwise" $
         [ phase BS.CONFIRMED Nothing [TS.ACTIVE],
           phase BS.CONFIRMED Nothing [TS.ACTIVE, TS.INPROGRESS],
@@ -367,12 +362,11 @@ tests =
             cabStopEta t0 defaultTunables "S1" stop (cabFixEta 30 "A" (LatLong 25.6690 91.8930) (Just 5) 10)
           ]
           @?= [Nothing, Nothing, Nothing],
-      testCase "a picked cab holds while it is unskipped, within the wait bound, active on the route and has room, whatever the plate's spelling" $
+      testCase "a picked cab holds while it is unskipped, within the wait bound, active on the route and has room" $
         ( verdict [] 0 [pickable] 4 2 "ML05A1234",
-          verdict [] 0 [pickable] 4 2 "ml-05 a1234",
           verdict ["ML05A9999"] 0 [pickable] 4 2 "ML05A1234"
         )
-          @?= (Honour "ML05A1234", Honour "ML05A1234", Honour "ML05A1234"),
+          @?= (Honour "ML05A1234", Honour "ML05A1234"),
       testCase "a picked cab that was skipped is lost without a word, even with everything else in order" $
         verdict ["ML05A1234"] 0 [pickable] 4 2 "ML05A1234" @?= Lost PrefSkipped,
       testCase "a picked cab is lost once the rider has waited fallbackAfterSec, and not a second sooner" $
@@ -515,7 +509,7 @@ tests =
          in ([offerBlocks a offer | a <- [DriverCancel, DriverBoarded, DriverDropped]], [offerBlocks a (Just standing) | a <- [DriverCancel, DriverBoarded]], offerBlocks DriverCancel Nothing)
               @?= ([True, True, False], [False, False], False),
       testCase "only the picked cab stays a candidate" $
-        map (.rcSession.vehicleNumber) (onlyPreferred "ml05a1234" [candidate "ML05A9999", candidate "ML05A1234", candidate "ML05A5555"]) @?= ["ML05A1234"]
+        map (.rcSession.vehicleNumber) (onlyPreferred "ML05A1234" [candidate "ML05A9999", candidate "ML05A1234", candidate "ML05A5555"]) @?= ["ML05A1234"]
     ]
   where
     pickable = (candidate "ML05A1234").rcSession

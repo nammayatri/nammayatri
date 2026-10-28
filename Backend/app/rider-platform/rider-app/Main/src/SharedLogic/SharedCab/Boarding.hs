@@ -17,6 +17,7 @@ where
 
 import qualified API.Types.UI.MultimodalConfirm as API
 import Control.Applicative ((<|>))
+import qualified Data.Char as Char
 import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Types.FRFSTicket as DTicket
@@ -41,7 +42,6 @@ import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
 import qualified SharedLogic.SharedCab.Lts as Lts
-import SharedLogic.SharedCab.Plate (canonicalisePlate, findByPlate, samePlate)
 import qualified SharedLogic.SharedCab.RateLimit as RateLimit
 import qualified SharedLogic.SharedCab.Schedule as Schedule
 import qualified SharedLogic.SharedCab.Seats as Seats
@@ -63,10 +63,13 @@ data SharedCabBoardOutcome
     SharedCabProximityHold (Maybe Double) Text
   deriving (Show, Generic)
 
+-- | A rider types the code: the one place a plate is compared with human input, so both sides drop case, spaces and punctuation.
 boardingCodeMatches :: Text -> Text -> Bool
 boardingCodeMatches code plate
-  | T.length code <= 4 = canonicalisePlate code `T.isSuffixOf` canonicalisePlate plate
-  | otherwise = samePlate code plate
+  | T.length code <= 4 = normCode code `T.isSuffixOf` normCode plate
+  | otherwise = normCode code == normCode plate
+  where
+    normCode = T.toUpper . T.filter Char.isAlphaNum
 
 -- | An unknown code never boards on its own (a typo would consume the ticket); the rider confirms an unlisted cab via forceCheckIn.
 data UnknownCodeStep = AskToConfirmUnlisted | BoardUnlisted
@@ -121,7 +124,7 @@ lookupCabPing session = do
   pure $ case outcome of
     Left _ -> Nothing -- LTS outage behaves identically to NO_LIVE_CAB_DATA (8.2 ladder floor)
     Right tracked -> do
-      v <- findByPlate (.vehicleNumber) session.vehicleNumber tracked
+      v <- find ((== session.vehicleNumber) . (.vehicleNumber)) tracked
       pingTime <- parseLtsTimestamp =<< v.vehicleInfo.timestamp
       pure (pingTime, LatLong v.vehicleInfo.latitude v.vehicleInfo.longitude)
 
@@ -203,7 +206,7 @@ commitBoarding ::
   Session -> -- target cab
   Environment.Flow ()
 commitBoarding journeyLeg booking target =
-  let plate = canonicalisePlate target.vehicleNumber
+  let plate = target.vehicleNumber
    in Session.withPlateLock plate $
         withBookingLock booking.id $ do
           -- Re-validate under locks. readSession, not getSession: getSession may rebuild under this same non-re-entrant plate lock.
@@ -327,6 +330,6 @@ boardSharedCab journey journeyLeg booking mbPersonId req = do
           commitBoarding journeyLeg booking target
           -- no rider location counts against the VEHICLE's IST-day counter, so a driver feeding codes to non-app riders shows up per vehicle
           when noLocation $
-            RateLimit.recordNoLocationBoarding tunables.noLocationSpotBookingsPerVehiclePerDay (canonicalisePlate target.vehicleNumber)
+            RateLimit.recordNoLocationBoarding tunables.noLocationSpotBookingsPerVehiclePerDay target.vehicleNumber
           -- TODO: re-fare if the re-bound route differs.
           pure SharedCabBoarded
