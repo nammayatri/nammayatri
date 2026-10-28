@@ -7,8 +7,6 @@ module SharedLogic.SharedCab.Schedule
   ( -- * Allocation tick
     ensureAllocationTick,
     ChainVerdict (..),
-    NextStep (..),
-    nextStepFor,
     chainVerdict,
     ownAllocationChain,
     claimTickRun,
@@ -77,19 +75,13 @@ ensureChain (Chain guardKey guardTtlSec enqueue) = do
   whenM (shared $ Redis.setNxExpire guardKey guardTtlSec chainId) (enqueue chainId)
 
 scheduleNext :: (Redis.HedisFlow m r, MonadFlow m) => Chain m -> Text -> m ()
-scheduleNext = scheduleNextWith RefreshGuard
+scheduleNext = scheduleNextWith True
 
 -- | The next tick either refreshes the guard with its chain id and enqueues, or only enqueues. A tick that could not read the guard
 -- must not write it: it does not know the guard still names its chain, and a stale chain would take it over from the live one.
-data NextStep = RefreshGuard | EnqueueOnly
-  deriving (Eq, Show)
-
-nextStepFor :: Bool -> NextStep
-nextStepFor guardReadable = if guardReadable then RefreshGuard else EnqueueOnly
-
-scheduleNextWith :: (Redis.HedisFlow m r, MonadFlow m) => NextStep -> Chain m -> Text -> m ()
-scheduleNextWith step (Chain guardKey guardTtlSec enqueue) chainId = do
-  when (step == RefreshGuard) $ shared $ Redis.setExp guardKey chainId guardTtlSec
+scheduleNextWith :: (Redis.HedisFlow m r, MonadFlow m) => Bool -> Chain m -> Text -> m ()
+scheduleNextWith refreshGuard (Chain guardKey guardTtlSec enqueue) chainId = do
+  when refreshGuard $ shared $ Redis.setExp guardKey chainId guardTtlSec
   enqueue chainId
 
 -- | What a tick does with the guard it finds: its own chain's id (go on), none (the guard lapsed: take it back, unless a seed
@@ -109,7 +101,7 @@ ownChain chain'@(Chain guardKey guardTtlSec _) mbChainId body = do
   let chainId = fromMaybe fresh mbChainId
   -- a guard that cannot be read leaves the chain's fate unknown: keep it going, a duplicate dies at its next tick
   withTryCatch "sharedCab:ownChain" (shared $ Redis.safeGet guardKey) >>= \case
-    Left err -> logError ("sharedCab chain " <> guardKey <> ": guard unreadable, keeping the chain: " <> show err) >> scheduleNextWith (nextStepFor False) chain' chainId
+    Left err -> logError ("sharedCab chain " <> guardKey <> ": guard unreadable, keeping the chain: " <> show err) >> scheduleNextWith False chain' chainId
     Right live -> case chainVerdict live mbChainId of
       Mine -> body chainId
       Adopt -> whenM (shared $ Redis.setNxExpire guardKey guardTtlSec chainId) (body chainId)
