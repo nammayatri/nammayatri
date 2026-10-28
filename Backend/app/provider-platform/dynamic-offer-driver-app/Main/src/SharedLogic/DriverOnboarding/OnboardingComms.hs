@@ -81,16 +81,19 @@ fleetOwnerDriverDeclinedInviteKey = "FLEET_OWNER_DRIVER_DECLINED_INVITE"
 
 setOnboardingAs :: (OnboardingFlow m r, Forkable m) => DTC.TransporterConfig -> DP.Person -> DI.OnboardingAs -> m ()
 setOnboardingAs transporterConfig driver onboardingAs = do
-  endFleetAssociationsOnLeavingFleetDriver
+  mbCurrent <- ((.onboardingAs) =<<) <$> QDIExtra.findById (cast driver.id)
+  -- Same type again: no write and no push, but the guard still runs for its recompute.
+  let onboardingAsUnchanged = mbCurrent == Just onboardingAs
+  endFleetAssociationsOnLeavingFleetDriver mbCurrent
   SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.SetOnboardingAs (SGuard.TargetDriver driver.id) $
-    QDIExtra.updateOnboardingAs (Just onboardingAs) (cast driver.id)
-  fork "Onboarding as changed notification" $ do
-    notifyOnOnboardingAsChange driver onboardingAs
+    unless onboardingAsUnchanged $ QDIExtra.updateOnboardingAs (Just onboardingAs) (cast driver.id)
+  unless onboardingAsUnchanged $
+    fork "Onboarding as changed notification" $ do
+      notifyOnOnboardingAsChange driver onboardingAs
   where
-    endFleetAssociationsOnLeavingFleetDriver =
+    endFleetAssociationsOnLeavingFleetDriver mbCurrent =
       when (onboardingAs /= DI.FLEET_DRIVER) $ do
-        mbDriverInfo <- QDIExtra.findById (cast driver.id)
-        when (((.onboardingAs) =<< mbDriverInfo) == Just DI.FLEET_DRIVER) $ do
+        when (mbCurrent == Just DI.FLEET_DRIVER) $ do
           associations <- QFDA.findAllByDriverIdWithStatus driver.id
           forM_ associations $ \association ->
             SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id association.fleetOwnerId) driver.id) SGuard.UnlinkFromFleet (SGuard.TargetDriver driver.id) $ do
