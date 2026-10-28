@@ -25,7 +25,6 @@ data VehicleTrip = VehicleTrip
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     movingAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     offlineBoardings :: Kernel.Prelude.Int,
-    reachedEndAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     routeCode :: Kernel.Prelude.Text,
     serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
     startedAt :: Kernel.Prelude.UTCTime,

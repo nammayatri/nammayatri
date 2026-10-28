@@ -241,7 +241,6 @@ tripFor s now =
       status = DVT.ACTIVE,
       startedAt = now,
       movingAt = Nothing,
-      reachedEndAt = Nothing,
       endedAt = Nothing,
       endReason = Nothing,
       offlineBoardings = 0,

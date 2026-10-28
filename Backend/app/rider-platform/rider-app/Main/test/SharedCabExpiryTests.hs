@@ -37,7 +37,6 @@ liveTrip =
       status = DVT.ACTIVE,
       startedAt = t0,
       movingAt = Nothing,
-      reachedEndAt = Nothing,
       endedAt = Nothing,
       endReason = Nothing,
       offlineBoardings = 3,

@@ -1,5 +1,5 @@
 -- | Stop-progress actions for every live cab of a city, run by the allocation tick under its city lease: board stop passed,
--- drop auto-end, off-route pause, and the trip's `reachedEndAt`. Decisions live in `StopProgress.Rules`.
+-- drop auto-end and off-route pause. Decisions live in `StopProgress.Rules`.
 module SharedLogic.SharedCab.StopProgress
   ( runStopProgress,
   )
@@ -122,7 +122,6 @@ stepCab cfg spc now live positions route s = do
         movingTimerStep (allocKeyTtl cfg) spc now freshCab plate b
   forM_ onBoard $ dropStep spc now mbCab plate
   when (s.status == ACTIVE) $ offRouteStep spc now route ((.position) <$> freshCab) plate
-  whenJust mbCab $ \cab -> when (reachedRouteEnd spc.atStopRadiusM cab) $ markReachedEnd now s
 
 cabFix :: LT.VehicleInfo -> CabFix
 cabFix vi =
@@ -176,9 +175,3 @@ offRouteStep spc now route freshPosition plate = do
         Right _ -> do
           releaseUnboarded plate SessionClosed
     OffRouteNoChange -> pure ()
-
-markReachedEnd :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Metrics.CoreMetrics m) => UTCTime -> Session -> m ()
-markReachedEnd now s =
-  QVT.findById s.vehicleTripId >>= traverse_ \trip ->
-    when (isNothing trip.reachedEndAt) $ do
-      QVT.updateReachedEndAt (Just now) trip.id

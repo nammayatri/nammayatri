@@ -9,13 +9,10 @@ module SharedLogic.SharedCab.StopProgress.Rules
     armMovingTimer,
     dropAction,
     offRouteAction,
-    reachedRouteEnd,
     metersFromPolyline,
   )
 where
 
-import Data.List (sortOn)
-import Data.Ord (Down (..))
 import Data.Time (addUTCTime, diffUTCTime)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
@@ -90,11 +87,6 @@ offRouteAction cfg now offSince route mbPosition =
       | d > cfg.offRouteMeters -> if diffUTCTime now since >= fromIntegral cfg.offRouteSec then PauseOffRoute else OffRouteNoChange
       | otherwise -> ClearOffRouteClock
     _ -> OffRouteNoChange
-
-reachedRouteEnd :: Double -> CabFix -> Bool
-reachedRouteEnd radius cab = case sortOn (Down . (.stopIdx)) cab.stops of
-  lastStop : _ -> arrivedAt radius cab lastStop
-  [] -> False
 
 metersFromPolyline :: [LatLong] -> LatLong -> Maybe Double
 metersFromPolyline route p = case route of

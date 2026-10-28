@@ -72,13 +72,5 @@ tests =
         let st timer = AllocationState {vehicleNumber = "P1", driverId = Nothing, allocatedAt = t0, timer}
             armedWith timer = armMovingTimer cfg t0 (runningTimerDeadline (st timer)) (Just (fix 25.6195 [stopAt 5 False, stopAt 6 False])) "S5"
          in map armedWith [NoTimer, StandTimer (after 30), MovingTimer (after 30), AwayTimer (after 30)]
-              @?= [Just (after 90), Nothing, Nothing, Nothing],
-      testCase "reached end: the last stop Reached, or the cab at it" $
-        ( reachedRouteEnd 100 (fix 25.60 [stopAt 5 False, stopAt 6 False]),
-          reachedRouteEnd 100 (fix 25.625 [stopAt 5 True, stopAt 6 False]),
-          reachedRouteEnd 100 (fix 25.6295 [stopAt 5 True, stopAt 6 False]),
-          reachedRouteEnd 100 (fix 25.64 [stopAt 5 True, stopAt 6 True]),
-          reachedRouteEnd 100 (fix 25.6295 [])
-        )
-          @?= (False, False, True, True, False)
+              @?= [Just (after 90), Nothing, Nothing, Nothing]
     ]

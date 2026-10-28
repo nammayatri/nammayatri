@@ -76,9 +76,6 @@ updateOfflineBoardings offlineBoardings id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.offlineBoardings offlineBoardings, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateReachedEndAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip -> m ())
-updateReachedEndAt reachedEndAt id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.reachedEndAt reachedEndAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleTrip.VehicleTripStatus -> Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -98,7 +95,6 @@ updateByPrimaryKey (Domain.Types.VehicleTrip.VehicleTrip {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.movingAt movingAt,
       Se.Set Beam.offlineBoardings offlineBoardings,
-      Se.Set Beam.reachedEndAt reachedEndAt,
       Se.Set Beam.routeCode routeCode,
       Se.Set Beam.serviceTierType serviceTierType,
       Se.Set Beam.startedAt startedAt,

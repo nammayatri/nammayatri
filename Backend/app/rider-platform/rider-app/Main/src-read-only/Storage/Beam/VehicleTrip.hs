@@ -24,7 +24,6 @@ data VehicleTripT f = VehicleTripT
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     movingAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     offlineBoardings :: (B.C f Kernel.Prelude.Int),
-    reachedEndAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     routeCode :: (B.C f Kernel.Prelude.Text),
     serviceTierType :: (B.C f BecknV2.FRFS.Enums.ServiceTierType),
     startedAt :: (B.C f Kernel.Prelude.UTCTime),
