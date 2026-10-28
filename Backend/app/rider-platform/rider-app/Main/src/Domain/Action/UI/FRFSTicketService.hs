@@ -32,6 +32,7 @@ import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.FleetOperatorTripAction as FOTripAction
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJL
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
@@ -83,6 +84,7 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyModule.RouteServiceability as JMRouteServiceability
+import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.JourneyModule.Utils as JourneyUtils
@@ -132,8 +134,10 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RouteDetails as QRouteDetails
 import qualified Storage.Queries.SeatLayout as QSeatLayout
 import Tools.Error
 import Tools.Maps as Maps
@@ -2083,6 +2087,7 @@ postFrfsFleetOperatorTripAction' (merchantId, merchantOperatingCityId) req = do
       now <- getCurrentTime
       let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
       void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionEnd, trip_number = Just prevTrip, timestamp = Just epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
+      fork "closeJourneysForEndedTrip" $ closeJourneysForEndedTrip (JMU.makeTripIdFromWaybillNoAndTripNo waybillNo prevTrip)
       pure
         FRFSTicketService.FleetOperatorTripActionResp
           { currentTripNumber = prevTrip,
@@ -2112,6 +2117,42 @@ postFrfsFleetOperatorTripAction' (merchantId, merchantOperatingCityId) req = do
           { currentTripNumber = 0, -- no active trip after a rollback
             hasUpcomingTrips = not (null (filter (> newCursor) allTripNumbers))
           }
+
+closeJourneysForEndedTrip :: Text -> Environment.Flow ()
+closeJourneysForEndedTrip tripId = do
+  bookings <- QFRFSTicketBooking.findAllConfirmedByTripId tripId
+  unless (null bookings) $ do
+    legs <- QJourneyLeg.findAllByLegSearchIds (map (\b -> b.searchId.getId) bookings)
+    let legMap = Map.fromList $ mapMaybe (\l -> (,l) <$> l.legSearchId) legs
+    persons <- QP.findAllByIds (map (.riderId) bookings)
+    let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
+    now <- getCurrentTime
+    updated <- fmap catMaybes $
+      forM bookings $ \booking ->
+        case Map.lookup booking.searchId.getId legMap of
+          Nothing -> pure Nothing
+          Just leg -> do
+            let hasTripStarted = maybe False (now >=) booking.startTime
+            mbJourney <- if hasTripStarted then QJourney.findByPrimaryKey leg.journeyId else pure Nothing
+            case mbJourney of
+              Just journey
+                | journey.status `elem` [DJourney.CONFIRMED, DJourney.INPROGRESS] -> do
+                  tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
+                  journeyLegs <- QJourneyLeg.getJourneyLegs journey.id
+                  let travelled = journey.status == DJourney.INPROGRESS || any (\t -> t.status == DFRFSTicket.USED) tickets
+                      isLegFinished l = l.id == leg.id || all (\rd -> rd.trackingStatus == Just JMState.Finished) l.routeDetails
+                      allLegsFinished = all isLegFinished (filter (\l -> l.isDeleted /= Just True) journeyLegs)
+                  if travelled
+                    then do
+                      forM_ leg.routeDetails $ \rd -> QRouteDetails.updateTrackingStatusWithTime (Just JMState.Finished) rd.id now
+                      when allLegsFinished $ do
+                        QJourney.updateStatusAndEndTime DJourney.FEEDBACK_PENDING journey.id
+                        whenJust (Map.lookup booking.riderId personMap) $ \person ->
+                          fork "notifyBusTripEnded" $ Notifications.notifyBusTripEnded person (fromMaybe "" leg.finalBoardedBusNumber) (fromMaybe "" booking.routeName) tripId journey.id
+                      pure $ Just journey.id
+                    else pure Nothing
+              _ -> pure Nothing
+    logInfo $ "closeJourneysForEndedTrip tripId=" <> tripId <> " bookings=" <> show (length bookings) <> " journeysUpdated=" <> show (length updated)
 
 -- | Notify every confirmed passenger of a trip that their bus has started.
 -- Lives on the rider app because it needs rider `Person` device tokens (atlas_app);

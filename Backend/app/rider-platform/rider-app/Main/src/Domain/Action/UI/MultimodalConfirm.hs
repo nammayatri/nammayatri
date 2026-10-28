@@ -267,7 +267,7 @@ postMultimodalConfirm (_mbPersonId, _merchantId) journeyId forcedBookLegOrder mb
       QJourney.updateSkipCreateOrderCall (Just skipCreateOrderCall) journeyId
 
     void $ JM.startJourney journey.riderId confirmElements forcedBookLegOrder journey journeyConfirmReq.enableOffer (Just isMockPayment)
-    -- If all FRFS legs are skipped, update journey status to INPROGRESS. Otherwise, update journey status to CONFIRMED and it would be marked as INPROGRESS on Payment Success in `markJourneyPaymentSuccess`.
+    -- If all FRFS legs are skipped, update journey status to INPROGRESS. Otherwise, update journey status to CONFIRMED and it would be marked as INPROGRESS on Payment Success in `markJourneyPaymentSuccess`, unless the trip departs later, in which case it stays CONFIRMED until the rider checks in.
     -- Note: INPROGRESS journey status indicates that the tracking has started.
     if isAllFRFSLegSkipped legs confirmElements
       then do
@@ -2971,7 +2971,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails ::
     API.Types.UI.MultimodalConfirm.OnboardedVehicleDetailsReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) journeyId legOrder _subLegOrder req = runAction journeyId $ do
+postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) journeyId legOrder subLegOrder req = runAction journeyId $ do
   vehicleNumber <- req.vehicleNumber & fromMaybeM (InvalidRequest "vehicleNumber is required")
   let boardingMethod = DJourneyLeg.UserActivated
   let mbForceCheckIn = req.forceCheckIn
@@ -3110,6 +3110,9 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
                 booking.totalPrice.amount
                 purchaseCount
 
+      JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS
+      onboardedTime <- getCurrentTime
+      markLegStatus Nothing (Just JMState.Ongoing) journeyLeg (Just subLegOrder) onboardedTime
       QJourneyLeg.updateByPrimaryKey $
         journeyLeg
           { DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber,
@@ -3136,7 +3139,8 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
           booking.driverMobileNumber
           booking.id
       updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
-      generateJourneyInfoResponse journey updatedLegs
+      updatedJourney <- JM.getJourney journeyId
+      generateJourneyInfoResponse updatedJourney updatedLegs
   where
     allTicketsUsed bookingId = do
       tickets <- QFRFSTicket.findAllByTicketBookingId bookingId

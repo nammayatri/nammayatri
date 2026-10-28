@@ -2163,6 +2163,7 @@ data BusTripStartedParam = BusTripStartedParam
 
 data BusNotificationType
   = TRIP_STARTED
+  | TRIP_ENDED
   | APPROACHING
   | AT_STOP
   | TRACKING_AVAILABLE_ON_START
@@ -2217,6 +2218,38 @@ notifyBusTripStarted person vehicleNumber routeName tripId mbJourneyId = do
   -- Secondary channel: WhatsApp for opted-in riders (additive, best-effort).
   -- The `trip_tracking_enabled` template carries a static deep link, so no variables are passed.
   sendWhatsAppTemplateIfOptedIn person DMM.WHATSAPP_BUS_TRIP_STARTED []
+
+notifyBusTripEnded ::
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
+  Person.Person ->
+  Text ->
+  Text ->
+  Text ->
+  Id Domain.Types.Journey.Journey ->
+  m ()
+notifyBusTripEnded person vehicleNumber routeName tripId journeyId = do
+  let entityData =
+        BusNotificationEntityData
+          { tripId = Just tripId,
+            vehicleNumber = vehicleNumber,
+            routeId = routeName,
+            stopCode = Nothing,
+            stopName = Nothing,
+            notificationType = TRIP_ENDED,
+            journeyId = Just journeyId.getId,
+            bookingId = Nothing
+          }
+  let entity = Notification.Entity Notification.Product person.id.getId entityData
+      dynamicParams = BusTripStartedParam vehicleNumber routeName
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "BUS_TRIP_ENDED" identity)
+    dynamicParams
+    entity
+    Nothing
+    [("vehicleNumber", vehicleNumber), ("routeName", routeName)]
+    Nothing
+    Nothing
 
 data BusApproachingParam = BusApproachingParam
   { vehicleNumber :: Text,

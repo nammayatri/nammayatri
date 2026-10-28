@@ -321,10 +321,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         whenJust paymentBooking.frfsQuoteId $ \paymentBookingQuoteId -> do
           when (booking.quoteId /= paymentBookingQuoteId) $ do
             switchFRFSQuoteTier journeyLeg paymentBookingQuoteId
-        isTestTransaction <- asks (.isMetroTestTransaction)
-        let updatedOrderShortId = DPayment.updateShortId paymentOrder.paymentServiceType isTestTransaction paymentOrder.shortId.getShortId
-        void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) (Just True) journeyId
-        void $ QJourney.updateStatus (if booking.status == DFRFSTicketBooking.FAILED then DJ.FAILED else DJ.INPROGRESS) journeyId
+        markJourneyPaidForBooking booking paymentOrder journeyId
       pure mbJourneyLeg
 
     buildPaymentObject booking paymentBooking paymentBookingStatus =
@@ -633,3 +630,22 @@ paymentCategoryToQuoteCategory DTBPC.FRFSTicketBookingPaymentCategory {..} =
       seatLabels = seatLabels,
       holdId = holdId
     }
+
+markJourneyPaidForBooking ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HasField "isMetroTestTransaction" r Bool) =>
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  DPaymentOrder.PaymentOrder ->
+  Id DJ.Journey ->
+  m ()
+markJourneyPaidForBooking booking paymentOrder journeyId = do
+  isTestTransaction <- asks (.isMetroTestTransaction)
+  let updatedOrderShortId = DPayment.updateShortId paymentOrder.paymentServiceType isTestTransaction paymentOrder.shortId.getShortId
+  void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) (Just True) journeyId
+  now <- getCurrentTime
+  let newStatus
+        | booking.status == DFRFSTicketBooking.FAILED = DJ.FAILED
+        | maybe False (> now) booking.startTime = DJ.CONFIRMED
+        | otherwise = DJ.INPROGRESS
+  mbJourney <- QJourney.findByPrimaryKey journeyId
+  whenJust mbJourney $ \journey ->
+    when (newStatus > journey.status) $ void $ QJourney.updateStatus newStatus journeyId
