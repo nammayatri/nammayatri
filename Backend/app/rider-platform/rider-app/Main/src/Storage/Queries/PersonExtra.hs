@@ -34,6 +34,15 @@ updateAcceptedPolicies (Id personId) acceptedPolicies = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
+updateCommsConsent :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Bool -> m ()
+updateCommsConsent (Id personId) commsConsent = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.commsConsent (Just commsConsent),
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
 findByPId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
 findByPId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is BeamP.id $ Se.Eq id]
 

@@ -137,6 +137,7 @@ Person:
     operatorBadgeToken: Maybe Text
     clientId: Maybe Text
     acceptedPolicies: Maybe AcceptedPolicies
+    commsConsent: Maybe Bool
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>

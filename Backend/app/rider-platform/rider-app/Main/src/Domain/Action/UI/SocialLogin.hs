@@ -306,6 +306,7 @@ postAuthEmailVerifyV2 authId req =
               deviceToken = req.deviceToken,
               whatsappNotificationEnroll = Nothing,
               userPasswordString = Nothing,
+              commsConsent = Nothing,
               socialLinkToken = Nothing
             }
           Nothing

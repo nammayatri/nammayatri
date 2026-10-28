@@ -188,6 +188,7 @@ data ProfileRes = ProfileRes
     paymentMode :: Maybe DMPM.PaymentMode,
     blockedUntil :: Maybe UTCTime,
     pendingLegalPolicies :: Maybe [PolicyDoc.PendingLegalPolicy],
+    commsConsent :: Maybe Bool,
     mobileNumberRequired :: Bool,
     isEmailVerified :: Bool
   }
