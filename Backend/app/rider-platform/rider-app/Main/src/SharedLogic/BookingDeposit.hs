@@ -42,6 +42,7 @@ module SharedLogic.BookingDeposit
     releaseHolds,
     refundBookingDeposit,
     creditRiderBalance,
+    depositTopupAccount,
     expireOrRepairBookingDeposit,
     holdGraceSeconds,
     unpaidFeeGraceSeconds,
@@ -73,10 +74,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Account.Service as Account
 import qualified Lib.Finance.Balance as FinanceBalance
-import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
+import Lib.Finance.Domain.Types.Account (Account, CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
+import qualified Lib.Finance.Domain.Types.Transfer as DT
 import Lib.Finance.FinanceM
 import qualified Lib.Finance.Ledger.Service as Ledger
+import qualified Lib.Finance.Storage.Queries.Transfer as QTransfer
+import qualified Lib.Finance.Transfer.Inbound as Inbound
+import Lib.Finance.Transfer.Rail (TransferOutcome (OutcomeSucceeded))
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as QPaymentTransaction
@@ -145,7 +150,7 @@ getAvailableBalance riderId = do
   case mbAcc of
     Nothing -> pure 0
     Just acc -> do
-      breakdown <- FinanceBalance.getBalanceBreakdown acc []
+      breakdown <- FinanceBalance.getBalanceAmountsWith [] acc []
       pure breakdown.available
 
 hasCreditForOrder :: (CacheFlow m r, EsqDBFlow m r) => Text -> m Bool
@@ -633,6 +638,9 @@ applyDepositRefundResult ::
   m ()
 applyDepositRefundResult booking refundReq (row, order) refundId refundStatus errorCode = do
   resolveDepositRefundLegs booking.riderId order.id refundStatus
+  -- One tracking row per gateway attempt (the Refunds id), same canonical status as every other transfer.
+  FinanceRails.mintDepositRefundTransfer booking.riderId.getId booking.merchantId.getId booking.merchantOperatingCityId.getId order.currency order.amount refundId
+  FinanceRails.updateDepositRefundTransferStatus refundId (Just (show refundStatus)) (FinanceRails.refundStatusToTransferStatus refundStatus)
   let reqStatus = SPayment.refundStatusToRequestStatus refundStatus
       bpStatus = case refundStatus of
         Payment.REFUND_SUCCESS -> DBP.REFUNDED
@@ -763,6 +771,16 @@ creditRiderBalance ::
 creditRiderBalance riderId merchantId merchantOpCityId amount referenceId =
   withRiderFeeLock riderId $ creditRiderBalance_ riderId merchantId merchantOpCityId amount referenceId
 
+-- | The rider's wallet account a deposit payment order credits; the kernel keys the order's intent on it.
+depositTopupAccount ::
+  DepositFlow m r =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe Account)
+depositTopupAccount riderId merchantId merchantOpCityId =
+  FinanceRails.depositTopupWalletAccount (mkCtx riderId merchantId merchantOpCityId "")
+
 creditRiderBalance_ ::
   DepositFlow m r =>
   Id DP.Person ->
@@ -775,13 +793,37 @@ creditRiderBalance_ riderId merchantId merchantOpCityId amount referenceId = do
   existing <- Ledger.getEntriesByReference bookingDepositTopupRefType referenceId
   when (length existing == 1) $
     logError $ "Booking deposit credit for " <> referenceId <> " has only one leg; ledger is unbalanced"
-  if not (null existing)
-    then logInfo $ "Booking deposit already credited for " <> referenceId <> "; skipping duplicate credit"
-    else do
-      let ctx = mkCtx riderId merchantId merchantOpCityId referenceId
-      result <- runFinance ctx $ do
-        transfer_ BuyerAsset BuyerExternal amount bookingDepositTopupRefType
-        transfer BuyerExternal OwnerLiability amount bookingDepositTopupRefType Nothing
-      case result of
+  let ctx = mkCtx riderId merchantId merchantOpCityId referenceId
+  -- The payment's INBOUND transfer row, minted by the kernel when the order was created, posts the two credit
+  -- legs once (idempotent on the anchor leg) and is the canonical status of the payment. An order from before
+  -- that has no row: credit directly, as before.
+  mbRow <- QTransfer.findByReference FinanceRails.depositTopupTransferRefType referenceId
+  -- The kernel credits the row's own amount; it must be the order's. A mismatch is not expected
+  -- (the row is minted with the order's amount) but would credit the wrong sum, so credit directly.
+  let usableRow = case mbRow of
+        Just t | t.status == DT.SUCCEEDED || t.amount == amount -> Just t
+        _ -> Nothing
+  when (isJust mbRow && isNothing usableRow) $
+    logError $ "Booking deposit transfer row amount differs from order amount for " <> referenceId <> "; crediting directly"
+  case usableRow of
+    Just transfer' -> do
+      let recipe =
+            Inbound.CreditRecipe
+              { legs =
+                  Inbound.CreditLeg {fromRole = BuyerAsset, toRole = BuyerExternal, portion = Inbound.FullAmount, referenceType = bookingDepositTopupRefType}
+                    :| [Inbound.CreditLeg {fromRole = BuyerExternal, toRole = OwnerLiability, portion = Inbound.FullAmount, referenceType = bookingDepositTopupRefType}],
+                invoiceConfig = Nothing
+              }
+      Inbound.applyInboundTransferOutcome runFinance ctx recipe transfer'.id (Just "CHARGED") OutcomeSucceeded >>= \case
         Left err -> throwError $ InternalError $ "Booking deposit credit failed: " <> show err
-        Right _ -> logInfo $ "Credited " <> show amount <> " to rider " <> riderId.getId
+        Right _ -> logInfo $ "Credited " <> show amount <> " to rider " <> riderId.getId <> " (order " <> referenceId <> ")"
+    Nothing ->
+      if not (null existing)
+        then logInfo $ "Booking deposit already credited for " <> referenceId <> "; skipping duplicate credit"
+        else do
+          result <- runFinance ctx $ do
+            transfer_ BuyerAsset BuyerExternal amount bookingDepositTopupRefType
+            transfer BuyerExternal OwnerLiability amount bookingDepositTopupRefType Nothing
+          case result of
+            Left err -> throwError $ InternalError $ "Booking deposit credit failed: " <> show err
+            Right _ -> logInfo $ "Credited " <> show amount <> " to rider " <> riderId.getId

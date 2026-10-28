@@ -32,3 +32,8 @@ CREATE INDEX CONCURRENTLY finance_transfer_idx_account_id_created_at ON atlas_ap
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.finance_transfer ADD CONSTRAINT finance_transfer_unique_idx_reference_id_reference_type UNIQUE (reference_id, reference_type);
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY finance_transfer_idx_merchant_id_status ON atlas_app.finance_transfer USING btree (merchant_id, status);

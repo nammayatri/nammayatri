@@ -1126,17 +1126,33 @@ TransporterConfig:
     # cap, redeemable cutoff, topup enablement) lives in finance_account_config keyed on
     # the account class — see docs/backend/design/finance-kernel-unification-plan.md §3.
     # Only domain policy that is NOT about moving money stays here.
+    #
+    # DEPRECATED, UNUSED BY NEW CODE — kept for one release: driverWalletPayoutThreshold,
+    # gstPercentage, enableWalletPayout, enableWalletTopup, maxWalletPayoutsPerDay,
+    # minimumWalletPayoutAmount, payoutCutOffDays, instantPayoutExcludedRoles. Pods still on
+    # the previous release read them, and a config written without them makes those pods fall
+    # back to defaults (payouts disabled, no cap). Remove them in the next release.
     DriverWalletConfig:
       enableDriverWallet: Bool
+      driverWalletPayoutThreshold: HighPrecMoney
+      gstPercentage: Double
+      enableWalletPayout: Bool
+      enableWalletTopup: Bool
+      maxWalletPayoutsPerDay: Maybe Int
+      minimumWalletPayoutAmount: HighPrecMoney
       minWalletAmountForCashRides: Maybe HighPrecMoney
       minWalletAmountForScheduledRides: Maybe HighPrecMoney
       # Wallet summary a fleet-linked driver sees. Absent = FLEET_ACCOUNT.
       fleetLinkedDriverWalletView: Maybe FleetLinkedDriverWalletView
+      payoutCutOffDays: Int
       payoutFee: Maybe PayoutFeeConfig
       forceOnlineLedger: Maybe Bool
       onlineCommissionPaidOutDirectly: Maybe Bool
       fetchWalletTransactionsFromClickhouse: Maybe Bool
       enableWalletGatedTierCheck: Maybe Bool
+      # Roles barred from instant wallet payout in this city (scheduled, bulk and adhoc are unaffected).
+      # FLEET_OWNER also covers FLEET_BUSINESS. Absent: nobody is barred.
+      instantPayoutExcludedRoles: Maybe [Role]
       paymentChargeBearer: Maybe PaymentChargeBearer
       paymentChargeRate: Maybe Double
       paymentChargeVat: Maybe Double

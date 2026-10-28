@@ -604,6 +604,9 @@ refundStatusHandler paymentOrder paymentServiceType = do
       m ()
     bookingDepositRefundStatusHandler refund = do
       let newStatus = if BookingDepositLedger.unknownRefundOutcome refund then DBP.REFUND_INITIATED else refundStatusToBookingPaymentStatus refund
+      -- A thrown refund call is not a decline: it is not recorded as a failed transfer either.
+      unless (BookingDepositLedger.unknownRefundOutcome refund) $
+        FinanceRails.updateDepositRefundTransferStatus refund.id.getId (Just (show refund.status)) (FinanceRails.refundStatusToTransferStatus refund.status)
       depositReqs <- filter (\r -> r.refundPurpose == DRefundRequest.BOOKING_DEPOSIT) <$> QRefundRequest.findAllByOrderId paymentOrder.id
       case depositReqs of
         [] -> pure ()

@@ -8,8 +8,7 @@
   raw payout statuses — the per-caller cast tables derive from kernel status now.
 -}
 module SharedLogic.Finance.Rails
-  ( riderJuspayPayoutRailKey,
-    classifyJuspayPayoutStatus,
+  ( classifyJuspayPayoutStatus,
     riderJuspayStatusRail,
     cashbackSubmitRail,
     awardPayoutRail,
@@ -20,8 +19,15 @@ module SharedLogic.Finance.Rails
     rideRefundTransferRefType,
     refundStatusToTransferStatus,
     refundRequestStatusToTransferStatus,
+    depositRefundTransferRefType,
+    depositTopupTransferRefType,
+    depositTopupWalletAccount,
+    mkDepositInboundRail,
+    updateDepositTopupTransferStatus,
     mintRideRefundTransfer,
     updateRideRefundTransferStatus,
+    mintDepositRefundTransfer,
+    updateDepositRefundTransferStatus,
     refundPollPacing,
   )
 where
@@ -37,17 +43,18 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.AccountConfig as FinanceConfig
 import qualified Lib.Finance.Balance as FinanceBalance
 import qualified Lib.Finance.Core.Types as Finance
-import Lib.Finance.Domain.Types.Account (AccountType (Liability), CounterpartyType (RIDER))
+import Lib.Finance.Domain.Types.Account (Account, AccountType (Liability), CounterpartyType (RIDER))
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Domain.Types.Transfer as DT
-import Lib.Finance.FinanceM (runFinance)
+import Lib.Finance.FinanceM (FinanceCtx, runFinance)
+import qualified Lib.Finance.FinanceM as FinM
 import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..), findActivePayoutHold)
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Finance.Storage.Queries.Transfer as QTransfer
 import qualified Lib.Finance.Storage.Queries.TransferExtra as QTransferExtra
 import qualified Lib.Finance.Transfer.Backfill as Backfill
-import Lib.Finance.Transfer.Outbound (OutboundSpec (..), initiateTransferOut)
+import Lib.Finance.Transfer.Outbound (OutboundAccrual (..), OutboundSpec (..), initiateTransferOutWithAccrual)
 import Lib.Finance.Transfer.Outcome (applyRailStatus)
 import Lib.Finance.Transfer.Rail
 import qualified Lib.Finance.Transfer.RailStatus as RailStatus
@@ -58,9 +65,6 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import Storage.Beam.Payment ()
-
-riderJuspayPayoutRailKey :: DT.RailKey
-riderJuspayPayoutRailKey = DT.JUSPAY_PAYOUT
 
 -- | The ONE rider-side mapping from Juspay's raw payout-status vocabulary to the
 --   kernel's canonical outcomes. Unparseable text goes to review, never to a guess.
@@ -75,8 +79,7 @@ classifyJuspayPayoutStatus = RailStatus.classifyJuspayPayoutStatus
 riderJuspayStatusRail :: (PaymentBeamFlow.BeamFlow m r) => TransferRail m
 riderJuspayStatusRail =
   TransferRail
-    { railKey = riderJuspayPayoutRailKey,
-      holdOrdering = SubmitThenHold,
+    { railKey = DT.JUSPAY_PAYOUT,
       submit = \_ -> pure (RailAmbiguous "status-only rail: submit not supported"),
       pollStatus = \t -> case t.railOrderId of
         Nothing -> pure Nothing
@@ -96,8 +99,7 @@ cashbackSubmitRail ::
   TransferRail m
 cashbackSubmitRail submission payoutRequest payoutCall afterPayoutOrderCreated =
   TransferRail
-    { railKey = riderJuspayPayoutRailKey,
-      holdOrdering = SubmitThenHold,
+    { railKey = DT.JUSPAY_PAYOUT,
       submit = \_ -> do
         outcome <- PayoutRequest.executePayoutRequestWithOutcome submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated
         pure $ case outcome of
@@ -118,8 +120,7 @@ cashbackSubmitRail submission payoutRequest payoutCall afterPayoutOrderCreated =
 awardPayoutRail :: (PaymentBeamFlow.BeamFlow m r) => m RailSubmitResult -> TransferRail m
 awardPayoutRail submitAction =
   TransferRail
-    { railKey = riderJuspayPayoutRailKey,
-      holdOrdering = SubmitThenHold,
+    { railKey = DT.JUSPAY_PAYOUT,
       submit = const submitAction,
       pollStatus = \t -> case t.railOrderId of
         Nothing -> pure Nothing
@@ -155,62 +156,62 @@ runAwardPayoutTransfer ::
 runAwardPayoutTransfer merchantId merchantOpCityId currency riderId orderId accrualReferenceId amount accrualRefType transferRefType refs submitAction onNotSubmitted onParked = do
   let ctx = RidePaymentFinance.buildRiderFinanceCtx merchantId merchantOpCityId currency True riderId orderId Nothing Nothing Nothing
       accrualCtx = RidePaymentFinance.buildRiderFinanceCtx merchantId merchantOpCityId currency True riderId accrualReferenceId Nothing Nothing Nothing
-  -- Idempotent accrual: a retry of the same award (same anchor) reuses the existing
-  -- leg instead of granting the amount twice.
-  existingAccrual <- filter (\e -> isNothing e.reversalOf) <$> LedgerService.getEntriesByReference accrualRefType accrualReferenceId
-  accrualRes <-
-    if null existingAccrual
-      then RidePaymentFinance.createSettledAwardAccrualLeg accrualCtx amount accrualRefType
-      else pure (Right (map (.id) existingAccrual))
-  case accrualRes of
+  -- The wallet account is resolved (created on a rider's first award) before the transfer so
+  -- the kernel can lock it; the award credit itself is posted by the kernel inside that lock.
+  runFinance ctx (FinM.account FinM.OwnerLiability) >>= \case
     Left err -> do
-      logError $ "award payout " <> orderId <> ": accrual leg failed: " <> show err
-      onNotSubmitted ("ACCRUAL_FAILED: " <> show err)
-    Right accrualIds ->
-      RidePaymentFinance.getWalletAccountByOwner RIDER riderId >>= \case
-        Nothing -> do
-          logError $ "award payout " <> orderId <> ": no wallet account after accrual"
-          onNotSubmitted "NO_WALLET_ACCOUNT"
-        Just account -> do
-          res <-
-            initiateTransferOut
-              runFinance
-              (awardPayoutRail submitAction)
-              OutboundSpec
-                { ctx = ctx,
-                  account = account,
-                  amount = FinanceBalance.Exact amount,
-                  referenceType = transferRefType,
-                  referenceId = orderId,
-                  ledgerRefs = refs,
-                  instant = True,
-                  legacyOfferHoldKeys = [],
-                  alwaysRedeemableRefs = [],
-                  coveredEntryIds = Just accrualIds,
-                  holdLedgerMetadata = Nothing,
-                  metadata = DT.emptyTransferMetadata {DT.coveredRefs = Just [DT.CoveredRef {refType = accrualRefType, amount = amount}]}
-                }
-          case res of
-            Left err -> do
-              -- Pre-row rejection: nothing was sent and no hold exists, but the accrual
-              -- WAS posted. Left standing it would be a phantom wallet credit (spendable
-              -- via booking deposits) that nobody paid in — reverse any accrual minted
-              -- by THIS call (a reused accrual belongs to the retry chain and stays).
-              when (null existingAccrual) $
-                forM_ accrualIds $ \accrualId ->
-                  LedgerService.createReversal accrualId ("AWARD_PAYOUT_NOT_STARTED: " <> show err)
-                    >>= either (\e -> logError $ "award payout " <> orderId <> ": accrual reversal failed: " <> show e) (const (pure ()))
-              logError $ "award payout " <> orderId <> ": kernel transfer rejected: " <> show err
-              onNotSubmitted ("KERNEL_REJECTED: " <> show err)
-            Right t -> do
-              logInfo $ "award payout " <> orderId <> " transfer " <> t.id.getId <> " status " <> show t.status
-              when (t.status == DT.FAILED) $
-                -- rail confirmed nothing was sent; hold already reversed by the kernel
-                onNotSubmitted ("RAIL_REJECTED: " <> fromMaybe "-" t.lastError)
-              when (t.status == DT.NEEDS_REVIEW) $
-                -- parked: the submit outcome is unknown, money may be with the partner.
-                -- Never retried (that's how double-pays happen) — escalate instead.
-                onParked ("PARKED_FOR_REVIEW: " <> fromMaybe "-" t.lastError)
+      logError $ "award payout " <> orderId <> ": no wallet account: " <> show err
+      onNotSubmitted ("NO_WALLET_ACCOUNT: " <> show err)
+    Right (account, _) -> do
+      let -- Idempotent: a retry of the same award (same anchor) reuses the existing leg instead
+          -- of granting the amount twice. A credit minted by this call is taken back by the
+          -- kernel if the transfer is rejected or fails, so it is never left spendable
+          -- (booking deposits read the same wallet); a reused one stays with the retry chain.
+          accrual =
+            OutboundAccrual
+              { postAccrual = do
+                  entries <- LedgerService.getEntriesByReference accrualRefType accrualReferenceId
+                  -- a credit the kernel already took back (rejected earlier attempt) does not count
+                  let reversedIds = mapMaybe (.reversalOf) entries
+                      liveAccrual = [e | e <- entries, isNothing e.reversalOf, e.id `notElem` reversedIds]
+                  if null liveAccrual
+                    then fmap (\ids -> (ids, True)) <$> RidePaymentFinance.createSettledAwardAccrualLeg accrualCtx amount accrualRefType
+                    else pure (Right (map (.id) liveAccrual, False))
+              }
+      res <-
+        initiateTransferOutWithAccrual
+          runFinance
+          (awardPayoutRail submitAction)
+          (Just accrual)
+          OutboundSpec
+            { ctx = ctx,
+              account = account,
+              amount = FinanceBalance.Exact amount,
+              referenceType = transferRefType,
+              referenceId = orderId,
+              ledgerRefs = refs,
+              instant = True,
+              legacyOfferHoldKeys = [],
+              alwaysRedeemableRefs = [],
+              -- the kernel covers the credit it posts
+              coveredEntryIds = Nothing,
+              holdLedgerMetadata = Nothing,
+              metadata = DT.emptyTransferMetadata {DT.coveredRefs = Just [DT.CoveredRef {refType = accrualRefType, amount = amount}]}
+            }
+      case res of
+        Left err -> do
+          -- Nothing was sent and no hold exists; the kernel already took back a credit it minted.
+          logError $ "award payout " <> orderId <> ": kernel transfer rejected: " <> show err
+          onNotSubmitted ("KERNEL_REJECTED: " <> show err)
+        Right t -> do
+          logInfo $ "award payout " <> orderId <> " transfer " <> t.id.getId <> " status " <> show t.status
+          when (t.status == DT.FAILED) $
+            -- rail confirmed nothing was sent; hold already reversed by the kernel, and so was the credit
+            onNotSubmitted ("RAIL_REJECTED: " <> fromMaybe "-" t.lastError)
+          when (t.status == DT.NEEDS_REVIEW) $
+            -- parked: the submit outcome is unknown, money may be with the partner.
+            -- Never retried (that's how double-pays happen) — escalate instead.
+            onParked ("PARKED_FOR_REVIEW: " <> fromMaybe "-" t.lastError)
 
 -- | Settle a payout outcome through the kernel transfer. Pre-migration payouts have no
 --   transfer row; one is minted from the domain's process record (backfill-on-read) so
@@ -255,7 +256,7 @@ settleRiderPayoutViaKernel refType refId refs merchantId merchantOpCityId curren
                   <$> Backfill.backfillTransfer
                     Backfill.BackfillSpec
                       { direction = DT.OUTBOUND,
-                        railKey = riderJuspayPayoutRailKey,
+                        railKey = DT.JUSPAY_PAYOUT,
                         railOrderId = mbRailOrderId,
                         accountId = account.id,
                         amount = amount,
@@ -303,8 +304,66 @@ payoutOrderFallbackStatus st = case classifyJuspayPayoutStatus (show st) of
 rideRefundTransferRefType :: Text
 rideRefundTransferRefType = "RideRefund"
 
-riderJuspayRefundRailKey :: DT.RailKey
-riderJuspayRefundRailKey = DT.JUSPAY_REFUND
+-- | Booking-deposit top-up (rider pays the shortfall through the gateway). The rider keeps its own
+--   order creation / reuse / expiry; this INBOUND row is the canonical status of the payment, keyed on
+--   the payment order id, and the credit legs post through the kernel when the order is CHARGED.
+depositTopupTransferRefType :: Text
+depositTopupTransferRefType = "BookingDepositTopup"
+
+-- | The rider's wallet account for a deposit payment (created here when the rider has none yet).
+--   Nothing = the account could not be resolved.
+depositTopupWalletAccount ::
+  (FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
+  FinanceCtx ->
+  m (Maybe Account)
+depositTopupWalletAccount ctx =
+  runFinance ctx (FinM.account FinM.OwnerLiability) >>= \case
+    Left err -> do
+      logError $ "deposit topup: wallet account unavailable: " <> show err
+      pure Nothing
+    Right (account, _) -> pure (Just account)
+
+-- | Collection rail of the deposit topup, same shape as the driver's: the kernel runs the intent (gate,
+--   the order's row, its status); the domain supplies only how the gateway order is created or re-served.
+mkDepositInboundRail :: (Applicative m) => (RailCollectRequest -> m RailCollectResult) -> TransferRail m
+mkDepositInboundRail collect =
+  TransferRail
+    { railKey = DT.JUSPAY_PG,
+      submit = \_ -> pure (RailDeferred "COLLECTION_RAIL"),
+      pollStatus = \_ -> pure Nothing,
+      classifyStatus = \_ -> OutcomePending,
+      collectPayload = Just collect
+    }
+
+-- | Status landing for a deposit payment that did not succeed (dead order). Terminal rows are never
+--   touched; success is recorded by the credit itself.
+updateDepositTopupTransferStatus ::
+  (FinanceBeamFlow.BeamFlow m r) =>
+  Text -> -- payment order id
+  Maybe Text -> -- raw gateway status
+  DT.TransferStatus ->
+  m ()
+updateDepositTopupTransferStatus orderId mbRaw newStatus =
+  trackingOnly "updateDepositTopupTransferStatus" $
+    QTransfer.findByReference depositTopupTransferRefType orderId >>= \case
+      Nothing -> pure ()
+      Just t ->
+        -- a credited payment stays SUCCEEDED whatever a late or out-of-order gateway status says
+        unless (t.status `elem` [DT.SUCCEEDED, DT.FAILED, DT.REVERSED]) $
+          QTransferExtra.updateStatusById newStatus mbRaw Nothing t.id
+
+-- | Transfer rows for these flows are tracking only: a failure writing one is logged and must never
+--   fail the payment or refund it describes.
+trackingOnly :: (MonadFlow m) => Text -> m () -> m ()
+trackingOnly label action =
+  withTryCatch label action >>= \case
+    Left err -> logError $ label <> ": transfer tracking skipped: " <> show err
+    Right () -> pure ()
+
+-- | Same shape for the booking-deposit refund: the ledger legs stay on the deposit's own
+--   BOOKING_DEPOSIT_REFUND path; this row only tracks the gateway attempt.
+depositRefundTransferRefType :: Text
+depositRefundTransferRefType = "BookingDepositRefund"
 
 -- | THE gateway refund-status mapping (canonical, total).
 refundStatusToTransferStatus :: PaymentI.RefundStatus -> DT.TransferStatus
@@ -329,8 +388,17 @@ refundRequestStatusToTransferStatus = \case
 -- | Mint the money-process row for one gateway refund attempt, idempotent on the
 --   Refunds row id (each retry attempt = one Refunds row = one transfer). A rider with
 --   no wallet account was never ledgered — skip with a log, never fabricate an account.
-mintRideRefundTransfer ::
+mintRideRefundTransfer :: (FinanceBeamFlow.BeamFlow m r) => Text -> Text -> Text -> Currency -> HighPrecMoney -> Text -> m ()
+mintRideRefundTransfer = mintRefundTransfer rideRefundTransferRefType
+
+-- | 'mintRideRefundTransfer' for the booking-deposit refund attempt.
+mintDepositRefundTransfer :: (FinanceBeamFlow.BeamFlow m r) => Text -> Text -> Text -> Currency -> HighPrecMoney -> Text -> m ()
+mintDepositRefundTransfer riderId merchantId mocId currency amount refundsId =
+  trackingOnly "mintDepositRefundTransfer" $ mintRefundTransfer depositRefundTransferRefType riderId merchantId mocId currency amount refundsId
+
+mintRefundTransfer ::
   (FinanceBeamFlow.BeamFlow m r) =>
+  Text -> -- transfer reference type
   Text -> -- rider id
   Text -> -- merchant id
   Text -> -- merchant operating city id
@@ -338,22 +406,22 @@ mintRideRefundTransfer ::
   HighPrecMoney ->
   Text -> -- Refunds row id (gateway requestId)
   m ()
-mintRideRefundTransfer riderId merchantId merchantOpCityId currency amount refundsId =
+mintRefundTransfer refType riderId merchantId merchantOpCityId currency amount refundsId =
   RidePaymentFinance.getWalletAccountByOwner RIDER riderId >>= \case
     Nothing ->
-      logInfo $ "ride refund " <> refundsId <> ": no wallet account for rider " <> riderId <> "; transfer tracking skipped"
+      logInfo $ refType <> " " <> refundsId <> ": no wallet account for rider " <> riderId <> "; transfer tracking skipped"
     Just account ->
       void $
         Backfill.backfillTransfer
           Backfill.BackfillSpec
             { direction = DT.OUTBOUND,
-              railKey = riderJuspayRefundRailKey,
+              railKey = DT.JUSPAY_REFUND,
               railOrderId = Just refundsId,
               accountId = account.id,
               amount = amount,
               feeAmount = 0,
               currency = currency,
-              referenceType = rideRefundTransferRefType,
+              referenceType = refType,
               referenceId = refundsId,
               knownEntryIds = [],
               coveredEntryIds = [],
@@ -363,14 +431,23 @@ mintRideRefundTransfer riderId merchantId merchantOpCityId currency amount refun
 
 -- | Status landing for a refund attempt. Terminal rows are never downgraded by a late
 --   pending poll; a missing row (pre-migration refund, account-less rider) is a skip.
-updateRideRefundTransferStatus ::
+updateRideRefundTransferStatus :: (FinanceBeamFlow.BeamFlow m r) => Text -> Maybe Text -> DT.TransferStatus -> m ()
+updateRideRefundTransferStatus = updateRefundTransferStatus rideRefundTransferRefType
+
+-- | 'updateRideRefundTransferStatus' for the booking-deposit refund attempt.
+updateDepositRefundTransferStatus :: (FinanceBeamFlow.BeamFlow m r) => Text -> Maybe Text -> DT.TransferStatus -> m ()
+updateDepositRefundTransferStatus refundsId mbRaw newStatus =
+  trackingOnly "updateDepositRefundTransferStatus" $ updateRefundTransferStatus depositRefundTransferRefType refundsId mbRaw newStatus
+
+updateRefundTransferStatus ::
   (FinanceBeamFlow.BeamFlow m r) =>
+  Text -> -- transfer reference type
   Text -> -- Refunds row id
   Maybe Text -> -- raw gateway status, verbatim
   DT.TransferStatus ->
   m ()
-updateRideRefundTransferStatus refundsId mbRaw newStatus =
-  QTransfer.findByReference rideRefundTransferRefType refundsId >>= \case
+updateRefundTransferStatus refType refundsId mbRaw newStatus =
+  QTransfer.findByReference refType refundsId >>= \case
     Nothing -> pure ()
     Just t -> do
       let terminal = t.status `elem` [DT.SUCCEEDED, DT.FAILED, DT.REVERSED]

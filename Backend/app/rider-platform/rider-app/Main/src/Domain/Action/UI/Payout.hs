@@ -8,6 +8,7 @@ module Domain.Action.UI.Payout
     isPayoutStatusFailed,
     PayoutSettlementFlow,
     runRiderPayoutSettlement,
+    runRiderPayoutSettlementManual,
     refreshPayoutOrderWithSettlement,
   )
 where
@@ -102,7 +103,36 @@ runRiderPayoutSettlement ::
   IPayout.PayoutOrderStatus ->
   DPayoutOrder.PayoutOrder ->
   m ()
-runRiderPayoutSettlement merchantId merchantOperatingCityId payoutStatus payoutOrder =
+runRiderPayoutSettlement = runRiderPayoutSettlementWith True
+
+-- | The same settlement for a status ops decided by hand: the partner is not asked again, because its
+--   answer would overwrite the manual decision recorded on the order.
+runRiderPayoutSettlementManual ::
+  (PayoutSettlementFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  IPayout.PayoutOrderStatus ->
+  DPayoutOrder.PayoutOrder ->
+  m ()
+runRiderPayoutSettlementManual = runRiderPayoutSettlementWith False
+
+runRiderPayoutSettlementWith ::
+  (PayoutSettlementFlow m r) =>
+  Bool -> -- ask the partner for its status afterwards
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  IPayout.PayoutOrderStatus ->
+  DPayoutOrder.PayoutOrder ->
+  m ()
+runRiderPayoutSettlementWith repoll merchantId merchantOperatingCityId payoutStatus payoutOrder = do
+  -- The transfer is driven to its end BEFORE the "already SUCCESS" check below. A status refresh or the
+  -- dashboard saves the partner's status first and then calls this, so whoever sees SUCCESS first would
+  -- otherwise skip the settle and leave the transfer IN_FLIGHT with its hold never settled. The settle
+  -- is idempotent; the check only guards the once-only side effects (person stats, booking, pushes).
+  -- When the saved order is already SUCCESS, only a success status is applied here: a late failure or
+  -- REVERSED notice for a paid award must not move money without the partner being asked again.
+  when (not (isPayoutOrderSuccess payoutOrder.status) || isPayoutOrderSuccess payoutStatus) $
+    forM_ awardLedger $ \(refType, refs) -> settleAwardViaKernel refType refs
   unless (isPayoutOrderSuccess payoutOrder.status && payoutOrder.entityName /= Just DPayment.RIDE_OFFER_CASHBACK) $ do
     let personId = Id payoutOrder.customerId
     payoutConfig <-
@@ -114,41 +144,36 @@ runRiderPayoutSettlement merchantId merchantOperatingCityId payoutStatus payoutO
     person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
     case payoutOrder.entityName of
       Just DPayment.METRO_BOOKING_CASHBACK -> do
-        settleAwardViaKernel RidePaymentFinance.ridePaymentRefMetroCashbackPayout RidePaymentFinance.metroCashbackPayoutLedgerRefs
         forM_ (listToMaybe =<< payoutOrder.entityIds) $ \bookingId -> do
           when (isPayoutOrderSuccess payoutStatus) $
             QFTB.updatePayoutStatusById (Just $ castPayoutOrderStatus payoutStatus) (Id bookingId)
           fork "Update Payout Status and Transactions for MetroBooking" $
-            callPayoutService payoutOrder payoutConfig person
+            repollPartner payoutOrder payoutConfig person
       Just DPayment.REFERRAL_AWARD_RIDE -> do
-        settleAwardViaKernel RidePaymentFinance.ridePaymentRefReferralAwardPayout RidePaymentFinance.referralAwardPayoutLedgerRefs
         when (isPayoutOrderSuccess payoutStatus) $ do
           notifyPersonOnAmountCredit person
           QPersonStats.updateReferralAmountPaid (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
         fork "Update Payout Status and Transactions for Referral Award" $
-          callPayoutService payoutOrder payoutConfig person
+          repollPartner payoutOrder payoutConfig person
       Just DPayment.REFERRED_BY_AWARD -> do
-        settleAwardViaKernel RidePaymentFinance.ridePaymentRefReferralAwardPayout RidePaymentFinance.referralAwardPayoutLedgerRefs
         when (isPayoutOrderSuccess payoutStatus) $ do
           notifyPersonOnAmountCredit person
           QPersonStats.updateReferredByEarningsPayoutStatusAndAmountPaid (Just $ castOrderStatus payoutStatus) (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
         fork "Update Payout Status and Transactions for ReferredBy Award" $
-          callPayoutService payoutOrder payoutConfig person
+          repollPartner payoutOrder payoutConfig person
       Just DPayment.BACKLOG -> do
-        settleAwardViaKernel RidePaymentFinance.ridePaymentRefReferralAwardPayout RidePaymentFinance.referralAwardPayoutLedgerRefs
         when (isPayoutOrderSuccess payoutStatus) $ do
           notifyPersonOnAmountCredit person
           QPersonStats.updateBacklogStatusAndAmountPaid (Just $ castOrderStatus payoutStatus) (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
         fork "Update Payout Status and Transactions for Backlog Referral Award" $
-          callPayoutService payoutOrder payoutConfig person
+          repollPartner payoutOrder payoutConfig person
       Just DPayment.REFERRED_BY_AND_BACKLOG_AWARD -> do
-        settleAwardViaKernel RidePaymentFinance.ridePaymentRefReferralAwardPayout RidePaymentFinance.referralAwardPayoutLedgerRefs
         when (isPayoutOrderSuccess payoutStatus) $ do
           let mbStatus = Just $ castOrderStatus payoutStatus
           notifyPersonOnAmountCredit person
           QPersonStats.updateBacklogAndReferredByPayoutStatusAndAmountPaid mbStatus mbStatus (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
         fork "Update Payout Status and Transactions for Referred By And Backlog Award" $
-          callPayoutService payoutOrder payoutConfig person
+          repollPartner payoutOrder payoutConfig person
       Just DPayment.RIDE_OFFER_CASHBACK -> do
         let mbPayoutRequestId = listToMaybe (fromMaybe [] payoutOrder.entityIds)
         whenJust mbPayoutRequestId $ \prId -> Redis.withWaitAndLockMasterCloudCrossAppRedis "payout" "waitForSettlementLock" (payoutSettlementLockKey prId) 60 100 $ do
@@ -178,9 +203,19 @@ runRiderPayoutSettlement merchantId merchantOperatingCityId payoutStatus payoutO
             when (isPayoutOrderFailed payoutStatus) $
               Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" payoutOrder.amount.amount
         fork "Update Payout Status and Transactions for RideOfferCashback" $
-          callPayoutService payoutOrder payoutConfig person
+          repollPartner payoutOrder payoutConfig person
       _ -> logTagError "Webhook Handler Error" $ "Unsupported Payout Entity:" <> show payoutOrder.entityName
   where
+    repollPartner order cfg person = when repoll (callPayoutService order cfg person)
+    -- Which ledger vocabulary an award payout's transfer was minted under.
+    awardLedger = case payoutOrder.entityName of
+      Just DPayment.METRO_BOOKING_CASHBACK -> Just (RidePaymentFinance.ridePaymentRefMetroCashbackPayout, RidePaymentFinance.metroCashbackPayoutLedgerRefs)
+      Just DPayment.REFERRAL_AWARD_RIDE -> Just referralAward
+      Just DPayment.REFERRED_BY_AWARD -> Just referralAward
+      Just DPayment.BACKLOG -> Just referralAward
+      Just DPayment.REFERRED_BY_AND_BACKLOG_AWARD -> Just referralAward
+      _ -> Nothing
+    referralAward = (RidePaymentFinance.ridePaymentRefReferralAwardPayout, RidePaymentFinance.referralAwardPayoutLedgerRefs)
     -- Award payouts settle through the kernel transfer; pre-migration awards had no
     -- accrual leg, so the backfilled transfer carries no covered entries and the
     -- kernel's settle repairs the missing hold itself on success.
@@ -218,7 +253,16 @@ refreshPayoutOrderWithSettlement payoutOrder =
             >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" merchantOperatingCityId.getId)
         let payoutStatusServiceReq = DPayment.PayoutStatusServiceReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
             createPayoutOrderStatusCall = PayoutTools.payoutOrderStatus person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just person.id.getId)
-        void $ DPayment.payoutStatusService (cast merchantId) (cast person.id) payoutStatusServiceReq createPayoutOrderStatusCall
+        statusRes <- withTryCatch "payoutOrderStatus" (void $ DPayment.payoutStatusService (cast merchantId) (cast person.id) payoutStatusServiceReq createPayoutOrderStatusCall)
+        case statusRes of
+          Right () -> pure ()
+          Left err
+            -- The partner says it never received this order: nothing was sent. Close it as failed so
+            -- the usual failure settlement below frees the held money.
+            | PayoutRequest.isOrderNotFoundAtPartner err -> do
+              closed <- PayoutRequest.markPayoutOrderNeverReceived payoutOrder
+              unless closed $ throwM err
+            | otherwise -> throwM err
         refreshed <- QPayoutOrder.findByOrderId payoutOrder.orderId >>= fromMaybeM (PayoutOrderNotFound payoutOrder.orderId)
         runRiderPayoutSettlement merchantId merchantOperatingCityId refreshed.status refreshed
         QPayoutOrder.findByOrderId payoutOrder.orderId >>= \case
