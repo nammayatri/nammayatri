@@ -39,6 +39,7 @@ import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as PStats
 import Tools.Error
+import qualified Tools.EventTracking as ET
 import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TPayout
 
@@ -153,6 +154,9 @@ postPayoutVpaUpsert (mbPersonId, _mbMerchantId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   QPerson.updatePayoutVpa (Just req.vpa) personId
+  when (isNothing person.payoutVpa) $
+    fork "event_tracking: upi_id_added" $
+      ET.trackEvent person.merchantId person.merchantOperatingCityId (ET.UpiIdAdded personId.getId)
   fork ("processing backlog payout for customer while vpa updation" <> personId.getId) $
     processBacklogReferralPayout personId req.vpa person.merchantOperatingCityId
   pure Success
