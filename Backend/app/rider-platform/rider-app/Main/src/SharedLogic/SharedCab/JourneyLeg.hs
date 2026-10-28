@@ -32,7 +32,7 @@ import qualified SharedLogic.SharedCab.Allocation.Select as Select
 import SharedLogic.SharedCab.Allocation.Types (RiderFix (..), allocationDeadline, visiblePlate)
 import qualified SharedLogic.SharedCab.Approach as Approach
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
-import SharedLogic.SharedCab.BookingState (readAlloc, readAttempts, readFindingSince, readPreferenceDropped, readPreferred, readRiderSkipUsed)
+import SharedLogic.SharedCab.BookingState (readBookingState)
 import qualified SharedLogic.SharedCab.Call as SharedCabCall
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as SharedCabDegraded
@@ -73,17 +73,17 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
     JMStateTypes.FRFSTicket DFRFSTicket.INPROGRESS -> SharedCabDegraded.expireDegradedBoardingIfNeeded booking
     _ -> pure False
   let bookingStatus' = if degradeExpired then JMStateTypes.FRFSTicket DFRFSTicket.USED else bookingStatus
-  mbAllocState <- readAlloc booking.id
+  bookingState <- readBookingState booking.id
+  let mbAllocState = bookingState.allocState
   -- an offer the driver has not accepted is not the rider's cab yet: the leg stays FINDING and shows no cab
   let shown = visiblePlate mbAllocState booking.vehicleNumber
       visibleBooking = booking {DFRFSTicketBooking.vehicleNumber = shown}
   mbSession <- maybe (pure Nothing) SharedCabSession.readSession shown
-  cabsComing <- maybe (pure 0) (fmap length . RouteSnapshot.routeSnapshot) mbRouteCode
   -- the fallback gate and the arrival deadline both live in the cross-app Redis cell the allocation tick writes to
   cfg <- Config.getTunables booking.merchantOperatingCityId
-  findingSince <- readFindingSince booking.id booking.createdAt
-  attempts <- readAttempts booking.id
-  preference <- (,) . fmap (T.takeEnd 4) <$> readPreferred booking.id <*> readPreferenceDropped booking.id
+  let findingSince = fromMaybe booking.createdAt bookingState.findingStintSince
+      attempts = bookingState.attemptCount
+      preference = (T.takeEnd 4 <$> bookingState.preferredPlate, bookingState.preferenceLost)
   -- the cab's position, driver and contact only while the plate runs the trip the rider boarded on
   let tripSession = sessionOnTrip (getId <$> booking.vehicleTripId) mbSession
   cabTrack <- readCabTrack now cfg booking tripSession
@@ -100,6 +100,10 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
             findingSince,
             fallbackAfterSec = cfg.fallbackAfterSec
           }
+  -- how many cabs run the route matters only while the rider waits for one
+  cabsComing <- case mbRouteCode of
+    Just routeCode | mbState == Just SharedCabLeg.FINDING -> length <$> RouteSnapshot.routeSnapshot routeCode
+    _ -> pure 0
   let inWindow = isJust tripSession && maybe False SharedCabLeg.callWindowState mbState
   maskedCall <- if cfg.callEnabled && inWindow then SharedCabCall.maskedCallNumber booking.merchantOperatingCityId else pure Nothing
   let chatChannel = if cfg.chatEnabled && inWindow then Just booking.id.getId else Nothing
@@ -112,21 +116,23 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
       then SharedCabBooking.readCancelReason booking.id
       else pure Nothing
   -- the assigned cab's own ETA (from the track already read) decides the skip button and which other cabs come after it
-  skipUsed <- readRiderSkipUsed booking.id
-  let assignedEtaSec = cabTrack >>= \(_, boardEta, _) -> boardEta
+  let skipUsed = bookingState.skipUsed
+      assignedEtaSec = cabTrack >>= \(_, boardEta, _) -> boardEta
       approaching = mbState `elem` [Just SharedCabLeg.ALLOCATED, Just SharedCabLeg.ARRIVING]
       skipAvailable = maybe False (\st -> SharedCabLeg.skipAvailableFor st skipUsed assignedEtaSec) mbState
   upcomingCabs <- case (shown, mbRouteCode) of
     (Just plate, Just routeCode) | approaching -> do
       snapshot <- RouteSnapshot.routeSnapshot routeCode
-      cabs <- fmap catMaybes . forM [c | c <- snapshot, not (samePlate plate c.session.vehicleNumber)] $ \c ->
-        case Approach.plausibleEtaFrom now cfg booking.fromStationCode =<< c.track of
-          Nothing -> pure Nothing
-          Just etaSec -> do
-            seats <- SharedCabSeats.cabSeats c.session
-            let freeSeats = maybe 0 (SharedCabSeats.freeOverBitmaps (RouteSnapshot.cabBitmapsOf c)) (SharedCabSeats.bookingRange seats booking.fromStationCode booking.toStationCode)
-            pure (Just SharedCabLeg.UpcomingCab {cabId = c.session.vehicleTripId.getId, etaSec, freeSeats})
-      pure (SharedCabLeg.upcomingCabsOf assignedEtaSec cabs)
+      let approachingCabs =
+            [ (c, etaSec)
+              | c <- snapshot,
+                not (samePlate plate c.session.vehicleNumber),
+                Just etaSec <- [Approach.plausibleEtaFrom now cfg booking.fromStationCode =<< c.track]
+            ]
+      forM (SharedCabLeg.nearestAfter snd assignedEtaSec approachingCabs) $ \(c, etaSec) -> do
+        seats <- SharedCabSeats.cabSeats c.session
+        let freeSeats = maybe 0 (SharedCabSeats.freeOverBitmaps (RouteSnapshot.cabBitmapsOf c)) (SharedCabSeats.bookingRange seats booking.fromStationCode booking.toStationCode)
+        pure SharedCabLeg.UpcomingCab {cabId = c.session.vehicleTripId.getId, etaSec, freeSeats}
     _ -> pure []
   pure $
     JT.Single

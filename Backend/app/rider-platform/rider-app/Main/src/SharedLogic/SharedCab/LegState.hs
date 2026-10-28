@@ -20,6 +20,7 @@ module SharedLogic.SharedCab.LegState
     seatsHeld,
     UpcomingCab (..),
     upcomingCabsOf,
+    nearestAfter,
     SkipVerdict (..),
     skipMinEtaSec,
     decideRiderSkip,
@@ -162,7 +163,11 @@ data UpcomingCab = UpcomingCab
 
 -- | At most three cabs that arrive after the assigned one (all of them when its own ETA is unknown), soonest first.
 upcomingCabsOf :: Maybe Int -> [UpcomingCab] -> [UpcomingCab]
-upcomingCabsOf assignedEtaSec = take 3 . sortOn (.etaSec) . filter (\c -> maybe True (< c.etaSec) assignedEtaSec)
+upcomingCabsOf = nearestAfter (.etaSec)
+
+-- | The three soonest of `xs` arriving after the assigned cab: the leg picks its upcoming cabs by ETA before any seat math.
+nearestAfter :: (a -> Int) -> Maybe Int -> [a] -> [a]
+nearestAfter etaOf assignedEtaSec = take 3 . sortOn etaOf . filter (\x -> maybe True (< etaOf x) assignedEtaSec)
 
 data SkipVerdict = SkipOk | SkipUsed | SkipTooLate
   deriving (Show, Eq)

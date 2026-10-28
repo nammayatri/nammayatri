@@ -5,9 +5,11 @@ module SharedCabLegStateTests (tests) where
 
 import qualified "beckn-spec" BecknV2.FRFS.Enums as Spec
 import Data.Aeson (decode, encode)
+import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as BLC
 import Data.List (isInfixOf)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isNothing)
 import Data.Text (Text)
 import Data.Time (NominalDiffTime, UTCTime (..), addUTCTime, fromGregorian, secondsToDiffTime)
 import qualified "beckn-spec" Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
@@ -20,6 +22,7 @@ import "rider-app" Lib.JourneyModule.State.Utils (onlyTransitLeg)
 import qualified "rider-app" Lib.JourneyModule.Utils as JMU
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
 import "rider-app" SharedLogic.SharedCab.Booking (bookingSeats, partyMap)
+import "rider-app" SharedLogic.SharedCab.BookingState (BookingStateView (..), bookingStateFrom)
 import "rider-app" SharedLogic.SharedCab.Call (exophoneCandidates)
 import "rider-app" SharedLogic.SharedCab.LegState
 import "rider-app" SharedLogic.SharedCab.Session (CabDriverInfo (..))
@@ -170,6 +173,13 @@ tests =
         [ testCase "the other cabs after the assigned one, soonest first, at most three, never earlier or equal" $
             map (.cabId) (upcomingCabsOf (Just 100) [cab "late" 400, cab "same" 100, cab "early" 60, cab "b" 150, cab "c" 200, cab "d" 300])
               @?= ["b", "c", "d"],
+          testCase "the leg picks its three nearest cabs after the assigned one by ETA alone, before reading any seats" $
+            nearestAfter snd (Just 100) [("late", 400), ("same", 100), ("early", 60), ("b", 150), ("c", 200), ("d", 300 :: Int)]
+              @?= [("b", 150), ("c", 200), ("d", 300)],
+          testCase "the booking hash read once gives each field, or its single-field default when missing or undecodable" $
+            let st = bookingStateFrom [("attempts", A.Number 2), ("preferred", A.String "ML05A1234"), ("riderSkipUsed", A.String "yes")]
+             in (isNothing st.allocState, st.attemptCount, st.findingStintSince, st.preferredPlate, st.preferenceLost, st.skipUsed)
+                  @?= (True, 2, Nothing, Just "ML05A1234", False, False),
           testCase "when the assigned cab's own ETA is unknown every other cab counts" $
             map (.cabId) (upcomingCabsOf Nothing [cab "x" 90, cab "y" 30]) @?= ["y", "x"],
           testCase "an upcoming cab ships its opaque id, ETA and seats, and nothing else" $

@@ -21,9 +21,13 @@ module SharedLogic.SharedCab.BookingState
     writePreferenceDropped,
     clearBookingState,
     bookingStateTtl,
+    BookingStateView (..),
+    bookingStateFrom,
+    readBookingState,
   )
 where
 
+import qualified Data.Aeson as A
 import Data.List (nub)
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Kernel.Prelude
@@ -101,6 +105,37 @@ readPreferenceDropped bookingId = fromMaybe False <$> readField bookingId "prefe
 
 writePreferenceDropped :: StateFlow m r => Int -> BookingId -> m ()
 writePreferenceDropped ttl bookingId = writeField ttl bookingId "preferredDropped" True
+
+-- | The hash's fields a leg poll shows, from one HGETALL instead of a read per field.
+data BookingStateView = BookingStateView
+  { allocState :: Maybe AllocationState,
+    attemptCount :: Int,
+    findingStintSince :: Maybe UTCTime,
+    preferredPlate :: Maybe Text,
+    preferenceLost :: Bool,
+    skipUsed :: Bool
+  }
+
+-- | A missing or undecodable field reads as its single-field reader's default.
+bookingStateFrom :: [(Text, A.Value)] -> BookingStateView
+bookingStateFrom fields =
+  BookingStateView
+    { allocState = field "alloc",
+      attemptCount = fromMaybe 0 (field "attempts"),
+      findingStintSince = field "findingSince",
+      preferredPlate = field "preferred",
+      preferenceLost = fromMaybe False (field "preferredDropped"),
+      skipUsed = fromMaybe False (field "riderSkipUsed")
+    }
+  where
+    field :: FromJSON a => Text -> Maybe a
+    field name =
+      lookup name fields >>= \v -> case A.fromJSON v of
+        A.Success a -> Just a
+        A.Error _ -> Nothing
+
+readBookingState :: StateFlow m r => BookingId -> m BookingStateView
+readBookingState bookingId = bookingStateFrom <$> shared (Redis.hGetAll (bookingStateKey bookingId))
 
 -- | The booking is done with allocation (cancelled or finished): the hash and the fallback-push flag go.
 clearBookingState :: StateFlow m r => BookingId -> m ()
