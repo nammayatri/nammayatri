@@ -13,7 +13,6 @@ module SharedLogic.SharedCab.Keys
     fallbackPushedKey,
     pickedCabKey,
     interestKey,
-    declineCountKey,
     riderFixKey,
     cancelReasonKey,
     degradedKey,
@@ -84,9 +83,6 @@ interestKey :: Text -> Text
 interestKey routeCode = "sharedcab:interest:" <> routeCode
 
 -- | How many offers a driver declined or let lapse on a day (YYYYMMDD); counted for later, nothing reads it yet.
-declineCountKey :: Text -> Text -> Text
-declineCountKey driverId day = "sharedcab:declines:" <> driverId <> ":" <> day
-
 riderFixKey :: BookingId -> Text
 riderFixKey bookingId = "sharedcab:riderfix:" <> bookingId.getId
 

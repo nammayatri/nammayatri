@@ -11,9 +11,6 @@ module SharedLogic.SharedCab.Allocation.Reallocate
   )
 where
 
-import Control.Monad.Extra (whenJustM)
-import qualified Data.Text as T
-import Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (..))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
@@ -34,7 +31,7 @@ import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
-import SharedLogic.SharedCab.Keys (declineCountKey, fallbackPushedKey)
+import SharedLogic.SharedCab.Keys (fallbackPushedKey)
 import SharedLogic.SharedCab.LegState (CancelReason (NO_SHOW_CAP))
 import qualified SharedLogic.SharedCab.NoShow as NoShow
 import qualified SharedLogic.SharedCab.Notify as Notify
@@ -173,20 +170,16 @@ afterClose cfg bookingId plate outcome closed =
       ReallocatedIntoFallback -> do
         notifyReassignment mbBooking
         whenM (claimFallbackPush cfg bookingId) $ mapM_ Notify.notifyBoardAny mbBooking
-    when (outcome `elem` [DriverDeclined, OfferTimeout]) $ onOfferLost bookingId plate mbBooking now
+    when (outcome `elem` [DriverDeclined, OfferTimeout]) $ onOfferLost bookingId plate mbBooking
   where
     notifyReassignment mbBooking = forM_ (Notify.reassignReasonFor outcome) $ \reason -> mapM_ (Notify.notifyReassigned reason) mbBooking
 
--- | A driver declined an offer or let it lapse. The driver's count for the day goes up (nothing reads it yet), and a rider who picked this cab hears
--- once that it is gone; a rider who did not pick it was never told of it. Best effort: the booking is already back to FINDING.
-onOfferLost :: AllocFlow m r => Id DFTB.FRFSTicketBooking -> Text -> Maybe DFTB.FRFSTicketBooking -> UTCTime -> m ()
-onOfferLost bookingId plate mbBooking now = do
-  withTryCatch "sharedCabOfferLost:count" countDecline >>= either (\e -> logError $ "shared-cab decline count failed for booking " <> bookingId.getId <> ": " <> show e) pure
+-- | A driver declined an offer or let it lapse (the driver app counts the decline). A rider who picked this cab hears once that it is gone;
+-- a rider who did not pick it was never told of it. Best effort: the booking is already back to FINDING.
+onOfferLost :: AllocFlow m r => Id DFTB.FRFSTicketBooking -> Text -> Maybe DFTB.FRFSTicketBooking -> m ()
+onOfferLost bookingId plate mbBooking = do
   withTryCatch "sharedCabOfferLost:picked" pickedLost >>= either (\e -> logError $ "shared-cab picked-cab loss failed for booking " <> bookingId.getId <> ": " <> show e) pure
   where
-    countDecline = whenJustM (fmap (.driverId) <$> Session.readSession plate) $ \driverId -> do
-      let key = declineCountKey driverId (T.pack (formatTime defaultTimeLocale "%Y%m%d" now))
-      shared $ Redis.incr key >> Redis.expire key (3 * 24 * 3600)
     pickedLost = do
       mbPreferred <- readPreferred bookingId
       dropped <- readPreferenceDropped bookingId

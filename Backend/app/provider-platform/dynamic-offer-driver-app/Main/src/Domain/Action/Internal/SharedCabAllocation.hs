@@ -25,6 +25,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverPool as DP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson
 import Tools.Notifications
@@ -70,4 +71,6 @@ sharedCabAllocationFCM req apiKey = do
             dropStopCode = req.dropStopCode
           }
   notifySharedCabAllocation person.merchantOperatingCityId person.id person.deviceToken (fromMaybe ENGLISH person.language) entityData
+  -- an offer is a request the driver answers, counted like a ride request so the accept and reject rates stay true
+  when (isJust req.offerExpiresAt) $ DP.incrementSrdSentCount person.id
   pure Success
