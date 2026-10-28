@@ -1,4 +1,6 @@
 imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Kernel.Prelude
   HighPrecMoney: Kernel.Types.Common
 
@@ -25,8 +27,8 @@ RsfReconLedgerEntry:
 
   fields:
     id: Id RsfReconLedgerEntry
-    merchantId: Text
-    merchantOperatingCityId: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity # the ride's city for a claim; the message's city otherwise
     messageId: Maybe Text
     orderId: Maybe Text
     utr: Maybe Text
@@ -71,16 +73,19 @@ RsfReconLedgerEntry:
     createdAt: UTCTime
     updatedAt: UTCTime
 
+
   constraints:
     id: PrimaryKey
     orderId: "!SecondaryKey"
     utr: "!SecondaryKey"
     messageId: "!SecondaryKey"
 
+  # Indexes needing a column order other than alphabetical, or a WHERE, are hand-written in
+  # dev/migrations-after-release/dynamic-offer-driver-app/0016-rsf-indexes.sql.
   extraIndexes:
     - columns: [merchantId, orderId]
     - columns: [merchantId, utr]
-    - columns: [merchantId, messageId, entryType]
+    - columns: [merchantId, messageId] # a message's rows (ingest, send)
 
   sqlType:
     amount: numeric(30,2)
@@ -104,5 +109,3 @@ RsfReconLedgerEntry:
     - EXTRA_QUERY_FILE
     - GENERATE_INDEXES
 
-  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
-  beamInstance: MakeTableInstancesGenericSchema

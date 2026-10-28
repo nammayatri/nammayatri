@@ -1,8 +1,10 @@
 module Beckn.ACL.ReceiverRecon
   ( buildReceiverReconDomain,
+    currencyMismatch,
   )
 where
 
+import qualified BecknV2.RSF.Enums as Enums
 import qualified BecknV2.RSF.Types as Spec
 import qualified BecknV2.RSF.Utils as RSFUtils
 import qualified Data.Aeson as A
@@ -14,7 +16,16 @@ import Kernel.Types.Common ()
 import Kernel.Types.TimeRFC339 (convertRFC3339ToUTC)
 import Kernel.Utils.Common
 
--- Phase 1 (E1): mandatory-field checks while translating the wire payload; any gap NACKs with 70000.
+-- Phase 1 (E1): mandatory-field checks while translating the wire payload: a missing field NACKs with 70000 (naming
+-- the field), an unparseable amount with 70020. Amounts may be negative (recoveries and deductions), so their sign
+-- is not checked. The currency is checked by currencyMismatch once the merchant is known.
+-- Phase 1 (E1): an order whose payment.params.currency is given and is not the merchant's currency (70021).
+currencyMismatch :: Currency -> Spec.ReceiverReconReq -> Bool
+currencyMismatch currency req =
+  any
+    (\o -> maybe False (/= show currency) (o.rsfOrderPayment >>= (.rsfPaymentParams) >>= (.rsfPaymentParamsCurrency)))
+    req.receiverReconReqMessage.rsfOrderbookMessageOrderbook.rsfOrderbookOrders
+
 buildReceiverReconDomain ::
   A.Value ->
   Spec.ReceiverReconReq ->
@@ -41,7 +52,10 @@ buildReceiverReconDomain rawBody req = do
       }
 
 orMissing :: Maybe a -> Text -> Either Spec.RSFAckResponse a
-orMissing mVal _field = maybe (Left $ RSFUtils.buildNackForCode RSFUtils.RSFMissingMandatory) Right mVal
+orMissing mVal field = maybe (Left $ RSFUtils.buildNackWithDetail RSFUtils.RSFMissingMandatory (Just field)) Right mVal
+
+invalidAmount :: Text -> Either Spec.RSFAckResponse a
+invalidAmount field = Left $ RSFUtils.buildNackWithDetail RSFUtils.RSFInvalidAmount (Just field)
 
 buildOrder :: Spec.RSFOrder -> Either Spec.RSFAckResponse DRecon.ReceiverReconOrder
 buildOrder order = do
@@ -57,10 +71,11 @@ buildOrder order = do
   paymentStatus <- payment.rsfPaymentStatus `orMissing` "payment.status"
   wireDetails <- payment.rsfPaymentSettlementDetails `orMissing` "settlement_details"
   nonEmptyDetails <- case wireDetails of
-    [] -> Left (RSFUtils.buildNackForCode RSFUtils.RSFMissingMandatory)
+    [] -> Left (RSFUtils.buildNackWithDetail RSFUtils.RSFMissingMandatory (Just "settlement_details"))
     (d : ds) -> Right (d :| ds)
   parsedDetails <- traverse buildSettlementDetail nonEmptyDetails
-  let grossAmountText = payment.rsfPaymentParams >>= (.rsfPaymentParamsAmount)
+  grossAmountText <- (payment.rsfPaymentParams >>= (.rsfPaymentParamsAmount)) `orMissing` "payment.params.amount"
+  claimedGrossAmount <- maybe (invalidAmount "payment.params.amount") Right (RSFUtils.parseMonetaryString grossAmountText)
   pure
     DRecon.ReceiverReconOrder
       { orderId = orderId,
@@ -68,11 +83,11 @@ buildOrder order = do
         invoiceNo = order.rsfOrderInvoiceNo,
         collectorAppId = order.rsfOrderCollectorAppId,
         orderState = orderState,
-        claimedGrossAmount = fromMaybe 0 $ grossAmountText >>= RSFUtils.parseMonetaryString,
+        claimedGrossAmount = claimedGrossAmount,
         paymentStatus = paymentStatus,
         transactionStatus = payment.rsfPaymentParams >>= (.rsfPaymentParamsTransactionStatus),
         settlementId = settlementId,
-        reasonCode = reasonCode,
+        reasonCode = Enums.rsfEnumText reasonCode,
         bffType = payment.rsfPaymentBuyerAppFinderFeeType,
         bffAmount = payment.rsfPaymentBuyerAppFinderFeeAmount >>= RSFUtils.parseMonetaryString,
         withholdingTaxGst = extractMonetaryValue order.rsfOrderWithholdingTaxGst,
@@ -88,10 +103,11 @@ buildSettlementDetail sd = do
   _ <- sd.rsfSettlementDetailStatus `orMissing` "settlement_detail.settlement_status"
   _ <- sd.rsfSettlementDetailType `orMissing` "settlement_detail.settlement_type"
   timestamp <- sd.rsfSettlementDetailTimestamp `orMissing` "settlement_detail.settlement_timestamp"
+  let amount = RSFUtils.roundToPaise (toHighPrecMoney rawAmt)
   pure
     DRecon.SettlementDetailParsed
       { utr = ref,
-        amount = RSFUtils.roundToPaise (toHighPrecMoney rawAmt),
+        amount = amount,
         settlementTimestamp = convertRFC3339ToUTC timestamp
       }
 

@@ -21,8 +21,8 @@ ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD COLUMN effective_a
 ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD COLUMN entry_type text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD COLUMN invoice_no text ;
-ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD COLUMN merchant_id text NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD COLUMN merchant_operating_city_id text ;
+ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD COLUMN message_id text ;
 ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD COLUMN order_id text ;
 ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD COLUMN order_payment_amount numeric(30,2) ;
@@ -45,4 +45,4 @@ ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD COLUMN withholding
 ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD PRIMARY KEY ( id);
 CREATE INDEX CONCURRENTLY rsf_recon_ledger_entry_idx_merchant_id_order_id ON atlas_driver_offer_bpp.rsf_recon_ledger_entry USING btree (merchant_id, order_id);
 CREATE INDEX CONCURRENTLY rsf_recon_ledger_entry_idx_merchant_id_utr ON atlas_driver_offer_bpp.rsf_recon_ledger_entry USING btree (merchant_id, utr);
-CREATE INDEX CONCURRENTLY rsf_recon_ledger_entry_idx_entry_type_merchant_id_message_id ON atlas_driver_offer_bpp.rsf_recon_ledger_entry USING btree (entry_type, merchant_id, message_id);
+CREATE INDEX CONCURRENTLY rsf_recon_ledger_entry_idx_merchant_id_message_id ON atlas_driver_offer_bpp.rsf_recon_ledger_entry USING btree (merchant_id, message_id);

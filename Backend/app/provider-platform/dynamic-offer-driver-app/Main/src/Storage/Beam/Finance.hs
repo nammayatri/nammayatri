@@ -34,9 +34,6 @@ import qualified Lib.Finance.Storage.Beam.PgPayoutSettlementReport as BeamPgPayo
 import qualified Lib.Finance.Storage.Beam.PgSettlementBatch as BeamPgSettlementBatch
 import qualified Lib.Finance.Storage.Beam.ReconciliationEntry as BeamReconciliationEntry
 import qualified Lib.Finance.Storage.Beam.ReconciliationSummary as BeamReconciliationSummary
-import qualified Lib.Finance.Storage.Beam.RsfOrderState as BeamRsfOrderState
-import qualified Lib.Finance.Storage.Beam.RsfReconLedgerEntry as BeamRsfReconLedgerEntry
-import qualified Lib.Finance.Storage.Beam.RsfUtrState as BeamRsfUtrState
 import qualified Lib.Finance.Storage.Beam.SapJournalEntry as BeamSapJournal
 import qualified Lib.Finance.Storage.Beam.ScheduledTransferRule as BeamScheduledTransferRule
 import qualified Lib.Finance.Storage.Beam.SettlementFileInfo as BeamSettlementFileInfo
@@ -78,15 +75,6 @@ instance HasSchemaName BeamInvoiceTemplate.InvoiceTemplateT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamLedger.LedgerEntryT where
-  schemaName _ = T.pack currentSchemaName
-
-instance HasSchemaName BeamRsfReconLedgerEntry.RsfReconLedgerEntryT where
-  schemaName _ = T.pack currentSchemaName
-
-instance HasSchemaName BeamRsfUtrState.RsfUtrStateT where
-  schemaName _ = T.pack currentSchemaName
-
-instance HasSchemaName BeamRsfOrderState.RsfOrderStateT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamReconciliationEntry.ReconciliationEntryT where

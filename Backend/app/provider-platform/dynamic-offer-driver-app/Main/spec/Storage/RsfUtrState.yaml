@@ -1,4 +1,6 @@
 imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Kernel.Prelude
   HighPrecMoney: Kernel.Types.Common
 
@@ -12,7 +14,8 @@ RsfUtrState:
   tableName: rsf_utr_state
 
   fields:
-    merchantId: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity # the city the receiver_recon naming the UTR first arrived for (a UTR can span cities)
     utr: Text
     bapId: Maybe Text
     reportedStatus: Maybe Text
@@ -23,6 +26,7 @@ RsfUtrState:
     createdAt: UTCTime
     updatedAt: UTCTime
 
+
   constraints:
     merchantId: PrimaryKey
     utr: PrimaryKey
@@ -30,12 +34,8 @@ RsfUtrState:
   sqlType:
     reportedDiff: numeric(30,2)
 
-  extraIndexes:
-    - columns: [merchantId, lastClaimedAt]
 
   extraOperations:
     - EXTRA_QUERY_FILE
     - GENERATE_INDEXES
 
-  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
-  beamInstance: MakeTableInstancesGenericSchema

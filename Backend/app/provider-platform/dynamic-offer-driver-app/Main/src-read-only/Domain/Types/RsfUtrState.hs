@@ -1,11 +1,14 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Lib.Finance.Domain.Types.RsfUtrState where
+module Domain.Types.RsfUtrState where
 
 import Data.Aeson
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data RsfUtrState = RsfUtrState
@@ -14,7 +17,8 @@ data RsfUtrState = RsfUtrState
     lastClaimedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastReportedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastReportedMessageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    merchantId :: Kernel.Prelude.Text,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     reportedDiff :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     reportedStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,

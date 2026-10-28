@@ -16,7 +16,6 @@ module BecknV2.RSF.APIs where
 
 import qualified BecknV2.RSF.Types as Spec
 import EulerHS.Prelude
-import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type ReceiverReconAPI =
@@ -26,14 +25,6 @@ type ReceiverReconAPI =
 
 receiverReconAPI :: Proxy ReceiverReconAPI
 receiverReconAPI = Proxy
-
-type ReceiverReconAPIBS =
-  "receiver_recon"
-    :> ReqBody '[JSONBS] ByteString
-    :> Post '[JSON] Spec.RSFAckResponse
-
-receiverReconAPIBS :: Proxy ReceiverReconAPIBS
-receiverReconAPIBS = Proxy
 
 type OnReceiverReconAPI =
   "on_receiver_recon"

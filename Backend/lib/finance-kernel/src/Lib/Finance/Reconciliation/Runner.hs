@@ -197,7 +197,7 @@ reconcileSources recipe scope sourceIds = do
   where
     acquireAll _ [] action = action
     acquireAll prefix (sid : rest) action =
-      Hedis.withLockRedis (prefix <> sid.getId) 300 $
+      Hedis.withWaitAndLockRedis (prefix <> sid.getId) 300 50000 $
         acquireAll prefix rest action
 
 -- ─── Per-chunk processing ──────────────────────────────────────────────────
