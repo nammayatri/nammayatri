@@ -709,7 +709,7 @@ data SharedCabAllocationEntityData = SharedCabAllocationEntityData
     firstName :: Maybe Text,
     dropStopCode :: Maybe Text
   }
-  deriving (Generic, ToJSON, Eq, FromJSON, Show)
+  deriving (Generic, ToJSON, Eq, FromJSON, ToSchema, Show)
 
 -- Shared-cab allocation offer pushed by the internal FCM endpoint, with the dedicated SHARED_CAB_ALLOCATION key/type so the
 -- driver app renders a shared-cab card; priority defaults to HIGH via FCMReq def.

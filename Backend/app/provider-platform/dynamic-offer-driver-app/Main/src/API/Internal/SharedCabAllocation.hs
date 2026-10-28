@@ -25,10 +25,11 @@ import Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import Tools.Notifications (SharedCabAllocationEntityData)
 
 type API =
   ( "sharedCabAllocationFCM"
-      :> ReqBody '[JSON] Domain.SharedCabAllocationReq
+      :> ReqBody '[JSON] SharedCabAllocationEntityData
       :> Header "token" Text
       :> Post '[JSON] APISuccess
   )
@@ -37,5 +38,5 @@ handler :: FlowServer API
 handler =
   sharedCabAllocationFCM
 
-sharedCabAllocationFCM :: Domain.SharedCabAllocationReq -> Maybe Text -> FlowHandler APISuccess
+sharedCabAllocationFCM :: SharedCabAllocationEntityData -> Maybe Text -> FlowHandler APISuccess
 sharedCabAllocationFCM req = withFlowHandlerAPI . Domain.sharedCabAllocationFCM req

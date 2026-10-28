@@ -14,9 +14,6 @@
 
 module Domain.Action.Internal.SharedCabAllocation where
 
-import Data.OpenApi (ToSchema)
-import Domain.Types.Booking as DBooking
-import Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
 import Kernel.Beam.Functions
@@ -30,47 +27,18 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson
 import Tools.Notifications
 
-data SharedCabAllocationReq = SharedCabAllocationReq
-  { bookingId :: Id DBooking.Booking,
-    driverId :: Id DP.Person,
-    seats :: Maybe Int,
-    boardingCode :: Maybe Text,
-    vehicleNumber :: Maybe Text,
-    boardStopCode :: Maybe Text,
-    etaSeconds :: Maybe Int,
-    offerExpiresAt :: Maybe UTCTime,
-    fare :: Maybe HighPrecMoney,
-    firstName :: Maybe Text,
-    dropStopCode :: Maybe Text
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
-
-sharedCabAllocationFCM :: SharedCabAllocationReq -> Maybe Text -> Flow APISuccess
+sharedCabAllocationFCM :: SharedCabAllocationEntityData -> Maybe Text -> Flow APISuccess
 sharedCabAllocationFCM req apiKey = do
   -- Auth first: an unknown driver, an unknown merchant and a wrong key all answer AuthBlocked, so an
   -- unauthenticated caller cannot probe for existing driver ids (PersonNotFound vs AuthBlocked).
   verified <- do
-    mbPerson <- runInReplica $ QPerson.findById req.driverId
+    mbPerson <- runInReplica $ QPerson.findById (Id req.driverId)
     mbMerchant <- maybe (pure Nothing) (QM.findById . (.merchantId)) mbPerson
     pure $ case (mbPerson, mbMerchant) of
       (Just p, Just m) | Just m.internalApiKey == apiKey -> Just p
       _ -> Nothing
   person <- fromMaybeM (AuthBlocked "Invalid BPP internal api key") verified
-  let entityData =
-        SharedCabAllocationEntityData
-          { bookingId = req.bookingId.getId,
-            driverId = req.driverId.getId,
-            seats = req.seats,
-            boardingCode = req.boardingCode,
-            vehicleNumber = req.vehicleNumber,
-            boardStopCode = req.boardStopCode,
-            etaSeconds = req.etaSeconds,
-            offerExpiresAt = req.offerExpiresAt,
-            fare = req.fare,
-            firstName = req.firstName,
-            dropStopCode = req.dropStopCode
-          }
-  notifySharedCabAllocation person.merchantOperatingCityId person.id person.deviceToken (fromMaybe ENGLISH person.language) entityData
+  notifySharedCabAllocation person.merchantOperatingCityId person.id person.deviceToken (fromMaybe ENGLISH person.language) req
   -- an offer is a request the driver answers, counted like a ride request so the accept and reject rates stay true
   when (isJust req.offerExpiresAt) $ DP.incrementSrdSentCount person.id
   pure Success
