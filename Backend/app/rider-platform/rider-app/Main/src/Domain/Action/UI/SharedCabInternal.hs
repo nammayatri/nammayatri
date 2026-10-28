@@ -303,10 +303,11 @@ liveRiderRows cfg sessionTrip stopPoints polyline addresses plate = do
           statusesOf b = [t.status | t <- tickets, t.frfsTicketBookingId == b.id]
           onThisTrip b = LegState.tripMatches (getId <$> b.vehicleTripId) sessionTrip
       parties <- Booking.partySizes bookings
-      forM bookings $ \b -> do
+      allocs <- BookingState.readAllocs (map (.id) bookings)
+      fixes <- Booking.readRiderFixes (map (.id) bookings)
+      forM (zip3 bookings allocs fixes) $ \(b, mbAlloc, mbFix) -> do
         let statuses = statusesOf b
             boarded = DFRFSTicket.INPROGRESS `elem` statuses
-        mbAlloc <- BookingState.readAlloc b.id
         -- the allocation's armed timer (stand/moving); else the key's own TTL is the allocation's outer bound
         expiresAt <- case mbAlloc of
           Just st | isJust (AllocTypes.allocationDeadline st) -> pure (AllocTypes.allocationDeadline st)
@@ -314,7 +315,6 @@ liveRiderRows cfg sessionTrip stopPoints polyline addresses plate = do
             ttl <- BookingState.bookingStateTtl b.id
             pure $ if ttl > 0 then Just (addUTCTime (fromInteger ttl) now) else Nothing
           Nothing -> pure Nothing
-        mbFix <- Booking.readRiderFix b.id
         let offerDeadline =
               mbAlloc >>= \st -> case st.timer of
                 AllocTypes.OfferTimer d -> Just d

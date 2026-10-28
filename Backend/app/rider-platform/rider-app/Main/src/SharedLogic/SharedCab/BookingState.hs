@@ -3,6 +3,7 @@
 -- close while the rest outlives it, so each lives in its own field.
 module SharedLogic.SharedCab.BookingState
   ( readAlloc,
+    readAllocs,
     writeAlloc,
     clearAlloc,
     readAttempts,
@@ -29,6 +30,7 @@ where
 
 import qualified Data.Aeson as A
 import Data.List (nub)
+import qualified Database.Redis as RawRedis
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -51,6 +53,14 @@ writeField ttl bookingId field value = shared $ Redis.hSetExp (bookingStateKey b
 
 readAlloc :: StateFlow m r => BookingId -> m (Maybe AllocationState)
 readAlloc bookingId = readField bookingId "alloc"
+
+-- | Every booking's alloc record in one pipelined round trip, in the bookings' order; a failed read is no record.
+readAllocs :: StateFlow m r => [BookingId] -> m [Maybe AllocationState]
+readAllocs bookingIds = do
+  replies <- shared $ do
+    keys <- traverse (Redis.buildKey . bookingStateKey) bookingIds
+    Redis.runPipelined "sharedCabReadAllocs" (`RawRedis.hget` "alloc") keys
+  pure $ either (const (map (const Nothing) bookingIds)) (map (either (const Nothing) (>>= A.decodeStrict))) replies
 
 writeAlloc :: StateFlow m r => Int -> BookingId -> AllocationState -> m ()
 writeAlloc ttl bookingId = writeField ttl bookingId "alloc"

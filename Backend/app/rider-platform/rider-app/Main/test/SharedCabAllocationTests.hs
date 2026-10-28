@@ -30,7 +30,7 @@ import "rider-app" SharedLogic.SharedCab.Allocation.Select (CabStance (..), Clai
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.Approach (cabStopEta)
 import "rider-app" SharedLogic.SharedCab.Boarding (boardingGate)
-import "rider-app" SharedLogic.SharedCab.Booking (boardedTouchDue, cityLiveWindowSec, liveSince, plateLiveWindowSec)
+import "rider-app" SharedLogic.SharedCab.Booking (alignByKey, boardedTouchDue, cityLiveWindowSec, liveSince, plateLiveWindowSec)
 import "rider-app" SharedLogic.SharedCab.Config (SharedCabTunables (allocationWindowSec, driverAcceptEnabled, fallbackAfterSec, findingTimeoutSec, movingTimerSec, offerRetryTimeoutSec, offerTimeoutSec, standTimerSec), defaultTunables)
 import "rider-app" SharedLogic.SharedCab.Demand (StopDemand (..), demandAheadRows, searchingRiders, waitingRiders)
 import "rider-app" SharedLogic.SharedCab.DriverAction (DriverAction (..), offerBlocks)
@@ -144,6 +144,8 @@ tests =
         snapshotRead (addUTCTime 5 t0) (Just t0) True @?= ServeStaleNoRebuild,
       testCase "route snapshot: 10 s old is never served, even while another request rebuilds" $
         snapshotRead (addUTCTime 10 t0) (Just t0) True @?= Rebuild,
+      testCase "the driver view's batched reads come back in its bookings' order, a missing key as Nothing" $
+        alignByKey ["k1", "k2", "k3"] [("k3", 'c'), ("k1", 'a')] @?= [Just 'a', Nothing, Just 'c'],
       testCase "a tick item that throws is reported and the next one still runs" $ do
         ran <- newIORef []
         failed <- newIORef []

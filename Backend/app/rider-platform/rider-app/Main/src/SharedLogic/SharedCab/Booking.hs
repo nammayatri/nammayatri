@@ -20,6 +20,8 @@ module SharedLogic.SharedCab.Booking
     plateLiveWindowSec,
     liveSince,
     boardedTouchDue,
+    readRiderFixes,
+    alignByKey,
   )
 where
 
@@ -106,6 +108,16 @@ recordRiderFix bookingId riderFix = shared $ Redis.setExp (riderFixKey bookingId
 
 readRiderFix :: (Redis.HedisFlow m r, MonadFlow m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe RiderFix)
 readRiderFix = shared . Redis.safeGet . riderFixKey
+
+-- | Every booking's rider fix in one cluster MGET (grouped by slot), in the bookings' order.
+readRiderFixes :: (Redis.HedisFlow m r, MonadFlow m) => [Id DFRFSTicketBooking.FRFSTicketBooking] -> m [Maybe RiderFix]
+readRiderFixes bookingIds = alignByKey keys <$> shared (Redis.mGetClusterWithKeys keys)
+  where
+    keys = map riderFixKey bookingIds
+
+-- | An MGET's (key, value) pairs back in the order of the keys asked for; a key it didn't return is Nothing.
+alignByKey :: [Text] -> [(Text, a)] -> [Maybe a]
+alignByKey keys found = map (`Map.lookup` Map.fromList found) keys
 
 cancelReasonTtlSec :: Int
 cancelReasonTtlSec = 24 * 3600
