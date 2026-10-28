@@ -11,6 +11,7 @@ module SharedLogic.SharedCab.Schedule
     ownAllocationChain,
     claimTickRun,
     scheduleNextTick,
+    nextTickAfter,
     claimedTick,
     withCityTickLease,
     ensureExpiryJob,
@@ -117,9 +118,12 @@ tickSecOf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOper
 tickSecOf mocId = (.tickSec) <$> Config.getTunables mocId
 
 allocChain :: JobCreator r m => Int -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Chain m
-allocChain tickSec merchantId mocId =
-  chain @'SharedCabAllocationTick (allocJobGuardKey mocId) (leaseTickMultiple * tickSec) tickSec merchantId mocId $
-    \chainId -> SharedCabAllocationTickJobData {merchantId, merchantOperatingCityId = mocId, chainId = Just chainId}
+allocChain tickSec = allocChainIn tickSec tickSec Nothing
+
+allocChainIn :: JobCreator r m => Int -> Int -> Maybe Int -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Chain m
+allocChainIn tickSec delaySec leaseMisses merchantId mocId =
+  chain @'SharedCabAllocationTick (allocJobGuardKey mocId) (leaseTickMultiple * tickSec) delaySec merchantId mocId $
+    \chainId -> SharedCabAllocationTickJobData {merchantId, merchantOperatingCityId = mocId, chainId = Just chainId, leaseMisses}
 
 ensureAllocationTick :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 ensureAllocationTick merchantId mocId = do
@@ -142,15 +146,32 @@ keepChainsAlive merchantId mocId =
     Left err -> logError $ "sharedCab: could not keep the chains alive for " <> mocId.getId <> ": " <> show err
     Right () -> pure ()
 
-claimTickRun :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m Bool
-claimTickRun mocId = do
+-- | A lease retry claims its own run: the run it retries still holds the plain key.
+claimTickRun :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Int -> m Bool
+claimTickRun mocId leaseMisses = do
   tickSec <- tickSecOf mocId
-  setNx (allocRunKey mocId) (max 1 (tickSec - 1))
+  setNx (allocRunKey mocId <> maybe "" ((":retry" <>) . show) leaseMisses) (max 1 (tickSec - 1))
 
-scheduleNextTick :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> m ()
-scheduleNextTick merchantId mocId chainId = do
+-- | A tick that found the city lease held by a trigger's claim pass comes back in 1 s instead of a whole tick later.
+scheduleNextTick :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Bool -> Maybe Int -> m ()
+scheduleNextTick merchantId mocId chainId gotLease leaseMisses = do
   tickSec <- tickSecOf mocId
-  scheduleNext (allocChain tickSec merchantId mocId) chainId
+  let (delaySec, misses) = nextTickAfter tickSec gotLease leaseMisses
+  when (not gotLease && isNothing misses) $
+    logWarning $ "sharedCab tick: city lease held for " <> show maxLeaseRetries <> " retries in a row, back on the normal schedule for " <> mocId.getId
+  scheduleNext (allocChainIn tickSec delaySec misses merchantId mocId) chainId
+
+maxLeaseRetries :: Int
+maxLeaseRetries = 3
+
+-- | The next tick's delay and the lease misses it carries: a missed lease retries in 1 s, at most maxLeaseRetries times in a row.
+nextTickAfter :: Int -> Bool -> Maybe Int -> (Int, Maybe Int)
+nextTickAfter tickSec gotLease leaseMisses
+  | gotLease = (tickSec, Nothing)
+  | misses < maxLeaseRetries = (1, Just (misses + 1))
+  | otherwise = (tickSec, Nothing)
+  where
+    misses = fromMaybe 0 leaseMisses
 
 ownAllocationChain :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> (Text -> m ()) -> m ()
 ownAllocationChain merchantId mocId mbChainId body = do
@@ -166,10 +187,10 @@ claimedTick claim body next = do
     `finally` (liftIO (readIORef dropped) >>= \isDropped -> unless isDropped next)
 
 -- | One tick per city; the lease TTL only bounds a crashed holder.
-withCityTickLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m () -> m ()
+withCityTickLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m () -> m Bool
 withCityTickLease cityId action = do
   tickSec <- tickSecOf cityId
-  void $ tryWithOwnedLock (allocLeaseKey cityId) (leaseTickMultiple * tickSec) action
+  isJust <$> tryWithOwnedLock (allocLeaseKey cityId) (leaseTickMultiple * tickSec) action
 
 expiryTickSec :: Int
 expiryTickSec = 60

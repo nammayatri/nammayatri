@@ -39,7 +39,7 @@ import "rider-app" SharedLogic.SharedCab.Interest (bestEffort, windowStart)
 import "rider-app" SharedLogic.SharedCab.Offer (AcceptDecision (..), DeclineDecision (..), decideAccept, decideDecline)
 import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..))
 import "rider-app" SharedLogic.SharedCab.RefundPolicy (cancellableStatus)
-import "rider-app" SharedLogic.SharedCab.Schedule (claimedTick)
+import "rider-app" SharedLogic.SharedCab.Schedule (claimedTick, nextTickAfter)
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE, PAUSED))
 import "rider-app" SharedLogic.SharedCab.WalkUp (cabVehicle)
 import Test.Tasty (TestTree, testGroup)
@@ -128,6 +128,9 @@ tests =
             freeFor sess = Map.findWithDefault 0 sess.vehicleNumber free
          in (map (.rcSession.vehicleNumber) (withRoomFor freeFor 1 (map candidate ["FULL", "ONE", "TWO"])), map (.rcSession.vehicleNumber) (withRoomFor freeFor 2 (map candidate ["FULL", "ONE", "TWO"])))
               @?= (["ONE", "TWO"], ["TWO"]),
+      testCase "a tick that found the city lease held comes back in 1 s, three times at most, then on the normal schedule" $
+        map (uncurry (nextTickAfter 3)) [(True, Nothing), (True, Just 2), (False, Nothing), (False, Just 1), (False, Just 2), (False, Just 3)]
+          @?= [(3, Nothing), (3, Nothing), (1, Just 1), (1, Just 2), (1, Just 3), (3, Nothing)],
       testCase "a tick item that throws is reported and the next one still runs" $ do
         ran <- newIORef []
         failed <- newIORef []

@@ -42,28 +42,36 @@ sharedCabAllocationTick ::
   Job 'SharedCabAllocationTick ->
   m ExecutionResult
 sharedCabAllocationTick Job {jobInfo} = do
-  let SharedCabAllocationTickJobData {merchantId, merchantOperatingCityId, chainId = mbChainId} = jobInfo.jobData
+  let SharedCabAllocationTickJobData {merchantId, merchantOperatingCityId, chainId = mbChainId, leaseMisses} = jobInfo.jobData
   -- a chain the guard no longer names ends here. A suspended city allocates nothing new, but its chain keeps draining
   -- (timeouts, refunds, timers) until no live booking is left.
   ownAllocationChain merchantId merchantOperatingCityId mbChainId $ \chainId -> do
     -- stays True until a pass proves the chain can lapse, so a throwing tick still reschedules
     keepGoingRef <- liftIO $ newIORef True
     liveRef <- liftIO $ newIORef []
+    -- stays True unless the lease was held, so a throwing tick reschedules as usual
+    gotLeaseRef <- liftIO $ newIORef True
     claimedTick
-      (claimTickRun merchantOperatingCityId)
+      (claimTickRun merchantOperatingCityId leaseMisses)
       ( do
           enabled <- sharedCabEnabled merchantOperatingCityId
           -- the lease runSharedCabAllocationTick takes for on-demand triggers too; stop progress shares it
-          withCityTickLease merchantOperatingCityId $
-            allocationPass merchantOperatingCityId >>= \(live, positions) -> do
-              liftIO (writeIORef liveRef live)
-              liftIO (writeIORef keepGoingRef (tickChainContinues enabled (length live)))
-              runStopProgress merchantOperatingCityId live positions
+          gotLease <-
+            withCityTickLease merchantOperatingCityId $
+              allocationPass merchantOperatingCityId >>= \(live, positions) -> do
+                liftIO (writeIORef liveRef live)
+                liftIO (writeIORef keepGoingRef (tickChainContinues enabled (length live)))
+                runStopProgress merchantOperatingCityId live positions
+          liftIO (writeIORef gotLeaseRef gotLease)
           -- after the lease, so the refund's network calls never hold up the city's tick
           liftIO (readIORef liveRef) >>= cancelTimedOutFindings merchantOperatingCityId
           -- the expiry chain's watchdog: a lost expiry job would otherwise wait for the stream reclaim
           withTryCatch "sharedCab:allocationWatchesExpiry" (ensureExpiryJob merchantId merchantOperatingCityId)
             >>= either (logError . ("sharedCab tick: expiry watchdog failed: " <>) . show) pure
       )
-      (liftIO (readIORef keepGoingRef) >>= \keepGoing -> when keepGoing (scheduleNextTick merchantId merchantOperatingCityId chainId))
+      ( do
+          keepGoing <- liftIO (readIORef keepGoingRef)
+          gotLease <- liftIO (readIORef gotLeaseRef)
+          when keepGoing (scheduleNextTick merchantId merchantOperatingCityId chainId gotLease leaseMisses)
+      )
   pure Complete

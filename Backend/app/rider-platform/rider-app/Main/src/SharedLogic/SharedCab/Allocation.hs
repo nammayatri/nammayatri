@@ -120,7 +120,18 @@ runSharedCabAllocationTick ::
   AllocFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   m ()
-runSharedCabAllocationTick cityId = withCityTickLease cityId . void $ allocationPass cityId
+runSharedCabAllocationTick cityId = void . withCityTickLease cityId $ claimPass cityId
+
+-- | A trigger's pass (a confirm, a close, a skip): claims only. Timers, stop progress and timeouts are the scheduled tick's, which
+-- retries shortly when this pass holds the lease.
+claimPass :: AllocFlow m r => Id DMOC.MerchantOperatingCity -> m ()
+claimPass cityId = do
+  enabled <- sharedCabEnabled cityId
+  when enabled $ do
+    cfg <- Config.getTunables cityId
+    now <- getCurrentTime
+    (live, positionsByRoute) <- readCity cityId
+    claimFindings cfg now live positionsByRoute
 
 type RoutePositions = [(Text, [LT.VehicleTrackingOnRouteResp])]
 

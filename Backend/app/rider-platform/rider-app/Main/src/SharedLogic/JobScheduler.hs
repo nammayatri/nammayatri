@@ -526,7 +526,9 @@ type instance JobContent 'SendLegalPolicyNotification = SendLegalPolicyNotificat
 data SharedCabAllocationTickJobData = SharedCabAllocationTickJobData
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    chainId :: Maybe Text
+    chainId :: Maybe Text,
+    -- | how many ticks in a row found the city lease held; Nothing on a normal tick
+    leaseMisses :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
