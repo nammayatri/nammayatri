@@ -43,11 +43,13 @@ VehicleTrip:
     status: text
     endReason: text
 
+  # On KV: the plate's live trip is found through its SecondaryKey while the row is still in Redis. One live trip per plate is held by
+  # the plate lock around every write (SharedCab.Session), not by a DB constraint, which would only fire at drain time. The city's
+  # live list and a driver's history read Postgres through the indexes below; a trip a few seconds late there is the next tick's.
   constraints:
     id: PrimaryKey
+    vehicleNumber: SecondaryKey
 
-  # The partial unique index on vehicle_number (live statuses) and the CHECKs are raw SQL in ddl 1579 (namma-dsl can't express
-  # them); they only hold because vehicle_trip is in kv_configs.disableForKV (1580), so *WithKV calls hit Postgres directly.
   extraIndexes:
     - columns: [driverId, startedAt]
     - columns: [merchantOperatingCityId, status]

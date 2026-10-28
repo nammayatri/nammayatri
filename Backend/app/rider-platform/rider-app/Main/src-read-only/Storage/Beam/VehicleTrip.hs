@@ -38,6 +38,6 @@ instance B.Table VehicleTripT where
 
 type VehicleTrip = VehicleTripT Identity
 
-$(enableKVPG (''VehicleTripT) [('id)] [])
+$(enableKVPG (''VehicleTripT) [('id)] [[('vehicleNumber)]])
 
 $(mkTableInstances (''VehicleTripT) "vehicle_trip")

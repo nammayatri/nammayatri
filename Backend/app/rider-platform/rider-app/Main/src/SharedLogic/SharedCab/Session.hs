@@ -186,7 +186,8 @@ switchTo reason newRoute s = do
   when (walkups /= switched.walkupCount) $ logError $ "sharedCab: " <> show walkups <> " of " <> show switched.walkupCount <> " walk-ups carried onto " <> switched.vehicleTripId.getId
   pure switched
 
--- | The live-trip index allows one ACTIVE/PAUSED row per plate, so the old run closes first; if creating or saving then fails, it is reopened.
+-- | One ACTIVE/PAUSED trip per plate: every trip write runs under the plate lock (vehicle_trip is on KV, so no DB constraint could
+-- hold it), and the old run closes before the new one is created; if creating or saving then fails, it is reopened.
 replaceLiveTrip :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadCatch m) => DVT.VehicleTripEndReason -> UTCTime -> Maybe Session -> Session -> m Session
 replaceLiveTrip reason now prior s' = do
   mbOld <- QVT.findActiveByVehicleNumber s'.vehicleNumber

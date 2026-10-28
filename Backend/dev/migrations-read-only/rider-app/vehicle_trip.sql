@@ -30,3 +30,8 @@ CREATE INDEX CONCURRENTLY vehicle_trip_idx_merchant_operating_city_id_status ON 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.vehicle_trip ADD COLUMN missed_pickups integer  default 0;
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY vehicle_trip_idx_vehicle_number ON atlas_app.vehicle_trip USING btree (vehicle_number);
