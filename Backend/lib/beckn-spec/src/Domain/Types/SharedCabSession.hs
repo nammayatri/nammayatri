@@ -2,9 +2,7 @@
 -- definition for both apps, so the two cannot drift.
 module Domain.Types.SharedCabSession where
 
-import Data.Aeson (Value (..), defaultOptions, object, withObject, withText, (.:), (.=))
-import qualified Data.Aeson.Key as Key
-import qualified Data.Aeson.KeyMap as KeyMap
+import Data.Aeson (object, withObject, withText, (.:), (.=))
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
@@ -71,11 +69,7 @@ data SharedCabRoute = SharedCabRoute
     stops :: [SessionStop],
     shapePolyline :: Maybe Text
   }
-  deriving (Show, Eq, Generic, ToJSON, ToSchema)
-
--- | A response from before the demand and map fields has none of them: no one waiting or searching, no stops.
-instance FromJSON SharedCabRoute where
-  parseJSON = genericParseJSON defaultOptions . withDefaults [("waitingCount", Number 0), ("searchingCount", Number 0), ("stops", Array mempty)]
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | A rider the driver has not yet accepted or declined: the accept sheet's content.
 data PendingOffer = PendingOffer
@@ -145,11 +139,7 @@ data DemandAtStop = DemandAtStop
     searching :: Int,
     windowMin :: Int
   }
-  deriving (Show, Eq, Generic, ToJSON, ToSchema)
-
--- | A row from before the stop code has none (the app then falls back to the name).
-instance FromJSON DemandAtStop where
-  parseJSON = genericParseJSON defaultOptions . withDefaults [("stopCode", String "")]
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 data SharedCabSession = SharedCabSession
   { route :: SessionRoute,
@@ -169,17 +159,7 @@ data SharedCabSession = SharedCabSession
     vehicle :: Maybe LatLong,
     demandAhead :: [DemandAtStop]
   }
-  deriving (Show, Eq, Generic, ToJSON, ToSchema)
-
--- | A session from before the offer and map fields has none of them: no pending offers, no stops.
-instance FromJSON SharedCabSession where
-  parseJSON = genericParseJSON defaultOptions . withDefaults [("pendingOffers", Array mempty), ("stops", Array mempty)]
-
--- | Missing keys filled in before the generic decode; a key that is present is left alone.
-withDefaults :: [(Text, Value)] -> Value -> Value
-withDefaults defaults = \case
-  Object obj -> Object (foldr (\(key, value) -> KeyMap.insertWith (\_ old -> old) (Key.fromText key) value) obj defaults)
-  other -> other
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 data EndRouteNext = RETURN | CHANGE | END
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)

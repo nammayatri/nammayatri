@@ -158,15 +158,12 @@ tests =
         "cancelReason on the leg status"
         [ testCase "reason encodes SCREAMING like SharedCabState" $ BLC.unpack (encode NO_SHOW_CAP) @?= "\"NO_SHOW_CAP\"",
           testCase "status with a reason round-trips" $ decode (encode statusWithReason) @?= Just statusWithReason,
-          testCase "a Nothing reason leaves no key (additive for older app builds)" $
-            isInfixOf "\"cancelReason\"" (BLC.unpack (encode statusNoReason)) @?= False,
-          testCase "everything else still ships as null like before (only cancelReason is omitted)" $ do
+          testCase "a Nothing reason and the other optional fields ship as null" $ do
             let encoded = BLC.unpack (encode statusNoReason)
+            assertBool "cancelReason must ship null" ("\"cancelReason\":null" `isInfixOf` encoded)
             assertBool "vehicleModel must ship null" ("\"vehicleModel\":null" `isInfixOf` encoded)
             assertBool "boardDeadlineSec must ship null" ("\"boardDeadlineSec\":null" `isInfixOf` encoded)
-            assertBool "cancelReason with a value ships" ("\"cancelReason\":\"NO_SHOW_CAP\"" `isInfixOf` BLC.unpack (encode statusWithReason)),
-          testCase "a payload (no cancelReason key) still decodes" $
-            decode "{\"state\":\"CANCELLED\",\"bookingId\":\"b1\",\"vehicleNumber\":\"ML05A1234\",\"cabsComing\":0}" @?= Just statusNoReason
+            assertBool "cancelReason with a value ships" ("\"cancelReason\":\"NO_SHOW_CAP\"" `isInfixOf` BLC.unpack (encode statusWithReason))
         ],
       testGroup
         "upcoming cabs and the rider's skip"
@@ -191,10 +188,7 @@ tests =
               @?= [False, True, True, False, False],
           testCase "the skip button hides once the skip is used or the cab is near" $
             (skipAvailableFor ARRIVING True (Just 300), skipAvailableFor ARRIVING False (Just 60), skipAvailableFor ALLOCATED False Nothing)
-              @?= (False, False, False),
-          testCase "a payload from before these fields has no other cabs and no skip" $
-            fmap (\(s :: SharedCabLegStatus) -> (s.upcomingCabs, s.skipAvailable)) (decode "{\"state\":\"CANCELLED\",\"bookingId\":\"b1\",\"cabsComing\":0}")
-              @?= Just ([], False)
+              @?= (False, False, False)
         ]
     ]
   where

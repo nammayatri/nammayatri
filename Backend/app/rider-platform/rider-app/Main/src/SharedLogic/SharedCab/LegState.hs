@@ -28,9 +28,6 @@ module SharedLogic.SharedCab.LegState
 where
 
 import BecknV2.FRFS.Enums (ServiceTierType (SHARED_CAB))
-import Data.Aeson (Value (..), defaultOptions, omitNothingFields)
-import qualified Data.Aeson.Key as Key
-import qualified Data.Aeson.KeyMap as KeyMap
 import Data.List (sortOn)
 import Data.Time (diffUTCTime)
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
@@ -89,21 +86,7 @@ data SharedCabLegStatus = SharedCabLegStatus
     -- | The rider may still skip the assigned cab: once per booking, and only while it is more than skipMinEtaSec away.
     skipAvailable :: Bool
   }
-  deriving (Show, Eq, Generic, ToSchema)
-
--- Nothing is omitted for cancelReason alone (older app builds); other Nothing fields ship null so strict decoders keep their keys.
-instance ToJSON SharedCabLegStatus where
-  toJSON status = case genericToJSON defaultOptions status of
-    Object obj | isNothing status.cancelReason -> Object (KeyMap.delete (Key.fromText "cancelReason") obj)
-    v -> v
-
--- A payload from before the pick-a-cab and skip fields lacks them: not lost, no other cabs, no skip.
-instance FromJSON SharedCabLegStatus where
-  parseJSON = genericParseJSON defaultOptions {omitNothingFields = True} . withDefaults
-    where
-      withDefaults = \case
-        Object obj -> Object (foldr (\(key, value) -> KeyMap.insertWith (\_ old -> old) (Key.fromText key) value) obj [("preferredCabLost", Bool False), ("upcomingCabs", Array mempty), ("skipAvailable", Bool False)])
-        other -> other
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 isSharedCabAgency :: Text -> Bool
 isSharedCabAgency agencyGtfsId = gtfsIdtoDomainCode agencyGtfsId == "SHARED_CAB"

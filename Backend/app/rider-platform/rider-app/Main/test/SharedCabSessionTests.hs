@@ -185,13 +185,6 @@ tests =
               map (\o -> (o.bookingId, o.boardStop, o.dropStop)) (View.pendingOffersOf routeStops rows)
             )
               @?= (["boarding"], [("soon", "Alpha", "Charlie"), ("late", "Alpha", "Charlie")]),
-      testCase "a session and a route list entry from before the offer, demand and map fields still decode, with empty defaults" $
-        let session = "{\"route\":{\"code\":\"R1\",\"name\":\"Route\",\"direction\":\"Far\",\"nextStops\":[]},\"queuedRoute\":null,\"status\":\"ACTIVE\",\"pauseReason\":null,\"movement\":{\"tag\":\"MOVING\"},\"capacity\":4,\"walkupCount\":0,\"available\":4,\"version\":1,\"ridersByStop\":[],\"demandAhead\":[]}"
-            routeEntry = "{\"code\":\"R1\",\"name\":\"Route\",\"direction\":\"Far\",\"fromStop\":\"Near\",\"toStop\":\"Far\",\"distanceKm\":null}"
-         in ( (\s -> (s.pendingOffers, s.stops, s.shapePolyline, s.vehicle)) <$> (decode session :: Maybe View.SharedCabSession),
-              (\r -> (r.waitingCount, r.searchingCount, r.stops, r.shapePolyline)) <$> (decode routeEntry :: Maybe View.SharedCabRoute)
-            )
-              @?= (Just ([], [], Nothing, Nothing), Just (0, 0, [], Nothing)),
       testCase "a stop ships as code, name, lat and lon, and nothing else" $
         BLC.unpack (encode (View.sessionStopOf "SC_POLO" "Polo" (LatLong 25.5 91.8)))
           @?= "{\"code\":\"SC_POLO\",\"lat\":25.5,\"lon\":91.8,\"name\":\"Polo\"}",
