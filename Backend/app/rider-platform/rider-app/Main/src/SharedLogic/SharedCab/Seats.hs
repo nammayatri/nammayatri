@@ -29,7 +29,6 @@ module SharedLogic.SharedCab.Seats
     markDropped,
     freeForStops,
     freeAhead,
-    cabLoad,
     riderLoad,
     setWalkups,
     clearWalkups,
@@ -225,9 +224,6 @@ freeAhead :: SeatFlow m r => Session -> Maybe LT.VehicleInfo -> m Int
 freeAhead s mbVehicle = do
   c <- cabSeats s
   freeOver redisEngine c (nextStopIdx c mbVehicle, routeEnd c)
-
-cabLoad :: SeatFlow m r => Session -> Maybe Text -> Maybe LT.VehicleInfo -> m (Int, Int)
-cabLoad s mbBoard mbVehicle = cabSeats s >>= \c -> riderLoad redisEngine c mbBoard Nothing mbVehicle
 
 -- | A rider's view of a cab: seats free for their [board, drop) when the route serves it, else from `mbBoard` (else from the cab's
 -- next stop) to the route's end; and seats taken at the next stop.

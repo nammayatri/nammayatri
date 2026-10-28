@@ -1,17 +1,12 @@
 module Domain.Action.UI.SharedCab
   ( getSharedCabRoutes,
-    getSharedCabRoute,
     postSharedCabBookingSkip,
     skipReason,
-    liveCabEntry,
   )
 where
 
 import qualified API.Types.UI.SharedCab as API
-import Control.Applicative ((<|>))
 import Data.List (sortOn)
-import qualified Data.Map as Map
-import qualified Data.Text as T
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (CONFIRMED))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
@@ -20,13 +15,10 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Route as DRoute
 import qualified Environment
-import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
-import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
-import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Select as Select
 import SharedLogic.SharedCab.Allocation.Types (SkipReason (..), usesRiderSkip)
@@ -34,15 +26,8 @@ import qualified SharedLogic.SharedCab.Approach as Approach
 import SharedLogic.SharedCab.Booking (isSharedCabBooking)
 import SharedLogic.SharedCab.BookingState (readRiderSkipUsed)
 import qualified SharedLogic.SharedCab.Config as Config
-import qualified SharedLogic.SharedCab.Demand as Demand
-import SharedLogic.SharedCab.Interest (bestEffort)
 import SharedLogic.SharedCab.LegState (SkipVerdict (..), decideRiderSkip)
-import qualified SharedLogic.SharedCab.Lts as Lts
-import qualified SharedLogic.SharedCab.Nearby as Nearby
-import SharedLogic.SharedCab.Plate (canonicalisePlate)
-import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
-import SharedLogic.SharedCab.SessionState (Session)
 import SharedLogic.SharedCab.WalkUp (findSharedCabConfig)
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -69,52 +54,6 @@ getSharedCabRoutes (mbPersonId, _) = do
       Nothing -> pure []
       Just integratedBppConfig -> OTPRest.getRoutesByGtfsIdWithPolyline integratedBppConfig >>= mapM (mkRouteInfo integratedBppConfig)
   pure API.SharedCabRouteListResp {routes}
-
--- | A failed LTS read means no cab is seen on the route, not a failed list.
-liveCabsOnRoute :: Text -> Environment.Flow [LT.VehicleTrackingOnRouteResp]
-liveCabsOnRoute routeCode =
-  withTryCatch "sharedCab:vehicleTrackingOnRoute" (Lts.readRoutePositions routeCode) >>= \case
-    Left err -> [] <$ logError ("shared-cab route " <> routeCode <> ": LTS read failed: " <> show err)
-    Right cabs -> pure cabs
-
--- | What the rider sees of a cab. The plate stays server-side: the rider names a cab by `cabId` and sees only the last four characters.
--- `freeSeats` and `ridersOnBoard` are the seat engine's (Seats.cabLoad).
-liveCabEntry :: (Int, Int) -> Maybe Int -> Maybe Int -> Maybe LatLong -> Session -> API.SharedCabLiveCab
-liveCabEntry (freeSeats, ridersOnBoard) etaMin distanceM position s =
-  API.SharedCabLiveCab
-    { cabId = s.vehicleTripId.getId,
-      plateLast4 = T.takeEnd 4 s.vehicleNumber,
-      position,
-      freeSeats,
-      ridersOnBoard,
-      etaMin,
-      distanceM
-    }
-
--- | With `boardStop` each cab says how soon it reaches that stop and how far it is (from the rider when `lat`/`lon` are given, else from the
--- stop); cabs are listed soonest first. `pickEnabled` tells the app whether the city lets the rider pick one.
-getSharedCabRoute :: (Maybe (Id DP.Person), Id DM.Merchant) -> Text -> Maybe Text -> Maybe Double -> Maybe Double -> Environment.Flow API.SharedCabRouteDetailResp
-getSharedCabRoute (mbPersonId, _) routeCode mbBoardStop mbLat mbLon = do
-  integratedBppConfig <- findSharedCabConfig mbPersonId >>= fromMaybeM IntegratedBPPConfigNotFound
-  route <- OTPRest.getRouteByRouteId integratedBppConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)
-  routeInfo <- mkRouteInfo integratedBppConfig route
-  cfg <- Config.getTunables integratedBppConfig.merchantOperatingCityId
-  now <- getCurrentTime
-  -- opening the cab list for a boarding stop is a search for a cab there
-  forM_ ((,) <$> mbPersonId <*> mbBoardStop) $ \(personId, stopCode) ->
-    void $ bestEffort (logError . ("shared-cab search not recorded: " <>)) (Demand.recordSearch integratedBppConfig.merchantOperatingCityId.getId personId.getId stopCode)
-  sessions <- Session.activeSessionsOnRoute routeCode
-  live <- liveCabsOnRoute routeCode
-  let positions = Map.fromList [(canonicalisePlate v.vehicleNumber, v) | v <- live]
-      boardStop = mbBoardStop >>= \code -> find (\st -> st.code == code) routeInfo.stops
-      reference = (LatLong <$> mbLat <*> mbLon) <|> ((.point) <$> boardStop)
-  cabs <- forM sessions $ \s -> do
-    let mbLive = Map.lookup s.vehicleNumber positions
-        position = (\v -> LatLong v.vehicleInfo.latitude v.vehicleInfo.longitude) <$> mbLive
-        eta = join $ (\st -> Nearby.nextCabEtaMin now cfg st.code st.point (maybeToList mbLive)) <$> boardStop
-    load <- Seats.cabLoad s mbBoardStop ((.vehicleInfo) <$> mbLive)
-    pure (eta, liveCabEntry load eta (round <$> (distanceBetweenInMeters <$> reference <*> position)) position s)
-  pure API.SharedCabRouteDetailResp {routeInfo, cabs = Nearby.sortByEta cabs, pickEnabled = cfg.pickEnabled}
 
 skipReason :: API.SharedCabSkipReason -> SkipReason
 skipReason = \case

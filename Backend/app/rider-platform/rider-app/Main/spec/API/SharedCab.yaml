@@ -23,20 +23,6 @@ types:
   SharedCabRouteListResp:
     routes: "[SharedCabRouteInfo]"
 
-  SharedCabLiveCab:
-    cabId: Text
-    plateLast4: Text
-    position: Maybe LatLong
-    freeSeats: Int
-    ridersOnBoard: Int
-    etaMin: Maybe Int
-    distanceM: Maybe Int
-
-  SharedCabRouteDetailResp:
-    routeInfo: SharedCabRouteInfo
-    cabs: "[SharedCabLiveCab]"
-    pickEnabled: Bool
-
   # FULL = no seat for me (nobody's fault), OTHER = I don't want this cab (counts as my miss)
   SharedCabSkipReason:
     enum: "FULL,OTHER"
@@ -50,18 +36,6 @@ apis:
       auth: TokenAuth
       response:
         type: SharedCabRouteListResp
-  - GET:
-      endpoint: /sharedCab/routes/{routeCode}
-      name: getSharedCabRoute
-      auth: TokenAuth
-      params:
-        routeCode: Text
-      query:
-        boardStop: Text
-        lat: Double
-        lon: Double
-      response:
-        type: SharedCabRouteDetailResp
   - POST:
       endpoint: /sharedCab/booking/{bookingId}/skip
       auth: TokenAuth

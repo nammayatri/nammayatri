@@ -9,22 +9,6 @@ import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
-data SharedCabLiveCab = SharedCabLiveCab
-  { cabId :: Kernel.Prelude.Text,
-    distanceM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    etaMin :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    freeSeats :: Kernel.Prelude.Int,
-    plateLast4 :: Kernel.Prelude.Text,
-    position :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
-    ridersOnBoard :: Kernel.Prelude.Int
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data SharedCabRouteDetailResp = SharedCabRouteDetailResp {cabs :: [SharedCabLiveCab], pickEnabled :: Kernel.Prelude.Bool, routeInfo :: SharedCabRouteInfo}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data SharedCabRouteInfo = SharedCabRouteInfo {cabsRunning :: Kernel.Prelude.Int, name :: Kernel.Prelude.Text, polyline :: Kernel.Prelude.Maybe Kernel.Prelude.Text, routeCode :: Kernel.Prelude.Text, stops :: [SharedCabStop]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -25,21 +25,7 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "sharedCab" :> "routes" :> Get '[JSON] API.Types.UI.SharedCab.SharedCabRouteListResp :<|> TokenAuth :> "sharedCab" :> "routes"
-      :> Capture
-           "routeCode"
-           Kernel.Prelude.Text
-      :> QueryParam "boardStop" Kernel.Prelude.Text
-      :> QueryParam "lat" Kernel.Prelude.Double
-      :> QueryParam
-           "lon"
-           Kernel.Prelude.Double
-      :> Get
-           '[JSON]
-           API.Types.UI.SharedCab.SharedCabRouteDetailResp
-      :<|> TokenAuth
-      :> "sharedCab"
-      :> "booking"
+  ( TokenAuth :> "sharedCab" :> "routes" :> Get '[JSON] API.Types.UI.SharedCab.SharedCabRouteListResp :<|> TokenAuth :> "sharedCab" :> "booking"
       :> Capture
            "bookingId"
            (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
@@ -53,22 +39,10 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getSharedCabRoutes :<|> getSharedCabRoute :<|> postSharedCabBookingSkip
+handler = getSharedCabRoutes :<|> postSharedCabBookingSkip
 
 getSharedCabRoutes :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler API.Types.UI.SharedCab.SharedCabRouteListResp)
 getSharedCabRoutes a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.SharedCab.getSharedCabRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
-
-getSharedCabRoute ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
-    Environment.FlowHandler API.Types.UI.SharedCab.SharedCabRouteDetailResp
-  )
-getSharedCabRoute a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.SharedCab.getSharedCabRoute (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postSharedCabBookingSkip ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

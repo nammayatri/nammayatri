@@ -18,7 +18,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import Data.Time.Format.ISO8601 (iso8601Show)
-import "rider-app" Domain.Action.UI.SharedCab (liveCabEntry, skipReason)
+import "rider-app" Domain.Action.UI.SharedCab (skipReason)
 import qualified "beckn-spec" Domain.Types.FRFSTicketBookingStatus as BS
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
@@ -33,7 +33,7 @@ import "rider-app" SharedLogic.SharedCab.Demand (StopDemand (..), demandAheadRow
 import "rider-app" SharedLogic.SharedCab.DriverAction (DriverAction (..), offerBlocks)
 import "rider-app" SharedLogic.SharedCab.FindingTimeout (findingTimeoutRefund)
 import "rider-app" SharedLogic.SharedCab.Interest (bestEffort, windowStart)
-import "rider-app" SharedLogic.SharedCab.Nearby (cabStopEta, nextCabEtaMin, sortByEta)
+import "rider-app" SharedLogic.SharedCab.Nearby (cabStopEta)
 import "rider-app" SharedLogic.SharedCab.Offer (AcceptDecision (..), DeclineDecision (..), decideAccept, decideDecline)
 import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..))
 import "rider-app" SharedLogic.SharedCab.RefundPolicy (cancellableStatus)
@@ -324,24 +324,17 @@ tests =
           (.stop.stopCode) <$> cabStopEta t0 defaultTunables "S2" stop (cabFixEta 125 "A" stop (Just 5) 10)
         )
           @?= (Just "S1", Nothing),
-      testCase "the next cab's ETA is the soonest fresh cab that still has the stop ahead, in whole minutes rounded up" $
-        ( nextCabEtaMin t0 defaultTunables "S1" stop [cabFixEta 125 "A" stop (Just 5) 10, cabFixEta 70 "B" stop (Just 5) 10],
-          nextCabEtaMin t0 defaultTunables "S1" stop [cabFixEta 125 "A" stop (Just 5) 10],
-          nextCabEtaMin t0 defaultTunables "S1" stop [cabFixEta 0 "A" stop Nothing 10]
-        )
-          @?= (Just 2, Just 3, Just 0),
       testCase "a stop the cab has already reached is not ahead of it" $
         let reached = (cabFixEta 60 "A" stop (Just 5) 10) {LT.vehicleInfo = (cabFixEta 60 "A" stop (Just 5) 10).vehicleInfo {LT.upcomingStops = Just [LT.UpcomingStop (LT.Stop "S1" stop "S1" 1 0 0) t0 LT.Reached Nothing]}}
-         in ((.stop.stopCode) <$> cabStopEta t0 defaultTunables "S1" stop reached, nextCabEtaMin t0 defaultTunables "S1" stop [reached]) @?= (Nothing, Nothing),
-      testCase "no ETA from a stale fix, a stop the cab is past, or an ETA the cab's distance cannot back; none for no cabs" $
-        ( nextCabEtaMin t0 defaultTunables "S1" stop [cabFixEta 60 "A" stop (Just 5) 3600],
-          nextCabEtaMin t0 defaultTunables "S2" stop [cabFixEta 60 "A" stop (Just 5) 10],
-          nextCabEtaMin t0 defaultTunables "S1" stop [cabFixEta 30 "A" (LatLong 25.6690 91.8930) (Just 5) 10],
-          nextCabEtaMin t0 defaultTunables "S1" stop []
-        )
-          @?= (Nothing, Nothing, Nothing, Nothing),
-      testCase "routes sort by ETA, the soonest first, routes with no cab on the way last, ties in list order" $
-        sortByEta [(Just 7, "a"), (Nothing, "b"), (Just 2, "c"), (Just 7, "d"), (Nothing, "e"), (Just 0, "f")] @?= ["f", "c", "a", "d", "b", "e"],
+         in (.stop.stopCode) <$> cabStopEta t0 defaultTunables "S1" stop reached @?= Nothing,
+      testCase "no ETA from a stale fix, a stop the cab is past, or an ETA the cab's distance cannot back" $
+        map
+          (fmap (.stop.stopCode))
+          [ cabStopEta t0 defaultTunables "S1" stop (cabFixEta 60 "A" stop (Just 5) 3600),
+            cabStopEta t0 defaultTunables "S2" stop (cabFixEta 60 "A" stop (Just 5) 10),
+            cabStopEta t0 defaultTunables "S1" stop (cabFixEta 30 "A" (LatLong 25.6690 91.8930) (Just 5) 10)
+          ]
+          @?= [Nothing, Nothing, Nothing],
       testCase "a picked cab holds while it is unskipped, within the wait bound, active on the route and has room, whatever the plate's spelling" $
         ( verdict [] 0 [pickable] 4 2 "ML05A1234",
           verdict [] 0 [pickable] 4 2 "ml-05 a1234",
@@ -393,10 +386,6 @@ tests =
             tooFar = LatLong 25.6690 91.8930
          in (etaStops (Just ("S1", stop)) tooFar, etaStops (Just ("S1", stop)) stop, etaStops Nothing tooFar)
               @?= (Just ["S2"], Just ["S1", "S2"], Just ["S1", "S2"]),
-      testCase "the cab list shows a cab by its cabId and last four characters, never the plate" $ do
-        let shown = BL.unpack (encode (liveCabEntry (3, 1) (Just 3) (Just 500) (Just stop) pickable))
-        ("ML05A1234" `isInfixOf` shown, "05A1234" `isInfixOf` shown, "\"cabId\":\"trip1\"" `isInfixOf` shown, "\"plateLast4\":\"1234\"" `isInfixOf` shown, "\"freeSeats\":3" `isInfixOf` shown, "\"ridersOnBoard\":1" `isInfixOf` shown)
-          @?= (False, False, True, True, True, True),
       testCase "riders waiting on a route are the distinct riders with a recent finding booking" $
         ( waitingRiders 1200 t0 [(addUTCTime (-60) t0, "r1"), (addUTCTime (-120) t0, "r2"), (addUTCTime (-30) t0, "r1")] [],
           waitingRiders 1200 t0 [(addUTCTime (-1199) t0, "r1"), (addUTCTime (-1200) t0, "r2")] [],
