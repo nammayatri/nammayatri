@@ -27,6 +27,10 @@ module Domain.Action.UI.Pass
     createPassCatalog,
     updatePassCatalog,
     deletePassCatalog,
+    getPassCatalog,
+    findMerchantOperatingCity,
+    isEnabledCategory,
+    isEnabledPassType,
   )
 where
 
@@ -41,7 +45,7 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AKey
 import qualified Data.Aeson.KeyMap as AKeyMap
 import qualified Data.HashMap.Strict as HM
-import Data.List (partition, sortOn)
+import Data.List (nub, partition, sortOn)
 import qualified Data.Map.Strict as Map
 import Data.Ord (Down (..))
 import qualified Data.Text as T
@@ -158,7 +162,7 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
-  passCategories <- getConfig (PassCategoryDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, configId = Nothing}) (Just (CQPassCategory.findAllByMerchantOperatingCityId person.merchantOperatingCityId))
+  passCategories <- filter isEnabledCategory <$> getConfig (PassCategoryDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, configId = Nothing}) (Just (CQPassCategory.findAllByMerchantOperatingCityId person.merchantOperatingCityId))
   when (null passCategories) $
     logError $ "getMultimodalPassAvailablePasses: no pass categories for mocId " <> person.merchantOperatingCityId.getId
 
@@ -169,7 +173,7 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
     TDL.getAppDynamicLogic (Id.cast person.merchantOperatingCityId) LYT.PASS_PURCHASE_ELIGIBILITY localTime Nothing Nothing
 
   forM passCategories $ \category -> do
-    passTypes <- CQPassType.findAllByPassCategoryId category.id
+    passTypes <- filter isEnabledPassType <$> CQPassType.findAllByPassCategoryId category.id
     when (null passTypes) $
       logError $ "getMultimodalPassAvailablePasses: no pass types for categoryId " <> category.id.getId
 
@@ -216,7 +220,7 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   pass <- B.runInReplica $ QPass.findById passId >>= fromMaybeM (PassNotFound passId.getId)
 
-  unless pass.enable $ throwError (InvalidRequest "Pass is not enabled")
+  assertPassSellable pass
 
   -- Purchase eligibility is enforced here, not only surfaced as a flag on the
   -- listing: a pass restricted to a customer tag (say, a discounted test price)
@@ -691,8 +695,24 @@ mkPassCatalogItem passType mbCategoryName passRow =
       maxSwitchCount = (.maxSwitchCount) <$> passRow.passConfig,
       minFare = passRow.minFare,
       maxFare = passRow.maxFare,
-      formVerificationConfig = passRow.formVerificationConfig
+      formVerificationConfig = passRow.formVerificationConfig,
+      frfsPriceOverrideApplicable = passRow.frfsPriceOverrideApplicable,
+      frfsCancelLimit = passRow.frfsCancelLimit,
+      overrideBenefitConfigJson = A.toJSON <$> passRow.overrideBenefitConfigJson,
+      minTripsAllowingOverlap = passRow.minTripsAllowingOverlap,
+      minDaysToSuggestRenewal = passRow.minDaysToSuggestRenewal,
+      timeOverlappingFrfsBookingsLimit = passRow.timeOverlappingFrfsBookingsLimit,
+      dynamicDayCount = passRow.dynamicDayCount,
+      dayCountRecommendations = passRow.dayCountRecommendations
     }
+
+getPassCatalog :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPass.Pass -> Environment.Flow DashPass.PassCatalogItem
+getPassCatalog merchantShortId opCity passId = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  passRow <- findPassInCity passId merchantOperatingCity.id opCity
+  passType <- QPassType.findById passRow.passTypeId >>= fromMaybeM (PassTypeNotFound passRow.passTypeId.getId)
+  mbPassCategory <- QPassCategory.findById passType.passCategoryId
+  pure $ mkPassCatalogItem passType ((.name) <$> mbPassCategory) passRow
 
 createPassCatalog :: Id.ShortId DM.Merchant -> Context.City -> DashPass.PassCreateReq -> Environment.Flow DashPass.PassCreateResp
 createPassCatalog merchantShortId opCity req = do
@@ -704,6 +724,9 @@ createPassCatalog merchantShortId opCity req = do
   unless (passType.merchantOperatingCityId == merchantOperatingCity.id) $
     throwError (InvalidRequest $ "Pass type " <> req.passTypeId.getId <> " does not belong to city " <> show opCity)
   assertPassCodeFree req.code merchantOperatingCity.id
+  mbOverrideConfig <- mapM parseOverrideBenefitConfig req.overrideBenefitConfigJson
+  when (req.frfsPriceOverrideApplicable == Just True && isNothing mbOverrideConfig) $
+    throwError (InvalidRequest "overrideBenefitConfigJson is required when frfsPriceOverrideApplicable is true")
   passId <- generateGUID
   now <- getCurrentTime
   let passRow =
@@ -730,25 +753,24 @@ createPassCatalog merchantShortId opCity req = do
             minFare = req.minFare,
             maxFare = req.maxFare,
             formVerificationConfig = req.formVerificationConfig,
-            minTripsAllowingOverlap = Nothing,
-            minDaysToSuggestRenewal = Nothing,
-            timeOverlappingFrfsBookingsLimit = Nothing,
-            dynamicDayCount = Nothing,
-            dayCountRecommendations = Nothing,
+            minTripsAllowingOverlap = req.minTripsAllowingOverlap,
+            minDaysToSuggestRenewal = req.minDaysToSuggestRenewal,
+            timeOverlappingFrfsBookingsLimit = req.timeOverlappingFrfsBookingsLimit,
+            dynamicDayCount = req.dynamicDayCount,
+            dayCountRecommendations = req.dayCountRecommendations,
             purchaseEligibilityJsonLogic = [],
             redeemEligibilityJsonLogic = [],
-            -- FRFS fare/cancellation override columns are owned by the override flow,
-            -- not the catalog: created null, edited there.
-            frfsCancelLimit = Nothing,
-            frfsPriceOverrideApplicable = Nothing,
-            overrideBenefitConfigJson = Nothing,
+            frfsCancelLimit = req.frfsCancelLimit,
+            frfsPriceOverrideApplicable = req.frfsPriceOverrideApplicable,
+            overrideBenefitConfigJson = mbOverrideConfig,
             merchantId = merchant.id,
             merchantOperatingCityId = merchantOperatingCity.id,
             createdAt = now,
             updatedAt = now
           }
+  validateValidityDays passRow
   QPass.create passRow
-  CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId passRow.enable
+  CQPass.clearCache passRow.id [passRow.passTypeId]
   pure $ DashPass.PassCreateResp {passId = passId}
 
 updatePassCatalog :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPass.Pass -> DashPass.PassUpdateReq -> Environment.Flow APISuccess.APISuccess
@@ -761,6 +783,11 @@ updatePassCatalog merchantShortId opCity passId req = do
       throwError (InvalidRequest $ "Pass type " <> newPassTypeId.getId <> " does not belong to city " <> show opCity)
   whenJust (mfilter (/= passRow.code) req.code) $ \newCode ->
     assertPassCodeFree newCode merchantOperatingCity.id
+  mbOverrideConfig <- mapM parseOverrideBenefitConfig req.overrideBenefitConfigJson
+  let overrideApplicable = req.frfsPriceOverrideApplicable <|> passRow.frfsPriceOverrideApplicable
+      hasOverrideConfig = isJust (mbOverrideConfig <|> passRow.overrideBenefitConfigJson)
+  when ((isJust req.frfsPriceOverrideApplicable || isJust req.overrideBenefitConfigJson) && overrideApplicable == Just True && not hasOverrideConfig) $
+    throwError (InvalidRequest "overrideBenefitConfigJson is required when frfsPriceOverrideApplicable is true")
   now <- getCurrentTime
   let updatedPass =
         passRow
@@ -785,11 +812,20 @@ updatePassCatalog merchantShortId opCity passId req = do
             DPass.minFare = req.minFare <|> passRow.minFare,
             DPass.maxFare = req.maxFare <|> passRow.maxFare,
             DPass.formVerificationConfig = req.formVerificationConfig <|> passRow.formVerificationConfig,
+            DPass.frfsPriceOverrideApplicable = overrideApplicable,
+            DPass.frfsCancelLimit = req.frfsCancelLimit <|> passRow.frfsCancelLimit,
+            DPass.minTripsAllowingOverlap = req.minTripsAllowingOverlap <|> passRow.minTripsAllowingOverlap,
+            DPass.minDaysToSuggestRenewal = req.minDaysToSuggestRenewal <|> passRow.minDaysToSuggestRenewal,
+            DPass.timeOverlappingFrfsBookingsLimit = req.timeOverlappingFrfsBookingsLimit <|> passRow.timeOverlappingFrfsBookingsLimit,
+            DPass.dynamicDayCount = req.dynamicDayCount <|> passRow.dynamicDayCount,
+            DPass.dayCountRecommendations = req.dayCountRecommendations <|> passRow.dayCountRecommendations,
             DPass.updatedAt = now
           }
+  validateValidityDays updatedPass
   QPass.updateCatalogFields updatedPass
-  CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId passRow.enable
-  CQPass.clearCacheByPassTypeIdAndEnabled updatedPass.passTypeId updatedPass.enable
+  whenJust req.overrideBenefitConfigJson $ \configJson ->
+    QPass.updateOverrideBenefitConfigJson (Just configJson) passRow.id
+  CQPass.clearCache passRow.id (nub [passRow.passTypeId, updatedPass.passTypeId])
   pure APISuccess.Success
 
 -- | Soft delete (enable = false) so purchased_pass rows keep their pass reference.
@@ -798,8 +834,7 @@ deletePassCatalog merchantShortId opCity passId = do
   merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
   passRow <- findPassInCity passId merchantOperatingCity.id opCity
   QPass.updateEnable False passRow.id
-  CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId True
-  CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId False
+  CQPass.clearCache passRow.id [passRow.passTypeId]
   pure APISuccess.Success
 
 mkRoutePassConfig :: DPassOverrideConfig.PassPricingConfig -> PassAPI.RoutePassConfigAPIEntity
@@ -829,6 +864,40 @@ findMerchantOperatingCity :: Id.ShortId DM.Merchant -> Context.City -> Environme
 findMerchantOperatingCity merchantShortId opCity =
   CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
     >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+
+isEnabledCategory :: DPassCategory.PassCategory -> Bool
+isEnabledCategory category = category.enable /= Just False
+
+isEnabledPassType :: DPassType.PassType -> Bool
+isEnabledPassType passType = passType.enable /= Just False
+
+assertPassSellable :: DPass.Pass -> Environment.Flow ()
+assertPassSellable pass = do
+  unless pass.enable $ throwError (InvalidRequest "Pass is not enabled")
+  passType <- CQPassType.findById pass.passTypeId >>= fromMaybeM (PassTypeNotFound pass.passTypeId.getId)
+  passCategory <- CQPassCategory.findById passType.passCategoryId >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
+  unless (isEnabledPassType passType && isEnabledCategory passCategory) $
+    throwError (InvalidRequest "Pass is not enabled")
+
+parseOverrideBenefitConfig :: A.Value -> Environment.Flow DPassOverrideConfig.OverrideBenefitConfig
+parseOverrideBenefitConfig configJson = do
+  config <- case A.fromJSON configJson of
+    A.Success parsed -> pure parsed
+    A.Error err -> throwError (InvalidRequest $ "overrideBenefitConfigJson does not parse: " <> T.pack err)
+  case config.overrideBenefits of
+    [entry] -> case FRFSPassOverride.validateEntry entry of
+      Left reason -> throwError (InvalidRequest $ "overrideBenefitConfigJson is invalid: " <> reason)
+      Right _ -> pure config
+    [] -> throwError (InvalidRequest "overrideBenefitConfigJson has no override_benefits entry")
+    _ -> throwError (InvalidRequest "overrideBenefitConfigJson must have exactly one override_benefits entry")
+
+validateValidityDays :: DPass.Pass -> Environment.Flow ()
+validateValidityDays passRow = do
+  when (passRow.dynamicDayCount == Just True && maybe True (< 1) passRow.maxValidDays) $
+    throwError (InvalidRequest "maxValidDays must be set when dynamicDayCount is true")
+  whenJust passRow.dayCountRecommendations $ \recommendations ->
+    unless (all (\days -> days >= 1 && maybe True (days <=) passRow.maxValidDays) recommendations) $
+      throwError (InvalidRequest "dayCountRecommendations must be between 1 and maxValidDays")
 
 findPassInCity :: Id.Id DPass.Pass -> Id.Id DMOC.MerchantOperatingCity -> Context.City -> Environment.Flow DPass.Pass
 findPassInCity passId merchantOperatingCityId opCity = do
@@ -2322,7 +2391,7 @@ postMultimodalPassCalculateFare (mbPersonId, merchantId) passId req = do
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   pass <- B.runInReplica $ QPass.findById passId >>= fromMaybeM (PassNotFound passId.getId)
   unless (pass.merchantId == merchantId) $ throwError (PassNotFound passId.getId)
-  unless pass.enable $ throwError (InvalidRequest "Pass is not enabled")
+  assertPassSellable pass
   eligibilityResult <- resolvePassEligibility person pass
   unless eligibilityResult.eligible $
     throwError (InvalidRequest $ "Not eligible to purchase pass " <> pass.code)

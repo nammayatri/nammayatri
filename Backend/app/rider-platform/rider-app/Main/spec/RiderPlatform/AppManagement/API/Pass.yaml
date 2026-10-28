@@ -17,6 +17,8 @@ imports:
   IssueMediaUploadReq: IssueManagement.Common.UI.Issue
   IssueMediaUploadRes: IssueManagement.Common.UI.Issue
   PassType: Domain.Types.PassType
+  PassEnum: Domain.Types.PassType
+  PassCategory: Domain.Types.PassCategory
   Benefit: Domain.Types.Pass
   PassDocumentType: Domain.Types.Pass
   ServiceTierType: BecknV2.FRFS.Enums
@@ -33,6 +35,7 @@ importPackageOverrides:
   Lib.Payment.Domain.Types.PaymentOrder: "payment"
   Domain.Types.Pass: "rider-app"
   Domain.Types.PassType: "rider-app"
+  Domain.Types.PassCategory: "rider-app"
   API.Types.UI.Pass: "rider-app"
   IssueManagement.Domain.Types.MediaFile: "shared-services"
   IssueManagement.Common.UI.Issue: "shared-services"
@@ -71,6 +74,14 @@ types:
     minFare: Maybe HighPrecMoney
     maxFare: Maybe HighPrecMoney
     formVerificationConfig: Maybe Value
+    frfsPriceOverrideApplicable: Maybe Bool
+    frfsCancelLimit: Maybe Int
+    overrideBenefitConfigJson: Maybe Value
+    minTripsAllowingOverlap: Maybe Int
+    minDaysToSuggestRenewal: Maybe Int
+    timeOverlappingFrfsBookingsLimit: Maybe Int
+    dynamicDayCount: Maybe Bool
+    dayCountRecommendations: "Maybe [Int]"
     derive: "'HideSecrets"
 
   # Partial patch — every field optional, absent means "leave as is".
@@ -96,6 +107,14 @@ types:
     minFare: Maybe HighPrecMoney
     maxFare: Maybe HighPrecMoney
     formVerificationConfig: Maybe Value
+    frfsPriceOverrideApplicable: Maybe Bool
+    frfsCancelLimit: Maybe Int
+    overrideBenefitConfigJson: Maybe Value
+    minTripsAllowingOverlap: Maybe Int
+    minDaysToSuggestRenewal: Maybe Int
+    timeOverlappingFrfsBookingsLimit: Maybe Int
+    dynamicDayCount: Maybe Bool
+    dayCountRecommendations: "Maybe [Int]"
     derive: "'HideSecrets"
 
   PassCatalogItem:
@@ -123,9 +142,103 @@ types:
     minFare: Maybe HighPrecMoney
     maxFare: Maybe HighPrecMoney
     formVerificationConfig: Maybe Value
+    frfsPriceOverrideApplicable: Maybe Bool
+    frfsCancelLimit: Maybe Int
+    overrideBenefitConfigJson: Maybe Value
+    minTripsAllowingOverlap: Maybe Int
+    minDaysToSuggestRenewal: Maybe Int
+    timeOverlappingFrfsBookingsLimit: Maybe Int
+    dynamicDayCount: Maybe Bool
+    dayCountRecommendations: "Maybe [Int]"
 
   PassCreateResp:
     passId: Id Pass
+
+  PassTypeItem:
+    id: Id PassType
+    passCategoryId: Id PassCategory
+    passCategoryName: Text
+    name: Maybe Text
+    catchline: Maybe Text
+    title: Text
+    description: Maybe Text
+    order: Int
+    passEnum: Maybe PassEnum
+    maxPhotoChangeLimit: Maybe Int
+    photoReUploadTimeLimit: Maybe Seconds
+    enable: Bool
+
+  PassTypeCreateReq:
+    passCategoryId: Id PassCategory
+    name: Maybe Text
+    catchline: Maybe Text
+    title: Text
+    description: Maybe Text
+    order: Int
+    passEnum: Maybe PassEnum
+    maxPhotoChangeLimit: Maybe Int
+    photoReUploadTimeLimit: Maybe Seconds
+    enable: Maybe Bool
+    derive: "'HideSecrets"
+
+  PassTypeUpdateReq:
+    passCategoryId: Maybe (Id PassCategory)
+    name: Maybe Text
+    catchline: Maybe Text
+    title: Maybe Text
+    description: Maybe Text
+    order: Maybe Int
+    passEnum: Maybe PassEnum
+    maxPhotoChangeLimit: Maybe Int
+    photoReUploadTimeLimit: Maybe Seconds
+    enable: Maybe Bool
+    derive: "'HideSecrets"
+
+  PassTypeCreateResp:
+    passTypeId: Id PassType
+
+  PassCategoryItem:
+    id: Id PassCategory
+    name: Text
+    description: Text
+    order: Maybe Int
+    enable: Bool
+
+  PassCategoryCreateReq:
+    name: Text
+    description: Text
+    order: Maybe Int
+    enable: Maybe Bool
+    derive: "'HideSecrets"
+
+  PassCategoryUpdateReq:
+    name: Maybe Text
+    description: Maybe Text
+    order: Maybe Int
+    enable: Maybe Bool
+    derive: "'HideSecrets"
+
+  PassCategoryCreateResp:
+    passCategoryId: Id PassCategory
+
+  PurchasedPassPaymentTripsResp:
+    purchasedPassPaymentId: Id PurchasedPassPayment
+    purchasedPassId: Id PurchasedPass
+    passCode: Text
+    status: StatusType
+    startDate: Day
+    endDate: Day
+    sourceStopCode: Maybe Text
+    destinationStopCode: Maybe Text
+    unlimitedTripCount: Bool
+    maximumTripCount: Maybe Int
+    remainingTripCount: Maybe Int
+    storedTripCount: Maybe Int
+
+  PurchasedPassPaymentTripsAdjustReq:
+    delta: Int
+    reason: Text
+    derive: "'HideSecrets"
 
 apis:
   - GET:
@@ -288,3 +401,108 @@ apis:
         type: APISuccess
       migrate:
         capability: city-operations.pass.write
+  - GET:
+      endpoint: /catalog/{passId}/info
+      name: GetPassCatalog
+      auth: ApiAuthV2
+      params:
+        passId: Id Pass
+      response:
+        type: PassCatalogItem
+      migrate:
+        capability: city-operations.pass.read
+
+  - GET:
+      endpoint: /catalog/passType/list
+      name: ListPassType
+      auth: ApiAuthV2
+      query:
+        passCategoryId: Id PassCategory
+        enable: Bool
+      response:
+        type: "[PassTypeItem]"
+      migrate:
+        capability: city-operations.pass.read
+
+  - POST:
+      endpoint: /catalog/passType/create
+      name: CreatePassType
+      auth: ApiAuthV2
+      request:
+        type: PassTypeCreateReq
+      response:
+        type: PassTypeCreateResp
+      migrate:
+        capability: city-operations.pass.write
+
+  - PUT:
+      endpoint: /catalog/passType/{passTypeId}/update
+      name: UpdatePassType
+      auth: ApiAuthV2
+      params:
+        passTypeId: Id PassType
+      request:
+        type: PassTypeUpdateReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-operations.pass.write
+
+  - GET:
+      endpoint: /catalog/passCategory/list
+      name: ListPassCategory
+      auth: ApiAuthV2
+      query:
+        enable: Bool
+      response:
+        type: "[PassCategoryItem]"
+      migrate:
+        capability: city-operations.pass.read
+
+  - POST:
+      endpoint: /catalog/passCategory/create
+      name: CreatePassCategory
+      auth: ApiAuthV2
+      request:
+        type: PassCategoryCreateReq
+      response:
+        type: PassCategoryCreateResp
+      migrate:
+        capability: city-operations.pass.write
+
+  - PUT:
+      endpoint: /catalog/passCategory/{passCategoryId}/update
+      name: UpdatePassCategory
+      auth: ApiAuthV2
+      params:
+        passCategoryId: Id PassCategory
+      request:
+        type: PassCategoryUpdateReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-operations.pass.write
+
+  - GET:
+      endpoint: /purchasedPassPayment/{purchasedPassPaymentId}/trips
+      name: GetPurchasedPassPaymentTrips
+      auth: ApiAuthV2
+      params:
+        purchasedPassPaymentId: Id PurchasedPassPayment
+      response:
+        type: PurchasedPassPaymentTripsResp
+      migrate:
+        capability: city-operations.pass.read
+
+  - POST:
+      endpoint: /purchasedPassPayment/{purchasedPassPaymentId}/trips/adjust
+      name: AdjustPurchasedPassPaymentTrips
+      auth: ApiAuthV2
+      params:
+        purchasedPassPaymentId: Id PurchasedPassPayment
+      request:
+        type: PurchasedPassPaymentTripsAdjustReq
+      response:
+        type: PurchasedPassPaymentTripsResp
+      migrate:
+        capability: city-operations.pass.execute

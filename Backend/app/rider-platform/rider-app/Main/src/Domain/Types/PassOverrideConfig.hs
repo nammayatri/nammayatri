@@ -115,3 +115,8 @@ entryPricing (PassTicketBenefit config) = Just config.pricing
 
 firstEntry :: OverrideBenefitConfig -> Maybe OverrideBenefitEntry
 firstEntry config = listToMaybe config.overrideBenefits
+
+setMaximumTripCount :: Int -> OverrideBenefitEntry -> OverrideBenefitEntry
+setMaximumTripCount tripCount = \case
+  TicketBenefit benefit -> TicketBenefit benefit {maximumTripCount = Just tripCount}
+  PassTicketBenefit config -> PassTicketBenefit config {benefit = config.benefit {maximumTripCount = Just tripCount}}

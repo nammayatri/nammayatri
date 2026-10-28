@@ -3,6 +3,7 @@
 
 module Storage.Queries.PassExtra where
 
+import Data.Aeson (Value)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.PassType as DPassType
@@ -106,6 +107,19 @@ updateEnable enable passId = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.enable enable,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.id $ Se.Eq (getId passId)]
+
+updateOverrideBenefitConfigJson ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Value ->
+  Id DPass.Pass ->
+  m ()
+updateOverrideBenefitConfigJson overrideBenefitConfigJson passId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.overrideBenefitConfigJson overrideBenefitConfigJson,
       Se.Set Beam.updatedAt now
     ]
     [Se.Is Beam.id $ Se.Eq (getId passId)]

@@ -29,6 +29,7 @@ updateByPrimaryKey (Domain.Types.PassCategory.PassCategory {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.description description,
+      Se.Set Beam.enable enable,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
