@@ -179,9 +179,7 @@ ownSession :: Text -> Text -> Environment.Flow Session
 ownSession driver plate = Session.getSession plate >>= either throwError pure . ownedSession driver
 
 getSharedCabSession :: Text -> Text -> Maybe Text -> Environment.Flow View.SharedCabSession
-getSharedCabSession driver plate mbToken = do
-  checkToken mbToken
-  ownSession driver plate >>= mkSessionResp
+getSharedCabSession driver plate mbToken = checkToken mbToken >> getSharedCabSession' driver plate
 
 postSharedCabSeats :: Maybe Text -> API.SeatsReq -> Environment.Flow View.SharedCabSession
 postSharedCabSeats mbToken req = do

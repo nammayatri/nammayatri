@@ -82,7 +82,7 @@ pickedCabKey searchId = "sharedcab:pickedcab:" <> searchId
 interestKey :: Text -> Text
 interestKey routeCode = "sharedcab:interest:" <> routeCode
 
--- | How many offers a driver declined or let lapse on a day (YYYYMMDD); counted for later, nothing reads it yet.
+-- | The rider's latest position, for the tick's passed-stop judgement.
 riderFixKey :: BookingId -> Text
 riderFixKey bookingId = "sharedcab:riderfix:" <> bookingId.getId
 

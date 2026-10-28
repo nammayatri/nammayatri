@@ -48,12 +48,11 @@ tests =
           testCase "a stop-search request (two stop codes, or just the source stop, no route) is a cab request only when the cab feed has a route there" $
             map
               (fmap (map (\ApiTypes.RouteCodesWithLeg {ApiTypes.legOrder = o, ApiTypes.routeCodes = c} -> (o, c))))
-              [ stopPairLegs (Just "SC_POLO") (Just "SC_NONGTHYMMAI") ["SC-PRD-F"],
-                stopPairLegs (Just "SC_POLO") (Just "SC_NONGTHYMMAI") [],
-                stopPairLegs (Just "SC_POLO") Nothing ["SC-PRD-F"],
-                stopPairLegs Nothing (Just "SC_NONGTHYMMAI") ["SC-PRD-F"]
+              [ stopPairLegs (Just "SC_POLO") ["SC-PRD-F"],
+                stopPairLegs (Just "SC_POLO") [],
+                stopPairLegs Nothing ["SC-PRD-F"]
               ]
-              @?= [Just [(0, ["SC-PRD-F"])], Nothing, Just [(0, ["SC-PRD-F"])], Nothing],
+              @?= [Just [(0, ["SC-PRD-F"])], Nothing, Nothing],
           testCase "a city without a cab config never reads the shared-cab switch; one with it is answered by the switch" $ do
             switchReads <- newIORef (0 :: Int)
             let switch on = modifyIORef switchReads (+ 1) >> pure on

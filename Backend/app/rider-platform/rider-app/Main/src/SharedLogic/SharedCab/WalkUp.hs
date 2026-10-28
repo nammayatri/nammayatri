@@ -82,11 +82,14 @@ cabRouteRequest :: Maybe [Text] -> [Text] -> Bool
 cabRouteRequest Nothing _ = False
 cabRouteRequest (Just feedRouteCodes) requested = not (null requested) && all (`elem` feedRouteCodes) requested
 
+stopEta :: UTCTime -> LT.UpcomingStop -> CQMMB.BusStopETA
+stopEta now u = CQMMB.BusStopETA u.stop.stopCode (Just u.stop.name) u.eta (floor (utcTimeToPOSIXSeconds u.eta)) (Just (max 0 (floor (diffUTCTime u.eta now))))
+
 -- | A stop-search request names no route: the cab feed's routes between the two stops (or, with only a source stop, the routes
 -- passing it) make it a cab request. No such route leaves it on the bus path.
-stopPairLegs :: Maybe Text -> Maybe Text -> [Text] -> Maybe [ApiTypes.RouteCodesWithLeg]
-stopPairLegs (Just _) _ routes@(_ : _) = Just [ApiTypes.RouteCodesWithLeg {legOrder = 0, routeCodes = routes}]
-stopPairLegs _ _ _ = Nothing
+stopPairLegs :: Maybe Text -> [Text] -> Maybe [ApiTypes.RouteCodesWithLeg]
+stopPairLegs (Just _) routes@(_ : _) = Just [ApiTypes.RouteCodesWithLeg {legOrder = 0, routeCodes = routes}]
+stopPairLegs _ _ = Nothing
 
 -- | The tier a route of this feed advertises in the public-transport data: a shared-cab route says SHARED_CAB, but only to a client
 -- that declared the tier (`newServiceTiers`), so every other client gets exactly the data it got before.
@@ -249,12 +252,12 @@ routeServiceability mbPersonId req =
     stopPairRoutes = case (req.sourceStopCode, req.destinationStopCode) of
       (Just src, Just dest) ->
         withTryCatch "routeServiceability:sharedCabStopPair" (findSharedCabConfig mbPersonId >>= traverse (\cabIbc -> (,) cabIbc <$> JLU.getRouteCodesFromTo src dest cabIbc)) >>= \case
-          Right (Just (cabIbc, routes)) -> pure $ (\legs -> (cabIbc, legs, Just routes)) <$> stopPairLegs req.sourceStopCode req.destinationStopCode routes
+          Right (Just (cabIbc, routes)) -> pure $ (\legs -> (cabIbc, legs, Just routes)) <$> stopPairLegs req.sourceStopCode routes
           _ -> pure Nothing
       -- the stop picked on its own: the routes of the cab feed that pass it
       (Just src, Nothing) ->
         withTryCatch "routeServiceability:sharedCabStop" (findSharedCabConfig mbPersonId >>= traverse (\cabIbc -> (,) cabIbc . nub . map (.routeCode) <$> OTPRest.getRouteStopMappingByStopCode src cabIbc)) >>= \case
-          Right (Just (cabIbc, routes)) -> pure $ (\legs -> (cabIbc, legs, Just routes)) <$> stopPairLegs req.sourceStopCode Nothing routes
+          Right (Just (cabIbc, routes)) -> pure $ (\legs -> (cabIbc, legs, Just routes)) <$> stopPairLegs req.sourceStopCode routes
           _ -> pure Nothing
       _ -> pure Nothing
 
@@ -291,7 +294,7 @@ trackStopRoutes mbPersonId stopCode mbRouteCodes =
               { vehicleNumber = sess.vehicleNumber,
                 serviceTierType = Spec.SHARED_CAB,
                 serviceTierName = Nothing,
-                eta = CQMMB.BusStopETA u.stop.stopCode (Just u.stop.name) u.eta (floor (utcTimeToPOSIXSeconds u.eta)) (Just (max 0 (floor (diffUTCTime u.eta now))))
+                eta = stopEta now u
               }
       stops <- OTPRest.getRouteStopMappingByRouteCode code cabIbc
       pure
@@ -365,7 +368,7 @@ cabVehicle now cfg namedByPlate mbBoardStop (freeSeats, ridersOnBoard) s = \case
             vehicleVariant = Nothing,
             serviceTierName = Nothing,
             locationUTCTimestamp = fixTime track.vehicleInfo,
-            eta = Just [stopEta u | u <- fromMaybe [] track.vehicleInfo.upcomingStops, u.status == LT.Upcoming, believable track u],
+            eta = Just [stopEta now u | u <- fromMaybe [] track.vehicleInfo.upcomingStops, u.status == LT.Upcoming, believable track u],
             position = LatLong track.vehicleInfo.latitude track.vehicleInfo.longitude,
             serviceSubTypes = Nothing,
             seatSelectionType = Nothing,
@@ -398,4 +401,3 @@ cabVehicle now cfg namedByPlate mbBoardStop (freeSeats, ridersOnBoard) s = \case
     believable track u = case mbBoardStop of
       Just (stopCode, stopPoint) | u.stop.stopCode == stopCode -> isJust (Approach.cabStopEta now cfg stopCode stopPoint track)
       _ -> True
-    stopEta u = CQMMB.BusStopETA u.stop.stopCode (Just u.stop.name) u.eta (floor (utcTimeToPOSIXSeconds u.eta)) (Just (max 0 (floor (diffUTCTime u.eta now))))
