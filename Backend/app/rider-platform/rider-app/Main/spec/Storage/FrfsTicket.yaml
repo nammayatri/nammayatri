@@ -707,6 +707,7 @@ FRFSTicketBooking:
     - columns: [tripId]
     - columns: [waybillNo]
     - columns: [overrideAppliedEntityId]
+    - columns: [riderId]
 
   extraOperations:
     - EXTRA_QUERY_FILE
