@@ -39,7 +39,7 @@ import Kernel.Prelude
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 
-data SharedCabState = FINDING | ALLOCATED | ARRIVING | FALLBACK | BOARDED | DEGRADED | DROPPED | CANCELLED
+data SharedCabState = FINDING | ALLOCATED | FALLBACK | BOARDED | DEGRADED | DROPPED | CANCELLED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Why the leg was cancelled, for "cancelled after missed cabs". NO_CAB_FOUND and SYSTEM cover cancels outside the shared-cab code.
@@ -82,7 +82,7 @@ data SharedCabLegStatus = SharedCabLegStatus
     cancelReason :: Maybe CancelReason,
     preferredCab :: Maybe Text,
     preferredCabLost :: Bool,
-    -- | Other cabs on the route that reach the board stop after the assigned one, soonest first (ALLOCATED and ARRIVING only).
+    -- | Other cabs on the route that reach the board stop after the assigned one, soonest first (ALLOCATED only).
     upcomingCabs :: [UpcomingCab],
     -- | The rider may still skip the assigned cab: once per booking, and only while it is more than skipMinEtaSec away.
     skipAvailable :: Bool
@@ -114,8 +114,9 @@ fallbackReached now maxAttempts attempts findingSince fallbackAfterSec = attempt
 legNeedsChains :: SharedCabState -> Bool
 legNeedsChains = (`notElem` [DROPPED, CANCELLED])
 
-deriveSharedCabState :: UTCTime -> JMState.JourneyBookingStatus -> Maybe Text -> Bool -> Maybe FallbackGate -> Maybe UTCTime -> Maybe SharedCabState
-deriveSharedCabState now bookingStatus mbVehicleNumber hasLiveSession fallbackGate arrivalDeadline = case bookingStatus of
+-- | A cab at (or passing) the stop is ALLOCATED with the leg's boardDeadlineSec set; there is no separate state for it.
+deriveSharedCabState :: UTCTime -> JMState.JourneyBookingStatus -> Maybe Text -> Bool -> Maybe FallbackGate -> Maybe SharedCabState
+deriveSharedCabState now bookingStatus mbVehicleNumber hasLiveSession fallbackGate = case bookingStatus of
   JMState.FRFSBooking DFRFSBooking.CONFIRMED -> Just waiting
   JMState.FRFSTicket DFRFSTicket.ACTIVE -> Just waiting
   JMState.FRFSTicket DFRFSTicket.INPROGRESS -> Just $ if hasLiveSession then BOARDED else DEGRADED
@@ -128,14 +129,14 @@ deriveSharedCabState now bookingStatus mbVehicleNumber hasLiveSession fallbackGa
   _ -> Nothing
   where
     waiting
-      | isJust mbVehicleNumber = if isJust arrivalDeadline then ARRIVING else ALLOCATED
+      | isJust mbVehicleNumber = ALLOCATED
       | fallbackDue' = FALLBACK
       | otherwise = FINDING
     fallbackDue' = maybe False (fallbackDue now) fallbackGate
 
 -- | Calling and chatting with the cab's driver is open only while a cab holds the rider's seat.
 callWindowState :: SharedCabState -> Bool
-callWindowState = (`elem` [ALLOCATED, ARRIVING, BOARDED])
+callWindowState = (`elem` [ALLOCATED, BOARDED])
 
 -- | The same window from the booking's own rows, for callers that have no leg status: a confirmed booking on a plate with a held ticket.
 callWindow :: DFRFSBooking.FRFSTicketBookingStatus -> [DFRFSTicket.FRFSTicketStatus] -> Maybe Text -> Bool
@@ -186,4 +187,4 @@ decideRiderSkip used boarded mbEtaSec
 
 -- | What the app uses to show the skip button.
 skipAvailableFor :: SharedCabState -> Bool -> Maybe Int -> Bool
-skipAvailableFor st used mbEtaSec = st `elem` [ALLOCATED, ARRIVING] && decideRiderSkip used False mbEtaSec == SkipOk
+skipAvailableFor st used mbEtaSec = st == ALLOCATED && decideRiderSkip used False mbEtaSec == SkipOk

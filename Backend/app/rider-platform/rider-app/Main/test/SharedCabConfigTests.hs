@@ -55,8 +55,8 @@ tests =
         )
           @?= (Nothing, Just ("shillong_bus", t 1)),
       testCase "a rider polling a leg that is not over keeps the city's chains alive; a finished or cancelled leg does not" $
-        map legNeedsChains [FINDING, ALLOCATED, ARRIVING, FALLBACK, BOARDED, DEGRADED, DROPPED, CANCELLED]
-          @?= [True, True, True, True, True, True, False, False],
+        map legNeedsChains [FINDING, ALLOCATED, FALLBACK, BOARDED, DEGRADED, DROPPED, CANCELLED]
+          @?= [True, True, True, True, True, False, False],
       testCase "a suspended city with live bookings still gets its allocation chain re-seeded; new demand needs the city on" $
         ( [allocationSeedWanted Watchdog e n | e <- [True, False], n <- [0, 3]],
           [allocationSeedWanted OnDemand e n | e <- [True, False], n <- [0, 3]],

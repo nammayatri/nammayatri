@@ -90,8 +90,8 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   let hasLiveSession = maybe False ((/= SharedCabSessionState.ENDED) . (.status)) mbSession
       (trackingStatus, trackingStatusLastUpdatedAt) = maybe (JMStateTypes.InPlan, now) (\(_, ts, tsAt) -> (ts, tsAt)) (listToMaybe trackingStatuses)
       arrivalDeadline = mbAllocState >>= allocationDeadline
-      mbState = SharedCabLeg.deriveSharedCabState now bookingStatus' shown hasLiveSession (Just fallbackGate) arrivalDeadline
-      boardDeadlineSec = guard (mbState == Just SharedCabLeg.ARRIVING) *> arrivalDeadline <&> \deadline -> max 0 (ceiling (diffUTCTime deadline now) :: Int)
+      mbState = SharedCabLeg.deriveSharedCabState now bookingStatus' shown hasLiveSession (Just fallbackGate)
+      boardDeadlineSec = guard (mbState == Just SharedCabLeg.ALLOCATED) *> arrivalDeadline <&> \deadline -> max 0 (ceiling (diffUTCTime deadline now) :: Int)
       fallbackGate =
         SharedCabLeg.FallbackGate
           { attempts,
@@ -107,7 +107,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   maskedCall <- if cfg.callEnabled && inWindow then SharedCabCall.maskedCallNumber booking.merchantOperatingCityId else pure Nothing
   let chatChannel = if cfg.chatEnabled && inWindow then Just booking.id.getId else Nothing
   -- where the rider is while a cab is on its way decides the blame if it passes the stop
-  when (mbState `elem` [Just SharedCabLeg.ALLOCATED, Just SharedCabLeg.ARRIVING]) $
+  when (mbState == Just SharedCabLeg.ALLOCATED) $
     whenJust (listToMaybe riderLastPoints) $ \p -> SharedCabBooking.recordRiderFix booking.id RiderFix {position = p.latLong, takenAt = p.currTime}
   -- why a cancelled leg was cancelled (written by the cancel paths; absent once its TTL lapses)
   mbCancelReason <-
@@ -117,7 +117,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   -- the assigned cab's own ETA (from the track already read) decides the skip button and which other cabs come after it
   let skipUsed = bookingState.skipUsed
       assignedEtaSec = cabTrack >>= \(_, boardEta, _) -> boardEta
-      approaching = mbState `elem` [Just SharedCabLeg.ALLOCATED, Just SharedCabLeg.ARRIVING]
+      approaching = mbState == Just SharedCabLeg.ALLOCATED
       skipAvailable = maybe False (\st -> SharedCabLeg.skipAvailableFor st skipUsed assignedEtaSec) mbState
   upcomingCabs <- case (shown, mbRouteCode) of
     (Just plate, Just routeCode) | approaching -> do

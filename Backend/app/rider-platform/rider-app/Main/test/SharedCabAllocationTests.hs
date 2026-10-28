@@ -288,7 +288,7 @@ tests =
       testCase "(user decision 2026-09-30): a stand timeout is the rider's no-show, not a driver miss; a driver cancel still is" $
         map blameFor [StandTimeout, MovingTimeout, DriverCancelled, AwayTimeout]
           @?= [BlameRider, BlameRider, BlameDriver, BlameNone],
-      testCase "only a stand or moving timer makes the leg ARRIVING: an away timer reads as an assigned cab still on its way" $
+      testCase "only a stand or moving timer gives the rider a board deadline: an away timer reads as an assigned cab still on its way" $
         map (allocationDeadline . (\timer -> standing {timer})) [StandTimer t0, MovingTimer t0, AwayTimer t0, NoTimer] @?= [Just t0, Just t0, Nothing, Nothing],
       testCase "stand and away timers are cleared once the cab moves, the moving timer is not" $
         map clearOnMove [StandTimer t0, AwayTimer t0, MovingTimer t0, NoTimer] @?= [NoTimer, NoTimer, MovingTimer t0, NoTimer],

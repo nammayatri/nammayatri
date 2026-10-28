@@ -96,32 +96,31 @@ tests =
         ],
       testGroup
         "state from the booking/ticket encoding"
-        [ testCase "confirmed, no plate -> FINDING" $ derive (JMState.FRFSBooking DFRFSBooking.CONFIRMED) Nothing False Nothing Nothing @?= Just FINDING,
-          testCase "ticket ACTIVE, no plate -> FINDING" $ derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False Nothing Nothing @?= Just FINDING,
-          testCase "ticket ACTIVE, plate set, no timer -> ALLOCATED" $ derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) plate True Nothing Nothing @?= Just ALLOCATED,
-          testCase "ticket ACTIVE, plate set, timer armed -> ARRIVING" $ derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) plate True Nothing (Just now) @?= Just ARRIVING,
-          testCase "INPROGRESS with a live session -> BOARDED" $ derive (JMState.FRFSTicket DFRFSTicket.INPROGRESS) plate True Nothing Nothing @?= Just BOARDED,
-          testCase "INPROGRESS, no session -> DEGRADED" $ derive (JMState.FRFSTicket DFRFSTicket.INPROGRESS) plate False Nothing Nothing @?= Just DEGRADED,
-          testCase "ticket USED -> DROPPED" $ derive (JMState.FRFSTicket DFRFSTicket.USED) plate False Nothing Nothing @?= Just DROPPED,
-          testCase "feedback pending (all USED) -> DROPPED" $ derive (JMState.Feedback JMState.FEEDBACK_PENDING) plate False Nothing Nothing @?= Just DROPPED,
-          testCase "ticket CANCELLED -> CANCELLED" $ derive (JMState.FRFSTicket DFRFSTicket.CANCELLED) Nothing False Nothing Nothing @?= Just CANCELLED,
-          testCase "booking CANCELLED -> CANCELLED" $ derive (JMState.FRFSBooking DFRFSBooking.CANCELLED) Nothing False Nothing Nothing @?= Just CANCELLED,
-          testCase "not yet confirmed -> no block" $ derive (JMState.FRFSBooking DFRFSBooking.NEW) Nothing False Nothing Nothing @?= Nothing
+        [ testCase "confirmed, no plate -> FINDING" $ derive (JMState.FRFSBooking DFRFSBooking.CONFIRMED) Nothing False Nothing @?= Just FINDING,
+          testCase "ticket ACTIVE, no plate -> FINDING" $ derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False Nothing @?= Just FINDING,
+          testCase "ticket ACTIVE, plate set -> ALLOCATED" $ derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) plate True Nothing @?= Just ALLOCATED,
+          testCase "INPROGRESS with a live session -> BOARDED" $ derive (JMState.FRFSTicket DFRFSTicket.INPROGRESS) plate True Nothing @?= Just BOARDED,
+          testCase "INPROGRESS, no session -> DEGRADED" $ derive (JMState.FRFSTicket DFRFSTicket.INPROGRESS) plate False Nothing @?= Just DEGRADED,
+          testCase "ticket USED -> DROPPED" $ derive (JMState.FRFSTicket DFRFSTicket.USED) plate False Nothing @?= Just DROPPED,
+          testCase "feedback pending (all USED) -> DROPPED" $ derive (JMState.Feedback JMState.FEEDBACK_PENDING) plate False Nothing @?= Just DROPPED,
+          testCase "ticket CANCELLED -> CANCELLED" $ derive (JMState.FRFSTicket DFRFSTicket.CANCELLED) Nothing False Nothing @?= Just CANCELLED,
+          testCase "booking CANCELLED -> CANCELLED" $ derive (JMState.FRFSBooking DFRFSBooking.CANCELLED) Nothing False Nothing @?= Just CANCELLED,
+          testCase "not yet confirmed -> no block" $ derive (JMState.FRFSBooking DFRFSBooking.NEW) Nothing False Nothing @?= Nothing
         ],
       testGroup
         "FINDING fallback gate (attempts OR fallbackAfterSec, whichever first)"
         [ testCase "no plate, gate untripped -> FINDING" $
-            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False (Just (gate 0 (-60))) Nothing @?= Just FINDING,
+            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False (Just (gate 0 (-60))) @?= Just FINDING,
           testCase "no plate, attempts >= maxAttempts -> FALLBACK" $
-            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False (Just (gate 2 (-60))) Nothing @?= Just FALLBACK,
+            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False (Just (gate 2 (-60))) @?= Just FALLBACK,
           testCase "no plate, attempts under max but findingSince past fallbackAfterSec -> FALLBACK" $
-            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False (Just (gate 0 (-700))) Nothing @?= Just FALLBACK,
+            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False (Just (gate 0 (-700))) @?= Just FALLBACK,
           testCase "no plate, one attempt short of max and just inside fallbackAfterSec -> still FINDING" $
-            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False (Just (gate 1 (-300))) Nothing @?= Just FINDING,
+            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False (Just (gate 1 (-300))) @?= Just FINDING,
           testCase "the clock is inclusive: exactly fallbackAfterSec is due, a second less is not (the tick's push uses the same test)" $
             map (\off -> fallbackTimeElapsed now (addUTCTime off now) 600) [-600, -599] @?= [True, False],
           testCase "plate set: fallback gate is irrelevant, plate always wins" $
-            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) plate True (Just (gate 2 (-700))) Nothing @?= Just ALLOCATED
+            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) plate True (Just (gate 2 (-700))) @?= Just ALLOCATED
         ],
       testGroup
         "I got down: which tickets go USED"
@@ -133,8 +132,8 @@ tests =
       testGroup
         "call and chat window"
         [ testCase "open only while a cab holds the seat" $
-            map callWindowState [FINDING, ALLOCATED, ARRIVING, FALLBACK, BOARDED, DEGRADED, DROPPED, CANCELLED]
-              @?= [False, True, True, False, True, False, False, False],
+            map callWindowState [FINDING, ALLOCATED, FALLBACK, BOARDED, DEGRADED, DROPPED, CANCELLED]
+              @?= [False, True, False, True, False, False, False],
           testCase "from the booking rows: a confirmed booking on a plate with a held ticket" $
             [ callWindow DFRFSBooking.CONFIRMED [DFRFSTicket.ACTIVE] plate,
               callWindow DFRFSBooking.CONFIRMED [DFRFSTicket.INPROGRESS] plate,
@@ -153,7 +152,7 @@ tests =
             [ callWindow DFRFSBooking.CONFIRMED [ts] plate
               | ts <- [DFRFSTicket.ACTIVE, DFRFSTicket.INPROGRESS, DFRFSTicket.USED, DFRFSTicket.EXPIRED, DFRFSTicket.CANCELLED]
             ]
-              @?= [ maybe False callWindowState (derive (JMState.FRFSTicket ts) plate True Nothing Nothing)
+              @?= [ maybe False callWindowState (derive (JMState.FRFSTicket ts) plate True Nothing)
                     | ts <- [DFRFSTicket.ACTIVE, DFRFSTicket.INPROGRESS, DFRFSTicket.USED, DFRFSTicket.EXPIRED, DFRFSTicket.CANCELLED]
                   ]
         ],
@@ -194,10 +193,10 @@ tests =
             ]
               @?= [SkipUsed, SkipTooLate, SkipTooLate, SkipOk, SkipTooLate, SkipUsed],
           testCase "the skip button shows only while the cab is coming, unused and far enough" $
-            [skipAvailableFor st False (Just 300) | st <- [FINDING, ALLOCATED, ARRIVING, BOARDED, CANCELLED]]
-              @?= [False, True, True, False, False],
+            [skipAvailableFor st False (Just 300) | st <- [FINDING, ALLOCATED, BOARDED, CANCELLED]]
+              @?= [False, True, False, False],
           testCase "the skip button hides once the skip is used or the cab is near" $
-            (skipAvailableFor ARRIVING True (Just 300), skipAvailableFor ARRIVING False (Just 60), skipAvailableFor ALLOCATED False Nothing)
+            (skipAvailableFor ALLOCATED True (Just 300), skipAvailableFor ALLOCATED False (Just 60), skipAvailableFor ALLOCATED False Nothing)
               @?= (False, False, False)
         ]
     ]

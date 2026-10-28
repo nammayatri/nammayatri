@@ -57,7 +57,7 @@ retry: 10
 retry-interval: 3000ms
 HTTP 200
 [Asserts]
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" matches "^(ALLOCATED|ARRIVING)$"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "ALLOCATED"
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.maskedCallNumber" == null
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.chatChannelId" == null
 [Captures]

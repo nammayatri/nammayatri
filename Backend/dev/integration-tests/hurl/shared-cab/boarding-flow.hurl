@@ -68,7 +68,9 @@ retry: 10
 retry-interval: 3000ms
 HTTP 200
 [Asserts]
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" matches "^(ALLOCATED|ARRIVING)$"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "ALLOCATED"
+# the cab stands at the stop, so the rider counts down to its board deadline
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.boardDeadlineSec" isInteger
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{plate}}"
 # the pinger keeps the cab's LTS fix fresh: its position rides on the leg status
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.position.lat" isFloat
@@ -197,7 +199,7 @@ retry: 10
 retry-interval: 3000ms
 HTTP 200
 [Asserts]
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" matches "^(ALLOCATED|ARRIVING)$"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "ALLOCATED"
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{plate}}"
 
 POST {{base_url}}/internal/sharedCab/route/select

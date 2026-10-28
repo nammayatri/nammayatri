@@ -6,6 +6,7 @@ module SharedLogic.SharedCab.RefundPolicy
     decideCancel,
     cancellableStatus,
     cancelState,
+    besideWaitingCab,
     riderNearStop,
     routeRiderDrop,
   )
@@ -29,21 +30,25 @@ data CancelBy = ByRider | ByDriver
 data CancelDecision = Allowed Refund | Rejected SharedCabCancelError
   deriving (Show, Eq)
 
--- | A started ride is nobody's self-refund; the driver's cancel refunds in full; a rider beside the waiting cab is sent to the driver;
--- otherwise a full refund unless a no-show is already booked.
+-- | A started ride is nobody's self-refund; the driver's cancel refunds in full; a rider beside the waiting cab is sent to the driver
+-- (`riderNear` comes from `besideWaitingCab`); otherwise a full refund unless a no-show is already booked.
 decideCancel :: CancelBy -> SharedCabState -> Int -> [DFRFSTicket.FRFSTicketStatus] -> Bool -> CancelDecision
 decideCancel by state noShows tickets riderNear
   | rideStarted = Rejected RideStarted
   | by == ByDriver = Allowed FullRefund
-  | state == ARRIVING && riderNear = Rejected TalkToDriver
+  | state == ALLOCATED && riderNear = Rejected TalkToDriver
   | noShows > 0 = Allowed NoRefund
   | otherwise = Allowed FullRefund
   where
     rideStarted = state `elem` [BOARDED, DEGRADED, DROPPED] || any (`elem` [DFRFSTicket.INPROGRESS, DFRFSTicket.USED]) tickets
 
-cancelState :: UTCTime -> Maybe Text -> Maybe UTCTime -> SharedCabState
-cancelState now plate arrivalDeadline =
-  fromMaybe FINDING $ deriveSharedCabState now (JMState.FRFSBooking DFRFSBooking.CONFIRMED) plate True Nothing arrivalDeadline
+cancelState :: UTCTime -> Maybe Text -> SharedCabState
+cancelState now plate =
+  fromMaybe FINDING $ deriveSharedCabState now (JMState.FRFSBooking DFRFSBooking.CONFIRMED) plate True Nothing
+
+-- | Near counts only while the cab waits for the rider (its arrival deadline runs); beside an assigned cab still on its way is not near.
+besideWaitingCab :: Maybe UTCTime -> Bool -> Bool
+besideWaitingCab arrivalDeadline near = isJust arrivalDeadline && near
 
 riderNearStop :: Int -> Int -> UTCTime -> Maybe LatLong -> Maybe RiderFix -> Bool
 riderNearStop radiusM maxAgeSec now mbStop = \case

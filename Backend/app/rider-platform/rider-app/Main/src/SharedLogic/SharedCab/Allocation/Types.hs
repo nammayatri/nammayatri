@@ -63,7 +63,7 @@ timerDeadline = \case
   OfferTimer d -> Just d
 
 -- | The deadline the rider counts down to: a cab waiting at the stop (stand) or passing it (moving). An away timer only bounds how
--- long the allocator holds a cab that is not at the stop, so it is no ARRIVING.
+-- long the allocator holds a cab that is not at the stop, so it sets no boardDeadlineSec.
 allocationDeadline :: AllocationState -> Maybe UTCTime
 allocationDeadline st = case st.timer of
   AwayTimer _ -> Nothing

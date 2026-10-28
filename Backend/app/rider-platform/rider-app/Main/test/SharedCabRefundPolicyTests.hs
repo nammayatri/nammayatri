@@ -57,14 +57,16 @@ tests =
         ],
       testGroup
         "2: allocated, cab still en route"
-        [ testCase "ALLOCATED refunds in full, even beside the stop" $ rider ALLOCATED 0 True @?= Allowed FullRefund
+        [ testCase "ALLOCATED refunds in full, even beside the stop" $ rider ALLOCATED 0 (besideWaitingCab Nothing True) @?= Allowed FullRefund,
+          testCase "near only while the cab's arrival deadline runs" $
+            [besideWaitingCab (Just t0) True, besideWaitingCab (Just t0) False, besideWaitingCab Nothing True] @?= [True, False, False]
         ],
       testGroup
         "3: cab waiting at the stop"
-        [ testCase "rider near: self-cancel refused, talk to the driver" $ rider ARRIVING 0 True @?= Rejected TalkToDriver,
-          testCase "rider away: refunds in full" $ rider ARRIVING 0 False @?= Allowed FullRefund,
-          testCase "the driver's cancel refunds in full while the rider is near" $ driver ARRIVING 0 True @?= Allowed FullRefund,
-          testCase "the driver's cancel refunds in full with the rider away" $ driver ARRIVING 0 False @?= Allowed FullRefund
+        [ testCase "rider near: self-cancel refused, talk to the driver" $ rider ALLOCATED 0 True @?= Rejected TalkToDriver,
+          testCase "rider away: refunds in full" $ rider ALLOCATED 0 False @?= Allowed FullRefund,
+          testCase "the driver's cancel refunds in full while the rider is near" $ driver ALLOCATED 0 True @?= Allowed FullRefund,
+          testCase "the driver's cancel refunds in full with the rider away" $ driver ALLOCATED 0 False @?= Allowed FullRefund
         ],
       testGroup
         "3: near = within the board radius by a fresh fix; unknown or stale counts as near"
@@ -80,9 +82,9 @@ tests =
         "4: after a no-show"
         [ testCase "FINDING (reallocated): no refund" $ rider FINDING 1 True @?= Allowed NoRefund,
           testCase "FALLBACK: no refund" $ rider FALLBACK 2 True @?= Allowed NoRefund,
-          testCase "ALLOCATED: no refund" $ rider ALLOCATED 1 True @?= Allowed NoRefund,
-          testCase "ARRIVING, rider away: no refund" $ rider ARRIVING 1 False @?= Allowed NoRefund,
-          testCase "ARRIVING, rider near: still talk to the driver" $ rider ARRIVING 1 True @?= Rejected TalkToDriver,
+          testCase "ALLOCATED, cab on its way: no refund" $ rider ALLOCATED 1 (besideWaitingCab Nothing True) @?= Allowed NoRefund,
+          testCase "ALLOCATED, cab waiting, rider away: no refund" $ rider ALLOCATED 1 False @?= Allowed NoRefund,
+          testCase "ALLOCATED, cab waiting, rider near: still talk to the driver" $ rider ALLOCATED 1 True @?= Rejected TalkToDriver,
           testCase "the driver's cancel still refunds in full" $ driver ALLOCATED 1 False @?= Allowed FullRefund
         ],
       testGroup
@@ -91,7 +93,7 @@ tests =
           testCase "DEGRADED: refused" $ rider DEGRADED 0 False @?= Rejected RideStarted,
           testCase "DROPPED: refused" $ rider DROPPED 0 False @?= Rejected RideStarted,
           testCase "a ticket INPROGRESS refuses whatever the state says" $ decideCancel ByRider ALLOCATED 0 [INPROGRESS] False @?= Rejected RideStarted,
-          testCase "one INPROGRESS among several tickets" $ decideCancel ByRider ARRIVING 0 [ACTIVE, INPROGRESS] False @?= Rejected RideStarted,
+          testCase "one INPROGRESS among several tickets" $ decideCancel ByRider ALLOCATED 0 [ACTIVE, INPROGRESS] False @?= Rejected RideStarted,
           testCase "a USED ticket refuses" $ decideCancel ByRider FINDING 0 [USED] False @?= Rejected RideStarted,
           testCase "boarded after a no-show is still refused, not NoRefund" $ decideCancel ByRider BOARDED 1 [INPROGRESS] False @?= Rejected RideStarted,
           testCase "the driver's cancel does not reach a boarded seat" $ decideCancel ByDriver BOARDED 0 [INPROGRESS] False @?= Rejected RideStarted
@@ -106,10 +108,9 @@ tests =
           testCase "no tickets" $ routeRiderDrop [] @?= NothingToDrop
         ],
       testGroup
-        "state from the booking's plate and the arrival deadline"
-        [ testCase "no plate" $ cancelState t0 Nothing Nothing @?= FINDING,
-          testCase "plate, no timer" $ cancelState t0 (Just "ML05A9999") Nothing @?= ALLOCATED,
-          testCase "plate, timer armed" $ cancelState t0 (Just "ML05A9999") (Just t0) @?= ARRIVING
+        "state from the booking's plate"
+        [ testCase "no plate" $ cancelState t0 Nothing @?= FINDING,
+          testCase "plate" $ cancelState t0 (Just "ML05A9999") @?= ALLOCATED
         ],
       testGroup
         "no payment row (pay on board): a cancel never produces refund money, charges or a refund marker"
