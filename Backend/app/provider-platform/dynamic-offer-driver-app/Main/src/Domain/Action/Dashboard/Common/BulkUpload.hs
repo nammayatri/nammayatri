@@ -171,12 +171,19 @@ processDriverRows tag driverDetails mkFailure func =
               tag
               (func driverDetail)
               >>= \case
-                Left err -> return (processed, unprocessed <> [mkFailure driverDetail.driverPhoneNumber (T.pack (displayException err))])
+                Left err -> return (processed, unprocessed <> [mkFailure driverDetail.driverPhoneNumber (rowErrorMessage err)])
                 Right driverPersonId ->
                   return (processed <> [Common.ProcessedDriverInfo {driverId = cast @DP.Person @Common.Driver driverPersonId, phoneNo = driverDetail.driverPhoneNumber}], unprocessed)
     )
     ([], [])
     driverDetails
+
+-- | The error's own message, else the raw exception text.
+rowErrorMessage :: SomeException -> Text
+rowErrorMessage err
+  | Just (HTTPException e) <- fromException err = fromMaybe (show e) (toMessage e)
+  | Just (BaseException e) <- fromException err = fromMaybe (show e) (toMessage e)
+  | otherwise = T.pack (displayException err)
 
 mkAddDriverCounterKey :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Text
 mkAddDriverCounterKey merchantOpCityId driverId = "Fleet:AddDriverCount:" <> driverId.getId <> ":" <> merchantOpCityId.getId
