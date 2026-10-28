@@ -54,7 +54,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), MinimumGuaranteeSettlementJobData (..))
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.MinimumGuarantee.Context (setMgCampaignPaused)
-import SharedLogic.MinimumGuarantee.Enrollment (cancelUpcomingEnrollments)
+import SharedLogic.MinimumGuarantee.Enrollment (cancelUpcomingEnrollments, cityTimeDiff)
 import SharedLogic.MinimumGuarantee.Rules (localDayOf, pageBounds)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -331,7 +331,7 @@ postMinimumGuaranteeStatus merchantShortId opCity reqCampaignId req = do
         ( createJobIn @_ @'MinimumGuaranteeSettlement (Just merchant.id) (Just merchantOpCity.id) 900 $
             MinimumGuaranteeSettlementJobData {merchantId = merchant.id, merchantOperatingCityId = merchantOpCity.id, campaignId = campaign.id}
           )
-          `C.onException` QMgC.updateStatusById DMgC.DRAFT campaign.id
+          `C.onException` (QMgC.updateStatusById DMgC.DRAFT campaign.id >> cancelUpcomingEnrollments campaign campaign.startDate)
         notifyInvitees campaign {DMgC.status = DMgC.PUBLISHED}
       (DMgC.PUBLISHED, DMgC.PAUSED) -> do
         QMgC.updateStatusById DMgC.PAUSED campaign.id
@@ -347,6 +347,10 @@ postMinimumGuaranteeStatus merchantShortId opCity reqCampaignId req = do
           -- days that are over are still settled by the campaign's job; today and later are called off
           today <- localToday merchantOpCity
           cancelUpcomingEnrollments campaign today
+      (DMgC.CANCELLED, DMgC.CANCELLED) -> do
+        -- picks up where an interrupted cancellation stopped, from the day the campaign was cancelled
+        timeDiff <- cityTimeDiff merchantOpCity.id
+        cancelUpcomingEnrollments campaign (localDayOf timeDiff campaign.updatedAt)
       (from, to) -> throwError (InvalidRequest $ "transition " <> show from <> " -> " <> show to <> " is not allowed")
   pure Success
 

@@ -27,7 +27,7 @@ cd Backend/dev/integration-tests
 | 2 Draft | create → listed as `DRAFT` with `createdBy`; list `limit` above 50 is clamped; DRAFT terms editable (guarantee 2000 → 2500); invite is idempotent (second call skips); a DRAFT campaign is hidden from the driver and cannot be opted into |
 | 3 Publish | `DRAFT → PUBLISHED`; terms locked afterwards; re-publish refused |
 | 4 Driver opt-in | invitation visible with updated terms and `canOptIn` for tomorrow; opt-in needs `acceptTerms`; opt-in is idempotent; progress shows `UPCOMING` with zero counters; admin enrollments list shows the driver; opt-out → `OPTED_OUT`; re-opt-in → `UPCOMING` |
-| 5 Pause, extend, cancel | paused campaign refuses opt-in; resume; extend only moves the end date later; with the campaign extended, opting in for the day after tomorrow is still refused (only today and tomorrow are open); cancel calls off upcoming days (`CANCELLED_BY_ADMIN`); a cancelled campaign cannot be re-published or opted into |
+| 5 Pause, extend, cancel | paused campaign refuses opt-in; resume; extend only moves the end date later; with the campaign extended, opting in for the day after tomorrow is still refused (only today and tomorrow are open); cancel calls off upcoming days (`CANCELLED_BY_ADMIN`) and can be repeated to resume an interrupted cancellation; a cancelled campaign cannot be re-published or opted into |
 | 6 Budget cap | `maxBudget` (100) below one day's guarantee (2000): opt-in is refused with "fully subscribed" |
 
 ## Dates

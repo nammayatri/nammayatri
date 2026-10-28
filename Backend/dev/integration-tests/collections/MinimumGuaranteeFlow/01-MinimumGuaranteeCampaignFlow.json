@@ -1402,6 +1402,38 @@
           ]
         },
         {
+          "name": "Cancel again resumes the cancellation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CANCELLED\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Second cancel 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Re-publish cancelled campaign rejected",
           "request": {
             "method": "POST",

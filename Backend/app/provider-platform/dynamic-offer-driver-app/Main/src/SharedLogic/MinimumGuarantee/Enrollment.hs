@@ -20,6 +20,7 @@ module SharedLogic.MinimumGuarantee.Enrollment
     optInForDay,
     optOutForDay,
     cancelUpcomingEnrollments,
+    cancelEnrollment,
   )
 where
 
@@ -161,33 +162,52 @@ optInForDay actorId driverId campaignId periodDate = do
             maybe (QMgE.create enrollment) (const (QMgE.updateByPrimaryKey enrollment)) existing
           )
           `C.onException` (unregisterMgCtx driverId newId >> releaseBudget campaign)
+        -- the campaign was read before the day was written: if it was cancelled or reverted to DRAFT in
+        -- the meantime, its cancel pass may have missed this day, so the day is called off here
+        stillOpen <- maybe False (\c -> c.status == DMgC.PUBLISHED) <$> QMgC.findByPrimaryKey campaignId
+        unless stillOpen $ do
+          void $ cancelEnrollment campaign enrollment
+          throwError $ InvalidRequest "Campaign is not open for opt-in"
         pure enrollment
 
--- | Calls off every enrollment of a cancelled campaign from `fromDay` (today) on: no top-up, no
--- violation. Days before `fromDay` are over and are still settled by the campaign's job.
+-- | Calls off every enrollment of a cancelled campaign from `fromDay` on: no top-up, no violation.
+-- Days before `fromDay` are over and are still settled by the campaign's job.
 --
 -- Works in batches of at most 'cancelBatchLimit' rows and reads the next batch while one comes back
--- full. A full batch that cancelled nothing (every row had changed in the meantime) ends the loop, so
--- stale reads cannot keep it running.
+-- full. Rows changed by a ride end or the settlement job between the read and the lock are skipped
+-- and no longer UPCOMING, so they do not come back. 'cancelMaxBatches' bounds the loop in case reads
+-- keep returning rows that cannot be cancelled.
 cancelUpcomingEnrollments :: MgEventFlow m r => DMgC.MgCampaign -> Day -> m ()
-cancelUpcomingEnrollments campaign fromDay = do
-  rows <- QMgEx.findAllUpcomingFromDay campaign.id fromDay cancelBatchLimit
-  cancelled <- forM rows $ \row ->
-    withMgDriverLock row.driverId $ do
-      -- the row was read before the lock: a ride end or the settlement job may have changed it since
-      mbCurrent <- QMgE.findByPrimaryKey row.id
-      case mbCurrent of
-        Just enrollment | enrollment.status == DMgE.UPCOMING -> do
-          QMgE.updateByPrimaryKey enrollment {DMgE.status = DMgE.CANCELLED_BY_ADMIN}
-          unregisterMgCtx enrollment.driverId enrollment.id
-          releaseBudget campaign
-          pure True
-        _ -> pure False
-  when (length rows >= cancelBatchLimit && or cancelled) $
-    cancelUpcomingEnrollments campaign fromDay
+cancelUpcomingEnrollments campaign fromDay = go cancelMaxBatches
+  where
+    go batchesLeft = do
+      rows <- QMgEx.findAllUpcomingFromDay campaign.id fromDay cancelBatchLimit
+      forM_ rows $ cancelEnrollment campaign
+      when (length rows >= cancelBatchLimit) $
+        if batchesLeft > 1
+          then go (batchesLeft - 1)
+          else logWarning $ "MG campaign " <> campaign.id.getId <> ": cancellation stopped after " <> show cancelMaxBatches <> " batches; cancel again to continue"
+
+-- | Calls off one enrollment if it is still UPCOMING. The row is read again under the driver's lock
+-- because a ride end or the settlement job may have changed it since the caller read it. True when
+-- the day was cancelled.
+cancelEnrollment :: MgEventFlow m r => DMgC.MgCampaign -> DMgE.MgEnrollment -> m Bool
+cancelEnrollment campaign row =
+  withMgDriverLock row.driverId $ do
+    mbCurrent <- QMgE.findByPrimaryKey row.id
+    case mbCurrent of
+      Just enrollment | enrollment.status == DMgE.UPCOMING -> do
+        QMgE.updateByPrimaryKey enrollment {DMgE.status = DMgE.CANCELLED_BY_ADMIN}
+        unregisterMgCtx enrollment.driverId enrollment.id
+        releaseBudget campaign
+        pure True
+      _ -> pure False
 
 cancelBatchLimit :: Int
 cancelBatchLimit = 20000
+
+cancelMaxBatches :: Int
+cancelMaxBatches = 100
 
 -- | Opts a driver out of one day, allowed until that day's first window starts.
 optOutForDay :: MgEventFlow m r => Id DP.Person -> Id DP.Person -> Id DMgC.MgCampaign -> Day -> m ()

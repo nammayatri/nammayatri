@@ -40,6 +40,7 @@ import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator (AllocatorJobType (..), MinimumGuaranteeSettlementJobData (..))
 import SharedLogic.MinimumGuarantee.Context (MgEventFlow)
+import SharedLogic.MinimumGuarantee.Enrollment (cancelEnrollment)
 import SharedLogic.MinimumGuarantee.Rules
 import SharedLogic.MinimumGuarantee.Settlement (settleEnrollment)
 import Storage.Beam.SchedulerJob ()
@@ -129,10 +130,18 @@ runOnce jobData campaign = do
       let lastWindow = foldl' (\a w -> if w.endTime > a.endTime then w else a) firstWindow otherWindows
       let dueDay = lastDueDay timeDiff campaign.settlementGraceMinutes lastWindow.endTime now
       due <- QMgEx.findAllUpcomingUpToDay campaign.id dueDay settlementBatchSize
+      -- a cancelled campaign's cancel pass calls off every day from the cancellation day on. A day
+      -- from then on that is still UPCOMING was missed by that pass (an interrupted run, or an opt-in
+      -- that raced it): it is called off here instead of settled. The campaign row has not changed
+      -- since it was cancelled, so its updatedAt is the cancellation time.
+      let cancelledFromDay = localDayOf timeDiff campaign.updatedAt
+          missedByCancel enrollment = campaign.status == DMgC.CANCELLED && enrollment.periodDate >= cancelledFromDay
       forM_ due $ \enrollment -> do
         res <-
           withTryCatch "MinimumGuaranteeSettlement:settleEnrollment" $
-            settleEnrollment campaign rules (windowSpansOnDay timeDiff enrollment.periodDate windows) enrollment
+            if missedByCancel enrollment
+              then void $ cancelEnrollment campaign enrollment
+              else settleEnrollment campaign rules (windowSpansOnDay timeDiff enrollment.periodDate windows) enrollment
         case res of
           Left err -> logError $ "MG settlement failed for enrollment " <> enrollment.id.getId <> ": " <> show err
           Right () -> pure ()
