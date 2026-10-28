@@ -38,6 +38,7 @@ import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Utils (mapConcurrently)
+import qualified EulerHS.Language as L
 import GHC.Float (int2Double)
 import Kernel.Prelude
 import Kernel.Randomizer
@@ -1276,10 +1277,22 @@ buildDynamicPricingInputs ::
   [Maybe DVC.VehicleCategory] ->
   m [(Maybe DVC.VehicleCategory, DynamicPricingInputs)]
 buildDynamicPricingInputs now location radius mbDropQARConfig geohash mbToLocGeohash distance cityId vehicleCategories = do
-  shared <- fetchSharedDynamicPricingInputs geohash (getDistanceBin distance) cityId
-  forM (List.nub vehicleCategories) $ \vehicleCategory -> do
-    categoryInputs <- fetchCategoryDynamicPricingInputs now location radius mbDropQARConfig geohash mbToLocGeohash distance cityId vehicleCategory
+  -- The reads are independent and read-only, so the shared part and every
+  -- category run concurrently instead of one after another.
+  sharedAwaitable <- awaitableFork "dpSharedInputs" $ fetchSharedDynamicPricingInputs geohash (getDistanceBin distance) cityId
+  categoryAwaitables <- forM (List.nub vehicleCategories) $ \vehicleCategory ->
+    (vehicleCategory,) <$> awaitableFork "dpCategoryInputs" (fetchCategoryDynamicPricingInputs now location radius mbDropQARConfig geohash mbToLocGeohash distance cityId vehicleCategory)
+  shared <- awaitOrThrow sharedAwaitable
+  forM categoryAwaitables $ \(vehicleCategory, awaitable) -> do
+    categoryInputs <- awaitOrThrow awaitable
     pure (vehicleCategory, mkDynamicPricingInputs shared categoryInputs)
+  where
+    -- Unlike 'mapConcurrently', a failed read is rethrown rather than dropped, as it was when
+    -- these ran sequentially: a dropped category would silently fall back to per-tier fetches.
+    awaitOrThrow awaitable =
+      L.await Nothing awaitable >>= \case
+        Left err -> throwError $ InternalError $ "buildDynamicPricingInputs: " <> show err
+        Right res -> pure res
 
 -- | Phase-4 surge entrypoint (docs/backend/design/fare-policy-revamp-plan.md): an ACTIVE
 -- typed SurgeConfig for (city, tier) replaces the json-logic path entirely; a
