@@ -319,3 +319,8 @@ ALTER TABLE atlas_app.person ADD COLUMN firebase_app_instance_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person ADD COLUMN accepted_policies text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN comms_consent boolean ;
