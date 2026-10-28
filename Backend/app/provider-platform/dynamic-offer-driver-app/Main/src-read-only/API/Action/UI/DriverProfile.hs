@@ -40,10 +40,20 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "driver"
+      :> "operatingCity"
+      :> "update"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.DriverProfile.UpdateOperatingCityReq
+      :> Post
+           '[JSON]
+           API.Types.UI.DriverProfile.UpdateOperatingCityRes
   )
 
 handler :: Environment.FlowServer API
-handler = postDriverProfileUpdateAuthDataTriggerOTP :<|> postDriverProfileUpdateAuthDataVerifyOTP
+handler = postDriverProfileUpdateAuthDataTriggerOTP :<|> postDriverProfileUpdateAuthDataVerifyOTP :<|> postDriverOperatingCityUpdate
 
 postDriverProfileUpdateAuthDataTriggerOTP ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -64,3 +74,13 @@ postDriverProfileUpdateAuthDataVerifyOTP ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postDriverProfileUpdateAuthDataVerifyOTP a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverProfile.postDriverProfileUpdateAuthDataVerifyOTP (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postDriverOperatingCityUpdate ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverProfile.UpdateOperatingCityReq ->
+    Environment.FlowHandler API.Types.UI.DriverProfile.UpdateOperatingCityRes
+  )
+postDriverOperatingCityUpdate a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverProfile.postDriverOperatingCityUpdate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
