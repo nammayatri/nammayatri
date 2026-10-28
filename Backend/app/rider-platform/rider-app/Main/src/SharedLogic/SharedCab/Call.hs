@@ -11,6 +11,7 @@ module SharedLogic.SharedCab.Call
   )
 where
 
+import Control.Monad.Extra (firstJustM)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import Domain.Types.Exophone (Exophone)
@@ -118,7 +119,3 @@ driverNumberOfSession :: CallFlow m r => Session -> m Text
 driverNumberOfSession s = do
   merchant <- CQM.findById s.merchantId >>= fromMaybeM (MerchantNotFound s.merchantId.getId)
   (.driverNumber) <$> CallBPPInternal.sharedCabDriverCallNumber merchant.driverOfferApiKey merchant.driverOfferBaseUrl s.driverId
-
-firstJustM :: Monad m => (a -> m (Maybe b)) -> [a] -> m (Maybe b)
-firstJustM _ [] = pure Nothing
-firstJustM f (x : xs) = f x >>= maybe (firstJustM f xs) (pure . Just)
