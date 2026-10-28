@@ -4,9 +4,8 @@
 module Domain.Action.UI.SharedCabCall (callRider, SharedCabMessageReq (..), sendMessage) where
 
 import Data.OpenApi (ToSchema)
-import Domain.Action.UI.Call (CallAttachments (..), CallRes (..), handleCallStatus)
+import Domain.Action.UI.Call (CallRes (..), buildDriverCallStatus, driverCallReq)
 import Domain.Action.UI.SharedCab (DriverAuthInfo, bapInternal, validateSharedCabDriver)
-import qualified Domain.Types.CallStatus as SCS
 import Domain.Types.Person (Person)
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -27,33 +26,9 @@ callRider (personId, merchantId, merchantOpCityId) bookingId = do
   rider <- RiderClient.getRiderCallNumber bap.apiKey bap.url bookingId personId.getId vehicle.registrationNo
   driverPhone <- getDriverPhone personId
   callStatusId <- generateGUID
-  let callReq =
-        InitiateCallReq
-          { fromPhoneNum = driverPhone,
-            toPhoneNum = Just rider.riderNumber,
-            attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = bookingId},
-            appletId = Nothing
-          }
-  exotelResponse <- initiateCall merchantId merchantOpCityId callReq
+  exotelResponse <- initiateCall merchantId merchantOpCityId (driverCallReq driverPhone rider.riderNumber callStatusId bookingId)
   logTagInfo ("BookingId: " <> bookingId) "Call initiated from shared-cab driver to rider."
-  now <- getCurrentTime
-  QCallStatus.create
-    SCS.CallStatus
-      { id = callStatusId,
-        callId = exotelResponse.callId,
-        entityId = Just bookingId,
-        dtmfNumberUsed = Nothing,
-        status = exotelResponse.callStatus,
-        conversationDuration = 0,
-        recordingUrl = Nothing,
-        merchantId = Just merchantId.getId,
-        merchantOperatingCityId = Just merchantOpCityId,
-        callService = Just Exotel,
-        callAttempt = Just (handleCallStatus exotelResponse.callStatus),
-        callError = Nothing,
-        createdAt = now,
-        aiCallAnalyzed = Nothing
-      }
+  QCallStatus.create =<< buildDriverCallStatus callStatusId bookingId merchantId merchantOpCityId exotelResponse
   pure $ CallRes callStatusId
 
 getDriverPhone :: Id Person -> Flow Text
