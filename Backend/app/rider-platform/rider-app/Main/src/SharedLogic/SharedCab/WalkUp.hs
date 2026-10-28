@@ -13,7 +13,6 @@ module SharedLogic.SharedCab.WalkUp
     probeBus,
     cabRouteStations,
     isStickerCode,
-    sharedCabVehicleData,
     findSharedCabConfig,
     walkUpVehicleData,
     routeServiceability,
@@ -138,59 +137,36 @@ liveSharedCabByCode integratedBppConfig code = do
   plates <- concatMap (map (.vehicleNumber)) <$> mapM (Session.activeSessionsOnRoute . (.code)) routes
   pure (resolveCode code plates)
 
-sharedCabVehicleData :: Session -> Environment.Flow ApiTypes.PublicTransportData
-sharedCabVehicleData s = do
+-- | A live cab as the bus builder's live vehicle: its route on its feed, tagged SHARED_CAB. A cab has no waybill or schedule.
+cabLiveRoute :: Session -> Environment.Flow (DIBC.IntegratedBPPConfig, JLU.VehicleLiveRouteInfo)
+cabLiveRoute s = do
   integratedBppConfig <- CQIBC.findById s.integratedBppConfigId >>= fromMaybeM IntegratedBPPConfigNotFound
-  mbRoute <- OTPRest.getRouteByRouteId integratedBppConfig s.routeCode
-  stops <- sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode s.routeCode integratedBppConfig
-  gtfsVersion <- either (const integratedBppConfig.feedKey) identity <$> withTryCatch "sharedCabVehicleData:gtfsVersion" (OTPRest.getGtfsVersion integratedBppConfig)
-  let ibc = integratedBppConfig.id
-      vehicleType = maybe (show Spec.BUS) (show . (.vehicleType)) mbRoute
   pure
-    ApiTypes.PublicTransportData
-      { rs =
-          [ ApiTypes.TransportRoute
-              { cd = s.routeCode,
-                sN = maybe s.routeCode (.shortName) mbRoute,
-                lN = maybe s.routeCode (.longName) mbRoute,
-                dTC = Nothing,
-                stC = Just (length stops),
-                vt = vehicleType,
-                st = Just Spec.SHARED_CAB,
-                stn = Nothing,
-                sst = Nothing,
-                clr = mbRoute >>= (.color),
-                tid = Nothing,
-                ibc
-              }
-          ],
-        ss =
-          [ ApiTypes.TransportStation
-              { cd = stop.stopCode,
-                nm = stop.stopName,
-                lt = stop.stopPoint.lat,
-                ln = stop.stopPoint.lon,
-                vt = vehicleType,
-                ad = Nothing,
-                rgn = Nothing,
-                hin = Nothing,
-                sgstdDest = Nothing,
-                gj = Nothing,
-                gi = Nothing,
-                ibc,
-                lty = Nothing,
-                psc = Nothing,
-                pf = Nothing
-              }
-            | stop <- stops
-          ],
-        rsm = [ApiTypes.TransportRouteStopMapping {rc = stop.routeCode, sc = stop.stopCode, sn = stop.sequenceNum, ibc} | stop <- stops],
-        ptcv = gtfsVersion,
-        eligiblePassIds = Nothing,
-        isHistoric = False,
-        scheduleBasedActiveTrip = False,
-        waybillStatus = Nothing
-      }
+    ( integratedBppConfig,
+      JLU.VehicleLiveRouteInfo
+        { routeCode = Just s.routeCode,
+          serviceType = Spec.SHARED_CAB,
+          vehicleNumber = s.vehicleNumber,
+          routeNumber = Nothing,
+          waybillId = Nothing,
+          waybillNo = Nothing,
+          scheduleNo = Nothing,
+          tripNumber = Nothing,
+          depot = Nothing,
+          remaining_trip_details = Nothing,
+          isActuallyValid = Nothing,
+          busConductorId = Nothing,
+          busDriverId = Nothing,
+          busTagNumber = Nothing,
+          busVehicleVariant = Nothing,
+          eligiblePassIds = Nothing,
+          serviceSubTypes = Nothing,
+          seatLayoutId = Nothing,
+          isHistoric = Nothing,
+          scheduleBasedActiveTrip = Nothing,
+          waybillStatus = Nothing
+        }
+    )
 
 -- | The city's shared-cab feed sits on its own config, told apart by its SHARED_CAB agency.
 findSharedCabConfig :: Maybe (Id DP.Person) -> Environment.Flow (Maybe DIBC.IntegratedBPPConfig)
@@ -210,7 +186,7 @@ walkUpVehicleData ::
   Environment.Flow ApiTypes.PublicTransportData
 walkUpVehicleData mbPersonId vehicleNumber busPathWith =
   liveSharedCab vehicleNumber >>= \case
-    Just session -> requireSharedCabEnabled session.merchantOperatingCityId >> sharedCabVehicleData session
+    Just session -> requireSharedCabEnabled session.merchantOperatingCityId >> cabPath session
     Nothing
       | isStickerCode vehicleNumber -> do
         mbBusVehicle <- probeBus busKnowsVehicle
@@ -224,7 +200,7 @@ walkUpVehicleData mbPersonId vehicleNumber busPathWith =
                 Just ibc -> liveSharedCabByCode ibc vehicleNumber
         case chooseWalkUp busVehicleFound resolution of
           UseBus -> busPathWith (Just <$> mbBusVehicle) -- the found vehicle is passed on: one lookup
-          UseCab plate -> liveSharedCab plate >>= maybe busPath sharedCabVehicleData
+          UseCab plate -> liveSharedCab plate >>= maybe busPath cabPath
           PickRoute -> throwError CodeAmbiguous
       | otherwise -> busPath
   where
@@ -234,6 +210,7 @@ walkUpVehicleData mbPersonId vehicleNumber busPathWith =
       configs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
       JLU.getVehicleLiveRouteInfo configs vehicleNumber Nothing
     busPath = busPathWith Nothing
+    cabPath s = cabLiveRoute s >>= busPathWith . Just . Just
 
 routeServiceability :: Maybe (Id DP.Person) -> ApiTypes.RouteServiceabilityReq -> Environment.Flow (Maybe ApiTypes.RouteServiceabilityResp)
 routeServiceability mbPersonId req =
