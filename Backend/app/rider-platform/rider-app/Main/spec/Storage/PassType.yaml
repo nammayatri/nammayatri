@@ -19,6 +19,7 @@ PassType:
     passEnum: Maybe PassEnum
     maxPhotoChangeLimit: Maybe Int
     photoReUploadTimeLimit: Maybe Seconds
+    enable: Maybe Bool
 
   types:
     PassEnum:

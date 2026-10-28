@@ -1,0 +1,52 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  ActorType: Kernel.Types.ActorInfo
+
+EntityValueLog:
+  tableName: entity_value_log
+
+  types:
+    EntityType:
+      enum: "PurchasedPassPayment"
+      derive: "HttpInstance"
+    OperationType:
+      enum: "TripCountAdjust"
+      derive: "HttpInstance"
+    OperationStatus:
+      enum: "PENDING, APPLIED, FAILED"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id EntityValueLog
+    entityType: EntityType
+    entityId: Text
+    operationId: Text
+    operationType: OperationType
+    status: OperationStatus
+    delta: Maybe Int
+    valueBefore: Maybe Int
+    valueAfter: Maybe Int
+    reason: Maybe Text
+    actorType: ActorType
+    actorId: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    id: PrimaryKey
+    entityId: SecondaryKey
+
+  queries:
+    findAllByEntityTypeAndEntityIdAndOperationId:
+      kvFunction: findAllWithKV
+      where:
+        and: [entityType, entityId, operationId]
+
+    findAllByEntityTypeAndEntityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [entityType, entityId]
+
+  extraOperations:
+    - GENERATE_INDEXES

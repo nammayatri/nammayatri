@@ -12,6 +12,7 @@ PassCategory:
     order: Maybe Int
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    enable: Maybe Bool
 
   constraints:
     id: PrimaryKey

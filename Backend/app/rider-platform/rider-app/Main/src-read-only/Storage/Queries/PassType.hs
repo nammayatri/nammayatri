@@ -30,6 +30,7 @@ updateByPrimaryKey (Domain.Types.PassType.PassType {..}) = do
   updateWithKV
     [ Se.Set Beam.catchline catchline,
       Se.Set Beam.description description,
+      Se.Set Beam.enable enable,
       Se.Set Beam.maxPhotoChangeLimit maxPhotoChangeLimit,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
