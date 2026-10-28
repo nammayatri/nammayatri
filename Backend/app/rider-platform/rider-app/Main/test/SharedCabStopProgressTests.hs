@@ -6,13 +6,14 @@ import qualified Data.Text as T
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import Kernel.External.Maps.Types (LatLong (..))
 import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), Timer (..), runningTimerDeadline)
+import SharedLogic.SharedCab.Config (SharedCabTunables, defaultTunables)
 import SharedLogic.SharedCab.StopProgress.Rules
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
 
-cfg :: StopProgressConfig
-cfg = StopProgressConfig {atStopRadiusM = 100, autoEndAfterDropSec = 600, offRouteMeters = 300, offRouteSec = 120, movingTimerSec = 90}
+cfg :: SharedCabTunables
+cfg = defaultTunables
 
 t0 :: UTCTime
 t0 = UTCTime (fromGregorian 2026 9 25) 36000

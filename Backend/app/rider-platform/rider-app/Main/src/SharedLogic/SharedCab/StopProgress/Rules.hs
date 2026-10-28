@@ -1,7 +1,6 @@
 -- | Stop-progress decisions, pure: the tick reads LTS and Redis, asks these, and acts.
 module SharedLogic.SharedCab.StopProgress.Rules
-  ( StopProgressConfig (..),
-    StopMark (..),
+  ( StopMark (..),
     CabFix (..),
     DropAction (..),
     OffRouteAction (..),
@@ -18,15 +17,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Lib.GateInfo.Geometry (pointToSegmentMeters)
-
-data StopProgressConfig = StopProgressConfig
-  { atStopRadiusM :: Double,
-    autoEndAfterDropSec :: Int,
-    offRouteMeters :: Double,
-    offRouteSec :: Int,
-    movingTimerSec :: Int
-  }
-  deriving (Show, Eq)
+import qualified SharedLogic.SharedCab.Config as Config
 
 data StopMark = StopMark
   { stopCode :: Text,
@@ -60,31 +51,31 @@ arrivedAt radius cab s = s.reached || meters cab.position s.coordinate <= radius
 
 -- | The moving timer starts when the cab gets to the board stop, only if no timer runs yet (a stand timer is cleared once
 -- the cab moves) and the stop is still Upcoming. Needs a fresh fix: a stale one parked near the stop would arm it falsely.
-armMovingTimer :: StopProgressConfig -> UTCTime -> Maybe UTCTime -> Maybe CabFix -> Text -> Maybe UTCTime
+armMovingTimer :: Config.SharedCabTunables -> UTCTime -> Maybe UTCTime -> Maybe CabFix -> Text -> Maybe UTCTime
 armMovingTimer cfg now expiresAt freshCab boardStop
   | isJust expiresAt = Nothing
-  | any (\cab -> any (\s -> s.stopCode == boardStop && not s.reached && meters cab.position s.coordinate <= cfg.atStopRadiusM) cab.stops) freshCab =
+  | any (\cab -> any (\s -> s.stopCode == boardStop && not s.reached && meters cab.position s.coordinate <= fromIntegral cfg.atStopRadiusM) cab.stops) freshCab =
     Just (addUTCTime (fromIntegral cfg.movingTimerSec) now)
   | otherwise = Nothing
 
 -- | The clock starts when the cab gets to the drop stop and ends the ride `autoEndAfterDropSec` later, wherever the cab is by then.
-dropAction :: StopProgressConfig -> UTCTime -> Maybe UTCTime -> Maybe CabFix -> Text -> DropAction
+dropAction :: Config.SharedCabTunables -> UTCTime -> Maybe UTCTime -> Maybe CabFix -> Text -> DropAction
 dropAction cfg now clock mbFix dropStop = case clock of
   Just since
     | diffUTCTime now since >= fromIntegral cfg.autoEndAfterDropSec -> AutoEnd
     | otherwise -> KeepWaiting
   Nothing
-    | any (\cab -> any (\s -> s.stopCode == dropStop && arrivedAt cfg.atStopRadiusM cab s) cab.stops) mbFix -> StartDropClock
+    | any (\cab -> any (\s -> s.stopCode == dropStop && arrivedAt (fromIntegral cfg.atStopRadiusM) cab s) cab.stops) mbFix -> StartDropClock
     | otherwise -> KeepWaiting
 
 -- | Off the polyline by more than `offRouteMeters` for `offRouteSec` pauses the session. No fresh position or no polyline
 -- decides nothing, so the clock is neither started nor cleared.
-offRouteAction :: StopProgressConfig -> UTCTime -> Maybe UTCTime -> [LatLong] -> Maybe LatLong -> OffRouteAction
+offRouteAction :: Config.SharedCabTunables -> UTCTime -> Maybe UTCTime -> [LatLong] -> Maybe LatLong -> OffRouteAction
 offRouteAction cfg now offSince route mbPosition =
   case (mbPosition >>= metersFromPolyline route, offSince) of
-    (Just d, Nothing) | d > cfg.offRouteMeters -> StartOffRouteClock
+    (Just d, Nothing) | d > fromIntegral cfg.offRouteMeters -> StartOffRouteClock
     (Just d, Just since)
-      | d > cfg.offRouteMeters -> if diffUTCTime now since >= fromIntegral cfg.offRouteSec then PauseOffRoute else OffRouteNoChange
+      | d > fromIntegral cfg.offRouteMeters -> if diffUTCTime now since >= fromIntegral cfg.offRouteSec then PauseOffRoute else OffRouteNoChange
       | otherwise -> ClearOffRouteClock
     _ -> OffRouteNoChange
 

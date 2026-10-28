@@ -52,16 +52,6 @@ type StopProgressFlow m r c =
     InternalEndpointFlow m r
   )
 
-stopProgressConfig :: Config.SharedCabTunables -> StopProgressConfig
-stopProgressConfig t =
-  StopProgressConfig
-    { atStopRadiusM = fromIntegral t.atStopRadiusM,
-      autoEndAfterDropSec = t.autoEndAfterDropSec,
-      offRouteMeters = fromIntegral t.offRouteMeters,
-      offRouteSec = t.offRouteSec,
-      movingTimerSec = t.movingTimerSec
-    }
-
 -- | Live = not ENDED: a PAUSED cab still carries and drops its riders, it just isn't checked for off-route.
 runStopProgress ::
   StopProgressFlow m r c =>
@@ -71,7 +61,6 @@ runStopProgress ::
   m ()
 runStopProgress cityId live positionsByRoute = do
   cfg <- Config.getTunables cityId
-  spc <- stopProgressConfig <$> Config.getTunables cityId
   trips <- QVT.findAllLiveByMerchantOperatingCityId cityId
   sessions <- filter ((/= ENDED) . (.status)) . catMaybes <$> mapM (Session.readSession . (.vehicleNumber)) trips
   now <- getCurrentTime
@@ -83,7 +72,7 @@ runStopProgress cityId live positionsByRoute = do
           >>= either (\e -> [] <$ logError ("shared-cab stop progress: LTS read failed for route " <> routeCode <> ": " <> show e)) pure
     route <- if any ((== ACTIVE) . (.status)) cabs then routePolyline cityId routeCode else pure []
     forM_ cabs $ \s ->
-      withTryCatch "sharedCabStopProgressCab" (stepCab cfg spc now live positions route s)
+      withTryCatch "sharedCabStopProgressCab" (stepCab cfg now live positions route s)
         >>= either (\e -> logError $ "shared-cab stop progress failed for cab " <> s.vehicleNumber <> ": " <> show e) pure
 
 routePolyline :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> m [LatLong]
@@ -92,14 +81,13 @@ routePolyline cityId routeCode = maybe [] KEPP.decode . (>>= (.polyline)) <$> QR
 stepCab ::
   StopProgressFlow m r c =>
   Config.SharedCabTunables ->
-  StopProgressConfig ->
   UTCTime ->
   [LiveBooking] ->
   [LT.VehicleTrackingOnRouteResp] ->
   [LatLong] ->
   Session ->
   m ()
-stepCab cfg spc now live positions route s = do
+stepCab cfg now live positions route s = do
   let plate = s.vehicleNumber
       mbInfo = (.vehicleInfo) <$> findByPlate (.vehicleNumber) plate positions
       mbCab = cabFix <$> mbInfo
@@ -119,9 +107,9 @@ stepCab cfg spc now live positions route s = do
         void $ releaseSharedCabAllocation cfg b.id plate (PassedStop blame)
       else do
         -- the key the moving timer is armed under must outlive it (see allocKeyTtl in Allocation.Types)
-        movingTimerStep (allocKeyTtl cfg) spc now freshCab plate b
-  forM_ onBoard $ dropStep spc now mbCab plate
-  when (s.status == ACTIVE) $ offRouteStep spc now route ((.position) <$> freshCab) plate
+        movingTimerStep (allocKeyTtl cfg) cfg now freshCab plate b
+  forM_ onBoard $ dropStep cfg now mbCab plate
+  when (s.status == ACTIVE) $ offRouteStep cfg now route ((.position) <$> freshCab) plate
 
 cabFix :: LT.VehicleInfo -> CabFix
 cabFix vi =
@@ -133,28 +121,28 @@ cabFix vi =
     mark u = StopMark {stopCode = u.stop.stopCode, stopIdx = u.stop.stopIdx, reached = u.status == LT.Reached, coordinate = u.stop.coordinate}
 
 -- | Under the booking lock the key is re-read, so a close or re-bind racing the tick is never overwritten.
-movingTimerStep :: StopProgressFlow m r c => Int -> StopProgressConfig -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()
-movingTimerStep keyTtlSec spc now freshCab plate b = do
+movingTimerStep :: StopProgressFlow m r c => Int -> Config.SharedCabTunables -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()
+movingTimerStep keyTtlSec cfg now freshCab plate b = do
   mbState <- readAlloc b.id
-  whenJust mbState $ \st -> whenJust (armMovingTimer spc now (runningTimerDeadline st) freshCab b.fromStationCode) $ \_ -> do
+  whenJust mbState $ \st -> whenJust (armMovingTimer cfg now (runningTimerDeadline st) freshCab b.fromStationCode) $ \_ -> do
     armed <- withBookingLock b.id $ do
       current <- readAlloc b.id
       case current of
         Just cur
           | cur.vehicleNumber == plate,
-            Just deadline <- armMovingTimer spc now (runningTimerDeadline cur) freshCab b.fromStationCode -> do
+            Just deadline <- armMovingTimer cfg now (runningTimerDeadline cur) freshCab b.fromStationCode -> do
             writeAlloc keyTtlSec b.id cur {timer = MovingTimer deadline}
             pure True
         _ -> pure False
-    when armed $ Notify.notifyArriving plate spc.movingTimerSec b
+    when armed $ Notify.notifyArriving plate cfg.movingTimerSec b
 
-dropStep :: StopProgressFlow m r c => StopProgressConfig -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()
-dropStep spc now mbCab plate b = do
+dropStep :: StopProgressFlow m r c => Config.SharedCabTunables -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()
+dropStep cfg now mbCab plate b = do
   degraded <- isJust <$> shared (Redis.get @A.Value (degradedKey b.id))
   unless degraded $ do
     clock <- Redis.withMasterRedis $ Redis.safeGet (dropClockKey b.id)
-    case dropAction spc now clock mbCab b.toStationCode of
-      StartDropClock -> Redis.withMasterRedis $ Redis.setExp (dropClockKey b.id) now (2 * spc.autoEndAfterDropSec)
+    case dropAction cfg now clock mbCab b.toStationCode of
+      StartDropClock -> Redis.withMasterRedis $ Redis.setExp (dropClockKey b.id) now (2 * cfg.autoEndAfterDropSec)
       AutoEnd -> do
         markDropped b
         switched <- Session.applyQueuedRoute plate
@@ -162,11 +150,11 @@ dropStep spc now mbCab plate b = do
         Redis.withMasterRedis $ Redis.del (dropClockKey b.id)
       KeepWaiting -> pure ()
 
-offRouteStep :: StopProgressFlow m r c => StopProgressConfig -> UTCTime -> [LatLong] -> Maybe LatLong -> Text -> m ()
-offRouteStep spc now route freshPosition plate = do
+offRouteStep :: StopProgressFlow m r c => Config.SharedCabTunables -> UTCTime -> [LatLong] -> Maybe LatLong -> Text -> m ()
+offRouteStep cfg now route freshPosition plate = do
   offSince <- Redis.withMasterRedis $ Redis.safeGet (offRouteKey plate)
-  case offRouteAction spc now offSince route freshPosition of
-    StartOffRouteClock -> Redis.withMasterRedis $ Redis.setExp (offRouteKey plate) now (2 * spc.offRouteSec)
+  case offRouteAction cfg now offSince route freshPosition of
+    StartOffRouteClock -> Redis.withMasterRedis $ Redis.setExp (offRouteKey plate) now (2 * cfg.offRouteSec)
     ClearOffRouteClock -> Redis.withMasterRedis $ Redis.del (offRouteKey plate)
     PauseOffRoute -> do
       Redis.withMasterRedis $ Redis.del (offRouteKey plate)
