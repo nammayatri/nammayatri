@@ -7,10 +7,12 @@ import qualified "rider-app" API.Types.UI.FRFSTicketService as ApiFRFS
 import qualified "rider-app" API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import Data.IORef (modifyIORef, newIORef, readIORef)
+import Data.Time (UTCTime (..), fromGregorian)
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import "rider-app" SharedLogic.SharedCab.Plate (canonicalisePlate, findByPlate, samePlate)
-import "rider-app" SharedLogic.SharedCab.WalkUp (CodeResolution (..), WalkUpChoice (..), cabRouteRequest, cabRouteServiceTier, cabRouteStations, chooseWalkUp, enabledCabConfig, isStickerCode, probeBus, resolveCode, stopPairLegs, withoutCabRows)
+import "rider-app" SharedLogic.SharedCab.WalkUp (CodeResolution (..), WalkUpChoice (..), cabRouteRequest, cabRouteServiceTier, cabRouteStations, chooseWalkUp, enabledCabConfig, isStickerCode, passingCab, probeBus, resolveCode, stopPairLegs, withoutCabRows)
+import qualified "rider-app" Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -29,6 +31,8 @@ tests =
         canonicalisePlate "" @?= "",
       testCase "a spaced and an unspaced plate are the same cab, a different plate is not" $
         [samePlate "ML 05 A 1234" "ML05A1234", samePlate "ml05a1234" "ML05A1234", samePlate "ML05A1235" "ML05A1234"] @?= [True, True, False],
+      testCase "a cab approaching a stop shows only its plate's last four" $
+        (passingCab "ML05A9999" (CQMMB.BusStopETA "SC_STOP" Nothing (UTCTime (fromGregorian 2026 10 28) 0) 0 Nothing)).vehicleNumber @?= "9999",
       testCase "a position is found by its plate whatever its spelling" $
         findByPlate id "ML05A1234" ["ML05B9999", "ml 05 a 1234"] @?= Just "ml 05 a 1234",
       testGroup

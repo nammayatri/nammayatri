@@ -3,6 +3,7 @@
 module SharedLogic.SharedCab.RateLimit
   ( enforceBoardingAttemptLimit,
     enforceChatMessageLimit,
+    enforceStickerCodeLimit,
     recordNoLocationBoarding,
   )
 where
@@ -14,7 +15,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import SharedLogic.SharedCab.Booking (shared)
-import SharedLogic.SharedCab.Keys (boardAttemptsKey, chatAttemptsKey, noLocationKey)
+import SharedLogic.SharedCab.Keys (boardAttemptsKey, chatAttemptsKey, noLocationKey, stickerCodeAttemptsKey)
 import Tools.Error
 
 -- | <= boardAttemptsPer10Min. Over the limit is the SAME generic BoardingFailed: the client must not be able to tell a
@@ -35,6 +36,18 @@ enforceChatMessageLimit :: (Redis.HedisFlow m r, MonadFlow m) => Id DBooking.FRF
 enforceChatMessageLimit bookingId driverId =
   unlessM (shared $ slidingWindowLimiter (chatAttemptsKey bookingId driverId) chatMessagesPerWindow chatWindowSec) $
     throwError (HitsLimitError chatWindowSec)
+
+stickerCodesPerWindow :: Int
+stickerCodesPerWindow = 10
+
+stickerCodeWindowSec :: Int
+stickerCodeWindowSec = 10 * 60
+
+-- | <= stickerCodesPerWindow walk-up sticker-code resolutions per stickerCodeWindowSec for one rider.
+enforceStickerCodeLimit :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m ()
+enforceStickerCodeLimit personId =
+  unlessM (shared $ slidingWindowLimiter (stickerCodeAttemptsKey personId) stickerCodesPerWindow stickerCodeWindowSec) $
+    throwError (HitsLimitError stickerCodeWindowSec)
 
 -- | One no-location boarding against the vehicle's count over the last day (a driver feeding codes to non-app riders shows up per
 -- vehicle, not per rider). Logs the ops flag from the noLocationSpotBookingsPerVehiclePerDay-th one on.

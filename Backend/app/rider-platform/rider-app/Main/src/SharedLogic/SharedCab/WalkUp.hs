@@ -19,6 +19,7 @@ module SharedLogic.SharedCab.WalkUp
     routeServiceability,
     cabVehicle,
     trackStopRoutes,
+    passingCab,
   )
 where
 
@@ -54,6 +55,7 @@ import SharedLogic.SharedCab.Interest (bestEffort, recordInterest)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import qualified SharedLogic.SharedCab.Lts as Lts
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
+import SharedLogic.SharedCab.RateLimit (enforceStickerCodeLimit)
 import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
@@ -210,7 +212,9 @@ walkUpVehicleData mbPersonId vehicleNumber busPathWith =
             else
               findSharedCabConfig mbPersonId >>= \case
                 Nothing -> pure NoCab
-                Just ibc -> liveSharedCabByCode ibc vehicleNumber
+                Just ibc -> do
+                  whenJust mbPersonId (enforceStickerCodeLimit . getId)
+                  liveSharedCabByCode ibc vehicleNumber
         case chooseWalkUp busVehicleFound resolution of
           UseBus -> busPathWith (Just <$> mbBusVehicle) -- the found vehicle is passed on: one lookup
           UseCab plate -> liveSharedCab plate >>= maybe busPath cabPath
@@ -289,13 +293,7 @@ trackStopRoutes mbPersonId stopCode mbRouteCodes =
         pure $ do
           track <- mbTrack
           u <- Approach.cabStopEta now cfg stopCode (fromMaybe (LatLong track.vehicleInfo.latitude track.vehicleInfo.longitude) stopPoint) track
-          pure
-            ApiTypes.PassingVehicleInfo
-              { vehicleNumber = sess.vehicleNumber,
-                serviceTierType = Spec.SHARED_CAB,
-                serviceTierName = Nothing,
-                eta = stopEta now u
-              }
+          pure (passingCab sess.vehicleNumber (stopEta now u))
       stops <- OTPRest.getRouteStopMappingByRouteCode code cabIbc
       pure
         ApiTypes.PassingRoutes
@@ -305,6 +303,16 @@ trackStopRoutes mbPersonId stopCode mbRouteCodes =
             schedules = [],
             isLastStop = fmap (.stopCode) (listToMaybe (sortOn (Down . (.sequenceNum)) stops)) == Just stopCode
           }
+
+-- | A cab approaching a stop as any rider sees it: the plate shows its last four only, as in routeServiceability.
+passingCab :: Text -> CQMMB.BusStopETA -> ApiTypes.PassingVehicleInfo
+passingCab plate eta =
+  ApiTypes.PassingVehicleInfo
+    { vehicleNumber = T.takeEnd 4 plate,
+      serviceTierType = Spec.SHARED_CAB,
+      serviceTierName = Nothing,
+      eta
+    }
 
 sharedCabRouteServiceability ::
   DP.Person ->
