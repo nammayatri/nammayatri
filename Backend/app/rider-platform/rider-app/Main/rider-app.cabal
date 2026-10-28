@@ -722,7 +722,6 @@ library
       SharedLogic.SharedCab.Demand
       SharedLogic.SharedCab.DriverAction
       SharedLogic.SharedCab.Enabled
-      SharedLogic.SharedCab.Events
       SharedLogic.SharedCab.FindingTimeout
       SharedLogic.SharedCab.Interest
       SharedLogic.SharedCab.JourneyLeg
@@ -2260,7 +2259,6 @@ test-suite rider-app-test
       SharedCabDegradedTests
       SharedCabDemandTests
       SharedCabDriverActionTests
-      SharedCabEventsTests
       SharedCabExpiryTests
       SharedCabLegStateTests
       SharedCabLockTests

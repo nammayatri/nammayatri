@@ -25,7 +25,6 @@ import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), Allocatio
 import SharedLogic.SharedCab.Booking (readRiderFix, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.Config as Config
-import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, offRouteKey)
 import SharedLogic.SharedCab.Lts (readRoutePositions)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
@@ -47,7 +46,6 @@ type StopProgressFlow m r c =
     Log m,
     Redis.HedisLTSFlowEnv r,
     Metrics.CoreMetrics m,
-    Events.EventFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EncFlow m r,
@@ -159,7 +157,7 @@ dropStep spc now mbCab plate b = do
     case dropAction spc now clock mbCab b.toStationCode of
       StartDropClock -> Redis.withMasterRedis $ Redis.setExp (dropClockKey b.id) now (2 * spc.autoEndAfterDropSec)
       AutoEnd -> do
-        markDropped Events.DroppedByTick b
+        markDropped b
         switched <- Session.applyQueuedRoute plate
         when switched $ releaseUnboarded plate RouteChanged
         Redis.withMasterRedis $ Redis.del (dropClockKey b.id)
@@ -176,11 +174,10 @@ offRouteStep spc now route freshPosition plate = do
       withTryCatch "sharedCabOffRoutePause" (Session.pause plate OFF_ROUTE) >>= \case
         Left e -> logWarning $ "shared-cab off-route pause skipped for " <> plate <> ": " <> show e
         Right _ -> do
-          -- TODO: emit a paused {reason: OFF_ROUTE} event.
           releaseUnboarded plate SessionClosed
     OffRouteNoChange -> pure ()
 
-markReachedEnd :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Metrics.CoreMetrics m, Events.EventFlow m r) => UTCTime -> Session -> m ()
+markReachedEnd :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Metrics.CoreMetrics m) => UTCTime -> Session -> m ()
 markReachedEnd now s =
   QVT.findById s.vehicleTripId >>= traverse_ \trip ->
     when (isNothing trip.reachedEndAt) $ do

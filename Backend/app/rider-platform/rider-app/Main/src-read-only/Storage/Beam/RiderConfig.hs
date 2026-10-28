@@ -217,7 +217,6 @@ data RiderConfigT f = RiderConfigT
     sharedCabDegradedTimeoutSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     sharedCabDriverAcceptEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     sharedCabEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    sharedCabEventsTopic :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     sharedCabFallbackAfterSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     sharedCabFindingTimeoutSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     sharedCabInterestWindowSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

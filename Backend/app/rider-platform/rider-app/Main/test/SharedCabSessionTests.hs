@@ -14,8 +14,7 @@ import qualified "rider-app" Domain.Types.VehicleTrip as DVT
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Common (Seconds (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
-import qualified "rider-app" SharedLogic.SharedCab.Events as Events
-import "rider-app" SharedLogic.SharedCab.Session (endDropBy, stranded)
+import "rider-app" SharedLogic.SharedCab.Session (stranded)
 import "rider-app" SharedLogic.SharedCab.SessionState
 import qualified "rider-app" SharedLogic.SharedCab.SessionView as View
 import Test.Tasty (TestTree, testGroup)
@@ -231,11 +230,7 @@ tests =
         View.groupRidersByStop routeStops [(row "b2" "Ravi" 1 "A" "B" True) {View.chatChannelId = Just "b2", View.callable = True}]
           @?= [View.RidersAtStop "Bravo" [] [View.AlightingRider "b2" "Ravi" 1 (Just "b2") True]],
       testCase "H3: finish reports exactly the riders whose drop failed" $
-        stranded [("b1", Right ()), ("b2", Left ("timeout" :: Text)), ("b3", Right ()), ("b4", Left "timeout")] @?= ["b2", "b4"],
-      testCase "expiry and ops ends drop the riders as the tick" $
-        map endDropBy [DVT.SESSION_TIMEOUT, DVT.OPS_FORCED] @?= [Events.DroppedByTick, Events.DroppedByTick],
-      testCase "a driver's end drops the riders as the driver" $
-        map endDropBy [DVT.END_ROUTE, DVT.END_FOR_NOW, DVT.RETURN] @?= replicate 3 Events.DroppedByDriver
+        stranded [("b1", Right ()), ("b2", Left ("timeout" :: Text)), ("b3", Right ()), ("b4", Left "timeout")] @?= ["b2", "b4"]
     ]
 
 routeStops :: [(Text, Text)]

@@ -29,7 +29,6 @@ import SharedLogic.SharedCab.Booking (shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
-import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Keys (fallbackPushedKey)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Seats as Seats
@@ -53,7 +52,6 @@ type AllocFlow m r =
     Metrics.CoreMetrics m,
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    Events.EventFlow m r,
     EncFlow m r,
     InternalEndpointFlow m r,
     HasShortDurationRetryCfg r ()
@@ -182,15 +180,12 @@ claimFirst ::
   FindingBooking ->
   [RankedCandidate] ->
   m (Maybe RankedCandidate)
-claimFirst cfg booking = go (0 :: Int)
+claimFirst cfg booking = go
   where
-    go _ [] = pure Nothing
-    go rank (c : cs) =
+    go [] = pure Nothing
+    go (c : cs) =
       attemptClaim cfg booking c >>= \case
         Right st -> do
-          now <- getCurrentTime
-          Events.emit c.rcSession.merchantOperatingCityId . Events.withTrip (Just c.rcSession.vehicleTripId.getId) $
-            Events.bookingEvent (Events.AllocationCreated (Just (c.rcEtaToBoardStopSec `div` 60)) rank) booking.bookingId.getId (Just c.rcSession.vehicleNumber) (Just booking.routeCode) now
           fork "sharedCabNotifyDriver" (notifyDriverOfAllocation booking c (offerDeadline st))
           -- an offer tells the rider nothing until the driver accepts
           unless (isOffered st) $
@@ -200,4 +195,4 @@ claimFirst cfg booking = go (0 :: Int)
           pure (Just c)
         Left miss -> do
           logDebug $ "shared-cab claim missed booking=" <> booking.bookingId.getId <> " cab=" <> c.rcSession.vehicleNumber <> " reason=" <> show miss
-          go (rank + 1) cs
+          go cs

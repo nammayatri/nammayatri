@@ -23,7 +23,6 @@ import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (RouteChanged),
 import SharedLogic.SharedCab.Booking (isSharedCabBooking, withBookingLock)
 import SharedLogic.SharedCab.BookingState (clearAlloc, readAlloc)
 import SharedLogic.SharedCab.Cancel (CancelStage (ConfirmCancel), withSharedCabCancel)
-import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.LegState (isDroppable)
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.RefundPolicy (CancelBy (ByDriver))
@@ -87,7 +86,7 @@ runDriverAction action driver rawPlate mbReason bookingId = do
     case action of
       DriverDropped -> do
         decide booking
-        markDropped Events.DroppedByDriver booking
+        markDropped booking
         pure (Just booking, Nothing)
       -- the cancel's refund goes out to the payment service: it runs after the plate lock is dropped
       DriverCancel -> do
@@ -125,6 +124,3 @@ runDriverAction action driver rawPlate mbReason bookingId = do
         QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.INPROGRESS (Just plate) booking.id ticket.ticketNumber
       QFRFSTicketBooking.updateVehicleTripId (Just s.vehicleTripId) booking.id
       clearAlloc booking.id
-      now <- getCurrentTime
-      Events.emit s.merchantOperatingCityId . Events.withTrip (Just s.vehicleTripId.getId) $
-        Events.bookingEvent (Events.Boarded Events.ByDriverFallback) booking.id.getId (Just plate) (Just s.routeCode) now

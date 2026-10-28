@@ -1,6 +1,5 @@
 module SharedLogic.SharedCab.Session
   ( selectRoute,
-    endDropBy,
     stranded,
     applyQueuedRoute,
     endRoute,
@@ -38,7 +37,6 @@ import SharedLogic.SharedCab.Booking (ridersOnBoard, shared)
 import qualified SharedLogic.SharedCab.Booking as Booking
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import SharedLogic.SharedCab.Enabled (cabItineraryShown, requireSharedCabEnabled, sharedCabEnabled)
-import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Keys (driverInfoKey, plateLockKey, routeKey, sessionKey)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency, seatsHeld)
 import SharedLogic.SharedCab.Lock (withOwnedLock)
@@ -167,12 +165,12 @@ closeLiveTrip plate reason now =
   QVT.findActiveByVehicleNumber plate
     >>= traverse_ (\trip -> QVT.closeTrip (closedTripStatus reason) (Just reason) (Just now) trip.id)
 
-switchTo :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => DVT.VehicleTripEndReason -> Text -> Session -> m Session
+switchTo :: (LtsFlow m r c, MonadMask m) => DVT.VehicleTripEndReason -> Text -> Session -> m Session
 switchTo reason newRoute s = do
   now <- getCurrentTime
   tripId <- generateGUID
   let s' = switchRoute newRoute tripId s
-  switched <- withAttach (Just s) s' (replaceLiveTrip reason now (Just s) s') <* Events.forSession (Events.RouteChanged s.routeCode) s'
+  switched <- withAttach (Just s) s' (replaceLiveTrip reason now (Just s) s')
   onBoard <- ridersOnBoard s.vehicleNumber
   walkups <- Seats.carryOver s switched (map (.id) onBoard)
   when (walkups /= switched.walkupCount) $ logError $ "sharedCab: " <> show walkups <> " of " <> show switched.walkupCount <> " walk-ups carried onto " <> switched.vehicleTripId.getId
@@ -194,20 +192,14 @@ replaceLiveTrip reason now prior s' = do
         )
         >>= either (\e -> logError $ "sharedCab: couldn't undo the trip switch for " <> s'.vehicleNumber <> ": " <> show e) pure
 
-endDropBy :: DVT.VehicleTripEndReason -> Events.DropBy
-endDropBy = \case
-  DVT.SESSION_TIMEOUT -> Events.DroppedByTick
-  DVT.OPS_FORCED -> Events.DroppedByTick
-  _ -> Events.DroppedByDriver
-
 stranded :: [(b, Either e ())] -> [b]
 stranded results = [b | (b, Left _) <- results]
 
 -- | Every end path. Each rider drop is caught on its own: one lock timeout must not strand the others or stop the end itself.
-finish :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => DVT.VehicleTripEndReason -> Session -> m Session
+finish :: (LtsFlow m r c, MonadMask m) => DVT.VehicleTripEndReason -> Session -> m Session
 finish reason s = do
   onBoard <- ridersOnBoard s.vehicleNumber
-  results <- forM onBoard $ \b -> (b,) <$> withTryCatch "sharedCab:dropOnFinish" (Seats.markDropped (endDropBy reason) b)
+  results <- forM onBoard $ \b -> (b,) <$> withTryCatch "sharedCab:dropOnFinish" (Seats.markDropped b)
   forM_ (stranded results) $ \b -> logError $ "sharedCab: rider still on board after the session ended, booking=" <> b.id.getId <> " plate=" <> s.vehicleNumber
   Seats.clearWalkups s
   now <- getCurrentTime
@@ -216,7 +208,7 @@ finish reason s = do
   closeLiveTrip s.vehicleNumber reason now
   clearCabDriverInfo s.vehicleNumber
   detach s
-  ended <$ Events.forSession (Events.Ended (show reason)) s
+  pure ended
 
 -- | Open a session, or change route if this driver already has one. A change with riders on board needs a mode.
 selectRoute :: Maybe SelectRouteMode -> OpenSessionReq -> Environment.Flow (Either [DFRFSTicketBooking.FRFSTicketBooking] Session)
@@ -245,13 +237,12 @@ selectRoute mode req = withPlateLock plate $ do
       withTryCatch "sharedCabSeedSweep" (ensureDegradedSweep s.merchantId s.merchantOperatingCityId) >>= \case
         Left e -> logError $ "sharedCab: couldn't seed the degraded sweep for " <> plate <> ": " <> show e
         Right () -> pure ()
-      Events.forSession Events.SessionStarted opened
       pure (Right opened)
   where
     plate = canonicalisePlate req.vehicleNumber
 
 -- | Applies an `afterLastDrop` route change once no rider is left; True when it switched (the caller then releases the old route's allocations, outside this lock).
-applyQueuedRoute :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => Text -> m Bool
+applyQueuedRoute :: (LtsFlow m r c, MonadMask m) => Text -> m Bool
 applyQueuedRoute rawPlate = withPlateLock plate $ do
   mbSession <- readSession plate
   case mbSession of
@@ -278,7 +269,7 @@ endRoute driver rawPlate forced action = withPlateLock plate $ do
   where
     plate = canonicalisePlate rawPlate
 
-expire :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => Text -> m Session
+expire :: (LtsFlow m r c, MonadMask m) => Text -> m Session
 expire rawPlate =
   withPlateLock plate $
     readSession plate >>= \case
@@ -288,12 +279,12 @@ expire rawPlate =
     plate = canonicalisePlate rawPlate
 
 -- | System-initiated: no driver check. Mirrored to the trip row so flush recovery restores PAUSED.
-pause :: (Events.EventFlow m r, MonadMask m) => Text -> PauseReason -> m Session
+pause :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => Text -> PauseReason -> m Session
 pause rawPlate reason = withPlateLock plate $ do
   prior <- readSession plate
   s <- liftSession $ maybe (Left SessionNotFound) (pauseSession reason) prior
   QVT.updateStatus DVT.PAUSED s.vehicleTripId
-  saveSession prior s <* Events.forSession (Events.Paused (show reason)) s
+  saveSession prior s
   where
     plate = canonicalisePlate rawPlate
 
@@ -306,7 +297,6 @@ resume driver rawPlate = do
     s <- liftSession $ resumeSession owned
     QVT.updateStatus DVT.ACTIVE s.vehicleTripId
     saveSession prior s
-  Events.forSession Events.Resumed resumed
   resumed <$ ensureExpiryJob resumed.merchantId resumed.merchantOperatingCityId
   where
     plate = canonicalisePlate rawPlate
@@ -332,7 +322,6 @@ markCabFull driver rawPlate releaseUnboarded = do
     released <- releaseUnboarded
     held <- Seats.setWalkups s s.capacity
     (,released) <$> saveWalkups CabFullFill prior s (fillCab held s)
-  Events.forSession (Events.CabFull full.walkupCount) full
   pure (full, released)
   where
     plate = canonicalisePlate rawPlate
@@ -346,14 +335,14 @@ saveWalkups source prior s s' = do
   saveSession prior s'
 
 -- | End a rider `finish` couldn't drop. Plate lock serialises with `finish` and re-open; plate -> booking lock order.
-dropStrandedRider :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m, Events.EventFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m Bool
+dropStrandedRider :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => DFRFSTicketBooking.FRFSTicketBooking -> m Bool
 dropStrandedRider booking = case canonicalisePlate <$> booking.vehicleNumber of
   Nothing -> pure False
   Just plate ->
     ifStranded (isStranded plate booking) . withPlateLock plate $ do
       fresh <- QBooking.findById booking.id
       case fresh of
-        Just b | b.vehicleNumber == booking.vehicleNumber -> ifStranded (isStranded plate b) (True <$ Seats.markDropped Events.DroppedByTick b)
+        Just b | b.vehicleNumber == booking.vehicleNumber -> ifStranded (isStranded plate b) (True <$ Seats.markDropped b)
         _ -> pure False
   where
     ifStranded cond act = cond >>= \c -> if c then act else pure False

@@ -11,7 +11,6 @@ module SharedLogic.SharedCab.ConfirmHook
   )
 where
 
-import BecknV2.FRFS.Enums (ServiceTierType (SHARED_CAB))
 import qualified Data.HashMap.Strict as HM
 import Data.List (sortOn)
 import qualified Domain.Types.FRFSTicketBooking as DFTB
@@ -19,7 +18,6 @@ import qualified Domain.Types.JourneyLeg as DJL
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -29,7 +27,6 @@ import SharedLogic.SharedCab.Allocation.Types (allocKeyTtl)
 import SharedLogic.SharedCab.Booking (isSharedCabBooking, shared)
 import SharedLogic.SharedCab.BookingState (writePreferred)
 import qualified SharedLogic.SharedCab.Config as Config
-import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Keys (pickedCabKey)
 import SharedLogic.SharedCab.LegState (sharedCabLegMode)
 import SharedLogic.SharedCab.Schedule (ensureAllocationTick)
@@ -41,7 +38,6 @@ type SharedCabConfirmFlow m r =
   ( JobCreator r m,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    HasKafkaProducer r,
     MonadMask m,
     Metrics.CoreMetrics m,
     ServiceFlow m r,
@@ -58,9 +54,8 @@ confirmHook booking =
     withTryCatch "sharedCab:confirmHook" (ensureAllocationTick booking.merchantId booking.merchantOperatingCityId >> triggerSharedCabAllocation booking.merchantOperatingCityId)
       >>= either (\e -> logError $ "shared-cab confirm hook failed for booking " <> booking.id.getId <> ": " <> show e) pure
 
-onBookingCreated :: Events.EventFlow m r => DFTB.FRFSTicketBooking -> Maybe DJL.JourneyLeg -> m (Maybe DJL.JourneyLeg)
+onBookingCreated :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DFTB.FRFSTicketBooking -> Maybe DJL.JourneyLeg -> m (Maybe DJL.JourneyLeg)
 onBookingCreated booking mbJourneyLeg = do
-  when (booking.serviceTierType == Just SHARED_CAB) $ Events.forBooking Events.BookingCreated booking
   forM mbJourneyLeg $ \leg ->
     let legMode = sharedCabLegMode booking.serviceTierType leg.mode
      in if legMode == leg.mode

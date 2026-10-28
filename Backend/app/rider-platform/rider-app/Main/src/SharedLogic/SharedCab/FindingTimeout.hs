@@ -33,10 +33,9 @@ import SharedLogic.SharedCab.Booking (recordCancelReason, withBookingLock)
 import SharedLogic.SharedCab.BookingState (clearBookingState, readFindingSince)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
-import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.LegState (CancelReason (NO_CAB_FOUND), SharedCabState (FINDING))
 import qualified SharedLogic.SharedCab.Notify as Notify
-import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, owesRefund, refundAmounts, refundWord)
+import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, owesRefund, refundAmounts)
 import SharedLogic.SharedCab.RefundPolicy (CancelBy (..), CancelDecision (..), decideCancel)
 import qualified SharedLogic.SharedCab.RefundRetry as RefundRetry
 import qualified SharedLogic.SharedCab.Seats as Seats
@@ -48,9 +47,10 @@ import Tools.Metrics (HasBAPMetrics)
 import qualified UrlShortner.Common as UrlShortner
 
 type CancelFlow m r c =
-  ( Events.EventFlow m r,
-    Redis.HedisFlow m r,
+  ( Redis.HedisFlow m r,
     CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
     EncFlow m r,
     SchedulerFlow r,
     ServiceFlow m r,
@@ -126,14 +126,13 @@ cancelOne findingTimeoutSec stale = do
       >>= either (\e -> logError $ "shared-cab finding-timeout release effects failed for booking " <> b.id.getId <> ": " <> show e) pure
     void . withTryCatch "sharedCab:findingTimeout:cancelJourney" $ cancelJourneyIfOnlyTransitLeg b.searchId.getId
     void . withTryCatch "sharedCab:findingTimeout:recordCancelReason" $ recordCancelReason b.id NO_CAB_FOUND
-    Events.forBooking (Events.BookingCancelled "system" (refundWord decision) (Just "finding_timeout")) b
     case decision of
       FullRefund -> when refunded $ Notify.notifyFindingTimeout b -- never "refunded in full" to a rider whose refund did not start
       NothingPaid -> Notify.notifyFindingTimeout b
       NoRefund -> Notify.notifyBookingCancelled b.sharedCabNoShows b
 
 flipToCancelled ::
-  (Events.EventFlow m r, Redis.HedisFlow m r, HasBAPMetrics m r) =>
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Redis.HedisFlow m r, HasBAPMetrics m r) =>
   Refund ->
   DFTB.FRFSTicketBooking ->
   m ()

@@ -220,7 +220,6 @@ data RiderConfig = RiderConfig
     sharedCabDegradedTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabDriverAcceptEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sharedCabEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    sharedCabEventsTopic :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sharedCabFallbackAfterSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabFindingTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabInterestWindowSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

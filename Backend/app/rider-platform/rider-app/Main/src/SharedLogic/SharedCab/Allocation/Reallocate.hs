@@ -29,15 +29,13 @@ import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (recordCancelReason, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
-import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Keys (fallbackPushedKey)
 import SharedLogic.SharedCab.LegState (CancelReason (NO_SHOW_CAP))
 import qualified SharedLogic.SharedCab.NoShow as NoShow
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Plate (samePlate)
-import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, refundAmounts, refundWord)
+import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, refundAmounts)
 import qualified SharedLogic.SharedCab.Seats as Seats
-import qualified SharedLogic.SharedCab.Session as Session
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -142,26 +140,14 @@ releaseCancelledBooking b = do
   mbPerson <- QPerson.findById b.riderId
   FRFSCancelEffects.releaseCancelledBooking True (not (isRescheduledChild b.parentBookingId)) b mbPerson quantity
 
-eventBlame :: Blame -> Events.Blame
-eventBlame = \case
-  BlameDriver -> Events.BlameDriver
-  BlameRider -> Events.BlameRider
-  BlameNone -> Events.BlameNone
-
 afterClose :: AllocFlow m r => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> Maybe Closed -> m ()
 afterClose cfg bookingId plate outcome closed =
-  whenJust closed $ \Closed {closedCity = cityId, result, heldTrip} -> do
-    now <- getCurrentTime
-    trip <- fmap (getId . (.vehicleTripId)) <$> Session.readSession plate
-    Events.emit cityId . Events.withTrip trip $
-      Events.bookingEvent (Events.AllocationClosed (outcomeText outcome) (eventBlame (blameFor outcome))) bookingId.getId (Just plate) Nothing now
+  whenJust closed $ \Closed {result, heldTrip} -> do
     mbBooking <- QFRFSTicketBooking.findById bookingId
     withTryCatch "sharedCabMisses" (NoShow.record (blameFor outcome) (mbBooking <&> (.riderId)) (Id <$> heldTrip))
       >>= either (\e -> logError $ "shared-cab miss count bump failed for booking " <> bookingId.getId <> ": " <> show e) pure
     case result of
       AutoCancelled -> do
-        decision <- maybe (pure NoRefund) (`gateByPayment` NoRefund) mbBooking
-        Events.emit cityId $ Events.bookingEvent (Events.BookingCancelled "system" (refundWord decision) (Just "max_no_shows")) bookingId.getId (Just plate) Nothing now
         mapM_ (\b -> Notify.notifyBookingCancelled b.sharedCabNoShows b) mbBooking
       Reallocated -> notifyReassignment mbBooking
       ReallocatedIntoFallback -> do

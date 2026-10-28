@@ -23,9 +23,8 @@ import SharedLogic.SharedCab.Booking (readRiderFix, recordCancelReason, withBook
 import SharedLogic.SharedCab.BookingState (readAlloc)
 import qualified SharedLogic.SharedCab.BookingState as BookingState
 import qualified SharedLogic.SharedCab.Config as Config
-import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.LegState (CancelReason (DRIVER, RIDER))
-import SharedLogic.SharedCab.RefundDecision (Refund (..), clearRefundDecision, gateByPayment, isSharedCabBooking, refundWord, setRefundDecision)
+import SharedLogic.SharedCab.RefundDecision (Refund (..), clearRefundDecision, gateByPayment, isSharedCabBooking, setRefundDecision)
 import SharedLogic.SharedCab.RefundPolicy
 import SharedLogic.SharedCab.Seats (markDropped)
 import qualified SharedLogic.SharedCab.Seats as Seats
@@ -40,7 +39,7 @@ data CancelStage = SoftCancel | ConfirmCancel
 -- `cancelAction` must not take the booking lock itself.
 withSharedCabCancel :: CancelBy -> CancelStage -> Maybe Text -> (DFTB.FRFSTicketBooking -> Flow ()) -> DFTB.FRFSTicketBooking -> Flow () -> Flow ()
 withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
-  refund <- withBookingLock booking.id $ do
+  withBookingLock booking.id $ do
     fresh <- QFRFSTicketBooking.findById booking.id >>= fromMaybeM (InvalidRequest "Booking not found")
     -- a canceller that lost the lock to another cancel (a rider's tap racing the finding timeout) must not refund again
     unless (cancellableStatus fresh.status) $ throwError (InvalidRequest "Booking is already cancelled")
@@ -48,7 +47,6 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
     refund <- decide by fresh
     setRefundDecision booking.id refund
     (cancelAction >> when (stage == ConfirmCancel) (BookingState.clearBookingState booking.id >> Seats.releaseBooking booking.id)) `finally` clearRefundDecision booking.id
-    pure refund
   when (stage == ConfirmCancel) $ do
     -- the leg-state surface shows why. Swallowed: the booking is cancelled by now, so a Redis hiccup here must not error a
     -- finished cancel. The leg is cancelled for good: the journey ends with it when it was the journey's only non-walk leg.
@@ -57,7 +55,6 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
     withTryCatch "sharedCab:cancel:recordCancelReason" (recordCancelReason booking.id (reasonFor by))
       >>= either (\err -> logError $ "shared-cab cancel-reason not recorded for booking " <> booking.id.getId <> ": " <> show err) pure
     whenJust mbReason $ \reason -> logInfo $ "shared-cab booking " <> booking.id.getId <> " cancelled by " <> byText by <> ": " <> T.take 200 reason
-    Events.forBooking (Events.BookingCancelled (byText by) (refundText refund) mbReason) booking
 
 guardRiderCancel :: CancelStage -> DFTB.FRFSTicketBooking -> Flow () -> Flow ()
 guardRiderCancel stage booking cancelAction
@@ -76,7 +73,7 @@ dropRider cancelLeg journeyLeg = do
         CancelInstead -> True <$ guardRiderCancel ConfirmCancel booking cancelLeg
         NothingToDrop -> pure False
         MarkDropped -> do
-          markDropped Events.DroppedByRider booking
+          markDropped booking
           whenJust booking.vehicleNumber $ \plate -> do
             switched <- Session.applyQueuedRoute plate
             when switched $ Allocation.releaseUnboarded plate RouteChanged
@@ -105,6 +102,3 @@ reasonFor :: CancelBy -> CancelReason
 reasonFor = \case
   ByRider -> RIDER
   ByDriver -> DRIVER
-
-refundText :: Refund -> Text
-refundText = refundWord

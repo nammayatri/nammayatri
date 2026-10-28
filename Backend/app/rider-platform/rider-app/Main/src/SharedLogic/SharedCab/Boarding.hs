@@ -41,7 +41,6 @@ import SharedLogic.SharedCab.BookingState (clearAlloc)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
-import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Lts as Lts
 import SharedLogic.SharedCab.Plate (canonicalisePlate, findByPlate, samePlate)
 import qualified SharedLogic.SharedCab.RateLimit as RateLimit
@@ -57,7 +56,7 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import Tools.Error
 
 data SharedCabBoardOutcome
-  = -- | Boarding committed: ticket INPROGRESS, booking pointed at the cab, event emitted.
+  = -- | Boarding committed: ticket INPROGRESS, booking pointed at the cab.
     SharedCabBoarded BoardingSummary
   | -- | the typed code matched no ACTIVE cab and the rider confirmed (forceCheckIn) —
     SharedCabDegraded
@@ -181,15 +180,10 @@ degradedBoarding degradedTimeoutSec booking typedCode = do
       QBooking.updateAllocatedVehicle Nothing booking.id (Just plate)
       clearAlloc booking.id
       Seats.releaseBooking booking.id
-      -- Skips Allocation.closeLocked, so it emits allocation_closed {degraded, none} itself in the same locked block.
-      now <- getCurrentTime
-      Events.emit booking.merchantOperatingCityId $
-        Events.bookingEvent (Events.AllocationClosed "DEGRADED" Events.BlameNone) booking.id.getId (Just plate) booking.routeCode now
     forM_ (filter ((== TicketStatus.ACTIVE) . (.status)) tickets) $ \t ->
       QTicket.updateStatusByTBookingIdAndTicketNumber TicketStatus.INPROGRESS t.scannedByVehicleNumber booking.id t.ticketNumber
     Degraded.markDegradedBoarding degradedTimeoutSec booking.id typedCode
     QBooking.updateUpdatedAtById booking.id
-    Events.forBooking Events.DegradedBoarding booking
   -- Outside the booking lock; a failure must not fail a boarding that already committed (the retry would be refused: marker alive).
   withTryCatch "sharedCabSeedSweep" (Schedule.ensureDegradedSweep booking.merchantId booking.merchantOperatingCityId) >>= \case
     Left e -> logError $ "sharedCab: couldn't seed the degraded sweep for booking " <> booking.id.getId <> ": " <> show e
@@ -215,9 +209,8 @@ commitBoarding ::
   DJourneyLeg.JourneyLeg ->
   DBooking.FRFSTicketBooking ->
   Session -> -- target cab
-  Maybe Session -> -- old cab, iff re-bind
   Environment.Flow ()
-commitBoarding journeyLeg booking target mbOld =
+commitBoarding journeyLeg booking target =
   let plate = canonicalisePlate target.vehicleNumber
    in Session.withPlateLock plate $
         withBookingLock booking.id $ do
@@ -232,17 +225,17 @@ commitBoarding journeyLeg booking target mbOld =
           -- already holds here are kept; seats held on another cab are given back once the boarding has landed.
           prior <- Seats.bookingHold booking.id
           if Seats.heldOn fresh prior
-            then applyBoarding journeyLeg booking freshBooking fresh eligible mbOld
+            then applyBoarding journeyLeg booking freshBooking fresh eligible
             else do
               parties <- partySizes [freshBooking]
               held <- Seats.holdForStops fresh freshBooking.fromStationCode freshBooking.toStationCode (partyOf parties freshBooking) >>= fromMaybeM CabFull
-              applyBoarding journeyLeg booking freshBooking fresh eligible mbOld `onException` Seats.releaseHeld held
+              applyBoarding journeyLeg booking freshBooking fresh eligible `onException` Seats.releaseHeld held
               Seats.recordHold booking.id held
               traverse_ Seats.releaseHeld prior
 
 -- | The writes of a boarding the gate allowed, in order: tickets, then the booking's cab (CAS), the old cab's keys, the leg, the event.
-applyBoarding :: DJourneyLeg.JourneyLeg -> DBooking.FRFSTicketBooking -> DBooking.FRFSTicketBooking -> Session -> [DTicket.FRFSTicket] -> Maybe Session -> Environment.Flow ()
-applyBoarding journeyLeg booking freshBooking fresh eligible mbOld = do
+applyBoarding :: DJourneyLeg.JourneyLeg -> DBooking.FRFSTicketBooking -> DBooking.FRFSTicketBooking -> Session -> [DTicket.FRFSTicket] -> Environment.Flow ()
+applyBoarding journeyLeg booking freshBooking fresh eligible = do
   -- Ticket FIRST: INPROGRESS, never postFrfsTicketVerify (USED reads as leg completed). Flip ONLY the eligible set.
   forM_ eligible $ \t ->
     QTicket.updateStatusByTBookingIdAndTicketNumber TicketStatus.INPROGRESS (Just fresh.vehicleNumber) booking.id t.ticketNumber
@@ -265,18 +258,13 @@ applyBoarding journeyLeg booking freshBooking fresh eligible mbOld = do
     Nothing -- driverName: join driver-app later
     Nothing -- driverMobileNumber
     booking.id
+  -- NOTE: BusBoardingMethod has no SHARED_CAB value; UserActivated is the closest fit.
   QJourneyLeg.updateByPrimaryKey $
     journeyLeg
       { DJourneyLeg.finalBoardedBusNumber = Just fresh.vehicleNumber,
         DJourneyLeg.finalBoardedBusNumberSource = Just DJourneyLeg.UserActivated,
         DJourneyLeg.finalBoardedBusServiceTierType = booking.serviceTierType
       }
-  -- NOTE: BusBoardingMethod has no SHARED_CAB value; UserActivated is the closest fit.
-  now <- getCurrentTime
-  let event k = Events.withTrip (Just fresh.vehicleTripId.getId) $ Events.bookingEvent k booking.id.getId (Just fresh.vehicleNumber) (Just fresh.routeCode) now
-  Events.emit fresh.merchantOperatingCityId . event $ case mbOld of
-    Nothing -> Events.Boarded Events.ByCode
-    Just old -> Events.Rebound old.vehicleNumber (old.routeCode /= fresh.routeCode)
 
 -- | The SHARED_CAB branch; `Nothing` means "not our tier" and the caller falls through to the bus/metro body.
 tryBoardSharedCab ::
@@ -348,7 +336,7 @@ boardSharedCab journey journeyLeg booking mbPersonId req = do
             if isRebind
               then join <$> traverse Session.getSession booking.vehicleNumber
               else pure Nothing
-          commitBoarding journeyLeg booking target mbOld
+          commitBoarding journeyLeg booking target
           -- no rider location counts against the VEHICLE's IST-day counter, so a driver feeding codes to non-app riders shows up per vehicle
           when noLocation $
             RateLimit.recordNoLocationBoarding tunables.noLocationSpotBookingsPerVehiclePerDay (canonicalisePlate target.vehicleNumber)

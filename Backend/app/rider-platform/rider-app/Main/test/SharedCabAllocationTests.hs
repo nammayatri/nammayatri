@@ -134,9 +134,6 @@ tests =
       testCase "offsets, a space separator and epoch seconds also parse" $
         map parseLtsTimestamp ["2026-09-25T15:30:00+05:30", "2026-09-25 10:00:00Z", "1790330400"]
           @?= [Just t0, Just t0, Just t0],
-      testCase "allocation_closed outcomes use the wire spellings" $
-        map outcomeText [StandTimeout, MovingTimeout, DriverCancelled, PassedStop BlameDriver, SeatLost, RouteChanged, SessionClosed, TimerLost, RiderSkipped SkipFull]
-          @?= ["STAND_TIMEOUT", "MOVING_TIMEOUT", "DRIVER_CANCELLED", "PASSED_STOP", "SEAT_LOST", "ROUTE_CHANGED", "SESSION_CLOSED", "TIMER_LOST", "RIDER_SKIPPED"],
       testCase "rider fresh and at the stop when the cab passed -> the driver's miss" $
         blameAt (Just (RiderFix nearStop (addUTCTime (-30) t0))) @?= BlameDriver,
       testCase "rider fresh but away from the stop -> the rider's no-show" $
@@ -247,20 +244,16 @@ tests =
         ]
           @?= [True, False, False, False],
       testCase "a silent-cab release is nobody's fault and not an attempt" $
-        (outcomeText CabSilent, blameFor CabSilent, countsTowardAttempts CabSilent, countsTowardDriverMisses CabSilent) @?= ("CAB_SILENT", BlameNone, False, False),
-      testCase "the away timer lapses as AwayTimeout, which blames nobody, skips the cab that never came and is not a driver miss" $
+        (blameFor CabSilent, countsTowardAttempts CabSilent) @?= (BlameNone, False),
+      testCase "the away timer lapses as AwayTimeout, which blames nobody and skips the cab that never came" $
         ( timerExpiry (addUTCTime 181 t0) (Just standing {timer = AwayTimer (addUTCTime 180 t0)}),
           blameFor AwayTimeout,
-          skipsPlateOnClose AwayTimeout,
-          countsTowardDriverMisses AwayTimeout,
-          outcomeText AwayTimeout
+          skipsPlateOnClose AwayTimeout
         )
-          @?= (Just AwayTimeout, BlameNone, True, False, "AWAY_TIMEOUT"),
+          @?= (Just AwayTimeout, BlameNone, True),
       testCase "(user decision 2026-09-30): a stand timeout is the rider's no-show, not a driver miss; a driver cancel still is" $
-        ( map blameFor [StandTimeout, MovingTimeout, DriverCancelled, AwayTimeout],
-          map countsTowardDriverMisses [StandTimeout, MovingTimeout, DriverCancelled, AwayTimeout]
-        )
-          @?= ([BlameRider, BlameRider, BlameDriver, BlameNone], [False, False, True, False]),
+        map blameFor [StandTimeout, MovingTimeout, DriverCancelled, AwayTimeout]
+          @?= [BlameRider, BlameRider, BlameDriver, BlameNone],
       testCase "only a stand or moving timer makes the leg ARRIVING: an away timer reads as an assigned cab still on its way" $
         map (allocationDeadline . (\timer -> standing {timer})) [StandTimer t0, MovingTimer t0, AwayTimer t0, NoTimer] @?= [Just t0, Just t0, Nothing, Nothing],
       testCase "stand and away timers are cleared once the cab moves, the moving timer is not" $
@@ -442,10 +435,10 @@ tests =
         let st = Just standing {timer = OfferTimer (addUTCTime 30 t0)}
          in (timerExpiry (addUTCTime 30 t0) st, timerExpiry (addUTCTime 31 t0) st) @?= (Nothing, Just OfferTimeout),
       testCase "a decline or a lapse is nobody's miss and no allocation attempt, and skips the plate for the booking" $
-        [ (blameFor o, countsTowardAttempts o, countsTowardDriverMisses o, skipsPlateOnClose o, outcomeText o)
+        [ (blameFor o, countsTowardAttempts o, skipsPlateOnClose o)
           | o <- [DriverDeclined, OfferTimeout]
         ]
-          @?= [(BlameNone, False, False, True, "DRIVER_DECLINED"), (BlameNone, False, False, True, "OFFER_TIMEOUT")],
+          @?= [(BlameNone, False, True), (BlameNone, False, True)],
       testCase "an offer is accepted on its own plate before it lapses; later it is gone, and an answered one is a no-op" $
         let offer d = Just standing {timer = OfferTimer (addUTCTime d t0)}
          in ( decideAccept t0 "ML05A1234" (Just "ML05A1234") (offer 30),

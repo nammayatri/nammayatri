@@ -3,7 +3,6 @@ module SharedLogic.SharedCab.RefundDecision
   ( Refund (..),
     isSharedCabBooking,
     gateByPayment,
-    refundWord,
     gateNoPayment,
     owesRefund,
     refundAmounts,
@@ -44,12 +43,6 @@ gateNoPayment hasPayment refund = if hasPayment then refund else NothingPaid
 
 gateByPayment :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> Refund -> m Refund
 gateByPayment booking refund = (\mbPayment -> gateNoPayment (isJust mbPayment) refund) <$> QFRFSTicketBookingPayment.findTicketBookingPayment booking
-
-refundWord :: Refund -> Text
-refundWord = \case
-  FullRefund -> "full"
-  NoRefund -> "none"
-  NothingPaid -> "nothing_paid"
 
 owesRefund :: Refund -> Bool
 owesRefund = (== FullRefund)

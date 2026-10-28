@@ -34,7 +34,6 @@ import SharedLogic.SharedCab.BookingState (readAlloc, readAttempts, readFindingS
 import qualified SharedLogic.SharedCab.Call as SharedCabCall
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as SharedCabDegraded
-import qualified SharedLogic.SharedCab.Events as SharedCabEvents
 import qualified SharedLogic.SharedCab.LegState as SharedCabLeg
 import qualified SharedLogic.SharedCab.Lts as Lts
 import SharedLogic.SharedCab.Plate (samePlate)
@@ -43,7 +42,7 @@ import qualified SharedLogic.SharedCab.Session as SharedCabSession
 import qualified SharedLogic.SharedCab.SessionState as SharedCabSessionState
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 
-type LegFlow m r = (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadFlow m, SharedCabEvents.EventFlow m r, HasShortDurationRetryCfg r ())
+type LegFlow m r = (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadFlow m, HasShortDurationRetryCfg r ())
 
 -- | The cities where a polled journey status shows a shared-cab leg that is not over (see 'SharedCabLeg.legNeedsChains').
 liveCabLegCities :: [JT.JourneyLegState] -> [Id DMOC.MerchantOperatingCity]

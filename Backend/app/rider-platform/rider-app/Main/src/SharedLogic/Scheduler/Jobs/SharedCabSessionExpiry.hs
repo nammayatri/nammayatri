@@ -20,7 +20,6 @@ import SharedLogic.JobScheduler
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (SessionClosed), parseLtsTimestamp)
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
-import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Lts as Lts
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import qualified SharedLogic.SharedCab.RefundRetry as RefundRetry
@@ -36,7 +35,7 @@ pauseAfter = 15 * 60
 endAfter :: NominalDiffTime
 endAfter = 60 * 60
 
-type ExpiryFlow m r c = (LtsFlow m r c, Events.EventFlow m r, MonadMask m, JobCreator r m, Redis.HedisLTSFlowEnv r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EncFlow m r, Allocation.InternalEndpointFlow m r)
+type ExpiryFlow m r c = (LtsFlow m r c, MonadMask m, JobCreator r m, Redis.HedisLTSFlowEnv r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EncFlow m r, Allocation.InternalEndpointFlow m r)
 
 sharedCabSessionExpiry :: ExpiryFlow m r c => Job 'SharedCabSessionExpiry -> m ExecutionResult
 sharedCabSessionExpiry Job {jobInfo} = do

@@ -19,7 +19,6 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Booking (shared, tryWithBookingLock)
-import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Keys (degradedKey)
 import SharedLogic.SharedCab.LegState (isDroppable)
 import qualified Storage.Queries.FRFSTicket as QTicket
@@ -59,7 +58,7 @@ isMarkerAlive bookingId = isJust <$> shared (Redis.get @DegradedBoarding (degrad
 -- | The timeout end: marker gone + tickets still INPROGRESS => USED. Re-decided on a fresh read under the booking lock, so a boarding that
 -- landed after the caller's read is never ended; the poll (and the degraded sweep) is the clock.
 expireDegradedBoardingIfNeeded ::
-  (Events.EventFlow m r, Redis.HedisFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Redis.HedisFlow m r) =>
   DBooking.FRFSTicketBooking ->
   m Bool
 expireDegradedBoardingIfNeeded booking
@@ -77,6 +76,5 @@ expireDegradedBoardingIfNeeded booking
           then do
             forM_ (filter ((== TicketStatus.INPROGRESS) . (.status)) freshTickets) $ \t ->
               QTicket.updateStatusByTBookingIdAndTicketNumber TicketStatus.USED t.scannedByVehicleNumber booking.id t.ticketNumber
-            Events.forBooking (Events.Dropped Events.DroppedByTick) booking
             pure True
           else pure False

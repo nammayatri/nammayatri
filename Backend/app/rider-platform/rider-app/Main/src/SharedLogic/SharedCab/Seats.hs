@@ -48,7 +48,6 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSSeatBooking (SeatHoldMeta (..))
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.SharedCab.Booking (shared, withBookingLock)
-import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Keys (seatHoldKey, walkupSeatsKey)
 import qualified SharedLogic.SharedCab.Lts as Lts
 import SharedLogic.SharedCab.RefundDecision (readRefundDecision)
@@ -205,14 +204,12 @@ releaseCancelled bookingId = do
 
 -- | "I got down": boarded tickets go USED and the party's seats are free for the rest of the route; a ticket that never boarded is a
 -- cancel, not consumed here.
-markDropped :: (Events.EventFlow m r, MonadMask m) => Events.DropBy -> DFTB.FRFSTicketBooking -> m ()
-markDropped by booking = withBookingLock booking.id $ do
+markDropped :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => DFTB.FRFSTicketBooking -> m ()
+markDropped booking = withBookingLock booking.id $ do
   droppable <- filter ((== DFRFSTicket.INPROGRESS) . (.status)) <$> QFRFSTicket.findAllByTicketBookingId booking.id
   forM_ droppable $ \ticket ->
     QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.USED ticket.scannedByVehicleNumber booking.id ticket.ticketNumber
-  unless (null droppable) $ do
-    releaseBooking booking.id
-    Events.forBooking (Events.Dropped by) booking
+  unless (null droppable) $ releaseBooking booking.id
 
 freeForStops :: SeatFlow m r => Session -> Text -> Text -> m Int
 freeForStops s board dropStop = do
