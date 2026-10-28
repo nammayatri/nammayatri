@@ -168,7 +168,7 @@ routesByGtfsId ::
   Bool ->
   IntegratedBPPConfig ->
   m [Route.Route]
-routesByGtfsId isPolylineRequired integratedBPPConfig = do
+routesByGtfsId isPolylineRequired integratedBPPConfig = IM.withInMemCache ["RoutesByGtfsId", integratedBPPConfig.id.getId, show isPolylineRequired] 300 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   routes <- Flow.getRoutesByGtfsId baseUrl integratedBPPConfig.feedKey
   parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId isPolylineRequired

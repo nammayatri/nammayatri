@@ -6,9 +6,9 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import Kernel.External.Maps.Types (LatLong (..))
+import SharedLogic.SharedCab.Allocation.Select (groupByKey)
 import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), Timer (..), runningTimerDeadline)
 import SharedLogic.SharedCab.Config (SharedCabTunables, defaultTunables)
-import SharedLogic.SharedCab.StopProgress (groupByKey)
 import SharedLogic.SharedCab.StopProgress.Rules
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -41,6 +41,10 @@ tests =
     [ testCase "the tick groups its live bookings by cab once, each cab's in order, the cab-less left out" $
         groupByKey snd [(1 :: Int, Just "A"), (2, Nothing), (3, Just "B"), (4, Just "A" :: Maybe String)]
           @?= Map.fromList [("A", [(1, Just "A"), (4, Just "A")]), ("B", [(3, Just "B")])],
+      testCase "the driver route list splits one city-wide FINDING read by route; a route nobody waits on gets none" $
+        let byRoute = groupByKey fst [(Just "R1", "b1"), (Nothing, "b2"), (Just "R2", "b3"), (Just "R1", "b4" :: String)]
+         in (map snd (Map.findWithDefault [] "R1" byRoute), Map.findWithDefault [] "R9" byRoute)
+              @?= (["b1", "b4"], []),
       testCase "board stop passed only once LTS marks it Reached" $
         ( boardStopPassed "S1" (fix 25.59 [stopAt 1 True, stopAt 2 False]),
           boardStopPassed "S1" (fix 25.58 [stopAt 1 False, stopAt 2 False]),

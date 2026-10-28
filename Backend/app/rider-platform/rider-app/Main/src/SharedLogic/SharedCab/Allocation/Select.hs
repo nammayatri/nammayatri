@@ -35,12 +35,14 @@ module SharedLogic.SharedCab.Allocation.Select
     cabForId,
     crossedMaxAttempts,
     groupAllOn,
+    groupByKey,
     isRescheduledChild,
   )
 where
 
 import Data.List (sortOn)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as Map
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (..))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
@@ -266,6 +268,10 @@ isRescheduledChild = isJust
 
 crossedMaxAttempts :: Int -> Int -> Int -> Bool
 crossedMaxAttempts maxAttempts before now = before < maxAttempts && now >= maxAttempts
+
+-- | Items by key, in their order; an item without a key is left out.
+groupByKey :: Ord k => (a -> Maybe k) -> [a] -> Map.Map k [a]
+groupByKey keyOf xs = Map.fromListWith (flip (<>)) [(k, [x]) | x <- xs, Just k <- [keyOf x]]
 
 groupAllOn :: Ord b => (a -> b) -> [a] -> [(b, [a])]
 groupAllOn f = map (\grp -> (f (NE.head grp), NE.toList grp)) . NE.groupBy ((==) `on` f) . sortOn f

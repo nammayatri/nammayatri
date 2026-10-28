@@ -9,6 +9,7 @@ module SharedLogic.SharedCab.Demand
     demandAheadRows,
     searchingRiders,
     searchingOnRoute,
+    findingByRoute,
     tallyDemand,
   )
 where
@@ -27,6 +28,7 @@ import qualified Kernel.Storage.InMem as IM
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import SharedLogic.SharedCab.Allocation.Select (groupByKey)
 import SharedLogic.SharedCab.Booking (findingOnRoute)
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Interest (bestEffort, interestedRiders)
@@ -74,10 +76,11 @@ waitingRiders findingTimeoutSec now bookings interested =
   Set.size (Set.fromList ([rider | (createdAt, rider) <- bookings, isRecentFinding findingTimeoutSec now createdAt] <> interested))
 
 -- | Riders waiting on the route for a cab: the driver's pre-start route cards.
-waitingOnRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Redis.HedisFlow m r, MonadCatch m) => Config.SharedCabTunables -> Text -> Text -> m Int
-waitingOnRoute cfg cityId routeCode = do
+-- | The route's waiting riders among the city's FINDING bookings ('findingByRoute'), read once for the whole route list.
+waitingOnRoute :: (CacheFlow m r, MonadFlow m, Redis.HedisFlow m r, MonadCatch m) => Config.SharedCabTunables -> [DFRFSTicketBooking.FRFSTicketBooking] -> Text -> m Int
+waitingOnRoute cfg routeFinding routeCode = do
   now <- getCurrentTime
-  finding <- map (\(b :: DFRFSTicketBooking.FRFSTicketBooking) -> (b.createdAt, b.riderId.getId)) <$> findingOnRoute (Id cityId) routeCode
+  let finding = [(b.createdAt, b.riderId.getId) | b <- routeFinding]
   interested <- fromMaybe [] <$> bestEffort (logError . ("shared-cab interest read failed: " <>)) (interestedRiders cfg routeCode)
   pure (waitingRiders cfg.findingTimeoutSec now finding interested)
 
@@ -94,20 +97,18 @@ demandAheadRows stops demand =
 searchingRiders :: [Set.Set Text] -> Set.Set Text -> Int
 searchingRiders searchedPerStop waiting = Set.size (Set.unions searchedPerStop `Set.difference` waiting)
 
-searchingOnRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Config.SharedCabTunables -> Text -> Text -> [Text] -> m Int
-searchingOnRoute cfg cityId routeCode stopCodes = do
+searchingOnRoute :: (CacheFlow m r, MonadFlow m) => Config.SharedCabTunables -> Text -> [DFRFSTicketBooking.FRFSTicketBooking] -> [Text] -> m Int
+searchingOnRoute cfg cityId routeFinding stopCodes = do
   now <- getCurrentTime
-  finding <- recentFinding cfg now cityId routeCode
-  searched <- mapM (searchedAt cityId now) stopCodes
-  pure (searchingRiders searched (Set.fromList [b.riderId.getId | b <- finding]))
+  searched <- map snd <$> searchedAtStops cityId now stopCodes
+  pure (searchingRiders searched (Set.fromList [b.riderId.getId | b <- routeFinding, isRecentFinding cfg.findingTimeoutSec now b.createdAt]))
+
+-- | The city's FINDING bookings by route: one query serves every route of the driver's route list.
+findingByRoute :: [DFRFSTicketBooking.FRFSTicketBooking] -> Map.Map Text [DFRFSTicketBooking.FRFSTicketBooking]
+findingByRoute = groupByKey (.routeCode)
 
 recentFinding :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Config.SharedCabTunables -> UTCTime -> Text -> Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
 recentFinding cfg now cityId routeCode = filter (\b -> isRecentFinding cfg.findingTimeoutSec now b.createdAt) <$> findingOnRoute (Id cityId) routeCode
-
--- | Riders who searched at the stop in the last bucketCount buckets.
-searchedAt :: (CacheFlow m r, MonadFlow m) => Text -> UTCTime -> Text -> m (Set.Set Text)
-searchedAt cityId now stopCode =
-  Set.unions <$> mapM (fmap Set.fromList . Redis.withMasterRedis . Redis.sMembers . demandKey cityId stopCode) [bucketOf now - i | i <- [0 .. bucketCount - 1]]
 
 -- | Per board stop of the route: riders whose booking is FINDING (and not past the city's findingTimeoutSec),
 -- and riders who searched in the window without booking.

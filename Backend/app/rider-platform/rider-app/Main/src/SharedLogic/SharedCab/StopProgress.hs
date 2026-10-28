@@ -3,7 +3,6 @@
 module SharedLogic.SharedCab.StopProgress
   ( runStopProgress,
     bookingsByPlate,
-    groupByKey,
   )
 where
 
@@ -23,7 +22,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, eachIsolated, releaseSharedCabAllocation, releaseUnboarded)
-import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), isFreshPosition)
+import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), groupByKey, isFreshPosition)
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, passedStopBlame, runningTimerDeadline, seatIsRiders)
 import SharedLogic.SharedCab.Booking (boardedTouchDue, readRiderFix, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
@@ -92,10 +91,6 @@ routePolyline cityId routeCode =
 -- | The tick's live bookings by their cab, built once per tick instead of a scan of all of them per cab.
 bookingsByPlate :: [LiveBooking] -> M.Map Text [LiveBooking]
 bookingsByPlate = groupByKey (.booking.vehicleNumber)
-
--- | Items by key, in their order; an item without a key is left out.
-groupByKey :: Ord k => (a -> Maybe k) -> [a] -> M.Map k [a]
-groupByKey keyOf xs = M.fromListWith (flip (<>)) [(k, [x]) | x <- xs, Just k <- [keyOf x]]
 
 stepCab ::
   StopProgressFlow m r c =>
