@@ -37,6 +37,7 @@ CommunicationDelivery:
   constraints:
     id: PrimaryKey
     communicationId: "!SecondaryKey"
+    recipientId: SecondaryKey
 
   sqlType:
     recipientRole: character varying (36)
@@ -59,6 +60,11 @@ CommunicationDelivery:
       where:
         and: [recipientId, channel]
 
+    findByRecipientIdAndCommunicationIdAndChannel:
+      kvFunction: findOneWithKV
+      where:
+        and: [recipientId, communicationId, channel]
+
     updateStatusById:
       kvFunction: updateOneWithKV
       params: [status, updatedAt]
@@ -72,6 +78,7 @@ CommunicationDelivery:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
 
   excludedDefaultQueries:
     - updateByPrimaryKey

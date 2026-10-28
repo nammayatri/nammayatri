@@ -37,6 +37,18 @@ findByRecipientIdAndChannel ::
   (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Communication.ChannelType -> m [Domain.Types.CommunicationDelivery.CommunicationDelivery])
 findByRecipientIdAndChannel recipientId channel = do findAllWithKV [Se.And [Se.Is Beam.recipientId $ Se.Eq (Kernel.Types.Id.getId recipientId), Se.Is Beam.channel $ Se.Eq channel]]
 
+findByRecipientIdAndCommunicationIdAndChannel ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Communication.Communication -> Domain.Types.Communication.ChannelType -> m (Maybe Domain.Types.CommunicationDelivery.CommunicationDelivery))
+findByRecipientIdAndCommunicationIdAndChannel recipientId communicationId channel = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.recipientId $ Se.Eq (Kernel.Types.Id.getId recipientId),
+          Se.Is Beam.communicationId $ Se.Eq (Kernel.Types.Id.getId communicationId),
+          Se.Is Beam.channel $ Se.Eq channel
+        ]
+    ]
+
 updateStatusAndReadAt ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.CommunicationDelivery.DeliveryStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Communication.Communication -> Domain.Types.Communication.ChannelType -> m ())
