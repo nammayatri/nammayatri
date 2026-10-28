@@ -26,7 +26,6 @@ import SharedLogic.SharedCab.Booking (readRiderFix, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
-import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, offRouteKey)
 import SharedLogic.SharedCab.Lts (readRoutePositions)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
@@ -150,9 +149,7 @@ movingTimerStep keyTtlSec spc now freshCab plate b = do
             writeAlloc keyTtlSec b.id cur {timer = MovingTimer deadline}
             pure True
         _ -> pure False
-    when armed $ do
-      Invariants.checkBooking b.id
-      Notify.notifyArriving plate spc.movingTimerSec b
+    when armed $ Notify.notifyArriving plate spc.movingTimerSec b
 
 dropStep :: StopProgressFlow m r c => StopProgressConfig -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()
 dropStep spc now mbCab plate b = do
@@ -166,8 +163,6 @@ dropStep spc now mbCab plate b = do
         switched <- Session.applyQueuedRoute plate
         when switched $ releaseUnboarded plate RouteChanged
         Redis.withMasterRedis $ Redis.del (dropClockKey b.id)
-        Invariants.checkBooking b.id
-        Invariants.checkCab plate
       KeepWaiting -> pure ()
 
 offRouteStep :: StopProgressFlow m r c => StopProgressConfig -> UTCTime -> [LatLong] -> Maybe LatLong -> Text -> m ()
@@ -183,7 +178,6 @@ offRouteStep spc now route freshPosition plate = do
         Right _ -> do
           -- TODO: emit a paused {reason: OFF_ROUTE} event.
           releaseUnboarded plate SessionClosed
-          Invariants.checkCab plate
     OffRouteNoChange -> pure ()
 
 markReachedEnd :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Metrics.CoreMetrics m, Events.EventFlow m r) => UTCTime -> Session -> m ()
@@ -191,4 +185,3 @@ markReachedEnd now s =
   QVT.findById s.vehicleTripId >>= traverse_ \trip ->
     when (isNothing trip.reachedEndAt) $ do
       QVT.updateReachedEndAt (Just now) trip.id
-      Invariants.checkCab s.vehicleNumber

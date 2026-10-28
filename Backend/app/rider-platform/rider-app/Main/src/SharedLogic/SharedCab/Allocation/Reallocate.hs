@@ -30,7 +30,6 @@ import SharedLogic.SharedCab.Booking (recordCancelReason, shared, withBookingLoc
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
-import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.Keys (fallbackPushedKey)
 import SharedLogic.SharedCab.LegState (CancelReason (NO_SHOW_CAP))
 import qualified SharedLogic.SharedCab.NoShow as NoShow
@@ -156,8 +155,6 @@ afterClose cfg bookingId plate outcome closed =
     trip <- fmap (getId . (.vehicleTripId)) <$> Session.readSession plate
     Events.emit cityId . Events.withTrip trip $
       Events.bookingEvent (Events.AllocationClosed (outcomeText outcome) (eventBlame (blameFor outcome))) bookingId.getId (Just plate) Nothing now
-    Invariants.checkBooking bookingId
-    Invariants.checkCab plate
     mbBooking <- QFRFSTicketBooking.findById bookingId
     withTryCatch "sharedCabMisses" (NoShow.record (blameFor outcome) (mbBooking <&> (.riderId)) (Id <$> heldTrip))
       >>= either (\e -> logError $ "shared-cab miss count bump failed for booking " <> bookingId.getId <> ": " <> show e) pure

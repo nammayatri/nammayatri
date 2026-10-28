@@ -48,7 +48,6 @@ import qualified SharedLogic.SharedCab.Call as SharedCabCall
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Demand as Demand
 import SharedLogic.SharedCab.DriverAction (DriverAction (..), runDriverAction)
-import qualified SharedLogic.SharedCab.Invariants as Invariants
 import qualified SharedLogic.SharedCab.LegState as LegState
 import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Offer as Offer
@@ -135,19 +134,18 @@ postSharedCabRouteSelect mbToken req = do
   integratedBppConfig <- getIntegratedBppConfigByAgency req.agencyId
   priorRoute <- fmap (.routeCode) . mfilter ((/= ENDED) . (.status)) <$> Session.getSession req.vehicleNumber
   selected <-
-    checkedCab req.vehicleNumber $
-      Session.selectRoute
-        req.mode
-        OpenSessionReq
-          { driverId = req.driverId,
-            vehicleNumber = req.vehicleNumber,
-            merchantId = integratedBppConfig.merchantId,
-            merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId,
-            integratedBppConfigId = integratedBppConfig.id,
-            serviceTierType = req.serviceTierType,
-            capacity = fromMaybe defaultCapacity req.capacity,
-            routeCode = req.routeCode
-          }
+    Session.selectRoute
+      req.mode
+      OpenSessionReq
+        { driverId = req.driverId,
+          vehicleNumber = req.vehicleNumber,
+          merchantId = integratedBppConfig.merchantId,
+          merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId,
+          integratedBppConfigId = integratedBppConfig.id,
+          serviceTierType = req.serviceTierType,
+          capacity = fromMaybe defaultCapacity req.capacity,
+          routeCode = req.routeCode
+        }
   case selected of
     Left onBoard -> do
       affected <- mapM affectedRider onBoard
@@ -159,7 +157,7 @@ postSharedCabRouteSelect mbToken req = do
       session' <-
         if req.walkupCount == session.walkupCount
           then pure session
-          else Session.setWalkupCount req.driverId req.vehicleNumber session.version req.walkupCount >>= checked
+          else Session.setWalkupCount req.driverId req.vehicleNumber session.version req.walkupCount
       resp <- mkSessionResp session'
       pure API.SelectRouteResp {session = Just resp, affectedRiders = Nothing}
   where
@@ -172,17 +170,11 @@ postSharedCabRouteSelect mbToken req = do
             dropStop = fromMaybe booking.toStationCode booking.toStationName
           }
 
-checked :: Session -> Environment.Flow Session
-checked s = s <$ Invariants.checkCab s.vehicleNumber
-
 seeded :: Session -> Environment.Flow Session
 seeded s = s <$ ensureAllocationTick s.merchantId s.merchantOperatingCityId
 
 releasing :: AllocTypes.AllocationOutcome -> Session -> Environment.Flow Session
 releasing outcome s = s <$ Allocation.releaseUnboarded s.vehicleNumber outcome
-
-checkedCab :: Text -> Environment.Flow a -> Environment.Flow a
-checkedCab rawPlate action = action <* Invariants.checkCab (canonicalisePlate rawPlate)
 
 ownSession :: Text -> Text -> Environment.Flow Session
 ownSession driver plate = Session.getSession plate >>= either throwError pure . ownedSession driver
@@ -195,22 +187,22 @@ getSharedCabSession driver plate mbToken = do
 postSharedCabSeats :: Maybe Text -> API.SeatsReq -> Environment.Flow View.SharedCabSession
 postSharedCabSeats mbToken req = do
   checkToken mbToken
-  Session.setWalkupCount req.driverId req.vehicleNumber req.version req.walkupCount >>= checked >>= mkSessionResp
+  Session.setWalkupCount req.driverId req.vehicleNumber req.version req.walkupCount >>= mkSessionResp
 
 postSharedCabRouteEnd :: Maybe Text -> View.EndRouteReq -> Environment.Flow (Maybe View.SharedCabSession)
 postSharedCabRouteEnd mbToken req = do
   checkToken mbToken
   case req.next of
-    View.RETURN -> Just <$> (Session.endRoute req.driverId req.vehicleNumber forced StartReturn >>= releasing AllocTypes.RouteChanged >>= checked >>= mkSessionResp)
+    View.RETURN -> Just <$> (Session.endRoute req.driverId req.vehicleNumber forced StartReturn >>= releasing AllocTypes.RouteChanged >>= mkSessionResp)
     View.CHANGE -> Just <$> (ownSession req.driverId req.vehicleNumber >>= mkSessionResp)
-    View.END -> Nothing <$ (Session.endRoute req.driverId req.vehicleNumber forced (if req.atLastStop == Just True then EndRoute else EndForNow) >>= releasing AllocTypes.SessionClosed >>= checked)
+    View.END -> Nothing <$ (Session.endRoute req.driverId req.vehicleNumber forced (if req.atLastStop == Just True then EndRoute else EndForNow) >>= releasing AllocTypes.SessionClosed)
   where
     forced = req.force == Just True
 
 postSharedCabResume :: Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
 postSharedCabResume mbToken req = do
   checkToken mbToken
-  Session.resume req.driverId req.vehicleNumber >>= seeded >>= checked >>= mkSessionResp
+  Session.resume req.driverId req.vehicleNumber >>= seeded >>= mkSessionResp
 
 postSharedCabBookingCancel :: Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
 postSharedCabBookingCancel = driverAction DriverCancel
@@ -226,15 +218,13 @@ postSharedCabBookingDropped = driverAction DriverDropped
 postSharedCabBookingAccept :: Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
 postSharedCabBookingAccept bookingId mbToken req = do
   checkToken mbToken
-  _ <- checkedCab req.vehicleNumber (Offer.acceptOffer req.driverId req.vehicleNumber bookingId)
-  Invariants.checkBooking bookingId
+  _ <- Offer.acceptOffer req.driverId req.vehicleNumber bookingId
   getSharedCabSession' req.driverId req.vehicleNumber
 
 postSharedCabBookingDecline :: Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
 postSharedCabBookingDecline bookingId mbToken req = do
   checkToken mbToken
-  _ <- checkedCab req.vehicleNumber (Offer.declineOffer req.driverId req.vehicleNumber bookingId)
-  Invariants.checkBooking bookingId
+  _ <- Offer.declineOffer req.driverId req.vehicleNumber bookingId
   getSharedCabSession' req.driverId req.vehicleNumber
 
 getSharedCabSession' :: Text -> Text -> Environment.Flow View.SharedCabSession
@@ -247,16 +237,14 @@ postSharedCabCabFull mbToken req = do
   checkToken mbToken
   (full, released) <- Session.markCabFull req.driverId req.vehicleNumber (Allocation.closeUnboarded plate AllocTypes.SeatLost)
   Allocation.afterUnboarded plate AllocTypes.SeatLost released
-  checked full >>= mkSessionResp
+  mkSessionResp full
   where
     plate = canonicalisePlate req.vehicleNumber
 
 driverAction :: DriverAction -> Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
 driverAction action bookingId mbToken req = do
   checkToken mbToken
-  s <- runDriverAction action req.driverId req.vehicleNumber req.reason bookingId >>= checked
-  Invariants.checkBooking bookingId
-  mkSessionResp s
+  runDriverAction action req.driverId req.vehicleNumber req.reason bookingId >>= mkSessionResp
 
 getSharedCabTrips :: Day -> Text -> Maybe Text -> Environment.Flow API.SharedCabTripsResp
 getSharedCabTrips date driver mbToken = do

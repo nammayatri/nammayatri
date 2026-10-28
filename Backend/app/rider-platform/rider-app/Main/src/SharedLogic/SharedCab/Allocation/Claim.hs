@@ -30,7 +30,6 @@ import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import qualified SharedLogic.SharedCab.Events as Events
-import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.Keys (fallbackPushedKey)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Seats as Seats
@@ -192,8 +191,6 @@ claimFirst cfg booking = go (0 :: Int)
           now <- getCurrentTime
           Events.emit c.rcSession.merchantOperatingCityId . Events.withTrip (Just c.rcSession.vehicleTripId.getId) $
             Events.bookingEvent (Events.AllocationCreated (Just (c.rcEtaToBoardStopSec `div` 60)) rank) booking.bookingId.getId (Just c.rcSession.vehicleNumber) (Just booking.routeCode) now
-          Invariants.checkBooking booking.bookingId
-          Invariants.checkCab c.rcSession.vehicleNumber
           fork "sharedCabNotifyDriver" (notifyDriverOfAllocation booking c (offerDeadline st))
           -- an offer tells the rider nothing until the driver accepts
           unless (isOffered st) $

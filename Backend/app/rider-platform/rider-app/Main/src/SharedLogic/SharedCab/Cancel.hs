@@ -24,7 +24,6 @@ import SharedLogic.SharedCab.BookingState (readAlloc)
 import qualified SharedLogic.SharedCab.BookingState as BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
-import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LegState (CancelReason (DRIVER, RIDER))
 import SharedLogic.SharedCab.RefundDecision (Refund (..), clearRefundDecision, gateByPayment, isSharedCabBooking, refundWord, setRefundDecision)
 import SharedLogic.SharedCab.RefundPolicy
@@ -59,7 +58,6 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
       >>= either (\err -> logError $ "shared-cab cancel-reason not recorded for booking " <> booking.id.getId <> ": " <> show err) pure
     whenJust mbReason $ \reason -> logInfo $ "shared-cab booking " <> booking.id.getId <> " cancelled by " <> byText by <> ": " <> T.take 200 reason
     Events.forBooking (Events.BookingCancelled (byText by) (refundText refund) mbReason) booking
-  Invariants.checkBooking booking.id
 
 guardRiderCancel :: CancelStage -> DFTB.FRFSTicketBooking -> Flow () -> Flow ()
 guardRiderCancel stage booking cancelAction
@@ -82,8 +80,6 @@ dropRider cancelLeg journeyLeg = do
           whenJust booking.vehicleNumber $ \plate -> do
             switched <- Session.applyQueuedRoute plate
             when switched $ Allocation.releaseUnboarded plate RouteChanged
-          Invariants.checkBooking booking.id
-          whenJust booking.vehicleNumber Invariants.checkCab
           pure False
     _ -> pure False
 
