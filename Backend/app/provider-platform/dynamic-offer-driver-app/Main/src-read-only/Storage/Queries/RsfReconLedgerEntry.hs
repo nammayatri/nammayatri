@@ -2,33 +2,32 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Lib.Finance.Storage.Queries.RsfReconLedgerEntry (module Lib.Finance.Storage.Queries.RsfReconLedgerEntry, module ReExport) where
+module Storage.Queries.RsfReconLedgerEntry (module Storage.Queries.RsfReconLedgerEntry, module ReExport) where
 
+import qualified Domain.Types.RsfReconLedgerEntry
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Lib.Finance.Domain.Types.RsfReconLedgerEntry
-import qualified Lib.Finance.Storage.Beam.BeamFlow
-import qualified Lib.Finance.Storage.Beam.RsfReconLedgerEntry as Beam
-import Lib.Finance.Storage.Queries.RsfReconLedgerEntryExtra as ReExport
 import qualified Sequelize as Se
+import qualified Storage.Beam.RsfReconLedgerEntry as Beam
+import Storage.Queries.RsfReconLedgerEntryExtra as ReExport
 
-create :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry -> m ())
 create = createWithKV
 
-createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry] -> m ())
 createMany = traverse_ create
 
 findByPrimaryKey ::
-  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry -> m (Maybe Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry))
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry -> m (Maybe Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry -> m ())
-updateByPrimaryKey (Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry {..}) = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry -> m ())
+updateByPrimaryKey (Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.actorId actorId,
@@ -50,8 +49,8 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfReconLedgerE
       Se.Set Beam.effectiveAt effectiveAt,
       Se.Set Beam.entryType entryType,
       Se.Set Beam.invoiceNo invoiceNo,
-      Se.Set Beam.merchantId merchantId,
-      Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.messageId messageId,
       Se.Set Beam.orderId orderId,
       Se.Set Beam.orderPaymentAmount orderPaymentAmount,

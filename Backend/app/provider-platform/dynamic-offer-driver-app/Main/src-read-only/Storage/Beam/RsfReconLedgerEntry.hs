@@ -1,25 +1,26 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Lib.Finance.Storage.Beam.RsfReconLedgerEntry where
+module Storage.Beam.RsfReconLedgerEntry where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
+import qualified Domain.Types.RsfReconLedgerEntry
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Lib.Finance.Domain.Types.RsfReconLedgerEntry
 import Tools.Beam.UtilsTH
 
 data RsfReconLedgerEntryT f = RsfReconLedgerEntryT
   { actorId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    actorType :: (B.C f Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfActorType),
+    actorType :: (B.C f Domain.Types.RsfReconLedgerEntry.RsfActorType),
     amount :: (B.C f Kernel.Types.Common.HighPrecMoney),
     bapId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     bapUri :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     bffAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     bffType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    claimStatus :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfClaimStatus)),
+    claimStatus :: (B.C f (Kernel.Prelude.Maybe Domain.Types.RsfReconLedgerEntry.RsfClaimStatus)),
     collectorAppId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     contextTransactionId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     counterpartyReconStatus :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
@@ -30,11 +31,11 @@ data RsfReconLedgerEntryT f = RsfReconLedgerEntryT
     diffMessageName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     driverId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     effectiveAt :: (B.C f Kernel.Prelude.UTCTime),
-    entryType :: (B.C f Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfLedgerEntryType),
+    entryType :: (B.C f Domain.Types.RsfReconLedgerEntry.RsfLedgerEntryType),
     id :: (B.C f Kernel.Prelude.Text),
     invoiceNo :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     messageId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     orderId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     orderPaymentAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
@@ -48,7 +49,7 @@ data RsfReconLedgerEntryT f = RsfReconLedgerEntryT
     rideId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     settlementId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     settlementReasonCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    source :: (B.C f Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfLedgerSource),
+    source :: (B.C f Domain.Types.RsfReconLedgerEntry.RsfLedgerSource),
     ttl :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime),
     utr :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
@@ -65,4 +66,4 @@ type RsfReconLedgerEntry = RsfReconLedgerEntryT Identity
 
 $(enableKVPG (''RsfReconLedgerEntryT) [('id)] [[('messageId)], [('orderId)], [('utr)]])
 
-$(mkTableInstancesGenericSchema (''RsfReconLedgerEntryT) "rsf_recon_ledger_entry")
+$(mkTableInstances (''RsfReconLedgerEntryT) "rsf_recon_ledger_entry")

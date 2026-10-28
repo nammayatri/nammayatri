@@ -7,7 +7,6 @@ where
 import qualified Domain.Types.Ride as DRide
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Storage.Queries.Ride as QRide
 

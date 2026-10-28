@@ -6,13 +6,13 @@ module API.Types.ProviderPlatform.Management.Endpoints.RSFReconciliation where
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Data.Time
+import qualified Domain.Types.RsfReconLedgerEntry
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
-import qualified Lib.Finance.Domain.Types.RsfReconLedgerEntry
 import Servant
 import Servant.Client
 
@@ -86,7 +86,7 @@ data OrderRow = OrderRow
     receivedTotal :: Kernel.Types.Common.HighPrecMoney,
     orderVerdict :: OrderReconVerdict,
     orderDiff :: Kernel.Types.Common.HighPrecMoney,
-    claimStatus :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfClaimStatus,
+    claimStatus :: Kernel.Prelude.Maybe Domain.Types.RsfReconLedgerEntry.RsfClaimStatus,
     settlementUtrs :: [Kernel.Prelude.Text],
     allocations :: [OrderAllocation],
     anyManuallyConfirmed :: Kernel.Prelude.Bool,
@@ -180,11 +180,10 @@ type PostRSFReconciliationRsfAllocationsManual = ("rsf" :> "allocations" :> "man
 type PostRSFReconciliationRsfSend = ("rsf" :> "send" :> QueryParam "date" Data.Time.Day :> Post ('[JSON]) SendForDateRes)
 
 type GetRSFReconciliationRsfReconUnmatched =
-  ( "rsf" :> "recon" :> "unmatched" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "limit" Kernel.Prelude.Int
+  ( "rsf" :> "recon" :> "unmatched" :> QueryParam "date" Data.Time.Day :> QueryParam "limit" Kernel.Prelude.Int
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
-      :> QueryParam "to" Kernel.Prelude.UTCTime
       :> Get ('[JSON]) ReconGridListRes
   )
 
@@ -198,7 +197,7 @@ data RSFReconciliationAPIs = RSFReconciliationAPIs
     postRSFReconciliationRsfOrdersConfirm :: (Kernel.Prelude.Text -> ManualConfirmReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postRSFReconciliationRsfAllocationsManual :: (ManualAllocationReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postRSFReconciliationRsfSend :: (Kernel.Prelude.Maybe (Data.Time.Day) -> EulerHS.Types.EulerClient SendForDateRes),
-    getRSFReconciliationRsfReconUnmatched :: (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient ReconGridListRes)
+    getRSFReconciliationRsfReconUnmatched :: (Kernel.Prelude.Maybe (Data.Time.Day) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient ReconGridListRes)
   }
 
 mkRSFReconciliationAPIs :: (Client EulerHS.Types.EulerClient API -> RSFReconciliationAPIs)

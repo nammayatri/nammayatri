@@ -1,35 +1,38 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Lib.Finance.Storage.Beam.RsfUtrState where
+module Storage.Beam.RsfOrderState where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
-data RsfUtrStateT f = RsfUtrStateT
+data RsfOrderStateT f = RsfOrderStateT
   { bapId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     lastClaimedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     lastReportedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     lastReportedMessageId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    orderId :: (B.C f Kernel.Prelude.Text),
+    reportedCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     reportedDiff :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     reportedStatus :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    utr :: (B.C f Kernel.Prelude.Text)
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table RsfUtrStateT where
-  data PrimaryKey RsfUtrStateT f = RsfUtrStateId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = RsfUtrStateId <$> merchantId <*> utr
+instance B.Table RsfOrderStateT where
+  data PrimaryKey RsfOrderStateT f = RsfOrderStateId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = RsfOrderStateId <$> merchantId <*> orderId
 
-type RsfUtrState = RsfUtrStateT Identity
+type RsfOrderState = RsfOrderStateT Identity
 
-$(enableKVPG (''RsfUtrStateT) [('merchantId), ('utr)] [])
+$(enableKVPG (''RsfOrderStateT) [('merchantId), ('orderId)] [])
 
-$(mkTableInstancesGenericSchema (''RsfUtrStateT) "rsf_utr_state")
+$(mkTableInstances (''RsfOrderStateT) "rsf_order_state")

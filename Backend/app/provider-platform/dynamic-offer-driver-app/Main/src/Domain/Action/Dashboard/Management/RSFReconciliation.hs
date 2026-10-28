@@ -16,11 +16,14 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.RSFReconciliation as Res
 import Data.List (nub, sortOn)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Time
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as M
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RsfReconLedgerEntry as L
+import qualified Domain.Types.RsfUtrState as DUtrState
 import qualified Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -30,16 +33,14 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
-import qualified Lib.Finance.Domain.Types.RsfReconLedgerEntry as L
-import qualified Lib.Finance.Domain.Types.RsfUtrState as DUtrState
-import qualified Lib.Finance.Storage.Queries.RsfOrderState as QOrderState
-import qualified Lib.Finance.Storage.Queries.RsfReconLedgerEntry as QLedger
-import qualified Lib.Finance.Storage.Queries.RsfUtrState as QUtrState
 import qualified SharedLogic.CallRSF as CallRSF
 import qualified SharedLogic.RSFLedger as RSFLedger
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RsfLedgerAggregates as QAgg
+import qualified Storage.Queries.RsfOrderState as QOrderState
+import qualified Storage.Queries.RsfReconLedgerEntry as QLedger
+import qualified Storage.Queries.RsfUtrState as QUtrState
 import Tools.Error (RsfError (..))
 
 -- What an order row is folded from, grouped once per request: standing claims and allocations
@@ -63,7 +64,7 @@ data UtrView = UtrView
 groupBy :: (RSFLedger.Entry -> Maybe Text) -> [RSFLedger.Entry] -> Map.Map Text [RSFLedger.Entry]
 groupBy key = Map.fromListWith (flip (<>)) . mapMaybe (\e -> (,[e]) <$> key e)
 
-loadOrderView :: Text -> [Text] -> Environment.Flow OrderView
+loadOrderView :: Id M.Merchant -> [Text] -> Environment.Flow OrderView
 loadOrderView merchantId orderIds = do
   orderEntries <- QLedger.findAllByMerchantAndOrderIds merchantId orderIds
   rideByOrderId <- RSFLedger.latestRideByBooking <$> B.runInReplica (QRide.findRidesByBookingId (map Id orderIds))
@@ -77,7 +78,7 @@ loadOrderView merchantId orderIds = do
         lastReportedMessageByOrder = Map.fromList [(st.orderId, m) | st <- orderStates, Just m <- [st.lastReportedMessageId]]
       }
 
-loadUtrView :: Text -> [Text] -> Environment.Flow UtrView
+loadUtrView :: Id M.Merchant -> [Text] -> Environment.Flow UtrView
 loadUtrView merchantId utrs = do
   utrEntries <- QLedger.findAllByMerchantAndUtrs merchantId utrs
   utrStates <- QUtrState.findAllByMerchantAndUtrs merchantId utrs
@@ -88,13 +89,21 @@ loadUtrView merchantId utrs = do
         utrStates = Map.fromList [(s.utr, s) | s <- utrStates]
       }
 
-findMerchantId :: ShortId M.Merchant -> Environment.Flow Text
+findMerchantId :: ShortId M.Merchant -> Environment.Flow (Id M.Merchant)
 findMerchantId merchantShortId = do
   merchant <- CQMerchant.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest "Merchant not found")
-  pure merchant.id.getId
+  pure merchant.id
 
 dayRange :: Maybe Data.Time.Day -> Environment.Flow (UTCTime, UTCTime)
 dayRange mbDay = RSFLedger.istDayRange <$> fromMaybeM (InvalidRequest "Missing 'date'") mbDay
+
+-- The bapId filter of the order / UTR lists.
+forBap :: HasField "bapId" s (Maybe Text) => Maybe Text -> s -> Bool
+forBap mbBapId s = maybe True (\b -> s.bapId == Just b) mbBapId
+
+-- Page size defaults to `def` and is capped at 100; offset is never negative.
+pageOf :: Int -> Maybe Int -> Maybe Int -> (Int, Int)
+pageOf def mbLimit mbOffset = (max 1 (min 100 (fromMaybe def mbLimit)), max 0 (fromMaybe 0 mbOffset))
 
 -- Verify / allocate / send only once the message date's IST day has ended, by the server clock:
 -- receiver_recon claims for the day can still arrive until then.
@@ -116,11 +125,10 @@ getRSFReconciliationRsfOrders :: Kernel.Types.Id.ShortId M.Merchant -> Kernel.Ty
 getRSFReconciliationRsfOrders merchantShortId _opCity mbBapId mbDate mbLimit mbOffset = do
   merchantId <- findMerchantId merchantShortId
   (from, to) <- dayRange mbDate
-  let limit = fromMaybe 50 mbLimit
-      offset = fromMaybe 0 mbOffset
+  let (limit, offset) = pageOf 10 mbLimit mbOffset
   -- page over rsf_order_state by the day of each order's latest claim; only the page is folded
   page <- QOrderState.findPageByMerchantAndLastClaimedAtRange merchantId from to mbBapId limit offset
-  total <- QAgg.countOrderStatesByLastClaimedAtRange merchantId from to mbBapId
+  total <- length . filter (forBap mbBapId) <$> QOrderState.findAllByMerchantAndLastClaimedAtRange merchantId from to
   let orderIds = map (.orderId) page
   view <- loadOrderView merchantId orderIds
   pure $ Res.OrderListRes {totalItems = total, orders = mapMaybe (toOrderRow view) orderIds}
@@ -164,10 +172,9 @@ getRSFReconciliationRsfUtrs :: Kernel.Types.Id.ShortId M.Merchant -> Kernel.Type
 getRSFReconciliationRsfUtrs merchantShortId _opCity mbBapId mbDate mbLimit mbOffset = do
   merchantId <- findMerchantId merchantShortId
   (from, to) <- dayRange mbDate
-  let limit = fromMaybe 20 mbLimit
-      offset = fromMaybe 0 mbOffset
+  let (limit, offset) = pageOf 10 mbLimit mbOffset
   page <- QUtrState.findPageByMerchantAndLastClaimedAtRange merchantId from to mbBapId limit offset
-  total <- QAgg.countUtrStatesByLastClaimedAtRange merchantId from to mbBapId
+  total <- length . filter (forBap mbBapId) <$> QUtrState.findAllByMerchantAndLastClaimedAtRange merchantId from to
   let utrs = map (.utr) page
   view <- loadUtrView merchantId utrs
   pure $ Res.UtrListRes {totalItems = total, utrs = mapMaybe (toUtrSummary view) utrs}
@@ -187,8 +194,9 @@ postRSFReconciliationRsfUtrBankVerify merchantShortId _opCity utr req = do
   merchantId <- findMerchantId merchantShortId
   actorId <- operatorId
   -- the IST day rsf/utrs?date lists the UTR under
-  mbState <- listToMaybe <$> QUtrState.findAllByMerchantAndUtrs merchantId [utr]
-  forM_ (mbState >>= (.lastClaimedAt)) $ ensureDayClosed "You can verify today's UTRs tomorrow." . RSFLedger.istDay
+  utrState <- listToMaybe <$> QUtrState.findAllByMerchantAndUtrs merchantId [utr] >>= fromMaybeM (InvalidRequest "UTR not found")
+  lastClaimedAt <- fromMaybeM (InvalidRequest "UTR has no receiver_recon claim yet") utrState.lastClaimedAt
+  ensureDayClosed "You can verify today's UTRs tomorrow." (RSFLedger.istDay lastClaimedAt)
   RSFLedger.verifyUtr merchantId utr req.bankVerifiedAmount actorId req.reason
   logInfo $ "RSF bank verify: utr=" <> utr <> " amount=" <> show req.bankVerifiedAmount <> " by=" <> actorId
   pure APISuccess.Success
@@ -233,7 +241,7 @@ postRSFReconciliationRsfSend merchantShortId _opCity mbDate = do
   merchantId <- findMerchantId merchantShortId
   day <- fromMaybeM (InvalidRequest "Missing 'date'") mbDate
   ensureDayClosed "You can send today's recon information tomorrow." day
-  (sent, alreadySent, failed) <- CallRSF.sendOnReceiverReconForDate (Id merchantId) day
+  (sent, alreadySent, failed) <- CallRSF.sendOnReceiverReconForDate merchantId day
   pure $
     Res.SendForDateRes
       { messagesSent = sent,
@@ -241,14 +249,12 @@ postRSFReconciliationRsfSend merchantShortId _opCity mbDate = do
         messagesFailed = [Res.SendFailure {messageId = m, reason = r} | (m, r) <- failed]
       }
 
-getRSFReconciliationRsfReconUnmatched :: Kernel.Types.Id.ShortId M.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow Res.ReconGridListRes
-getRSFReconciliationRsfReconUnmatched merchantShortId _opCity mbFrom mbLimit mbOffset mbTo = do
+getRSFReconciliationRsfReconUnmatched :: Kernel.Types.Id.ShortId M.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow Res.ReconGridListRes
+getRSFReconciliationRsfReconUnmatched merchantShortId _opCity mbDate mbLimit mbOffset = do
   merchantId <- findMerchantId merchantShortId
-  from <- fromMaybeM (InvalidRequest "Missing 'from'") mbFrom
-  to <- fromMaybeM (InvalidRequest "Missing 'to'") mbTo
-  let limit = fromMaybe 20 mbLimit
-      offset = fromMaybe 0 mbOffset
-  -- anti-join and paging in the database: completed, BAP-collected bookings with no BAP_CLAIM
+  (from, to) <- dayRange mbDate
+  let (limit, offset) = pageOf 10 mbLimit mbOffset
+  -- completed online bookings with no BAP_CLAIM: filtered, paged and counted in the database
   bookings <- QAgg.findUnclaimedCompletedBookingsPage merchantId from to limit offset
   total <- QAgg.countUnclaimedCompletedBookings merchantId from to
   -- one ride read for the page: the final fare lives on the ride, the booking only has the estimate
@@ -283,8 +289,8 @@ toOrderRow :: OrderView -> Text -> Maybe Res.OrderRow
 toOrderRow view orderId =
   case Map.findWithDefault [] orderId view.claimsByOrder of
     [] -> Nothing
-    claims@(firstClaim : _) ->
-      let lastClaim = last claims
+    claims@(firstClaim : rest) ->
+      let lastClaim = NE.last (firstClaim :| rest)
           mbRide = Map.lookup orderId view.rideByOrderId
           fare = mbRide >>= RSFLedger.rideFare
           allocationRows = Map.findWithDefault [] orderId view.allocationsByOrder

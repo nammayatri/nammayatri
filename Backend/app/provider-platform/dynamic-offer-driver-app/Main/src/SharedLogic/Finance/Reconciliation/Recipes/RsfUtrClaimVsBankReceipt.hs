@@ -14,15 +14,15 @@ import qualified Data.HashSet as HS
 import Data.List (nub)
 import qualified Data.Map.Strict as Map
 import Data.Time (nominalDay)
+import qualified Domain.Types.RsfReconLedgerEntry as L
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (getCurrentTime)
-import qualified Lib.Finance.Domain.Types.RsfReconLedgerEntry as L
 import Lib.Finance.Reconciliation.Recipe (Recipe (..))
 import qualified Lib.Finance.Reconciliation.Types as ReconT
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
-import qualified Lib.Finance.Storage.Queries.RsfReconLedgerEntry as QLedger
 import qualified Storage.Queries.RsfLedgerAggregates as QAgg
+import qualified Storage.Queries.RsfReconLedgerEntry as QLedger
 
 -- Phase 2, stage C (check 5): a UTR already known to us must still have the money to cover the
 -- new claims the message puts on it. Source = Σ this message's PENDING legs on the UTR; target =
@@ -48,13 +48,13 @@ recipe messageId =
 
 fetchSources :: (BeamFlow m r) => Text -> ReconT.MerchantScope -> ReconT.DateRange -> m [ReconT.SourceRecord]
 fetchSources messageId scope range = do
-  claims <- QLedger.findAllByMerchantEntryTypeAndCreatedAtRange scope.merchantId L.BAP_CLAIM range.from range.to
+  claims <- QLedger.findClaimsByMerchantStatusAndCreatedAtRange (Id scope.merchantId) L.PENDING range.from range.to
   fetchSourcesById messageId scope (nub $ mapMaybe (.utr) claims)
 
 -- One source per UTR: this message's PENDING legs on it.
 fetchSourcesById :: (BeamFlow m r) => Text -> ReconT.MerchantScope -> [Text] -> m [ReconT.SourceRecord]
 fetchSourcesById messageId scope utrs = do
-  entries <- QLedger.findAllByMerchantAndMessageId scope.merchantId messageId
+  entries <- QLedger.findAllByMerchantAndMessageId (Id scope.merchantId) messageId
   let wanted = HS.fromList utrs
       pending = [c | c <- entries, c.entryType == L.BAP_CLAIM, c.claimStatus == Just L.PENDING, maybe False (`HS.member` wanted) c.utr]
       byUtr = Map.fromListWith (<>) [(u, [c]) | c <- pending, Just u <- [c.utr]]
@@ -67,16 +67,16 @@ fetchSourcesById messageId scope utrs = do
           srcMatchKey = Just utr,
           srcComponent = Nothing,
           srcMeta = Just $ A.object ["newClaims" .= sum (map (.amount) claims), "pendingClaimIds" .= map (.id.getId) claims],
-          srcTimestamp = minimum (map (.createdAt) claims),
+          srcTimestamp = foldl' min firstClaim.createdAt (map (.createdAt) claims),
           srcLifecycle = ReconT.Settled
         }
-      | (utr, claims) <- Map.toList byUtr
+      | (utr, claims@(firstClaim : _)) <- Map.toList byUtr
     ]
 
 -- The target is the UTR's unallocated money: receipt + adjustments − allocations, from one GROUP BY.
 fetchTargets :: (BeamFlow m r) => ReconT.MerchantScope -> HS.HashSet Text -> m [ReconT.TargetRecord]
 fetchTargets scope utrs = do
-  sums <- QAgg.sumByUtrAndEntryType scope.merchantId [L.BANK_RECEIPT, L.MANUAL_ADJUSTMENT, L.BANK_ALLOCATION] (HS.toList utrs)
+  sums <- QAgg.sumByUtrAndEntryType (Id scope.merchantId) [L.BANK_RECEIPT, L.MANUAL_ADJUSTMENT, L.BANK_ALLOCATION] (HS.toList utrs)
   now <- getCurrentTime
   let amount u t = fromMaybe 0 (Map.lookup (u, t) sums)
   pure
@@ -111,7 +111,7 @@ syncClaimStatus :: (BeamFlow m r) => ReconT.SourceRecord -> ReconT.Reconciliatio
 syncClaimStatus src status =
   unless (status `elem` [ReconT.MATCHED, ReconT.AWAITING_SETTLEMENT]) $ do
     let claimIds = fromMaybe [] (src.srcMeta >>= extractField "pendingClaimIds") :: [Text]
-    forM_ claimIds $ \claimId -> QLedger.updateClaimStatus (Id claimId) L.REJECTED_UTR_IMBALANCE Nothing
+    QLedger.updateClaimStatusByIds (map Id claimIds) L.REJECTED_UTR_IMBALANCE Nothing
 
 extractField :: (A.FromJSON a) => Text -> A.Value -> Maybe a
 extractField key (A.Object o) = AKM.lookup (AK.fromText key) o >>= A.parseMaybe A.parseJSON

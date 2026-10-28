@@ -1,9 +1,11 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Lib.Finance.Domain.Types.RsfReconLedgerEntry where
+module Domain.Types.RsfReconLedgerEntry where
 
 import Data.Aeson
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -11,13 +13,13 @@ import qualified Tools.Beam.UtilsTH
 
 data RsfReconLedgerEntry = RsfReconLedgerEntry
   { actorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    actorType :: Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfActorType,
+    actorType :: Domain.Types.RsfReconLedgerEntry.RsfActorType,
     amount :: Kernel.Types.Common.HighPrecMoney,
     bapId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bapUri :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bffAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     bffType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    claimStatus :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfClaimStatus,
+    claimStatus :: Kernel.Prelude.Maybe Domain.Types.RsfReconLedgerEntry.RsfClaimStatus,
     collectorAppId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     contextTransactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     counterpartyReconStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -28,11 +30,11 @@ data RsfReconLedgerEntry = RsfReconLedgerEntry
     diffMessageName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     effectiveAt :: Kernel.Prelude.UTCTime,
-    entryType :: Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfLedgerEntryType,
-    id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry,
+    entryType :: Domain.Types.RsfReconLedgerEntry.RsfLedgerEntryType,
+    id :: Kernel.Types.Id.Id Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry,
     invoiceNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    merchantId :: Kernel.Prelude.Text,
-    merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     orderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     orderPaymentAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -46,7 +48,7 @@ data RsfReconLedgerEntry = RsfReconLedgerEntry
     rideId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     settlementId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     settlementReasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    source :: Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfLedgerSource,
+    source :: Domain.Types.RsfReconLedgerEntry.RsfLedgerSource,
     ttl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     utr :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

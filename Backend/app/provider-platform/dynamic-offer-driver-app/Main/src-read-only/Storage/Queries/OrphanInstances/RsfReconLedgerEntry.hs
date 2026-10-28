@@ -1,22 +1,22 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Lib.Finance.Storage.Queries.OrphanInstances.RsfReconLedgerEntry where
+module Storage.Queries.OrphanInstances.RsfReconLedgerEntry where
 
+import qualified Domain.Types.RsfReconLedgerEntry
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Lib.Finance.Domain.Types.RsfReconLedgerEntry
-import qualified Lib.Finance.Storage.Beam.RsfReconLedgerEntry as Beam
+import qualified Storage.Beam.RsfReconLedgerEntry as Beam
 
-instance FromTType' Beam.RsfReconLedgerEntry Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry where
+instance FromTType' Beam.RsfReconLedgerEntry Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry where
   fromTType' (Beam.RsfReconLedgerEntryT {..}) = do
     pure $
       Just
-        Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry
+        Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry
           { actorId = actorId,
             actorType = actorType,
             amount = amount,
@@ -38,8 +38,8 @@ instance FromTType' Beam.RsfReconLedgerEntry Lib.Finance.Domain.Types.RsfReconLe
             entryType = entryType,
             id = Kernel.Types.Id.Id id,
             invoiceNo = invoiceNo,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             messageId = messageId,
             orderId = orderId,
             orderPaymentAmount = orderPaymentAmount,
@@ -61,8 +61,8 @@ instance FromTType' Beam.RsfReconLedgerEntry Lib.Finance.Domain.Types.RsfReconLe
             withholdingTaxTds = withholdingTaxTds
           }
 
-instance ToTType' Beam.RsfReconLedgerEntry Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry where
-  toTType' (Lib.Finance.Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry {..}) = do
+instance ToTType' Beam.RsfReconLedgerEntry Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry where
+  toTType' (Domain.Types.RsfReconLedgerEntry.RsfReconLedgerEntry {..}) = do
     Beam.RsfReconLedgerEntryT
       { Beam.actorId = actorId,
         Beam.actorType = actorType,
@@ -85,8 +85,8 @@ instance ToTType' Beam.RsfReconLedgerEntry Lib.Finance.Domain.Types.RsfReconLedg
         Beam.entryType = entryType,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.invoiceNo = invoiceNo,
-        Beam.merchantId = merchantId,
-        Beam.merchantOperatingCityId = merchantOperatingCityId,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.messageId = messageId,
         Beam.orderId = orderId,
         Beam.orderPaymentAmount = orderPaymentAmount,

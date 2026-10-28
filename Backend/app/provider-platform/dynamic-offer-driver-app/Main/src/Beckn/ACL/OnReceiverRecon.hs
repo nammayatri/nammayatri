@@ -4,6 +4,7 @@ module Beckn.ACL.OnReceiverRecon
   )
 where
 
+import qualified BecknV2.RSF.Enums as Enums
 import qualified BecknV2.RSF.Types as Spec
 import qualified Data.Text as T
 import Kernel.Prelude
@@ -22,12 +23,12 @@ data ReconReport = ReconReport
 
 -- Phase 4 (step 11): the inbound context echoed back with the new action and a fresh timestamp.
 -- Every order answers with order_recon_status 02 (Finale) and a diff amount (0 when 01); message only when not 01.
-buildOnReceiverReconReq :: Spec.RSFContext -> UTCTime -> Text -> [ReconReport] -> Spec.OnReceiverReconReq
-buildOnReceiverReconReq inboundCtx now receiverAppId reports =
+buildOnReceiverReconReq :: Spec.RSFContext -> UTCTime -> Text -> Currency -> [ReconReport] -> Spec.OnReceiverReconReq
+buildOnReceiverReconReq inboundCtx now receiverAppId currency reports =
   Spec.OnReceiverReconReq
     { onReceiverReconReqContext =
         inboundCtx
-          { Spec.rsfContextAction = Just "on_receiver_recon",
+          { Spec.rsfContextAction = Just Enums.ON_RECEIVER_RECON,
             Spec.rsfContextTimestamp = Just (UTCTimeRFC3339 now)
           },
       onReceiverReconReqMessage =
@@ -45,20 +46,21 @@ buildOnReceiverReconReq inboundCtx now receiverAppId reports =
           rsfOnOrderInvoiceNo = report.orderId >> report.echo >>= (.invoiceNo),
           rsfOnOrderCollectorAppId = report.echo >>= (.collectorAppId),
           rsfOnOrderReceiverAppId = Just receiverAppId,
-          rsfOnOrderOrderReconStatus = Just "02",
+          rsfOnOrderOrderReconStatus = Just Enums.ORS_FINALE,
           rsfOnOrderTransactionId = report.echo >>= (.orderTransactionId),
           rsfOnOrderSettlementId = report.echo >>= (.settlementId),
           rsfOnOrderCounterpartyReconStatus = Just report.verdict.status,
           rsfOnOrderCounterpartyDiffAmount =
             Just
               Spec.RSFCounterpartyDiffAmount
-                { rsfDiffAmountCurrency = Just "INR",
+                { rsfDiffAmountCurrency = Just (show currency),
                   rsfDiffAmountValue = Just (showAmount report.verdict.diff)
                 },
           rsfOnOrderMessage = report.verdict.code $> Spec.RSFDiffMessage report.verdict.name report.verdict.code,
           rsfOnOrderSettlementReferenceNo = if T.null report.utr then Nothing else Just report.utr
         }
 
--- "100" rather than "100.0" for whole amounts, as the collector sends them.
+-- Exact decimal text ("0.05", never Show's Double "5.0e-2"); "100" rather than "100.0" for whole amounts, as the
+-- collector sends them.
 showAmount :: HighPrecMoney -> Text
-showAmount amount = let t = T.pack (show amount) in fromMaybe t (T.stripSuffix ".0" t)
+showAmount amount = let t = highPrecMoneyToText amount in fromMaybe t (T.stripSuffix ".0" t)
