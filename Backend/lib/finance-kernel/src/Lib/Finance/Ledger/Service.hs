@@ -1133,15 +1133,17 @@ markEntriesAsUnsettled entryIds = do
 --   hold-back and become redeemable by their timestamp, see Note [Redeemable payout calculation].
 releaseExternalPendingByReferenceIds ::
   (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  Text -> -- merchant id: only this merchant's entries are released
   [Text] -> -- reference ids (booking ids)
   m ()
-releaseExternalPendingByReferenceIds [] = pure ()
-releaseExternalPendingByReferenceIds referenceIds = do
+releaseExternalPendingByReferenceIds _ [] = pure ()
+releaseExternalPendingByReferenceIds merchantId referenceIds = do
   actorInfo <- asks (.actorInfo)
   heldEntries <-
     findAllWithKV
       [ Se.And
-          [ Se.Is BeamLE.referenceId $ Se.In referenceIds,
+          [ Se.Is BeamLE.merchantId $ Se.Eq merchantId,
+            Se.Is BeamLE.referenceId $ Se.In referenceIds,
             Se.Is BeamLE.status $ Se.In [PENDING, SETTLED],
             Se.Is BeamLE.settlementStatus $ Se.Eq (Just EXTERNAL_PENDING)
           ]

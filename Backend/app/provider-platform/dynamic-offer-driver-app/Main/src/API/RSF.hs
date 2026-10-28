@@ -6,8 +6,6 @@ import Environment
 type API =
   ReceiverRecon.API
 
--- :<|> OnReceiverRecon.API
-
 handler :: FlowServer API
 handler =
   ReceiverRecon.handler

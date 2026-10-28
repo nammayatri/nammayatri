@@ -42,6 +42,7 @@ module BecknV2.RSF.Types
   )
 where
 
+import BecknV2.RSF.Enums
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), genericParseJSON, genericToJSON)
 import Data.Aeson.Types (Options (..), defaultOptions, typeMismatch)
 import Data.Data (Data)
@@ -103,10 +104,10 @@ optionsOnReceiverReconReq =
       ]
 
 data RSFContext = RSFContext
-  { rsfContextDomain :: Maybe Text,
+  { rsfContextDomain :: Maybe RSFDomain,
     rsfContextCountry :: Maybe Text,
     rsfContextCity :: Maybe Text,
-    rsfContextAction :: Maybe Text,
+    rsfContextAction :: Maybe RSFAction,
     rsfContextCoreVersion :: Maybe Text,
     rsfContextBapId :: Maybe Text,
     rsfContextBapUri :: Maybe Text,
@@ -200,12 +201,12 @@ data RSFOrder = RSFOrder
     rsfOrderWithholdingTaxTds :: Maybe RSFMonetaryValue,
     rsfOrderDeductionByCollector :: Maybe RSFMonetaryValue,
     rsfOrderPayerdetails :: Maybe RSFPayerDetails,
-    rsfOrderSettlementReasonCode :: Maybe Text,
+    rsfOrderSettlementReasonCode :: Maybe SettlementReasonCode,
     rsfOrderTransactionId :: Maybe Text,
     rsfOrderSettlementId :: Maybe Text,
     rsfOrderSettlementReferenceNo :: Maybe Text,
-    rsfOrderReconStatus :: Maybe Text,
-    rsfOrderOrderReconStatus :: Maybe Text,
+    rsfOrderReconStatus :: Maybe ReconStatus,
+    rsfOrderOrderReconStatus :: Maybe OrderReconStatus,
     rsfOrderCreatedAt :: Maybe UTCTimeRFC3339,
     rsfOrderUpdatedAt :: Maybe UTCTimeRFC3339
   }
@@ -342,7 +343,7 @@ data RSFSettlementDetail = RSFSettlementDetail
     rsfSettlementDetailBranchName :: Maybe Text,
     rsfSettlementDetailBeneficiaryAddress :: Maybe Text,
     rsfSettlementDetailBeneficiaryName :: Maybe Text,
-    rsfSettlementDetailStatus :: Maybe Text,
+    rsfSettlementDetailStatus :: Maybe WireSettlementStatus,
     rsfSettlementDetailReference :: Maybe Text,
     rsfSettlementDetailTimestamp :: Maybe UTCTimeRFC3339
   }
@@ -500,10 +501,10 @@ data RSFOnReceiverReconOrder = RSFOnReceiverReconOrder
     rsfOnOrderInvoiceNo :: Maybe Text,
     rsfOnOrderCollectorAppId :: Maybe Text,
     rsfOnOrderReceiverAppId :: Maybe Text,
-    rsfOnOrderOrderReconStatus :: Maybe Text,
+    rsfOnOrderOrderReconStatus :: Maybe OrderReconStatus,
     rsfOnOrderTransactionId :: Maybe Text,
     rsfOnOrderSettlementId :: Maybe Text,
-    rsfOnOrderCounterpartyReconStatus :: Maybe Text,
+    rsfOnOrderCounterpartyReconStatus :: Maybe CounterpartyReconStatus,
     rsfOnOrderCounterpartyDiffAmount :: Maybe RSFCounterpartyDiffAmount,
     rsfOnOrderMessage :: Maybe RSFDiffMessage,
     rsfOnOrderSettlementReferenceNo :: Maybe Text
@@ -563,7 +564,7 @@ optionsRSFDiffAmount =
 
 data RSFDiffMessage = RSFDiffMessage
   { rsfDiffMessageName :: Maybe Text,
-    rsfDiffMessageCode :: Maybe Text
+    rsfDiffMessageCode :: Maybe DiffMessageCode
   }
   deriving (Show, Eq, Generic, Data)
 

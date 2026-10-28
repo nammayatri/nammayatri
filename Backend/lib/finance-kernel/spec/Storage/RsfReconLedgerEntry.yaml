@@ -80,7 +80,6 @@ RsfReconLedgerEntry:
   extraIndexes:
     - columns: [merchantId, orderId]
     - columns: [merchantId, utr]
-    - columns: [merchantId, messageId, entryType]
 
   sqlType:
     amount: numeric(30,2)

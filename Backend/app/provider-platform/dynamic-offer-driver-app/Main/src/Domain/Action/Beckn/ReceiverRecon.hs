@@ -8,6 +8,7 @@ module Domain.Action.Beckn.ReceiverRecon
   )
 where
 
+import qualified Data.HashSet as HS
 import Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -65,12 +66,13 @@ data SettlementDetailParsed = SettlementDetailParsed
     settlementTimestamp :: UTCTime
   }
 
--- Phase 2 (async, steps 4-9): persist first, then let each stage settle claim_status.
+-- Phase 2 (async, steps 4-9): persist first, then let each stage settle claim_status. A message is done only
+-- once MESSAGE_PROCESSED is written; a retry of a half-processed one resumes it (each step skips what it already wrote).
 --   4. MESSAGE_RECEIVED envelope row
 --   5. stage A per order (payload only): payment is PAID, Σ legs == payment.params.amount
 --   6. one BAP_CLAIM per settlement leg -- PENDING if stage A passed, else straight to its rejection
 --   7. stage B: recon-framework pass (fare, then finder fee) settles only the failures
---   8. stage C: closed-UTR check, then the survivors become ACCEPTED
+--   8. stage C (under the merchant's finance lock): closed-UTR check, then the survivors become ACCEPTED
 --   9. MESSAGE_PROCESSED -- the last write; Phase 4 will not send without it
 -- Rides come in from Phase 1 (E4 already resolved every order id).
 runReceiverReconPass ::
@@ -81,26 +83,31 @@ runReceiverReconPass ::
   Flow ()
 runReceiverReconPass merchantId merchantOpCityId req rideByOrderId =
   Hedis.withLockRedis ("RsfIngest:" <> merchantId.getId <> ":" <> req.messageId) 300 $ do
-    alreadyReceived <- QLedger.findMessageReceived merchantId.getId req.messageId
-    if isJust alreadyReceived
-      then logWarning $ "RSF ingest: messageId=" <> req.messageId <> " already in the ledger, skipping"
+    let mid = merchantId.getId
+    existing <- QLedger.findAllByMerchantAndMessageId mid req.messageId
+    if not (null (RSFLedger.ofType L.MESSAGE_PROCESSED existing))
+      then logWarning $ "RSF ingest: messageId=" <> req.messageId <> " already processed, skipping"
       else do
         now <- getCurrentTime
-        let mid = merchantId.getId
-            mocId = Just merchantOpCityId.getId
+        let mocId = Just merchantOpCityId.getId
             orderIds = nub $ map (.orderId) req.orders
+            -- a claim belongs to its ride's city; the merchant's default city only when the ride is unknown
+            cityOf orderId = maybe mocId (Just . (.merchantOperatingCityId.getId)) (Map.lookup orderId rideByOrderId)
+            earlierClaims = RSFLedger.ofType L.BAP_CLAIM existing
+            writtenLegs = HS.fromList [(o, u) | c <- earlierClaims, Just o <- [c.orderId], Just u <- [c.utr]]
 
         -- step 4
-        envelope <- RSFLedger.baseEntry mid mocId L.MESSAGE_RECEIVED L.BAP_CLAIMED 0 req.contextTimestamp
-        QLedger.create
-          envelope
-            { L.messageId = Just req.messageId,
-              L.contextTransactionId = Just req.reconTransactionId,
-              L.bapId = Just req.bapId,
-              L.bapUri = Just req.bapUri,
-              L.ttl = req.ttl,
-              L.rawJson = Just req.rawJson
-            }
+        when (null (RSFLedger.ofType L.MESSAGE_RECEIVED existing)) $ do
+          envelope <- RSFLedger.baseEntry mid mocId L.MESSAGE_RECEIVED L.BAP_CLAIMED 0 req.contextTimestamp
+          QLedger.create
+            envelope
+              { L.messageId = Just req.messageId,
+                L.contextTransactionId = Just req.reconTransactionId,
+                L.bapId = Just req.bapId,
+                L.bapUri = Just req.bapUri,
+                L.ttl = req.ttl,
+                L.rawJson = Just req.rawJson
+              }
 
         -- steps 5 + 6. A leg already ACCEPTED with the same amount is a re-send: no-op, never re-judged.
         priorEntries <- QLedger.findAllByMerchantAndOrderIds mid orderIds
@@ -111,10 +118,11 @@ runReceiverReconPass merchantId merchantOpCityId req rideByOrderId =
                 | order <- req.orders,
                   let stageA = runStageA order,
                   leg <- order.settlementDetails,
+                  not (HS.member (order.orderId, leg.utr) writtenLegs),
                   isJust stageA || not (isResend order leg)
               ]
         claimRows <- forM (zip [0 :: Int ..] legsToWrite) $ \(idx, (order, leg, stageA)) -> do
-          row <- RSFLedger.baseEntry mid mocId L.BAP_CLAIM L.BAP_CLAIMED leg.amount leg.settlementTimestamp
+          row <- RSFLedger.baseEntry mid (cityOf order.orderId) L.BAP_CLAIM L.BAP_CLAIMED leg.amount leg.settlementTimestamp
           let mbRide = Map.lookup order.orderId rideByOrderId
           pure
             row{L.messageId = Just req.messageId,
@@ -136,22 +144,25 @@ runReceiverReconPass merchantId merchantOpCityId req rideByOrderId =
                 L.driverId = (.driverId.getId) <$> mbRide,
                 L.claimStatus = Just (maybe L.PENDING fst stageA),
                 L.rejectionDiff = snd <$> stageA,
-                -- microsecond offsets keep payload (claim) order recoverable from createdAt
-                L.createdAt = addUTCTime (fromIntegral idx / 1000000) now -- Need Attention
+                -- the ledger has no sequence column: microsecond offsets keep the payload's leg order in createdAt
+                L.createdAt = addUTCTime (fromIntegral idx / 1000000) now
                }
         QLedger.createMany claimRows
-        -- the two projections get their (status NULL) row the first time an order / UTR is seen;
-        -- the dashboard pages over them, Phase 4 stamps them
-        QOrderState.createMissing mid (Just req.bapId) now orderIds
-        QUtrState.createMissing mid (Just req.bapId) now (mapMaybe (.utr) claimRows)
 
         -- step 7. One lock for the whole message (held above), not one per order.
-        let pendingOrderIds = nub [oid | r <- claimRows, r.claimStatus == Just L.PENDING, Just oid <- [r.orderId]]
+        -- every PENDING claim of the message, including those an interrupted earlier attempt wrote
+        let pendingOrderIds = nub [oid | r <- claimRows <> earlierClaims, r.claimStatus == Just L.PENDING, Just oid <- [r.orderId]]
         unless (null pendingOrderIds) $
           ReconRunner.processChunkByIds RsfRecipe.recipe (ReconT.MerchantScope mid merchantOpCityId.getId) pendingOrderIds
 
-        -- step 8
-        unjudged <- runStageC mid merchantOpCityId.getId req.messageId rideByOrderId
+        -- step 8, under the merchant's finance lock: two messages on one verified UTR can't both be accepted beyond its
+        -- balance, and two messages naming the same order or UTR can't both create its projection row.
+        unjudged <- RSFLedger.withFinanceLock mid $ do
+          -- the two projections get their (status NULL) row the first time an order / UTR is seen;
+          -- the dashboard pages over them, Phase 4 stamps them
+          QOrderState.createMissing mid (Just req.bapId) now orderIds
+          QUtrState.createMissing mid (Just req.bapId) now (nub (mapMaybe (.utr) (claimRows <> earlierClaims)))
+          runStageC mid merchantOpCityId.getId req.messageId rideByOrderId
 
         -- step 9. A ride still in flight leaves its claim PENDING and the message visibly incomplete.
         if unjudged > 0
@@ -191,5 +202,5 @@ runStageC mid mocId messageId rideByOrderId = do
   unless (null verifiedUtrs) $
     ReconRunner.processChunkByIds (RsfUtrRecipe.recipe messageId) (ReconT.MerchantScope mid mocId) verifiedUtrs
   survivors <- filter hasFare . pendingClaims <$> QLedger.findAllByMerchantAndMessageId mid messageId
-  forM_ survivors $ \e -> QLedger.updateClaimStatus e.id L.ACCEPTED Nothing
+  QLedger.updateClaimStatusByIds (map (.id) survivors) L.ACCEPTED Nothing
   pure (length inFlight)

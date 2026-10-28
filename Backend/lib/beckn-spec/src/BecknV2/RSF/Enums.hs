@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveDataTypeable #-}
+
 {-
   Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -16,10 +18,18 @@ module BecknV2.RSF.Enums where
 
 import Data.Aeson
 import Data.Aeson.Types (parseFail, typeMismatch)
+import Data.Data (Data)
+import qualified Data.Text as T
 import Kernel.Prelude
 
+-- The text an enum value has on the wire (what its ToJSON writes), for storing it in a Text column.
+rsfEnumText :: ToJSON a => a -> Text
+rsfEnumText a = case toJSON a of
+  String t -> t
+  _ -> ""
+
 data RSFDomain = NTS10
-  deriving (Eq, Generic, Show, Read)
+  deriving (Eq, Ord, Generic, Show, Read, Data)
 
 instance FromJSON RSFDomain where
   parseJSON (String "ONDC:NTS10") = pure NTS10
@@ -32,7 +42,7 @@ instance ToJSON RSFDomain where
 data RSFAction
   = RECEIVER_RECON
   | ON_RECEIVER_RECON
-  deriving (Eq, Generic, Show, Read)
+  deriving (Eq, Ord, Generic, Show, Read, Data)
 
 instance FromJSON RSFAction where
   parseJSON (String "receiver_recon") = pure RECEIVER_RECON
@@ -49,7 +59,7 @@ data ReconStatus
   | RS_MATCHED
   | RS_DEEMED_SETTLED
   | RS_CLOSED
-  deriving (Eq, Generic, Show, Read)
+  deriving (Eq, Ord, Generic, Show, Read, Data)
 
 instance FromJSON ReconStatus where
   parseJSON (String "01") = pure RS_PROVISIONAL
@@ -69,7 +79,7 @@ data OrderReconStatus
   = ORS_PROVISIONAL
   | ORS_FINALE
   | ORS_OVERDUE
-  deriving (Eq, Generic, Show, Read)
+  deriving (Eq, Ord, Generic, Show, Read, Data)
 
 instance FromJSON OrderReconStatus where
   parseJSON (String "01") = pure ORS_PROVISIONAL
@@ -88,7 +98,7 @@ data CounterpartyReconStatus
   | CRS_OVERPAID
   | CRS_UNDERPAID
   | CRS_NOT_PAID
-  deriving (Eq, Generic, Show, Read)
+  deriving (Eq, Ord, Generic, Show, Read, Data)
 
 instance FromJSON CounterpartyReconStatus where
   parseJSON (String "01") = pure CRS_PAID
@@ -111,7 +121,7 @@ data SettlementReasonCode
   | SRC_CORRECTION
   | SRC_BUYER_APP_FEE
   | SRC_BUYER_APP_FEE_GST
-  deriving (Eq, Generic, Show, Read)
+  deriving (Eq, Ord, Generic, Show, Read, Data)
 
 instance FromJSON SettlementReasonCode where
   parseJSON (String "01") = pure SRC_ORDER_PAYMENT
@@ -134,7 +144,7 @@ instance ToJSON SettlementReasonCode where
 data WireSettlementStatus
   = WSS_PAID
   | WSS_NOT_PAID
-  deriving (Eq, Generic, Show, Read)
+  deriving (Eq, Ord, Generic, Show, Read, Data)
 
 instance FromJSON WireSettlementStatus where
   parseJSON (String "PAID") = pure WSS_PAID
@@ -147,17 +157,25 @@ instance ToJSON WireSettlementStatus where
   toJSON WSS_PAID = String "PAID"
   toJSON WSS_NOT_PAID = String "NOT_PAID"
 
+-- on_receiver_recon orders[].message.code: an amount deviation (less / more / missing) or an RSF error code (70000-70021).
 data DiffMessageCode
   = DMC_LESS
   | DMC_MORE
-  deriving (Eq, Generic, Show, Read)
+  | DMC_MISSING
+  | DMC_ERROR Text
+  deriving (Eq, Ord, Generic, Show, Read, Data)
 
 instance FromJSON DiffMessageCode where
   parseJSON (String "less") = pure DMC_LESS
   parseJSON (String "more") = pure DMC_MORE
-  parseJSON (String s) = parseFail $ "Invalid message.code: " <> show s
+  parseJSON (String "missing") = pure DMC_MISSING
+  parseJSON (String s)
+    | T.length s == 5 && "700" `T.isPrefixOf` s && T.all (`elem` ['0' .. '9']) s = pure (DMC_ERROR s)
+    | otherwise = parseFail $ "Invalid message.code: " <> show s
   parseJSON e = typeMismatch "String" e
 
 instance ToJSON DiffMessageCode where
   toJSON DMC_LESS = String "less"
   toJSON DMC_MORE = String "more"
+  toJSON DMC_MISSING = String "missing"
+  toJSON (DMC_ERROR code) = String code

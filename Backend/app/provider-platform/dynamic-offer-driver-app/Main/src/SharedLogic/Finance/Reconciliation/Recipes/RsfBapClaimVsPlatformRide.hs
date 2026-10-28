@@ -28,7 +28,7 @@ import qualified Storage.Queries.Ride as QRide
 -- Phase 2, stage B: check 3 (claimed fare == our ride fare) as a recon-framework pass over the
 -- orders whose BAP_CLAIM rows are still PENDING. The write-back settles only the failures; a
 -- claim that passes stays PENDING for stage C.
--- Check 4 (buyer app finder fee) is switched off for now -- its inputs still ride on srcMeta.
+-- Check 4 (buyer app finder fee) is not implemented yet.
 recipe ::
   ( BeamFlow m r,
     CacheFlow m r,
@@ -52,17 +52,13 @@ recipe =
       syncSourceStatus = Just syncClaimStatus
     }
 
-isPendingClaim :: L.RsfReconLedgerEntry -> Bool
-isPendingClaim e = e.entryType == L.BAP_CLAIM && e.claimStatus == Just L.PENDING
-
 fetchSources ::
   (BeamFlow m r, CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
   ReconT.MerchantScope ->
   ReconT.DateRange ->
   m [ReconT.SourceRecord]
 fetchSources scope range = do
-  claims <- QLedger.findAllByMerchantEntryTypeAndCreatedAtRange scope.merchantId L.BAP_CLAIM range.from range.to
-  claimsToSourceRecords scope (filter isPendingClaim claims)
+  QLedger.findClaimsByMerchantStatusAndCreatedAtRange scope.merchantId L.PENDING range.from range.to >>= claimsToSourceRecords scope
 
 fetchSourcesById ::
   (BeamFlow m r, CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
@@ -110,19 +106,6 @@ claimsToSourceRecords _scope claims = do
                 ]
     ]
 
--- Check 4 (finder fee), disabled for now. When re-enabled: fetch the bookings
--- (QBooking.findByIds), look up our advertised fee per booking and add
--- "bffExpected" / "bffTypeOk" to the meta above.
---
--- expectedBff ::
---   (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
---   ReconT.MerchantScope ->
---   DBooking.Booking ->
---   m (Maybe HighPrecMoney)
--- expectedBff scope booking = do
---   mbConfig <- CQBC.findByMerchantIdDomainAndVehicle (Id scope.merchantId) "MOBILITY" (BecknUtils.mapServiceTierToCategory booking.vehicleServiceTier)
---   pure $ mbConfig >>= (.buyerFinderFee) >>= readMaybe . T.unpack
-
 -- The target is the collector's claim: payment.params.amount as carried on the order's PENDING legs.
 fetchTargets ::
   (BeamFlow m r, CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
@@ -147,8 +130,7 @@ fetchTargets scope orderIds = do
       | (orderId, firstClaim : _) <- Map.toList grouped
     ]
 
--- Check 3 only. (Check 4, the finder fee, is commented out below; it reuses LOWER/HIGHER_IN_TARGET
--- with a BFF_MISMATCH reason once re-enabled.)
+-- Check 3 only.
 rsfClassify :: [ReconT.SourceRecord] -> [ReconT.TargetRecord] -> ReconT.ReconResult
 rsfClassify srcs tgts
   | any ((== ReconT.InFlight) . (.srcLifecycle)) srcs =
@@ -168,17 +150,6 @@ rsfClassify srcs tgts
               then ReconT.ReconResult ReconT.HIGHER_IN_TARGET (Just "FARE_MISMATCH: overpaid")
               else ReconT.ReconResult ReconT.MATCHED Nothing
 
--- Check 4 (finder fee), disabled for now:
---   let meta = listToMaybe srcs >>= (.srcMeta)
---       bffExpected = fromMaybe 0 (meta >>= extractMoney "bffExpected")
---       bffClaimed = fromMaybe 0 (meta >>= extractMoney "bffClaimed")
---       bffTypeOk = meta >>= extractField "bffTypeOk"
---       bffReason = "BFF_MISMATCH: expected " <> show bffExpected <> ", claimed " <> show bffClaimed
---   fare agreed ->
---     if bffExpected > bffClaimed || bffTypeOk == Just False then LOWER_IN_TARGET bffReason
---     else if bffExpected < bffClaimed then HIGHER_IN_TARGET bffReason
---     else MATCHED
-
 -- Write-back: a mismatch settles the claim as REJECTED_FARE_MISMATCH with a signed
 -- rejectionDiff (ours − theirs).
 syncClaimStatus ::
@@ -191,9 +162,7 @@ syncClaimStatus src status =
     let money key = fromMaybe 0 (src.srcMeta >>= extractMoney key)
         claimIds = fromMaybe [] (src.srcMeta >>= extractField "claimIds") :: [Text]
         fareDiff = money "rideFare" - money "totalClaimed"
-    -- check 4, disabled: when fareDiff == 0 the failure would be the fee ->
-    --   (L.REJECTED_BFF_MISMATCH, (money "bffExpected" - money "bffClaimed") * money "rideFare" / 100)
-    forM_ claimIds $ \claimId -> QLedger.updateClaimStatus (Id claimId) L.REJECTED_FARE_MISMATCH (Just fareDiff)
+    QLedger.updateClaimStatusByIds (map Id claimIds) L.REJECTED_FARE_MISMATCH (Just fareDiff)
 
 extractField :: (A.FromJSON a) => Text -> A.Value -> Maybe a
 extractField key (A.Object o) = AKM.lookup (AK.fromText key) o >>= A.parseMaybe A.parseJSON

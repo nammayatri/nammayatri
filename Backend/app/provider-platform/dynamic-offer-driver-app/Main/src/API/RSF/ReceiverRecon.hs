@@ -1,12 +1,14 @@
 module API.RSF.ReceiverRecon (API, handler) where
 
 import qualified Beckn.ACL.ReceiverRecon as ACL
+import qualified BecknV2.RSF.Enums as Enums
 import qualified BecknV2.RSF.Types as Spec
 import qualified BecknV2.RSF.Utils as RSFUtils
 import qualified Data.Aeson as A
 import Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.ReceiverRecon as DRecon
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -48,12 +50,13 @@ receiverRecon merchantId authResult rawBody = withFlowHandlerAPI $ do
   case A.fromJSON rawBody of
     A.Success (req :: Spec.ReceiverReconReq) -> receiverReconHandler merchantId authResult rawBody req
     A.Error err -> do
+      -- a value outside an RSF enum (domain, action, statuses, reason code) fails here, as does a field of the wrong type
       logError $ "RSF: receiver_recon malformed body: " <> show err
-      pure $ RSFUtils.buildNackForCode RSFUtils.RSFMissingMandatory
+      pure $ RSFUtils.buildNackWithDetail RSFUtils.RSFInvalidEnum (Just (T.pack err))
 
 -- Phase 1 (sync, steps 1-3): decides ACK / NACK and writes nothing.
 --   E1 schema + context + the signing subscriber is the context's bap_id, E2 the merchant in the path exists
---   (bpp_id is only cross-checked against it: collectors address us by the id they registered), E3 message_id unseen,
+--   (bpp_id is only cross-checked against it: collectors address us by the id they registered), E3 message_id not yet processed,
 --   E4 every orders[].id is an online (non-cash) booking this BAP made with us and has a ride (one unknown id NACKs the whole message),
 --   E5 an order already funded from some UTRs repeats every funded leg unchanged (same UTR, same amount).
 -- On ACK the Phase 2 pass is forked with the ride rows already in memory.
@@ -86,17 +89,22 @@ receiverReconHandler merchantId authResult rawBody req = do
             Nothing -> do
               logError $ "RSF: no operating city for merchant=" <> merchantId.getId
               pure $ RSFUtils.buildNack "No operating city found for merchant"
+            Just moc | ACL.currencyMismatch moc.currency req -> do
+              logError $ "RSF: messageId=" <> domainReq.messageId <> " has a currency other than " <> show moc.currency
+              pure $ RSFUtils.buildNackForCode RSFUtils.RSFInvalidCurrency
             Just moc -> do
-              -- E3 first; the ride lookup for E4 only runs for a message we have not seen
-              isDuplicate <- isJust <$> QLedger.findMessageReceived merchant.id.getId domainReq.messageId
+              -- E3 first; the ride lookup for E4 only runs for a message not yet fully processed. A message whose
+              -- processing was interrupted is not a duplicate: the collector's retry resumes it.
+              isDuplicate <- isJust <$> QLedger.findMessageProcessed merchant.id.getId domainReq.messageId
               if isDuplicate
                 then do
                   logWarning $ "RSF: duplicate messageId=" <> domainReq.messageId
                   pure $ RSFUtils.buildNackForCode RSFUtils.RSFDuplicateMessage
                 else do
                   let orderIds = nub $ map (.orderId) domainReq.orders
-                  -- E4 only knows online orders this BAP booked with us: a cash ride or another BAP's booking is unknown here
-                  ownBookingIds <- map (.id) <$> B.runInReplica (QBooking.findAllOnlineByIdsAndBapId (map Id orderIds) domainReq.bapId)
+                  -- E4 only knows online orders this BAP booked with this merchant: a cash ride, another BAP's or
+                  -- another merchant's booking is unknown here
+                  ownBookingIds <- map (.id) <$> B.runInReplica (QBooking.findAllOnlineByIdsAndBapId merchant.id (map Id orderIds) domainReq.bapId)
                   rideByOrderId <- RSFLedger.latestRideByBooking <$> B.runInReplica (QRide.findRidesByBookingId ownBookingIds)
                   let unknownOrderIds = filter (`Map.notMember` rideByOrderId) orderIds
                   if not (null unknownOrderIds)
@@ -127,10 +135,10 @@ allocatedLegsChanged merchantId orders = do
 
 validateContext :: Spec.RSFContext -> Maybe Spec.RSFAckResponse
 validateContext ctx
-  | ctx.rsfContextDomain /= Just "ONDC:NTS10" =
+  | ctx.rsfContextDomain /= Just Enums.NTS10 =
     Just $ RSFUtils.buildNackForCode RSFUtils.RSFInvalidDomain
-  | ctx.rsfContextAction /= Just "receiver_recon" =
+  | ctx.rsfContextAction /= Just Enums.RECEIVER_RECON =
     Just $ RSFUtils.buildNackForCode RSFUtils.RSFInvalidAction
-  | ctx.rsfContextCoreVersion /= Just "1.0.0" =
+  | ctx.rsfContextCoreVersion /= Just RSFUtils.rsfCoreVersion =
     Just $ RSFUtils.buildNackForCode RSFUtils.RSFInvalidVersion
   | otherwise = Nothing

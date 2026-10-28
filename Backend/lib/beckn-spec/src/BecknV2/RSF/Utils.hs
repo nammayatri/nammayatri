@@ -15,11 +15,8 @@
 module BecknV2.RSF.Utils where
 
 import qualified BecknV2.RSF.Types as Spec
-import qualified Data.Text as T
-import Data.Time (addUTCTime)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, highPrecMoneyFromText, roundHighPrecMoney)
-import Kernel.Types.TimeRFC339 (UTCTimeRFC3339)
 
 -- Wire amounts are compared exactly (Σ legs == amount), so they are parsed as exact decimals
 -- (never via Double) and normalised to paise.
@@ -29,76 +26,12 @@ parseMonetaryString = fmap roundToPaise . highPrecMoneyFromText
 roundToPaise :: HighPrecMoney -> HighPrecMoney
 roundToPaise = roundHighPrecMoney @HighPrecMoney 2
 
-parseDeadline :: UTCTime -> Maybe Text -> Maybe UTCTime
-parseDeadline now mTtl = do
-  ttl <- mTtl
-  seconds <- parseISO8601DurationToSeconds ttl
-  pure $ addUTCTime (fromIntegral seconds) now
-
-parseISO8601DurationToSeconds :: Text -> Maybe Int
-parseISO8601DurationToSeconds t = do
-  let s = T.unpack t
-  case s of
-    'P' : rest
-      | null rest -> Nothing
-      | otherwise -> parseDuration rest 0 False
-    _ -> Nothing
-  where
-    parseDuration [] acc hadComponent
-      | hadComponent = Just acc
-      | otherwise = Nothing
-    parseDuration ('T' : rest) acc hadComponent
-      | null rest = Nothing
-      | otherwise = parseTimePart rest acc hadComponent False False False
-    parseDuration rest acc _hadComponent = do
-      let (numStr, remaining) = span isDigit rest
-      num <- readMaybe numStr
-      case remaining of
-        'D' : rest' -> parseDuration rest' (acc + num * 86400) True
-        _ -> Nothing
-
-    parseTimePart [] acc hadComponent _ _ _
-      | hadComponent = Just acc
-      | otherwise = Nothing
-    parseTimePart rest acc _hadComponent seenH seenM seenS = do
-      let (numStr, remaining) = span isDigit rest
-      num <- readMaybe numStr
-      case remaining of
-        'H' : rest' | not seenH -> parseTimePart rest' (acc + num * 3600) True True seenM seenS
-        'M' : rest' | not seenM -> parseTimePart rest' (acc + num * 60) True seenH True seenS
-        'S' : rest' | not seenS -> parseTimePart rest' (acc + num) True seenH seenM True
-        _ -> Nothing
-
-    isDigit c = c >= '0' && c <= '9'
-
-buildRSFContext ::
-  Text ->
-  Text ->
-  Text ->
-  Text ->
-  Text ->
-  Text ->
-  Text ->
-  Text ->
-  UTCTimeRFC3339 ->
-  Maybe Text ->
-  Spec.RSFContext
-buildRSFContext domain action bapId bapUri bppId bppUri transactionId messageId timestamp ttl =
-  Spec.RSFContext
-    { rsfContextDomain = Just domain,
-      rsfContextCountry = Just "IND",
-      rsfContextCity = Nothing,
-      rsfContextAction = Just action,
-      rsfContextCoreVersion = Just "1.0.0",
-      rsfContextBapId = Just bapId,
-      rsfContextBapUri = Just bapUri,
-      rsfContextBppId = Just bppId,
-      rsfContextBppUri = Just bppUri,
-      rsfContextTransactionId = Just transactionId,
-      rsfContextMessageId = Just messageId,
-      rsfContextTimestamp = Just timestamp,
-      rsfContextTtl = ttl
-    }
+-- RSF 1.0 (ONDC:NTS10) wire constants (the domain and action are BecknV2.RSF.Enums values). -- Need to discuss which all value we should store merchant wise or city wise
+rsfCoreVersion, rsfCountry, rsfCity, rsfTtl :: Text
+rsfCoreVersion = "1.0.0"
+rsfCountry = "IND"
+rsfCity = "*" -- settlement is not city-scoped
+rsfTtl = "P2D" -- two days
 
 buildAck :: Spec.RSFAckResponse
 buildAck =
@@ -116,6 +49,9 @@ data RSFErrorCode
   | RSFDuplicateMessage
   | RSFNoRecordFound
   | RSFAllocatedUtrMissing
+  | RSFInvalidEnum
+  | RSFInvalidAmount
+  | RSFInvalidCurrency
   deriving (Show, Eq)
 
 rsfErrorCodeToText :: RSFErrorCode -> Text
@@ -128,6 +64,9 @@ rsfErrorCodeToText = \case
   RSFDuplicateMessage -> "70003"
   RSFNoRecordFound -> "70010"
   RSFAllocatedUtrMissing -> "70011"
+  RSFInvalidEnum -> "70001"
+  RSFInvalidAmount -> "70020"
+  RSFInvalidCurrency -> "70021"
 
 rsfErrorDefaultMessage :: RSFErrorCode -> Text
 rsfErrorDefaultMessage = \case
@@ -139,12 +78,19 @@ rsfErrorDefaultMessage = \case
   RSFDuplicateMessage -> "Duplicate message_id"
   RSFNoRecordFound -> "No record found for one or more order ids"
   RSFAllocatedUtrMissing -> "settlement_details omit a UTR already allocated to the order"
+  RSFInvalidEnum -> "Wrong enum value or field format"
+  RSFInvalidAmount -> "Amount is not a valid number"
+  RSFInvalidCurrency -> "Currency is not the merchant's currency"
 
 buildNackForCode :: RSFErrorCode -> Spec.RSFAckResponse
-buildNackForCode code =
+buildNackForCode code = buildNackWithDetail code Nothing
+
+-- The code's message plus what exactly was wrong (e.g. the missing field), for the collector to act on.
+buildNackWithDetail :: RSFErrorCode -> Maybe Text -> Spec.RSFAckResponse
+buildNackWithDetail code detail =
   Spec.RSFAckResponse
     { rsfAckResponseMessage = Spec.RSFAckMessage {rsfAckMessageAck = Spec.RSFAck {rsfAckStatus = Just "NACK"}},
-      rsfAckResponseError = Just $ Spec.RSFError {rsfErrorMessage = Just (rsfErrorDefaultMessage code), rsfErrorCode = Just (rsfErrorCodeToText code)}
+      rsfAckResponseError = Just $ Spec.RSFError {rsfErrorMessage = Just (rsfErrorDefaultMessage code <> maybe "" (": " <>) detail), rsfErrorCode = Just (rsfErrorCodeToText code)}
     }
 
 buildNack :: Text -> Spec.RSFAckResponse

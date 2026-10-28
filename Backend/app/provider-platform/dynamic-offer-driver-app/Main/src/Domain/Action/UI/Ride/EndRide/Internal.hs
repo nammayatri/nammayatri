@@ -577,32 +577,24 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       (holdCounterparty, holdOwnerId) = case ride.fleetOwnerId of
         Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
         Nothing -> (counterpartyDriver, ride.driverId.getId)
+  let requireBapConfirm = fromMaybe False transporterConfig.driverWalletConfig.requireBapSettlementConfirmation
+      forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
+  -- one payment-method read, outside the wallet lock and only when the BAP check or the online check needs it
+  mbPaymentMethod <-
+    if requireBapConfirm || not forceOnline
+      then forM booking.paymentMethodId $ \paymentMethodId ->
+        CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+          >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+      else pure Nothing
+  let isCollectedByBap = maybe False ((== BAP) . (.collectedBy)) mbPaymentMethod
+  isExternalBap <- if requireBapConfirm && isCollectedByBap then not <$> CQVAN.isValueAddNP booking.bapId else pure False
+  let shouldSetBapPending = requireBapConfirm && isCollectedByBap && isExternalBap
+      initialSettlementStatus = if shouldSetBapPending then Just LE.EXTERNAL_PENDING else Nothing
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverOrFleetPersonId.getId) 10 10 $ do
     voidWalletHoldByReference holdCounterparty holdOwnerId booking.id.getId "Ride completed - replaced by actual deductions"
-    mbPaymentMethodForBap <- forM booking.paymentMethodId $ \paymentMethodId ->
-      do
-        CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-
-    isExternalBap <- not <$> CQVAN.isValueAddNP booking.bapId
-    let requireBapConfirm = fromMaybe False transporterConfig.driverWalletConfig.requireBapSettlementConfirmation
-        isCollectedByBap = case mbPaymentMethodForBap of
-          Just pm -> pm.collectedBy == BAP
-          Nothing -> False
-        shouldSetBapPending = requireBapConfirm && isCollectedByBap && isExternalBap
-        initialSettlementStatus = if shouldSetBapPending then Just LE.EXTERNAL_PENDING else Nothing
 
     isOnline <- do
-      let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
-      resolvedIsOnline <-
-        if forceOnline
-          then pure True
-          else do
-            mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
-              do
-                CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-                >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-            pure $ maybe False (isOnlinePaymentInstrument . (.paymentInstrument)) mbPaymentMethod
+      let resolvedIsOnline = forceOnline || maybe False (isOnlinePaymentInstrument . (.paymentInstrument)) mbPaymentMethod
       -- Persist the computed ledger write mode on the booking for reconciliation
       QRB.updateLedgerWriteMode booking.id (Just resolvedIsOnline)
       pure resolvedIsOnline

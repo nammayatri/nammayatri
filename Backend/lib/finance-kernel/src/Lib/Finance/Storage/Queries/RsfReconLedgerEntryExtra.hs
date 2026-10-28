@@ -2,6 +2,7 @@
 
 module Lib.Finance.Storage.Queries.RsfReconLedgerEntryExtra
   ( findMessageReceived,
+    findMessageProcessed,
     findAllByMerchantAndMessageId,
     findAllByMerchantAndOrderIds,
     findAllByMerchantAndUtrs,
@@ -12,6 +13,7 @@ module Lib.Finance.Storage.Queries.RsfReconLedgerEntryExtra
     findClaimsByMerchantStatusAndCreatedAtRange,
     findAllByMerchantEntryTypeAndCreatedAtRange,
     updateClaimStatus,
+    updateClaimStatusByIds,
   )
 where
 
@@ -59,6 +61,23 @@ findMessageReceived merchantId messageId =
           [ Se.Is Beam.merchantId $ Se.Eq merchantId,
             Se.Is Beam.messageId $ Se.Eq (Just messageId),
             Se.Is Beam.entryType $ Se.Eq Domain.MESSAGE_RECEIVED
+          ]
+      ]
+
+-- Phase 1 (E3): a message is a duplicate only once it was fully processed; a half-processed one is taken
+-- again so a retry can finish it.
+findMessageProcessed ::
+  (BeamFlow m r) =>
+  Text ->
+  Text ->
+  m (Maybe Domain.RsfReconLedgerEntry)
+findMessageProcessed merchantId messageId =
+  listToMaybe
+    <$> findLedgerRows
+      [ Se.And
+          [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+            Se.Is Beam.messageId $ Se.Eq (Just messageId),
+            Se.Is Beam.entryType $ Se.Eq Domain.MESSAGE_PROCESSED
           ]
       ]
 
@@ -223,6 +242,27 @@ updateClaimStatus entryId claimStatus rejectionDiff = do
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (getId entryId),
+          Se.Is Beam.entryType $ Se.Eq Domain.BAP_CLAIM
+        ]
+    ]
+
+-- The same, for many claims settled to one status in a single UPDATE.
+updateClaimStatusByIds ::
+  (BeamFlow m r) =>
+  [Id Domain.RsfReconLedgerEntry] ->
+  Domain.RsfClaimStatus ->
+  Maybe HighPrecMoney ->
+  m ()
+updateClaimStatusByIds [] _ _ = pure ()
+updateClaimStatusByIds entryIds claimStatus rejectionDiff = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.claimStatus (Just claimStatus),
+      Se.Set Beam.rejectionDiff rejectionDiff,
+      Se.Set Beam.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.In (map getId entryIds),
           Se.Is Beam.entryType $ Se.Eq Domain.BAP_CLAIM
         ]
     ]

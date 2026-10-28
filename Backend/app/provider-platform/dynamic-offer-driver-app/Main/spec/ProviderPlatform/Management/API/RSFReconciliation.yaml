@@ -124,17 +124,16 @@ apis:
       response:
         type: SendForDateRes
 
-  # Rides completed on the platform between from and to that no receiver_recon ever claimed.
+  # Rides completed on the platform on `date` (IST day) that no receiver_recon ever claimed.
   - GET: # ReconUnmatchedAPI
       endpoint: /rsf/recon/unmatched
       migrate:
         capability: financeManagement.rsfRecon.unmatched
       auth: ApiAuthV2
       query:
+        date: Day
         limit: Int
         offset: Int
-        from: UTCTime
-        to: UTCTime
       response:
         type: ReconGridListRes
 

@@ -45,4 +45,3 @@ ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD COLUMN withholding
 ALTER TABLE atlas_driver_offer_bpp.rsf_recon_ledger_entry ADD PRIMARY KEY ( id);
 CREATE INDEX CONCURRENTLY rsf_recon_ledger_entry_idx_merchant_id_order_id ON atlas_driver_offer_bpp.rsf_recon_ledger_entry USING btree (merchant_id, order_id);
 CREATE INDEX CONCURRENTLY rsf_recon_ledger_entry_idx_merchant_id_utr ON atlas_driver_offer_bpp.rsf_recon_ledger_entry USING btree (merchant_id, utr);
-CREATE INDEX CONCURRENTLY rsf_recon_ledger_entry_idx_entry_type_merchant_id_message_id ON atlas_driver_offer_bpp.rsf_recon_ledger_entry USING btree (entry_type, merchant_id, message_id);

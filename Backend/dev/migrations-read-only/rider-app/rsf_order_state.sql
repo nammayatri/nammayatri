@@ -21,4 +21,3 @@ ALTER TABLE atlas_app.rsf_order_state ADD COLUMN bap_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rsf_order_state ADD COLUMN last_claimed_at timestamp with time zone ;
-CREATE INDEX CONCURRENTLY rsf_order_state_idx_last_claimed_at_merchant_id ON atlas_app.rsf_order_state USING btree (last_claimed_at, merchant_id);

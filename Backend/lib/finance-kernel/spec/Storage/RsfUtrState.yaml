@@ -30,8 +30,6 @@ RsfUtrState:
   sqlType:
     reportedDiff: numeric(30,2)
 
-  extraIndexes:
-    - columns: [merchantId, lastClaimedAt]
 
   extraOperations:
     - EXTRA_QUERY_FILE

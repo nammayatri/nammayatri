@@ -48,7 +48,7 @@ recipe messageId =
 
 fetchSources :: (BeamFlow m r) => Text -> ReconT.MerchantScope -> ReconT.DateRange -> m [ReconT.SourceRecord]
 fetchSources messageId scope range = do
-  claims <- QLedger.findAllByMerchantEntryTypeAndCreatedAtRange scope.merchantId L.BAP_CLAIM range.from range.to
+  claims <- QLedger.findClaimsByMerchantStatusAndCreatedAtRange scope.merchantId L.PENDING range.from range.to
   fetchSourcesById messageId scope (nub $ mapMaybe (.utr) claims)
 
 -- One source per UTR: this message's PENDING legs on it.
@@ -111,7 +111,7 @@ syncClaimStatus :: (BeamFlow m r) => ReconT.SourceRecord -> ReconT.Reconciliatio
 syncClaimStatus src status =
   unless (status `elem` [ReconT.MATCHED, ReconT.AWAITING_SETTLEMENT]) $ do
     let claimIds = fromMaybe [] (src.srcMeta >>= extractField "pendingClaimIds") :: [Text]
-    forM_ claimIds $ \claimId -> QLedger.updateClaimStatus (Id claimId) L.REJECTED_UTR_IMBALANCE Nothing
+    QLedger.updateClaimStatusByIds (map Id claimIds) L.REJECTED_UTR_IMBALANCE Nothing
 
 extractField :: (A.FromJSON a) => Text -> A.Value -> Maybe a
 extractField key (A.Object o) = AKM.lookup (AK.fromText key) o >>= A.parseMaybe A.parseJSON

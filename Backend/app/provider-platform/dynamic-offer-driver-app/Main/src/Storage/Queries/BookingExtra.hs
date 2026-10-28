@@ -323,15 +323,30 @@ findAllByIds bookingIds = findAllWithKV [Se.Is BeamB.id $ Se.In $ getId <$> book
 
 -- RSF E4: bookings among these ids that this BAP made and paid online (a cash ride is collected by the
 -- driver, so the BAP never settles it). Both instrument conditions are spelled out so Postgres and KV agree.
-findAllOnlineByIdsAndBapId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> Text -> m [Booking]
-findAllOnlineByIdsAndBapId [] _ = pure []
-findAllOnlineByIdsAndBapId bookingIds bapId =
+findAllOnlineByIdsAndBapId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Id Booking] -> Text -> m [Booking]
+findAllOnlineByIdsAndBapId _ [] _ = pure []
+findAllOnlineByIdsAndBapId merchantId bookingIds bapId =
   findAllWithKV
     [ Se.And
         [ Se.Is BeamB.id $ Se.In $ getId <$> bookingIds,
+          Se.Is BeamB.providerId $ Se.Eq merchantId.getId,
           Se.Is BeamB.bapId $ Se.Eq bapId,
           Se.Is BeamB.paymentInstrument $ Se.Not (Se.Eq Nothing),
           Se.Is BeamB.paymentInstrument $ Se.Not (Se.Eq (Just DMPM.Cash))
+        ]
+    ]
+
+-- RSF: a merchant's completed online (non-cash) bookings created in [from, to).
+findAllCompletedOnlineByProviderAndCreatedAtRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> UTCTime -> m [Booking]
+findAllCompletedOnlineByProviderAndCreatedAtRange merchantId from to =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamB.providerId $ Se.Eq merchantId.getId,
+          Se.Is BeamB.status $ Se.Eq COMPLETED,
+          Se.Is BeamB.paymentInstrument $ Se.Not (Se.Eq Nothing),
+          Se.Is BeamB.paymentInstrument $ Se.Not (Se.Eq (Just DMPM.Cash)),
+          Se.Is BeamB.createdAt $ Se.GreaterThanOrEq from,
+          Se.Is BeamB.createdAt $ Se.LessThan to
         ]
     ]
 

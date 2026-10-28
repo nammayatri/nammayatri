@@ -5,11 +5,14 @@ module SharedLogic.CallRSF (sendOnReceiverReconForDate) where
 import qualified Beckn.ACL.OnReceiverRecon as ACL
 import qualified Beckn.OnDemand.Utils.Common as BecknUtils
 import qualified BecknV2.RSF.APIs as RSFAPIs
+import qualified BecknV2.RSF.Enums as Enums
 import qualified BecknV2.RSF.Types as Spec
+import qualified BecknV2.RSF.Utils as RSFUtils
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BSL
 import Data.Either (lefts, rights)
 import qualified Data.HashMap.Strict as HMS
+import qualified Data.HashSet as HS
 import Data.List (nub, sortOn)
 import qualified Data.Map.Strict as Map
 import Data.Ord (Down (..))
@@ -34,6 +37,7 @@ import qualified Lib.Finance.Storage.Queries.RsfReconLedgerEntry as QLedger
 import qualified Lib.Finance.Storage.Queries.RsfUtrState as QUtrState
 import qualified SharedLogic.RSFLedger as RSFLedger
 import qualified Storage.CachedQueries.Merchant as CQMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RsfLedgerAggregates as QAgg
 
@@ -79,13 +83,19 @@ sendOnReceiverReconForDate merchantId day = do
       (from, to) = RSFLedger.istDayRange day
   envelopes <- QLedger.findAllByMerchantEntryTypeAndCreatedAtRange mid L.MESSAGE_RECEIVED from to
   let messageIds = nub (mapMaybe (.messageId) envelopes)
-  Hedis.withLockRedisAndReturnValue ("RsfSendLock:" <> mid <> ":" <> show day) 300 $ do
+  -- the merchant's finance lock, shared with allocation, so a send never interleaves with an allocation
+  RSFLedger.withFinanceLock mid $ do
+    -- every message received since the day began, read and parsed once: a UTR that a later message also
+    -- carries is answered in that later message
+    now <- getCurrentTime
+    sinceDayStart <- QLedger.findAllByMerchantEntryTypeAndCreatedAtRange mid L.MESSAGE_RECEIVED from now
+    let utrsByEnvelope = [(e.createdAt, u) | e <- sinceDayStart, Just (_, _, u) <- [RSFLedger.parseInbound e]]
     tagged <- forM messageIds $ \messageId -> do
       msgEntries <- QLedger.findAllByMerchantAndMessageId mid messageId
       pure (messageId, msgEntries, alreadyAnswered msgEntries)
     let alreadySent = [m | (m, _, True) <- tagged]
     results <- forM [(m, e) | (m, e, False) <- tagged] $ \(messageId, msgEntries) -> do
-      res <- try @_ @SomeException (checkMessage mid messageId msgEntries >>= dispatchMessage merchantId)
+      res <- try @_ @SomeException (checkMessage mid messageId msgEntries utrsByEnvelope >>= dispatchMessage merchantId)
       case res of
         Right () -> pure (Right messageId)
         Left exc -> do
@@ -100,8 +110,8 @@ sendOnReceiverReconForDate merchantId day = do
   where
     alreadyAnswered entries = not (null (RSFLedger.ofType L.ORDER_VARIANCE entries <> RSFLedger.ofType L.UTR_VARIANCE entries))
 
-checkMessage :: (BeamFlow m r) => Text -> Text -> [RSFLedger.Entry] -> m PreparedMessage
-checkMessage mid messageId msgEntries = do
+checkMessage :: (BeamFlow m r) => Text -> Text -> [RSFLedger.Entry] -> [(UTCTime, [Text])] -> m PreparedMessage
+checkMessage mid messageId msgEntries utrsByEnvelope = do
   envelope <- fromMaybeM (InvalidRequest ("No receiver_recon found for message " <> messageId)) $ listToMaybe (RSFLedger.ofType L.MESSAGE_RECEIVED msgEntries)
   when (null (RSFLedger.ofType L.MESSAGE_PROCESSED msgEntries)) $
     throwError $ InvalidRequest ("Message " <> messageId <> " is not fully processed yet (no MESSAGE_PROCESSED row)")
@@ -121,9 +131,8 @@ checkMessage mid messageId msgEntries = do
   unless (null unallocatedOrders) $
     throwError $ InvalidRequest ("Run auto-allocation first; orders not allocated yet: " <> show unallocatedOrders)
   -- a UTR carried by a later message is answered there, not here
-  laterEnvelopes <- QLedger.findAllByMerchantEntryTypeAndCreatedAtRange mid L.MESSAGE_RECEIVED (addUTCTime 0.000001 envelope.createdAt) =<< getCurrentTime
-  let utrsInLaterMessages = concat [u | Just (_, _, u) <- map RSFLedger.parseInbound laterEnvelopes]
-      utrsToAnswer = filter (`notElem` utrsInLaterMessages) utrs
+  let utrsInLaterMessages = HS.fromList (concat [u | (receivedAt, u) <- utrsByEnvelope, receivedAt > envelope.createdAt])
+      utrsToAnswer = filter (not . (`HS.member` utrsInLaterMessages)) utrs
 
   rideByOrderId <- RSFLedger.latestRideByBooking <$> B.runInReplica (QRide.findRidesByBookingId (map Id orderIds))
   let latestLeg claims = listToMaybe $ sortOn (Down . (.effectiveAt)) claims
@@ -149,29 +158,24 @@ dispatchMessage merchantId prepared = do
       orderReports = prepared.orderReports
       utrReports = prepared.utrReports
   bapUri <- fromMaybeM (InternalError "RSF: MESSAGE_RECEIVED row has no bap_uri") envelope.bapUri
-  now <- sendOnReceiverRecon merchantId bapUri prepared.inboundCtx (orderReports <> filter ((/= "01") . (.verdict.status)) utrReports)
+  now <- sendOnReceiverRecon merchantId bapUri prepared.inboundCtx (orderReports <> filter ((/= Enums.CRS_PAID) . (.verdict.status)) utrReports)
   logInfo $ "RSF outbound ACKed: messageId=" <> messageId <> " orders=" <> show (length orderReports) <> " utrs=" <> show (length utrReports)
 
+  recordReconOutcome mid messageId now orderReports utrReports
   varianceRows <- forM (orderReports <> utrReports) $ \report -> do
     row <- RSFLedger.baseEntry mid envelope.merchantOperatingCityId (if isJust report.orderId then L.ORDER_VARIANCE else L.UTR_VARIANCE) L.SYSTEM_JOB report.verdict.diff now
     pure
       row{L.messageId = Just messageId,
           L.orderId = report.orderId,
           L.utr = Just report.utr,
-          L.counterpartyReconStatus = Just report.verdict.status,
-          L.diffMessageCode = report.verdict.code,
+          L.counterpartyReconStatus = Just (Enums.rsfEnumText report.verdict.status),
+          L.diffMessageCode = Enums.rsfEnumText <$> report.verdict.code,
           L.diffMessageName = report.verdict.name,
           L.reportedAt = Just now,
           L.reportedInMessageId = Just messageId
          }
-  -- the VARIANCE rows mark the message answered, so they stay inline: a failed write here leaves
-  -- the message unanswered and the next send retries it
+  -- the VARIANCE rows mark the message answered; they are the last write
   QLedger.createMany varianceRows
-  fork "rsf-on-receiver-recon-settlement" $ do
-    res <- withTryCatch "recordReconOutcome" $ recordReconOutcome mid messageId now orderReports utrReports
-    case res of
-      Left exc -> logError $ "RSF: recording the on_receiver_recon outcome failed for messageId=" <> messageId <> ": " <> show exc
-      Right () -> pure ()
 
 -- Rides in [from, to) that no receiver_recon claimed: one fresh on_receiver_recon per BAP (new transaction and
 -- message ids, the rest of the context from the day's receiver_recon, or a fresh RSF context when the day has
@@ -185,11 +189,11 @@ sendMissingRides merchantId from to envelopes = do
   merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   let freshCtx =
         Spec.RSFContext
-          { rsfContextDomain = Just "ONDC:NTS10",
-            rsfContextCountry = Just "IND",
-            rsfContextCity = Just "*",
+          { rsfContextDomain = Just Enums.NTS10,
+            rsfContextCountry = Just RSFUtils.rsfCountry,
+            rsfContextCity = Just RSFUtils.rsfCity, -- Need to discuss which city we need to put because A single BAP's missing rides can be in different cities
             rsfContextAction = Nothing,
-            rsfContextCoreVersion = Just "1.0.0",
+            rsfContextCoreVersion = Just RSFUtils.rsfCoreVersion,
             rsfContextBapId = Nothing,
             rsfContextBapUri = Nothing,
             rsfContextBppId = Just (getShortId merchant.subscriberId),
@@ -197,7 +201,7 @@ sendMissingRides merchantId from to envelopes = do
             rsfContextTransactionId = Nothing,
             rsfContextMessageId = Nothing,
             rsfContextTimestamp = Nothing,
-            rsfContextTtl = Just "PT30S"
+            rsfContextTtl = Just RSFUtils.rsfTtl
           }
       template = fromMaybe freshCtx (listToMaybe [ctx | Just (ctx, _, _) <- map RSFLedger.parseInbound envelopes])
       bookingsByBap = Map.fromListWith (<>) [((b.bapId, b.bapUri), [b]) | b <- bookings]
@@ -207,7 +211,7 @@ sendMissingRides merchantId from to envelopes = do
     res <- try @_ @SomeException $ do
       let ctx = template {Spec.rsfContextBapId = Just bapId, Spec.rsfContextBapUri = Just bapUri, Spec.rsfContextTransactionId = Just transactionId, Spec.rsfContextMessageId = Just messageId}
           reports =
-            [ ACL.ReconReport {orderId = Just b.id.getId, utr = "", verdict = RSFLedger.WireVerdict "04" fare (Just "missing") (Just "order not claimed"), echo = Nothing}
+            [ ACL.ReconReport {orderId = Just b.id.getId, utr = "", verdict = RSFLedger.WireVerdict Enums.CRS_NOT_PAID fare (Just Enums.DMC_MISSING) (Just "order not claimed"), echo = Nothing}
               | b <- bapBookings,
                 let fare = fromMaybe b.estimatedFare (Map.lookup b.id.getId rideByBookingId >>= RSFLedger.rideFare)
             ]
@@ -219,13 +223,14 @@ sendMissingRides merchantId from to envelopes = do
 sendOnReceiverRecon :: SendFlow m r => Id DM.Merchant -> Text -> Spec.RSFContext -> [ACL.ReconReport] -> m UTCTime
 sendOnReceiverRecon merchantId bapUri ctx reports = do
   merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  moc <- CQMOC.findByMerchantIdAndCity merchant.id merchant.city >>= fromMaybeM (InternalError "RSF: no operating city for the merchant")
   bapBaseUrl <- parseBaseUrl bapUri
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   now <- getCurrentTime
   let bppSubscriberId = getShortId merchant.subscriberId
-      payload = ACL.buildOnReceiverReconReq ctx now bppSubscriberId reports
+      payload = ACL.buildOnReceiverReconReq ctx now bppSubscriberId moc.currency reports
 
-  logInfo $ "RSF outbound payload: " <> TE.decodeUtf8 (BSL.toStrict (A.encode payload))
+  logDebug $ "RSF outbound payload: " <> TE.decodeUtf8 (BSL.toStrict (A.encode payload))
   ackRes <-
     withShortRetry $
       Beckn.callBecknAPI
@@ -252,14 +257,14 @@ recordReconOutcome :: SendFlow m r => Text -> Text -> UTCTime -> [ACL.ReconRepor
 recordReconOutcome mid messageId now orderReports utrReports = do
   forM_ orderReports $ \report ->
     whenJust report.orderId $ \orderId ->
-      QOrderState.upsertReported mid orderId report.verdict.status report.verdict.diff report.verdict.code messageId now
+      QOrderState.upsertReported mid orderId (Enums.rsfEnumText report.verdict.status) report.verdict.diff (Enums.rsfEnumText <$> report.verdict.code) messageId now
   forM_ utrReports $ \report ->
-    QUtrState.upsertReported mid report.utr report.verdict.status report.verdict.diff messageId now
-  let paidOrderIds = [orderId | report <- orderReports, report.verdict.status == "01", Just orderId <- [report.orderId]]
+    QUtrState.upsertReported mid report.utr (Enums.rsfEnumText report.verdict.status) report.verdict.diff messageId now
+  let paidOrderIds = [orderId | report <- orderReports, report.verdict.status == Enums.CRS_PAID, Just orderId <- [report.orderId]]
   unless (null paidOrderIds) $ do
     rideByOrderId <- RSFLedger.latestRideByBooking <$> QRide.findRidesByBookingId (map Id paidOrderIds)
     forM_ (Map.elems rideByOrderId) $ \ride -> QRide.updateBapSettled (Just True) ride.id
-    LedgerService.releaseExternalPendingByReferenceIds paidOrderIds
+    LedgerService.releaseExternalPendingByReferenceIds mid paidOrderIds
 
 -- The human-readable reason of a failed check or send, as the API error would show it.
 failureReason :: SomeException -> Text
