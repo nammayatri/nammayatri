@@ -13,6 +13,7 @@ module SharedLogic.SharedCab.Allocation
     allocationPass,
     cityLiveBookings,
     mergeLive,
+    eachIsolated,
   )
 where
 
@@ -53,6 +54,11 @@ cityLiveBookings cityId = do
   now <- getCurrentTime
   plated <- QFRFSTicketBooking.findSharedCabPlatedCityUpdatedSince cityId (liveSince cityLiveWindowSec now)
   liveBookingsOf (mergeLive (.id) finding plated)
+
+-- | Runs `act` on every item; one that throws goes to `onError` and the next still runs, so one bad booking or cab can't stop the
+-- city's tick.
+eachIsolated :: Monad m => (m () -> m (Either e ())) -> (a -> e -> m ()) -> (a -> m ()) -> [a] -> m ()
+eachIsolated tryAct onError act = mapM_ (\x -> tryAct (act x) >>= either (onError x) pure)
 
 -- | The tick's two reads: riders still waiting (no window) and bookings with a cab (recent ones). A booking claimed between the two
 -- reads comes back from both; its plated row is the newer.
@@ -163,11 +169,13 @@ claimFindings cfg now live positionsByRoute = do
   forM_ (groupAllOn (.routeCode) (map snd findings)) $ \(routeCode, bookings) ->
     whenJust (lookup routeCode positionsByRoute) $ \positions -> do
       sessions <- Session.activeSessionsOnRoute routeCode
-      forM_ bookings $ \booking -> do
+      flip (eachIsolated (withTryCatch "sharedCabClaim") failed) bookings $ \booking -> do
         attempts <- readAttempts booking.bookingId
         skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> readSkipped booking.bookingId
         candidates <- narrowToPreferred cfg now sessions booking (withoutSkipped skipped (eligibleCandidates now cfg positions sessions booking))
         void $ claimFirst cfg booking candidates
+  where
+    failed booking e = logError $ "shared-cab tick: claim failed for booking " <> booking.bookingId.getId <> ": " <> show e
 
 -- | A booking whose rider picked a cab is offered only that cab until the pick stops holding; then it is dropped for good (the rider is told
 -- once, unless the cab lapsed on them and they already were) and the booking is an ordinary finding one.
@@ -207,17 +215,20 @@ expireTimers ::
   [LiveBooking] ->
   m ()
 expireTimers cfg now movingOn silentOn live =
-  forM_ [(lb.booking, plate) | lb <- live, Just plate <- [allocatedPlate lb]] $ \(b, plate) -> do
-    result <- withBookingLock b.id $ do
-      mbState <- readAlloc b.id
-      case timerExpiry now mbState <|> (CabSilent <$ guard (maybe False (silentOn plate) b.routeCode)) of
-        Just outcome -> fmap (outcome,) <$> closeLocked cfg b.id plate outcome
-        Nothing -> do
-          whenJust mbState $ \st ->
-            when (clearOnMove st.timer /= st.timer && maybe False (movingOn plate) b.routeCode) $ do
-              writeAlloc (allocKeyTtl cfg) b.id st {timer = clearOnMove st.timer}
-          pure Nothing
-    whenJust result $ \(outcome, closedInfo) -> afterClose cfg b.id plate outcome (Just closedInfo)
+  eachIsolated (withTryCatch "sharedCabExpireTimer") failed expire [(lb.booking, plate) | lb <- live, Just plate <- [allocatedPlate lb]]
+  where
+    failed (b, _) e = logError $ "shared-cab tick: timer check failed for booking " <> b.id.getId <> ": " <> show e
+    expire (b, plate) = do
+      result <- withBookingLock b.id $ do
+        mbState <- readAlloc b.id
+        case timerExpiry now mbState <|> (CabSilent <$ guard (maybe False (silentOn plate) b.routeCode)) of
+          Just outcome -> fmap (outcome,) <$> closeLocked cfg b.id plate outcome
+          Nothing -> do
+            whenJust mbState $ \st ->
+              when (clearOnMove st.timer /= st.timer && maybe False (movingOn plate) b.routeCode) $ do
+                writeAlloc (allocKeyTtl cfg) b.id st {timer = clearOnMove st.timer}
+            pure Nothing
+      whenJust result $ \(outcome, closedInfo) -> afterClose cfg b.id plate outcome (Just closedInfo)
 
 pushTimeFallbacks :: AllocFlow m r => Config.SharedCabTunables -> UTCTime -> [(DFTB.FRFSTicketBooking, FindingBooking)] -> m ()
 pushTimeFallbacks cfg now findings =

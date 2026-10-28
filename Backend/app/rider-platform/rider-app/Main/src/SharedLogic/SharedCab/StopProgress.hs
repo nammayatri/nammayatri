@@ -19,7 +19,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, releaseSharedCabAllocation, releaseUnboarded)
+import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, eachIsolated, releaseSharedCabAllocation, releaseUnboarded)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), isFreshPosition)
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, passedStopBlame, runningTimerDeadline, seatIsRiders)
 import SharedLogic.SharedCab.Booking (boardedTouchDue, readRiderFix, shared, withBookingLock)
@@ -72,9 +72,11 @@ runStopProgress cityId live positionsByRoute = do
         withTryCatch "sharedCabStopProgressLts" (readRoutePositions routeCode)
           >>= either (\e -> [] <$ logError ("shared-cab stop progress: LTS read failed for route " <> routeCode <> ": " <> show e)) pure
     route <- if any ((== ACTIVE) . (.status)) cabs then routePolyline cityId routeCode else pure []
-    forM_ cabs $ \s ->
-      withTryCatch "sharedCabStopProgressCab" (stepCab cfg now live positions route s)
-        >>= either (\e -> logError $ "shared-cab stop progress failed for cab " <> s.vehicleNumber <> ": " <> show e) pure
+    eachIsolated
+      (withTryCatch "sharedCabStopProgressCab")
+      (\s e -> logError $ "shared-cab stop progress failed for cab " <> s.vehicleNumber <> ": " <> show e)
+      (stepCab cfg now live positions route)
+      cabs
 
 routePolyline :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> m [LatLong]
 routePolyline cityId routeCode = maybe [] KEPP.decode . (>>= (.polyline)) <$> QRoutePolylines.getByRouteIdAndCity routeCode cityId

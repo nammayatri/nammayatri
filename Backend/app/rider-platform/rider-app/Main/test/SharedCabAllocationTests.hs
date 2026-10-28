@@ -24,7 +24,7 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation (mergeLive)
+import "rider-app" SharedLogic.SharedCab.Allocation (eachIsolated, mergeLive)
 import "rider-app" SharedLogic.SharedCab.Allocation.Claim (ClaimMiss (..), claimGate)
 import "rider-app" SharedLogic.SharedCab.Allocation.Select (CabStance (..), ClaimPush (..), FindingBooking (..), Phase (..), PreferenceLoss (..), PreferenceVerdict (..), RankedCandidate (..), armedTimer, cabForId, claimPush, claimTimer, claimable, closable, crossedMaxAttempts, eligibleCandidates, etaPlausible, isFreshPosition, isRescheduledChild, movingCab, onlyPreferred, phase, preferenceVerdict, silentCab, silentReleaseMult, skippedWhileFinding, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
@@ -123,6 +123,15 @@ tests =
         (liveSince cityLiveWindowSec t0, liveSince plateLiveWindowSec t0) @?= (addUTCTime (-6 * 3600) t0, addUTCTime (-17 * 3600) t0),
       testCase "the tick's live set is every plated booking plus the waiting ones, the plated row winning for one claimed in between" $
         mergeLive fst [(1 :: Int, Nothing), (2, Nothing)] [(2, Just "P2" :: Maybe Text), (3, Just "P3")] @?= [(2, Just "P2"), (3, Just "P3"), (1, Nothing)],
+      testCase "a tick item that throws is reported and the next one still runs" $ do
+        ran <- newIORef []
+        failed <- newIORef []
+        eachIsolated
+          (try :: IO () -> IO (Either IOException ()))
+          (\x _ -> modifyIORef failed (x :))
+          (\x -> if x == 2 then throwIO (userError "boom") else modifyIORef ran (x :))
+          [1, 2, 3 :: Int]
+        (,) <$> readIORef ran <*> readIORef failed >>= (@?= ([3, 1], [2])),
       testCase "a boarded booking is touched only once it is over an hour old" $
         (boardedTouchDue (addUTCTime 3600 t0) t0, boardedTouchDue (addUTCTime 3601 t0) t0) @?= (False, True),
       testCase "a running timer keeps the allocation" $
