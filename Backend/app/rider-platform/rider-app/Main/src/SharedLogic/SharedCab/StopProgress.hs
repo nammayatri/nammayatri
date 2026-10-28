@@ -22,7 +22,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, releaseSharedCabAllocation, releaseUnboarded)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), isFreshPosition)
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, passedStopBlame, runningTimerDeadline, seatIsRiders)
-import SharedLogic.SharedCab.Booking (readRiderFix, shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (boardedTouchDue, readRiderFix, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, offRouteKey)
@@ -35,6 +35,7 @@ import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (PauseReason (OFF_ROUTE), Session (..), SessionStatus (..))
 import SharedLogic.SharedCab.StopProgress.Rules
 import qualified Storage.CachedQueries.RoutePolylines as QRoutePolylines
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.VehicleTrip as QVT
 
 type StopProgressFlow m r c =
@@ -140,6 +141,8 @@ dropStep :: StopProgressFlow m r c => Config.SharedCabTunables -> UTCTime -> May
 dropStep cfg now mbCab plate b = do
   degraded <- isJust <$> shared (Redis.get @A.Value (degradedKey b.id))
   unless degraded $ do
+    -- keeps a long ride inside the city scan's window (Booking.cityLiveWindowSec)
+    when (boardedTouchDue now b.updatedAt) $ QFRFSTicketBooking.updateUpdatedAtById b.id
     clock <- Redis.withMasterRedis $ Redis.safeGet (dropClockKey b.id)
     case dropAction cfg now clock mbCab b.toStationCode of
       StartDropClock -> Redis.withMasterRedis $ Redis.setExp (dropClockKey b.id) now (2 * cfg.autoEndAfterDropSec)

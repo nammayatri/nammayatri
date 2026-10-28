@@ -16,6 +16,10 @@ module SharedLogic.SharedCab.Booking
     partySizes,
     partyMap,
     partyOf,
+    cityLiveWindowSec,
+    plateLiveWindowSec,
+    liveSince,
+    boardedTouchDue,
   )
 where
 
@@ -33,9 +37,27 @@ import SharedLogic.SharedCab.Keys (bookingLockKey, cancelReasonKey, riderFixKey)
 import SharedLogic.SharedCab.LegState (CancelReason, seatsHeld)
 import SharedLogic.SharedCab.Lock (shared, tryWithOwnedLock, withOwnedLock)
 import SharedLogic.SharedCab.RefundDecision (isSharedCabBooking)
+import SharedLogic.SharedCab.SessionState (sessionTtlSec)
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+
+-- | A shared-cab booking stays CONFIRMED after its ride, so a scan of "live" bookings is bounded by when they were last written.
+-- City-wide scans: no city cab ride lasts 6 h, and stop progress touches a boarded booking hourly ('boardedTouchDue').
+cityLiveWindowSec :: Int
+cityLiveWindowSec = 6 * 3600
+
+-- | A plate's bookings: each is written (claim or boarding) during that plate's session, which lives at most sessionTtlSec, so ending
+-- a session still finds every rider on board even if the tick was down.
+plateLiveWindowSec :: Int
+plateLiveWindowSec = sessionTtlSec + 3600
+
+liveSince :: Int -> UTCTime -> UTCTime
+liveSince windowSec = addUTCTime (negate (fromIntegral windowSec))
+
+-- | A boarded booking last written over an hour ago is touched, so it stays inside 'cityLiveWindowSec' however long the ride.
+boardedTouchDue :: UTCTime -> UTCTime -> Bool
+boardedTouchDue now updatedAt = diffUTCTime now updatedAt > 3600
 
 withBookingLock :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m a -> m a
 withBookingLock bookingId = withOwnedLock "waitForBookingLock" (bookingLockKey bookingId) 10 10000
@@ -46,7 +68,8 @@ tryWithBookingLock bookingId = tryWithOwnedLock (bookingLockKey bookingId) 10
 
 ridersOnBoard :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
 ridersOnBoard plate = do
-  bookings <- QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) [DFRFSTicketBookingStatus.CONFIRMED]
+  now <- getCurrentTime
+  bookings <- QFRFSTicketBooking.findSharedCabPlateUpdatedSince plate [DFRFSTicketBookingStatus.CONFIRMED] (liveSince plateLiveWindowSec now)
   if null bookings
     then pure []
     else do
@@ -100,7 +123,7 @@ nonTerminalStatuses :: [DFRFSTicketBookingStatus.FRFSTicketBookingStatus]
 nonTerminalStatuses = [DFRFSTicketBookingStatus.NEW, DFRFSTicketBookingStatus.APPROVED, DFRFSTicketBookingStatus.PAYMENT_PENDING, DFRFSTicketBookingStatus.CONFIRMING, DFRFSTicketBookingStatus.CONFIRMED, DFRFSTicketBookingStatus.TECHNICAL_CANCEL_REJECTED]
 
 liveBookingsForVehicle :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
-liveBookingsForVehicle plate = QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) nonTerminalStatuses
+liveBookingsForVehicle plate = getCurrentTime >>= QFRFSTicketBooking.findSharedCabPlateUpdatedSince plate nonTerminalStatuses . liveSince plateLiveWindowSec
 
 -- | Seats move under the booking lock with expected-value CAS writes; a waybill refresh holds no lock, so it is guarded the same way.
 reseatOnWaybill :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Id DFRFSTicketBooking.FRFSTicketBooking -> m ()

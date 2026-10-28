@@ -29,6 +29,7 @@ import "rider-app" SharedLogic.SharedCab.Allocation.Select (CabStance (..), Clai
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.Approach (cabStopEta)
 import "rider-app" SharedLogic.SharedCab.Boarding (boardingGate)
+import "rider-app" SharedLogic.SharedCab.Booking (boardedTouchDue, cityLiveWindowSec, liveSince, plateLiveWindowSec)
 import "rider-app" SharedLogic.SharedCab.Config (SharedCabTunables (allocationWindowSec, driverAcceptEnabled, fallbackAfterSec, findingTimeoutSec, movingTimerSec, offerRetryTimeoutSec, offerTimeoutSec, standTimerSec), defaultTunables)
 import "rider-app" SharedLogic.SharedCab.Demand (StopDemand (..), demandAheadRows, searchingRiders, waitingRiders)
 import "rider-app" SharedLogic.SharedCab.DriverAction (DriverAction (..), offerBlocks)
@@ -117,7 +118,11 @@ tests :: TestTree
 tests =
   testGroup
     "SharedCab allocation timers and LTS timestamps"
-    [ testCase "a running timer keeps the allocation" $
+    [ testCase "city scans read the last 6 h, a plate's queries the last 17 h (a session's 16 h + 1 h)" $
+        (liveSince cityLiveWindowSec t0, liveSince plateLiveWindowSec t0) @?= (addUTCTime (-6 * 3600) t0, addUTCTime (-17 * 3600) t0),
+      testCase "a boarded booking is touched only once it is over an hour old" $
+        (boardedTouchDue (addUTCTime 3600 t0) t0, boardedTouchDue (addUTCTime 3601 t0) t0) @?= (False, True),
+      testCase "a running timer keeps the allocation" $
         timerExpiry (addUTCTime 179 t0) (Just standing) @?= Nothing,
       testCase "an expired stand timer releases as StandTimeout, a moving one as MovingTimeout" $
         (timerExpiry (addUTCTime 181 t0) (Just standing), timerExpiry (addUTCTime 181 t0) (Just standing {timer = MovingTimer (addUTCTime 180 t0)}))

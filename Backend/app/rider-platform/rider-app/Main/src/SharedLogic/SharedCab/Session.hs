@@ -65,9 +65,6 @@ clearCabDriverInfo = void . shared . Redis.del . driverInfoKey
 readCabDriverInfo :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe CabDriverInfo)
 readCabDriverInfo = shared . Redis.safeGet . driverInfoKey
 
-sessionTtlSec :: Int
-sessionTtlSec = 16 * 60 * 60
-
 lockTtlSec :: Int
 lockTtlSec = 30
 

@@ -15,7 +15,6 @@ module SharedLogic.SharedCab.Allocation
   )
 where
 
-import qualified BecknV2.FRFS.Enums as Spec
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (whenJustM)
 import Data.List (nub)
@@ -30,7 +29,7 @@ import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, 
 import SharedLogic.SharedCab.Allocation.Reallocate (Closed (..), afterClose, closeAllocation, closeLocked)
 import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), PreferenceLoss (..), PreferenceVerdict (..), RankedCandidate, allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, onlyPreferred, preferenceVerdict, silentCab, skippedWhileFinding, withoutSkipped)
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (partyOf, partySizes, withBookingLock)
+import SharedLogic.SharedCab.Booking (cityLiveWindowSec, liveSince, partyOf, partySizes, plateLiveWindowSec, withBookingLock)
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
@@ -48,8 +47,9 @@ cityLiveBookings ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   m [LiveBooking]
-cityLiveBookings cityId =
-  QFRFSTicketBooking.findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus cityId (Just Spec.SHARED_CAB) [CONFIRMED] >>= liveBookingsOf
+cityLiveBookings cityId = do
+  now <- getCurrentTime
+  QFRFSTicketBooking.findSharedCabCityUpdatedSince cityId (liveSince cityLiveWindowSec now) >>= liveBookingsOf
 
 -- | Idempotent close: whoever loses the booking CAS emits nothing.
 releaseSharedCabAllocation ::
@@ -81,7 +81,8 @@ type ClosedUnboarded = (Config.SharedCabTunables, Id DFTB.FRFSTicketBooking, Clo
 -- | The closes of `releaseUnboarded`, each under its booking lock and nothing else, so a caller holding the plate lock may run them.
 closeUnboarded :: AllocFlow m r => Text -> AllocationOutcome -> m [ClosedUnboarded]
 closeUnboarded plate outcome = do
-  live <- QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) [CONFIRMED] >>= liveBookingsOf
+  now <- getCurrentTime
+  live <- QFRFSTicketBooking.findSharedCabPlateUpdatedSince plate [CONFIRMED] (liveSince plateLiveWindowSec now) >>= liveBookingsOf
   fmap catMaybes . forM [lb.booking | lb <- live, isJust (allocatedPlate lb)] $ \b -> do
     cfg <- Config.getTunables b.merchantOperatingCityId
     fmap (cfg,b.id,) <$> withBookingLock b.id (closeLocked cfg b.id plate outcome)

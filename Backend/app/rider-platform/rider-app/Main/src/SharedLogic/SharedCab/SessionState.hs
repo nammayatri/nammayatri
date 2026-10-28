@@ -32,6 +32,7 @@ module SharedLogic.SharedCab.SessionState
     Ping (..),
     readPing,
     lastSeenFor,
+    sessionTtlSec,
   )
 where
 
@@ -52,6 +53,10 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import Tools.Error (SharedCabSessionError (..))
+
+-- | How long a session lives without a write; a plate's bookings are written during its session.
+sessionTtlSec :: Int
+sessionTtlSec = 16 * 60 * 60
 
 data SelectRouteMode = AfterLastDrop | Force
   deriving (Show, Eq, Generic)

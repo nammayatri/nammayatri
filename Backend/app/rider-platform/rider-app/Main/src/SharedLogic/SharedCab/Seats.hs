@@ -89,7 +89,7 @@ crossApp =
   where
     unprefixed cell = cell {Redis.keyModifier = identity}
 
--- | Outlives a session (Session.sessionTtlSec): a trip's seats and records go with it.
+-- | Outlives a session (SessionState.sessionTtlSec): a trip's seats and records go with it.
 seatTtlSec :: Int
 seatTtlSec = 16 * 60 * 60
 

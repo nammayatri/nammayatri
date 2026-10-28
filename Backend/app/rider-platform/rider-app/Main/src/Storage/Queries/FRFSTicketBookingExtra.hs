@@ -193,3 +193,36 @@ findAllConfirmedByWaybillNo waybillNo = do
           Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED
         ]
     ]
+
+-- | A city's CONFIRMED shared-cab bookings touched since `since`: the tick's live set without the city's ride history.
+findSharedCabCityUpdatedSince ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  m [FRFSTicketBooking]
+findSharedCabCityUpdatedSince merchantOperatingCityId since =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId,
+          Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED,
+          Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB),
+          Se.Is Beam.updatedAt $ Se.GreaterThanOrEq since
+        ]
+    ]
+
+-- | A plate's shared-cab bookings in these statuses touched since `since`: the plate's runs without its past.
+findSharedCabPlateUpdatedSince ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  [DFRFSTicketBookingStatus.FRFSTicketBookingStatus] ->
+  UTCTime ->
+  m [FRFSTicketBooking]
+findSharedCabPlateUpdatedSince plate statuses since =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.vehicleNumber $ Se.Eq (Just plate),
+          Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB),
+          Se.Is Beam.status $ Se.In statuses,
+          Se.Is Beam.updatedAt $ Se.GreaterThanOrEq since
+        ]
+    ]
