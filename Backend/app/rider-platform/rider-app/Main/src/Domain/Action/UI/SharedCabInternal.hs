@@ -16,6 +16,7 @@ module Domain.Action.UI.SharedCabInternal
     postSharedCabCabFull,
     getSharedCabBookingCallNumber,
     postSharedCabBookingMessage,
+    chatMessageBody,
   )
 where
 
@@ -52,6 +53,7 @@ import qualified SharedLogic.SharedCab.LegState as LegState
 import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Offer as Offer
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
+import SharedLogic.SharedCab.RateLimit (enforceChatMessageLimit)
 import SharedLogic.SharedCab.Schedule (ensureAllocationTick)
 import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
@@ -403,8 +405,20 @@ postSharedCabBookingMessage bookingId mbToken req = do
   case mbSession of
     Just s | s.driverId == req.driverId, s.vehicleNumber == canonicalisePlate req.vehicleNumber -> pure ()
     _ -> throwError SharedCabChatNotAvailable
-  let message = T.strip req.message
-  when (T.null message) $ throwError (InvalidRequest "message is empty")
+  message <- either (throwError . InvalidRequest) pure (chatMessageBody req.message)
+  enforceChatMessageLimit bookingId req.driverId
   mbLeg <- QJourneyLeg.findByLegSearchId (Just booking.searchId.getId)
   notifyChatMessage booking.riderId message (SharedCabChatEntityData {sharedCabBookingId = bookingId.getId, journeyId = (.journeyId.getId) <$> mbLeg})
   pure Success
+
+maxChatMessageChars :: Int
+maxChatMessageChars = 500
+
+-- | A driver's chat message as the push body: stripped, not empty and at most maxChatMessageChars.
+chatMessageBody :: Text -> Either Text Text
+chatMessageBody raw
+  | T.null message = Left "message is empty"
+  | T.length message > maxChatMessageChars = Left "message is too long"
+  | otherwise = Right message
+  where
+    message = T.strip raw

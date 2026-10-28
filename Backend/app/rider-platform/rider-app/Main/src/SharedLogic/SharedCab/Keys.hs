@@ -20,6 +20,7 @@ module SharedLogic.SharedCab.Keys
     refundKey,
     refundRetryKey,
     boardAttemptsKey,
+    chatAttemptsKey,
     allocLeaseKey,
     refundRetryCityKey,
     demandKey,
@@ -104,6 +105,10 @@ refundRetryKey bookingId = "sharedcab:refundretry:" <> bookingId.getId
 -- | Per booking: a booking belongs to exactly one rider, so this bounds the rider's probe rate.
 boardAttemptsKey :: BookingId -> Text
 boardAttemptsKey bookingId = "sharedcab:rate:board:" <> bookingId.getId
+
+-- | Per booking and driver: bounds how many chat pushes one driver can send one rider.
+chatAttemptsKey :: BookingId -> Text -> Text
+chatAttemptsKey bookingId driverId = "sharedcab:rate:chat:" <> bookingId.getId <> ":" <> driverId
 
 allocLeaseKey :: CityId -> Text
 allocLeaseKey cityId = "sharedcab:alloc:lease:" <> cityId.getId

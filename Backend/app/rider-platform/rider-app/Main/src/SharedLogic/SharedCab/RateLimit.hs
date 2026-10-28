@@ -2,6 +2,7 @@
 -- (Booking.shared) so the scheduler and ops cells can see them.
 module SharedLogic.SharedCab.RateLimit
   ( enforceBoardingAttemptLimit,
+    enforceChatMessageLimit,
     recordNoLocationBoarding,
   )
 where
@@ -13,7 +14,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import SharedLogic.SharedCab.Booking (shared)
-import SharedLogic.SharedCab.Keys (boardAttemptsKey, noLocationKey)
+import SharedLogic.SharedCab.Keys (boardAttemptsKey, chatAttemptsKey, noLocationKey)
 import Tools.Error
 
 -- | <= boardAttemptsPer10Min. Over the limit is the SAME generic BoardingFailed: the client must not be able to tell a
@@ -22,6 +23,18 @@ enforceBoardingAttemptLimit :: (Redis.HedisFlow m r, MonadFlow m) => Int -> Id D
 enforceBoardingAttemptLimit boardAttemptsPer10Min bookingId =
   unlessM (shared $ slidingWindowLimiter (boardAttemptsKey bookingId) boardAttemptsPer10Min (10 * 60)) $
     throwError BoardingFailed
+
+chatMessagesPerWindow :: Int
+chatMessagesPerWindow = 10
+
+chatWindowSec :: Int
+chatWindowSec = 60
+
+-- | <= chatMessagesPerWindow chat pushes per chatWindowSec from one driver to one booking.
+enforceChatMessageLimit :: (Redis.HedisFlow m r, MonadFlow m) => Id DBooking.FRFSTicketBooking -> Text -> m ()
+enforceChatMessageLimit bookingId driverId =
+  unlessM (shared $ slidingWindowLimiter (chatAttemptsKey bookingId driverId) chatMessagesPerWindow chatWindowSec) $
+    throwError (HitsLimitError chatWindowSec)
 
 -- | One no-location boarding against the vehicle's count over the last day (a driver feeding codes to non-app riders shows up per
 -- vehicle, not per rider). Logs the ops flag from the noLocationSpotBookingsPerVehiclePerDay-th one on.

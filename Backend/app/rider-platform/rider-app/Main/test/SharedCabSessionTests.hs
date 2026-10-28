@@ -7,8 +7,9 @@ import "beckn-spec" BecknV2.FRFS.Enums (ServiceTierType (AC))
 import Data.Aeson (decode, encode)
 import qualified Data.ByteString.Lazy.Char8 as BLC
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
-import "rider-app" Domain.Action.UI.SharedCabInternal (onCityDay, tripDayWindow)
+import "rider-app" Domain.Action.UI.SharedCabInternal (chatMessageBody, onCityDay, tripDayWindow)
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import qualified "rider-app" Domain.Types.VehicleTrip as DVT
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
@@ -49,7 +50,12 @@ tests :: TestTree
 tests =
   testGroup
     "SharedCab session state"
-    [ testCase "a trip's day is its city's local day, found inside the window" $ do
+    [ testCase "a chat message is stripped and must be 1 to 500 characters" $
+        map
+          (either (const Nothing) (Just . T.length) . chatMessageBody)
+          ["  on my way  ", T.replicate 500 "a", T.replicate 501 "a", "   "]
+          @?= [Just 9, Just 500, Nothing, Nothing],
+      testCase "a trip's day is its city's local day, found inside the window" $ do
         let date = fromGregorian 2026 9 25
             lateUtc = UTCTime (fromGregorian 2026 9 24) (20 * 3600) -- 01:30 on the 25th at +05:30
             (from, to) = tripDayWindow date
