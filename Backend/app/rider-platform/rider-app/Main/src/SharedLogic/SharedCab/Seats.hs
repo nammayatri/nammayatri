@@ -24,6 +24,7 @@ module SharedLogic.SharedCab.Seats
     bookingHold,
     recordHold,
     releaseBooking,
+    releaseCancelled,
     markDropped,
     freeForStops,
     freeAhead,
@@ -49,6 +50,7 @@ import SharedLogic.SharedCab.Booking (shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Keys (seatHoldKey, walkupSeatsKey)
 import qualified SharedLogic.SharedCab.Lts as Lts
+import SharedLogic.SharedCab.RefundDecision (readRefundDecision)
 import SharedLogic.SharedCab.SessionState (Session)
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -188,6 +190,13 @@ releaseBooking bookingId =
   bookingHold bookingId >>= traverse_ \h -> do
     releaseHeld h
     void . shared $ Redis.del (seatHoldKey bookingId)
+
+-- | A cancel's seat release. The shared-cab cancel runs it under the booking lock it already holds (its refund decision marks
+-- that); a seller's cancel bypasses it, so it takes the lock and cannot race a claim recording a hold.
+releaseCancelled :: (MonadFlow m, Redis.HedisFlow m r, MonadMask m) => Id DFTB.FRFSTicketBooking -> m ()
+releaseCancelled bookingId = do
+  underCancelLock <- isJust <$> readRefundDecision bookingId
+  (if underCancelLock then identity else withBookingLock bookingId) (releaseBooking bookingId)
 
 -- | "I got down": boarded tickets go USED and the party's seats are free for the rest of the route; a ticket that never boarded is a
 -- cancel, not consumed here.

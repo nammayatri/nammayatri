@@ -41,6 +41,7 @@ import SharedLogic.SharedCab.Enabled (cabItineraryShown, requireSharedCabEnabled
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Keys (driverInfoKey, plateLockKey, routeKey, sessionKey)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency, seatsHeld)
+import SharedLogic.SharedCab.Lock (withOwnedLock)
 import SharedLogic.SharedCab.LtsAttach
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
@@ -73,7 +74,7 @@ lockTtlSec :: Int
 lockTtlSec = 30
 
 withPlateLock :: (Redis.HedisFlow m r, MonadMask m, MonadFlow m) => Text -> m a -> m a
-withPlateLock plate = Redis.withWaitAndLockMasterCloudCrossAppRedis "sharedCab" "plateLock" (plateLockKey plate) lockTtlSec 25000
+withPlateLock plate = withOwnedLock "plateLock" (plateLockKey plate) lockTtlSec 25000
 
 readSession :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe Session)
 readSession = shared . Redis.safeGet . sessionKey

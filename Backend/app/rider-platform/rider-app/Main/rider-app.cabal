@@ -729,6 +729,7 @@ library
       SharedLogic.SharedCab.JourneyLeg
       SharedLogic.SharedCab.Keys
       SharedLogic.SharedCab.LegState
+      SharedLogic.SharedCab.Lock
       SharedLogic.SharedCab.Lts
       SharedLogic.SharedCab.LtsAttach
       SharedLogic.SharedCab.Nearby
@@ -2264,6 +2265,7 @@ test-suite rider-app-test
       SharedCabExpiryTests
       SharedCabInvariantsTests
       SharedCabLegStateTests
+      SharedCabLockTests
       SharedCabNoShowTests
       SharedCabNotifyTests
       SharedCabPlateTests

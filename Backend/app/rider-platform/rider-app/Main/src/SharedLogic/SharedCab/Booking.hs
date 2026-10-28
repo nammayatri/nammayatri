@@ -31,29 +31,18 @@ import Kernel.Utils.Common
 import SharedLogic.SharedCab.Allocation.Types (RiderFix)
 import SharedLogic.SharedCab.Keys (bookingLockKey, cancelReasonKey, riderFixKey)
 import SharedLogic.SharedCab.LegState (CancelReason, seatsHeld)
+import SharedLogic.SharedCab.Lock (shared, tryWithOwnedLock, withOwnedLock)
 import SharedLogic.SharedCab.RefundDecision (isSharedCabBooking)
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
--- | The cross-app master cell, unprefixed, so every app and the scheduler see the allocation and degraded-boarding keys.
-shared :: (Redis.HedisFlow m r, MonadFlow m) => m a -> m a
-shared = Redis.runInMasterCloudRedisCellWithCrossAppRedis . Redis.withMasterRedis
-
 withBookingLock :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m a -> m a
-withBookingLock bookingId =
-  Redis.withWaitAndLockMasterCloudCrossAppRedis "sharedCab" "waitForBookingLock" (bookingLockKey bookingId) 10 10000
+withBookingLock bookingId = withOwnedLock "waitForBookingLock" (bookingLockKey bookingId) 10 10000
 
--- | The same lock without waiting, for read paths with no MonadMask: Nothing when held. Not exception-safe (a throw leaves it to its 10 s expiry).
-tryWithBookingLock :: (Redis.HedisFlow m r, MonadFlow m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m a -> m (Maybe a)
-tryWithBookingLock bookingId action = do
-  acquired <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.tryLockRedis (bookingLockKey bookingId) 10
-  if not acquired
-    then pure Nothing
-    else do
-      result <- action
-      Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.unlockRedis (bookingLockKey bookingId)
-      pure (Just result)
+-- | The same lock without waiting: Nothing when held.
+tryWithBookingLock :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m a -> m (Maybe a)
+tryWithBookingLock bookingId = tryWithOwnedLock (bookingLockKey bookingId) 10
 
 ridersOnBoard :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
 ridersOnBoard plate = do
