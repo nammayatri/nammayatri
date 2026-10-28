@@ -481,6 +481,7 @@ library
       Domain.Action.UI.SearchRequestLocation
       Domain.Action.UI.SearchRoute
       Domain.Action.UI.SocialLogin
+      Domain.Action.UI.UnserviceableCityLead
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialLocation
       Domain.Action.UI.SpecialLocationWarrior
@@ -1343,6 +1344,7 @@ library
       API.Action.UI.RideEvidence
       API.Action.UI.SearchRoute
       API.Action.UI.SocialLogin
+      API.Action.UI.UnserviceableCityLead
       API.Action.UI.Sos
       API.Action.UI.SpecialLocation
       API.Action.UI.SpecialLocationWarrior
@@ -1540,6 +1542,7 @@ library
       API.Types.UI.RideEvidence
       API.Types.UI.SearchRoute
       API.Types.UI.SocialLogin
+      API.Types.UI.UnserviceableCityLead
       API.Types.UI.Sos
       API.Types.UI.SpecialLocationWarrior
       API.Types.UI.SpecialZoneQueue
@@ -1641,6 +1644,7 @@ library
       Domain.Types.FleetBadgeAssociation
       Domain.Types.FleetBookingAssignments
       Domain.Types.FleetBookingInformation
+      Domain.Types.UnserviceableCityLead
       Domain.Types.FleetConfig
       Domain.Types.FleetDriverAssociation
       Domain.Types.FleetMemberAssociation
@@ -1845,6 +1849,7 @@ library
       Storage.Beam.FleetBadgeAssociation
       Storage.Beam.FleetBookingAssignments
       Storage.Beam.FleetBookingInformation
+      Storage.Beam.UnserviceableCityLead
       Storage.Beam.FleetConfig
       Storage.Beam.FleetDriverAssociation
       Storage.Beam.FleetMemberAssociation
@@ -2054,6 +2059,7 @@ library
       Storage.Queries.FleetBadgeAssociation
       Storage.Queries.FleetBookingAssignments
       Storage.Queries.FleetBookingInformation
+      Storage.Queries.UnserviceableCityLead
       Storage.Queries.FleetConfig
       Storage.Queries.FleetDriverAssociation
       Storage.Queries.FleetMemberAssociation
@@ -2151,6 +2157,7 @@ library
       Storage.Queries.OrphanInstances.FleetBadgeAssociation
       Storage.Queries.OrphanInstances.FleetBookingAssignments
       Storage.Queries.OrphanInstances.FleetBookingInformation
+      Storage.Queries.OrphanInstances.UnserviceableCityLead
       Storage.Queries.OrphanInstances.FleetDriverAssociation
       Storage.Queries.OrphanInstances.FleetMemberAssociation
       Storage.Queries.OrphanInstances.FleetOperatorAssociation

@@ -1,0 +1,25 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  VehicleCategory: Domain.Types.VehicleCategory
+
+module: UnserviceableCityLead
+
+types:
+  UnserviceableCityLeadReq:
+    name: Text
+    mobileNumber: Text
+    mobileCountryCode: Maybe Text
+    vehicleCategory: VehicleCategory
+    lat: Maybe Double
+    lon: Maybe Double
+    merchantShortId: ShortId Merchant
+
+apis:
+  # Called from the provider app when the driver's city is unserviceable (no session exists yet)
+  - POST:
+      endpoint: /unserviceableCity/lead
+      auth: NoAuth
+      request:
+        type: API.Types.UI.UnserviceableCityLead.UnserviceableCityLeadReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
