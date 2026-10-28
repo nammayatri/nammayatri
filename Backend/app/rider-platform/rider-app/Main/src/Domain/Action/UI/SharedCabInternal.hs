@@ -388,7 +388,7 @@ getSharedCabBookingCallNumber bookingId driverId vehicleNumber mbToken = do
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (FRFSTicketBookingDoesNotExist bookingId.getId)
   cfg <- Config.getTunables booking.merchantOperatingCityId
   unless cfg.callEnabled $ throwError SharedCabCallDisabled
-  mbSession <- SharedCabCall.callableSession cfg booking
+  mbSession <- SharedCabCall.liveSession cfg.callEnabled booking
   case mbSession of
     Just s | s.driverId == driverId, s.vehicleNumber == canonicalisePlate vehicleNumber -> API.RiderCallNumberResp <$> SharedCabCall.riderCallNumber booking
     _ -> throwError SharedCabCallNotAvailable
@@ -401,7 +401,7 @@ postSharedCabBookingMessage bookingId mbToken req = do
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (FRFSTicketBookingDoesNotExist bookingId.getId)
   cfg <- Config.getTunables booking.merchantOperatingCityId
   unless cfg.chatEnabled $ throwError SharedCabChatDisabled
-  mbSession <- SharedCabCall.chatSession cfg booking
+  mbSession <- SharedCabCall.liveSession cfg.chatEnabled booking
   case mbSession of
     Just s | s.driverId == req.driverId, s.vehicleNumber == canonicalisePlate req.vehicleNumber -> pure ()
     _ -> throwError SharedCabChatNotAvailable

@@ -1,8 +1,7 @@
 -- | Masked call between a shared-cab rider and the cab's driver. A cab booking has no ride, so the two numbers that ride-hailing carries on the
 -- ride come from the app that owns the person: the rider's from here, the driver's from driver-app on demand. Neither is stored.
 module SharedLogic.SharedCab.Call
-  ( callableSession,
-    chatSession,
+  ( liveSession,
     maskedCallNumber,
     riderCallNumber,
     driverNumberForRider,
@@ -40,23 +39,8 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
--- | The live cab session a booking may call through; Nothing when the city has calls off or the booking is outside the call window.
-callableSession ::
-  (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Redis.HedisFlow m r) =>
-  Config.SharedCabTunables ->
-  DFTB.FRFSTicketBooking ->
-  m (Maybe Session)
-callableSession cfg = liveSession cfg.callEnabled
-
--- | Same window for chat, under the city's chat switch.
-chatSession ::
-  (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Redis.HedisFlow m r) =>
-  Config.SharedCabTunables ->
-  DFTB.FRFSTicketBooking ->
-  m (Maybe Session)
-chatSession cfg = liveSession cfg.chatEnabled
-
--- | The cab session of a held seat on the booking's plate that is still running (not ENDED) the trip the rider boarded on.
+-- | The cab session of a held seat on the booking's plate that is still running (not ENDED) the trip the rider boarded on. `enabled` is
+-- the city's call or chat switch; Nothing when it is off or the booking is outside the call window.
 liveSession ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Redis.HedisFlow m r) =>
   Bool ->
@@ -113,7 +97,7 @@ driverNumberForRider riderId = do
 driverNumberOfBooking :: CallFlow m r => DFTB.FRFSTicketBooking -> m (Maybe Text)
 driverNumberOfBooking booking = do
   cfg <- Config.getTunables booking.merchantOperatingCityId
-  callableSession cfg booking >>= traverse driverNumberOfSession
+  liveSession cfg.callEnabled booking >>= traverse driverNumberOfSession
 
 driverNumberOfSession :: CallFlow m r => Session -> m Text
 driverNumberOfSession s = do
