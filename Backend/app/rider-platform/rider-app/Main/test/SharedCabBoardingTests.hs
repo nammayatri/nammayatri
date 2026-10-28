@@ -8,7 +8,7 @@ import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
-import "rider-app" Lib.JourneyLeg.Common.FRFSJourneyUtils (VehicleProximity (..))
+import "rider-app" Lib.JourneyLeg.Common.FRFSJourneyUtils (VehicleProximity (..), riderNearVehicle)
 import "rider-app" SharedLogic.SharedCab.Boarding (BoardingSummary (..), SharedCabBoardOutcome (..), UnknownCodeStep (..), bindingUnmoved, cabProximity, firstUse, forceHonoured, forcedNoLocation, unknownCodeStep)
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 import Test.Tasty (TestTree, testGroup)
@@ -69,6 +69,11 @@ tests =
               cabProximity now 10 (Just (ago 2, cab)) Nothing [at 301 cab]
             ]
               @?= [Just (RiderDistance 0), Nothing, Just (RiderDistance 0), Just NoRecentRiderPoint],
+          testCase "a rider point 60 s old boards a cab; the bus, its bar on both windows, still refuses it" $
+            [ cabProximity now 10 (Just (ago 2, cab)) Nothing [at 60 cab],
+              Just (riderNearVehicle now 10 10 (ago 2, cab) [at 60 cab])
+            ]
+              @?= [Just (RiderDistance 0), Just NoRecentRiderPoint],
           testCase "no ping and no stop is no anchor" $
             cabProximity now 10 Nothing Nothing [at 1 cab] @?= Nothing
         ],
