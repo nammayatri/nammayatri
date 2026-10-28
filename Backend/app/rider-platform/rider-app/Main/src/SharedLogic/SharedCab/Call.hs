@@ -27,6 +27,8 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import SharedLogic.SharedCab.Allocation.Types (offerPending)
+import qualified SharedLogic.SharedCab.BookingState as BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.LegState as LegState
 import SharedLogic.SharedCab.RefundDecision (isSharedCabBooking)
@@ -40,7 +42,7 @@ import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
 -- | The cab session of a held seat on the booking's plate that is still running (not ENDED) the trip the rider boarded on. `enabled` is
--- the city's call or chat switch; Nothing when it is off or the booking is outside the call window.
+-- the city's call or chat switch; Nothing when it is off, the booking is outside the call window or its offer is still open.
 liveSession ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Redis.HedisFlow m r) =>
   Bool ->
@@ -50,7 +52,8 @@ liveSession enabled booking
   | not enabled || not (isSharedCabBooking booking) = pure Nothing
   | otherwise = do
     tickets <- QFRFSTicket.findAllByTicketBookingIds [booking.id]
-    if LegState.callWindow booking.status (map (.status) tickets) booking.vehicleNumber
+    mbAlloc <- BookingState.readAlloc booking.id
+    if LegState.callWindow booking.status (map (.status) tickets) booking.vehicleNumber && not (offerPending mbAlloc)
       then do
         mbSession <- maybe (pure Nothing) Session.readSession booking.vehicleNumber
         pure $ mbSession >>= \s -> if s.status /= ENDED && LegState.tripMatches (getId <$> booking.vehicleTripId) s.vehicleTripId.getId then Just s else Nothing

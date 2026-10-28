@@ -10,6 +10,7 @@ module SharedLogic.SharedCab.Allocation.Types
     usesRiderSkip,
     visiblePlate,
     seatIsRiders,
+    offerPending,
     offerTimeoutFor,
     AllocationOutcome (..),
     SkipReason (..),
@@ -90,6 +91,10 @@ isOffered st = case st.timer of
 -- | The seat is the rider's (not an offer still waiting on the driver): only then can the rider miss it by not boarding.
 seatIsRiders :: Maybe AllocationState -> Bool
 seatIsRiders = maybe True (not . isOffered)
+
+-- | An offer still waits on the driver: until it is accepted neither side may call or message the other.
+offerPending :: Maybe AllocationState -> Bool
+offerPending = maybe False isOffered
 
 -- | The cab the rider may see for a booking: none while the driver has not accepted.
 visiblePlate :: Maybe AllocationState -> Maybe Text -> Maybe Text

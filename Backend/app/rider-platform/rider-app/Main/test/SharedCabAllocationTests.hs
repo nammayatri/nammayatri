@@ -466,6 +466,8 @@ tests =
           @?= (Nothing, Just "ML05A1234", Just "ML05A1234", Nothing),
       testCase "an unanswered offer is not a seat the rider can miss" $
         (seatIsRiders (Just standing {timer = OfferTimer (addUTCTime 30 t0)}), seatIsRiders (Just standing), seatIsRiders Nothing) @?= (False, True, True),
+      testCase "no call or chat while the offer waits on the driver" $
+        (offerPending (Just standing {timer = OfferTimer (addUTCTime 30 t0)}), offerPending (Just standing), offerPending Nothing) @?= (True, False, False),
       testCase "only the rider's own choice uses the booking's one skip; a full cab never does" $
         map usesRiderSkip [SkipFull, SkipOther] @?= [False, True],
       testCase "a driver cannot cancel or board-without-code an offer, but a drop is not blocked and an accepted booking is not either" $
