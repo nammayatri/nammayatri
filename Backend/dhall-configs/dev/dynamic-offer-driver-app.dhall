@@ -350,12 +350,12 @@ let AllocatorJobType =
       | ReconciliationSweep
       | ConnectAccountChargeDeduction
       | BulkUserCohortMappingUpload
+      | FleetAnalyticsRedisRecon
       | FleetEngineRetry
       | DeleteUnreferencedFarePolicies
       | GenerateInvoicePdf
       | SendLegalPolicyNotification
       | CheckBetterDriverSearchProximity
-      | FleetAnalyticsRedisRecon
       >
 
 let jobRetryOnExceptionMapx =
