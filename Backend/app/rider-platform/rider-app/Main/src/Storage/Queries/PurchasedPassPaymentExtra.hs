@@ -4,6 +4,7 @@
 module Storage.Queries.PurchasedPassPaymentExtra where
 
 import Data.Time hiding (getCurrentTime)
+import Domain.Types.PassOverrideConfig (OverrideBenefitConfig)
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.PurchasedPassPayment as DPurchasedPassPayment
 import Kernel.Beam.Functions
@@ -182,3 +183,14 @@ updateAvailableTripCountIfLowerById availableTripCount id = do
             ]
         ]
     ]
+
+updateOverrideBenefitConfigJsonById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe OverrideBenefitConfig ->
+  Id DPurchasedPassPayment.PurchasedPassPayment ->
+  m ()
+updateOverrideBenefitConfigJsonById overrideBenefitConfigJson id = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.overrideBenefitConfigJson (toJSON <$> overrideBenefitConfigJson), Se.Set Beam.updatedAt now]
+    [Se.Is Beam.id $ Se.Eq id.getId]

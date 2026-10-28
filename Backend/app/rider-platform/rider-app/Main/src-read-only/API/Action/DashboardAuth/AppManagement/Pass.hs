@@ -9,10 +9,12 @@ where
 
 import qualified API.Types.Dashboard.AppManagement.Pass
 import qualified "this" API.Types.UI.Pass
+import qualified Control.Lens
 import qualified Data.Time
 import qualified Domain.Action.Dashboard.AppManagement.Pass
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Pass
+import qualified "this" Domain.Types.PassCategory
 import qualified "this" Domain.Types.PassType
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.PurchasedPass
@@ -34,7 +36,7 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("pass" :> (GetPassCustomerAvailablePasses :<|> GetPassCustomerPurchasedPasses :<|> GetPassCustomerTransactions :<|> PostPassCustomerActivateToday :<|> PostPassCustomerPassSelect :<|> GetPassCustomerPaymentStatus :<|> PostPassCustomerPassResetDeviceSwitchCount :<|> PostPassCustomerPassUpdateProfilePicture :<|> GetPassCustomerPassPhoto :<|> PostPassCustomerPassRestore :<|> ListPassCatalog :<|> CreatePass :<|> UpdatePass :<|> DeletePass))
+type API = ("pass" :> (GetPassCustomerAvailablePasses :<|> GetPassCustomerPurchasedPasses :<|> GetPassCustomerTransactions :<|> PostPassCustomerActivateToday :<|> PostPassCustomerPassSelect :<|> GetPassCustomerPaymentStatus :<|> PostPassCustomerPassResetDeviceSwitchCount :<|> PostPassCustomerPassUpdateProfilePicture :<|> GetPassCustomerPassPhoto :<|> PostPassCustomerPassRestore :<|> ListPassCatalog :<|> CreatePass :<|> UpdatePass :<|> DeletePass :<|> GetPassCatalog :<|> ListPassType :<|> CreatePassType :<|> UpdatePassType :<|> ListPassCategory :<|> CreatePassCategory :<|> UpdatePassCategory :<|> GetPurchasedPassPaymentTrips :<|> AdjustPurchasedPassPaymentTrips))
 
 type GetPassCustomerAvailablePasses =
   ( DashboardUserAuth
@@ -114,8 +116,36 @@ type UpdatePass = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEME
 
 type DeletePass = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASS/DELETE_PASS" :> API.Types.Dashboard.AppManagement.Pass.DeletePass)
 
+type GetPassCatalog = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASS/GET_PASS_CATALOG" :> API.Types.Dashboard.AppManagement.Pass.GetPassCatalog)
+
+type ListPassType = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASS/LIST_PASS_TYPE" :> API.Types.Dashboard.AppManagement.Pass.ListPassType)
+
+type CreatePassType = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASS/CREATE_PASS_TYPE" :> API.Types.Dashboard.AppManagement.Pass.CreatePassType)
+
+type UpdatePassType = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASS/UPDATE_PASS_TYPE" :> API.Types.Dashboard.AppManagement.Pass.UpdatePassType)
+
+type ListPassCategory = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASS/LIST_PASS_CATEGORY" :> API.Types.Dashboard.AppManagement.Pass.ListPassCategory)
+
+type CreatePassCategory = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASS/CREATE_PASS_CATEGORY" :> API.Types.Dashboard.AppManagement.Pass.CreatePassCategory)
+
+type UpdatePassCategory = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASS/UPDATE_PASS_CATEGORY" :> API.Types.Dashboard.AppManagement.Pass.UpdatePassCategory)
+
+type GetPurchasedPassPaymentTrips =
+  ( DashboardUserAuth
+      'APP_BACKEND_MANAGEMENT
+      "RIDER_APP_MANAGEMENT/PASS/GET_PURCHASED_PASS_PAYMENT_TRIPS"
+      :> API.Types.Dashboard.AppManagement.Pass.GetPurchasedPassPaymentTrips
+  )
+
+type AdjustPurchasedPassPaymentTrips =
+  ( DashboardUserAuth
+      'APP_BACKEND_MANAGEMENT
+      "RIDER_APP_MANAGEMENT/PASS/ADJUST_PURCHASED_PASS_PAYMENT_TRIPS"
+      :> API.Types.Dashboard.AppManagement.Pass.AdjustPurchasedPassPaymentTrips
+  )
+
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPassCustomerAvailablePasses merchantId city :<|> getPassCustomerPurchasedPasses merchantId city :<|> getPassCustomerTransactions merchantId city :<|> postPassCustomerActivateToday merchantId city :<|> postPassCustomerPassSelect merchantId city :<|> getPassCustomerPaymentStatus merchantId city :<|> postPassCustomerPassResetDeviceSwitchCount merchantId city :<|> postPassCustomerPassUpdateProfilePicture merchantId city :<|> getPassCustomerPassPhoto merchantId city :<|> postPassCustomerPassRestore merchantId city :<|> listPassCatalog merchantId city :<|> createPass merchantId city :<|> updatePass merchantId city :<|> deletePass merchantId city
+handler merchantId city = getPassCustomerAvailablePasses merchantId city :<|> getPassCustomerPurchasedPasses merchantId city :<|> getPassCustomerTransactions merchantId city :<|> postPassCustomerActivateToday merchantId city :<|> postPassCustomerPassSelect merchantId city :<|> getPassCustomerPaymentStatus merchantId city :<|> postPassCustomerPassResetDeviceSwitchCount merchantId city :<|> postPassCustomerPassUpdateProfilePicture merchantId city :<|> getPassCustomerPassPhoto merchantId city :<|> postPassCustomerPassRestore merchantId city :<|> listPassCatalog merchantId city :<|> createPass merchantId city :<|> updatePass merchantId city :<|> deletePass merchantId city :<|> getPassCatalog merchantId city :<|> listPassType merchantId city :<|> createPassType merchantId city :<|> updatePassType merchantId city :<|> listPassCategory merchantId city :<|> createPassCategory merchantId city :<|> updatePassCategory merchantId city :<|> getPurchasedPassPaymentTrips merchantId city :<|> adjustPurchasedPassPaymentTrips merchantId city
 
 getPassCustomerAvailablePasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler [API.Types.UI.Pass.PassInfoAPIEntity])
 getPassCustomerAvailablePasses a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.Pass.getPassCustomerAvailablePasses a5 a4 a2 a1
@@ -197,4 +227,56 @@ deletePass a4 a3 a2 a1 =
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASS/DELETE_PASS" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.Pass.deletePass a4 a3 a1
+    )
+
+getPassCatalog :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Pass.PassCatalogItem)
+getPassCatalog a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.Pass.getPassCatalog a4 a3 a1
+
+listPassType :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassCategory.PassCategory) -> Environment.FlowHandler [API.Types.Dashboard.AppManagement.Pass.PassTypeItem])
+listPassType a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.Pass.listPassType a5 a4 a2 a1
+
+createPassType :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.Dashboard.AppManagement.Pass.PassTypeCreateReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Pass.PassTypeCreateResp)
+createPassType a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASS/CREATE_PASS_TYPE" a2 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.Pass.createPassType a4 a3 a1
+    )
+
+updatePassType :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.PassType.PassType -> API.Types.Dashboard.AppManagement.Pass.PassTypeUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+updatePassType a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASS/UPDATE_PASS_TYPE" a3 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.Pass.updatePassType a5 a4 a2 a1
+    )
+
+listPassCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler [API.Types.Dashboard.AppManagement.Pass.PassCategoryItem])
+listPassCategory a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.Pass.listPassCategory a4 a3 a1
+
+createPassCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.Dashboard.AppManagement.Pass.PassCategoryCreateReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Pass.PassCategoryCreateResp)
+createPassCategory a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASS/CREATE_PASS_CATEGORY" a2 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.Pass.createPassCategory a4 a3 a1
+    )
+
+updatePassCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.PassCategory.PassCategory -> API.Types.Dashboard.AppManagement.Pass.PassCategoryUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+updatePassCategory a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASS/UPDATE_PASS_CATEGORY" a3 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.Pass.updatePassCategory a5 a4 a2 a1
+    )
+
+getPurchasedPassPaymentTrips :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Pass.PurchasedPassPaymentTripsResp)
+getPurchasedPassPaymentTrips a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.Pass.getPurchasedPassPaymentTrips a4 a3 a1
+
+adjustPurchasedPassPaymentTrips :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> API.Types.Dashboard.AppManagement.Pass.PurchasedPassPaymentTripsAdjustReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Pass.PurchasedPassPaymentTripsResp)
+adjustPurchasedPassPaymentTrips a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASS/ADJUST_PURCHASED_PASS_PAYMENT_TRIPS" a3 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.Pass.adjustPurchasedPassPaymentTrips a5 a4 a2 a1
     )

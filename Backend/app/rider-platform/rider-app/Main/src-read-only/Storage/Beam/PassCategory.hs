@@ -12,6 +12,7 @@ import Tools.Beam.UtilsTH
 
 data PassCategoryT f = PassCategoryT
   { description :: B.C f Kernel.Prelude.Text,
+    enable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

@@ -55,6 +55,7 @@ module SharedLogic.FRFSPassOverride
     spendTripForBooking,
     passLegsNotCoverable,
     refundTrip,
+    adjustTrips,
     BookedTripWindow (..),
     checkOverlappingBookingLimit,
     recordBookedTrip,
@@ -839,6 +840,28 @@ refundTrip payment benefit quantity = unless (isUnlimitedBenefit benefit) $ do
   refreshTripCountTtl payment key
   QPurchasedPassPayment.updateAvailableTripCountById (Just (fromIntegral remaining)) payment.id
   logInfo $ "FRFSPassOverride:refundTrip paymentId=" <> payment.id.getId <> " -> " <> show remaining
+
+adjustTrips :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> OverrideBenefitEntry -> Int -> m (Either Text Int)
+adjustTrips payment entry delta
+  | isUnlimitedBenefit benefit = pure (Left "This pass has unlimited trips")
+  | otherwise = do
+    let key = makeTripCountKey payment.id
+    void $ seededRemainingTrips payment (allowanceFor payment benefit)
+    adjusted <- Redis.incrby key (fromIntegral delta)
+    if adjusted < 0
+      then do
+        void $ Redis.incrby key (fromIntegral (negate delta))
+        pure . Left $ "Only " <> show (adjusted - fromIntegral delta) <> " trips left, cannot remove " <> show (negate delta)
+      else do
+        let remaining = fromIntegral adjusted
+        when (maybe False (remaining >) benefit.maximumTripCount) $
+          QPurchasedPassPayment.updateOverrideBenefitConfigJsonById (Just (OverrideBenefitConfig [setMaximumTripCount remaining entry])) payment.id
+        refreshTripCountTtl payment key
+        QPurchasedPassPayment.updateAvailableTripCountById (Just remaining) payment.id
+        logInfo $ "FRFSPassOverride:adjustTrips paymentId=" <> payment.id.getId <> " delta=" <> show delta <> " -> " <> show remaining
+        pure (Right remaining)
+  where
+    benefit = entryBenefit entry
 
 registerHasPass :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> T.Day -> m ()
 registerHasPass personId endDate = do
