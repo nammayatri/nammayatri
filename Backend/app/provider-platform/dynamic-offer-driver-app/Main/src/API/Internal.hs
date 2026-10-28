@@ -34,7 +34,6 @@ import qualified API.Internal.NotificationWebhook as NotificationWebhook
 import qualified API.Internal.PersonCreate as PersonCreate
 import qualified API.Internal.PickupInstruction as PickupInstruction
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
-import qualified API.Internal.ProdLoopStatus as ProdLoopStatus
 import qualified API.Internal.QuoteRespond as QuoteRespond
 import qualified API.Internal.RadarXyneWebhook as RadarXyneWebhook
 import qualified API.Internal.RefundLedger as RefundLedger
@@ -86,7 +85,6 @@ type API =
            :<|> Multimodal.API
            :<|> DriverReachedDestination.API
            :<|> QuoteRespond.API
-           :<|> ProdLoopStatus.API
            :<|> DriverSourceDeparted.API
            :<|> ViolationDetection.API
            :<|> RideFeedback.API
@@ -144,7 +142,6 @@ handler env =
     :<|> Multimodal.handler
     :<|> DriverReachedDestination.handler
     :<|> QuoteRespond.handler
-    :<|> ProdLoopStatus.handler
     :<|> DriverSourceDeparted.handler
     :<|> ViolationDetection.handler
     :<|> RideFeedback.handler
