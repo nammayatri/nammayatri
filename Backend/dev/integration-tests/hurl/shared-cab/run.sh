@@ -6,6 +6,8 @@
 # LTS geo config for the SC routes, and a cab that pings LTS. The stack must run the scheduler PRODUCER (producer-exe) next to
 # rider-app-scheduler-exe: scheduled jobs sit in Scheduled_Jobs_Rider{n} until the producer moves them to the stream, so without
 # it no tick, timeout or refund ever fires and bookings stay FINDING.
+# A leftover LTS ride of the same driver on another route (a session that was never ended) blocks the attach: the cab's pings keep
+# feeding the old route and the allocation stays FINDING. End it with LTS POST /internal/ride/{rideId}/end before re-running.
 set -euo pipefail
 cd "$(dirname "$0")"
 env=${ENV:-local.env}
