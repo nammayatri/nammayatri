@@ -2,7 +2,11 @@
 
 module SharedCabBoardingTests (tests) where
 
-import "rider-app" SharedLogic.SharedCab.Boarding (UnknownCodeStep (..), bindingUnmoved, forceHonoured, forcedNoLocation, unknownCodeStep)
+import "rider-app" API.Types.UI.MultimodalConfirm (RiderLocationReq (..))
+import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
+import Kernel.External.Maps.Types (LatLong (..))
+import "rider-app" Lib.JourneyLeg.Common.FRFSJourneyUtils (VehicleProximity (..))
+import "rider-app" SharedLogic.SharedCab.Boarding (UnknownCodeStep (..), bindingUnmoved, cabProximity, forceHonoured, forcedNoLocation, unknownCodeStep)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -45,5 +49,24 @@ tests =
               @?= [True, False, True, False, False],
           testCase "e2e B12: the tick claiming the booking for the SAME cab being boarded does not abort" $
             bindingUnmoved "ML05A1234" Nothing (Just "ML05A1234") @?= True
+        ],
+      testGroup
+        "proximity (the bus boarding match)"
+        [ testCase "a fresh cab ping is the anchor" $
+            cabProximity now 10 (Just (ago 2, cab)) (Just stop) [at 1 cab] @?= Just (RiderDistance 0),
+          testCase "a stale cab ping falls back to the boarding stop" $
+            cabProximity now 10 (Just (ago 30, cab)) (Just stop) [at 1 stop] @?= Just (RiderDistance 0),
+          testCase "the rider's point closest in time to the ping counts, not the newest" $
+            cabProximity now 10 (Just (ago 6, cab)) (Just stop) [at 6 cab, at 1 stop] @?= Just (RiderDistance 0),
+          testCase "a rider point older than the bar is no location" $
+            cabProximity now 10 (Just (ago 2, cab)) (Just stop) [at 20 cab] @?= Just NoRecentRiderPoint,
+          testCase "no ping and no stop is no anchor" $
+            cabProximity now 10 Nothing Nothing [at 1 cab] @?= Nothing
         ]
     ]
+  where
+    now = UTCTime (fromGregorian 2026 10 28) 36000
+    ago sec = addUTCTime (negate sec) now
+    at sec latLong = RiderLocationReq {currTime = ago sec, latLong}
+    cab = LatLong 25.5788 91.8933
+    stop = LatLong 25.5688 91.8833

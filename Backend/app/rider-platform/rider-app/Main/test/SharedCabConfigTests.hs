@@ -90,6 +90,7 @@ tests =
               offRouteMeters = 300,
               offRouteSec = 120,
               boardProximityM = 150,
+              boardPingMaxAgeSec = 10,
               boardAttemptsPer10Min = 5,
               noLocationSpotBookingsPerVehiclePerDay = 5,
               maxCabSpeedMps = 14,

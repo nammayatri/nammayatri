@@ -9,6 +9,7 @@ module SharedLogic.SharedCab.Boarding
     forcedNoLocation,
     bindingUnmoved,
     boardingGate,
+    cabProximity,
     tryBoardSharedCab,
     boardingResponse,
   )
@@ -16,7 +17,7 @@ where
 
 import qualified API.Types.UI.MultimodalConfirm as API
 import Control.Applicative ((<|>))
-import Data.List (nub, sortOn)
+import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Types.FRFSTicket as DTicket
 import qualified Domain.Types.FRFSTicketBooking as DBooking
@@ -30,10 +31,11 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.JourneyLeg.Common.FRFSJourneyUtils (VehicleProximity (..), riderNearVehicle)
 import qualified Lib.JourneyModule.Location as JMLocation
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
+import SharedLogic.SharedCab.Allocation.Types (parseLtsTimestamp)
 import SharedLogic.SharedCab.Booking (isSharedCabBooking, partyOf, partySizes, withBookingLock)
 import SharedLogic.SharedCab.BookingState (clearAlloc)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -121,48 +123,47 @@ sessionServesBoardDrop booking session = do
     (Just fromSeq, Just toSeq) -> fromSeq < toSeq
     _ -> False
 
-lookupCabPosition :: Session -> Environment.Flow (Maybe LatLong)
-lookupCabPosition session = do
+lookupCabPing :: Session -> Environment.Flow (Maybe (UTCTime, LatLong))
+lookupCabPing session = do
   outcome <-
-    withTryCatch "lookupCabPosition" $
+    withTryCatch "lookupCabPing" $
       LTSFlow.vehicleTrackingOnRoute (LTSFlow.ByRoute session.routeCode)
   pure $ case outcome of
     Left _ -> Nothing -- LTS outage behaves identically to NO_LIVE_CAB_DATA (8.2 ladder floor)
-    Right tracked ->
-      findByPlate (.vehicleNumber) session.vehicleNumber tracked
-        <&> (\v -> LatLong v.vehicleInfo.latitude v.vehicleInfo.longitude)
+    Right tracked -> do
+      v <- findByPlate (.vehicleNumber) session.vehicleNumber tracked
+      pingTime <- parseLtsTimestamp =<< v.vehicleInfo.timestamp
+      pure (pingTime, LatLong v.vehicleInfo.latitude v.vehicleInfo.longitude)
 
--- TODO: freshness gate on VehicleInfo.timestamp vs ltsMaxAgeSec; a stale cab position should behave like NO_LIVE_CAB_DATA.
+-- | The bus boarding match against the cab's ping, or against the boarding stop (as if pinged now) when the cab has no fresh ping;
+-- Nothing when there is neither.
+cabProximity :: UTCTime -> NominalDiffTime -> Maybe (UTCTime, LatLong) -> Maybe LatLong -> [API.RiderLocationReq] -> Maybe VehicleProximity
+cabProximity now maxAge mbPing mbStop riderPoints =
+  mfilter (/= StaleVehiclePing) (near <$> mbPing) <|> (near . (now,) <$> mbStop)
+  where
+    near ping = riderNearVehicle now maxAge ping riderPoints
 
 -- | Left -> proximity hold; Right -> pass. Ladder: journey location stream, then request lat/lon (pending a MultiModal.yaml
 -- addition), then no location: allocated cab / direct board pass flagged, re-bind is a hard fail.
 checkRiderNearSharedCab ::
-  Int -> -- boardProximityM
+  Config.SharedCabTunables ->
   Session ->
   DJourney.Journey ->
   DBooking.FRFSTicketBooking ->
   Bool -> -- isRebind
   Environment.Flow (Either (Maybe Double, Text) (Maybe Double, Bool))
-checkRiderNearSharedCab boardProximityM session journey booking isRebind = do
+checkRiderNearSharedCab tunables session journey booking isRebind = do
   riderHistory <- JMLocation.getAllPoints journey.id
-  mbAnchor <- (<|>) <$> lookupCabPosition session <*> pure booking.fromStationPoint
+  mbPing <- lookupCabPing session
   now <- getCurrentTime
-  let riderPointFreshSec = 300
-      freshRiderPoints = filter (\p -> abs (diffUTCTime now p.currTime) < riderPointFreshSec) riderHistory
-      newestRiderPoint = lastMay (sortOn (.currTime) freshRiderPoints)
-  case mbAnchor of
+  case cabProximity now (realToFrac tunables.boardPingMaxAgeSec) mbPing booking.fromStationPoint riderHistory of
     Nothing -> pure $ Left (Nothing, "NO_CAB_POSITION")
-    Just anchor ->
-      case newestRiderPoint of
-        Just riderPoint -> do
-          let d :: Double = realToFrac (highPrecMetersToMeters (distanceBetweenInMeters riderPoint.latLong anchor))
-          pure $
-            if d <= fromIntegral boardProximityM
-              then Right (Just d, False)
-              else Left (Just d, "TOO_FAR_FROM_CAB")
-        Nothing
-          | isRebind -> throwError BoardingLocationRequired -- hard fail
-          | otherwise -> pure $ Right (Nothing, True)
+    Just (RiderDistance d)
+      | d <= fromIntegral tunables.boardProximityM -> pure $ Right (Just d, False)
+      | otherwise -> pure $ Left (Just d, "TOO_FAR_FROM_CAB")
+    Just _
+      | isRebind -> throwError BoardingLocationRequired -- hard fail
+      | otherwise -> pure $ Right (Nothing, True)
 
 -- | An unknown code is NEVER blocked: ticket -> INPROGRESS with a degrade marker, no driver card, no seat effect. Decided on a fresh read
 -- under the booking lock; an allocated booking gives its cab back first so a degraded ride never counts as a seat.
@@ -327,7 +328,7 @@ boardSharedCab journey journeyLeg booking mbPersonId req = do
       mbCase <-
         if forced
           then pure $ Right (Nothing, forcedNoLocation booking.vehicleNumber)
-          else checkRiderNearSharedCab tunables.boardProximityM target journey booking isRebind
+          else checkRiderNearSharedCab tunables target journey booking isRebind
       case mbCase of
         Left (mbDist, reason) -> pure $ SharedCabProximityHold mbDist reason
         Right (_mbDist, noLocation) -> do

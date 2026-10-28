@@ -32,6 +32,8 @@ data SharedCabTunables = SharedCabTunables
     offRouteMeters :: Int,
     offRouteSec :: Int,
     boardProximityM :: Int,
+    -- | The bus boarding's freshness bar (rider_config.boardingBusPingMaxAgeSeconds), for the cab's ping and the rider's point.
+    boardPingMaxAgeSec :: Double,
     boardAttemptsPer10Min :: Int,
     noLocationSpotBookingsPerVehiclePerDay :: Int,
     -- | Fastest a cab can plausibly travel (m/s): a candidate whose straight-line distance to the stop exceeds its ETA times this (plus
@@ -70,6 +72,7 @@ defaultTunables =
       offRouteMeters = 300,
       offRouteSec = 120,
       boardProximityM = 150,
+      boardPingMaxAgeSec = 10,
       boardAttemptsPer10Min = 5,
       noLocationSpotBookingsPerVehiclePerDay = 5,
       maxCabSpeedMps = 14,
@@ -101,6 +104,7 @@ tunablesFrom (Just rc) =
       offRouteMeters = pick rc.sharedCabOffRouteMeters (.offRouteMeters),
       offRouteSec = pick rc.sharedCabOffRouteSec (.offRouteSec),
       boardProximityM = pick rc.sharedCabBoardProximityM (.boardProximityM),
+      boardPingMaxAgeSec = pick rc.boardingBusPingMaxAgeSeconds (.boardPingMaxAgeSec),
       boardAttemptsPer10Min = pick rc.sharedCabBoardAttemptsPer10Min (.boardAttemptsPer10Min),
       noLocationSpotBookingsPerVehiclePerDay = pick rc.sharedCabNoLocationSpotBookingsPerVehiclePerDay (.noLocationSpotBookingsPerVehiclePerDay),
       maxCabSpeedMps = pick rc.sharedCabMaxCabSpeedMps (.maxCabSpeedMps),
