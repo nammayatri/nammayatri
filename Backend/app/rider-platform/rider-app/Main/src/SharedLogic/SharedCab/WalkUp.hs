@@ -7,6 +7,7 @@ module SharedLogic.SharedCab.WalkUp
     WalkUpChoice (..),
     cabRouteRequest,
     stopPairLegs,
+    cabOnlyCity,
     withoutCabRows,
     cabRouteServiceTier,
     chooseWalkUp,
@@ -14,6 +15,7 @@ module SharedLogic.SharedCab.WalkUp
     cabRouteStations,
     isStickerCode,
     findSharedCabConfig,
+    enabledCabConfig,
     walkUpVehicleData,
     routeServiceability,
     cabVehicle,
@@ -96,6 +98,10 @@ cabRouteServiceTier isCabFeed declared = Spec.SHARED_CAB <$ guard (isCabFeed && 
 withoutCabRows :: (a -> Text) -> [a] -> [a]
 withoutCabRows agencyKeyOf = filter (not . isSharedCabAgency . agencyKeyOf)
 
+-- | A city whose BUS configs (by agency key) are all the shared-cab feed has no bus fleet: only there does a stop search mean cabs.
+cabOnlyCity :: [Text] -> Bool
+cabOnlyCity = null . withoutCabRows identity
+
 -- | The bus fleet's lookup of a typed code, once. A failure counts as "the bus does not know it" (failing walk-ups on a transient error hurts riders more).
 probeBus :: (Monad m, TryException m) => m (Maybe a) -> m (Maybe a)
 probeBus lookupBus = either (const Nothing) identity <$> withTryCatch "walkUp:busProbe" lookupBus
@@ -177,10 +183,15 @@ findSharedCabConfig :: Maybe (Id DP.Person) -> Environment.Flow (Maybe DIBC.Inte
 findSharedCabConfig mbPersonId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   city <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  cabConfig <- find (isSharedCabAgency . (.agencyKey)) <$> SIBC.findAllIntegratedBPPConfig city.merchantOperatingCityId Enums.BUS DIBC.APPLICATION
+  cabConfig <-
+    IM.withInMemCache ["SharedCabConfig", city.merchantOperatingCityId.getId] 300 $
+      find (isSharedCabAgency . (.agencyKey)) <$> SIBC.findAllIntegratedBPPConfig city.merchantOperatingCityId Enums.BUS DIBC.APPLICATION
   -- a suspended city lists no routes and resolves no codes
-  enabled <- sharedCabEnabled city.merchantOperatingCityId
-  pure (cabConfig <* guard enabled)
+  enabledCabConfig (sharedCabEnabled city.merchantOperatingCityId) cabConfig
+
+-- | The cab config while the city is on; a city without one (every bus-only city) never reads the switch.
+enabledCabConfig :: Monad m => m Bool -> Maybe a -> m (Maybe a)
+enabledCabConfig isEnabled = maybe (pure Nothing) (\cabConfig -> (cabConfig <$) . guard <$> isEnabled)
 
 -- | A plate with a live shared-cab session is a spot booking's first step, whatever vehicleType the app sent.
 walkUpVehicleData ::
@@ -238,19 +249,23 @@ routeServiceability mbPersonId req =
                   IM.withInMemCache ["SharedCabFeedRoutes:" <> cabIbc.id.getId] 300 (map (.code) <$> OTPRest.getRoutesByGtfsId cabIbc)
               pure $ Just (cabIbc, legReqs, either (const Nothing) Just feed)
             _ -> pure Nothing
-      _ -> stopPairRoutes
-    -- The app's stop search sends the two stop codes and no route.
-    stopPairRoutes = case (req.sourceStopCode, req.destinationStopCode) of
-      (Just src, Just dest) ->
-        withTryCatch "routeServiceability:sharedCabStopPair" (findSharedCabConfig mbPersonId >>= traverse (\cabIbc -> (,) cabIbc <$> JLU.getRouteCodesFromTo src dest cabIbc)) >>= \case
-          Right (Just (cabIbc, routes)) -> pure $ (\legs -> (cabIbc, legs, Just routes)) <$> stopPairLegs req.sourceStopCode req.destinationStopCode routes
+      _ -> stopSearchRoutes
+    -- The app's stop search sends stop codes and no route; where buses run, the bus path answers it.
+    stopSearchRoutes = case req.sourceStopCode of
+      Just src ->
+        withTryCatch "routeServiceability:sharedCabStop" (findSharedCabConfig mbPersonId >>= traverse (\cabIbc -> (cabIbc,) <$> cabStopRoutes cabIbc src)) >>= \case
+          Right (Just (cabIbc, Just routes)) -> pure $ (\legs -> (cabIbc, legs, Just routes)) <$> stopPairLegs req.sourceStopCode req.destinationStopCode routes
           _ -> pure Nothing
-      -- the stop picked on its own: the routes of the cab feed that pass it
-      (Just src, Nothing) ->
-        withTryCatch "routeServiceability:sharedCabStop" (findSharedCabConfig mbPersonId >>= traverse (\cabIbc -> (,) cabIbc . nub . map (.routeCode) <$> OTPRest.getRouteStopMappingByStopCode src cabIbc)) >>= \case
-          Right (Just (cabIbc, routes)) -> pure $ (\legs -> (cabIbc, legs, Just routes)) <$> stopPairLegs req.sourceStopCode Nothing routes
-          _ -> pure Nothing
-      _ -> pure Nothing
+      Nothing -> pure Nothing
+    cabStopRoutes cabIbc src = do
+      busConfigs <- SIBC.findAllIntegratedBPPConfig cabIbc.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+      if cabOnlyCity (map (.agencyKey) busConfigs)
+        then
+          Just <$> case req.destinationStopCode of
+            Just dest -> JLU.getRouteCodesFromTo src dest cabIbc
+            -- the stop picked on its own: the routes of the cab feed that pass it
+            Nothing -> nub . map (.routeCode) <$> OTPRest.getRouteStopMappingByStopCode src cabIbc
+        else pure Nothing
 
 -- | The cab routes through a stop and the cabs approaching it, in the bus API's shape (the Home "Share Taxis" card reads it like the bus
 -- stop view). Nothing when the city has no cab feed or the stop is not on it, so the bus path answers as before.

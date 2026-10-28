@@ -6,10 +6,11 @@ module SharedCabPlateTests (tests) where
 import qualified "rider-app" API.Types.UI.FRFSTicketService as ApiFRFS
 import qualified "rider-app" API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
+import Data.IORef (modifyIORef, newIORef, readIORef)
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import "rider-app" SharedLogic.SharedCab.Plate (canonicalisePlate, findByPlate, samePlate)
-import "rider-app" SharedLogic.SharedCab.WalkUp (CodeResolution (..), WalkUpChoice (..), cabRouteRequest, cabRouteServiceTier, cabRouteStations, chooseWalkUp, isStickerCode, probeBus, resolveCode, stopPairLegs, withoutCabRows)
+import "rider-app" SharedLogic.SharedCab.WalkUp (CodeResolution (..), WalkUpChoice (..), cabOnlyCity, cabRouteRequest, cabRouteServiceTier, cabRouteStations, chooseWalkUp, enabledCabConfig, isStickerCode, probeBus, resolveCode, stopPairLegs, withoutCabRows)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -53,6 +54,13 @@ tests =
                 stopPairLegs Nothing (Just "SC_NONGTHYMMAI") ["SC-PRD-F"]
               ]
               @?= [Just [(0, ["SC-PRD-F"])], Nothing, Just [(0, ["SC-PRD-F"])], Nothing],
+          testCase "a stop search answers with cab routes only in a city whose bus configs are all the cab feed" $
+            [cabOnlyCity ["shillong_shared_cab:SHARED_CAB"], cabOnlyCity ["chennai_data_bus", "shillong_shared_cab:SHARED_CAB"], cabOnlyCity ["chennai_data_bus"]] @?= [True, False, False],
+          testCase "a city without a cab config never reads the shared-cab switch; one with it is answered by the switch" $ do
+            switchReads <- newIORef (0 :: Int)
+            let switch on = modifyIORef switchReads (+ 1) >> pure on
+            found <- sequence [enabledCabConfig (switch True) (Nothing :: Maybe Int), enabledCabConfig (switch True) (Just 1), enabledCabConfig (switch False) (Just 1)]
+            readIORef switchReads >>= \n -> (found, n) @?= ([Nothing, Just 1, Nothing], 2),
           testCase "the bus fleet's configs never include the shared-cab feed" $
             withoutCabRows fst [("chennai_data_bus", 1 :: Int), ("shillong_shared_cab:SHARED_CAB", 2)] @?= [("chennai_data_bus", 1)],
           testCase "a shared-cab route advertises SHARED_CAB only to a client that declared the tier; other routes and clients are untouched" $
