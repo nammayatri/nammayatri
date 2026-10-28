@@ -19,6 +19,7 @@ instance FromTType' Beam.PassType Domain.Types.PassType.PassType where
         Domain.Types.PassType.PassType
           { catchline = catchline,
             description = description,
+            enable = enable,
             id = Kernel.Types.Id.Id id,
             maxPhotoChangeLimit = maxPhotoChangeLimit,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -38,6 +39,7 @@ instance ToTType' Beam.PassType Domain.Types.PassType.PassType where
     Beam.PassTypeT
       { Beam.catchline = catchline,
         Beam.description = description,
+        Beam.enable = enable,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.maxPhotoChangeLimit = maxPhotoChangeLimit,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
