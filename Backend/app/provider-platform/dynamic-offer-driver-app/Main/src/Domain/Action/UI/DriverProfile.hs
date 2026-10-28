@@ -37,8 +37,13 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
+import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.OTP as SOTP
+import qualified SharedLogic.SocialLogin as SSL
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import Tools.Error
@@ -52,7 +57,7 @@ data AuthData = AuthData
   deriving (Generic, Show, FromJSON, ToJSON)
 
 postDriverProfileUpdateAuthDataTriggerOTP ::
-  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools, "apiRateLimitOptions" ::: APIRateLimitOptions],
     HasField "emailServiceConfig" r Email.Types.EmailServiceConfig,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -89,6 +94,10 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
       existingPerson <- QPersonExtra.findByEmailAndMerchantIdAndRole (Just receiverEmail) person.merchantId person.role
       whenJust existingPerson $ \existing ->
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
+      checkSlidingWindowLimit ("BPP:DriverProfile:updateAuthEmailOtp:" <> personId.getId <> ":hitsCount")
+      when (isNothing person.useFakeOtp) $ do
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+        SSL.enforceEmailOtpLimit receiverEmail transporterConfig
       storeAndSendOTP otpCode identifierType personId person smsCfg useFakeOtpM merchantOpCityId Nothing Nothing (Just receiverEmail)
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
     SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD identifier is not supported for profile update"
@@ -143,7 +152,8 @@ postDriverProfileUpdateAuthDataVerifyOTP ::
     EsqDBFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
-    HasFlowEnv m r '["version" ::: DeploymentVersion]
+    HasFlowEnv m r '["version" ::: DeploymentVersion],
+    SSL.SocialLoginFlowM m r
   ) =>
   (Maybe (Id SP.Person), Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverProfileTypes.VerifyUpdateAuthOTPReq ->
@@ -183,7 +193,8 @@ postDriverProfileUpdateAuthDataVerifyOTP (mbPersonId, merchantId, _) req = do
       existingPerson <- QPersonExtra.findByEmailAndMerchantIdAndRole (Just storedEmail) merchantId person.role
       whenJust existingPerson $ \existing ->
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
-      QPersonExtra.updateEmailByPersonId personId storedEmail
+      QPersonExtra.updateVerifiedEmail personId storedEmail SP.OTP
+      SSL.unlinkIdentitiesWithOtherEmail personId (Just storedEmail)
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
     SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD identifier is not supported for profile update"
     SP.GIMS_EMPLOYEE_ID_PASSWORD -> throwError $ InvalidRequest "GIMS_EMPLOYEE_ID_PASSWORD identifier is not supported for profile update"

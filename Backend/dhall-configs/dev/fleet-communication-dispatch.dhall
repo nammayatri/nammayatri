@@ -11,7 +11,7 @@ in      base
         , loggerConfig =
                 base.loggerConfig
             //  { logFilePath =
-                    "/tmp/kafka-consumers-fleet-communication-dispatch.log"
+                    "${common.logDir}/kafka-consumers-fleet-communication-dispatch.log"
                 , logRawSql = True
                 }
         }

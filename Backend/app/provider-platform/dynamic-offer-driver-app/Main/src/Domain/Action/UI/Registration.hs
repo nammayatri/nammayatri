@@ -41,6 +41,9 @@ module Domain.Action.UI.Registration
     shareLinkTempAppCodeCfg,
     driverTempAppCodeCfg,
     operatorLinkTempAppCodeCfg,
+    extractClientIP,
+    isIPBlocked,
+    checkAndUpdateAuthFraudByIP,
   )
 where
 
@@ -99,6 +102,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, getGimsBaseUrl)
 import qualified SharedLogic.OTP as SOTP
+import qualified SharedLogic.SocialLogin as SSL
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
@@ -178,7 +182,8 @@ type ResendAuthRes = AuthRes
 data AuthVerifyReq = AuthVerifyReq
   { otp :: Text,
     deviceToken :: FCMRecipientToken,
-    whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods
+    whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods,
+    socialLinkToken :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -398,6 +403,12 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       mbResetSeconds <- checkAuthLimitExceededByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
       whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
       updateAuthCountersByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
+  when (identifierType == SP.EMAIL && isNothing person.useFakeOtp) $
+    whenJust req.email $ \email -> do
+      transporterConfig <-
+        getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+          >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      SSL.enforceEmailOtpLimit email transporterConfig
   whenJust mbClientIP $ \clientIP -> fork "Driver Auth IP Fraud Check" $ do
     transporterConfig <-
       getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
@@ -619,6 +630,8 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         languagesSpoken = Nothing,
         identifierType = identifierType,
         email = email,
+        emailVerified = Nothing,
+        emailSource = Nothing,
         passwordHash = Nothing,
         mobileNumber = encMobNum,
         mobileCountryCode = req.mobileCountryCode,
@@ -748,7 +761,8 @@ verify ::
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasKafkaProducer r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    SSL.SocialLoginFlowM m r
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -762,6 +776,7 @@ verify tokenId req mbXForwardedFor = do
   checkForExpiry authExpiry updatedAt
   unless (authValueHash == req.otp) $ throwError InvalidAuthData
   person <- checkPersonExists entityId
+  whenJust req.socialLinkToken $ SSL.linkPendingIdentity person
   fork "generating the referral code for driver" $ do
     void $ generateReferralCode (Just person.role) (person.id, person.merchantId, Id merchantOperatingCityId)
 

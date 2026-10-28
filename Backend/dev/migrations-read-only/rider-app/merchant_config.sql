@@ -28,3 +28,12 @@ ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_phone_number_count_thresho
 ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_phone_number_count_window1 json;
 ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_phone_number_count_threshold2 integer;
 ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_phone_number_count_window2 json;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_email_count_window2 json ;
+ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_email_count_window1 json ;
+ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_email_count_threshold2 integer ;
+ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_email_count_threshold1 integer ;

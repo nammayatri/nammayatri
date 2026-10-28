@@ -159,7 +159,9 @@ in  { hedisCfg
     , encTools = appCfg.encTools
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/kafka-consumers.log", logRawSql = False }
+        //  { logFilePath = "${common.logDir}/kafka-consumers.log"
+            , logRawSql = False
+            }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , kvConfigUpdateFrequency
