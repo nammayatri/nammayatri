@@ -1,6 +1,7 @@
 module Lib.GtfsDataServer.API.Nandi where
 
 import Data.Aeson
+import Data.Time (Day)
 import qualified EulerHS.Types as ET
 import Kernel.Prelude
 import Lib.GtfsDataServer.Types
@@ -68,6 +69,42 @@ type DepotVehiclesV2API =
     :> QueryParam "status" Text
     :> Get '[JSON] [DepotVehicleInfo]
 
+-- Every registered bus of the feed (both stores merged), for the fleet-wide live map.
+type FleetVehiclesV2API =
+  "v2" :> Capture "gtfs_id" Text :> "vehicles"
+    :> QueryParam "status" Text
+    :> Get '[JSON] [DepotVehicleInfo]
+
+-- One depot's service day: waybills with trips, routes, crew and counts.
+type DepotWaybillsV2API =
+  "v2" :> Capture "gtfs_id" Text :> "depots" :> Capture "depot_id" Text :> "waybills"
+    :> QueryParam' '[Required, Strict] "serviceDate" Day
+    :> QueryParam "page" Int
+    :> QueryParam "pageSize" Int
+    :> QueryParam "q" Text
+    :> Get '[JSON] MonitoringAssignments
+
+type DepotRoutesV2API =
+  "v2" :> Capture "gtfs_id" Text :> "depots" :> Capture "depot_id" Text :> "routes"
+    :> QueryParam' '[Required, Strict] "serviceDate" Day
+    :> QueryParam "page" Int
+    :> QueryParam "pageSize" Int
+    :> QueryParam "q" Text
+    :> Get '[JSON] MonitoringRoutes
+
+type DepotCrewV2API =
+  "v2" :> Capture "gtfs_id" Text :> "depots" :> Capture "depot_id" Text :> "crew"
+    :> QueryParam' '[Required, Strict] "serviceDate" Day
+    :> QueryParam "page" Int
+    :> QueryParam "pageSize" Int
+    :> QueryParam "q" Text
+    :> Get '[JSON] MonitoringCrewPage
+
+type DepotOverviewV2API =
+  "v2" :> Capture "gtfs_id" Text :> "depots" :> Capture "depot_id" Text :> "overview"
+    :> QueryParam' '[Required, Strict] "serviceDate" Day
+    :> Get '[JSON] MonitoringOverview
+
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
 
@@ -119,6 +156,21 @@ nandiDepotByIdV2API = Proxy
 nandiDepotVehiclesV2API :: Proxy DepotVehiclesV2API
 nandiDepotVehiclesV2API = Proxy
 
+nandiFleetVehiclesV2API :: Proxy FleetVehiclesV2API
+nandiFleetVehiclesV2API = Proxy
+
+nandiDepotWaybillsV2API :: Proxy DepotWaybillsV2API
+nandiDepotWaybillsV2API = Proxy
+
+nandiDepotRoutesV2API :: Proxy DepotRoutesV2API
+nandiDepotRoutesV2API = Proxy
+
+nandiDepotCrewV2API :: Proxy DepotCrewV2API
+nandiDepotCrewV2API = Proxy
+
+nandiDepotOverviewV2API :: Proxy DepotOverviewV2API
+nandiDepotOverviewV2API = Proxy
+
 getNandiGetRouteStopMappingByRouteId :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRouteIdAPI
 
@@ -169,3 +221,18 @@ getNandiDepotByIdV2 = ET.client nandiDepotByIdV2API
 
 getNandiDepotVehiclesV2 :: Text -> Text -> Maybe Text -> ET.EulerClient [DepotVehicleInfo]
 getNandiDepotVehiclesV2 = ET.client nandiDepotVehiclesV2API
+
+getNandiFleetVehiclesV2 :: Text -> Maybe Text -> ET.EulerClient [DepotVehicleInfo]
+getNandiFleetVehiclesV2 = ET.client nandiFleetVehiclesV2API
+
+getNandiDepotWaybillsV2 :: Text -> Text -> Day -> Maybe Int -> Maybe Int -> Maybe Text -> ET.EulerClient MonitoringAssignments
+getNandiDepotWaybillsV2 = ET.client nandiDepotWaybillsV2API
+
+getNandiDepotRoutesV2 :: Text -> Text -> Day -> Maybe Int -> Maybe Int -> Maybe Text -> ET.EulerClient MonitoringRoutes
+getNandiDepotRoutesV2 = ET.client nandiDepotRoutesV2API
+
+getNandiDepotCrewV2 :: Text -> Text -> Day -> Maybe Int -> Maybe Int -> Maybe Text -> ET.EulerClient MonitoringCrewPage
+getNandiDepotCrewV2 = ET.client nandiDepotCrewV2API
+
+getNandiDepotOverviewV2 :: Text -> Text -> Day -> ET.EulerClient MonitoringOverview
+getNandiDepotOverviewV2 = ET.client nandiDepotOverviewV2API

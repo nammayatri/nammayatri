@@ -112,7 +112,6 @@ library
       API.Types.UI.TicketKapture
       API.UI
       API.UI.Aarokya
-      API.UI.LiwipStore
       API.UI.Call
       API.UI.CallEvent
       API.UI.CancellationReason
@@ -128,6 +127,7 @@ library
       API.UI.Issue
       API.UI.KioskLocation
       API.UI.LeaderBoard
+      API.UI.LiwipStore
       API.UI.Maps
       API.UI.Message
       API.UI.OnMessage
@@ -363,7 +363,6 @@ library
       Domain.Action.Internal.VerifyEmailUpdate
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.Aarokya
-      Domain.Action.UI.LiwipStore
       Domain.Action.UI.AvailableForRides
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
@@ -428,6 +427,7 @@ library
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
       Domain.Action.UI.LegalPublishInternal
+      Domain.Action.UI.LiwipStore
       Domain.Action.UI.LmsModule
       Domain.Action.UI.Location
       Domain.Action.UI.Maps
