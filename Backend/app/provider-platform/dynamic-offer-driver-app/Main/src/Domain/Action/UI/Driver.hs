@@ -296,6 +296,7 @@ import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MetricsLabels as SML
+import qualified SharedLogic.MinimumGuarantee.Events as MGEvents
 import qualified SharedLogic.OneShotAssign as OneShot
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
@@ -1160,6 +1161,12 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
               logInfo $ "Driver going OFFLINE at: " <> show now <> " for driverId: " <> show driverId
               DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing (Just now)
             else DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing Nothing
+          -- Minimum Guarantee campaigns: only this driver-facing path starts and ends breaks, so
+          -- offline writes forced by the system or an admin are never counted.
+          mgResult <- withTryCatch "setActivity:minimumGuarantee" $ MGEvents.onDriverModeChanged personId driverInfo.mode (mode <|> Just DriverInfo.OFFLINE)
+          case mgResult of
+            Left err -> logError $ "Minimum guarantee mode-change hook failed for driverId " <> personId.getId <> ": " <> show err
+            Right _ -> pure ()
         when (isActive && not driverInfo.active) $
           fork "FleetEngine:notifyDriverOnline" $
             FleetEngine.notifyDriverOnline merchantOpCityId personId

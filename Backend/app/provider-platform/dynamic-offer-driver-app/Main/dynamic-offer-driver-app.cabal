@@ -237,6 +237,7 @@ library
       Domain.Action.Dashboard.Fleet.Access
       Domain.Action.Dashboard.Fleet.Driver
       Domain.Action.Dashboard.Fleet.LiveMap
+      Domain.Action.Dashboard.Fleet.MinimumGuarantee
       Domain.Action.Dashboard.Fleet.Onboarding
       Domain.Action.Dashboard.Fleet.PayoutAccount
       Domain.Action.Dashboard.Fleet.Referral
@@ -266,6 +267,7 @@ library
       Domain.Action.Dashboard.Management.MediaFileDocument
       Domain.Action.Dashboard.Management.Merchant
       Domain.Action.Dashboard.Management.Message
+      Domain.Action.Dashboard.Management.MinimumGuarantee
       Domain.Action.Dashboard.Management.NammaTag
       Domain.Action.Dashboard.Management.Notification
       Domain.Action.Dashboard.Management.Payout
@@ -437,6 +439,7 @@ library
       Domain.Action.UI.MerchantServiceConfig
       Domain.Action.UI.Message
       Domain.Action.UI.MeterRide
+      Domain.Action.UI.MinimumGuarantee
       Domain.Action.UI.OnMessage
       Domain.Action.UI.OperationHub
       Domain.Action.UI.Operator
@@ -532,6 +535,7 @@ library
       Domain.Types.Extra.MerchantPaymentMethod
       Domain.Types.Extra.MerchantServiceConfig
       Domain.Types.Extra.MessageReport
+      Domain.Types.Extra.MgEnrollment
       Domain.Types.Extra.Notification
       Domain.Types.Extra.Plan
       Domain.Types.Extra.SurgeConfig
@@ -599,6 +603,7 @@ library
       SharedLogic.Allocator.Jobs.Mandate.Notification
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
       SharedLogic.Allocator.Jobs.Mandate.RetryAutopayCollection
+      SharedLogic.Allocator.Jobs.MinimumGuarantee.Settlement
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
       SharedLogic.Allocator.Jobs.Payout.BulkPayoutStatusCheck
       SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge
@@ -771,6 +776,12 @@ library
       SharedLogic.MerchantPaymentMethod
       SharedLogic.MessageBuilder
       SharedLogic.MetricsLabels
+      SharedLogic.MinimumGuarantee.Budget
+      SharedLogic.MinimumGuarantee.Context
+      SharedLogic.MinimumGuarantee.Enrollment
+      SharedLogic.MinimumGuarantee.Events
+      SharedLogic.MinimumGuarantee.Rules
+      SharedLogic.MinimumGuarantee.Settlement
       SharedLogic.MobileNumberValidation
       SharedLogic.OndcCancellationReason
       SharedLogic.OneShotAssign
@@ -1086,6 +1097,9 @@ library
       Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MessageExtra
       Storage.Queries.MessageReportExtra
+      Storage.Queries.MgCampaignExtra
+      Storage.Queries.MgEligibilityExtra
+      Storage.Queries.MgEnrollmentExtra
       Storage.Queries.MonetaryRewardConfigExtra
       Storage.Queries.NotificationExtra
       Storage.Queries.OnboardingList.DriverList
@@ -1235,6 +1249,7 @@ library
       API.Action.DashboardAuth.Fleet
       API.Action.DashboardAuth.Fleet.Driver
       API.Action.DashboardAuth.Fleet.LiveMap
+      API.Action.DashboardAuth.Fleet.MinimumGuarantee
       API.Action.DashboardAuth.Fleet.Onboarding
       API.Action.DashboardAuth.Fleet.PayoutAccount
       API.Action.DashboardAuth.Fleet.RegistrationV2
@@ -1265,6 +1280,7 @@ library
       API.Action.DashboardAuth.Management.MediaFileDocument
       API.Action.DashboardAuth.Management.Merchant
       API.Action.DashboardAuth.Management.Message
+      API.Action.DashboardAuth.Management.MinimumGuarantee
       API.Action.DashboardAuth.Management.NammaTag
       API.Action.DashboardAuth.Management.Notification
       API.Action.DashboardAuth.Management.Payout
@@ -1327,6 +1343,7 @@ library
       API.Action.UI.Merchant
       API.Action.UI.MerchantDocument
       API.Action.UI.MeterRide
+      API.Action.UI.MinimumGuarantee
       API.Action.UI.OperationHub
       API.Action.UI.Operator
       API.Action.UI.PaymentCustomer
@@ -1400,10 +1417,12 @@ library
       API.Types.ProviderPlatform.Fleet.Driver
       API.Types.ProviderPlatform.Fleet.Endpoints.Driver
       API.Types.ProviderPlatform.Fleet.Endpoints.LiveMap
+      API.Types.ProviderPlatform.Fleet.Endpoints.MinimumGuarantee
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
       API.Types.ProviderPlatform.Fleet.Endpoints.PayoutAccount
       API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
       API.Types.ProviderPlatform.Fleet.LiveMap
+      API.Types.ProviderPlatform.Fleet.MinimumGuarantee
       API.Types.ProviderPlatform.Fleet.Onboarding
       API.Types.ProviderPlatform.Fleet.PayoutAccount
       API.Types.ProviderPlatform.Fleet.RegistrationV2
@@ -1442,6 +1461,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.MediaFileDocument
       API.Types.ProviderPlatform.Management.Endpoints.Merchant
       API.Types.ProviderPlatform.Management.Endpoints.Message
+      API.Types.ProviderPlatform.Management.Endpoints.MinimumGuarantee
       API.Types.ProviderPlatform.Management.Endpoints.NammaTag
       API.Types.ProviderPlatform.Management.Endpoints.Notification
       API.Types.ProviderPlatform.Management.Endpoints.Payout
@@ -1472,6 +1492,7 @@ library
       API.Types.ProviderPlatform.Management.MediaFileDocument
       API.Types.ProviderPlatform.Management.Merchant
       API.Types.ProviderPlatform.Management.Message
+      API.Types.ProviderPlatform.Management.MinimumGuarantee
       API.Types.ProviderPlatform.Management.NammaTag
       API.Types.ProviderPlatform.Management.Notification
       API.Types.ProviderPlatform.Management.Payout
@@ -1526,6 +1547,7 @@ library
       API.Types.UI.Merchant
       API.Types.UI.MerchantDocument
       API.Types.UI.MeterRide
+      API.Types.UI.MinimumGuarantee
       API.Types.UI.OperationHub
       API.Types.UI.PaymentCustomer
       API.Types.UI.Penalty
@@ -1690,6 +1712,11 @@ library
       Domain.Types.MessageReport
       Domain.Types.MessageTranslation
       Domain.Types.MetaData
+      Domain.Types.MgCampaign
+      Domain.Types.MgCampaignRule
+      Domain.Types.MgCampaignWindow
+      Domain.Types.MgEligibility
+      Domain.Types.MgEnrollment
       Domain.Types.ModuleCompletionInformation
       Domain.Types.MonetaryRewardConfig
       Domain.Types.MorthVerification
@@ -1893,6 +1920,11 @@ library
       Storage.Beam.MessageReport
       Storage.Beam.MessageTranslation
       Storage.Beam.MetaData
+      Storage.Beam.MgCampaign
+      Storage.Beam.MgCampaignRule
+      Storage.Beam.MgCampaignWindow
+      Storage.Beam.MgEligibility
+      Storage.Beam.MgEnrollment
       Storage.Beam.ModuleCompletionInformation
       Storage.Beam.MonetaryRewardConfig
       Storage.Beam.MorthVerification
@@ -2101,6 +2133,11 @@ library
       Storage.Queries.MessageReport
       Storage.Queries.MessageTranslation
       Storage.Queries.MetaData
+      Storage.Queries.MgCampaign
+      Storage.Queries.MgCampaignRule
+      Storage.Queries.MgCampaignWindow
+      Storage.Queries.MgEligibility
+      Storage.Queries.MgEnrollment
       Storage.Queries.ModuleCompletionInformation
       Storage.Queries.MonetaryRewardConfig
       Storage.Queries.MorthVerification
@@ -2172,6 +2209,9 @@ library
       Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.Message
       Storage.Queries.OrphanInstances.MessageReport
+      Storage.Queries.OrphanInstances.MgCampaign
+      Storage.Queries.OrphanInstances.MgEligibility
+      Storage.Queries.OrphanInstances.MgEnrollment
       Storage.Queries.OrphanInstances.MonetaryRewardConfig
       Storage.Queries.OrphanInstances.Notification
       Storage.Queries.OrphanInstances.OperationHub

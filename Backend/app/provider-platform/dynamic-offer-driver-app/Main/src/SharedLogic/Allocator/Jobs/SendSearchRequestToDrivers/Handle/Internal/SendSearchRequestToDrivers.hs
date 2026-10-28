@@ -26,12 +26,14 @@ import Control.Monad.Extra (anyM)
 import Data.Aeson (Value (..))
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
+import Data.Either (fromRight)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
 import qualified Data.List as List
 import qualified Data.Map as M
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Domain.Action.UI.DriverAcceptOffer (AcceptDynamicOfferFlow, acceptDynamicOfferDriverRequest)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
@@ -48,6 +50,7 @@ import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
+import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Plan as DPlan
 import Domain.Types.RiderDetails
 import qualified Domain.Types.SearchRequest as DSR
@@ -93,6 +96,7 @@ import SharedLogic.FarePolicy
 import SharedLogic.Finance.Wallet (addOfferHoldsForSearchTry)
 import SharedLogic.GoogleTranslate
 import qualified SharedLogic.MetricsLabels as SML
+import SharedLogic.MinimumGuarantee.Context (getMgForceAssignDriverIds)
 import SharedLogic.Ride (offerQuoteLockKeyWithCoolDown)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
@@ -675,26 +679,31 @@ attemptPriorityDirectAssign ::
   [SDP.DriverPoolWithActualDistResult] ->
   m [SDP.DriverPoolWithActualDistResult]
 attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolCfg batchNum transporterConfig coinConfigCache fleetConfigs batch = do
+  -- Drivers inside a Minimum Guarantee force-assign window, one batched Redis read for the whole
+  -- batch. A failed read only means no MG driver is force-assigned this time; dispatch carries on.
+  nowForMg <- getCurrentTime
+  mgForced <- fromRight Set.empty <$> withTryCatch "attemptPriorityDirectAssign:mgForceAssign" (getMgForceAssignDriverIds (map (cast . (.driverPoolResult.driverId)) batch) nowForMg)
+  let sortedPriority = DL.sortOn (.actualDistanceToPickup) (DL.filter (isPriorityCandidate mgForced) batch)
   if null sortedPriority
     then pure batch
     else do
       now <- getCurrentTime
       let validTill = fromIntegral driverPoolCfg.singleBatchProcessTime `addUTCTime` now
       quoteRespondCoolDown <- asks (.quoteRespondCoolDown)
-      assigned <- tryAssign validTill quoteRespondCoolDown sortedPriority
+      assigned <- tryAssign mgForced validTill quoteRespondCoolDown sortedPriority
       -- On success return [] -- broadcasting the remainder would still notify for an already-taken ride.
       pure $ if assigned then [] else batch
   where
     tripQuoteDetailsHashMap = HashMap.fromList $ (\tqd -> (tqd.vehicleServiceTier, tqd)) <$> tripQuoteDetails
     -- Closes over the outer args; only validTill, the cooldown, and the candidate list vary per call.
-    tryAssign :: UTCTime -> Int -> [SDP.DriverPoolWithActualDistResult] -> m Bool
-    tryAssign _ _ [] = pure False
-    tryAssign validTill quoteRespondCoolDown (dp : rest) = do
+    tryAssign :: Set.Set (Id DPerson.Person) -> UTCTime -> Int -> [SDP.DriverPoolWithActualDistResult] -> m Bool
+    tryAssign _ _ _ [] = pure False
+    tryAssign mgForced validTill quoteRespondCoolDown (dp : rest) = do
       let driverId = cast dp.driverPoolResult.driverId
           unlockThisDriver = Redis.unlockRedis (offerQuoteLockKeyWithCoolDown driverId)
       locked <- Redis.tryLockRedis (offerQuoteLockKeyWithCoolDown driverId) quoteRespondCoolDown
       if not locked
-        then tryAssign validTill quoteRespondCoolDown rest
+        then tryAssign mgForced validTill quoteRespondCoolDown rest
         else do
           result :: Either SomeException Bool <- C.try $ do
             now <- getCurrentTime
@@ -718,7 +727,8 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
                 isStillLive =
                   maybe False (\d -> not d.blocked && d.enabled && not (fromMaybe False d.isDisabledReasonFlag) && isBillingEligible d && isDriverModeEligibleHelper d.mode d.active) mbFreshPoolData
                     && stillHasTierSelected
-                    && stillHasAutoAcceptTierSelected
+                    -- a Minimum Guarantee force-assign driver is not required to have selected auto-accept
+                    && (stillHasAutoAcceptTierSelected || Set.member driverId mgForced)
                 -- No LTS entry at all reads as on-ride/unavailable, never as eligible.
                 onRide = maybe True (.onRide) mbFreshPoolData
                 -- Post-ride cool-off: skip silent-assign only, broadcast unaffected.
@@ -774,19 +784,25 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
             Right True -> pure True -- lock stays held; initializeRide releases it (same as manual accept)
             Left err -> do
               logError $ "attemptPriorityDirectAssign: candidate check failed for driverId " <> driverId.getId <> ", searchTryId " <> searchTry.id.getId <> ": " <> show err
-              unlockThisDriver >> tryAssign validTill quoteRespondCoolDown rest
-            Right False -> unlockThisDriver >> tryAssign validTill quoteRespondCoolDown rest
+              unlockThisDriver >> tryAssign mgForced validTill quoteRespondCoolDown rest
+            Right False -> unlockThisDriver >> tryAssign mgForced validTill quoteRespondCoolDown rest
     autoAcceptanceConfigForTier tier =
       DL.find (\vst -> vst.serviceTierType == tier) cityServiceTiers >>= (.autoAcceptanceConfig)
     isAutoAssignEnabledForTier tier =
       maybe False (.enabled) (autoAcceptanceConfigForTier tier)
     -- Checked against DriverPoolResult's typed field, not a driverTags marker -- avoids encode/decode mismatch.
-    isPriorityCandidate dp =
+    isPriorityCandidate mgForced dp = isTaggedPriorityCandidate dp || isMgForcedCandidate mgForced dp
+    isTaggedPriorityCandidate dp =
       isAutoAssignEnabledForTier dp.driverPoolResult.serviceTier
         && UI.hasPriorityTag (show dp.driverPoolResult.serviceTier) dp
         && dp.driverPoolResult.serviceTier `elem` dp.driverPoolResult.selectedAutoAcceptTiers
         && dp.preferenceMatchScore == 1.0
         -- Farther-than-threshold drivers still get the normal broadcast, just no silent assign.
         && maybe True (dp.actualDistanceToPickup <=) driverPoolCfg.autoAssignMaxPickupDistance
-    priorityCandidates = DL.filter isPriorityCandidate batch
-    sortedPriority = DL.sortOn (.actualDistanceToPickup) priorityCandidates
+    -- A driver inside a Minimum Guarantee force-assign window is a candidate without the AutoAssign
+    -- tag, the auto-accept tier selection or the city auto-accept config; the preference and
+    -- distance conditions stand.
+    isMgForcedCandidate mgForced dp =
+      Set.member (cast dp.driverPoolResult.driverId) mgForced
+        && dp.preferenceMatchScore == 1.0
+        && maybe True (dp.actualDistanceToPickup <=) driverPoolCfg.autoAssignMaxPickupDistance

@@ -1,0 +1,96 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  VehicleCategory: Domain.Types.VehicleCategory
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+# Minimum Guarantee (MG) campaign template. A campaign runs once per local day between
+# startDate and endDate (inclusive). On each day an opted-in driver is guaranteed
+# `guaranteeAmount` across that day's windows (MgCampaignWindow); the shortfall is credited to
+# the driver's (or fleet owner's) wallet at settlement, scaled by the lowest slab percent across
+# the campaign's rules (MgCampaignRule).
+#
+# Once PUBLISHED the terms (guaranteeAmount, windows, rules, forceAssign, grace, payout delay,
+# onFleetChange) are immutable -- enrollments read them live. Only endDate, maxBudget and status
+# may change afterwards.
+MgCampaign:
+  tableName: mg_campaign
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  types:
+    MgFrequency:
+      enum: "DAILY"
+    MgCampaignStatus:
+      enum: "DRAFT, PUBLISHED, PAUSED, CLOSED, CANCELLED"
+    # What happens when an enrolled driver's fleet association changes during the day's windows.
+    #   BLOCK      - the fleet link/unlink/remove call is refused
+    #   DISQUALIFY - allowed; the day's enrollment is DISQUALIFIED (no top-up)
+    #   CANCEL     - allowed; the day's enrollment is CANCELLED_BY_ADMIN (no top-up, no violation)
+    MgFleetChangePolicy:
+      enum: "BLOCK, DISQUALIFY, CANCEL"
+
+  fields:
+    id: Id MgCampaign
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    name: Text
+    description: Maybe Text
+    # stored as one JSON text value, see FareAdjustment.vehicleServiceTiers for why
+    vehicleCategories: "[VehicleCategory]"
+    startDate: Day
+    endDate: Day
+    frequency: MgFrequency
+    # one amount per day, across all of that day's windows
+    guaranteeAmount: HighPrecMoney
+    currency: Currency
+    # silently assign rides to enrolled drivers inside a window (allocator check, no tag)
+    forceAssign: Bool
+    # opt-in for a day closes this many minutes before that day's first window
+    optInCutoffMinutes: Int
+    # settlement runs at (last window end + this); rides still running then are not counted
+    settlementGraceMinutes: Int
+    onFleetChange: MgFleetChangePolicy
+    # total top-ups credited across all days and drivers; Nothing = no cap
+    maxBudget: Maybe HighPrecMoney
+    status: MgCampaignStatus
+    # dashboard user id
+    createdBy: Text
+
+  constraints:
+    id: PrimaryKey
+
+  beamType:
+    vehicleCategories: Text
+
+  toTType:
+    vehicleCategories: Kernel.Utils.Text.encodeToText vehicleCategories|E
+
+  fromTType:
+    vehicleCategories: (fromMaybe [] (Kernel.Utils.Text.decodeFromText vehicleCategories))|E
+
+  sqlType:
+    vehicleCategories: text
+
+  default:
+    frequency: "'DAILY'"
+    forceAssign: "false"
+    optInCutoffMinutes: "60"
+    settlementGraceMinutes: "120"
+    onFleetChange: "'DISQUALIFY'"
+    status: "'DRAFT'"
+
+  queries:
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+
+    # the only terms that may change after publishing
+    updateEndDateAndMaxBudgetById:
+      kvFunction: updateOneWithKV
+      params: [endDate, maxBudget]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

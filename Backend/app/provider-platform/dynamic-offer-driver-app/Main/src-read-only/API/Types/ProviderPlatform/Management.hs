@@ -25,6 +25,7 @@ import qualified API.Types.ProviderPlatform.Management.Media
 import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
 import qualified API.Types.ProviderPlatform.Management.Merchant
 import qualified API.Types.ProviderPlatform.Management.Message
+import qualified API.Types.ProviderPlatform.Management.MinimumGuarantee
 import qualified API.Types.ProviderPlatform.Management.NammaTag
 import qualified API.Types.ProviderPlatform.Management.Notification
 import qualified API.Types.ProviderPlatform.Management.Payout
@@ -75,6 +76,7 @@ data ManagementUserActionType
   | MEDIA_FILE_DOCUMENT API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentUserActionType
   | MERCHANT API.Types.ProviderPlatform.Management.Merchant.MerchantUserActionType
   | MESSAGE API.Types.ProviderPlatform.Management.Message.MessageUserActionType
+  | MINIMUM_GUARANTEE API.Types.ProviderPlatform.Management.MinimumGuarantee.MinimumGuaranteeUserActionType
   | NAMMA_TAG API.Types.ProviderPlatform.Management.NammaTag.NammaTagUserActionType
   | NOTIFICATION API.Types.ProviderPlatform.Management.Notification.NotificationUserActionType
   | PAYOUT API.Types.ProviderPlatform.Management.Payout.PayoutUserActionType
@@ -122,6 +124,7 @@ instance Text.Show.Show ManagementUserActionType where
     MEDIA_FILE_DOCUMENT e -> "MEDIA_FILE_DOCUMENT/" <> show e
     MERCHANT e -> "MERCHANT/" <> show e
     MESSAGE e -> "MESSAGE/" <> show e
+    MINIMUM_GUARANTEE e -> "MINIMUM_GUARANTEE/" <> show e
     NAMMA_TAG e -> "NAMMA_TAG/" <> show e
     NOTIFICATION e -> "NOTIFICATION/" <> show e
     PAYOUT e -> "PAYOUT/" <> show e
@@ -330,6 +333,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "MESSAGE/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( MINIMUM_GUARANTEE v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "MINIMUM_GUARANTEE/" r,
                    ( v1,
                      r2
                      ) <-

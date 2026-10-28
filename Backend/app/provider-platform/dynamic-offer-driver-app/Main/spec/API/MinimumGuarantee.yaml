@@ -1,0 +1,97 @@
+imports:
+  MgCampaign: Domain.Types.MgCampaign
+  MgEnrollmentStatus: Domain.Types.MgEnrollment
+  MgMetric: Domain.Types.MgCampaignRule
+  MgSlab: Domain.Types.MgCampaignRule
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  Day: Data.Time
+  TimeOfDay: Data.Time
+
+module: MinimumGuarantee
+
+# Minimum Guarantee (MG) campaigns, driver side: see invitations, opt in or out for a day (today
+# or tomorrow), and follow today's progress. A fleet driver is opted in by the fleet owner from the
+# fleet dashboard instead; these endpoints refuse a fleet driver.
+types:
+  MgWindowRes:
+    startTime: TimeOfDay
+    endTime: TimeOfDay
+  MgRuleRes:
+    metric: MgMetric
+    slabs: "[MgSlab]"
+  MgInvitationDay:
+    date: Day
+    # the day's enrollment status when the driver is opted in
+    status: Maybe MgEnrollmentStatus
+    canOptIn: Bool
+  MgInvitation:
+    campaignId: Id MgCampaign
+    name: Text
+    description: Maybe Text
+    startDate: Day
+    endDate: Day
+    guaranteeAmount: HighPrecMoney
+    currency: Currency
+    forceAssign: Bool
+    windows: "[MgWindowRes]"
+    rules: "[MgRuleRes]"
+    # today and tomorrow, when they fall inside the campaign dates
+    days: "[MgInvitationDay]"
+  MgInvitationsRes:
+    invitations: "[MgInvitation]"
+  MgOptInReq:
+    campaignId: Id MgCampaign
+    date: Day
+    # the driver has read and accepted the campaign terms, including that rides are assigned to them
+    acceptTerms: Bool
+  MgOptOutReq:
+    campaignId: Id MgCampaign
+    date: Day
+  MgProgress:
+    campaignId: Id MgCampaign
+    campaignName: Text
+    date: Day
+    status: MgEnrollmentStatus
+    guaranteeAmount: HighPrecMoney
+    currency: Currency
+    earned: HighPrecMoney
+    rides: Int
+    distanceKm: Int
+    cancellations: Int
+    breakMinutesUsed: Int
+    # lowest slab percent so far; Nothing before the first event of the day
+    payoutPercent: Maybe Int
+    topUpAmount: Maybe HighPrecMoney
+    windows: "[MgWindowRes]"
+  MgProgressRes:
+    days: "[MgProgress]"
+
+apis:
+  - GET:
+      endpoint: /driver/mg/invitations
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: API.Types.UI.MinimumGuarantee.MgInvitationsRes
+  - POST:
+      endpoint: /driver/mg/optIn
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.MinimumGuarantee.MgOptInReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+  - POST:
+      endpoint: /driver/mg/optOut
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.MinimumGuarantee.MgOptOutReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+  - GET:
+      endpoint: /driver/mg/progress
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.MinimumGuarantee.MgProgressRes

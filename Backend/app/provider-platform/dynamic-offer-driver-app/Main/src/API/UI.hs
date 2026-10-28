@@ -48,6 +48,7 @@ import qualified API.Action.UI.LmsModule as LmsModule
 import qualified API.Action.UI.Merchant as Merchant
 import qualified API.Action.UI.MerchantDocument as MerchantDocument
 import qualified API.Action.UI.MeterRide as MeterRide
+import qualified API.Action.UI.MinimumGuarantee as MinimumGuarantee
 import qualified API.Action.UI.OperationHub as OH
 import qualified API.Action.UI.Operator as Operator
 import qualified API.Action.UI.PaymentCustomer as PaymentCustomer
@@ -208,6 +209,7 @@ type API =
            :<|> Aarokya.API
            :<|> LiwipStore.API
            :<|> FRFSFleetOperator.API
+           :<|> MinimumGuarantee.API
            :<|> FleetEngineToken.API
            :<|> DriverDocument.API
            :<|> DriverAreaPreference.API
@@ -303,6 +305,7 @@ handler =
     :<|> Aarokya.handler
     :<|> LiwipStore.handler
     :<|> FRFSFleetOperator.handler
+    :<|> MinimumGuarantee.handler
     :<|> FleetEngineToken.handler
     :<|> DriverDocument.handler
     :<|> DriverAreaPreference.handler

@@ -1,0 +1,1724 @@
+{
+  "info": {
+    "name": "MinimumGuaranteeFlow",
+    "description": "Minimum Guarantee campaign lifecycle: dashboard creates, invites and publishes; the driver opts in and out; pause, extend, cancel and budget cap are exercised. See Rules.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0 Driver setup",
+      "item": [
+        {
+          "name": "Driver Auth",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var d = pm.response.json();",
+                  "pm.environment.set('driver_authId', d.authId);",
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseURL_namma_P}}/auth",
+              "host": [
+                "{{baseURL_namma_P}}"
+              ],
+              "path": [
+                "auth"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Driver OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var d = pm.response.json();",
+                  "pm.environment.set('driver_token', d.token);",
+                  "pm.environment.set('driver_id', d.person.id);",
+                  "console.log('Driver ID:', d.person.id);",
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device\"\n}"
+            },
+            "url": {
+              "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+              "host": [
+                "{{baseURL_namma_P}}"
+              ],
+              "path": [
+                "auth",
+                "{{driver_authId}}",
+                "verify"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Switch City (Dashboard)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var d = pm.response.json();",
+                  "pm.environment.set('dashboard_token', d.authToken);",
+                  "console.log('Switched to', d.merchantId, d.city);",
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+            },
+            "url": {
+              "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+              "host": [
+                "{{dashboard_base_url}}"
+              ],
+              "path": [
+                "user",
+                "switchMerchantAndCity"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Vehicle (Dashboard)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Vehicle added', function () { pm.response.to.have.status(200); });",
+                  "console.log('AddVehicle:', pm.response.text());"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"registrationNo\": \"{{_test_reg_no}}\",\n  \"vehicleClass\": \"3w\",\n  \"colour\": \"Green\",\n  \"model\": \"AUTO RICKSHAW\",\n  \"make\": \"Bajaj\",\n  \"vehicleCategory\": \"AUTO_CATEGORY\"\n}"
+            },
+            "url": {
+              "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
+              "host": [
+                "{{baseURL_BPP_Dashboard_Internal}}"
+              ],
+              "path": [
+                "{{dashboard_merchant_id}}",
+                "{{dashboard_city}}",
+                "driver",
+                "{{driver_id}}",
+                "addVehicle"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Enable Driver (Dashboard)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Driver enabled', function () { pm.response.to.have.status(200); });",
+                  "console.log('Enable:', pm.response.text());"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
+              "host": [
+                "{{baseURL_BPP_Dashboard_Internal}}"
+              ],
+              "path": [
+                "{{dashboard_merchant_id}}",
+                "{{dashboard_city}}",
+                "driver",
+                "{{driver_id}}",
+                "enable"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 Campaign validation",
+      "item": [
+        {
+          "name": "Create - no windows rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/create",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"INT_TEST_MG_BAD\",\n  \"description\": \"integration test campaign\",\n  \"vehicleCategories\": [\n    \"AUTO_CATEGORY\"\n  ],\n  \"startDate\": \"{{_test_mg_today}}\",\n  \"endDate\": \"{{_test_mg_tomorrow}}\",\n  \"guaranteeAmount\": 2000,\n  \"currency\": \"INR\",\n  \"forceAssign\": true,\n  \"optInCutoffMinutes\": 0,\n  \"settlementGraceMinutes\": 120,\n  \"onFleetChange\": \"DISQUALIFY\",\n  \"maxBudget\": null,\n  \"windows\": [],\n  \"rules\": [\n    {\n      \"metric\": \"CANCELLATIONS\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        },\n        {\n          \"fromValue\": 1,\n          \"percent\": 0\n        }\n      ]\n    },\n    {\n      \"metric\": \"BREAK_MINUTES\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        },\n        {\n          \"fromValue\": 31,\n          \"percent\": 50\n        },\n        {\n          \"fromValue\": 61,\n          \"percent\": 0\n        }\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('empty windows -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: at least one window', function () { pm.expect(pm.response.text()).to.include(\"at least one window\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - overlapping windows rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/create",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"INT_TEST_MG_BAD\",\n  \"description\": \"integration test campaign\",\n  \"vehicleCategories\": [\n    \"AUTO_CATEGORY\"\n  ],\n  \"startDate\": \"{{_test_mg_today}}\",\n  \"endDate\": \"{{_test_mg_tomorrow}}\",\n  \"guaranteeAmount\": 2000,\n  \"currency\": \"INR\",\n  \"forceAssign\": true,\n  \"optInCutoffMinutes\": 0,\n  \"settlementGraceMinutes\": 120,\n  \"onFleetChange\": \"DISQUALIFY\",\n  \"maxBudget\": null,\n  \"windows\": [\n    {\n      \"startTime\": \"08:00:00\",\n      \"endTime\": \"10:00:00\"\n    },\n    {\n      \"startTime\": \"09:00:00\",\n      \"endTime\": \"11:00:00\"\n    }\n  ],\n  \"rules\": [\n    {\n      \"metric\": \"CANCELLATIONS\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        },\n        {\n          \"fromValue\": 1,\n          \"percent\": 0\n        }\n      ]\n    },\n    {\n      \"metric\": \"BREAK_MINUTES\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        },\n        {\n          \"fromValue\": 31,\n          \"percent\": 50\n        },\n        {\n          \"fromValue\": 61,\n          \"percent\": 0\n        }\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('overlapping windows -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: must not overlap', function () { pm.expect(pm.response.text()).to.include(\"must not overlap\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - first slab not at 0 rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/create",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"INT_TEST_MG_BAD\",\n  \"description\": \"integration test campaign\",\n  \"vehicleCategories\": [\n    \"AUTO_CATEGORY\"\n  ],\n  \"startDate\": \"{{_test_mg_today}}\",\n  \"endDate\": \"{{_test_mg_tomorrow}}\",\n  \"guaranteeAmount\": 2000,\n  \"currency\": \"INR\",\n  \"forceAssign\": true,\n  \"optInCutoffMinutes\": 0,\n  \"settlementGraceMinutes\": 120,\n  \"onFleetChange\": \"DISQUALIFY\",\n  \"maxBudget\": null,\n  \"windows\": [\n    {\n      \"startTime\": \"08:00:00\",\n      \"endTime\": \"10:00:00\"\n    },\n    {\n      \"startTime\": \"17:00:00\",\n      \"endTime\": \"19:00:00\"\n    }\n  ],\n  \"rules\": [\n    {\n      \"metric\": \"CANCELLATIONS\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 1,\n          \"percent\": 100\n        }\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('slab start -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: first slab must start at 0', function () { pm.expect(pm.response.text()).to.include(\"first slab must start at 0\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - duplicate metric rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/create",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"INT_TEST_MG_BAD\",\n  \"description\": \"integration test campaign\",\n  \"vehicleCategories\": [\n    \"AUTO_CATEGORY\"\n  ],\n  \"startDate\": \"{{_test_mg_today}}\",\n  \"endDate\": \"{{_test_mg_tomorrow}}\",\n  \"guaranteeAmount\": 2000,\n  \"currency\": \"INR\",\n  \"forceAssign\": true,\n  \"optInCutoffMinutes\": 0,\n  \"settlementGraceMinutes\": 120,\n  \"onFleetChange\": \"DISQUALIFY\",\n  \"maxBudget\": null,\n  \"windows\": [\n    {\n      \"startTime\": \"08:00:00\",\n      \"endTime\": \"10:00:00\"\n    },\n    {\n      \"startTime\": \"17:00:00\",\n      \"endTime\": \"19:00:00\"\n    }\n  ],\n  \"rules\": [\n    {\n      \"metric\": \"CANCELLATIONS\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        }\n      ]\n    },\n    {\n      \"metric\": \"CANCELLATIONS\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 50\n        }\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('duplicate metric -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: at most one rule', function () { pm.expect(pm.response.text()).to.include(\"at most one rule\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - non-positive guarantee rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/create",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"INT_TEST_MG_BAD\",\n  \"description\": \"integration test campaign\",\n  \"vehicleCategories\": [\n    \"AUTO_CATEGORY\"\n  ],\n  \"startDate\": \"{{_test_mg_today}}\",\n  \"endDate\": \"{{_test_mg_tomorrow}}\",\n  \"guaranteeAmount\": 0,\n  \"currency\": \"INR\",\n  \"forceAssign\": true,\n  \"optInCutoffMinutes\": 0,\n  \"settlementGraceMinutes\": 120,\n  \"onFleetChange\": \"DISQUALIFY\",\n  \"maxBudget\": null,\n  \"windows\": [\n    {\n      \"startTime\": \"08:00:00\",\n      \"endTime\": \"10:00:00\"\n    },\n    {\n      \"startTime\": \"17:00:00\",\n      \"endTime\": \"19:00:00\"\n    }\n  ],\n  \"rules\": [\n    {\n      \"metric\": \"CANCELLATIONS\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        },\n        {\n          \"fromValue\": 1,\n          \"percent\": 0\n        }\n      ]\n    },\n    {\n      \"metric\": \"BREAK_MINUTES\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        },\n        {\n          \"fromValue\": 31,\n          \"percent\": 50\n        },\n        {\n          \"fromValue\": 61,\n          \"percent\": 0\n        }\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('guarantee 0 -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: guaranteeAmount must be positive', function () { pm.expect(pm.response.text()).to.include(\"guaranteeAmount must be positive\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2 Draft: create, update, invite",
+      "item": [
+        {
+          "name": "Create Campaign (DRAFT)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/create",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{_test_mg_name}}\",\n  \"description\": \"integration test campaign\",\n  \"vehicleCategories\": [\n    \"AUTO_CATEGORY\"\n  ],\n  \"startDate\": \"{{_test_mg_today}}\",\n  \"endDate\": \"{{_test_mg_tomorrow}}\",\n  \"guaranteeAmount\": 2000,\n  \"currency\": \"INR\",\n  \"forceAssign\": true,\n  \"optInCutoffMinutes\": 0,\n  \"settlementGraceMinutes\": 120,\n  \"onFleetChange\": \"DISQUALIFY\",\n  \"maxBudget\": null,\n  \"windows\": [\n    {\n      \"startTime\": \"08:00:00\",\n      \"endTime\": \"10:00:00\"\n    },\n    {\n      \"startTime\": \"17:00:00\",\n      \"endTime\": \"19:00:00\"\n    }\n  ],\n  \"rules\": [\n    {\n      \"metric\": \"CANCELLATIONS\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        },\n        {\n          \"fromValue\": 1,\n          \"percent\": 0\n        }\n      ]\n    },\n    {\n      \"metric\": \"BREAK_MINUTES\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        },\n        {\n          \"fromValue\": 31,\n          \"percent\": 50\n        },\n        {\n          \"fromValue\": 61,\n          \"percent\": 0\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "description": "createdBy is the authenticated dashboard user (helper /create/{requestorId} of the generated proxy)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var d = pm.response.json();",
+                  "pm.environment.set('mg_campaign_id', d.campaignId);",
+                  "pm.test('Create 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('campaignId returned', function () { pm.expect(d.campaignId).to.be.a('string').and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Campaigns - new campaign is DRAFT",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/list?limit=20&offset=0"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('List 200', function () { pm.response.to.have.status(200); });",
+                  "var tries = Number(pm.collectionVariables.get('_test_mg_list_tries') || 0);",
+                  "var c = pm.response.json().campaigns.find(function (x) { return x.campaignId === pm.environment.get('mg_campaign_id'); });",
+                  "if (!c && tries < 20) {",
+                  "  // the list is read by city, which the key-value layer cannot serve: the row is visible once the drainer has flushed it",
+                  "  pm.collectionVariables.set('_test_mg_list_tries', tries + 1);",
+                  "  postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.test('campaign listed (newest first, first page)', function () { pm.expect(c).to.not.be.undefined; });",
+                  "  pm.test('status DRAFT', function () { pm.expect(c.status).to.eql('DRAFT'); });",
+                  "  pm.test('createdBy recorded', function () { pm.expect(c.createdBy).to.be.a('string').and.not.empty; });",
+                  "  pm.test('two windows, two rules', function () { pm.expect(c.windows.length).to.eql(2); pm.expect(c.rules.length).to.eql(2); });",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(function () {}, 3000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Campaigns - limit above the cap is clamped",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/list?limit=100000&offset=0"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('List 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('at most 50 campaigns', function () { pm.expect(pm.response.json().campaigns.length).to.be.at.most(50); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update DRAFT - guarantee 2000 -> 2500",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/update",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{_test_mg_name}}\",\n  \"description\": \"integration test campaign\",\n  \"vehicleCategories\": [\n    \"AUTO_CATEGORY\"\n  ],\n  \"startDate\": \"{{_test_mg_today}}\",\n  \"endDate\": \"{{_test_mg_tomorrow}}\",\n  \"guaranteeAmount\": 2500,\n  \"currency\": \"INR\",\n  \"forceAssign\": true,\n  \"optInCutoffMinutes\": 0,\n  \"settlementGraceMinutes\": 120,\n  \"onFleetChange\": \"DISQUALIFY\",\n  \"maxBudget\": null,\n  \"windows\": [\n    {\n      \"startTime\": \"08:00:00\",\n      \"endTime\": \"10:00:00\"\n    },\n    {\n      \"startTime\": \"17:00:00\",\n      \"endTime\": \"19:00:00\"\n    }\n  ],\n  \"rules\": [\n    {\n      \"metric\": \"CANCELLATIONS\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        },\n        {\n          \"fromValue\": 1,\n          \"percent\": 0\n        }\n      ]\n    },\n    {\n      \"metric\": \"BREAK_MINUTES\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        },\n        {\n          \"fromValue\": 31,\n          \"percent\": 50\n        },\n        {\n          \"fromValue\": 61,\n          \"percent\": 0\n        }\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update DRAFT 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invite Driver",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/invite",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invitees\": [\n    {\n      \"driverId\": \"{{driver_id}}\",\n      \"reason\": \"integration test: top performer\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var d = pm.response.json();",
+                  "pm.test('Invite 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('1 invited, 0 skipped', function () { pm.expect(d.invited).to.eql(1); pm.expect(d.skipped).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invite Driver again - skipped",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/invite",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invitees\": [\n    {\n      \"driverId\": \"{{driver_id}}\",\n      \"reason\": \"again\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var d = pm.response.json();",
+                  "pm.test('Invite 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('0 invited, 1 skipped', function () { pm.expect(d.invited).to.eql(0); pm.expect(d.skipped).to.eql(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Driver Invitations - DRAFT campaign hidden",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{driver_token}}"
+              }
+            ],
+            "url": "{{baseURL_namma_P}}/driver/mg/invitations?limit=20&offset=0"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invitations 200', function () { pm.response.to.have.status(200); });",
+                  "var hit = pm.response.json().invitations.find(function (i) { return i.campaignId === pm.environment.get('mg_campaign_id'); });",
+                  "pm.test('DRAFT campaign not shown to the driver', function () { pm.expect(hit).to.be.undefined; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Driver Opt-in on DRAFT rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{driver_token}}"
+              }
+            ],
+            "url": "{{baseURL_namma_P}}/driver/mg/optIn",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"campaignId\": \"{{mg_campaign_id}}\",\n  \"date\": \"{{_test_mg_tomorrow}}\",\n  \"acceptTerms\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('opt-in before publish -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: not open for opt-in', function () { pm.expect(pm.response.text()).to.include(\"not open for opt-in\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3 Publish",
+      "item": [
+        {
+          "name": "Publish Campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PUBLISHED\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Publish 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update after publish rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/update",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{_test_mg_name}}\",\n  \"description\": \"integration test campaign\",\n  \"vehicleCategories\": [\n    \"AUTO_CATEGORY\"\n  ],\n  \"startDate\": \"{{_test_mg_today}}\",\n  \"endDate\": \"{{_test_mg_tomorrow}}\",\n  \"guaranteeAmount\": 3000,\n  \"currency\": \"INR\",\n  \"forceAssign\": true,\n  \"optInCutoffMinutes\": 0,\n  \"settlementGraceMinutes\": 120,\n  \"onFleetChange\": \"DISQUALIFY\",\n  \"maxBudget\": null,\n  \"windows\": [\n    {\n      \"startTime\": \"08:00:00\",\n      \"endTime\": \"10:00:00\"\n    },\n    {\n      \"startTime\": \"17:00:00\",\n      \"endTime\": \"19:00:00\"\n    }\n  ],\n  \"rules\": [\n    {\n      \"metric\": \"CANCELLATIONS\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        },\n        {\n          \"fromValue\": 1,\n          \"percent\": 0\n        }\n      ]\n    },\n    {\n      \"metric\": \"BREAK_MINUTES\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        },\n        {\n          \"fromValue\": 31,\n          \"percent\": 50\n        },\n        {\n          \"fromValue\": 61,\n          \"percent\": 0\n        }\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('terms locked once published -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: Only a DRAFT campaign', function () { pm.expect(pm.response.text()).to.include(\"Only a DRAFT campaign\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish again rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PUBLISHED\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('PUBLISHED -> PUBLISHED -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: not allowed', function () { pm.expect(pm.response.text()).to.include(\"not allowed\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4 Driver opt-in and progress",
+      "item": [
+        {
+          "name": "Driver Invitations - published campaign shown",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{driver_token}}"
+              }
+            ],
+            "url": "{{baseURL_namma_P}}/driver/mg/invitations?limit=20&offset=0"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invitations 200', function () { pm.response.to.have.status(200); });",
+                  "var hit = pm.response.json().invitations.find(function (i) { return i.campaignId === pm.environment.get('mg_campaign_id'); });",
+                  "pm.test('campaign shown', function () { pm.expect(hit).to.not.be.undefined; });",
+                  "pm.test('guarantee is the updated 2500', function () { pm.expect(Number(hit.guaranteeAmount)).to.eql(2500); });",
+                  "pm.test('forceAssign visible to the driver', function () { pm.expect(hit.forceAssign).to.eql(true); });",
+                  "var tomorrow = hit.days.find(function (d) { return d.date === pm.collectionVariables.get('_test_mg_tomorrow'); });",
+                  "pm.test('tomorrow can be opted in', function () { pm.expect(tomorrow).to.not.be.undefined; pm.expect(tomorrow.canOptIn).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Driver Opt-in without accepting terms rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{driver_token}}"
+              }
+            ],
+            "url": "{{baseURL_namma_P}}/driver/mg/optIn",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"campaignId\": \"{{mg_campaign_id}}\",\n  \"date\": \"{{_test_mg_tomorrow}}\",\n  \"acceptTerms\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('terms not accepted -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: terms must be accepted', function () { pm.expect(pm.response.text()).to.include(\"terms must be accepted\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Driver Opt-in for tomorrow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{driver_token}}"
+              }
+            ],
+            "url": "{{baseURL_namma_P}}/driver/mg/optIn",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"campaignId\": \"{{mg_campaign_id}}\",\n  \"date\": \"{{_test_mg_tomorrow}}\",\n  \"acceptTerms\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Opt-in 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Driver Opt-in again is idempotent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{driver_token}}"
+              }
+            ],
+            "url": "{{baseURL_namma_P}}/driver/mg/optIn",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"campaignId\": \"{{mg_campaign_id}}\",\n  \"date\": \"{{_test_mg_tomorrow}}\",\n  \"acceptTerms\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Second opt-in 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Driver Progress - tomorrow is UPCOMING",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{driver_token}}"
+              }
+            ],
+            "url": "{{baseURL_namma_P}}/driver/mg/progress"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Progress 200', function () { pm.response.to.have.status(200); });",
+                  "var day = pm.response.json().days.find(function (d) { return d.campaignId === pm.environment.get('mg_campaign_id') && d.date === pm.collectionVariables.get('_test_mg_tomorrow'); });",
+                  "pm.test('tomorrow enrollment present', function () { pm.expect(day).to.not.be.undefined; });",
+                  "pm.test('status UPCOMING', function () { pm.expect(day.status).to.eql('UPCOMING'); });",
+                  "pm.test('counters start at zero', function () {",
+                  "  pm.expect(day.rides).to.eql(0); pm.expect(day.cancellations).to.eql(0); pm.expect(day.breakMinutesUsed).to.be.at.least(0);",
+                  "});",
+                  "pm.test('two windows', function () { pm.expect(day.windows.length).to.eql(2); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Enrollments - driver enrolled",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/enrollments?date={{_test_mg_tomorrow}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Enrollments 200', function () { pm.response.to.have.status(200); });",
+                  "var e = pm.response.json().enrollments.find(function (x) { return x.driverId === pm.environment.get('driver_id'); });",
+                  "pm.test('driver enrolled', function () { pm.expect(e).to.not.be.undefined; });",
+                  "pm.test('status UPCOMING', function () { pm.expect(e.status).to.eql('UPCOMING'); });",
+                  "pm.test('paid to the driver', function () { pm.expect(e.beneficiaryType).to.eql('DRIVER'); pm.expect(e.beneficiaryId).to.eql(pm.environment.get('driver_id')); });",
+                  "pm.test('nothing settled yet', function () { pm.expect(e.topUpAmount == null).to.eql(true); pm.expect(e.ledgerEntryId == null).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Driver Opt-out",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{driver_token}}"
+              }
+            ],
+            "url": "{{baseURL_namma_P}}/driver/mg/optOut",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"campaignId\": \"{{mg_campaign_id}}\",\n  \"date\": \"{{_test_mg_tomorrow}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Opt-out 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Enrollments - OPTED_OUT",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/enrollments?date={{_test_mg_tomorrow}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Enrollments 200', function () { pm.response.to.have.status(200); });",
+                  "var e = pm.response.json().enrollments.find(function (x) { return x.driverId === pm.environment.get('driver_id'); });",
+                  "pm.test('status OPTED_OUT', function () { pm.expect(e.status).to.eql('OPTED_OUT'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Driver Re-opt-in for tomorrow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{driver_token}}"
+              }
+            ],
+            "url": "{{baseURL_namma_P}}/driver/mg/optIn",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"campaignId\": \"{{mg_campaign_id}}\",\n  \"date\": \"{{_test_mg_tomorrow}}\",\n  \"acceptTerms\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Re-opt-in 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Enrollments - back to UPCOMING",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/enrollments?date={{_test_mg_tomorrow}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Enrollments 200', function () { pm.response.to.have.status(200); });",
+                  "var e = pm.response.json().enrollments.find(function (x) { return x.driverId === pm.environment.get('driver_id'); });",
+                  "pm.test('status UPCOMING', function () { pm.expect(e.status).to.eql('UPCOMING'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5 Pause, extend, cancel",
+      "item": [
+        {
+          "name": "Pause Campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PAUSED\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pause 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pause again rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PAUSED\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('PAUSED -> PAUSED -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: not allowed', function () { pm.expect(pm.response.text()).to.include(\"not allowed\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Driver Opt-in while paused rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{driver_token}}"
+              }
+            ],
+            "url": "{{baseURL_namma_P}}/driver/mg/optIn",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"campaignId\": \"{{mg_campaign_id}}\",\n  \"date\": \"{{_test_mg_tomorrow}}\",\n  \"acceptTerms\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('opt-in while paused -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: not open for opt-in', function () { pm.expect(pm.response.text()).to.include(\"not open for opt-in\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resume Campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PUBLISHED\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Resume 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Extend - earlier end date rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/extend",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"{{_test_mg_today}}\",\n  \"maxBudget\": null\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('shorter campaign -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: can only be moved later', function () { pm.expect(pm.response.text()).to.include(\"can only be moved later\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Extend - end date +1 day and budget",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/extend",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"{{_test_mg_day_after}}\",\n  \"maxBudget\": 100000\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Extend 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Driver Opt-in beyond tomorrow rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{driver_token}}"
+              }
+            ],
+            "url": "{{baseURL_namma_P}}/driver/mg/optIn",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"campaignId\": \"{{mg_campaign_id}}\",\n  \"date\": \"{{_test_mg_day_after}}\",\n  \"acceptTerms\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('day after tomorrow -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: today and tomorrow only', function () { pm.expect(pm.response.text()).to.include(\"today and tomorrow only\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel Campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CANCELLED\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cancel 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Enrollments - called off by admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/enrollments?date={{_test_mg_tomorrow}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Enrollments 200', function () { pm.response.to.have.status(200); });",
+                  "var e = pm.response.json().enrollments.find(function (x) { return x.driverId === pm.environment.get('driver_id'); });",
+                  "pm.test('status CANCELLED_BY_ADMIN', function () { pm.expect(e.status).to.eql('CANCELLED_BY_ADMIN'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel again resumes the cancellation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CANCELLED\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Second cancel 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Re-publish cancelled campaign rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_campaign_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PUBLISHED\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('CANCELLED -> PUBLISHED -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: not allowed', function () { pm.expect(pm.response.text()).to.include(\"not allowed\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Driver Opt-in on cancelled campaign rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{driver_token}}"
+              }
+            ],
+            "url": "{{baseURL_namma_P}}/driver/mg/optIn",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"campaignId\": \"{{mg_campaign_id}}\",\n  \"date\": \"{{_test_mg_tomorrow}}\",\n  \"acceptTerms\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('opt-in on cancelled -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: not open for opt-in', function () { pm.expect(pm.response.text()).to.include(\"not open for opt-in\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6 Budget cap",
+      "item": [
+        {
+          "name": "Create Campaign with budget below one day's guarantee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/create",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{_test_mg_name}}_BUDGET\",\n  \"description\": \"integration test campaign\",\n  \"vehicleCategories\": [\n    \"AUTO_CATEGORY\"\n  ],\n  \"startDate\": \"{{_test_mg_today}}\",\n  \"endDate\": \"{{_test_mg_tomorrow}}\",\n  \"guaranteeAmount\": 2000,\n  \"currency\": \"INR\",\n  \"forceAssign\": true,\n  \"optInCutoffMinutes\": 0,\n  \"settlementGraceMinutes\": 120,\n  \"onFleetChange\": \"DISQUALIFY\",\n  \"maxBudget\": 100,\n  \"windows\": [\n    {\n      \"startTime\": \"08:00:00\",\n      \"endTime\": \"10:00:00\"\n    },\n    {\n      \"startTime\": \"17:00:00\",\n      \"endTime\": \"19:00:00\"\n    }\n  ],\n  \"rules\": [\n    {\n      \"metric\": \"CANCELLATIONS\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        },\n        {\n          \"fromValue\": 1,\n          \"percent\": 0\n        }\n      ]\n    },\n    {\n      \"metric\": \"BREAK_MINUTES\",\n      \"params\": null,\n      \"slabs\": [\n        {\n          \"fromValue\": 0,\n          \"percent\": 100\n        },\n        {\n          \"fromValue\": 31,\n          \"percent\": 50\n        },\n        {\n          \"fromValue\": 61,\n          \"percent\": 0\n        }\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var d = pm.response.json();",
+                  "pm.environment.set('mg_budget_campaign_id', d.campaignId);",
+                  "pm.test('Create 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invite Driver to budget campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_budget_campaign_id}}/invite",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invitees\": [\n    {\n      \"driverId\": \"{{driver_id}}\",\n      \"reason\": \"budget test\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invite 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish budget campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_budget_campaign_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PUBLISHED\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Publish 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Driver Opt-in refused - budget fully subscribed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{driver_token}}"
+              }
+            ],
+            "url": "{{baseURL_namma_P}}/driver/mg/optIn",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"campaignId\": \"{{mg_budget_campaign_id}}\",\n  \"date\": \"{{_test_mg_tomorrow}}\",\n  \"acceptTerms\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('budget cap reserved at opt-in -> 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('error mentions: fully subscribed', function () { pm.expect(pm.response.text()).to.include(\"fully subscribed\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel budget campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "token",
+                "value": "{{dashboard_token}}"
+              }
+            ],
+            "url": "{{dashboard_base_url}}/{{dashboard_merchant_id}}/{{city}}/minimumGuarantee/{{mg_budget_campaign_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CANCELLED\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cancel 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    console.log('[skip] mock-only request on envType=' + envType + ': ' + (pm.info && pm.info.requestName));",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "  var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "  var regNo = 'KA' + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+          "  var suffix = String(Math.floor(100000 + Math.random() * 899999));",
+          "  pm.collectionVariables.set('_test_driver_number', dNum);",
+          "  pm.collectionVariables.set('_test_reg_no', regNo);",
+          "  pm.collectionVariables.set('_test_mg_name', 'INT_TEST_MG_' + suffix);",
+          "  // Bangalore is IST (UTC+5:30). Opt-in is open for today and tomorrow only, so the flow opts in for",
+          "  // tomorrow, whose windows are always still in the future.",
+          "  function istDay(offsetDays) {",
+          "    var d = new Date(Date.now() + (5 * 60 + 30) * 60 * 1000 + offsetDays * 24 * 60 * 60 * 1000);",
+          "    return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');",
+          "  }",
+          "  pm.collectionVariables.set('_test_mg_today', istDay(0));",
+          "  pm.collectionVariables.set('_test_mg_tomorrow', istDay(1));",
+          "  pm.collectionVariables.set('_test_mg_day_after', istDay(2));",
+          "  console.log('MG test driver:', dNum, 'reg:', regNo, 'tomorrow:', istDay(1));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "_test_driver_number",
+      "value": ""
+    },
+    {
+      "key": "_test_reg_no",
+      "value": ""
+    }
+  ]
+}

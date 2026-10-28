@@ -68,6 +68,7 @@ import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDri
 import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
 import SharedLogic.Allocator.Jobs.Mandate.RetryAutopayCollection (retryAutopayCollection)
+import SharedLogic.Allocator.Jobs.MinimumGuarantee.Settlement (minimumGuaranteeSettlement)
 import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
 import SharedLogic.Allocator.Jobs.Payout.BulkPayoutStatusCheck (runBulkPayoutStatusCheck)
 import SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge (sendConnectAccountCharge)
@@ -210,6 +211,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env checkPickupZoneArrival
           & putJobHandlerInListWrapper flowRt env triggerSpecialZoneNotify
           & putJobHandlerInListWrapper flowRt env scheduledTDSDistribution
+          & putJobHandlerInListWrapper flowRt env minimumGuaranteeSettlement
           & putJobHandlerInListWrapper flowRt env triggerIffcoTokioInsuranceForOnRideDrivers
           & putJobHandlerInListWrapper flowRt env runAggregatedCommissionInvoiceCreationJob
           & putJobHandlerInListWrapper flowRt env sendConnectAccountCharge

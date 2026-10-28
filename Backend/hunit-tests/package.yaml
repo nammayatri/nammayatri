@@ -101,6 +101,7 @@ library:
     - RewardsEvaluatorTests
     - RewardsCouponTemplatedTests
     - RewardsCouponPoolTests
+    - MinimumGuaranteeRulesTests
 
 executables:
   hunit-tests:
