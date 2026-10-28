@@ -65,7 +65,6 @@ import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVST
 import qualified Domain.Types.Yudhishthira as Y
-import Domain.Utils (mapConcurrently)
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude ((+||), (||+))
@@ -351,7 +350,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   -- the pin. Idempotent, so re-running (or a shadow search) rewrites the same
   -- decisions.
   withTimeAPI "search" "decideAndPinFareAdjustments" $ SFA.decideAndPinFareAdjustments merchantOpCityId sReq.customerPhoneNum sReq.transactionId
-  allFarePoliciesProduct <- withTimeAPI "search" "getAllFarePolicies" $ combineFarePoliciesProducts <$> (mapConcurrently (\tripCategory -> withTimeAPI "search" "getAllFarePoliciesProduct" $ getAllFarePoliciesProduct (Just possibleTripOption.schedule) merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap dpInputsSharing) possibleTripOption.tripCategories)
+  allFarePoliciesProduct <- withTimeAPI "search" "getAllFarePolicies" $ combineFarePoliciesProducts <$> getAllFarePoliciesProducts (Just possibleTripOption.schedule) merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion possibleTripOption.tripCategories configVersionMap dpInputsSharing
   when (null allFarePoliciesProduct.farePolicies) $ logError $ "No fare policies resolved for transactionId: " <> sReq.transactionId <> ", merchantOpCityId: " <> merchantOpCityId.getId <> ", tripCategories: " <> show possibleTripOption.tripCategories <> ", area: " <> show allFarePoliciesProduct.area <> ", specialLocationTag: " <> show allFarePoliciesProduct.specialLocationTag
   let mbAreaForVST =
         allFarePoliciesProduct.mbPickupDropArea
