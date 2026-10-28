@@ -6,9 +6,12 @@ module SharedCabProxyTests (tests) where
 
 import "dynamic-offer-driver-app" API.Types.UI.SharedCab (CancelBookingReq (..))
 import Data.Aeson (Value (..), decode, encode, object, (.=))
+import "dynamic-offer-driver-app" Domain.Action.Internal.SharedCabCallNumber (callNumberAllowed)
 import "dynamic-offer-driver-app" Domain.Action.UI.SharedCabBooking (BookingAction (..), actionReason)
 import "dynamic-offer-driver-app" Domain.Action.UI.SharedCabCall (SharedCabMessageReq (..))
+import qualified "dynamic-offer-driver-app" Domain.Types.Person as SP
 import "beckn-spec" Domain.Types.SharedCabSession (RiderStatus (..))
+import qualified "beckn-spec" Domain.Types.VehicleVariant as DV
 import "dynamic-offer-driver-app" SharedLogic.SharedCab.RiderClient (BAPDriverReq (..), BAPMessageReq (..), RiderCallNumberResp (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -40,5 +43,13 @@ tests =
       testCase "the app's chat body {message} decodes" $ decode "{\"message\":\"on my way\"}" @?= Just (SharedCabMessageReq {message = "on my way"}),
       testCase "the message request to rider-app carries the driver, the plate and the text" $
         (decode . encode) (BAPMessageReq {driverId = "d1", vehicleNumber = "ML05A9999", message = "on my way"})
-          @?= Just (object ["driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "message" .= ("on my way" :: String)])
+          @?= Just (object ["driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "message" .= ("on my way" :: String)]),
+      testCase "the call number is handed out only for a driver on a shared cab" $
+        [ callNumberAllowed SP.DRIVER (Just DV.SHARED_CAB),
+          callNumberAllowed SP.DRIVER (Just DV.SEDAN),
+          callNumberAllowed SP.DRIVER Nothing,
+          callNumberAllowed SP.FLEET_OWNER (Just DV.SHARED_CAB),
+          callNumberAllowed SP.BUS_DRIVER (Just DV.SHARED_CAB)
+        ]
+          @?= [True, False, False, False, False]
     ]
