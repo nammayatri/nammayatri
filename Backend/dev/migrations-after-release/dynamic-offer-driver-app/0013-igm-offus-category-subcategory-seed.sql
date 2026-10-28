@@ -45,6 +45,20 @@ WHERE moc.merchant_short_id = 'MSIL_PARTNER'
     WHERE igm_category = 'PAYMENT' AND merchant_operating_city_id = moc.id
   );
 
+INSERT INTO atlas_driver_offer_bpp.issue_category
+  (id, category, logo_url, priority, igm_category, merchant_id, category_type, created_at, updated_at,
+   is_ride_required, is_active, merchant_operating_city_id, label, is_ticket_required)
+SELECT
+  md5('igm-agent-' || moc.id)::uuid::text,
+  'Driver Behavior (IGM)', 'https://assets.moving.tech/beckn/common/common/images/ic_ride_related.png', 23, 'AGENT',
+  moc.merchant_id, 'Category', now(), now(), true, true, moc.id, 'IGM_AGENT', true
+FROM atlas_driver_offer_bpp.merchant_operating_city moc
+WHERE moc.merchant_short_id = 'MSIL_PARTNER'
+  AND NOT EXISTS (
+    SELECT 1 FROM atlas_driver_offer_bpp.issue_category
+    WHERE igm_category = 'AGENT' AND merchant_operating_city_id = moc.id
+  );
+
 -- Step 2: Insert issue_message for each sub-category
 -- FULFILLMENT messages
 
@@ -65,6 +79,25 @@ FROM atlas_driver_offer_bpp.issue_category ic,
     ('FLM115', 'Vehicle broke down while on trip', 'Vehicle', 5)
   ) AS sub(igm_code, message_text, message_title, priority)
 WHERE ic.igm_category = 'FULFILLMENT'
+  AND ic.merchant_operating_city_id IN (SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city WHERE merchant_short_id = 'MSIL_PARTNER')
+  AND NOT EXISTS (SELECT 1 FROM atlas_driver_offer_bpp.issue_message WHERE id = md5('igm-msg-' || sub.igm_code || '-' || ic.merchant_operating_city_id)::uuid::text);
+
+-- AGENT messages
+
+INSERT INTO atlas_driver_offer_bpp.issue_message
+  (id, category_id, option_id, merchant_operating_city_id, message, priority, label, merchant_id,
+   reference_category_id, reference_option_id, media_files, message_title, message_action,
+   message_type, is_active, created_at, updated_at)
+SELECT
+  md5('igm-msg-' || sub.igm_code || '-' || ic.merchant_operating_city_id)::uuid::text,
+  ic.id, NULL, ic.merchant_operating_city_id, sub.message_text, sub.priority, NULL, ic.merchant_id,
+  NULL, NULL, '{}', sub.message_title, NULL, 'Terminal', true, now(), now()
+FROM atlas_driver_offer_bpp.issue_category ic,
+  (VALUES
+    ('AGT111', 'Driver was rude and behaved inappropriately', 'Safety', 1),
+    ('AGT112', 'Rash Driving', 'Safety', 2)
+  ) AS sub(igm_code, message_text, message_title, priority)
+WHERE ic.igm_category = 'AGENT'
   AND ic.merchant_operating_city_id IN (SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city WHERE merchant_short_id = 'MSIL_PARTNER')
   AND NOT EXISTS (SELECT 1 FROM atlas_driver_offer_bpp.issue_message WHERE id = md5('igm-msg-' || sub.igm_code || '-' || ic.merchant_operating_city_id)::uuid::text);
 
@@ -133,6 +166,26 @@ WHERE ic.igm_category = 'FULFILLMENT'
   AND ic.merchant_operating_city_id IN (SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city WHERE merchant_short_id = 'MSIL_PARTNER')
   AND NOT EXISTS (SELECT 1 FROM atlas_driver_offer_bpp.issue_option WHERE id = md5('igm-opt-' || sub.igm_code || '-' || ic.merchant_operating_city_id)::uuid::text);
 
+-- AGENT options
+
+INSERT INTO atlas_driver_offer_bpp.issue_option
+  (id, issue_category_id, option, priority, igm_sub_category, merchant_id, is_active, created_at, updated_at,
+   merchant_operating_city_id, show_only_when_user_blocked, restricted_variants, restricted_ride_statuses,
+   issue_message_id)
+SELECT
+  md5('igm-opt-' || sub.igm_code || '-' || ic.merchant_operating_city_id)::uuid::text,
+  ic.id, sub.option_text, sub.priority, sub.igm_code,
+  ic.merchant_id, true, now(), now(), ic.merchant_operating_city_id, false, '{}', '{}',
+  md5('igm-msg-' || sub.igm_code || '-' || ic.merchant_operating_city_id)::uuid::text
+FROM atlas_driver_offer_bpp.issue_category ic,
+  (VALUES
+    ('AGT111', 'Driver was rude and behaved inappropriately', 1),
+    ('AGT112', 'Rash Driving', 2)
+  ) AS sub(igm_code, option_text, priority)
+WHERE ic.igm_category = 'AGENT'
+  AND ic.merchant_operating_city_id IN (SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city WHERE merchant_short_id = 'MSIL_PARTNER')
+  AND NOT EXISTS (SELECT 1 FROM atlas_driver_offer_bpp.issue_option WHERE id = md5('igm-opt-' || sub.igm_code || '-' || ic.merchant_operating_city_id)::uuid::text);
+
 -- ORDER options
 
 INSERT INTO atlas_driver_offer_bpp.issue_option
@@ -176,14 +229,33 @@ WHERE ic.igm_category = 'PAYMENT'
   AND ic.merchant_operating_city_id IN (SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city WHERE merchant_short_id = 'MSIL_PARTNER')
   AND NOT EXISTS (SELECT 1 FROM atlas_driver_offer_bpp.issue_option WHERE id = md5('igm-opt-' || sub.igm_code || '-' || ic.merchant_operating_city_id)::uuid::text);
 
--- Step 4: Add new columns to igm_config and insert for MSIL
+-- Step 4: Ensure igm_config columns exist and insert for MSIL
+-- Columns are added by schema migrations; these DO NOTHINGs are safe guards.
 
-ALTER TABLE atlas_driver_offer_bpp.igm_config ADD COLUMN IF NOT EXISTS respondent_name text;
-ALTER TABLE atlas_driver_offer_bpp.igm_config ADD COLUMN IF NOT EXISTS respondent_phone text;
-ALTER TABLE atlas_driver_offer_bpp.igm_config ADD COLUMN IF NOT EXISTS respondent_email text;
-ALTER TABLE atlas_driver_offer_bpp.igm_config ADD COLUMN IF NOT EXISTS resolution_provider_name text;
-ALTER TABLE atlas_driver_offer_bpp.igm_config ADD COLUMN IF NOT EXISTS resolution_provider_phone text;
-ALTER TABLE atlas_driver_offer_bpp.igm_config ADD COLUMN IF NOT EXISTS resolution_provider_email text;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.igm_config ADD COLUMN respondent_name text;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.igm_config ADD COLUMN respondent_phone text;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.igm_config ADD COLUMN respondent_email text;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.igm_config ADD COLUMN resolution_provider_name text;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.igm_config ADD COLUMN resolution_provider_phone text;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.igm_config ADD COLUMN resolution_provider_email text;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
 
 -- Insert igm_config for MSIL merchant (one per merchant, not per city)
 -- Required by /issue and /issue_status handlers — throws "IGMConfig not found" without it
@@ -205,3 +277,20 @@ WHERE m.short_id = 'MSIL_PARTNER'
   AND NOT EXISTS (
     SELECT 1 FROM atlas_driver_offer_bpp.igm_config WHERE merchant_id = m.id
   );
+
+-- Step 5: Add shouldSyncStatusWithTicketService to issue_config
+ALTER TABLE atlas_driver_offer_bpp.issue_config ADD COLUMN IF NOT EXISTS should_sync_status_with_ticket_service boolean NOT NULL DEFAULT false;
+
+-- Enable for MSIL
+UPDATE atlas_driver_offer_bpp.issue_config
+SET should_sync_status_with_ticket_service = true
+WHERE merchant_operating_city_id IN (
+  SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city WHERE merchant_short_id = 'MSIL_PARTNER'
+);
+
+-- Step 6: Enable Kapture as source for ongoing issues for MSIL
+UPDATE atlas_driver_offer_bpp.transporter_config
+SET use_kapture_as_source_for_ongoing_issues = true
+WHERE merchant_operating_city_id IN (
+  SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city WHERE merchant_short_id = 'MSIL_PARTNER'
+);

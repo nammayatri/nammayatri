@@ -75,6 +75,7 @@ imports:
   # IGM Dashboard types
   IgmIssueData: IssueManagement.Common.Dashboard.Issue
   IgmRespondentActionPayload: IssueManagement.Common.Dashboard.Issue
+  IssueTicketDetailsRes: IssueManagement.Common.UI.Issue
 
 module: Issue
 
@@ -476,6 +477,16 @@ apis:
         type: APISuccess
       migrate:
         capability: city-operations.driver_issue.write
+  - GET: # GetIssueTicketDetailsAPI
+      endpoint: /{issueReportId}/ticketDetails
+      name: GetIssueTicketDetails
+      auth: ApiAuthV2
+      params:
+        issueReportId: Id IssueReport
+      response:
+        type: IssueTicketDetailsRes
+      migrate:
+        capability: city-operations.driver_issue.read
 
 # Did not generated any types because we need to use common types for rider and provider dashboard
 types: {}

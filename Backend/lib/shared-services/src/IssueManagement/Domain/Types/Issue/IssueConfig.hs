@@ -31,6 +31,7 @@ data IssueConfig = IssueConfig
     messageTransformationConfig :: Maybe MessageTransformationConfig,
     reopenCount :: Int,
     onIssueCloseMsgs :: [Id IssueMessage],
+    shouldSyncStatusWithTicketService :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

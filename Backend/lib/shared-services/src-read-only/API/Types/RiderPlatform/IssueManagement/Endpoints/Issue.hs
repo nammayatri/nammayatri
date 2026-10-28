@@ -26,7 +26,7 @@ import qualified Kernel.Types.Id
 import Servant hiding (Summary)
 import Servant.Client
 
-type API = ("issueV2" :> (GetIssueCategoryList :<|> GetIssueList :<|> GetIssueInfo :<|> GetIssueInfoV2 :<|> PutIssueUpdateHelper :<|> PostIssueChatUpload :<|> PostIssueCommentHelper :<|> GetIssueMedia :<|> PostIssueTicketStatusCallBack :<|> PostIssueCategoryCreate :<|> PostIssueCategoryUpdate :<|> PostIssueOptionCreate :<|> PostIssueOptionUpdate :<|> PostIssueMessageUpsert :<|> PostIssueKaptureCreate :<|> GetIssueCategoryDetail :<|> GetIssueOptionDetail :<|> GetIssueMessageDetail :<|> GetIssueMessageList :<|> GetIssueOptionList :<|> DeleteIssueCategory :<|> DeleteIssueOption :<|> DeleteIssueMessage :<|> GetIssueCategoryFlowPreview :<|> GetIssueTranslations :<|> PostIssueBulkUpsertTranslations :<|> GetIssueConfig :<|> PostIssueConfigUpdate :<|> PostIssueCategoryReorder :<|> PostIssueOptionReorder :<|> PostIssueMessageReorder :<|> PostIssueCategoryCopy :<|> PostIssueCategoryDefaultCopy :<|> PostIssueCategoryAllCopy :<|> PostIssueChatMessageHelper :<|> GetIssueChatMessages :<|> PostIssueChatRead :<|> GetIssueApiIntegrationList :<|> PostIssueApiIntegrationUpsert :<|> PostIssueApiIntegrationDelete :<|> PostIssueApiIntegrationTest :<|> GetIssueFlowSimulate))
+type API = ("issueV2" :> (GetIssueCategoryList :<|> GetIssueList :<|> GetIssueInfo :<|> GetIssueInfoV2 :<|> PutIssueUpdateHelper :<|> PostIssueChatUpload :<|> PostIssueCommentHelper :<|> GetIssueMedia :<|> PostIssueTicketStatusCallBack :<|> PostIssueCategoryCreate :<|> PostIssueCategoryUpdate :<|> PostIssueOptionCreate :<|> PostIssueOptionUpdate :<|> PostIssueMessageUpsert :<|> PostIssueKaptureCreate :<|> GetIssueCategoryDetail :<|> GetIssueOptionDetail :<|> GetIssueMessageDetail :<|> GetIssueMessageList :<|> GetIssueOptionList :<|> DeleteIssueCategory :<|> DeleteIssueOption :<|> DeleteIssueMessage :<|> GetIssueCategoryFlowPreview :<|> GetIssueTranslations :<|> PostIssueBulkUpsertTranslations :<|> GetIssueConfig :<|> PostIssueConfigUpdate :<|> PostIssueCategoryReorder :<|> PostIssueOptionReorder :<|> PostIssueMessageReorder :<|> PostIssueCategoryCopy :<|> PostIssueCategoryDefaultCopy :<|> PostIssueCategoryAllCopy :<|> PostIssueChatMessageHelper :<|> GetIssueChatMessages :<|> PostIssueChatRead :<|> GetIssueApiIntegrationList :<|> PostIssueApiIntegrationUpsert :<|> PostIssueApiIntegrationDelete :<|> PostIssueApiIntegrationTest :<|> GetIssueFlowSimulate :<|> GetIssueTicketDetails))
 
 type GetIssueCategoryList = ("category" :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueCategoryListRes)
 
@@ -363,6 +363,13 @@ type GetIssueFlowSimulate =
            IssueManagement.Common.UI.Issue.IssueOptionListRes
   )
 
+type GetIssueTicketDetails =
+  ( Capture "issueReportId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) :> "ticketDetails"
+      :> Get
+           '[JSON]
+           IssueManagement.Common.UI.Issue.IssueTicketDetailsRes
+  )
+
 data IssueAPIs = IssueAPIs
   { getIssueCategoryList :: EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueCategoryListRes,
     getIssueList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe IssueManagement.Common.IssueStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueReportListResponse,
@@ -409,13 +416,14 @@ data IssueAPIs = IssueAPIs
     postIssueApiIntegrationUpsert :: IssueManagement.Common.Dashboard.Issue.UpsertApiIntegrationReq -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.UpsertApiIntegrationRes,
     postIssueApiIntegrationDelete :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueApiIntegration.IssueApiIntegration -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postIssueApiIntegrationTest :: IssueManagement.Common.Dashboard.Issue.TestApiIntegrationReq -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.TestApiIntegrationRes,
-    getIssueFlowSimulate :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> EulerHS.Types.EulerClient IssueManagement.Common.UI.Issue.IssueOptionListRes
+    getIssueFlowSimulate :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> EulerHS.Types.EulerClient IssueManagement.Common.UI.Issue.IssueOptionListRes,
+    getIssueTicketDetails :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> EulerHS.Types.EulerClient IssueManagement.Common.UI.Issue.IssueTicketDetailsRes
   }
 
 mkIssueAPIs :: (Client EulerHS.Types.EulerClient API -> IssueAPIs)
 mkIssueAPIs issueClient = (IssueAPIs {..})
   where
-    getIssueCategoryList :<|> getIssueList :<|> getIssueInfo :<|> getIssueInfoV2 :<|> putIssueUpdate :<|> postIssueChatUpload :<|> postIssueComment :<|> getIssueMedia :<|> postIssueTicketStatusCallBack :<|> postIssueCategoryCreate :<|> postIssueCategoryUpdate :<|> postIssueOptionCreate :<|> postIssueOptionUpdate :<|> postIssueMessageUpsert :<|> postIssueKaptureCreate :<|> getIssueCategoryDetail :<|> getIssueOptionDetail :<|> getIssueMessageDetail :<|> getIssueMessageList :<|> getIssueOptionList :<|> deleteIssueCategory :<|> deleteIssueOption :<|> deleteIssueMessage :<|> getIssueCategoryFlowPreview :<|> getIssueTranslations :<|> postIssueBulkUpsertTranslations :<|> getIssueConfig :<|> postIssueConfigUpdate :<|> postIssueCategoryReorder :<|> postIssueOptionReorder :<|> postIssueMessageReorder :<|> postIssueCategoryCopy :<|> postIssueCategoryDefaultCopy :<|> postIssueCategoryAllCopy :<|> postIssueChatMessage :<|> getIssueChatMessages :<|> postIssueChatRead :<|> getIssueApiIntegrationList :<|> postIssueApiIntegrationUpsert :<|> postIssueApiIntegrationDelete :<|> postIssueApiIntegrationTest :<|> getIssueFlowSimulate = issueClient
+    getIssueCategoryList :<|> getIssueList :<|> getIssueInfo :<|> getIssueInfoV2 :<|> putIssueUpdate :<|> postIssueChatUpload :<|> postIssueComment :<|> getIssueMedia :<|> postIssueTicketStatusCallBack :<|> postIssueCategoryCreate :<|> postIssueCategoryUpdate :<|> postIssueOptionCreate :<|> postIssueOptionUpdate :<|> postIssueMessageUpsert :<|> postIssueKaptureCreate :<|> getIssueCategoryDetail :<|> getIssueOptionDetail :<|> getIssueMessageDetail :<|> getIssueMessageList :<|> getIssueOptionList :<|> deleteIssueCategory :<|> deleteIssueOption :<|> deleteIssueMessage :<|> getIssueCategoryFlowPreview :<|> getIssueTranslations :<|> postIssueBulkUpsertTranslations :<|> getIssueConfig :<|> postIssueConfigUpdate :<|> postIssueCategoryReorder :<|> postIssueOptionReorder :<|> postIssueMessageReorder :<|> postIssueCategoryCopy :<|> postIssueCategoryDefaultCopy :<|> postIssueCategoryAllCopy :<|> postIssueChatMessage :<|> getIssueChatMessages :<|> postIssueChatRead :<|> getIssueApiIntegrationList :<|> postIssueApiIntegrationUpsert :<|> postIssueApiIntegrationDelete :<|> postIssueApiIntegrationTest :<|> getIssueFlowSimulate :<|> getIssueTicketDetails = issueClient
 
 data IssueUserActionType
   = GET_ISSUE_CATEGORY_LIST
@@ -460,6 +468,7 @@ data IssueUserActionType
   | POST_ISSUE_API_INTEGRATION_DELETE
   | POST_ISSUE_API_INTEGRATION_TEST
   | GET_ISSUE_FLOW_SIMULATE
+  | GET_ISSUE_TICKET_DETAILS
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -1618,6 +1618,7 @@ TransporterConfig:
     enableGoOnlinePolicyBlocker: Maybe Bool
     driverImagePresignedUrlExpiry: Maybe Seconds # Expiry of the pre-signed S3 URL of the driver image shared with non value-add BAPs. Nothing = 3600 seconds
     peerBapMerchantShortId: Maybe Text # BAP merchant whose FRFS bookings anna-checker ticket-verify validates against; no default since proxying to the wrong BAP would check another operator's tickets
+    useKaptureAsSourceForOngoingIssues: Maybe Bool
 
   beamType:
     currency: Maybe Currency

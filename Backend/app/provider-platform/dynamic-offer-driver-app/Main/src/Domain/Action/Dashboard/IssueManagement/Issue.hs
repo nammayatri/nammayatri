@@ -40,6 +40,7 @@ module Domain.Action.Dashboard.IssueManagement.Issue
     -- IGM Dashboard APIs
     getIGMIssueTrail,
     postIGMIssueTriggerActionUpdate,
+    getIssueTicketDetails,
   )
 where
 
@@ -57,6 +58,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueReport
+import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -435,3 +437,9 @@ postIGMIssueTriggerActionUpdate ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postIGMIssueTriggerActionUpdate (Kernel.Types.Id.ShortId merchantShortId) opCity issueReportId req =
   DIssue.igmIssueTriggerActionUpdate (Kernel.Types.Id.ShortId merchantShortId) opCity (Kernel.Types.Id.cast issueReportId) dashboardIssueHandle req
+
+getIssueTicketDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> Environment.Flow IssueManagement.Common.UI.Issue.IssueTicketDetailsRes)
+getIssueTicketDetails (Kernel.Types.Id.ShortId merchantShortId) opCity issueReportId = do
+  issueReport <- QIR.findById issueReportId >>= Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Issue report not found")
+  void $ DIssue.checkMerchantCityAccess (Kernel.Types.Id.ShortId merchantShortId) opCity issueReport Nothing dashboardIssueHandle
+  DAI.getTicketDetails issueReportId dashboardIssueHandle True

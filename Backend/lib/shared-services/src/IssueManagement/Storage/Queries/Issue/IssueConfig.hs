@@ -29,6 +29,7 @@ updateByPrimaryKey IssueConfig {..} =
       Set BeamIC.onKaptMarkIssueResMsgs (getId <$> onKaptMarkIssueResMsgs),
       Set BeamIC.onCustomerNotSatisfiedMsgs (getId <$> onCustomerNotSatisfiedMsgs),
       Set BeamIC.onIssueCloseMsgs (getId <$> onIssueCloseMsgs),
+      Set BeamIC.shouldSyncStatusWithTicketService shouldSyncStatusWithTicketService,
       Set BeamIC.reopenCount reopenCount,
       Set BeamIC.messageTransformationConfig messageTransformationConfig,
       Set BeamIC.updatedAt updatedAt
