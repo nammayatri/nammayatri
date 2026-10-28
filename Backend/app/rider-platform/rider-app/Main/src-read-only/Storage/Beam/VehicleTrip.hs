@@ -22,7 +22,6 @@ data VehicleTripT f = VehicleTripT
     integratedBppConfigId :: (B.C f Kernel.Prelude.Text),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    movingAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     offlineBoardings :: (B.C f Kernel.Prelude.Int),
     routeCode :: (B.C f Kernel.Prelude.Text),
     serviceTierType :: (B.C f BecknV2.FRFS.Enums.ServiceTierType),

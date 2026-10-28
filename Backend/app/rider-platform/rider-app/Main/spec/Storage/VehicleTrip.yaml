@@ -20,7 +20,6 @@ VehicleTrip:
     routeCode: Text
     status: VehicleTripStatus
     startedAt: UTCTime
-    movingAt: Maybe UTCTime
     endedAt: Maybe UTCTime
     endReason: Maybe VehicleTripEndReason
     offlineBoardings: Int
@@ -77,11 +76,6 @@ VehicleTrip:
     closeTrip:
       kvFunction: updateOneWithKV
       params: [status, endReason, endedAt]
-      where: id
-
-    updateMovingAt:
-      kvFunction: updateOneWithKV
-      params: [movingAt]
       where: id
 
     # Pause/resume mirror in Postgres so a Redis flush doesn't silently un-pause the recovered session.

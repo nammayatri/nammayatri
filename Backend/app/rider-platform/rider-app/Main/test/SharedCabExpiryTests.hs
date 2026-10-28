@@ -36,7 +36,6 @@ liveTrip =
       routeCode = "SC-R2",
       status = DVT.ACTIVE,
       startedAt = t0,
-      movingAt = Nothing,
       endedAt = Nothing,
       endReason = Nothing,
       offlineBoardings = 3,

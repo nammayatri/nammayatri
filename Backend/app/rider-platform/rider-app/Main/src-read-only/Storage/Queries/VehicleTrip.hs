@@ -68,9 +68,6 @@ findAllLiveByMerchantOperatingCityId merchantOperatingCityId = do
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip -> m (Maybe Domain.Types.VehicleTrip.VehicleTrip))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateMovingAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip -> m ())
-updateMovingAt movingAt id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.movingAt movingAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
 updateOfflineBoardings :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip -> m ())
 updateOfflineBoardings offlineBoardings id = do
   _now <- getCurrentTime
@@ -93,7 +90,6 @@ updateByPrimaryKey (Domain.Types.VehicleTrip.VehicleTrip {..}) = do
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.movingAt movingAt,
       Se.Set Beam.offlineBoardings offlineBoardings,
       Se.Set Beam.routeCode routeCode,
       Se.Set Beam.serviceTierType serviceTierType,

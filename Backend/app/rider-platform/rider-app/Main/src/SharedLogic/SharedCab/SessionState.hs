@@ -240,7 +240,6 @@ tripFor s now =
       routeCode = s.routeCode,
       status = DVT.ACTIVE,
       startedAt = now,
-      movingAt = Nothing,
       endedAt = Nothing,
       endReason = Nothing,
       offlineBoardings = 0,

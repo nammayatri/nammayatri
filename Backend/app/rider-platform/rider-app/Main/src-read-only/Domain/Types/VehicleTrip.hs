@@ -23,7 +23,6 @@ data VehicleTrip = VehicleTrip
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    movingAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     offlineBoardings :: Kernel.Prelude.Int,
     routeCode :: Kernel.Prelude.Text,
     serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
