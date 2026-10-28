@@ -12,6 +12,7 @@ module SharedLogic.SharedCab.Boarding
     cabProximity,
     tryBoardSharedCab,
     boardingResponse,
+    firstUse,
   )
 where
 
@@ -285,6 +286,15 @@ tryBoardSharedCab _ _ booking _ _
   | not (isSharedCabBooking booking) = pure Nothing
 tryBoardSharedCab journey journeyLeg booking mbPersonId req =
   requireSharedCabEnabled booking.merchantOperatingCityId >> boardSharedCab journey journeyLeg booking mbPersonId req
+
+-- | A boarding that puts a booking's tickets in use for the first time (the bus counts its booking used at check-in, so a cab does at boarding).
+firstUse :: [TicketStatus.FRFSTicketStatus] -> SharedCabBoardOutcome -> Bool
+firstUse ticketsBefore outcome = boarded && not (any (`elem` [TicketStatus.INPROGRESS, TicketStatus.USED]) ticketsBefore)
+  where
+    boarded = case outcome of
+      SharedCabBoarded _ -> True
+      SharedCabDegraded -> True
+      SharedCabProximityHold _ _ -> False
 
 boardingResponse :: SharedCabBoardOutcome -> API.JourneyInfoResp -> API.JourneyInfoResp
 boardingResponse outcome journeyInfoResp = case outcome of

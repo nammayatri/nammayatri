@@ -3,10 +3,14 @@
 module SharedCabBoardingTests (tests) where
 
 import "rider-app" API.Types.UI.MultimodalConfirm (RiderLocationReq (..))
+import "beckn-spec" BecknV2.FRFS.Enums (ServiceTierType (AC))
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
+import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import Kernel.External.Maps.Types (LatLong (..))
+import "mobility-core" Kernel.Types.Id (Id (..))
 import "rider-app" Lib.JourneyLeg.Common.FRFSJourneyUtils (VehicleProximity (..))
-import "rider-app" SharedLogic.SharedCab.Boarding (UnknownCodeStep (..), bindingUnmoved, cabProximity, forceHonoured, forcedNoLocation, unknownCodeStep)
+import "rider-app" SharedLogic.SharedCab.Boarding (BoardingSummary (..), SharedCabBoardOutcome (..), UnknownCodeStep (..), bindingUnmoved, cabProximity, firstUse, forceHonoured, forcedNoLocation, unknownCodeStep)
+import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -62,9 +66,38 @@ tests =
             cabProximity now 10 (Just (ago 2, cab)) (Just stop) [at 20 cab] @?= Just NoRecentRiderPoint,
           testCase "no ping and no stop is no anchor" $
             cabProximity now 10 Nothing Nothing [at 1 cab] @?= Nothing
+        ],
+      testGroup
+        "pt_booking_used"
+        [ testCase "a boarding, or a degraded one, puts unused tickets in use" $
+            map (firstUse [TS.ACTIVE]) [boarded, SharedCabDegraded] @?= [True, True],
+          testCase "tickets already boarded (a re-bind or a repeat) or used are not a first use" $
+            [firstUse [TS.INPROGRESS] boarded, firstUse [TS.USED] SharedCabDegraded] @?= [False, False],
+          testCase "a proximity hold boards nothing" $
+            firstUse [TS.ACTIVE] (SharedCabProximityHold Nothing "TOO_FAR_FROM_CAB") @?= False
         ]
     ]
   where
+    boarded = SharedCabBoarded BoardingSummary {boardedSession = session, reboundFrom = Nothing, boardedWithoutLocation = False}
+    session =
+      Session
+        { driverId = "d1",
+          vehicleNumber = "ML05A1234",
+          merchantId = Id "m",
+          merchantOperatingCityId = Id "moc",
+          integratedBppConfigId = Id "ibc",
+          serviceTierType = AC,
+          routeCode = "R1",
+          queuedRouteCode = Nothing,
+          capacity = 4,
+          walkupCount = 0,
+          status = ACTIVE,
+          pauseReason = Nothing,
+          consecutiveMisses = 0,
+          version = 1,
+          startedAt = now,
+          vehicleTripId = Id "trip1"
+        }
     now = UTCTime (fromGregorian 2026 10 28) 36000
     ago sec = addUTCTime (negate sec) now
     at sec latLong = RiderLocationReq {currTime = ago sec, latLong}

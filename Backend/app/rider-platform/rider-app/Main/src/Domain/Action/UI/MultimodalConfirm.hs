@@ -3008,9 +3008,38 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
   legSearchId <- journeyLeg.legSearchId & fromMaybeM (InvalidRequest $ "Leg search ID not found for journey: " <> journeyLeg.id.getId)
   booking <- QFRFSTicketBooking.findBySearchId (Id legSearchId) >>= fromMaybeM (BookingNotFound $ "FRFS booking with search ID:" <> legSearchId)
+  ticketsBefore <- map (.status) <$> QFRFSTicket.findAllByTicketBookingId booking.id
   SharedCab.tryBoardSharedCab journey journeyLeg booking mbPersonId req >>= \case
-    Just outcome -> SharedCab.boardingResponse outcome <$> (generateJourneyInfoResponse journey =<< JM.getAllLegsInfo journey.riderId journeyId)
+    Just outcome -> do
+      when (SharedCab.firstUse ticketsBefore outcome) $
+        fork "event_tracking: pt_booking_used" $ trackPTBookingUsed journey booking
+      SharedCab.boardingResponse outcome <$> (generateJourneyInfoResponse journey =<< JM.getAllLegsInfo journey.riderId journeyId)
     Nothing -> onboardBusOrMetro (mbPersonId, merchantId) journeyId req journey journeyLeg booking
+
+-- | pt_booking_used, and pt_first_booking_used for the rider's first purchase.
+trackPTBookingUsed :: Domain.Types.Journey.Journey -> DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow ()
+trackPTBookingUsed journey booking = do
+  person <- QP.findById journey.riderId >>= fromMaybeM (PersonNotFound journey.riderId.getId)
+  statsEvent <-
+    SPUS.mkPurchaseEvent
+      person
+      (Just booking.vehicleType)
+      booking.serviceTierType
+      DPUS.TICKET
+      Nothing
+      Nothing
+      booking.merchantId
+      booking.merchantOperatingCityId
+  mbPurchaseCount <- fmap (.purchaseCount) <$> SPUS.findRow statsEvent
+  whenJust mbPurchaseCount $ \purchaseCount ->
+    ET.trackPTBookingUsedEvents
+      journey.merchantId
+      journey.merchantOperatingCityId
+      journey.riderId
+      (show booking.vehicleType)
+      (show <$> booking.serviceTierType)
+      booking.totalPrice.amount
+      purchaseCount
 
 onboardBusOrMetro ::
   (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant) ->
@@ -3132,30 +3161,8 @@ onboardBusOrMetro (mbPersonId, merchantId) journeyId req journey journeyLeg book
       -- a rider who buys two bookings before boarding either one never fires it, because the count
       -- is already 2 by the first check-in.
       unless boardedBefore $
-        fork "event_tracking: pt_booking_used" $ do
-          boardedNow <- allTicketsUsed booking.id
-          when boardedNow $ do
-            person <- QP.findById journey.riderId >>= fromMaybeM (PersonNotFound journey.riderId.getId)
-            statsEvent <-
-              SPUS.mkPurchaseEvent
-                person
-                (Just booking.vehicleType)
-                booking.serviceTierType
-                DPUS.TICKET
-                Nothing
-                Nothing
-                booking.merchantId
-                booking.merchantOperatingCityId
-            mbPurchaseCount <- fmap (.purchaseCount) <$> SPUS.findRow statsEvent
-            whenJust mbPurchaseCount $ \purchaseCount ->
-              ET.trackPTBookingUsedEvents
-                journey.merchantId
-                journey.merchantOperatingCityId
-                journey.riderId
-                (show booking.vehicleType)
-                (show <$> booking.serviceTierType)
-                booking.totalPrice.amount
-                purchaseCount
+        fork "event_tracking: pt_booking_used" $
+          allTicketsUsed booking.id >>= (`when` trackPTBookingUsed journey booking)
 
       QJourneyLeg.updateByPrimaryKey $
         journeyLeg

@@ -27,6 +27,7 @@ module SharedLogic.SharedCab
     SharedCabBoardOutcome (..),
     tryBoardSharedCab,
     boardingResponse,
+    firstUse,
     CancelStage (..),
     guardRiderCancel,
     dropRider,
@@ -38,7 +39,7 @@ module SharedLogic.SharedCab
   )
 where
 
-import SharedLogic.SharedCab.Boarding (SharedCabBoardOutcome (..), boardingResponse, tryBoardSharedCab)
+import SharedLogic.SharedCab.Boarding (SharedCabBoardOutcome (..), boardingResponse, firstUse, tryBoardSharedCab)
 import SharedLogic.SharedCab.Cancel (CancelStage (..), dropRider, guardRiderCancel)
 import SharedLogic.SharedCab.ConfirmHook (SharedCabConfirmFlow, confirmHook, onBookingCreated, recordPreferredCab, stagePickedCab)
 import SharedLogic.SharedCab.Demand (recordSearch, sharedCabBoardStops)
