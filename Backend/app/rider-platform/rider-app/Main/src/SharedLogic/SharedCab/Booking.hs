@@ -60,11 +60,15 @@ boardedTouchDue :: UTCTime -> UTCTime -> Bool
 boardedTouchDue now updatedAt = diffUTCTime now updatedAt > 3600
 
 withBookingLock :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m a -> m a
-withBookingLock bookingId = withOwnedLock "waitForBookingLock" (bookingLockKey bookingId) 10 10000
+withBookingLock bookingId = withOwnedLock "waitForBookingLock" (bookingLockKey bookingId) bookingLockTtlSec 10000
+
+-- | A cancel holds the booking lock across the BPP cancel and the payment status call: the lock must outlive them.
+bookingLockTtlSec :: Int
+bookingLockTtlSec = 30
 
 -- | The same lock without waiting: Nothing when held.
 tryWithBookingLock :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m a -> m (Maybe a)
-tryWithBookingLock bookingId = tryWithOwnedLock (bookingLockKey bookingId) 10
+tryWithBookingLock bookingId = tryWithOwnedLock (bookingLockKey bookingId) bookingLockTtlSec
 
 ridersOnBoard :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
 ridersOnBoard plate = do

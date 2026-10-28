@@ -3,6 +3,7 @@
 module SharedLogic.SharedCab.Lock
   ( shared,
     withOwnedLock,
+    waitUntil,
     tryWithOwnedLock,
     acquireOwned,
     releaseOwned,
@@ -17,18 +18,35 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator (withTimeRedis)
+import System.Random (randomRIO)
+import Tools.Error (RedisLockError (..))
 
 -- | The cross-app master cell, unprefixed, so every app and the scheduler see the allocation and degraded-boarding keys.
 shared :: (Redis.HedisFlow m r, MonadFlow m) => m a -> m a
 shared = Redis.runInMasterCloudRedisCellWithCrossAppRedis . Redis.withMasterRedis
 
--- | Waits for the lock, retrying every `delayMicros`; `operation` labels the wait in the datastore latency metric.
+-- | Waits for the lock, retrying every `delayMicros` plus up to half again of jitter, for at most 'lockWaitSec'; then fails with a
+-- retriable error instead of holding the request. `operation` labels the wait in the datastore latency metric.
 withOwnedLock :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Text -> Text -> Int -> Int -> m a -> m a
 withOwnedLock operation key ttlSec delayMicros action = do
   owner <- generateGUIDText
-  let waitForLock = unlessM (acquire key ttlSec owner) (threadDelay delayMicros >> waitForLock)
-  withTimeRedis "sharedCab" operation waitForLock
+  deadline <- addUTCTime lockWaitSec <$> getCurrentTime
+  let pause = liftIO (randomRIO (delayMicros, delayMicros + delayMicros `div` 2)) >>= threadDelay
+  acquired <- withTimeRedis "sharedCab" operation (waitUntil getCurrentTime deadline (acquire key ttlSec owner) pause)
+  unless acquired $ throwError (RedisLockStillProcessing key)
   action `finally` release key owner
+
+lockWaitSec :: NominalDiffTime
+lockWaitSec = 5
+
+-- | Tries until `tryAcquire` succeeds or the clock has passed `deadline` after a failed try, pausing between tries.
+waitUntil :: Monad m => m UTCTime -> UTCTime -> m Bool -> m () -> m Bool
+waitUntil clock deadline tryAcquire pause = go
+  where
+    go =
+      tryAcquire >>= \case
+        True -> pure True
+        False -> clock >>= \now -> if now >= deadline then pure False else pause >> go
 
 -- | Nothing when another holder has the lock.
 tryWithOwnedLock :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Text -> Int -> m a -> m (Maybe a)
