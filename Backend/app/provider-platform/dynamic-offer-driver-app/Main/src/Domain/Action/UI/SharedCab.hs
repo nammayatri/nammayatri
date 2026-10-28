@@ -150,9 +150,10 @@ resumeSharedCab (personId, _merchantId, _merchantOpCityId) = do
   vehicle <- validateSharedCabDriver personId
   bap <- bapInternal
   SharedCabBAP.resumeSharedCab bap.apiKey bap.url $
-    SharedCabBAP.BAPResumeReq
+    SharedCabBAP.BAPDriverReq
       { SharedCabBAP.driverId = personId.getId,
-        SharedCabBAP.vehicleNumber = vehicle.registrationNo
+        SharedCabBAP.vehicleNumber = vehicle.registrationNo,
+        SharedCabBAP.reason = Nothing
       }
 
 getSharedCabTrips :: DriverAuthInfo -> Maybe Day -> Flow SharedCabTripsResp

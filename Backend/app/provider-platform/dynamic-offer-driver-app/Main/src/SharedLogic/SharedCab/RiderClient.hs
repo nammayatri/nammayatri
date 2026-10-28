@@ -3,14 +3,11 @@
 -- | driver-app -> rider-app client for the shared-cab internal API (/internal/sharedCab/*). Every call maps the rider app's
 -- APIError envelope onto BapProxyError, so the driver app surfaces the rider app's errorCode and HTTP status unchanged.
 module SharedLogic.SharedCab.RiderClient
-  ( BAPFlow,
-    SessionAPI,
+  ( SessionAPI,
     BAPSelectRouteReq (..),
     BAPSeatsReq (..),
     BAPEndRouteReq (..),
-    BAPResumeReq (..),
     BAPDriverReq (..),
-    sessionClient,
     sessionProbeClient,
     getSharedCabRoutes,
     selectSharedCabRoute,
@@ -85,13 +82,6 @@ data BAPEndRouteReq = BAPEndRouteReq
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON)
 
-data BAPResumeReq = BAPResumeReq
-  { driverId :: Text,
-    vehicleNumber :: Text
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON)
-
 data BAPDriverReq = BAPDriverReq
   { driverId :: Text,
     vehicleNumber :: Text,
@@ -130,7 +120,7 @@ type SeatsAPI = InternalAPI ("seats" :> TokenHeader :> ReqBody '[JSON] BAPSeatsR
 
 type EndRouteAPI = InternalAPI ("route" :> "end" :> TokenHeader :> ReqBody '[JSON] BAPEndRouteReq :> Post '[JSON] (Maybe SharedCabSession))
 
-type ResumeAPI = InternalAPI ("resume" :> TokenHeader :> ReqBody '[JSON] BAPResumeReq :> Post '[JSON] SharedCabSession)
+type ResumeAPI = InternalAPI ("resume" :> TokenHeader :> ReqBody '[JSON] BAPDriverReq :> Post '[JSON] SharedCabSession)
 
 -- | `date` is mandatory per the rider-app contract: an ISO-8601 calendar day, defaulted to today in Domain.Action.UI.SharedCab.
 type TripsAPI =
@@ -185,18 +175,15 @@ callRider internalUrl desc eulerClient api = do
 
 getSharedCabRoutes :: BAPFlow m r => Text -> BaseUrl -> Text -> Double -> Double -> m SharedCabRoutesResp
 getSharedCabRoutes apiKey internalUrl agencyId lat lon = do
-  logInfo $ "CallSharedCabBAP: Getting routes for agencyId: " <> agencyId
   callRider internalUrl "GetSharedCabRoutes" (client (Proxy @RoutesAPI) agencyId lat lon (Just apiKey)) (Proxy @RoutesAPI)
 
 selectSharedCabRoute :: BAPFlow m r => Text -> BaseUrl -> BAPSelectRouteReq -> m SelectRouteResp
 selectSharedCabRoute apiKey internalUrl req = do
-  logInfo $ "CallSharedCabBAP: Selecting route " <> req.routeCode <> " for driverId: " <> req.driverId
   callRider internalUrl "SelectSharedCabRoute" (client (Proxy @SelectRouteAPI) (Just apiKey) req) (Proxy @SelectRouteAPI)
 
 -- | No live session arrives as SHARED_CAB_SESSION_NOT_FOUND in the error body (not a bare status); every other error re-throws verbatim.
 getSharedCabSession :: BAPFlow m r => Text -> BaseUrl -> Text -> Text -> m (Maybe SharedCabSession)
 getSharedCabSession apiKey internalUrl driverId vehicleNumber = do
-  logInfo $ "CallSharedCabBAP: Getting session for driverId: " <> driverId
   callRider internalUrl "GetSharedCabSession" (sessionClient driverId vehicleNumber (Just apiKey)) (Proxy @(SessionAPI (Maybe SharedCabSession)))
     `catch` \case
       BapProxyResponseError _ code _ _ | code == sessionNotFoundErrorCode -> pure Nothing
@@ -207,22 +194,18 @@ sessionNotFoundErrorCode = "SHARED_CAB_SESSION_NOT_FOUND"
 
 setSharedCabSeats :: BAPFlow m r => Text -> BaseUrl -> BAPSeatsReq -> m SharedCabSession
 setSharedCabSeats apiKey internalUrl req = do
-  logInfo $ "CallSharedCabBAP: Setting seats for driverId: " <> req.driverId
   callRider internalUrl "SetSharedCabSeats" (client (Proxy @SeatsAPI) (Just apiKey) req) (Proxy @SeatsAPI)
 
 endSharedCabRoute :: BAPFlow m r => Text -> BaseUrl -> BAPEndRouteReq -> m (Maybe SharedCabSession)
 endSharedCabRoute apiKey internalUrl req = do
-  logInfo $ "CallSharedCabBAP: Ending route (next = " <> show req.next <> ") for driverId: " <> req.driverId
   callRider internalUrl "EndSharedCabRoute" (client (Proxy @EndRouteAPI) (Just apiKey) req) (Proxy @EndRouteAPI)
 
-resumeSharedCab :: BAPFlow m r => Text -> BaseUrl -> BAPResumeReq -> m SharedCabSession
+resumeSharedCab :: BAPFlow m r => Text -> BaseUrl -> BAPDriverReq -> m SharedCabSession
 resumeSharedCab apiKey internalUrl req = do
-  logInfo $ "CallSharedCabBAP: Resuming session for driverId: " <> req.driverId
   callRider internalUrl "ResumeSharedCab" (client (Proxy @ResumeAPI) (Just apiKey) req) (Proxy @ResumeAPI)
 
 getSharedCabTrips :: BAPFlow m r => Text -> BaseUrl -> Text -> Text -> m SharedCabTripsResp
 getSharedCabTrips apiKey internalUrl driverId date = do
-  logInfo $ "CallSharedCabBAP: Getting trips for driverId: " <> driverId <> ", date: " <> date
   callRider internalUrl "GetSharedCabTrips" (client (Proxy @TripsAPI) driverId date (Just apiKey)) (Proxy @TripsAPI)
 
 postBookingAction :: BAPFlow m r => Text -> BaseUrl -> Text -> Text -> BAPDriverReq -> m SharedCabSession
