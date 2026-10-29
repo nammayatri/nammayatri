@@ -173,13 +173,14 @@ mkDocumentVerificationConfigAPIEntityWithStage ::
 mkDocumentVerificationConfigAPIEntityWithStage onboardingStages language verificationProvidersPriorityList Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} = do
   mbTitle <- CQTranslations.findTextByKey (Just merchantOperatingCityId) language (Document_Title documentType)
   mbDescription <- CQTranslations.findTextByKey (Just merchantOperatingCityId) language (Document_Description documentType)
+  translatedFields <- traverse (SDO.translateDocumentFields merchantOperatingCityId language documentType) documentFields
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity
       { title = fromMaybe title mbTitle,
         description = mbDescription <|> description,
         isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
         applicableTo = applicableTo,
-        documentFields = documentFields,
+        documentFields = translatedFields,
         documentFlowGrouping = fromMaybe Domain.STANDARD documentFlowGrouping,
         verificationProvidersPriorityList = verificationProvidersPriorityList,
         doStrictVerification = doStrictVerifcation,

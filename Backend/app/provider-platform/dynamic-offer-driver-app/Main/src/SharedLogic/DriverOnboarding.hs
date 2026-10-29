@@ -25,9 +25,13 @@ import qualified API.Types.ProviderPlatform.Fleet.Onboarding
 import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
 import Control.Applicative ((<|>))
+import qualified Crypto.Hash as Hash
+import qualified Data.Char as Char
 import qualified Data.List as DL
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types as DVST
@@ -55,7 +59,9 @@ import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.Person as Person
+import Domain.Types.TranslationKey (keyName)
 import Domain.Types.TranslationKeys (TranslationKey (..))
+import qualified Domain.Types.Translations as Fields
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.Vehicle as DV
 import qualified Domain.Types.VehicleCategory as DVC
@@ -67,18 +73,20 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
-import Kernel.External.Types (Language, VerificationFlow)
+import Kernel.External.Types (Language (..), VerificationFlow)
 import qualified Kernel.External.Verification.Idfy.Types.Response as Fields
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Documents
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Association.Change as AC
@@ -110,6 +118,7 @@ import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.ImageExtra as ImageQueryExtra
 import qualified Storage.Queries.Message as MessageQuery
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.TranslationsExtra as QTE
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCExtra
@@ -804,8 +813,84 @@ filterInCompatibleFlows ::
   [documentVerificationConfigAPIEntity]
 filterInCompatibleFlows makeSelfieAadhaarPanMandatory = filter (\doc -> not (fromMaybe False doc.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)
 
+-- | The keys of every text leaf of a document's form fields: the registry lists them and
+-- 'translateDocumentFields' reads them. The field id is its request key, else its name; a
+-- non-image field without a request key is identified by its name, so its label has no key.
+documentFieldKeys :: Domain.Types.DocumentVerificationConfig.DocumentType -> [Domain.Types.DocumentVerificationConfig.FieldInfo] -> [TranslationKey]
+documentFieldKeys documentType = concatMap keysOf
+  where
+    keysOf field =
+      let fieldId = fromMaybe field.name field.requestKey
+       in [DocumentField_Label documentType fieldId | field._type == Domain.Types.DocumentVerificationConfig.FieldImage || isJust field.requestKey]
+            <> [DocumentField_Hint documentType fieldId | isJust field.hint]
+            <> [DocumentField_Placeholder documentType fieldId | isJust field.placeholder]
+            <> [DocumentField_Description documentType fieldId | isJust field.description]
+            <> concat [DocumentField_ImageTitle documentType fieldId name : [DocumentField_ImageText documentType fieldId name | isJust image.text] | (Just name, image) <- keyedByTitle field.images]
+            <> maybe [] (concatMap keysOf) field.fields
+
+-- | Items listed by ops (a field's sample images), each with the name its keys carry: its English
+-- title made key-safe ('textKeyName'). A title with no letter or digit has no keys, and of items
+-- sharing a name only the first has them, so a repeated title keeps its configured text.
+keyedByTitle :: HasField "title" item Text => Maybe [item] -> [(Maybe Text, item)]
+keyedByTitle = snd . DL.mapAccumL nameOf Set.empty . fromMaybe []
+  where
+    nameOf seen item =
+      let name = textKeyName item.title
+       in if T.null name || Set.member name seen then (seen, (Nothing, item)) else (Set.insert name seen, (Just name, item))
+
+-- | A key name segment from an English text typed by ops: apostrophes dropped, every other
+-- character that is not a letter or digit splits words, each word capitalised and the words
+-- joined ("Owner's copy (front)" -> "OwnersCopyFront").
+textKeyName :: Text -> Text
+textKeyName = T.concat . map capitalise . T.words . T.map (\c -> if Char.isAlphaNum c then c else ' ') . T.filter (`notElem` ['\'', '\x2019'])
+  where
+    capitalise word = maybe word (\(c, rest) -> T.cons (Char.toUpper c) rest) (T.uncons word)
+
+-- | Every text leaf in the reader's language where its key has text, else as configured.
+translateDocumentFields :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Language -> Domain.Types.DocumentVerificationConfig.DocumentType -> [Domain.Types.DocumentVerificationConfig.FieldInfo] -> m [Domain.Types.DocumentVerificationConfig.FieldInfo]
+translateDocumentFields merchantOpCityId language documentType fields = do
+  textOf <- cachedTexts (show documentType) merchantOpCityId language (documentFieldKeys documentType fields)
+  let translate field =
+        let fieldId = fromMaybe field.name field.requestKey
+            translateImage (mbName, image) = case mbName of
+              Nothing -> image
+              Just name ->
+                Domain.Types.DocumentVerificationConfig.ImageInfo
+                  { title = fromMaybe image.title (textOf (DocumentField_ImageTitle documentType fieldId name)),
+                    text = textOf (DocumentField_ImageText documentType fieldId name) <|> image.text,
+                    imageUrl = image.imageUrl
+                  }
+         in field
+              { Domain.Types.DocumentVerificationConfig.name = fromMaybe field.name (textOf (DocumentField_Label documentType fieldId)),
+                Domain.Types.DocumentVerificationConfig.hint = (textOf (DocumentField_Hint documentType fieldId) <|> field.hint),
+                Domain.Types.DocumentVerificationConfig.placeholder = (textOf (DocumentField_Placeholder documentType fieldId) <|> field.placeholder),
+                Domain.Types.DocumentVerificationConfig.description = (textOf (DocumentField_Description documentType fieldId) <|> field.description),
+                Domain.Types.DocumentVerificationConfig.images = map translateImage (keyedByTitle field.images) <$ field.images,
+                Domain.Types.DocumentVerificationConfig.fields = map translate <$> field.fields
+              }
+  pure (map translate fields)
+
+-- | The text of each key in the reader's language where it has a row, else its English row, a
+-- city row before a shared one; Nothing where neither exists. One cached read per owner (a
+-- document type) and city, in every language, rather than one per key; none when there
+-- are no keys. The cache is named under the driver translations' config-pilot prefix, so a save
+-- that clears the translations' cache (the dashboard translation editor, NammaTag) clears it on
+-- every pod too. A digest of the keys is part of the name: one document type has a form per
+-- vehicle category and a fleet-owner form, each with its own fields, and the name stays short
+-- enough for that clear to match it.
+cachedTexts :: (CacheFlow m r, EsqDBFlow m r) => Text -> Id DMOC.MerchantOperatingCity -> Language -> [TranslationKey] -> m (TranslationKey -> Maybe Text)
+cachedTexts _ _ _ [] = pure (const Nothing)
+cachedTexts owner merchantOpCityId language keys = do
+  let keysDigest = show $ Hash.hashWith Hash.SHA256 (TE.encodeUtf8 (T.intercalate "," (DL.sort (map keyName keys))))
+  rows <- IM.withInMemCache ["ConfigPilot", show LYT.TranslationDriver, merchantOpCityId.getId, owner, keysDigest] 3600 $ QTE.findAllByMessageKeys (map keyName keys)
+  let wanted r = r.language `elem` [language, ENGLISH] && (isNothing r.merchantOperatingCityId || r.merchantOperatingCityId == Just merchantOpCityId)
+      rank r = (if r.language == language then 0 else 1 :: Int, if isJust r.merchantOperatingCityId then 0 else 1 :: Int)
+      best = Map.fromListWith (\a b -> if rank a <= rank b then a else b) [(r.messageKey, r) | r <- rows, wanted r]
+  pure $ \key -> (.message) <$> Map.lookup (keyName key) best
+
 mkFleetOwnerDocumentVerificationConfigAPIEntity :: Language -> [API.Types.ProviderPlatform.Fleet.Onboarding.DocumentOnboardingStageAPIEntity] -> Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
 mkFleetOwnerDocumentVerificationConfigAPIEntity language onboardingStages Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig {..} = do
+  translatedFields <- traverse (translateDocumentFields merchantOperatingCityId language documentType) documentFields
   mbTitle <- CQTranslations.findTextByKey (Just merchantOperatingCityId) language (FleetOwnerDocument_Title documentType)
   mbDescription <- CQTranslations.findTextByKey (Just merchantOperatingCityId) language (FleetOwnerDocument_Description documentType)
   return $
@@ -819,7 +904,7 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language onboardingStages Domain
         dependencyDocumentType = map castDocumentType dependencyDocumentType,
         documentCategory = castDocumentCategory <$> documentCategory,
         isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
-        documentFields = fmap (map castDocumentFieldInfo) documentFields,
+        documentFields = fmap (map castDocumentFieldInfo) translatedFields,
         documentFlowGrouping = castDocumentFlowGrouping DVC.STANDARD,
         documentOnboardingStage = castDocumentOnboardingStage <$> documentOnboardingStage,
         isReminderSupported = Nothing,

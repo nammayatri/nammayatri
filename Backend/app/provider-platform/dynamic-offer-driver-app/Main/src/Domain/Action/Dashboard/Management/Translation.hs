@@ -27,6 +27,8 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import Domain.Action.UI.DriverWallet (allWalletReferences)
+import qualified Domain.Types.DocumentVerificationConfig as Fields
+import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -46,6 +48,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.DriverOnboarding as SDO
+import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMPN
@@ -75,8 +80,9 @@ data Domain = Domain
     domainFields :: [Text],
     -- | The columns that can narrow one key's text to a variant, with every value the column takes.
     domainDimensions :: [Common.TranslationDimension],
-    domainKeys :: [KeyRef],
-    readRows :: Id DMOC.MerchantOperatingCity -> Flow [Row],
+    -- | Per city: a domain whose keys are named by config text reads them from the city's configs.
+    domainKeys :: Id DMOC.MerchantOperatingCity -> Flow [KeyRef],
+    readRows :: [KeyRef] -> Id DMOC.MerchantOperatingCity -> Flow [Row],
     -- | Saves the cells of one key, variant and language: one row where the domain stores them together.
     writeEntry :: DMOC.MerchantOperatingCity -> [Common.TranslationUpsertEntry] -> Flow ()
   }
@@ -90,7 +96,7 @@ bodyField = "body"
 domains :: [Domain]
 domains =
   map translationsDomain ["Document", "FleetOwnerDocument", "OnboardingStage", "Verification", "ServiceTier", "DocumentDecision", "RcRule", "AcUsage", "Coins", "Earnings"]
-    <> [walletDomain, pushDomain, smsDomain]
+    <> [walletDomain, documentFieldDomain, pushDomain, smsDomain]
 
 findDomain :: Text -> Flow Domain
 findDomain name = find ((== name) . (.domainName)) domains & fromMaybeM (InvalidRequest $ "Unknown translation domain: " <> name)
@@ -129,7 +135,8 @@ getTranslationDomains :: ShortId DM.Merchant -> Context.City -> Flow Common.Tran
 getTranslationDomains merchantShortId opCity = do
   merchantOpCity <- findCity merchantShortId opCity
   summaries <- forM domains $ \domain -> do
-    rows <- bestRows <$> domain.readRows merchantOpCity.id
+    keyRefs <- domain.domainKeys merchantOpCity.id
+    rows <- bestRows <$> domain.readRows keyRefs merchantOpCity.id
     -- A text is one field of one key and variant with a row in some language; the sender reads
     -- only the variant that matches, so a variant that exists in one language only is a gap in
     -- the others. Keys with no row in any language are not texts yet.
@@ -140,7 +147,7 @@ getTranslationDomains merchantShortId opCity = do
         { domain = domain.domainName,
           fields = domain.domainFields,
           dimensions = domain.domainDimensions,
-          keyCount = length domain.domainKeys,
+          keyCount = length keyRefs,
           textCount = Set.size texts * length domain.domainFields,
           filledTexts = [Common.TranslationLanguageCount {language, count} | (language, count) <- Map.toList counts]
         }
@@ -150,7 +157,8 @@ getTranslationKeys :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common
 getTranslationKeys merchantShortId opCity domainName = do
   merchantOpCity <- findCity merchantShortId opCity
   domain <- findDomain domainName
-  rows <- bestRows <$> domain.readRows merchantOpCity.id
+  keyRefs <- domain.domainKeys merchantOpCity.id
+  rows <- bestRows <$> domain.readRows keyRefs merchantOpCity.id
   let entry ref =
         Common.TranslationKeyEntry
           { key = ref.refKey,
@@ -166,16 +174,17 @@ getTranslationKeys merchantShortId opCity domainName = do
       { domain = domain.domainName,
         fields = domain.domainFields,
         dimensions = domain.domainDimensions,
-        entries = map entry domain.domainKeys
+        entries = map entry keyRefs
       }
 
 postTranslationUpsert :: ShortId DM.Merchant -> Context.City -> Text -> Common.TranslationUpsertReq -> Flow Common.TranslationUpsertRes
 postTranslationUpsert merchantShortId opCity domainName req = do
   merchantOpCity <- findCity merchantShortId opCity
   domain <- findDomain domainName
-  stored <- bestRows <$> domain.readRows merchantOpCity.id
+  keyRefs <- domain.domainKeys merchantOpCity.id
+  stored <- bestRows <$> domain.readRows keyRefs merchantOpCity.id
   let check entry = do
-        unless (any ((== entry.key) . (.refKey)) domain.domainKeys) $
+        unless (any ((== entry.key) . (.refKey)) keyRefs) $
           throwError $ InvalidRequest $ "Key " <> entry.key <> " is not in domain " <> domainName
         unless (entry.field `elem` domain.domainFields) $
           throwError $ InvalidRequest $ "Field " <> entry.field <> " is not in domain " <> domainName
@@ -236,8 +245,8 @@ translationsDomain name =
     { domainName = name,
       domainFields = [messageField],
       domainDimensions = [],
-      domainKeys = refs,
-      readRows = readTranslations refs,
+      domainKeys = const (pure refs),
+      readRows = readTranslations,
       writeEntry = mapM_ . writeTranslation
     }
   where
@@ -250,12 +259,32 @@ walletDomain =
     { domainName = "Wallet",
       domainFields = [messageField],
       domainDimensions = [],
-      domainKeys = refs,
-      readRows = readTranslations refs,
+      domainKeys = const (pure refs),
+      readRows = readTranslations,
       writeEntry = mapM_ . writeTranslation
     }
   where
     refs = map (keyRef . Wallet_Item) allWalletReferences
+
+-- | Document form fields: the keys are read off the city's document configs.
+documentFieldDomain :: Domain
+documentFieldDomain =
+  Domain
+    { domainName = "DocumentField",
+      domainFields = [messageField],
+      domainDimensions = [],
+      domainKeys = fieldKeys,
+      readRows = readTranslations,
+      writeEntry = mapM_ . writeTranslation
+    }
+  where
+    -- A driver and a fleet config of the same document type share their fields' keys.
+    fieldKeys cityId = do
+      driverConfigs <- CQDVC.findAllByMerchantOpCityId cityId Nothing
+      fleetConfigs <- CQFODVC.findAllByMerchantOpCityId cityId Nothing
+      pure . map keyRef . List.nub $
+        [k | config <- driverConfigs, k <- SDO.documentFieldKeys config.documentType (fromMaybe [] config.documentFields)]
+          <> [k | config <- fleetConfigs, k <- SDO.documentFieldKeys config.documentType (fromMaybe [] config.documentFields)]
 
 readTranslations :: [KeyRef] -> Id DMOC.MerchantOperatingCity -> Flow [Row]
 readTranslations refs cityId = do
@@ -307,8 +336,8 @@ pushDomain =
     { domainName = "DriverPush",
       domainFields = [titleField, bodyField],
       domainDimensions = pushDimensions,
-      domainKeys = map keyRef (allKeys @DriverPushKey),
-      readRows = readPushes,
+      domainKeys = const (pure (map keyRef (allKeys @DriverPushKey))),
+      readRows = const readPushes,
       writeEntry = writePush
     }
 
@@ -418,8 +447,8 @@ smsDomain =
     { domainName = "Sms",
       domainFields = [messageField],
       domainDimensions = [],
-      domainKeys = map keyRef (allKeys @SmsKey),
-      readRows = readSms,
+      domainKeys = const (pure (map keyRef (allKeys @SmsKey))),
+      readRows = const readSms,
       writeEntry = mapM_ . writeSms
     }
 
