@@ -20,6 +20,7 @@ module SharedLogic.Payout.Bulk.Eligibility
     readPayoutSnapshot,
     classifyBulkCandidate,
     usableBankDetails,
+    mkBankVerificationStatus,
   )
 where
 
@@ -88,6 +89,12 @@ usableBankDetails acc
   | otherwise = Nothing
   where
     blank = maybe True (T.null . T.strip)
+
+-- | Stripe rows verify via 'detailsSubmitted'; penny-drop rows are only written once Idfy confirms the account.
+mkBankVerificationStatus :: DDBA.DriverBankAccount -> Text
+mkBankVerificationStatus acc
+  | acc.detailsSubmitted || isNothing (usableBankDetails acc) = "VERIFIED"
+  | otherwise = "PENDING"
 
 -- | 'Left': not in this batch, nothing recorded. 'Right': a batch member, payable unless
 --   'exclusionReason' is set, in which case it becomes an EXCLUDED request.
