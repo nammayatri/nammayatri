@@ -178,6 +178,7 @@ startContext merchant person req =
         ("city", A.toJSON (show person.currentCity :: Text)),
         ("merchant", A.toJSON merchant.shortId.getShortId)
       ]
+        <> maybe [] (\partner -> [("driver_merchant", A.toJSON partner)]) merchant.driverOfferMerchantShortId
 
 xyneConfig :: Id DM.Merchant -> DP.Person -> Flow Xyne.XyneSpacesCfg
 xyneConfig merchantId person = do
