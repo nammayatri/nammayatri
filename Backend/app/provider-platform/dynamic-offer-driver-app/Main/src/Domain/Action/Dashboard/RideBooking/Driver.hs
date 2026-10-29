@@ -91,6 +91,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.Finance.Wallet as FWallet
 import qualified SharedLogic.FleetDriverSettings as FDS
 import SharedLogic.Merchant (findMerchantByShortId)
+import SharedLogic.Payout.Bulk.Eligibility (mkBankVerificationStatus)
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified SharedLogic.VehicleServiceTier as VST
 import Storage.Beam.Yudhishthira ()
@@ -549,7 +550,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let gstinApplicableFlag' = mbGstin <&> \gstin -> gstin.verificationStatus == Documents.VALID
   let bankAccountNumber' = mbBankAccount <&> (.accountId)
   let bankIfsc' = mbBankAccount >>= (.ifscCode)
-  let bankVerificationStatus' = mbBankAccount <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
+  let bankVerificationStatus' = mbBankAccount <&> mkBankVerificationStatus
   mbIdentityInfo <- B.runInReplica $ QDII.findByDriverId person.id
   let courtRecord' = (mbIdentityInfo >>= (.courtRecord)) <&> \cr -> Common.CourtRecordResult {result = cr.result, errorMessage = cr.errorMessage}
   let tdsApplicableFlag' = case mbActiveFda of

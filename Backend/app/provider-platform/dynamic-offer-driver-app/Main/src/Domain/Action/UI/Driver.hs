@@ -298,6 +298,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.OneShotAssign as OneShot
 import qualified SharedLogic.Payment as SPayment
+import SharedLogic.Payout.Bulk.Eligibility (mkBankVerificationStatus)
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import SharedLogic.Ride
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
@@ -1883,7 +1884,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
         let gstinApplicableFlag'' = (== Documents.VALID) . (.verificationStatus) <$> mbGstin
         let bankAccountNumber'' = mbDriverBankAccountForRes <&> (.accountId)
         let bankIfsc'' = mbDriverBankAccountForRes >>= (.ifscCode)
-        let bankVerificationStatus'' = mbDriverBankAccountForRes <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
+        let bankVerificationStatus'' = mbDriverBankAccountForRes <&> mkBankVerificationStatus
         return ((.balance) <$> mbRideCreditAccount, panDec', panAadhaarLinkedFlag'', gstinApplicableFlag'', mbWalletAccount', bankAccountNumber'', bankIfsc'', bankVerificationStatus'')
       else return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
   let driverReferralApplied = isJust driverInfo.referredByDriverId

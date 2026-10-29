@@ -228,6 +228,7 @@ import qualified SharedLogic.FleetDriverSettings as FDS
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
+import SharedLogic.Payout.Bulk.Eligibility (mkBankVerificationStatus)
 import qualified SharedLogic.SocialLogin as SSL
 import qualified SharedLogic.VehicleServiceTier as SVST
 import qualified SharedLogic.WMB as WMB
@@ -2673,7 +2674,7 @@ getFleetOrOperatorInfo person = do
           gstinApplicableFlag' = mbGstin <&> \gstin -> gstin.verificationStatus == Documents.VALID
           bankAccountNumber' = mbBankAccount <&> (.accountId)
           bankIfsc' = mbBankAccount >>= (.ifscCode)
-          bankVerificationStatus' = mbBankAccount <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
+          bankVerificationStatus' = mbBankAccount <&> mkBankVerificationStatus
           walletId' = (\acc -> acc.id.getId) <$> mbWalletAccount
           upiId' = mbDriverInfo >>= (.payoutVpa)
 
@@ -2802,7 +2803,7 @@ getFleetOrOperatorInfo person = do
       -- wallet_id = Account_id from Finance_account where counterparty_id = fleet_owner_id AND AccountType = Liability
       mbWalletAccount <- FWallet.getWalletAccountByOwner FLEET_OWNER fleetOwnerPersonId.getId
       let walletId' = (\acc -> acc.id.getId) <$> mbWalletAccount
-      let bankVerificationStatus' = mbBankAccount <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
+      let bankVerificationStatus' = mbBankAccount <&> mkBankVerificationStatus
 
       -- upiId from FleetOwnerInformation
       let upiId' = payoutVpa
