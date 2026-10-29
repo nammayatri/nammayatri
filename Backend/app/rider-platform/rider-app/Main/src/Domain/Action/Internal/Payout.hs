@@ -79,7 +79,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
   case osr of
     IPayout.OrderStatusPayoutResp {..} -> do
       payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
-      UIPayout.runRiderPayoutSettlement merchantId merchanOperatingCityId payoutStatus payoutOrder
+      void $ UIPayout.payoutStatusHandler (Just payoutStatus) payoutOrder
     IPayout.BadStatusResp -> pure ()
   pure Ack
 
