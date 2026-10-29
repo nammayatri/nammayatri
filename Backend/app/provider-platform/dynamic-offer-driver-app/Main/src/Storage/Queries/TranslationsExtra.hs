@@ -27,3 +27,9 @@ isTranslationExist messageKey language = do
 
 findAllByMessageKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [Domain.Types.Translations.Translations]
 findAllByMessageKey messageKey = findAllWithKV [Se.Is BeamEMT.messageKey $ Se.Eq messageKey]
+
+-- | Every row stored under any of the names, whatever its city, in one read: the caller picks the
+-- city and the language.
+findAllByMessageKeys :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [Domain.Types.Translations.Translations]
+findAllByMessageKeys [] = pure []
+findAllByMessageKeys keys = findAllWithKV [Se.Is BeamEMT.messageKey $ Se.In keys]
