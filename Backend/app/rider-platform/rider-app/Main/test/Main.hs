@@ -16,19 +16,23 @@ import Kernel.Utils.App
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall
 import Kernel.Utils.FlowLogging
+import qualified SharedCabAllocationTests
 import qualified SharedCabBoardingTests
 import qualified SharedCabCancelRefusalTests
 import qualified SharedCabConfigTests
 import qualified SharedCabDegradedSweepTests
 import qualified SharedCabDegradedTests
 import qualified SharedCabDemandTests
+import qualified SharedCabDriverActionTests
 import qualified SharedCabExpiryTests
 import qualified SharedCabLegStateTests
 import qualified SharedCabLockTests
 import qualified SharedCabNoShowTests
 import qualified SharedCabNotifyTests
+import qualified SharedCabRefundPolicyTests
 import qualified SharedCabRefundRetryTests
 import qualified SharedCabSeatTests
+import qualified SharedCabSessionTests
 import qualified SharedCabStopProgressTests
 import qualified SharedCabTicketBirthTests
 import qualified SharedCabWalkUpTests
@@ -52,4 +56,4 @@ main = do
 
   -- -- Let the Logs be flushed
   -- threadDelaySec (Seconds 10)
-  defaultMain $ testGroup "rider-app" [SharedCabLegStateTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests, SharedCabConfigTests.tests, SharedCabExpiryTests.tests, SharedCabStopProgressTests.tests, SharedCabBoardingTests.tests, SharedCabDegradedTests.tests, SharedCabNoShowTests.tests, SharedCabDegradedSweepTests.tests, SharedCabTicketBirthTests.tests, SharedCabRefundRetryTests.tests, SharedCabCancelRefusalTests.tests, SharedCabSeatTests.tests, SharedCabLockTests.tests, SharedCabWalkUpTests.tests]
+  defaultMain $ testGroup "rider-app" [SharedCabSessionTests.tests, SharedCabLegStateTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests, SharedCabConfigTests.tests, SharedCabAllocationTests.tests, SharedCabDriverActionTests.tests, SharedCabExpiryTests.tests, SharedCabStopProgressTests.tests, SharedCabBoardingTests.tests, SharedCabDegradedTests.tests, SharedCabNoShowTests.tests, SharedCabDegradedSweepTests.tests, SharedCabRefundPolicyTests.tests, SharedCabTicketBirthTests.tests, SharedCabRefundRetryTests.tests, SharedCabCancelRefusalTests.tests, SharedCabSeatTests.tests, SharedCabLockTests.tests, SharedCabWalkUpTests.tests]
