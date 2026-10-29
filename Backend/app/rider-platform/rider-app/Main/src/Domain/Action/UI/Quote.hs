@@ -586,6 +586,7 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
                in (show q.vehicleServiceTierType, mbBreakup, offerBasePrice)
           )
       products = map (\(_, (productId, _, price)) -> (productId, price)) quoteEntitiesWithCtx
+      productContexts = [(show q.vehicleServiceTierType, SOffer.ProductOfferContext {tripCategory = q.tripCategory, isAirConditioned = q.isAirConditioned}) | q <- quoteList]
   productOffers <-
     -- No products means no basket to price, and the response is only ever read back by
     -- productId, so the provider can have nothing to say. Skipping saves a full round trip
@@ -594,7 +595,7 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
       then
         withTryCatch
           "getOffers:offerListWithBasket"
-          (SOffer.offerListWithBasket searchReq.merchantId searchReq.riderId searchReq.merchantOperatingCityId DOrder.RideHailing products Nothing Nothing (Just searchReq))
+          (SOffer.offerListWithBasket searchReq.merchantId searchReq.riderId searchReq.merchantOperatingCityId DOrder.RideHailing products productContexts Nothing Nothing (Just searchReq))
           >>= \case
             Left _ -> pure []
             Right r -> pure r
@@ -651,13 +652,14 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
           )
           sortedEstimates
       products = map (\(e, _, price) -> (show e.vehicleServiceTierType, price)) estimatesWithCtx
+      productContexts = [(show e.vehicleServiceTierType, SOffer.ProductOfferContext {tripCategory = e.tripCategory, isAirConditioned = e.isAirConditioned}) | (e, _, _) <- estimatesWithCtx]
   productOffers <-
     -- Same as the quotes path: an empty basket can only come back empty.
     if enableRideHailingOffers && not (null products)
       then
         withTryCatch
           "getEstimates:offerListWithBasket"
-          (SOffer.offerListWithBasket searchRequest.merchantId searchRequest.riderId searchRequest.merchantOperatingCityId DOrder.RideHailing products Nothing Nothing (Just searchRequest))
+          (SOffer.offerListWithBasket searchRequest.merchantId searchRequest.riderId searchRequest.merchantOperatingCityId DOrder.RideHailing products productContexts Nothing Nothing (Just searchRequest))
           >>= \case
             Left _ -> pure []
             Right r -> pure r
