@@ -16,9 +16,15 @@ import Kernel.Utils.App
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall
 import Kernel.Utils.FlowLogging
+import qualified SharedCabDegradedSweepTests
 import qualified SharedCabDegradedTests
+import qualified SharedCabDemandTests
+import qualified SharedCabExpiryTests
 import qualified SharedCabLockTests
 import qualified SharedCabNoShowTests
+import qualified SharedCabRefundRetryTests
+import qualified SharedCabSeatTests
+import qualified SharedCabStopProgressTests
 import System.Environment (lookupEnv)
 import System.Environment as Env (setEnv)
 import Test.Tasty (defaultMain, testGroup)
@@ -39,4 +45,4 @@ main = do
 
   -- -- Let the Logs be flushed
   -- threadDelaySec (Seconds 10)
-  defaultMain $ testGroup "rider-app" [SharedCabDegradedTests.tests, SharedCabNoShowTests.tests, SharedCabLockTests.tests]
+  defaultMain $ testGroup "rider-app" [SharedCabDemandTests.tests, SharedCabExpiryTests.tests, SharedCabStopProgressTests.tests, SharedCabDegradedTests.tests, SharedCabNoShowTests.tests, SharedCabDegradedSweepTests.tests, SharedCabRefundRetryTests.tests, SharedCabSeatTests.tests, SharedCabLockTests.tests]

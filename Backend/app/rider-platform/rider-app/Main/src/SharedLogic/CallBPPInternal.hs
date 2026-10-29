@@ -1799,3 +1799,78 @@ rideFeedbackActionResults apiKey internalUrl bppBookingId responseId results =
 rideFeedbackRetryableActions :: RideFeedbackCallFlow m r => Text -> BaseUrl -> Text -> Text -> m RideFeedback.RetryableActionsRes
 rideFeedbackRetryableActions apiKey internalUrl bppBookingId responseId =
   callRideFeedbackApi internalUrl "RideFeedbackRetryableActions" (rideFeedbackRetryableActionsClient bppBookingId responseId (Just apiKey))
+
+data SharedCabAllocationReq = SharedCabAllocationReq
+  { bookingId :: Text,
+    driverId :: Text,
+    seats :: Maybe Int,
+    boardingCode :: Maybe Text,
+    vehicleNumber :: Maybe Text,
+    boardStopCode :: Maybe Text,
+    etaSeconds :: Maybe Int,
+    -- the four below are set only for an offer the driver accepts or declines
+    offerExpiresAt :: Maybe UTCTime,
+    fare :: Maybe HighPrecMoney,
+    firstName :: Maybe Text,
+    dropStopCode :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+type SharedCabAllocationFCMAPI =
+  "internal"
+    :> "sharedCabAllocationFCM"
+    :> ReqBody '[JSON] SharedCabAllocationReq
+    :> Header "token" Text
+    :> Post '[JSON] APISuccess
+
+sharedCabAllocationFCMClient :: SharedCabAllocationReq -> Maybe Text -> EulerClient APISuccess
+sharedCabAllocationFCMClient = client sharedCabAllocationFCMApi
+
+sharedCabAllocationFCMApi :: Proxy SharedCabAllocationFCMAPI
+sharedCabAllocationFCMApi = Proxy
+
+sharedCabAllocationFCM ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  SharedCabAllocationReq ->
+  m APISuccess
+sharedCabAllocationFCM apiKey internalUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (sharedCabAllocationFCMClient req (Just apiKey)) "SharedCabAllocationFCM" sharedCabAllocationFCMApi
+
+newtype SharedCabDriverCallNumberResp = SharedCabDriverCallNumberResp {driverNumber :: Text}
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+type SharedCabDriverCallNumberAPI =
+  "internal"
+    :> "sharedCab"
+    :> "driver"
+    :> Capture "driverId" Text
+    :> "callNumber"
+    :> Header "token" Text
+    :> Get '[JSON] SharedCabDriverCallNumberResp
+
+sharedCabDriverCallNumberClient :: Text -> Maybe Text -> EulerClient SharedCabDriverCallNumberResp
+sharedCabDriverCallNumberClient = client sharedCabDriverCallNumberApi
+
+sharedCabDriverCallNumberApi :: Proxy SharedCabDriverCallNumberAPI
+sharedCabDriverCallNumberApi = Proxy
+
+sharedCabDriverCallNumber ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m SharedCabDriverCallNumberResp
+sharedCabDriverCallNumber apiKey internalUrl driverId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (sharedCabDriverCallNumberClient driverId (Just apiKey)) "SharedCabDriverCallNumber" sharedCabDriverCallNumberApi
