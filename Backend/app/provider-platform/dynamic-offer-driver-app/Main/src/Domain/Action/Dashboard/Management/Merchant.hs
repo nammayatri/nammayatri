@@ -5472,6 +5472,7 @@ buildVehicleServiceTierFromRequest merchantId merchantOpCityId serviceTierType r
         specialZoneQueueCalloutVariants = req.specialZoneQueueCalloutVariants,
         availabilityCheckConfig = req.availabilityCheckConfig,
         autoAcceptanceConfig = req.autoAcceptanceConfig,
+        regionCondition = Nothing,
         createdAt = now,
         updatedAt = now
       }
