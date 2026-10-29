@@ -126,6 +126,7 @@ import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.InvoiceTemplate as CQIT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQPlan
@@ -1897,7 +1898,10 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   -- If multiple invoices match the filters, the first (newest by issuedAt DESC) is rendered.
   let chosenPdfData = NE.head pdfDatasNE
       chosenInv = chosenPdfData.financeInvoice
-  mbStoredPdf <- if lang == ENGLISH then InvoiceDocument.getStoredInvoicePdfBase64 chosenInv else pure Nothing
+  -- A language with no template of its own gets the whole PDF in English, labels included.
+  mbTemplate <- CQIT.findByMerchantOpCityIdInvoiceTypeAndLanguage (Id chosenInv.merchantOperatingCityId) (Just chosenInv.invoiceType) lang Nothing
+  let pdfLang = if isJust mbTemplate then lang else ENGLISH
+  mbStoredPdf <- if pdfLang == ENGLISH then InvoiceDocument.getStoredInvoicePdfBase64 chosenInv else pure Nothing
   pdfBase64 <- case mbStoredPdf of
     Just storedPdf -> pure storedPdf
     Nothing -> do
@@ -1905,7 +1909,7 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
       let ctx =
             FRT.buildInvoiceContext
               FRT.BuildInvoiceContextInput
-                { language = lang,
+                { language = pdfLang,
                   logoUrl = tmplLogoUrl,
                   sellerTradeName = tmplSellerTradeName,
                   appName = tmplAppName,
@@ -1928,7 +1932,7 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
                   cityState = transporterConfig.invoiceConfig >>= (.cityState),
                   qrImageDataUri = mbQrDataUri
                 }
-      html <- RIFT.renderHtml (Id chosenInv.merchantOperatingCityId) (Just chosenInv.invoiceType) lang tz ctx
+      html <- RIFT.renderHtml (Id chosenInv.merchantOperatingCityId) (Just chosenInv.invoiceType) pdfLang tz ctx
       generateFinanceInvoicePdf chosenInv.invoiceNumber html
 
   pure $

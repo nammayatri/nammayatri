@@ -1463,12 +1463,13 @@ buildSendSearchRequestNotificationData ::
   Seconds ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
+  Maybe Language ->
   SearchRequestForDriverAPIEntity ->
   EmptyDynamicParam ->
   Maybe TripCategory ->
   m (Notification.NotificationReq SearchRequestForDriverAPIEntity EmptyDynamicParam)
-buildSendSearchRequestNotificationData merchantOpCityId timeDiffFromUtc driverId mbDeviceToken entityData dynamicParam tripCategory = do
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "NEW_RIDE_AVAILABLE" tripCategory Nothing Nothing Nothing >>= fromMaybeM (InternalError "MerchantPushNotification not found for NEW_RIDE_AVAILABLE")
+buildSendSearchRequestNotificationData merchantOpCityId timeDiffFromUtc driverId mbDeviceToken mbLanguage entityData dynamicParam tripCategory = do
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "NEW_RIDE_AVAILABLE" tripCategory Nothing mbLanguage Nothing >>= fromMaybeM (InternalError "MerchantPushNotification not found for NEW_RIDE_AVAILABLE")
   return $
     Notification.NotificationReq
       { category = Notification.NEW_RIDE_AVAILABLE,
