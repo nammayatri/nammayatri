@@ -4,12 +4,15 @@ import qualified "this" API.Types.RiderPlatform.Management.Ride as Common
 import API.Types.UI.EstimateBP as DTEst
 import qualified API.Types.UI.EstimateBP
 import qualified Data.Aeson as A
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.InterCityDetails
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.QuoteBreakup as DQB
 import qualified Domain.Types.RentalDetails
 import qualified Domain.Types.Ride as Ride
 import qualified Environment
@@ -18,6 +21,7 @@ import Kernel.Beam.Functions as B
 import qualified Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Types.Common as KTC
+import qualified Kernel.Types.Distance as KDistance
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as Id
 import Kernel.Types.Price (PriceAPIEntity (..))
@@ -32,17 +36,26 @@ getRideEstimateBreakup :: ((Kernel.Prelude.Maybe (Id.Id Person.Person), Id.Id Me
 getRideEstimateBreakup (_, _) rideId_ = do
   ride <- B.runInReplica $ QRideLite.findByIdLite rideId_ >>= fromMaybeM (RideDoesNotExist rideId_.getId)
   booking <- B.runInReplica $ QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  getBookingEstimateBreakup booking
+
+getRideBookingEstimateBreakup :: ((Kernel.Prelude.Maybe (Id.Id Person.Person), Id.Id Merchant.Merchant) -> Id.Id DBooking.Booking -> Environment.Flow API.Types.UI.EstimateBP.EstimateDetailsRes)
+getRideBookingEstimateBreakup (_, _) bookingId = do
+  booking <- B.runInReplica $ QBookingLite.findByIdLite bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  getBookingEstimateBreakup booking
+
+getBookingEstimateBreakup :: QBookingLite.BookingLite -> Environment.Flow API.Types.UI.EstimateBP.EstimateDetailsRes
+getBookingEstimateBreakup booking =
   case booking.quoteId of
     Just quoteId -> do
       quote <- B.runInReplica $ QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
-      estimateBreakup <- getEstimateBreakupFromQuote quote
+      estimateBreakup <- getEstimateBreakupFromQuote booking.estimatedDistance booking.estimatedDuration quote
       pure $ API.Types.UI.EstimateBP.EstimateDetailsRes {estimateBreakup = estimateBreakup}
     Nothing -> pure $ API.Types.UI.EstimateBP.EstimateDetailsRes {estimateBreakup = []}
 
-getEstimateBreakupFromQuote :: (EsqDBFlow m r, MonadFlow m, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => DQuote.Quote -> m [API.Types.UI.EstimateBP.EstimateBreakup]
-getEstimateBreakupFromQuote quote =
+getEstimateBreakupFromQuote :: (EsqDBFlow m r, MonadFlow m, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Kernel.Prelude.Maybe KTC.Distance -> Kernel.Prelude.Maybe KTC.Seconds -> DQuote.Quote -> m [API.Types.UI.EstimateBP.EstimateBreakup]
+getEstimateBreakupFromQuote mbEstimatedDistance mbEstimatedDuration quote =
   case quote.quoteDetails of
-    DQuote.OneWayDetails _ -> pure []
+    DQuote.OneWayDetails _ -> pure oneWayRateCard
     DQuote.AmbulanceDetails _ -> pure []
     DQuote.MeterRideDetails _ -> pure []
     DQuote.DeliveryDetails driverOfferDetails ->
@@ -51,9 +64,27 @@ getEstimateBreakupFromQuote quote =
     DQuote.RentalDetails rentalDetails -> pure $ transformRentalDetails rentalDetails
     DQuote.DriverOfferDetails driverOfferDetails ->
       findEstimateBreakupCH (Id.cast driverOfferDetails.estimateId) quote.createdAt
-    DQuote.OneWaySpecialZoneDetails _ -> pure []
+    DQuote.OneWaySpecialZoneDetails _ -> pure oneWayRateCard
     -- EasyBooking's quote details reuse RentalDetails's shape, so the same transformer applies.
     DQuote.EasyBookingDetails rentalDetails -> pure $ transformRentalDetails rentalDetails
+  where
+    oneWayRateCard = transformOneWayRateCard (KDistance.distanceToMeters <$> mbEstimatedDistance) mbEstimatedDuration quote.quoteBreakupList
+
+transformOneWayRateCard :: Kernel.Prelude.Maybe KTC.Meters -> Kernel.Prelude.Maybe KTC.Seconds -> [DQB.QuoteBreakup] -> [API.Types.UI.EstimateBP.EstimateBreakup]
+transformOneWayRateCard mbEstimatedDistance mbEstimatedDuration breakups =
+  catMaybes
+    [ toItem "Base Fare" <$> find ((== "BASE_FARE") . (.title)) breakups,
+      toItem "Dead Km Fare" <$> find ((== "DEAD_KILOMETER_FARE") . (.title)) breakups,
+      toItem "Per Extra Km Rate" <$> bandFor "EXTRA_PER_KM_STEP_FARE_" ((.getMeters) <$> mbEstimatedDistance),
+      toItem "Per Extra Min Rate" <$> bandFor "PER_MINUTE_STEP_FARE_" ((`div` 60) . (.getSeconds) <$> mbEstimatedDuration)
+    ]
+  where
+    toItem itemTitle breakup = createEstimateBreakup breakup.price itemTitle
+    bandFor prefix mbTarget =
+      let bands = [(T.splitOn "_" bandRange, breakup) | breakup <- breakups, Just bandRange <- [T.stripPrefix prefix breakup.title]]
+          contains target ([startTxt, endTxt], _) = maybe False (<= target) (readMaybe $ T.unpack startTxt) && maybe True (target <) (readMaybe $ T.unpack endTxt)
+          contains _ _ = False
+       in snd <$> ((mbTarget >>= \target -> find (contains target) bands) <|> Kernel.Prelude.listToMaybe bands)
 
 -- | Slim JSON shape mirroring
 -- 'Storage.Queries.Transformers.Estimate.EstimateBreakupItem'. Duplicated here
