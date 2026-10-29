@@ -35,7 +35,7 @@ instance ConfigDimensions IntegratedBPPConfigDimensions where
   getConfigList a =
     let fetch = case (a.configId, a.agencyKey, nonEmpty a.merchantOperatingCityId, a.domain, a.vehicleCategory, a.platformType) of
           (Just cId, _, _, _, _, _) -> maybeToList <$> SQ.findById (Id cId)
-          (_, Just ak, _, _, _, _) -> maybeToList <$> SQ.findByAgencyId ak
+          (_, Just ak, _, _, _, mbPlatformType) -> maybeToList <$> SQ.findByAgencyId ak (fromMaybe DT.APPLICATION mbPlatformType)
           (_, _, Just mocId, Just d, Just vc, Just pt) -> SQ.findAllByDomainAndCityAndVehicleCategory d (Id mocId) vc pt
           (_, _, Nothing, Just d, Just vc, Just pt) -> SQ.findAllByPlatformAndVehicleCategory d vc pt
           _ -> pure []

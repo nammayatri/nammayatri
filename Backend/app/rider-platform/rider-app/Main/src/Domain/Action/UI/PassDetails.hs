@@ -58,6 +58,7 @@ import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logInfo)
 import qualified Kernel.Utils.Common as Utils
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.SharedCab as SharedCab
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -224,7 +225,7 @@ processRouteDetails ::
 processRouteDetails _ [] = pure (Nothing, [], Nothing)
 processRouteDetails moid routeDetails = do
   let dedupedRouteDetails = L.nubBy (\a b -> a.srcStopId == b.srcStopId && a.destStopId == b.destStopId) routeDetails
-  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig moid Enums.BUS DIBC.MULTIMODAL
+  integratedBPPConfigs <- SharedCab.withoutCabRows (.agencyKey) <$> SIBC.findAllIntegratedBPPConfig moid Enums.BUS DIBC.MULTIMODAL
   case Kernel.Prelude.listToMaybe integratedBPPConfigs of
     Nothing -> pure (Nothing, [], Nothing)
     Just integratedBPPConfig -> do

@@ -65,9 +65,10 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
-import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
+import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
@@ -100,13 +101,19 @@ mapWithIndex f = go 0
       ys <- go (idx + 1) xs'
       return (y : ys)
 
-convertMultiModalModeToTripMode :: MultiModal.GeneralVehicleType -> Meters -> Meters -> DTrip.MultimodalTravelMode
-convertMultiModalModeToTripMode input straightLineDistance maximumWalkDistance = case input of
+-- The shared-cab agency is published in GTFS as a BUS route; the travel mode says what the leg really is.
+convertMultiModalModeToTripMode :: MultiModal.GeneralVehicleType -> Maybe Text -> Meters -> Meters -> DTrip.MultimodalTravelMode
+convertMultiModalModeToTripMode MultiModal.Bus (Just agencyGtfsId) _ _ | isSharedCabAgency agencyGtfsId = DTrip.SharedCab
+convertMultiModalModeToTripMode input _ straightLineDistance maximumWalkDistance = case input of
   MultiModal.MetroRail -> DTrip.Metro
   MultiModal.Subway -> DTrip.Subway
   MultiModal.Walk -> if straightLineDistance < maximumWalkDistance then DTrip.Walk else DTrip.Taxi
   MultiModal.Bus -> DTrip.Bus
   MultiModal.Unspecified -> DTrip.Taxi
+
+-- | The travel mode of a search-result leg; the one place a leg's agency reaches the mode, so a cab never goes back to Bus.
+legTripMode :: Meters -> Meters -> MultiModalTypes.MultiModalLeg -> DTrip.MultimodalTravelMode
+legTripMode straightLineDistance maximumWalkDistance leg = convertMultiModalModeToTripMode leg.mode (leg.agency >>= (.gtfsId)) straightLineDistance maximumWalkDistance
 
 mkJourneyUpdateInProgressKey :: Id Journey -> Text
 mkJourneyUpdateInProgressKey journeyId = "Journey:UpdateInProgress:JourneyId-" <> journeyId.getId
@@ -1374,6 +1381,7 @@ convertSortingType sortType = case sortType of
 -- Helper functions for recent location
 convertModeToEntityType :: DTrip.MultimodalTravelMode -> DTRL.EntityType
 convertModeToEntityType DTrip.Bus = DTRL.BUS
+convertModeToEntityType DTrip.SharedCab = DTRL.BUS
 convertModeToEntityType DTrip.Metro = DTRL.METRO
 convertModeToEntityType DTrip.Subway = DTRL.SUBWAY
 convertModeToEntityType _ = DTRL.TAXI -- This case will never be hit due to conditional check
@@ -1382,7 +1390,7 @@ convertModeToEntityType _ = DTRL.TAXI -- This case will never be hit due to cond
 createRecentLocationForMultimodal :: (MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Journey -> m ()
 createRecentLocationForMultimodal journey = do
   journeyLegs <- QJourneyLeg.getJourneyLegs journey.id
-  let onlyPublicTransportLegs = filter (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) journeyLegs
+  let onlyPublicTransportLegs = filter (\leg -> DTrip.isFrfsTransitMode leg.mode) journeyLegs
   fare <-
     foldrM
       ( \leg acc -> do
@@ -1555,9 +1563,9 @@ buildExternalOrderCreationReq ::
   Maybe Bool ->
   m JuspayCreateOrder.CreateOrderReq
 buildExternalOrderCreationReq paymentOrder allJourneyBookings person paymentType mbEnableOffer = do
+  bookings <- filterM (fmap not . FRFSUtils.noPaymentDue) allJourneyBookings
   let merchantId = person.merchantId
       merchantOperatingCityId = maybe person.merchantOperatingCityId cast paymentOrder.merchantOperatingCityId
-      bookings = filter (not . FRFSPassOverride.isFullyPassCovered . (.overriddenAmount)) allJourneyBookings
       isSingleMode = case bookings of
         [_] -> True
         _ -> False
@@ -2193,7 +2201,8 @@ data RefreshedTicketVehicleInfo = RefreshedTicketVehicleInfo
 applyWaybillMetadataToTicket ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m
+    MonadFlow m,
+    MonadMask m
   ) =>
   DFRFSTicketBooking.FRFSTicketBooking ->
   Maybe DJourneyLeg.JourneyLeg ->
@@ -2244,7 +2253,9 @@ applyWaybillMetadataToTicket booking mbJourneyLeg meta = do
       when (busChanged || variantChanged) $
         QJourneyLeg.updateFinalBoardedBusById effectiveBus effectiveBusTag effectiveBusVariant journeyLeg.id
       when busChanged $
-        QFRFSTicketBooking.updateFRFSTicketBookingVehicleNumberById effectiveBus booking.id
+        if journeyLeg.mode == DTrip.SharedCab
+          then SharedCabBooking.reseatOnWaybill effectiveBus booking.id
+          else QFRFSTicketBooking.updateFRFSTicketBookingVehicleNumberById effectiveBus booking.id
       pure (effectiveBus, effectiveBusTag, busChanged)
   pure
     RefreshedTicketVehicleInfo
