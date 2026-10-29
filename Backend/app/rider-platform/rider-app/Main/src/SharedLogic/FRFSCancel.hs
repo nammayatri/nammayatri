@@ -11,7 +11,6 @@ import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
-import qualified Domain.Types.PersonPTStats as DPUS
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -25,21 +24,21 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSCancelEffects as FRFSCancelEffects
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
-import qualified SharedLogic.PersonPTStats as SPUS
+import SharedLogic.SharedCab (isSharedCabBooking, refundWithheld)
+import qualified SharedLogic.SharedCab.Seats as SharedCabSeats
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
-import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QTBP
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.PersonStats as QPS
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 import qualified Tools.SMS as Sms
@@ -76,7 +75,8 @@ handleCancelledStatus ::
 handleCancelledStatus _merchant booking refundAmount cancellationCharges _messageId isCounterCancellation = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mbPaymentBooking <- QTBP.findTicketBookingPayment booking
-  unless (isJust mbPaymentBooking || FRFSPassOverride.isFullyPassCovered booking.overriddenAmount) $
+  isFree <- FRFSUtils.noPaymentDue booking
+  unless (isJust mbPaymentBooking || isFree) $
     throwError (InvalidRequest "Payment booking not found for approved TicketBookingId")
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
@@ -93,15 +93,20 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
         whenJust mbPaymentBooking $ \paymentBooking ->
           void $ SPayment.markRefundPendingWithAmount booking.riderId paymentBooking.paymentOrderId (abs refundAmount)
       else do
-        void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
+        -- shared cab: the refund policy fixed these amounts in this request (no earlier soft cancel to agree with)
+        if isSharedCabBooking booking
+          then void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) (Just True) booking.id
+          else void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
         void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.CANCELLED "cancelled" booking
         void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED booking.id
         void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) booking.id
         void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
         void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
         void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
-        whenJust mbPaymentBooking $ \paymentBooking ->
-          void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+        -- shared cab, no refund: the payment stays charged; pending is what makes the payment service refund it
+        unless (isSharedCabBooking booking && refundWithheld cancellationCharges refundAmount) $
+          whenJust mbPaymentBooking $ \paymentBooking ->
+            void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
   -- Refund only if the booking ever reached CONFIRMED, since that is where OnConfirm debits. A
   -- cancel arriving for a booking that never confirmed must not be credited a trip it never spent,
   -- and that is reachable: OnConfirm's expiry path and onConfirmFailure both fire a Technical
@@ -120,38 +125,17 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
     if booking.status == DFRFSTicketBooking.CANCELLED
       then FRFSPassOverride.hasPendingTripRefund booking.searchId
       else pure (not isCounterCancellation)
-  when (refundOwed && booking.status `notElem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.CONFIRMING, DFRFSTicketBooking.FAILED]) $
-    whenJust booking.overrideAppliedEntityId $ \entityId ->
-      -- One trip per ticket went out at confirm, so the same number comes back here.
-      void $ withTryCatch "FRFSCancel:refundPassOverrideTrip" (FRFSPassOverride.refundPassOverrideTrip booking (Id entityId) fareParameters.totalQuantity)
-  whenJust booking.overrideAppliedEntityId $ \entityId ->
-    void . withTryCatch "FRFSCancel:releaseBookedTrip" $
-      FRFSPassOverride.releaseBookedTrip person (Id entityId) booking.id.getId
-        (fromMaybe booking.createdAt booking.startTime)
-  void $ CQP.clearPSCache booking.riderId
-  -- NOTE: these are not idempotent -- a replayed cancel callback decrements the ticket count again
+  FRFSCancelEffects.releaseCancelledBooking
+    (refundOwed && booking.status `notElem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.CONFIRMING, DFRFSTicketBooking.FAILED])
+    True
+    booking
+    (Just person)
+    fareParameters.totalQuantity
+  -- NOTE: the counters are not idempotent -- a replayed cancel callback decrements the ticket count again
   -- and rewrites settlement. That is pre-existing behaviour, left exactly as it is on main.
-
-  -- Undo the segmentation counters recorded at on_confirm.
-  reverseStatsResult <-
-    withTryCatch "handleCancelledStatus:reversePersonPTStats" $ do
-      purchaseEvent <-
-        SPUS.mkPurchaseEvent
-          person
-          (Just booking.vehicleType)
-          booking.serviceTierType
-          DPUS.TICKET
-          Nothing
-          (Just fareParameters.totalQuantity)
-          booking.merchantId
-          booking.merchantOperatingCityId
-      SPUS.reversePurchase purchaseEvent
-  case reverseStatsResult of
-    Right () -> pure ()
-    Left err -> logError $ "Failed to reverse PersonPTStats for booking " <> booking.id.getId <> ": " <> show err
-
-  void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   releaseSeatsIfHeld booking quoteCategories
+  -- a seller's counter-cancel reaches a shared-cab booking here without passing the shared-cab cancel
+  when (isSharedCabBooking booking) $ SharedCabSeats.releaseCancelled booking.id
   unless isCounterCancellation $ do
     -- Must stay LAST and swallowed, or a Redis error here would abort before the seat release/counter above.
     -- Design notes: scripts/testing/cancel/DESIGN.md

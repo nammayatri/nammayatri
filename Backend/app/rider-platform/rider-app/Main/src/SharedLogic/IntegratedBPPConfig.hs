@@ -10,6 +10,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import Storage.ConfigPilot.Config.IntegratedBPPConfig (IntegratedBPPConfigDimensions (..))
 import Tools.Error
@@ -52,7 +53,7 @@ findMaybeIntegratedBPPConfigFromAgency ::
   m (Maybe IntegratedBPPConfig)
 findMaybeIntegratedBPPConfigFromAgency agencyId merchantOperatingCityId vehicleCategory platformType =
   let fallback = findByDomainAndCityCP (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
-   in maybe fallback (\agencyId' -> findByAgencyIdCP agencyId' |<|>| fallback) agencyId
+   in maybe fallback (\agencyId' -> findByAgencyIdCP agencyId' platformType |<|>| fallback) agencyId
 
 findIntegratedBPPConfigById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -71,6 +72,32 @@ findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleC
   findMaybeIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleCategory platformType
     >>= fromMaybeM IntegratedBPPConfigNotFound
 
+-- | The bus fleet's single config of a city: the newest row that is not the shared-cab feed, which shares the BUS category. A city with
+-- no shared-cab row gets exactly what 'findIntegratedBPPConfig' with no id gives (the newest row).
+findBusIntegratedBPPConfig ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Enums.VehicleCategory ->
+  PlatformType ->
+  m IntegratedBPPConfig
+findBusIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType =
+  (newestNonCab (.agencyKey) (.createdAt) <$> findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType)
+    >>= fromMaybeM IntegratedBPPConfigNotFound
+
+-- | 'findBusIntegratedBPPConfig' for callers that have nothing to do in a city without a bus fleet (a cab-only city has only the shared-cab row).
+findMaybeBusIntegratedBPPConfig ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Enums.VehicleCategory ->
+  PlatformType ->
+  m (Maybe IntegratedBPPConfig)
+findMaybeBusIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType =
+  newestNonCab (.agencyKey) (.createdAt) <$> findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType
+
+newestNonCab :: (a -> Text) -> (a -> UTCTime) -> [a] -> Maybe a
+newestNonCab agencyKeyOf createdAtOf rows =
+  listToMaybe (sortBy (\a b -> compare (createdAtOf b) (createdAtOf a)) (filter (not . isSharedCabAgency . agencyKeyOf) rows))
+
 findIntegratedBPPConfigFromEntity ::
   (HasField "integratedBppConfigId" a (Id IntegratedBPPConfig), EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   a ->
@@ -85,8 +112,8 @@ findIntegratedBPPConfigFromAgency ::
   Enums.VehicleCategory ->
   PlatformType ->
   m IntegratedBPPConfig
-findIntegratedBPPConfigFromAgency agencyName merchantOperatingCityId vehicleCategory platformType =
-  findMaybeIntegratedBPPConfigFromAgency agencyName merchantOperatingCityId vehicleCategory platformType
+findIntegratedBPPConfigFromAgency agencyId merchantOperatingCityId vehicleCategory platformType =
+  findMaybeIntegratedBPPConfigFromAgency agencyId merchantOperatingCityId vehicleCategory platformType
     >>= fromMaybeM IntegratedBPPConfigNotFound
 
 findAllIntegratedBPPConfig ::
@@ -223,6 +250,6 @@ findByDomainAndCityCP domain mocId vc pt = do
   configs <- getConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = mocId.getId, configId = Nothing, agencyKey = Nothing, domain = Just domain, vehicleCategory = Just vc, platformType = Just pt}) (Just (CQIBC.findAllByDomainAndCityAndVehicleCategory domain mocId vc pt))
   pure $ listToMaybe $ sortBy (\a b -> compare b.createdAt a.createdAt) configs
 
-findByAgencyIdCP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m (Maybe IntegratedBPPConfig)
-findByAgencyIdCP agencyKey =
-  getOneConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Nothing, agencyKey = Just agencyKey, domain = Nothing, vehicleCategory = Nothing, platformType = Nothing}) (Just (maybeToList <$> CQIBC.findByAgencyId agencyKey))
+findByAgencyIdCP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> PlatformType -> m (Maybe IntegratedBPPConfig)
+findByAgencyIdCP agencyKey platformType =
+  getOneConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Nothing, agencyKey = Just agencyKey, domain = Nothing, vehicleCategory = Nothing, platformType = Just platformType}) (Just (maybeToList <$> CQIBC.findByAgencyId agencyKey platformType))
