@@ -238,6 +238,7 @@ MerchantMessage:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     messageKey: MessageKey
+    language: Language
     message: Text
     templateId: Text
     messageType: Maybe Text
@@ -267,17 +268,21 @@ MerchantMessage:
     senderEmail: character varying(255)
   default:
     containsUrlButton: "false"
+    language: "'ENGLISH'"
   beamType:
     templateId: Maybe Text
     messageType: Maybe Text
     jsonData: Maybe Data.Aeson.Value
+    language: Maybe Language
 
   toTType:
     templateId: Just templateId|E
     jsonData: Just $ Data.Aeson.toJSON jsonData|E
+    language: Just language|E
 
   fromTType:
     templateId: fromMaybe "" templateId|E
+    language: fromMaybe Kernel.External.Types.ENGLISH language|E
     jsonData: fromMaybe Data.Default.Class.def
       (Storage.Queries.Transformers.MerchantMessage.valueToJsonData =<<
       jsonData)|E
@@ -285,11 +290,12 @@ MerchantMessage:
   constraints:
     merchantOperatingCityId: PrimaryKey
     messageKey: PrimaryKey
+    language: PrimaryKey
 
   extraIndexes:
-    - columns: [merchantOperatingCityId, domain, channel]
+    - columns: [merchantOperatingCityId, domain, channel, language]
       unique: true
-    - columns: [merchantOperatingCityId, messageKey, vehicleCategory]
+    - columns: [merchantOperatingCityId, messageKey, language, vehicleCategory]
       unique: true
 
   excludedDefaultQueries:
@@ -298,14 +304,18 @@ MerchantMessage:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId
-    findByMerchantOpCityIdAndMessageKeyVehicleCategory:
+    findByMerchantOpCityIdMessageKeyLanguageVehicleCategory:
       kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, messageKey, language, vehicleCategory]
+    findAllByMerchantOpCityIdAndMessageKeyAndVehicleCategory:
+      kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, messageKey, vehicleCategory]
-    findByMerchantOpCityIdDomainAndChannel:
+    findByMerchantOpCityIdDomainChannelAndLanguage:
       kvFunction: findOneWithKV
       where:
-        and: [merchantOperatingCityId, domain, channel]
+        and: [merchantOperatingCityId, domain, channel, language]
     deleteByMerchantOpCityIdAndMessageKeyVehicleCategory:
       kvFunction: deleteWithKV
       where:

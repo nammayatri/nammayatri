@@ -4,6 +4,7 @@
 
 module Storage.ConfigPilot.Config.Translation (TranslationDimensions (..)) where
 
+import Data.List (sortOn)
 import qualified Domain.Types.Translations as DT
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude
@@ -31,14 +32,20 @@ instance ConfigDimensions TranslationDimensions where
   type ConfigTypeOf TranslationDimensions = 'TranslationDriver
   type ConfigValueTypeOf TranslationDimensions = Maybe DT.Translations
   getConfigType _ = TranslationDriver
-  configDBFetch a = Just (listToMaybe <$> SQ.findAllByMessageKey a.messageKey)
+  configDBFetch a = Just (listToMaybe . forCity a <$> SQ.findAllByMessageKey a.messageKey)
   getConfigList a =
     listToMaybe
       <$> LCP.resolveConfigList
         a
         (LYT.DRIVER_CONFIG Translation)
         (Id (fromMaybe "" a.merchantOperatingCityId))
-        (SQ.findAllByMessageKey a.messageKey)
+        (forCity a <$> SQ.findAllByMessageKey a.messageKey)
         [ LCP.DimMatcher (.language) (Just . (.language)) (==)
         ]
         (Just [LCP.DimMatcher (const (Just KET.ENGLISH)) (Just . (.language)) (==)])
+
+-- | The city's own rows and the shared ones (no city), the city's own first.
+forCity :: TranslationDimensions -> [DT.Translations] -> [DT.Translations]
+forCity dims = sortOn (isNothing . (.merchantOperatingCityId)) . filter (\r -> isNothing r.merchantOperatingCityId || r.merchantOperatingCityId == cityId)
+  where
+    cityId = Id <$> dims.merchantOperatingCityId

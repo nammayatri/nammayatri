@@ -24,6 +24,7 @@ imports:
   APISuccessWithUnprocessedEntities: Dashboard.Common.Merchant
   Toll: Toll.Domain.Types.Toll
   City: Kernel.Types.Beckn.Context
+  Language: Kernel.External.Types
   ToParamSchema: Kernel.Prelude
   FromHttpApiData: Servant
   ToHttpApiData: Servant
@@ -499,6 +500,7 @@ types:
     - messageType: Maybe Text
     - senderHeader: Maybe Text
     - mediaUrl: Maybe Text
+    - language: Maybe Language
     - derive: "'HideSecrets"
 
 extraOperations:

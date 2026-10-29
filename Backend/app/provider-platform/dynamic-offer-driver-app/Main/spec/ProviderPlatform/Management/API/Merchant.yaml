@@ -1526,6 +1526,7 @@ types:
     - templateName: Maybe Text
     - mediaUrl: Maybe Text
     - vehicleCategory: Maybe VehicleCategory
+    - language: Maybe Language
     - derive: "'HideSecrets"
   CityListResp:
     - supportedCities: [City]
