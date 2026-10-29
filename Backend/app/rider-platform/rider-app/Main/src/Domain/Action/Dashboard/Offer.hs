@@ -11,6 +11,7 @@ where
 import qualified API.Types.RiderPlatform.Management.Offer as Common
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
+import qualified Data.Map.Strict as Map
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
@@ -20,6 +21,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Offer as DOffer
 import qualified Lib.Payment.Storage.Queries.Offer as QOffer
 import qualified Lib.Yudhishthira.Tools.Utils as LYUtils
@@ -39,6 +41,7 @@ postOfferCreate merchantShortId opCity req = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   validateMinimumAmount req.minimumAmount
   validateMaxApplyCount req.maxApplyCount
+  validateBudgetAmount req.budgetAmount
   validateValidityWindow req.validFrom req.validTill
   -- offer codes are unique per city (unique_offer_code_per_city); fail here instead of in the KV drainer
   existingOffer <- QOffer.findByOfferCodeAndCity req.offerCode merchantOpCity.id.getId
@@ -69,6 +72,7 @@ postOfferCreate merchantShortId opCity req = do
             frequencyType = req.frequencyType,
             maxApplyCount = req.maxApplyCount,
             showMilestoneCard = req.showMilestoneCard,
+            budgetAmount = req.budgetAmount,
             merchantId = merchant.id.getId,
             merchantOperatingCityId = merchantOpCity.id.getId,
             createdAt = now,
@@ -84,11 +88,11 @@ postOfferUpdate ::
   Common.UpdateOfferReq ->
   Flow APISuccess
 postOfferUpdate merchantShortId opCity offerId req = do
-  _merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  _merchantOpCity <- CQMOC.findByMerchantIdAndCity _merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _merchant.id.getId <> "-city-" <> show opCity)
-  offer <- QOffer.findById offerId >>= fromMaybeM (InvalidRequest $ "Offer not found: " <> offerId.getId)
+  offer <- findOfferInCity merchantShortId opCity offerId
   validateMinimumAmount req.minimumAmount
   validateMaxApplyCount req.maxApplyCount
+  whenJust req.budgetAmount $ \budgetAmount ->
+    when (budgetAmount < 0) $ throwError (InvalidRequest "budgetAmount cannot be negative; send 0 to remove the budget")
   now <- getCurrentTime
   let updatedOffer =
         offer
@@ -108,11 +112,27 @@ postOfferUpdate merchantShortId opCity offerId req = do
             DOffer.frequencyType = req.frequencyType <|> offer.frequencyType,
             DOffer.maxApplyCount = req.maxApplyCount <|> offer.maxApplyCount,
             DOffer.showMilestoneCard = req.showMilestoneCard <|> offer.showMilestoneCard,
+            -- 0 removes the budget; null or a missing field keeps it
+            DOffer.budgetAmount = case req.budgetAmount of
+              Just 0 -> Nothing
+              Just budgetAmount -> Just budgetAmount
+              Nothing -> offer.budgetAmount,
             DOffer.updatedAt = now
           }
   validateValidityWindow updatedOffer.validFrom updatedOffer.validTill
   QOffer.updateByPrimaryKey updatedOffer
   pure Success
+
+-- | The offer, only if it belongs to the merchant and city in the URL. An offer of another city gets the
+--   same error as a missing offer, so its id is not revealed.
+findOfferInCity :: ShortId DM.Merchant -> Context.City -> Id DOffer.Offer -> Flow DOffer.Offer
+findOfferInCity merchantShortId opCity offerId = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  offer <- QOffer.findById offerId >>= fromMaybeM (InvalidRequest $ "Offer not found: " <> offerId.getId)
+  unless (offer.merchantId == merchant.id.getId && offer.merchantOperatingCityId == merchantOpCity.id.getId) $
+    throwError (InvalidRequest $ "Offer not found: " <> offerId.getId)
+  pure offer
 
 validateMinimumAmount :: Maybe HighPrecMoney -> Flow ()
 validateMinimumAmount mbMinimumAmount =
@@ -123,6 +143,11 @@ validateMaxApplyCount :: Maybe Int -> Flow ()
 validateMaxApplyCount mbMaxApplyCount =
   whenJust mbMaxApplyCount $ \maxApplyCount ->
     when (maxApplyCount < 1) $ throwError (InvalidRequest "maxApplyCount must be at least 1")
+
+validateBudgetAmount :: Maybe HighPrecMoney -> Flow ()
+validateBudgetAmount mbBudgetAmount =
+  whenJust mbBudgetAmount $ \budgetAmount ->
+    when (budgetAmount <= 0) $ throwError (InvalidRequest "budgetAmount must be greater than 0")
 
 validateValidityWindow :: Maybe UTCTime -> Maybe UTCTime -> Flow ()
 validateValidityWindow mbValidFrom mbValidTill =
@@ -138,10 +163,12 @@ getOfferList merchantShortId opCity = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   activeOffers <- QOffer.findAllActiveByMerchant merchant.id.getId merchantOpCity.id.getId True
   inactiveOffers <- QOffer.findAllActiveByMerchant merchant.id.getId merchantOpCity.id.getId False
-  pure $ map mkOfferResp (activeOffers <> inactiveOffers)
+  let offers = activeOffers <> inactiveOffers
+  spentByOffer <- DPayment.offersBudgetSpent (map (.id) offers)
+  pure $ map (\offer -> mkOfferResp offer (Map.findWithDefault 0 offer.id.getId spentByOffer)) offers
 
-mkOfferResp :: DOffer.Offer -> Common.OfferResp
-mkOfferResp offer =
+mkOfferResp :: DOffer.Offer -> HighPrecMoney -> Common.OfferResp
+mkOfferResp offer budgetSpent =
   Common.OfferResp
     { id = offer.id,
       offerCode = offer.offerCode,
@@ -164,6 +191,8 @@ mkOfferResp offer =
       frequencyType = offer.frequencyType,
       maxApplyCount = offer.maxApplyCount,
       showMilestoneCard = offer.showMilestoneCard,
+      budgetAmount = offer.budgetAmount,
+      budgetSpent,
       createdAt = offer.createdAt,
       updatedAt = offer.updatedAt
     }
@@ -174,9 +203,7 @@ postOfferToggle ::
   Id DOffer.Offer ->
   Flow APISuccess
 postOfferToggle merchantShortId opCity offerId = do
-  _merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  _merchantOpCity <- CQMOC.findByMerchantIdAndCity _merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _merchant.id.getId <> "-city-" <> show opCity)
-  offer <- QOffer.findById offerId >>= fromMaybeM (InvalidRequest $ "Offer not found: " <> offerId.getId)
+  offer <- findOfferInCity merchantShortId opCity offerId
   now <- getCurrentTime
   QOffer.updateByPrimaryKey offer {DOffer.isActive = not offer.isActive, DOffer.updatedAt = now}
   pure Success

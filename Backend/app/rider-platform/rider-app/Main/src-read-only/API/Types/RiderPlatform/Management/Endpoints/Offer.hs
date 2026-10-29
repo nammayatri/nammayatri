@@ -37,7 +37,8 @@ data CreateOfferReq = CreateOfferReq
     isHidden :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     frequencyType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Offer.OfferFrequency,
     maxApplyCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    showMilestoneCard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    showMilestoneCard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    budgetAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -71,6 +72,8 @@ data OfferResp = OfferResp
     frequencyType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Offer.OfferFrequency,
     maxApplyCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     showMilestoneCard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    budgetAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    budgetSpent :: Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -93,7 +96,8 @@ data UpdateOfferReq = UpdateOfferReq
     isHidden :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     frequencyType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Offer.OfferFrequency,
     maxApplyCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    showMilestoneCard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    showMilestoneCard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    budgetAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

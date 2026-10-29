@@ -12,6 +12,7 @@ import qualified Tools.Beam.UtilsTH
 
 data Offer = Offer
   { autoApply :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    budgetAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

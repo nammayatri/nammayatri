@@ -52,3 +52,8 @@ ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN valid_from timestamp with ti
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN show_milestone_card boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN budget_amount double precision ;
