@@ -567,41 +567,7 @@ notifyFrfsTripStarted apiKey internalUrl tripId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsNotifyTripStartedClient tripId (Just apiKey)) "NotifyFrfsTripStarted" frfsNotifyTripStartedAPI
 
--- Toll charge approval (BPP -> BAP): the BAP owns the rider, so it decides whether the rider's app can
--- show the approval prompt and it delivers the prompt.
-
-type GetTollChargeApprovalModeAPI =
-  "internal"
-    :> "tollChargeApproval"
-    :> "mode"
-    :> Header "token" Text
-    :> Capture "bppBookingId" Text
-    :> Get '[JSON] TollChargeApprovalModeRes
-
-newtype TollChargeApprovalModeRes = TollChargeApprovalModeRes
-  { customerApprovalSupported :: Bool
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-getTollChargeApprovalModeClient :: Maybe Text -> Text -> EulerClient TollChargeApprovalModeRes
-getTollChargeApprovalModeClient = client (Proxy @GetTollChargeApprovalModeAPI)
-
-getTollChargeApprovalModeAPI :: Proxy GetTollChargeApprovalModeAPI
-getTollChargeApprovalModeAPI = Proxy
-
-getTollChargeApprovalMode ::
-  ( MonadFlow m,
-    CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasRequestId r
-  ) =>
-  Text ->
-  BaseUrl ->
-  Text ->
-  m TollChargeApprovalModeRes
-getTollChargeApprovalMode apiKey internalUrl bppBookingId = do
-  internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getTollChargeApprovalModeClient (Just apiKey) bppBookingId) "GetTollChargeApprovalMode" getTollChargeApprovalModeAPI
+-- Toll charge approval (BPP -> BAP): the BAP owns the rider, so it delivers the prompt.
 
 type RequestTollChargeApprovalAPI =
   "internal"

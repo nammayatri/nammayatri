@@ -517,7 +517,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                     tollBilling = TD.decideTollBilling tollInput
                     manualTollChargeSignal = ManualTollCharge.ManualTollChargeSignal {tollConfidence = tollBilling.tollConfidence, hasNoTollEvidence = TD.hasNoTollEvidence tollInput}
                 mbManualTollChargeResolution <- case req of
-                  DriverReq driverReq -> join <$> forM driverReq.manualTollCharge (ManualTollCharge.resolveManualTollChargeForEndRide thresholdConfig rideOld booking.tripCategory booking.vehicleServiceTier booking.id.getId manualTollChargeSignal)
+                  DriverReq driverReq -> join <$> forM driverReq.manualTollCharge (ManualTollCharge.resolveManualTollChargeForEndRide thresholdConfig rideOld booking.tripCategory booking.vehicleServiceTier manualTollChargeSignal)
                   _ -> pure Nothing
                 let (tollCharges, tollNames, tollIds, tollConfidence) = case mbManualTollChargeResolution of
                       -- A driver-declared 0 means no toll was paid, so the estimated toll's name/id

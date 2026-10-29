@@ -59,7 +59,7 @@ acknowledgeSurfacedTollChargeApproval booking rideId = do
         ackResult <- withTryCatch "ackTollChargeApproval" $ CallBPPInternal.ackTollChargeApproval merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId requestId
         case ackResult of
           Right _ -> Redis.setExp (Internal.pendingTollChargeApprovalKey rideId) pending {Internal.deliveryAcked = Just True} Internal.pendingTollChargeApprovalRedisTtlSec
-          Left err -> logWarning $ "Could not acknowledge toll charge approval for ride " <> rideId.getId <> ": " <> show err
+          Left _ -> logWarning $ "Could not acknowledge toll charge approval for ride " <> rideId.getId <> ", request " <> requestId
     _ -> pure ()
 
 -- Shared with the already-continuous ride-status polls, so none of them need a second poll just
