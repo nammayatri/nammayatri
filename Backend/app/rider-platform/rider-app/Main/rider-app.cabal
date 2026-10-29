@@ -594,6 +594,7 @@ library
       SharedLogic.EditLocationThrottle
       SharedLogic.External.BbpsService.Flow
       SharedLogic.External.LocationTrackingService.API.NearbyDrivers
+      SharedLogic.External.LocationTrackingService.API.Ride
       SharedLogic.External.LocationTrackingService.API.Sos
       SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute
       SharedLogic.External.LocationTrackingService.Flow
@@ -696,6 +697,25 @@ library
       SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability
+      SharedLogic.SharedCab.Allocation.Types
+      SharedLogic.SharedCab.Booking
+      SharedLogic.SharedCab.BookingState
+      SharedLogic.SharedCab.Config
+      SharedLogic.SharedCab.Degraded
+      SharedLogic.SharedCab.Enabled
+      SharedLogic.SharedCab.Interest
+      SharedLogic.SharedCab.Keys
+      SharedLogic.SharedCab.LegState
+      SharedLogic.SharedCab.Lock
+      SharedLogic.SharedCab.Lts
+      SharedLogic.SharedCab.LtsAttach
+      SharedLogic.SharedCab.NoShow
+      SharedLogic.SharedCab.Notify
+      SharedLogic.SharedCab.RateLimit
+      SharedLogic.SharedCab.RefundDecision
+      SharedLogic.SharedCab.RefundPolicy
+      SharedLogic.SharedCab.Seats
+      SharedLogic.SharedCab.SessionState
       SharedLogic.SilentReallocation
       SharedLogic.SocialLogin
       SharedLogic.SosLocationTracking
@@ -2199,6 +2219,9 @@ test-suite rider-app-test
   main-is: Main.hs
   other-modules:
       FRFS.DirectQR
+      SharedCabDegradedTests
+      SharedCabLockTests
+      SharedCabNoShowTests
       Paths_rider_app
   hs-source-dirs:
       test
@@ -2249,6 +2272,7 @@ test-suite rider-app-test
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-spec
     , bytestring
     , casing
     , cassava

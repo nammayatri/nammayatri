@@ -1,3 +1,5 @@
+{-# LANGUAGE PackageImports #-}
+
 module FRFS.DirectQR where
 
 import App.Server
@@ -9,7 +11,7 @@ import qualified Data.Text.Encoding as TE
 import Data.Time (Day (..), UTCTime (..), secondsToDiffTime)
 import Data.Time.Clock (NominalDiffTime)
 import Domain.Types.IntegratedBPPConfig
-import Environment
+import "rider-app" Environment
 import qualified EulerHS.Interpreters as R
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as ER
@@ -24,7 +26,7 @@ import Kernel.Utils.FlowLogging
 import qualified Kernel.Utils.SignatureAuth as HttpSig
 import Test.Tasty
 import Test.Tasty.HUnit
-import Tools.Error
+import "rider-app" Tools.Error
 
 -- Test configuration as JSON string
 testConfigJson :: Text
