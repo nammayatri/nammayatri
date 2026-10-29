@@ -1267,7 +1267,7 @@ in
             # Unified mock server for Juspay, Stripe, PayTM, Acko, SOS, WhatsApp, CMRL, CRIS, etc.
             mock-server = {
               imports = [ common ];
-              command = "${pkgs.python3.withPackages (ps: [ ps.pynacl ps.psycopg2 ])}/bin/python3 dev/mock-servers/server.py --port ${toString ports.mock-server}";
+              command = "${pkgs.python3.withPackages (ps: [ ps.pynacl ps.psycopg2 ps.cryptography ])}/bin/python3 dev/mock-servers/server.py --port ${toString ports.mock-server}";
               namespace = lib.mkForce "test";
               depends_on."nammayatri-init".condition = "process_completed_successfully";
               availability = {

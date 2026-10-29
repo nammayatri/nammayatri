@@ -1,0 +1,3 @@
+.state/
+# The HDFC mock's TEST-ONLY keys: generated on first use, never committed.
+hdfc-cbx/test-keys/
