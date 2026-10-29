@@ -58,6 +58,7 @@ imports:
   CancellationRateConfig: Dashboard.Common
   AvailabilityCheckConfig: Dashboard.Common
   AutoAcceptanceConfig: Dashboard.Common
+  RegionCondition: Dashboard.Common
   Language: Kernel.External.Types
   MerchantCloudUpdateReq: Dashboard.Common.Merchant
   MerchantCloudUpdateRes: Dashboard.Common.Merchant
@@ -1296,6 +1297,7 @@ types:
     - cancellationRateConfig: Maybe CancellationRateConfig
     - availabilityCheckConfig: Maybe AvailabilityCheckConfig
     - autoAcceptanceConfig: Maybe AutoAcceptanceConfig
+    - regionCondition: Maybe RegionCondition
     - allowNullVehicleRating: Maybe Bool
   VehicleServiceTierConfigUpdateReq:
     - name: Maybe Text
@@ -1334,6 +1336,7 @@ types:
     - cancellationRateConfig: Maybe CancellationRateConfig
     - availabilityCheckConfig: Maybe AvailabilityCheckConfig
     - autoAcceptanceConfig: Maybe AutoAcceptanceConfig
+    - regionCondition: Maybe RegionCondition
     - vehicleAgeThreshold: Maybe Months
     - allowNullVehicleRating: Maybe Bool
     - derive: "'HideSecrets"
@@ -1377,6 +1380,7 @@ types:
     - cancellationRateConfig: Maybe CancellationRateConfig
     - availabilityCheckConfig: Maybe AvailabilityCheckConfig
     - autoAcceptanceConfig: Maybe AutoAcceptanceConfig
+    - regionCondition: Maybe RegionCondition
     - allowNullVehicleRating: Maybe Bool
   VehicleServiceTierListRes:
     - recordType: Type
