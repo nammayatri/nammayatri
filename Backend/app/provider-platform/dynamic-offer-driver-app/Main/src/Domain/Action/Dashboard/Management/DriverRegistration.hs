@@ -2406,6 +2406,29 @@ approveAndUpdateLdcDocument req _mId mOpCityId = do
   image <- findApproveImage DVC.LDCCertificate imageId
   STds.assertValidTdsRateFor mOpCityId image.personId req.tdsRate
   QImage.updateVerificationStatusByIdAndType VALID imageId DVC.LDCCertificate
+  let baseMeta =
+        fromMaybe
+          DImage.ImageMetadata
+            { documentNumber = Nothing,
+              nameOnCard = Nothing,
+              dateOfBirth = Nothing,
+              vehicleClass = Nothing,
+              manufacturer = Nothing,
+              vehicleModel = Nothing,
+              fuelType = Nothing,
+              colour = Nothing,
+              chassisNumber = Nothing,
+              engineNumber = Nothing,
+              registrationDate = Nothing,
+              ownerName = Nothing
+            }
+          image.metadata
+      incomingLdcNumber =
+        req.ldcNumber >>= \n ->
+          let trimmed = T.strip n
+           in if T.null trimmed then Nothing else Just trimmed
+      mergedMeta = baseMeta {DImage.documentNumber = incomingLdcNumber <|> baseMeta.documentNumber}
+  when (isJust mergedMeta.documentNumber) $ QImage.updateMetadata (Just mergedMeta) imageId
   whenJust req.tdsRate $ \rate ->
     STds.setTdsRateValidatedFor mOpCityId image.personId True (Just rate)
 
