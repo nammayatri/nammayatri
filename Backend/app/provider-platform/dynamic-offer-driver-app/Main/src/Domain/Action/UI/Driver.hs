@@ -2854,7 +2854,7 @@ validate (personId, _, merchantOpCityId) phoneNumber = do
     let altPhoneNumber = phoneNumber.mobileCountryCode <> phoneNumber.alternateNumber
     withLogTag ("personId_" <> getId person.id) $ do
       (mbSender, message, templateId, messageType) <-
-        MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId $
+        MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId person.language $
           MessageBuilder.BuildSendOTPMessageReq
             { otp = otpCode,
               hash = otpHash
@@ -2928,6 +2928,7 @@ resendOtp (personId, merchantId, merchantOpCityId) req = do
   unless (attemptsLeft > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes req.mobileCountryCode
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   smsCfg <- asks (.smsCfg)
   let altNumber = req.alternateNumber
       counCode = req.mobileCountryCode
@@ -2944,7 +2945,7 @@ resendOtp (personId, merchantId, merchantOpCityId) req = do
       altphoneNumber = counCode <> altNumber
   withLogTag ("personId_" <> getId personId) $ do
     (mbSender, message, templateId, messageType) <-
-      MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId $
+      MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId person.language $
         MessageBuilder.BuildSendOTPMessageReq
           { otp = otpCode,
             hash = otpHash

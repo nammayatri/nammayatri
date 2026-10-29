@@ -422,6 +422,8 @@ data ChatNotifPayload = ChatNotifPayload
     messageId :: Text,
     senderType :: Text,
     snippet :: Text,
+    -- | Set on a status-update notification; the sender reads that status push's text by it.
+    status :: Maybe IssueStatus,
     hasMedia :: Bool,
     timestamp :: UTCTime
   }

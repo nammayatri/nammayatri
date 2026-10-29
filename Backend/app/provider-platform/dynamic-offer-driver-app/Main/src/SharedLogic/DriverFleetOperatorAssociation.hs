@@ -353,7 +353,7 @@ sendOperatorDeepLinkForAuth person mobileNumber merchantId merchantOpCityId coun
   smsCfg <- asks (.smsCfg)
   withLogTag ("sending Operator Deeplink Auth SMS" <> getId person.id) $ do
     (mbSender, message, templateId, messageType) <-
-      MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId $
+      MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId person.language $
         MessageBuilder.BuildOperatorDeepLinkAuthMessage
           { operatorName = operator.firstName
           }

@@ -547,12 +547,15 @@ notifyOnIssueChatMessage ::
 notifyOnIssueChatMessage driverId payload = do
   driver <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let merchantOperatingCityId = driver.merchantOperatingCityId
-      title = T.pack "Support"
-      body =
-        if T.null payload.snippet
-          then if payload.hasMedia then "Sent you an image" else "You have a new message"
-          else payload.snippet
-      notificationData =
+      keyedText key fallback = maybe fallback (.body) <$> CPN.findMatchingMerchantPNByKey merchantOperatingCityId key Nothing Nothing driver.language Nothing
+  title <- maybe (T.pack "Support") (.title) <$> CPN.findMatchingMerchantPNByKey merchantOperatingCityId DriverPush_IssueChat_Title Nothing Nothing driver.language Nothing
+  body <-
+    case payload.status of
+      Just status -> keyedText (DriverPush_IssueStatus status) payload.snippet
+      Nothing
+        | T.null payload.snippet -> if payload.hasMedia then keyedText DriverPush_IssueChat_ImageFallback "Sent you an image" else keyedText DriverPush_IssueChat_MessageFallback "You have a new message"
+        | otherwise -> pure payload.snippet
+  let notificationData =
         Notification.NotificationReq
           { category = Notification.CHAT_MESSAGE,
             subCategory = Nothing,

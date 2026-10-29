@@ -2926,7 +2926,7 @@ postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName mbFleetOwner
         otpCode <- maybe generateOTPCode return useFakeOtpM
         whenNothing_ useFakeOtpM $ do
           (mbSender, message, templateId, messageType) <-
-            MessageBuilder.buildFleetJoiningMessage merchantOpCityId $
+            MessageBuilder.buildFleetJoiningMessage merchantOpCityId person.language $
               MessageBuilder.BuildFleetJoiningMessageReq
                 { otp = otpCode,
                   fleetOwnerName = fleetOwnerName
@@ -2975,7 +2975,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
         whenNothing_ useFakeOtpM $
           do
             (mbSender, message, templateId, messageType) <-
-              MessageBuilder.buildFleetJoinAndDownloadAppMessage merchantOpCityId $
+              MessageBuilder.buildFleetJoinAndDownloadAppMessage merchantOpCityId person.language $
                 MessageBuilder.BuildDownloadAppMessageReq
                   { fleetOwnerName = fleetOwner.firstName
                   }

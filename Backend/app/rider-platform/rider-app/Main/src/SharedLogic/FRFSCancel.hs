@@ -16,7 +16,7 @@ import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (Language, SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -73,7 +73,7 @@ handleCancelledStatus ::
   HighPrecMoney ->
   Text ->
   Bool ->
-  m (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters)
+  m (Maybe Text, Maybe Text, Maybe Language, FRFSUtils.FRFSFareParameters)
 handleCancelledStatus _merchant booking refundAmount cancellationCharges _messageId isCounterCancellation = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mbPaymentBooking <- QTBP.findTicketBookingPayment booking
@@ -145,13 +145,13 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
     case quotaResult of
       Left err -> logError $ "FRFS cancellation quota not recorded for bookingId-" <> booking.id.getId <> ": " <> show err
       Right () -> pure ()
-  return (mRiderNumber, person.mobileCountryCode, fareParameters)
+  return (mRiderNumber, person.mobileCountryCode, person.language, fareParameters)
 
 -- | Side effects (SMS + Google Wallet) that require concrete Flow due to generic-lens constraints.
 -- Call this after handleCancelledStatus from a Flow context.
-handleCancelledSideEffects :: DFRFSTicketBooking.FRFSTicketBooking -> Maybe Text -> Maybe Text -> FRFSUtils.FRFSFareParameters -> Flow ()
-handleCancelledSideEffects booking mRiderNumber mRiderMobileCountryCode fareParameters = do
-  sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode booking fareParameters
+handleCancelledSideEffects :: DFRFSTicketBooking.FRFSTicketBooking -> Maybe Text -> Maybe Text -> Maybe Language -> FRFSUtils.FRFSFareParameters -> Flow ()
+handleCancelledSideEffects booking mRiderNumber mRiderMobileCountryCode mRiderLanguage fareParameters = do
+  sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode mRiderLanguage booking fareParameters
   handleGoogleWalletStatusUpdate booking
 
 releaseSeatsIfHeld :: (MonadFlow m, Redis.HedisFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> [FRFSQuoteCategory.FRFSQuoteCategory] -> m ()
@@ -174,8 +174,8 @@ checkRefundAndCancellationCharges bookingId refundAmount cancellationCharges = d
         throwError $ InternalError $ "Cancellation Charges mismatch in onCancel Req " <> "cancellationCharges: " <> show cancellationCharges <> " charges: " <> show charges
     _ -> throwError $ InternalError "Refund Amount or Cancellation Charges not found in booking"
 
-sendTicketCancelSMS :: Maybe Text -> Maybe Text -> DFRFSTicketBooking.FRFSTicketBooking -> FRFSUtils.FRFSFareParameters -> Flow ()
-sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode booking fareParameters =
+sendTicketCancelSMS :: Maybe Text -> Maybe Text -> Maybe Language -> DFRFSTicketBooking.FRFSTicketBooking -> FRFSUtils.FRFSFareParameters -> Flow ()
+sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode mRiderLanguage booking fareParameters =
   whenJust booking.partnerOrgId $ \pOrgId -> do
     fork "send ticket cancel sms" $
       withLogTag ("SMS:FRFSBookingId:" <> booking.id.getId) $ do
@@ -185,7 +185,7 @@ sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode booking fareParameters 
             phoneNumber = countryCode <> mobileNumber
 
         mbBuildSmsReq <-
-          MessageBuilder.buildFRFSTicketCancelMessage mocId pOrgId $
+          MessageBuilder.buildFRFSTicketCancelMessage mocId pOrgId mRiderLanguage $
             MessageBuilder.BuildFRFSTicketCancelMessageReq
               { countOfTickets = fareParameters.totalQuantity,
                 bookingId = booking.id

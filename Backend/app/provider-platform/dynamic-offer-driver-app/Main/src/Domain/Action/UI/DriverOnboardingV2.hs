@@ -496,6 +496,19 @@ postDriverUpdateAirCondition (mbPersonId, _, merchantOperatingCityId) API.Types.
   QDI.updateLastACStatusCheckedAt (Just now) personId
   return Success
 
+-- | The tier's name and descriptions in the driver's language where the keys have text.
+translateServiceTier :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Language -> VehicleServiceTier -> Environment.Flow VehicleServiceTier
+translateServiceTier merchantOpCityId language tier = do
+  mbName <- CQTranslations.findTextByKey (Just merchantOpCityId) language (ServiceTier_Name tier.serviceTierType)
+  mbShortDescription <- CQTranslations.findTextByKey (Just merchantOpCityId) language (ServiceTier_ShortDescription tier.serviceTierType)
+  mbLongDescription <- CQTranslations.findTextByKey (Just merchantOpCityId) language (ServiceTier_LongDescription tier.serviceTierType)
+  pure
+    tier
+      { Domain.Types.VehicleServiceTier.name = fromMaybe tier.name mbName,
+        Domain.Types.VehicleServiceTier.shortDescription = mbShortDescription <|> tier.shortDescription,
+        Domain.Types.VehicleServiceTier.longDescription = mbLongDescription <|> tier.longDescription
+      }
+
 getDriverVehicleServiceTiers ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -515,10 +528,12 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
     if any (isJust . (.specialZone)) baseCityVehicleServiceTiers
       then getDriverCurrentSpecialLocationId personId
       else pure Nothing
-  let cityVehicleServiceTiers = map (CQVST.applySpecialZoneName mbSpecialLocationId) baseCityVehicleServiceTiers
   let personLanguage = fromMaybe ENGLISH person.language
 
-  driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
+  -- The special-zone name is applied after the translation, so it is never overwritten by a keyed name.
+  driverVehicleServiceTierTypes <-
+    fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing (Just baseCityVehicleServiceTiers) personId merchantOpCityId
+      >>= mapM (\(tier, usageRestricted) -> (\translated -> (CQVST.applySpecialZoneName mbSpecialLocationId translated, usageRestricted)) <$> translateServiceTier merchantOpCityId personLanguage tier)
   let serviceTierACThresholds = map (\(VehicleServiceTier {..}, _) -> airConditionedThreshold) driverVehicleServiceTierTypes
   let isACCheckEnabledForCity = any isJust serviceTierACThresholds
   let isACAllowedForDriver = SDO.checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)

@@ -646,7 +646,7 @@ postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
                   assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId DomainRC.defaultAssociationEnd False
                   QDOA.create assoc
                 (mbSender, message, templateId, messageType) <-
-                  MessageBuilder.buildOperatorJoinAndDownloadAppMessage merchantOpCityId $
+                  MessageBuilder.buildOperatorJoinAndDownloadAppMessage merchantOpCityId person.language $
                     MessageBuilder.BuildOperatorJoinAndDownloadAppMessageReq
                       { operatorName = operator.firstName
                       }
@@ -662,7 +662,7 @@ postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
             whenNothing_ useFakeOtpM $ do
               let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
               (mbSender, message, templateId, messageType) <-
-                MessageBuilder.buildOperatorJoiningMessage merchantOpCityId $
+                MessageBuilder.buildOperatorJoiningMessage merchantOpCityId person.language $
                   MessageBuilder.BuildOperatorJoiningMessageReq
                     { otp = otpCode,
                       operatorName = operatorName
@@ -716,7 +716,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       let phoneNumber = req.mobileCountryCode <> req.mobileNumber
       withLogTag ("personId_" <> getId person.id) $ do
         (mbSender, message, templateId, messageType) <-
-          MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId $
+          MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId person.language $
             MessageBuilder.BuildOperatorDeepLinkAuthMessage
               { operatorName = operator.firstName
               }

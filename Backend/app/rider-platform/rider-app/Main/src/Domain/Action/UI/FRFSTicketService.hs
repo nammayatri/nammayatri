@@ -1342,8 +1342,8 @@ postFrfsBookingCanCancel (_, merchantId) bookingId = do
   mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision ticketBooking
   SharedCab.guardRiderCancel SharedCab.SoftCancel ticketBooking $ \mbRefund -> do
     mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.SOFT_CANCEL CallExternalBPP.UserInitiated True mbLiveDecision mbRefund ticketBooking
-    whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, fareParameters, updatedBooking) ->
-      FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode fareParameters
+    whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, mRiderLanguage, fareParameters, updatedBooking) ->
+      FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode mRiderLanguage fareParameters
   return APISuccess.Success
 
 getFrfsBookingCanCancelStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSCanCancelStatus
@@ -1381,8 +1381,8 @@ postFrfsBookingCancel (mbPersonId, merchantId) bookingId = do
   mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision ticketBooking
   SharedCab.guardRiderCancel SharedCab.ConfirmCancel ticketBooking $ \mbRefund -> do
     mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL CallExternalBPP.UserInitiated True mbLiveDecision mbRefund ticketBooking
-    whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, fareParameters, updatedBooking) -> do
-      FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode fareParameters
+    whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, mRiderLanguage, fareParameters, updatedBooking) -> do
+      FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode mRiderLanguage fareParameters
       FRFSCancelJourney.cancelJourney updatedBooking
   return APISuccess.Success
 

@@ -1459,12 +1459,15 @@ notifyOnIssueChatMessage personId payload = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.CHAT_MESSAGE merchantOperatingCityId
   let notificationSound = notificationSoundFromConfig >>= NSC.defaultSound
-      title = T.pack "Support"
-      body =
-        if T.null payload.snippet
-          then if payload.hasMedia then "Sent you an image" else "You have a new message"
-          else payload.snippet
-      notificationData =
+      keyedText key fallback = maybe fallback (.body) <$> CPN.findMatchingMerchantPNByKey merchantOperatingCityId key Nothing Nothing person.language Nothing
+  title <- maybe (T.pack "Support") (.title) <$> CPN.findMatchingMerchantPNByKey merchantOperatingCityId RiderPush_IssueChat_Title Nothing Nothing person.language Nothing
+  body <-
+    case payload.status of
+      Just status -> keyedText (RiderPush_IssueStatus status) payload.snippet
+      Nothing
+        | T.null payload.snippet -> if payload.hasMedia then keyedText RiderPush_IssueChat_ImageFallback "Sent you an image" else keyedText RiderPush_IssueChat_MessageFallback "You have a new message"
+        | otherwise -> pure payload.snippet
+  let notificationData =
         Notification.NotificationReq
           { category = Notification.CHAT_MESSAGE,
             subCategory = Nothing,
@@ -2124,7 +2127,7 @@ notifyRewardUnlock person rewardTitle sponsorName couponCode = do
             <> " reason=noPhone"
       Just phoneNumber -> do
         mbMerchantMessage <-
-          CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId whatsappMessageKey Nothing
+          CMM.findByMerchantOperatingCityIdAndMessageKeyLanguage person.merchantOperatingCityId whatsappMessageKey person.language Nothing
         case mbMerchantMessage of
           Nothing ->
             logInfo $
@@ -2487,7 +2490,7 @@ sendWhatsAppTemplateIfOptedIn person messageKey variables = do
       case mbPhoneNumber of
         Nothing -> logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=noPhone"
         Just phoneNumber -> do
-          mbMerchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing
+          mbMerchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyLanguage person.merchantOperatingCityId messageKey person.language Nothing
           case mbMerchantMessage of
             Just merchantMessage
               | not (T.null merchantMessage.templateId) -> do

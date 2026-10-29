@@ -619,12 +619,13 @@ sendDriverNotifications reminder driver merchantOpCityId notificationType messag
         (mbSender, msg, templateId, messageType) <-
           MessageBuilder.buildDocumentExpiryReminderMessage
             merchantOpCityId
+            driver.language
             (MessageBuilder.BuildDocumentExpiryReminderMessageReq {documentType = documentTypeName})
         smsCfg <- asks (.smsCfg)
         let sender = fromMaybe smsCfg.sender mbSender
         pure $ Just (msg, sender, templateId, messageType)
       else do
-        CMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing >>= \case
+        CMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId messageKey driver.language Nothing Nothing >>= \case
           Just merchantMsg -> do
             smsCfg <- asks (.smsCfg)
             let sender = fromMaybe smsCfg.sender merchantMsg.senderHeader

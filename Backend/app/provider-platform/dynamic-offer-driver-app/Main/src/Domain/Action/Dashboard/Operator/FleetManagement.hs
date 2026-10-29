@@ -179,7 +179,7 @@ postFleetManagementFleetUnlink merchantShortId opCity fleetOwnerId requestorId =
   let phoneNumber = fromMaybe "+91" fleetOwner.mobileCountryCode <> decryptedMobileNumber
   smsCfg <- asks (.smsCfg)
   (mbSender, message, templateId, messageType) <-
-    buildFleetUnlinkSuccessMessage merchantOpCityId $
+    buildFleetUnlinkSuccessMessage merchantOpCityId fleetOwner.language $
       BuildFleetLinkUnlinkSuccessMessageReq
         { operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
         }
@@ -264,7 +264,7 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
       whenNothing_ mbUseFakeOtp $ do
         let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
         (mbSenderHeader, message, templateId, messageType) <-
-          buildOperatorJoiningMessage merchantOpCityId $
+          buildOperatorJoiningMessage merchantOpCityId fleetOwner.language $
             BuildOperatorJoiningMessageReq
               { operatorName = operatorName,
                 otp = otpCode
@@ -326,7 +326,7 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
   whenNothing_ mbUseFakeOtp $ do
     res <- withTryCatch "sendSMS:postFleetManagementFleetLinkVerifyOtp" $ do
       (mbSender, message, templateId, messageType) <-
-        buildFleetLinkSuccessMessage merchantOpCityId $
+        buildFleetLinkSuccessMessage merchantOpCityId fleetOwner.language $
           BuildFleetLinkUnlinkSuccessMessageReq
             { operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
             }
