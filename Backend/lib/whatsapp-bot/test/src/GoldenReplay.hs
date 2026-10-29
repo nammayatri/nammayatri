@@ -325,6 +325,9 @@ rideBase bid =
       vehicleNumber = Just "KA06 AB 1234",
       rideOtp = Just "4321",
       endOtp = Nothing,
+      -- The mock rides model a rental-style end OTP (set at start below), which is
+      -- what the recorded goldens' End-ride button reflects.
+      endOtpRequired = True,
       driverRating = Just 4.9,
       etaMinutes = Just 3,
       computedFare = Nothing,
@@ -579,6 +582,7 @@ fixtureMerchant pn
     base =
       MerchantCtx
         { merchantLabel = "FLEXI",
+          phoneNumberId = pn,
           rideTypesOrder = [Flexi],
           maxDirectButtons = Nothing, -- unset by default; explicit override tested separately below
           flexiBaseFare = Nothing, -- FLEXI_BASE_FARE unset in test/setup.ts
@@ -679,7 +683,8 @@ makeWorld merchantCtx theKnobs t0 = do
             tdSender = senderH,
             tdSessions = sessionsH,
             tdClock = clockH,
-            tdTranslations = staticTranslations
+            tdTranslations = staticTranslations,
+            tdMerchant = merchantCtx
           }
   pure
     World
