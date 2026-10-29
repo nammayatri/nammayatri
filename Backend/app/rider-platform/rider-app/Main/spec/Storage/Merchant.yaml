@@ -561,6 +561,7 @@ MerchantMessage:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     messageKey: MessageKey
+    language: Language
     message: Text
     templateId: Text
     jsonData: MerchantMessageDefaultDataJSON
@@ -575,9 +576,11 @@ MerchantMessage:
     templateId: Maybe Text
     jsonData: Maybe Data.Aeson.Value
     messageType: Maybe Text
+    language: Maybe Language
 
   default:
     containsUrlButton: "False"
+    language: "'ENGLISH'"
   sqlType:
     templateId: character varying(255)
     jsonData: json
@@ -587,21 +590,28 @@ MerchantMessage:
   fromTType:
     templateId: fromMaybe "" templateId|E
     jsonData: valueToJsonData
+    language: fromMaybe Kernel.External.Types.ENGLISH language|E
   toTType:
     templateId: (Just templateId)|E
     jsonData: (Just $ toJSON jsonData)|E
+    language: Just language|E
   constraints:
     merchantOperatingCityId: PrimaryKey
     messageKey: PrimaryKey
+    language: PrimaryKey
 
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId
-    findByMerchantOperatingCityIdAndMessageKey:
-      kvFunction: findOneWithKV
+    findAllByMerchantOpCityIdAndMessageKey:
+      kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, messageKey]
+    findByMerchantOperatingCityIdAndMessageKeyLanguage:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, messageKey, language]
     deleteByMerchantOperatingCityIdAndMessageKey:
       kvFunction: deleteWithKV
       where:

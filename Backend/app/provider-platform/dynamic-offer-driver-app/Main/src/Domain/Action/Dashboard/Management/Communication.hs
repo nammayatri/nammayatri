@@ -41,6 +41,7 @@ import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Notification.FCM.Types as FCM
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Sms.Config (SmsConfig (..))
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer (produceMessage)
@@ -784,7 +785,7 @@ dispatchFromPayload p = do
       let phoneNumber = fromMaybe "+91" person.mobileCountryCode <> mobileNumber
       smsCfg <- asks (.smsCfg)
       -- Look up the DLT-registered template from merchant_message by domain+channel
-      mbMerchantMsg <- QMM.findByMerchantOpCityIdDomainAndChannel merchantOpCityId (Just DMM.FLEET) (Just DMM.SMS)
+      mbMerchantMsg <- QMM.findByMerchantOpCityIdDomainChannelAndLanguage merchantOpCityId (Just DMM.FLEET) (Just DMM.SMS) ENGLISH
       case mbMerchantMsg of
         Just merchantMsg -> do
           -- Substitute {#var1#} with the body text to match the DLT template
@@ -800,7 +801,7 @@ dispatchFromPayload p = do
       mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (InvalidRequest "Recipient phone not available for WhatsApp")
       let phoneNumber = fromMaybe "+91" person.mobileCountryCode <> mobileNumber
       -- Look up WhatsApp template from merchant_message
-      mbMerchantMsg <- QMM.findByMerchantOpCityIdDomainAndChannel merchantOpCityId (Just DMM.FLEET) (Just DMM.WHATSAPP)
+      mbMerchantMsg <- QMM.findByMerchantOpCityIdDomainChannelAndLanguage merchantOpCityId (Just DMM.FLEET) (Just DMM.WHATSAPP) ENGLISH
       let whatsappTemplateId = maybe (fromMaybe "" p.templateId) (.templateId) mbMerchantMsg
       let req =
             Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
@@ -991,7 +992,7 @@ getCommunicationTemplate merchantShortId opCity apiDomain apiChannel = do
           CommAPI.CH_SMS -> DMM.SMS
           CommAPI.CH_WHATSAPP -> DMM.WHATSAPP
           _ -> DMM.SMS -- fallback for unsupported channels
-  mbTemplate <- QMM.findByMerchantOpCityIdDomainAndChannel merchantOpCityId (Just mmDomain) (Just mmChannel)
+  mbTemplate <- QMM.findByMerchantOpCityIdDomainChannelAndLanguage merchantOpCityId (Just mmDomain) (Just mmChannel) ENGLISH
   template <- fromMaybeM (InvalidRequest "Template not found for given domain & channel") mbTemplate
   pure
     CommAPI.CommunicationTemplateResponse
