@@ -85,6 +85,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.FareCalculator (driverBorneAppFee, fareSum)
 import qualified SharedLogic.FarePolicy as SFP
+import SharedLogic.Finance.RideInvoice (rideFinanceInvoiceId)
 import SharedLogic.Finance.Wallet (splitGrossByVatPct)
 import SharedLogic.ManualTollCharge (isManualTollChargeEnabled)
 import qualified SharedLogic.RideFootnotes as RFN
@@ -793,7 +794,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
             DFPC.PerMinuteWaitingCharge _ -> Nothing,
         customerRating = mbRiderDetails >>= (.customerRating),
         showRoutePerRequest,
-        invoiceId = booking.financeInvoiceId
+        invoiceId = rideFinanceInvoiceId ride booking
       }
 
 getWaitingChargeInfo :: Maybe Meters -> Maybe Months -> FarePolicyD.FullFarePolicy -> Maybe DFPC.WaitingChargeInfo

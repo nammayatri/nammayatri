@@ -428,13 +428,13 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
                  in if clubVatInclusive
                       then
                         catMaybes
-                          [ if inclusiveCancellation > 0
+                          [ if inclusiveCancellation >= 0
                               then Just InvoiceLineItem {description = "Cancellation Fee (Incl. VAT)", descriptionType = Just CancellationFeeInclVat, quantity = 1, unitPrice = inclusiveCancellation, lineTotal = inclusiveCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Just Fare}
                               else Nothing
                           ]
                       else
                         catMaybes
-                          [ if baseCancellation > 0
+                          [ if baseCancellation > 0 || inclusiveCancellation == 0
                               then Just InvoiceLineItem {description = "Customer Cancellation Fee", descriptionType = Just CustomerCancellationFee, quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Just Fare}
                               else Nothing,
                             if gstOnCancellation > 0
