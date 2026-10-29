@@ -160,3 +160,8 @@ ALTER TABLE atlas_app.merchant ADD COLUMN social_identity_validity_in_days integ
 
 ------- SQL updates -------
 
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant ADD COLUMN driver_offer_merchant_short_id text ;

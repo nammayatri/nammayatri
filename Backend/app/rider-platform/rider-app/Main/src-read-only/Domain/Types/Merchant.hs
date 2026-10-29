@@ -34,6 +34,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     driverOfferApiKey :: Kernel.Prelude.Text,
     driverOfferBaseUrl :: Kernel.Types.Common.BaseUrl,
     driverOfferMerchantId :: Kernel.Prelude.Text,
+    driverOfferMerchantShortId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverOnTheWayNotifyExpiry :: Kernel.Types.Common.Seconds,
     editPickupDistanceThreshold :: Kernel.Types.Common.Distance,
     fakeOtpEmails :: [Kernel.Prelude.Text],
