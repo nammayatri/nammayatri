@@ -746,6 +746,7 @@ data SnapToRoadCall = SnapToRoadCall
   { apiName :: Kernel.Prelude.Text,
     provider :: Kernel.Prelude.Text,
     calledAt :: Kernel.Prelude.UTCTime,
+    rideStatus :: Status,
     distanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     inputPoints :: [Kernel.External.Maps.Types.LatLong],
     snappedPoints :: [Kernel.External.Maps.Types.LatLong]
