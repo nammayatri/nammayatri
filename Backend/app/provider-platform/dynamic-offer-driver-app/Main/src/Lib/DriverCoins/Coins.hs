@@ -54,7 +54,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MonetaryRewardConfig as DWC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
-import qualified Domain.Types.Translations as Fields
+import qualified Domain.Types.TranslationKeys as TK
 import Domain.Types.TransporterConfig
 import Domain.Types.VehicleCategory as DTV
 import qualified Domain.Types.VehicleVariant as DTVeh
@@ -81,8 +81,8 @@ import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import qualified SharedLogic.Finance.Wallet as SLFW
 import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
 import qualified Storage.CachedQueries.MonetaryRewardConfig as CWCQ
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
-import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.Coins.CoinsConfig as SQCC
@@ -90,7 +90,6 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.Translations as MTQuery
 import qualified Tools.Notifications as Notify
 import Tools.Utils
 
@@ -645,12 +644,12 @@ sendCoinsNotificationV3 merchantOpCityId driverId coinsValue (DCT.MetroRideCompl
   B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
     let language = fromMaybe L.ENGLISH driver.language
         entityData = Notify.CoinsNotificationData {coins = coinsValue, event = DCT.MetroRideCompleted metroRideType Nothing}
-     in getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = T.pack (show metroRideType), language = Just language}) (Just (MTQuery.findByErrorAndLanguage (T.pack (show metroRideType)) language)) >>= processMessage driver entityData
+     in CQTranslations.findTextByKey (Just merchantOpCityId) language (TK.Coins_MetroMessage metroRideType) >>= processMessage driver entityData
   where
     processMessage driver entityData mbCoinsMessage =
       case mbCoinsMessage of
         Just coinsMessage ->
-          case T.splitOn " | " coinsMessage.message of
+          case T.splitOn " | " coinsMessage of
             [title, description] ->
               Notify.sendCoinsNotificationV3 merchantOpCityId title (replaceCoinsValue description) driver (driver.deviceToken) entityData metroRideType
             _ -> logDebug "Invalid message format."
@@ -662,12 +661,12 @@ sendCoinsNotificationV2 :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFl
 sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue (DCT.BulkUploadFunctionV2 messageKey) = do
   B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
     let language = fromMaybe L.ENGLISH driver.language
-     in getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = T.pack (show messageKey), language = Just language}) (Just (MTQuery.findByErrorAndLanguage (T.pack (show messageKey)) language)) >>= processMessage driver amount
+     in CQTranslations.findTextByKey (Just merchantOpCityId) language (TK.Coins_Message messageKey) >>= processMessage driver amount
   where
     processMessage driver amount' mbCoinsMessage =
       case mbCoinsMessage of
         Just coinsMessage ->
-          case T.splitOn " | " coinsMessage.message of
+          case T.splitOn " | " coinsMessage of
             [title, description] -> do
               let descriptionReplaced = replaceAmountValue amount' $ replaceCoinsValue description
               Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title descriptionReplaced driver (driver.deviceToken)
@@ -683,12 +682,12 @@ sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction =
     let language = fromMaybe L.ENGLISH driver.language
         queryType = if coinsValue > 0 then CoinAdded else CoinSubtracted
         entityData = Notify.CoinsNotificationData {coins = coinsValue, event = eventFunction}
-     in getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = T.pack (show queryType), language = Just language}) (Just (MTQuery.findByErrorAndLanguage (T.pack (show queryType)) language)) >>= processMessage driver entityData
+     in CQTranslations.findTextByKey (Just merchantOpCityId) language (TK.Coins_Message queryType) >>= processMessage driver entityData
   where
     processMessage driver entityData mbCoinsMessage =
       case mbCoinsMessage of
         Just coinsMessage ->
-          case T.splitOn " | " coinsMessage.message of
+          case T.splitOn " | " coinsMessage of
             [title, description] ->
               Notify.sendCoinsNotification merchantOpCityId title (replaceCoinsValue description) driver (driver.deviceToken) entityData
             _ -> logDebug "Invalid message format."

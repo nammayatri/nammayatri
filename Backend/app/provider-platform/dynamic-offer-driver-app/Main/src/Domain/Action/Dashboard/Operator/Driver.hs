@@ -1084,7 +1084,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         forM_ validatedDocs $ \(_images, _rejectedReason, docDetail) -> do
           void $
             withTryCatch "SubmitReview:sendRejectionNotification" $
-              sendDocumentDecisionNotification merchantOpCity.id (show docDetail.documentType) (DocumentRejected docDetail.rejectedReason) person
+              sendDocumentDecisionNotification merchantOpCity.id docDetail.documentType (DocumentRejected docDetail.rejectedReason) person
 
     let domainEntityType = case req.entityType of
           API.Types.ProviderPlatform.Operator.Driver.DRIVER -> DRR.DRIVER

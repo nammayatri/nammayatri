@@ -29,6 +29,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonDisability as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderConfig as DRC
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
@@ -301,10 +302,10 @@ postSosCreate (mbPersonId, _merchantId) req = do
             void $ QPDEN.updateShareRideForAll (cast personId) True
             enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
           let sosType = if req.isRideEnded == Just True then Notification.POST_RIDE_SOS_ALERT else Notification.SOS_TRIGGERED
-          when shouldNotifyContacts $ SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" sosType [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
+          when shouldNotifyContacts $ SPDEN.notifyEmergencyContactsWithKey person RiderPush_Safety_SosAlert sosType [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
       Nothing -> do
         emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-        SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
+        SPDEN.notifyEmergencyContactsWithKey person RiderPush_Safety_SosAlert Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
   return $
     SosRes
       { sosId = sosId,
@@ -462,7 +463,7 @@ postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
         Nothing -> pure ()
         Just _ -> do
           Redis.setExp (CQSos.mockSosKey personId) (SafetyDSos.SosMockDrill {personId = cast personId, status = SafetyDSos.MockResolved}) 13400
-      SPDEN.notifyEmergencyContactsWithKey person "SOS_RESOLVED_SAFE" Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
+      SPDEN.notifyEmergencyContactsWithKey person RiderPush_Safety_SosResolvedSafe Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
       return APISuccess.Success
     _ -> do
       -- Call shared-services function (handles SOS DB, safetySettings DB, and Redis caching)
@@ -479,9 +480,13 @@ postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
       -- Notify emergency contacts (rider-app)
       when result.shouldNotifyContacts $ do
         let mbSosIdForNotification = if result.isRideBased then Nothing else Just sosId
-        SPDEN.notifyEmergencyContactsWithKey person result.notificationKey Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False contactsToNotify mbSosIdForNotification
+        SPDEN.notifyEmergencyContactsWithKey person (resolvedPushKey result.notificationKey) Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False contactsToNotify mbSosIdForNotification
 
       pure APISuccess.Success
+  where
+    resolvedPushKey = \case
+      SafetySos.SosResolvedSafe -> RiderPush_Safety_SosResolvedSafe
+      SafetySos.LiveTrackingStopped -> RiderPush_Safety_LiveTrackingStopped
 
 postSosCreateMockSos :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> MockSosReq -> Flow APISuccess.APISuccess
 postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
@@ -977,7 +982,7 @@ postSosStartTracking (mbPersonId, merchantId) StartTrackingReq {..} = do
   when (not (List.null contactsToNotify)) $ do
     fork "Notifying emergency contacts about live tracking start" $ do
       let formattedExpiryTime = T.pack . formatTime defaultTimeLocale "%I:%M %p" $ expiryTimeStamp
-      SPDEN.notifyEmergencyContactsWithKey person "LIVE_TRACKING_STARTED" Notification.SHARE_RIDE [("userName", SLP.getName person), ("expiryTime", formattedExpiryTime)] Nothing False contactsToNotify (Just (cast finalSosId))
+      SPDEN.notifyEmergencyContactsWithKey person RiderPush_Safety_LiveTrackingStarted Notification.SHARE_RIDE [("userName", SLP.getName person), ("expiryTime", formattedExpiryTime)] Nothing False contactsToNotify (Just (cast finalSosId))
 
   return $
     StartTrackingRes
@@ -1031,11 +1036,11 @@ postSosUpdateState (mbPersonId, _) sosId UpdateStateReq {..} = do
                     rideEndTime = Nothing,
                     isRideEnded = False
                   }
-            SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
+            SPDEN.notifyEmergencyContactsWithKey person RiderPush_Safety_SosAlert Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
           return result
         (Just SafetyDSos.SosActive, SafetyDSos.LiveTracking) -> do
           result <- SafetySos.updateSosStateWithAutoExpiry safetyPersonId sosDetails sosState Nothing
-          SPDEN.notifyEmergencyContactsWithKey person "SOS_RESOLVED" Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False emergencyContacts.defaultEmergencyNumbers (Just sosId)
+          SPDEN.notifyEmergencyContactsWithKey person RiderPush_Safety_SosResolved Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False emergencyContacts.defaultEmergencyNumbers (Just sosId)
           return result
         _ -> do
           result <- SafetySos.updateSosStateWithAutoExpiry safetyPersonId sosDetails sosState Nothing
@@ -1113,7 +1118,7 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
             emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
             void $ QPDEN.updateShareRideForAll (cast personId) True
             enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
-            SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
+            SPDEN.notifyEmergencyContactsWithKey person RiderPush_Safety_SosAlert Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
 
   pure APISuccess.Success
 

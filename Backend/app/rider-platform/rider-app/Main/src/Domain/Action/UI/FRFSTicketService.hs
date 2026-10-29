@@ -57,6 +57,7 @@ import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import qualified Domain.Types.SharedRoute as DSharedRoute
 import Domain.Types.Station
 import Domain.Types.StationType
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
 import Domain.Utils (mapConcurrently)
 import qualified Environment
@@ -2391,9 +2392,9 @@ fetchStopBookingsForNotify tripId stopCode routeId vehicleNumber = do
     [] -> pure ("", Nothing, Nothing)
   pure (stopBookings, personMap, legMap, routeNumber, mbVehicleTagNumber, mbIntegratedBPPConfig)
 
-approachingNotificationKey :: Text -> Text
-approachingNotificationKey "nearing" = "BUS_APPROACHING_NEARING"
-approachingNotificationKey _ = "BUS_APPROACHING_RELAXED"
+approachingNotificationKey :: Text -> RiderPushKey
+approachingNotificationKey "nearing" = RiderPush_Bus_ApproachingNearing
+approachingNotificationKey _ = RiderPush_Bus_ApproachingRelaxed
 
 -- | Distance-threshold ("relaxed"/"nearing") stop-approach notification.
 notifyBusApproachingStopForTrip :: Text -> Text -> FRFSInternal.NotifyBusApproachingReq -> Environment.Flow ()

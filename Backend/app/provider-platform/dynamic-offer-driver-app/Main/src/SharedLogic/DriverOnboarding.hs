@@ -55,7 +55,7 @@ import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Translations as Fields
+import Domain.Types.TranslationKeys (TranslationKey (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.Vehicle as DV
 import qualified Domain.Types.VehicleCategory as DVC
@@ -91,9 +91,9 @@ import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
-import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as DGQuery
@@ -110,7 +110,6 @@ import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.ImageExtra as ImageQueryExtra
 import qualified Storage.Queries.Message as MessageQuery
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCExtra
@@ -808,12 +807,12 @@ filterInCompatibleFlows makeSelfieAadhaarPanMandatory = filter (\doc -> not (fro
 
 mkFleetOwnerDocumentVerificationConfigAPIEntity :: Language -> [API.Types.ProviderPlatform.Fleet.Onboarding.DocumentOnboardingStageAPIEntity] -> Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
 mkFleetOwnerDocumentVerificationConfigAPIEntity language onboardingStages Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig {..} = do
-  mbTitle <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = show documentType <> "_Title", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (show documentType <> "_Title") language))
-  mbDescription <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = show documentType <> "_Description", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (show documentType <> "_Description") language))
+  mbTitle <- CQTranslations.findTextByKey (Just merchantOperatingCityId) language (FleetOwnerDocument_Title documentType)
+  mbDescription <- CQTranslations.findTextByKey (Just merchantOperatingCityId) language (FleetOwnerDocument_Description documentType)
   return $
     API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
-      { title = maybe title (.message) mbTitle,
-        description = maybe description (Just . (.message)) mbDescription,
+      { title = fromMaybe title mbTitle,
+        description = mbDescription <|> description,
         applicableTo = API.Types.ProviderPlatform.Fleet.Onboarding.FLEET,
         filterForOldApks = Nothing,
         rcNumberPrefixList = [],

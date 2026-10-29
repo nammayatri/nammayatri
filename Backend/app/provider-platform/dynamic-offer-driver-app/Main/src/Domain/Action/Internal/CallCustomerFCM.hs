@@ -16,6 +16,7 @@ module Domain.Action.Internal.CallCustomerFCM where
 
 import qualified Domain.Types.MerchantPushNotification as Fields
 import Domain.Types.Ride
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Environment
 import EulerHS.Prelude
 import Kernel.Beam.Functions
@@ -43,7 +44,7 @@ callCustomerFCM rideId apiKey = do
   pure Success
   where
     pingDriver driver = do
-      mbMerchantPN <- CPN.findMatchingMerchantPN driver.merchantOperatingCityId "FCM_CHAT_MESSAGE" Nothing Nothing driver.language Nothing
+      mbMerchantPN <- CPN.findMatchingMerchantPNByKey driver.merchantOperatingCityId DriverPush_Ride_MissedCall Nothing Nothing driver.language Nothing
       whenJust mbMerchantPN $ \merchantPN -> do
         let entityData = NotifReq {entityId = driver.id.getId, title = merchantPN.title, message = merchantPN.body}
         notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType

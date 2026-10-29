@@ -17,6 +17,7 @@ import Domain.Types.Alert.DetectionData as DTD
 import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TripTransaction as Fields
 import Environment
 import EulerHS.Prelude
@@ -55,15 +56,15 @@ violationDetection ViolationDetectionReq {..} = do
         now <- getCurrentTime
         let nowTs = floor $ utcTimeToPOSIXSeconds now
         addReachedStop rideId (stopIndex + 1) location nowTs
-    RouteDeviationDetection _ -> when isViolated $ notifyDriver driver "DRIVER_ROUTE_DEVIATION"
-    StoppedDetection _ -> when isViolated $ notifyDriver driver "DRIVER_RIDE_STOPPAGE"
+    RouteDeviationDetection _ -> when isViolated $ notifyDriver driver DriverPush_Ride_RouteDeviation
+    StoppedDetection _ -> when isViolated $ notifyDriver driver DriverPush_Ride_Stoppage
     _ -> pure ()
   whenJust mbTripTransaction $ \tripTransaction ->
     void $ triggerAlertRequest driverId tripTransaction.fleetOwnerId.getId requestTitle requestBody requestData isViolated tripTransaction
   pure Success
   where
     notifyDriver driver pnKey = do
-      mbMerchantPN <- CPN.findMatchingMerchantPN driver.merchantOperatingCityId pnKey Nothing Nothing driver.language Nothing
+      mbMerchantPN <- CPN.findMatchingMerchantPNByKey driver.merchantOperatingCityId pnKey Nothing Nothing driver.language Nothing
       whenJust mbMerchantPN $ \merchantPN -> do
         let entityData = TN.NotifReq {entityId = driver.id.getId, title = merchantPN.title, message = merchantPN.body}
         TN.notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType

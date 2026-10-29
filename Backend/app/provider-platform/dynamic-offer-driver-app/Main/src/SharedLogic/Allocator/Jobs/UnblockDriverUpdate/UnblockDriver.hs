@@ -22,6 +22,7 @@ where
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.MerchantPushNotification as Fields
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Kernel.Beam.Functions as BF
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -62,7 +63,7 @@ unblockDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
           SFlags.spMerchantOperatingCityId = driver.merchantOperatingCityId,
           SFlags.spBlockedBy = DTDBT.Application
         }
-  mbMerchantPN <- CPN.findMatchingMerchantPN driver.merchantOperatingCityId "UNBLOCK_DRIVER_KEY" Nothing Nothing driver.language Nothing
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey driver.merchantOperatingCityId DriverPush_Driver_Unblocked Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let entityData = NotifReq {entityId = driver.id.getId, title = merchantPN.title, message = merchantPN.body}
     notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType

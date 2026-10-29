@@ -18,7 +18,8 @@ module Storage.CachedQueries.Merchant.MerchantPushNotification
     findAllByMerchantOpCityId,
     findMatchingMerchantPN,
     findAllByMerchantOpCityIdInRideFlow,
-    findMatchingMerchantPNInRideFlow,
+    findMatchingMerchantPNByKey,
+    findMatchingMerchantPNInRideFlowByKey,
     clearCache,
     clearCacheById,
   )
@@ -27,6 +28,8 @@ where
 import Control.Applicative ((<|>))
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.MerchantPushNotification
+import Domain.Types.TranslationKey (lookupNames)
+import Domain.Types.TranslationKeys (DriverPushKey)
 import Domain.Types.Trip
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types
@@ -49,23 +52,32 @@ findAllByMerchantOpCityId id mbConfigVersionMap =
   DynamicLogic.findAllConfigs (cast id) (LYT.DRIVER_CONFIG LYT.MerchantPushNotification) mbConfigVersionMap Nothing (Queries.findAllByMerchantOpCityId id)
 
 findMatchingMerchantPN :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Maybe Notification.SubCategory -> Maybe Language -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantPushNotification)
-findMatchingMerchantPN merchantOperatingCityId messageKey tripCategory subCategory personLanguage mbConfigVersionMap = do
-  merchantPNs <-
-    getConfig
-      (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, key = Just messageKey, tripCategory = tripCategory})
-      (Just $ findAllByMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory mbConfigVersionMap)
-  if null merchantPNs
-    then do
-      pnsWithOutTripCategory <-
-        getConfig
-          (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, key = Just messageKey, tripCategory = Nothing})
-          (Just $ findAllByMessageKeyAndTripCategory merchantOperatingCityId messageKey Nothing mbConfigVersionMap)
-      return $ findMatchingNotification (filter (isNothing . (.tripCategory)) pnsWithOutTripCategory)
-    else return $ findMatchingNotification merchantPNs
+findMatchingMerchantPN merchantOperatingCityId messageKey = findMatchingMerchantPNByNames merchantOperatingCityId [messageKey]
+
+-- | The row for the first of several names of one message: the reader's language wins over
+-- English, and an earlier name over a later one. So a row under a later name in the reader's
+-- language beats an English row under an earlier name. A later name is only read when an
+-- earlier one has no row in the reader's language.
+-- The trip category's rows are looked for under every name before the rows without a trip
+-- category, so a row without one under an earlier name never hides the trip category's row
+-- under a later name.
+findMatchingMerchantPNByNames :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> [Text] -> Maybe TripCategory -> Maybe Notification.SubCategory -> Maybe Language -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantPushNotification)
+findMatchingMerchantPNByNames merchantOperatingCityId messageKeys tripCategory subCategory personLanguage mbConfigVersionMap = do
+  (hasRows, mbPN) <- go (rowsOf tripCategory) messageKeys False Nothing
+  if hasRows || isNothing tripCategory
+    then pure mbPN
+    else snd <$> go (fmap (filter (isNothing . (.tripCategory))) . rowsOf Nothing) messageKeys False Nothing
   where
-    findMatchingNotification pns =
-      find (\pn -> Just pn.language == personLanguage && pn.fcmSubCategory == subCategory) pns
-        <|> find (\pn -> pn.language == ENGLISH && pn.fcmSubCategory == subCategory) pns
+    go _ [] hasRows english = pure (hasRows, english)
+    go rowsOfName (messageKey : rest) hasRows english = do
+      pns <- rowsOfName messageKey
+      case find (\pn -> Just pn.language == personLanguage && pn.fcmSubCategory == subCategory) pns of
+        Just pn -> pure (True, Just pn)
+        Nothing -> go rowsOfName rest (hasRows || not (null pns)) (english <|> find (\pn -> pn.language == ENGLISH && pn.fcmSubCategory == subCategory) pns)
+    rowsOf category messageKey =
+      getConfig
+        (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, key = Just messageKey, tripCategory = category})
+        (Just $ findAllByMessageKeyAndTripCategory merchantOperatingCityId messageKey category mbConfigVersionMap)
 
 findAllByMessageKeyAndTripCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Maybe [LYT.ConfigVersionMap] -> m [MerchantPushNotification]
 findAllByMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory mbConfigVersionMap =
@@ -81,9 +93,14 @@ findAllByMerchantOpCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id Merc
 findAllByMerchantOpCityIdInRideFlow id configVersionMap =
   findAllByMerchantOpCityId id (Just configVersionMap)
 
-findMatchingMerchantPNInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Maybe Notification.SubCategory -> Maybe Language -> [LYT.ConfigVersionMap] -> m (Maybe MerchantPushNotification)
-findMatchingMerchantPNInRideFlow merchantOperatingCityId messageKey tripCategory subCategory personLanguage configVersionMap =
-  findMatchingMerchantPN merchantOperatingCityId messageKey tripCategory subCategory personLanguage (Just configVersionMap)
+-- | 'findMatchingMerchantPN' for a code-owned key: the row under the key's own name or its
+-- legacy name, the reader's language first ('findMatchingMerchantPNByNames').
+findMatchingMerchantPNByKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DriverPushKey -> Maybe TripCategory -> Maybe Notification.SubCategory -> Maybe Language -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantPushNotification)
+findMatchingMerchantPNByKey merchantOperatingCityId key = findMatchingMerchantPNByNames merchantOperatingCityId (lookupNames key)
+
+findMatchingMerchantPNInRideFlowByKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DriverPushKey -> Maybe TripCategory -> Maybe Notification.SubCategory -> Maybe Language -> [LYT.ConfigVersionMap] -> m (Maybe MerchantPushNotification)
+findMatchingMerchantPNInRideFlowByKey merchantOperatingCityId key tripCategory subCategory personLanguage configVersionMap =
+  findMatchingMerchantPNByKey merchantOperatingCityId key tripCategory subCategory personLanguage (Just configVersionMap)
 
 makeMerchantOpCityIdAndMessageKeyAndTripCategory :: Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Text
 makeMerchantOpCityIdAndMessageKeyAndTripCategory id messageKey tripCategory = "CachedQueries:MerchantPushNotification:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> messageKey <> ":TripCategory-" <> show tripCategory

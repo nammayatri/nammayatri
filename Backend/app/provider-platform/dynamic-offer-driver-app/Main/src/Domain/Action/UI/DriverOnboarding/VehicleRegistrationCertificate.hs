@@ -64,7 +64,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MorthVerification as MorthDomain
 import qualified Domain.Types.Person as Person
 import Domain.Types.RCValidationRules
-import qualified Domain.Types.Translations as Fields
+import Domain.Types.TranslationKeys (RcRuleFailure (..), TranslationKey (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleCategory as DVC
@@ -91,7 +91,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
-import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified SharedLogic.Analytics as Analytics
@@ -105,9 +105,9 @@ import qualified SharedLogic.RCTransferNotice as RCTransferNotice
 import SharedLogic.Reminder.Helper (createReminder)
 import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
-import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as DIQuery
 import Storage.Queries.DriverRCAssociation (buildRcHM)
@@ -120,7 +120,6 @@ import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.MorthVerification as MorthQuery
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.RCValidationRules
-import qualified Storage.Queries.TranslationsExtra as QTranslation
 import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleDetails as CQVD
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
@@ -545,7 +544,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
   let lang = fromMaybe ENGLISH person.language
   failures <- case rcValidationRules of
     Nothing -> pure []
-    Just rules -> validateRCResponse rcValidationReq rules lang
+    Just rules -> validateRCResponse person.merchantOperatingCityId rcValidationReq rules lang
   let mbReqStatus = if null failures then mbReqStatus' else Just "failed"
       rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDocumentImageId2 mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
       expiryFailures = getExpiryFailures transporterConfig rcInput now
@@ -783,8 +782,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             logWarning $ "guardApprovedRCDataUnchanged: rejecting re-registration of approved RC " <> existingRC.id.getId <> " by driver " <> person.id.getId <> ", mismatched columns: " <> T.intercalate ", " mismatchedColumns
             throwError (RCDataMismatch $ T.intercalate ", " mismatchedColumns)
 
-validateRCResponse :: forall r m. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => RCValidationReq -> RCValidationRules -> Language -> m [Text]
-validateRCResponse rc rule language = do
+validateRCResponse :: forall r m. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> RCValidationReq -> RCValidationRules -> Language -> m [Text]
+validateRCResponse merchantOpCityId rc rule language = do
   now <- getCurrentTime
   let fuelValid = maybe True (\ft -> isNothing rule.fuelType || Kernel.Prelude.any (\ftRule -> ftRule `T.isInfixOf` ft) (map T.toLower $ fromMaybe [] rule.fuelType)) (T.toLower <$> rc.fuelType)
       vehicleClassValid = maybe True (\vc -> isNothing rule.vehicleClass || Kernel.Prelude.any (\vcRule -> vcRule `T.isInfixOf` vc) (map T.toLower $ fromMaybe [] rule.vehicleClass)) (T.toLower <$> rc.vehicleClass)
@@ -801,18 +800,18 @@ validateRCResponse rc rule language = do
       vehicleAgeValid = ((.getMonths) <$> vehicleAge) <= rule.maxVehicleAge
       failureKeysWithValues =
         catMaybes
-          [ if not fuelValid then Just ("InvalidFuelType", fromMaybe "" rc.fuelType) else Nothing,
-            if not vehicleClassValid then Just ("InvalidVehicleClass", fromMaybe "" rc.vehicleClass) else Nothing,
-            if not manufacturerValid then Just ("InvalidOEM", fromMaybe "" (rc.manufacturer <|> rc.model)) else Nothing,
-            if not vehicleAgeValid then Just ("InvalidManufacturingYear", maybe "" (T.take 7 . T.pack . show) rc.mYManufacturing) else Nothing
+          [ if not fuelValid then Just (InvalidFuelType, fromMaybe "" rc.fuelType) else Nothing,
+            if not vehicleClassValid then Just (InvalidVehicleClass, fromMaybe "" rc.vehicleClass) else Nothing,
+            if not manufacturerValid then Just (InvalidOEM, fromMaybe "" (rc.manufacturer <|> rc.model)) else Nothing,
+            if not vehicleAgeValid then Just (InvalidManufacturingYear, maybe "" (T.take 7 . T.pack . show) rc.mYManufacturing) else Nothing
           ]
   forM failureKeysWithValues $ \(messageKey, value) ->
-    resolveTranslations language messageKey value
+    resolveTranslations merchantOpCityId language messageKey value
 
-resolveTranslations :: forall r m. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Language -> Text -> Text -> m Text
-resolveTranslations language messageKey value = do
-  mbTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = messageKey, language = Just language}) (Just (QTranslation.findByErrorAndLanguage messageKey language))
-  let translatedMessage = maybe messageKey (.message) mbTranslation
+resolveTranslations :: forall r m. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Language -> RcRuleFailure -> Text -> m Text
+resolveTranslations merchantOpCityId language messageKey value = do
+  mbTranslation <- CQTranslations.findTextByKey (Just merchantOpCityId) language (RcRule_Failure messageKey)
+  let translatedMessage = fromMaybe (show messageKey) mbTranslation
       placeholder = failureValuePlaceholder messageKey
       renderedMessage = maybe translatedMessage (\ph -> T.replace ph value translatedMessage) placeholder
   pure $
@@ -822,13 +821,16 @@ resolveTranslations language messageKey value = do
         Just ph | ph `T.isInfixOf` translatedMessage -> renderedMessage
         _ -> translatedMessage <> ": " <> value
 
-failureValuePlaceholder :: Text -> Maybe Text
+failureValuePlaceholder :: RcRuleFailure -> Maybe Text
 failureValuePlaceholder = \case
-  "InvalidFuelType" -> Just "{#fuelType#}"
-  "InvalidVehicleClass" -> Just "{#vehicleClass#}"
-  "InvalidOEM" -> Just "{#manufacturer#}"
-  "InvalidManufacturingYear" -> Just "{#year#}"
-  _ -> Nothing
+  InvalidFuelType -> Just "{#fuelType#}"
+  InvalidVehicleClass -> Just "{#vehicleClass#}"
+  InvalidOEM -> Just "{#manufacturer#}"
+  InvalidManufacturingYear -> Just "{#year#}"
+  FitnessCertificateExpired -> Nothing
+  InsuranceExpired -> Nothing
+  PermitExpired -> Nothing
+  PUCExpired -> Nothing
 
 compareRegistrationDates :: Maybe Text -> Maybe UTCTime -> Bool
 compareRegistrationDates actualDate providedDate =
