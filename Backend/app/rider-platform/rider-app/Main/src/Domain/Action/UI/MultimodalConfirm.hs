@@ -657,7 +657,8 @@ getMultimodalJourneyStatus ::
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatusResp
-getMultimodalJourneyStatus (_, _) journeyId = do
+getMultimodalJourneyStatus (mbPersonId, _) journeyId = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   (journeyStatusResp, _) <- getMultimodalJourneyStatusAndLegs journeyId Nothing
   return journeyStatusResp
 
@@ -1424,8 +1425,9 @@ postMultimodalOrderSublegSetStatus ::
   Kernel.Prelude.Int ->
   JL.JourneyLegStatus ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalOrderSublegSetStatus (_, _) journeyId legOrder subLegOrder newStatus = do
+postMultimodalOrderSublegSetStatus (mbPersonId, _) journeyId legOrder subLegOrder newStatus = do
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   now <- getCurrentTime
 
   legs <- QJourneyLeg.getJourneyLegs journeyId
@@ -1450,7 +1452,7 @@ postMultimodalOrderSublegSetTrackingStatus ::
   JMState.TrackingStatus ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalOrderSublegSetTrackingStatus (_, _) journeyId legOrder subLegOrder trackingStatus mbTrackingStatusUpdateTime = do
+postMultimodalOrderSublegSetTrackingStatus (mbPersonId, _) journeyId legOrder subLegOrder trackingStatus mbTrackingStatusUpdateTime = do
   now <- getCurrentTime
   -- In case user device time is of future, consider the updated time to be of now to avoid backend update miss
   let trackingStatusUpdateTime =
@@ -1460,6 +1462,7 @@ postMultimodalOrderSublegSetTrackingStatus (_, _) journeyId legOrder subLegOrder
             | otherwise -> t
           Nothing -> now
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
 
   legs <- QJourneyLeg.getJourneyLegs journeyId
 
@@ -1517,8 +1520,9 @@ postMultimodalComplete ::
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalComplete (_, _) journeyId = do
+postMultimodalComplete (mbPersonId, _) journeyId = do
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   legs <- QJourneyLeg.getJourneyLegs journeyId
   updatedLegStatus <- JM.markJourneyComplete journey legs
   updatedJourney <- JM.getJourney journeyId
@@ -1532,7 +1536,8 @@ postMultimodalOrderSoftCancel ::
     Kernel.Prelude.Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalOrderSoftCancel (_, _) journeyId legOrder = do
+postMultimodalOrderSoftCancel (mbPersonId, _) journeyId legOrder = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   legs <- QJourneyLeg.getJourneyLegs journeyId
   checkIfAnyTaxiLegOngoing legs -- check for any ongoing taxi legs, remove this once handled properly from UI
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
@@ -1567,7 +1572,8 @@ postMultimodalOrderCancel ::
     Kernel.Prelude.Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalOrderCancel (_, _) journeyId legOrder = do
+postMultimodalOrderCancel (mbPersonId, _) journeyId legOrder = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
   -- Rider-facing, so the cap applies. Checked here because cancelLeg reaches
   -- CallExternalBPP.cancel with enforceCap = False. Design notes: scripts/testing/cancel/DESIGN.md
@@ -1577,6 +1583,11 @@ postMultimodalOrderCancel (_, _) journeyId legOrder = do
   cancelOngoingTaxiLegs legs -- shouldn't be there once we have leg wise cancellation
   JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
   return Kernel.Types.APISuccess.Success
+
+-- | Journey-keyed endpoints act only on the caller's own journey.
+checkJourneyOwner :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Domain.Types.Journey.Journey -> Environment.Flow ()
+checkJourneyOwner mbPersonId journey =
+  unless (mbPersonId == Just journey.riderId) $ throwError (InvalidRequest "journey does not belong to the caller")
 
 postMultimodalOrderReschedule ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
