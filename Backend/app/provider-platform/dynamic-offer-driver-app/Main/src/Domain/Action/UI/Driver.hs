@@ -364,6 +364,7 @@ import qualified Storage.Queries.VendorFee as QVF
 import qualified Tools.Auth as Auth
 import qualified Tools.DynamicLogic as TDL
 import Tools.Error
+import qualified Tools.Maps as TMaps
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as Payout
@@ -3568,7 +3569,7 @@ filterBookingsByVisibilityStages driver transporterConfig now activeTagTexts boa
     Just configuredStages@(_ : _) -> do
       let rulesForBooking booking
             | DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime now = Nothing
-            | otherwise = (.rules) <$> resolveVisibilityStage configuredStages (diffUTCTime booking.startTime now)
+            | otherwise = (.rules) <$> resolveVisibilityStage booking.vehicleServiceTier configuredStages (diffUTCTime booking.startTime now)
           bookingsWithRules = [(booking, rulesForBooking booking) | booking <- bookings]
           needsDriverStatsForBoard = any (needsDriverStats . factsNeededBy) (mapMaybe snd bookingsWithRules)
       mbDriverStats <- if needsDriverStatsForBoard then QDriverStats.findById (cast driver.id) else pure Nothing
@@ -3684,6 +3685,23 @@ acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver c
     creditsValid <- hasPrepaidCreditsValidAt ownerId ownerType mbVehicleCategory booking.startTime
     unless creditsValid $
       throwError (InvalidRequest "Your ride credits expire before this booking's pickup time. Recharge to accept it.")
+  when (booking.isScheduled && isNothing mbForcedAcceptanceMode) $ do
+    now <- getCurrentTime
+    driverLocations <- LTF.driversLocationByCloudType [driver.id] driver.cloudType
+    driverLocation <- listToMaybe driverLocations & fromMaybeM (InvalidRequest "Current driver location is unavailable. Please update your location and try again.")
+    let pickupLocation = LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+        currentDriverLocation = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
+    distanceResponse <-
+      TMaps.getDistanceForScheduledRides booking.providerId booking.merchantOperatingCityId (Just booking.id.getId) $
+        Maps.GetDistanceReq
+          { origin = currentDriverLocation,
+            destination = pickupLocation,
+            travelMode = Just Maps.CAR,
+            distanceUnit = booking.distanceUnit,
+            sourceDestinationMapping = Nothing
+          }
+    when (addUTCTime (secondsToNominalDiffTime distanceResponse.duration) now > booking.startTime) $
+      throwError (InvalidRequest "You cannot reach the pickup location before the scheduled pickup time.")
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
   void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId transporterConfig mbBooking mbForcedAcceptanceMode
   pure Success
