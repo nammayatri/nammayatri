@@ -12,6 +12,7 @@ import qualified Data.Text as T
 import Data.Time (utctDay)
 import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OfferEntity as DOfferEntity
@@ -131,11 +132,21 @@ data OfferEligibilityInput = OfferEligibilityInput
     searchReq :: Maybe Y.SearchRequestData,
     hasTakenValidRide :: Bool,
     totalRidesCount :: Maybe Int,
-    personTags :: [Text]
+    personTags :: [Text],
+    -- tripCategory and isAirConditioned are null where no trip is chosen yet (offers list);
+    -- rules should treat null as "any trip".
+    tripCategory :: Maybe DCommon.TripCategory,
+    isAirConditioned :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
 $(YTH.generateGenericDefault ''OfferEligibilityInput)
+
+-- | Per-product facts from the quote or estimate that offer rules can check.
+data ProductOfferContext = ProductOfferContext
+  { tripCategory :: Maybe DCommon.TripCategory,
+    isAirConditioned :: Maybe Bool
+  }
 
 -------------------------------------------------------------------------------------------------------
 ----------------------------------- Fetch Offers List With Caching ------------------------------------
@@ -192,7 +203,9 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
                             searchReq = Nothing,
                             hasTakenValidRide = person.hasTakenValidRide,
                             totalRidesCount = person.totalRidesCount,
-                            personTags = offerEligibilityTags person.customerNammaTags
+                            personTags = offerEligibilityTags person.customerNammaTags,
+                            tripCategory = Nothing,
+                            isAirConditioned = Nothing
                           }
               DPayment.listDomainOffers merchantId.getId merchantOperatingCityId.getId price.amount price.currency domainContext (Just rider)
         DPayment.offerListService customerId version paymentServiceType (6 * 3600) False domainOfferCall req
@@ -252,7 +265,7 @@ getSelectedOfferDetailsWithBasket ::
   Maybe SSR.SearchRequest ->
   m (Maybe (OfferRespAPIEntity, DPayment.ComputedOfferAmount))
 getSelectedOfferDetailsWithBasket merchantId personId merchantOperatingCityId paymentServiceType productId price offerId mbFareCtx mbRide mbBooking mbSearchReq = do
-  productOffers <- offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType [(productId, price)] mbRide mbBooking mbSearchReq
+  productOffers <- offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType [(productId, price)] [] mbRide mbBooking mbSearchReq
   case lookup productId productOffers of
     Nothing -> pure Nothing
     Just resp -> do
@@ -500,7 +513,7 @@ listOffersForPerson ::
   m [OfferRespAPIEntity]
 listOffersForPerson merchantId person mbAmount = do
   let price = mkPrice (Just INR) (fromMaybe 1 mbAmount)
-  productOffers <- offerListWithBasket merchantId person.id person.merchantOperatingCityId DOrder.RideHailing [("offers-list", price)] Nothing Nothing Nothing
+  productOffers <- offerListWithBasket merchantId person.id person.merchantOperatingCityId DOrder.RideHailing [("offers-list", price)] [] Nothing Nothing Nothing
   let offerResps = concatMap (\(_, resp) -> resp.offerResp) productOffers
   mapM (mkOfferRespAPIEntity Nothing) offerResps
 
@@ -512,7 +525,7 @@ cumulativeOffersForPerson ::
   m CumulativeOfferResp
 cumulativeOffersForPerson merchantId person mbAmount = do
   let price = mkPrice (Just INR) (fromMaybe 1 mbAmount)
-  productOffers <- offerListWithBasket merchantId person.id person.merchantOperatingCityId DOrder.RideHailing [("offers-list", price)] Nothing Nothing Nothing
+  productOffers <- offerListWithBasket merchantId person.id person.merchantOperatingCityId DOrder.RideHailing [("offers-list", price)] [] Nothing Nothing Nothing
   let offerListResp = Payment.OfferListResp {Payment.bestOfferCombination = Nothing, Payment.offerResp = concatMap (\(_, resp) -> resp.offerResp) productOffers}
   mbResp <- mkCumulativeOfferResp person.merchantOperatingCityId offerListResp [] Nothing Nothing
   case mbResp of
@@ -693,11 +706,12 @@ offerListWithBasket ::
   Id DMOC.MerchantOperatingCity ->
   DOrder.PaymentServiceType ->
   [(Text, Price)] -> -- [(productId, price)]
+  [(Text, ProductOfferContext)] -> -- [(productId, context)] of the quotes/estimates; the booking's values are used when absent
   Maybe DRide.Ride ->
   Maybe DRB.Booking ->
   Maybe SSR.SearchRequest ->
   m [(Text, Payment.OfferListResp)]
-offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType products mbRide mbBooking mbSearchReq = do
+offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType products productContexts mbRide mbBooking mbSearchReq = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   personOfferStats <- QOfferStats.findAllByEntityIdAndEntityType personId.getId DOfferStats.Person
   mbPersonStats <- QPersonStats.findByPersonId personId
@@ -730,20 +744,23 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
         -- RideHailing product ids are service tiers (show vehicleServiceTierType), so each
         -- product's eligibility runs with its own serviceTierType for tier-specific offer rules.
         let domainContextFor productId =
-              Just $
-                A.toJSON
-                  OfferEligibilityInput
-                    { personOfferStats = personOfferStats,
-                      staticPersonOfferStats = staticPersonOfferStats,
-                      deviceOfferStats = deviceOfferStats,
-                      personDailyOfferStats = mbPersonDailyOfferStats,
-                      personStats = mbPersonStats,
-                      serviceTierType = Just productId,
-                      searchReq = mbSearchReqData,
-                      hasTakenValidRide = person.hasTakenValidRide,
-                      totalRidesCount = person.totalRidesCount,
-                      personTags = offerEligibilityTags person.customerNammaTags
-                    }
+              let mbProductCtx = lookup productId productContexts
+               in Just $
+                    A.toJSON
+                      OfferEligibilityInput
+                        { personOfferStats = personOfferStats,
+                          staticPersonOfferStats = staticPersonOfferStats,
+                          deviceOfferStats = deviceOfferStats,
+                          personDailyOfferStats = mbPersonDailyOfferStats,
+                          personStats = mbPersonStats,
+                          serviceTierType = Just productId,
+                          searchReq = mbSearchReqData,
+                          hasTakenValidRide = person.hasTakenValidRide,
+                          totalRidesCount = person.totalRidesCount,
+                          personTags = offerEligibilityTags person.customerNammaTags,
+                          tripCategory = (mbProductCtx >>= (.tripCategory)) <|> (mbBooking >>= (.tripCategory)),
+                          isAirConditioned = (mbProductCtx >>= (.isAirConditioned)) <|> (mbBooking >>= (.isAirConditioned))
+                        }
             currency = maybe INR ((.currency) . snd) (listToMaybe products)
         offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContextFor mbRider
         let mbRideData = mkRideData <$> mbRide
