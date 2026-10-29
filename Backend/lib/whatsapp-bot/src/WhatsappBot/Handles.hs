@@ -103,6 +103,10 @@ data RegisteredRide = RegisteredRide
     sessionUserId :: Text, -- scoped session id (merchantId:senderId)
     toPhone :: Text, -- WhatsApp recipient
     merchantLabel :: Text,
+    -- WhatsApp number (meta_config.phone_number_id) the ride was booked on; the
+    -- tracker sends from this row. Maybe: entries saved before this field existed
+    -- decode as Nothing (absent key) and fall back to matching by merchantLabel.
+    phoneNumberId :: Maybe Text,
     personId :: Text, -- opaque auth handle for backend polls
     rideType :: RideType,
     language :: Maybe SupportedLanguage,

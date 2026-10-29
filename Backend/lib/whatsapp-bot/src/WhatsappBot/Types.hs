@@ -135,7 +135,10 @@ data BotBookingDetails = BotBookingDetails
     driverNumber :: Maybe Text, -- best dial source (driverNumber || merchantExoPhone)
     vehicleNumber :: Maybe Text,
     rideOtp :: Maybe Text, -- start OTP
-    endOtp :: Maybe Text, -- rental end OTP (gates the End-ride button)
+    endOtp :: Maybe Text, -- ride.end_otp; rider-app fills it with the start OTP when the BPP sends none
+    -- Whether this booking's trip category uses an end OTP (Trip.isEndOtpRequired).
+    -- Gates the End-ride button, since endOtp alone is set for every ride.
+    endOtpRequired :: Bool,
     driverRating :: Maybe Double,
     etaMinutes :: Maybe Int,
     computedFare :: Maybe Double,
@@ -181,6 +184,10 @@ newtype BotProfileUpdate = BotProfileUpdate {language :: Maybe Text}
 -- value projected as @merchant@ in outbound records (e.g. "FLEXI"/"REG").
 data MerchantCtx = MerchantCtx
   { merchantLabel :: Text,
+    -- The meta_config row's phone_number_id. Stored on each RegisteredRide so the
+    -- tracker sends a ride's updates from the number it was booked on —
+    -- merchantLabel is not unique across rows.
+    phoneNumberId :: Text,
     -- Ordered list of ride types this merchant offers, PRIORITY order first.
     -- Replaces the old rideMode/flexiEnabled/regularEnabled trio: membership
     -- in this list is "is it offered", and position drives the WhatsApp

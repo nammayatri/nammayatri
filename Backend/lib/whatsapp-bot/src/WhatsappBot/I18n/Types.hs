@@ -194,7 +194,9 @@ data LanguageStrings = LanguageStrings
     -- Regular one-way flow (pickup + drop -> auto fare -> book)
     regularDropPrompt :: Text,
     regularSelectDrop :: Text,
-    regularFareConfirm :: Text -> Text -> Text, -- (fare, area) fare pre-formatted
+    -- (fare, to, from) fare pre-formatted. Argument order keeps {{1}} = drop as
+    -- before, so old code against new copy (or the reverse) never swaps the two.
+    regularFareConfirm :: Text -> Text -> Text -> Text,
     regularConfirmButton :: Text,
     regularChangeDropButton :: Text,
     regularSearching :: Text,
