@@ -33,7 +33,7 @@ data CoinMessage
   = CoinAdded
   | CoinSubtracted
   | FareRecomputation
-  deriving stock (Eq, Show, Generic, Read, Ord)
+  deriving stock (Eq, Show, Generic, Read, Ord, Bounded, Enum)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MetroRideType
@@ -41,7 +41,7 @@ data MetroRideType
   | FromMetro
   | FromOrToMetro
   | None
-  deriving stock (Eq, Show, Generic, Read, Ord)
+  deriving stock (Eq, Show, Generic, Read, Ord, Bounded, Enum)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverCoinsFunctionType

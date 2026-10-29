@@ -487,6 +487,7 @@ library
       Domain.Types.Station
       Domain.Types.TicketDashboard
       Domain.Types.TicketKapture
+      Domain.Types.TranslationKeys
       Domain.Types.UtilsTH
       Domain.Types.Yudhishthira
       Environment
