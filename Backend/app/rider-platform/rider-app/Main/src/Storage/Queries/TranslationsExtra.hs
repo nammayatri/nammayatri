@@ -20,6 +20,12 @@ import Storage.Queries.OrphanInstances.Translations
 findAllByMessageKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [Domain.Types.Translations.Translations]
 findAllByMessageKey messageKey = findAllWithKV [Se.Is Beam.messageKey $ Se.Eq messageKey]
 
+-- | Every row stored under any of the names, whatever its city: the dashboard reads a domain's
+-- keys and their legacy names in one go and sorts out the city afterwards.
+findAllByMessageKeys :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [Domain.Types.Translations.Translations]
+findAllByMessageKeys [] = pure []
+findAllByMessageKeys keys = findAllWithKV [Se.Is Beam.messageKey $ Se.In keys]
+
 findAllByMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.Translations.Translations]
 findAllByMerchantOperatingCityId merchantOperatingCityId = findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just $ getId merchantOperatingCityId)]
 

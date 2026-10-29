@@ -1,0 +1,73 @@
+imports:
+  Language: Kernel.External.Types
+
+module: Translation
+
+# Code-owned text keys (Domain.Field.Value) and their per-language rows, read and written in
+# each domain's own table for the selected city. See Domain.Types.TranslationKeys (rider: service tiers and rider pushes).
+apis:
+  - GET:
+      endpoint: /domains
+      auth: ApiAuthV2
+      response:
+        type: TranslationDomainsResp
+      migrate:
+        capability: system-config.translation.read
+
+  - GET:
+      endpoint: /{domain}/keys
+      auth: ApiAuthV2
+      params:
+        domain: Text
+      response:
+        type: TranslationKeysResp
+      migrate:
+        capability: system-config.translation.read
+
+
+types:
+  TranslationDomainsResp:
+    - domains: [TranslationDomainSummary]
+
+  TranslationDomainSummary:
+    - domain: Text
+    - fields: [Text]
+    - dimensions: [TranslationDimension]
+    - keyCount: Int
+    - textCount: Int
+    - filledTexts: [TranslationLanguageCount]
+
+  # keyCount: every key the domain lists. textCount: the keys and variants with a row in some
+  # language, times fields; filledTexts: how many of those each language has.
+  TranslationLanguageCount:
+    - language: Language
+    - count: Int
+
+  # A dimension is a column that narrows one key's text to a variant (push: trip category,
+  # sub-category); values are the text forms the column stores.
+  TranslationDimension:
+    - name: Text
+    - values: [Text]
+
+  TranslationKeysResp:
+    - domain: Text
+    - fields: [Text]
+    - dimensions: [TranslationDimension]
+    - entries: [TranslationKeyEntry]
+
+  TranslationKeyEntry:
+    - key: Text
+    - legacyKey: Maybe Text
+    - texts: [TranslationText]
+
+  # variant: the (dimension, value) pairs the text is for; empty for the text used when no variant matches.
+  TranslationText:
+    - language: Language
+    - field: Text
+    - variant: "[(Kernel.Prelude.Text, Kernel.Prelude.Text)]"
+    - text: Text
+    - source: TranslationTextSource
+
+  TranslationTextSource:
+    - enum: "City, Shared, Legacy"
+
