@@ -6,13 +6,15 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Notification.FCM.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
 data UnserviceableCityLeadReq = UnserviceableCityLeadReq
-  { lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+  { deviceToken :: Kernel.Prelude.Maybe Kernel.External.Notification.FCM.Types.FCMRecipientToken,
+    lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     merchantShortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

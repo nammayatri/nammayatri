@@ -8,12 +8,14 @@ import Domain.Types.Common ()
 import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
+import qualified Kernel.External.Notification.FCM.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data UnserviceableCityLeadT f = UnserviceableCityLeadT
   { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    deviceToken :: B.C f (Kernel.Prelude.Maybe Kernel.External.Notification.FCM.Types.FCMRecipientToken),
     id :: B.C f Kernel.Prelude.Text,
     lat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     lon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

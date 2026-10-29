@@ -30,6 +30,7 @@ postUnserviceableCityLead req = do
     DUCL.UnserviceableCityLead
       { id = Id leadId,
         merchantId = merchant.id,
+        deviceToken = req.deviceToken,
         name = name,
         mobileNumber = encMobileNumber,
         mobileCountryCode = fromMaybe "+91" req.mobileCountryCode,

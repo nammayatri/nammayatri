@@ -8,6 +8,7 @@ CREATE TABLE atlas_driver_offer_bpp.unserviceable_city_lead (
     vehicle_category character varying(255) NOT NULL,
     lat double precision,
     lon double precision,
+    device_token character varying(255),
     created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

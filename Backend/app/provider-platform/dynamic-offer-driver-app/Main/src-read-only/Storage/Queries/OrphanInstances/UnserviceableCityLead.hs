@@ -18,6 +18,7 @@ instance FromTType' Beam.UnserviceableCityLead Domain.Types.UnserviceableCityLea
       Just
         Domain.Types.UnserviceableCityLead.UnserviceableCityLead
           { createdAt = createdAt,
+            deviceToken = deviceToken,
             id = Kernel.Types.Id.Id id,
             lat = lat,
             lon = lon,
@@ -33,6 +34,7 @@ instance ToTType' Beam.UnserviceableCityLead Domain.Types.UnserviceableCityLead.
   toTType' (Domain.Types.UnserviceableCityLead.UnserviceableCityLead {..}) = do
     Beam.UnserviceableCityLeadT
       { Beam.createdAt = createdAt,
+        Beam.deviceToken = deviceToken,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.lat = lat,
         Beam.lon = lon,

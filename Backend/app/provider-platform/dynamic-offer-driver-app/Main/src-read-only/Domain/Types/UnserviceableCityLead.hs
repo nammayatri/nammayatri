@@ -7,12 +7,14 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
+import qualified Kernel.External.Notification.FCM.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data UnserviceableCityLeadE e = UnserviceableCityLead
   { createdAt :: Kernel.Prelude.UTCTime,
+    deviceToken :: Kernel.Prelude.Maybe Kernel.External.Notification.FCM.Types.FCMRecipientToken,
     id :: Kernel.Types.Id.Id Domain.Types.UnserviceableCityLead.UnserviceableCityLead,
     lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -36,6 +38,7 @@ instance EncryptedItem UnserviceableCityLead where
     pure
       UnserviceableCityLead
         { createdAt = createdAt entity,
+          deviceToken = deviceToken entity,
           id = id entity,
           lat = lat entity,
           lon = lon entity,
@@ -51,6 +54,7 @@ instance EncryptedItem UnserviceableCityLead where
     pure
       ( UnserviceableCityLead
           { createdAt = createdAt entity,
+            deviceToken = deviceToken entity,
             id = id entity,
             lat = lat entity,
             lon = lon entity,

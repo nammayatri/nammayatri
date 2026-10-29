@@ -14,6 +14,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.UnserviceableCityLead as Beam
+import Storage.Queries.OrphanInstances.UnserviceableCityLead
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.UnserviceableCityLead.UnserviceableCityLead -> m ())
 create = createWithKV
@@ -30,7 +31,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.UnserviceableCityLead.UnserviceableCityLead {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.lat lat,
+    [ Se.Set Beam.deviceToken deviceToken,
+      Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.mobileCountryCode mobileCountryCode,

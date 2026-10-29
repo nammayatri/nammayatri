@@ -3,6 +3,7 @@ imports:
   VehicleCategory: Domain.Types.VehicleCategory
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
+  FCMRecipientToken: Kernel.External.Notification.FCM.Types
 
 UnserviceableCityLead:
   tableName: unserviceable_city_lead
@@ -16,6 +17,7 @@ UnserviceableCityLead:
     vehicleCategory: VehicleCategory
     lat: Maybe Double
     lon: Maybe Double
+    deviceToken: Maybe FCMRecipientToken
 
   constraints:
     id: PrimaryKey
@@ -34,6 +36,7 @@ UnserviceableCityLead:
 
   sqlType:
     name: character varying(255)
+    deviceToken: character varying(255)
     mobileNumberEncrypted: character varying(255)
     mobileNumberHash: bytea
     mobileCountryCode: character varying(8)

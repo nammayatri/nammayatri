@@ -1,6 +1,7 @@
 imports:
   Merchant: Domain.Types.Merchant
   VehicleCategory: Domain.Types.VehicleCategory
+  FCMRecipientToken: Kernel.External.Notification.FCM.Types
 
 module: UnserviceableCityLead
 
@@ -12,6 +13,7 @@ types:
     vehicleCategory: VehicleCategory
     lat: Maybe Double
     lon: Maybe Double
+    deviceToken: Maybe FCMRecipientToken
     merchantShortId: ShortId Merchant
 
 apis:
