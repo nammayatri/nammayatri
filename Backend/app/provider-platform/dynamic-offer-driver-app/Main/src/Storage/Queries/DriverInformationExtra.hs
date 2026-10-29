@@ -637,6 +637,32 @@ updateOnRide onRide driverId = do
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.onRide = LTSSync.Set onRide}
 
+-- | Flip the shared-cab taxi-pool session flag. DB is the authority (accept-time guard); LTS is synced via the same choke
+-- point as 'updateOnRide'. Fail-closed by contract: session start writes True BEFORE pooled trips are accepted, and only an
+-- explicit session-end/reconcile path writes False.
+updateSharedCabSessionActive :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Id Person.Person -> m ()
+updateSharedCabSessionActive sharedCabSessionActive driverId = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamDI.sharedCabSessionActive (Just sharedCabSessionActive), Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.sharedCabSessionActive = LTSSync.Set sharedCabSessionActive}
+
+-- | Drivers in a city whose shared-cab session flag is stuck/likely-live True: the reconciler's read side. Keyset pagination
+-- (driverId > lastSeen), NOT offset: the sweep clears rows out of this very set, so an offset walk would skip every
+-- second row between pages.
+findSharedCabActiveDriversAfter :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe (Id Person.Person) -> Int -> m [DriverInformation]
+findSharedCabActiveDriversAfter merchantOpCityId mbLastDriverId batchSize = do
+  findAllWithOptionsKV
+    [ Se.And $
+        [ Se.Is BeamDI.merchantOperatingCityId (Se.Eq (Just $ getId merchantOpCityId)),
+          Se.Is BeamDI.sharedCabSessionActive (Se.Eq (Just True))
+        ]
+          <> maybe [] (\lastId -> [Se.Is BeamDI.driverId $ Se.GreaterThan (getId lastId)]) mbLastDriverId
+    ]
+    (Se.Asc BeamDI.driverId)
+    (Just batchSize)
+    Nothing
+
 updateOnRideAndLatestScheduledBookingAndPickup ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Bool ->
