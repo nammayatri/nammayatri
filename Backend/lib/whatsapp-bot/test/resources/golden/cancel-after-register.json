@@ -240,7 +240,7 @@
       ]
     },
     {
-      "note": "type \"cancel\" while TRACKING a REGISTERED booking -> handleCancel",
+      "note": "type \"cancel\" while TRACKING a REGISTERED booking -> handleCancel [2026-10-29 message cuts: Language moved from the menu row to More]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -287,8 +287,7 @@
           "merchant": "FLEXI",
           "buttons": [
             "ride_type:flexi",
-            "more",
-            "choose_language"
+            "more"
           ]
         }
       ],

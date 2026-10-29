@@ -199,6 +199,7 @@ data LanguageStrings = LanguageStrings
     regularFareConfirm :: Text -> Text -> Text -> Text,
     regularConfirmButton :: Text,
     regularChangeDropButton :: Text,
+    regularChangePickupButton :: Text,
     regularSearching :: Text,
     regularBooking :: Text,
     -- Errors

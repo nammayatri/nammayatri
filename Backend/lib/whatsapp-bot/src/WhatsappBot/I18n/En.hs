@@ -124,6 +124,7 @@ en =
       regularFareConfirm = \fare dropAddr pickupAddr -> "From: *" <> pickupAddr <> "*\nTo: *" <> dropAddr <> "*\nEstimated fare: *Rs." <> fare <> "*\n\nShall I book it?",
       regularConfirmButton = "Book auto",
       regularChangeDropButton = "Change drop",
+      regularChangePickupButton = "Change pickup",
       regularSearching = "Getting your fare...",
       regularBooking = "Booking your auto...",
       somethingWentWrong = "Something went wrong. Send \"book\" to start over.",

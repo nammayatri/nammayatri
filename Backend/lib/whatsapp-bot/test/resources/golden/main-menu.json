@@ -240,7 +240,7 @@
       ]
     },
     {
-      "note": "main_menu -> resetContext + welcome menu",
+      "note": "main_menu -> resetContext + welcome menu [2026-10-29 message cuts: Language moved from the menu row to More]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -292,8 +292,7 @@
           "buttons": [
             "status",
             "ride_type:flexi",
-            "more",
-            "choose_language"
+            "more"
           ]
         }
       ],
