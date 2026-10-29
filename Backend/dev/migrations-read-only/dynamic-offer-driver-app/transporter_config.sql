@@ -1310,3 +1310,17 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN route_mismatch_
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN tds_email_configuration_set text ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN email_event_webhook_token text ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN email_event_sns_topic_arn text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN shared_cab_reconciler_enabled boolean  default false;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

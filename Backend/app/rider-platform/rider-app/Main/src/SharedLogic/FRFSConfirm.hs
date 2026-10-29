@@ -549,6 +549,8 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 tripId = firstTripId,
                 isSpotBooking = isSpotBooking',
                 vehicleNumber = quote'.vehicleNumber <|> mbVehicleNumber,
+                vehicleTripId = Nothing,
+                sharedCabNoShows = 0,
                 waybillNo = firstTripId <&> (fst . JourneyUtils.getWaybillNoAndTripNoFromTripId),
                 parentBookingId = (.oldBookingId) <$> mbRescheduleCtx,
                 rescheduleCount = mbRescheduleCount,

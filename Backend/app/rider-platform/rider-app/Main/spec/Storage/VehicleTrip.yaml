@@ -1,0 +1,113 @@
+imports:
+  UTCTime: Kernel.Prelude
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  ServiceTierType: BecknV2.FRFS.Enums
+
+VehicleTrip:
+  tableName: vehicle_trip
+
+  fields:
+    id: Id VehicleTrip
+    serviceTierType: ServiceTierType
+    driverId: Text
+    vehicleNumber: Text
+    capacity: Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    integratedBppConfigId: Id IntegratedBPPConfig
+    routeCode: Text
+    status: VehicleTripStatus
+    startedAt: UTCTime
+    endedAt: Maybe UTCTime
+    endReason: Maybe VehicleTripEndReason
+    offlineBoardings: Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    VehicleTripStatus:
+      enum: "ACTIVE, PAUSED, COMPLETED, ABANDONED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    VehicleTripEndReason:
+      enum: "END_ROUTE, RETURN, ROUTE_CHANGED, END_FOR_NOW, SESSION_TIMEOUT, OPS_FORCED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VehicleTripStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VehicleTripEndReason>
+
+  sqlType:
+    serviceTierType: text
+    status: text
+    endReason: text
+
+  # On KV: the plate's live trip is found through its SecondaryKey while the row is still in Redis. One live trip per plate is held by
+  # the plate lock around every write (SharedCab.Session), not by a DB constraint, which would only fire at drain time. The city's
+  # live list and a driver's history read Postgres through the indexes below; a trip a few seconds late there is the next tick's.
+  constraints:
+    id: PrimaryKey
+    vehicleNumber: SecondaryKey
+
+  extraIndexes:
+    - columns: [driverId, startedAt]
+    - columns: [merchantOperatingCityId, status]
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findActiveByVehicleNumber:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - vehicleNumber
+          - in:
+            - status: "[Domain.Types.VehicleTrip.ACTIVE, Domain.Types.VehicleTrip.PAUSED]|CIM"
+
+    findAllLiveByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - merchantOperatingCityId
+          - in:
+            - status: "[Domain.Types.VehicleTrip.ACTIVE, Domain.Types.VehicleTrip.PAUSED]|CIM"
+
+    closeTrip:
+      kvFunction: updateOneWithKV
+      params: [status, endReason, endedAt]
+      where: id
+
+    # Pause/resume mirror in Postgres so a Redis flush doesn't silently un-pause the recovered session.
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+
+    updateOfflineBoardings:
+      kvFunction: updateOneWithKV
+      params: [offlineBoardings]
+      where: id
+
+    findAllByDriverIdAndStartedAtRange:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - driverId
+          - gte:
+            - startedAt: from
+          - lte:
+            - startedAt: to
+      orderBy:
+        field: startedAt
+        order: asc
+
+  default:
+    offlineBoardings: "0"
+    createdAt: "CURRENT_TIMESTAMP"
+    updatedAt: "CURRENT_TIMESTAMP"
+
+  extraOperations:
+    - GENERATE_INDEXES

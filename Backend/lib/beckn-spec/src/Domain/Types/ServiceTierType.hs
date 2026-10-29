@@ -69,6 +69,7 @@ data ServiceTierType
   | EV_SEDAN
   | EV_SUV
   | INSTANT_AUTO
+  | SHARED_CAB
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
 allServiceTiersTypes :: [ServiceTierType]
