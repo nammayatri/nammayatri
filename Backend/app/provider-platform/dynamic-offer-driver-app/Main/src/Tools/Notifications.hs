@@ -340,7 +340,7 @@ notifyOnCancel ::
   m ()
 notifyOnCancel merchantOpCityId rideId booking person cancellationSource = do
   subCategory <- getSubCategory cancellationSource
-  notificationData <- buildCancelNotificationData merchantOpCityId person.id person.deviceToken rideId booking subCategory
+  notificationData <- buildCancelNotificationData merchantOpCityId person.id person.deviceToken person.language rideId booking subCategory
   runWithServiceConfigForProviders merchantOpCityId person.clientId person.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken person.id)
   where
     getSubCategory = \case
@@ -354,14 +354,15 @@ buildCancelNotificationData ::
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
+  Maybe Language ->
   Id DRide.Ride ->
   Booking ->
   Notification.SubCategory ->
   m (Notification.NotificationReq EmptyDynamicParam EmptyDynamicParam)
-buildCancelNotificationData merchantOpCityId driverId mbDeviceToken rideId booking subCategory = do
+buildCancelNotificationData merchantOpCityId driverId mbDeviceToken mbLanguage rideId booking subCategory = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let params = [("startTime", showLocalTime transporterConfig.timeDiffFromUtc booking.startTime)]
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "NOTIFY_DRIVER_ON_CANCEL" (Just booking.tripCategory) (Just subCategory) Nothing (Just booking.configInExperimentVersions) >>= fromMaybeM (InternalError "MerchantPushNotification not found for NOTIFY_DRIVER_ON_CANCEL")
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "NOTIFY_DRIVER_ON_CANCEL" (Just booking.tripCategory) (Just subCategory) mbLanguage (Just booking.configInExperimentVersions) >>= fromMaybeM (InternalError "MerchantPushNotification not found for NOTIFY_DRIVER_ON_CANCEL")
   return $
     Notification.NotificationReq
       { category = Notification.CANCELLED_PRODUCT,
@@ -1462,12 +1463,13 @@ buildSendSearchRequestNotificationData ::
   Seconds ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
+  Maybe Language ->
   SearchRequestForDriverAPIEntity ->
   EmptyDynamicParam ->
   Maybe TripCategory ->
   m (Notification.NotificationReq SearchRequestForDriverAPIEntity EmptyDynamicParam)
-buildSendSearchRequestNotificationData merchantOpCityId timeDiffFromUtc driverId mbDeviceToken entityData dynamicParam tripCategory = do
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "NEW_RIDE_AVAILABLE" tripCategory Nothing Nothing Nothing >>= fromMaybeM (InternalError "MerchantPushNotification not found for NEW_RIDE_AVAILABLE")
+buildSendSearchRequestNotificationData merchantOpCityId timeDiffFromUtc driverId mbDeviceToken mbLanguage entityData dynamicParam tripCategory = do
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "NEW_RIDE_AVAILABLE" tripCategory Nothing mbLanguage Nothing >>= fromMaybeM (InternalError "MerchantPushNotification not found for NEW_RIDE_AVAILABLE")
   return $
     Notification.NotificationReq
       { category = Notification.NEW_RIDE_AVAILABLE,
