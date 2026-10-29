@@ -13,6 +13,7 @@ module Domain.Action.Dashboard.Management.FinanceManagement
     getFinanceManagementFinanceSapJournals,
     getFinanceManagementFinanceSapJournalsTransactions,
     postFinanceManagementTdsReimbursementRequestSubmit,
+    postFinanceManagementTdsReimbursementRequestPreview,
     getFinanceManagementTdsReimbursementStatus,
     getFinanceManagementTdsReimbursementHistory,
     getFinanceManagementTdsReimbursementList,
@@ -2007,6 +2008,30 @@ postFinanceManagementTdsReimbursementRequestSubmit ::
   API.TdsReimbursementRequestSubmitReq ->
   Flow API.TdsReimbursementRequestSubmitRes
 postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity requestorId req = do
+  let lockKey = "tdsReimbursementSubmitLock:" <> requestorId
+  Redis.withLockRedisAndReturnValue lockKey 60 $ do
+    (tdsRequest, mappingRows) <- buildTdsReimbursementRequest merchantShortId opCity requestorId req
+    QTdsReq.create tdsRequest
+    mapM_ QTdsMap.create mappingRows
+    pure API.TdsReimbursementRequestSubmitRes {requestId = cast tdsRequest.id, status = API.TDS_PENDING}
+
+postFinanceManagementTdsReimbursementRequestPreview ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  API.TdsReimbursementRequestSubmitReq ->
+  Flow API.TdsReimbursementRequestPreviewRes
+postFinanceManagementTdsReimbursementRequestPreview merchantShortId opCity requestorId req = do
+  (_, mappingRows) <- buildTdsReimbursementRequest merchantShortId opCity requestorId req
+  API.TdsReimbursementRequestPreviewRes <$> buildStatusInvoiceLines mappingRows
+
+buildTdsReimbursementRequest ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  API.TdsReimbursementRequestSubmitReq ->
+  Flow (DTdsReq.FinanceTdsReimbursementRequest, [DTdsMap.FinanceTdsReimbursementInvoiceMapping])
+buildTdsReimbursementRequest merchantShortId opCity requestorId req = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
@@ -2016,123 +2041,121 @@ postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity reques
   (assessmentYear, fyStartYear) <- DTdsReqExtra.mkAssessmentYearWithFyStartYear req.assessmentYear
   let quarter = castTdsReimbursementQuarter req.quarter
 
-  let lockKey = "tdsReimbursementSubmitLock:" <> requestorId
-  Redis.withLockRedisAndReturnValue lockKey 60 $ do
-    requestsForPeriod <- QTdsReq.findAllByFleetOwnerIdQuarterAndAssessmentYear requestorId quarter assessmentYear merchantOpCityId.getId
-    let hasActiveDuplicate = any (\r -> r.status `elem` [DTdsReq.PENDING, DTdsReq.APPROVED]) requestsForPeriod
-    when hasActiveDuplicate $
-      throwError (InvalidRequest "A PENDING or APPROVED TDS reimbursement request already exists for this quarter and assessment year")
+  requestsForPeriod <- QTdsReq.findAllByFleetOwnerIdQuarterAndAssessmentYear requestorId quarter assessmentYear merchantOpCityId.getId
+  let hasActiveDuplicate = any (\r -> r.status `elem` [DTdsReq.PENDING, DTdsReq.APPROVED]) requestsForPeriod
+  when hasActiveDuplicate $
+    throwError (InvalidRequest "A PENDING or APPROVED TDS reimbursement request already exists for this quarter and assessment year")
 
-    when (null req.invoiceLines) $
-      throwError (InvalidRequest "At least one invoice line is required")
+  when (null req.invoiceLines) $
+    throwError (InvalidRequest "At least one invoice line is required")
 
-    -- The same invoice must not appear twice, otherwise its TDS is counted more than once
-    -- towards the certificate total. The (request_id, invoice_id) unique index would also
-    -- reject this, but only as an opaque constraint violation at insert time.
-    let requestedInvoiceIds = map ((.getId) . (.invoiceId)) req.invoiceLines
-        duplicateInvoiceIds = nub $ filter (\i -> length (filter (== i) requestedInvoiceIds) > 1) requestedInvoiceIds
-    unless (null duplicateInvoiceIds) $
-      throwError (InvalidRequest $ "Duplicate invoice lines for: " <> T.intercalate ", " duplicateInvoiceIds)
+  -- The same invoice must not appear twice, otherwise its TDS is counted more than once
+  -- towards the certificate total. The (request_id, invoice_id) unique index would also
+  -- reject this, but only as an opaque constraint violation at insert time.
+  let requestedInvoiceIds = map ((.getId) . (.invoiceId)) req.invoiceLines
+      duplicateInvoiceIds = nub $ filter (\i -> length (filter (== i) requestedInvoiceIds) > 1) requestedInvoiceIds
+  unless (null duplicateInvoiceIds) $
+    throwError (InvalidRequest $ "Duplicate invoice lines for: " <> T.intercalate ", " duplicateInvoiceIds)
 
-    let (periodStart, periodEnd) = quarterDateRange fyStartYear quarter
+  let (periodStart, periodEnd) = quarterDateRange fyStartYear quarter
 
-    let roundingTolerance = 1 :: HighPrecMoney
+  let roundingTolerance = 1 :: HighPrecMoney
 
-    invoicesWithLines <- forM req.invoiceLines $ \line -> do
-      invoice <- QFinanceInvoice.findById line.invoiceId >>= fromMaybeM (InvalidRequest $ "Invoice not found: " <> line.invoiceId.getId)
-      unless (invoice.issuedToId == requestorId) $
-        throwError (InvalidRequest $ "Invoice " <> line.invoiceId.getId <> " does not belong to this fleet owner")
-      unless (invoice.issuedAt >= periodStart && invoice.issuedAt < periodEnd) $
-        throwError (InvalidRequest $ "Invoice " <> line.invoiceId.getId <> " does not fall within " <> show quarter <> " of assessment year " <> req.assessmentYear)
-      pure (line, invoice)
+  invoices <- QFinanceInvoiceExtra.findByIds (map (.invoiceId) req.invoiceLines)
+  let invoiceById = HM.fromList [(invoice.id.getId, invoice) | invoice <- invoices]
+  invoicesWithLines <- forM req.invoiceLines $ \line -> do
+    invoice <- fromMaybeM (InvalidRequest $ "Invoice not found: " <> line.invoiceId.getId) (HM.lookup line.invoiceId.getId invoiceById)
+    unless (invoice.issuedToId == requestorId) $
+      throwError (InvalidRequest $ "Invoice " <> line.invoiceId.getId <> " does not belong to this fleet owner")
+    unless (invoice.issuedAt >= periodStart && invoice.issuedAt < periodEnd) $
+      throwError (InvalidRequest $ "Invoice " <> line.invoiceId.getId <> " does not fall within " <> show quarter <> " of assessment year " <> req.assessmentYear)
+    pure (line, invoice)
 
-    -- Block invoices already on PENDING/APPROVED mappings or with DirectTax Reimbursed.
-    TdsReimbursement.assertInvoicesNotAlreadyClaimedForTdsReimbursement Nothing (snd <$> invoicesWithLines)
+  -- Block invoices already on PENDING/APPROVED mappings or with DirectTax Reimbursed.
+  TdsReimbursement.assertInvoicesNotAlreadyClaimedForTdsReimbursement Nothing (snd <$> invoicesWithLines)
 
-    forM_ invoicesWithLines $ \(line, invoice) -> do
-      indirectTaxTxns <- QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
-      forM_ indirectTaxTxns $ \txn ->
-        unless (abs (invoice.subtotal - txn.taxableValue) <= roundingTolerance) $
-          throwError
-            ( InvalidRequest $
-                "Base value mismatch for invoice " <> line.invoiceId.getId <> ": invoice subtotal ("
-                  <> show invoice.subtotal
-                  <> ") does not match its indirect tax taxable value ("
-                  <> show txn.taxableValue
-                  <> ")"
-            )
-
-      let expectedTdsAmount = invoice.subtotal * realToFrac req.tdsRate / 100
-      when (abs (line.tdsAmount - expectedTdsAmount) > roundingTolerance) $
+  forM_ invoicesWithLines $ \(line, invoice) -> do
+    indirectTaxTxns <- QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
+    forM_ indirectTaxTxns $ \txn ->
+      unless (abs (invoice.subtotal - txn.taxableValue) <= roundingTolerance) $
         throwError
           ( InvalidRequest $
-              "TDS amount (" <> show line.tdsAmount <> ") for invoice " <> line.invoiceId.getId
-                <> " does not match "
-                <> show req.tdsRate
-                <> "% of its taxable value "
+              "Base value mismatch for invoice " <> line.invoiceId.getId <> ": invoice subtotal ("
                 <> show invoice.subtotal
-                <> " (expected "
-                <> show expectedTdsAmount
+                <> ") does not match its indirect tax taxable value ("
+                <> show txn.taxableValue
                 <> ")"
           )
 
-    let sumTdsAmount = sum $ map ((.tdsAmount) . fst) invoicesWithLines
-    when (abs (sumTdsAmount - req.certAmount) > roundingTolerance) $
-      throwError (InvalidRequest $ "Sum of invoice TDS amounts (" <> show sumTdsAmount <> ") does not match certificate amount (" <> show req.certAmount <> ")")
+    let expectedTdsAmount = invoice.subtotal * realToFrac req.tdsRate / 100
+    when (abs (line.tdsAmount - expectedTdsAmount) > roundingTolerance) $
+      throwError
+        ( InvalidRequest $
+            "TDS amount (" <> show line.tdsAmount <> ") for invoice " <> line.invoiceId.getId
+              <> " does not match "
+              <> show req.tdsRate
+              <> "% of its taxable value "
+              <> show invoice.subtotal
+              <> " (expected "
+              <> show expectedTdsAmount
+              <> ")"
+        )
 
-    document <- QImage.findById (cast req.documentId) >>= fromMaybeM (InvalidRequest $ "Document image not found: " <> req.documentId.getId)
-    unless (document.personId == fleetOwnerId) $
-      throwError (InvalidRequest $ "Document " <> req.documentId.getId <> " does not belong to this fleet owner")
+  let sumTdsAmount = sum $ map ((.tdsAmount) . fst) invoicesWithLines
+  when (abs (sumTdsAmount - req.certAmount) > roundingTolerance) $
+    throwError (InvalidRequest $ "Sum of invoice TDS amounts (" <> show sumTdsAmount <> ") does not match certificate amount (" <> show req.certAmount <> ")")
 
-    requestId <- generateGUID
-    now <- getCurrentTime
+  document <- QImage.findById (cast req.documentId) >>= fromMaybeM (InvalidRequest $ "Document image not found: " <> req.documentId.getId)
+  unless (document.personId == fleetOwnerId) $
+    throwError (InvalidRequest $ "Document " <> req.documentId.getId <> " does not belong to this fleet owner")
 
-    -- Each line's TDS is rounded on its own, so the lines can add up to slightly more or less than the
-    -- certificate. The certificate is what was deposited with the government, so the stored lines (and
-    -- the credit later posted from them) are made to add up to it exactly.
-    let allocatedTdsAmounts = allocateTdsToCertificate req.certAmount (map ((.tdsAmount) . fst) invoicesWithLines)
-    mappingRows <- forM (zip invoicesWithLines allocatedTdsAmounts) $ \((line, invoice), allocatedTdsAmount) -> do
-      revenueRecognised <- getInvoiceRecognizedRevenueForTds invoice
-      let tdsCreditReceivable = computeTdsCreditReceivable allocatedTdsAmount revenueRecognised invoice.subtotal
-      mappingId <- generateGUID
-      pure
-        DTdsMap.FinanceTdsReimbursementInvoiceMapping
-          { id = mappingId,
-            requestId = requestId,
-            invoiceId = line.invoiceId,
-            revenueRecognisedSnapshot = revenueRecognised,
-            tdsAmount = allocatedTdsAmount,
-            tdsCreditReceivable = tdsCreditReceivable,
-            createdAt = now
-          }
+  requestId <- generateGUID
+  now <- getCurrentTime
 
-    QTdsReq.create
-      DTdsReq.FinanceTdsReimbursementRequest
-        { id = requestId,
-          merchantId = merchant.id.getId,
-          merchantOperatingCityId = merchantOpCityId.getId,
-          fleetOwnerId = requestorId,
-          tanNumber = req.tanNumber,
-          certNumber = req.certNumber,
-          quarter = quarter,
-          assessmentYear = assessmentYear,
-          tdsSection = Just req.tdsSection,
-          certAmount = req.certAmount,
-          tdsRate = req.tdsRate,
-          documentId = cast req.documentId,
-          status = DTdsReq.PENDING,
-          rejectionReason = Nothing,
-          adminMakerId = Nothing,
-          adminMakerName = Nothing,
-          adminCheckerId = Nothing,
-          adminCheckerName = Nothing,
-          createdAt = now,
-          updatedAt = now
+  -- Each line's TDS is rounded on its own, so the lines can add up to slightly more or less than the
+  -- certificate. The certificate is what was deposited with the government, so the stored lines (and
+  -- the credit later posted from them) are made to add up to it exactly.
+  let allocatedTdsAmounts = allocateTdsToCertificate req.certAmount (map ((.tdsAmount) . fst) invoicesWithLines)
+  mappingRows <- forM (zip invoicesWithLines allocatedTdsAmounts) $ \((line, invoice), allocatedTdsAmount) -> do
+    revenueRecognised <- getInvoiceRecognizedRevenueForTds invoice
+    let tdsCreditReceivable = computeTdsCreditReceivable allocatedTdsAmount revenueRecognised invoice.subtotal
+    mappingId <- generateGUID
+    pure
+      DTdsMap.FinanceTdsReimbursementInvoiceMapping
+        { id = mappingId,
+          requestId = requestId,
+          invoiceId = line.invoiceId,
+          revenueRecognisedSnapshot = revenueRecognised,
+          tdsAmount = allocatedTdsAmount,
+          tdsCreditReceivable = tdsCreditReceivable,
+          createdAt = now
         }
 
-    mapM_ QTdsMap.create mappingRows
+  let tdsRequest =
+        DTdsReq.FinanceTdsReimbursementRequest
+          { id = requestId,
+            merchantId = merchant.id.getId,
+            merchantOperatingCityId = merchantOpCityId.getId,
+            fleetOwnerId = requestorId,
+            tanNumber = req.tanNumber,
+            certNumber = req.certNumber,
+            quarter = quarter,
+            assessmentYear = assessmentYear,
+            tdsSection = Just req.tdsSection,
+            certAmount = req.certAmount,
+            tdsRate = req.tdsRate,
+            documentId = cast req.documentId,
+            status = DTdsReq.PENDING,
+            rejectionReason = Nothing,
+            adminMakerId = Nothing,
+            adminMakerName = Nothing,
+            adminCheckerId = Nothing,
+            adminCheckerName = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }
 
-    pure API.TdsReimbursementRequestSubmitRes {requestId = cast requestId, status = API.TDS_PENDING}
+  pure (tdsRequest, mappingRows)
 
 castTdsReimbursementQuarter :: API.TdsReimbursementQuarter -> DTdsReq.Quarter
 castTdsReimbursementQuarter API.Q1 = DTdsReq.Q1

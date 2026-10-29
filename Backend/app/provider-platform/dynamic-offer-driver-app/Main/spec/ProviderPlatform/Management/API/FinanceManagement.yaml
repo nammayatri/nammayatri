@@ -332,6 +332,19 @@ apis:
         mandatoryQuery:
           - requestorId: Text
 
+  - POST: # TdsReimbursementRequestPreviewAPI
+      endpoint: /tdsReimbursement/request/preview
+      auth: ApiAuthV2
+      request:
+        type: TdsReimbursementRequestSubmitReq
+      response:
+        type: TdsReimbursementRequestPreviewRes
+      migrate:
+        capability: finance.tds_reimbursement.read
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+
   - GET: # TdsReimbursementStatusAPI
       endpoint: /tdsReimbursement/status
       mandatoryQuery:
@@ -955,6 +968,10 @@ types:
   TdsReimbursementRequestSubmitRes:
     - requestId: Id FinanceTdsReimbursementRequest
     - status: TdsReimbursementStatus
+
+  TdsReimbursementRequestPreviewRes:
+    - recordType: NewType
+    - invoiceLines: [TdsReimbursementStatusInvoiceLine]
 
   TdsReimbursementRejectReq:
     recordType: NewType
