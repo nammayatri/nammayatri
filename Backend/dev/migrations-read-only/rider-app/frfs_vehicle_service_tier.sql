@@ -51,3 +51,9 @@ ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN is_reschedule_allowed
 
 ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN cancellation_delay_threshold_seconds integer ;
 ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN use_live_for_cancellation_and_rescheduling boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN pay_on_board boolean  default false;
