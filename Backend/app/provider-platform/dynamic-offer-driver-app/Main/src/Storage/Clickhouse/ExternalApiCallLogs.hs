@@ -14,6 +14,9 @@
 
 module Storage.Clickhouse.ExternalApiCallLogs where
 
+import Data.Aeson (eitherDecodeStrict)
+import Data.List (nubBy)
+import qualified Data.Text.Encoding as TE
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
@@ -23,6 +26,7 @@ data ExternalApiCallLogsT f = ExternalApiCallLogsT
     apiName :: C f (Maybe Text),
     svcProvider :: C f (Maybe Text),
     entityId :: C f (Maybe Text),
+    requestPayload :: C f (Maybe Text),
     responsePayload :: C f (Maybe Text),
     createdAt :: C f CH.DateTime -- DateTime on clickhouse side
   }
@@ -37,6 +41,7 @@ externalApiCallLogsTTable =
       apiName = "apiName",
       svcProvider = "svcProvider",
       entityId = "entityId",
+      requestPayload = "requestPayload",
       responsePayload = "responsePayload",
       createdAt = "createdAt"
     }
@@ -52,10 +57,10 @@ findAllByEntityIdAndApiNames ::
   UTCTime ->
   UTCTime ->
   Int ->
-  m [(Text, Maybe Text, Maybe Text, CH.DateTime, Maybe Text)]
+  m [ExternalApiCallLogs]
 findAllByEntityIdAndApiNames entityId apiNames from to limit =
-  CH.findAll $
-    CH.select_ (\logs -> CH.notGrouped (logs.id, logs.apiName, logs.svcProvider, logs.createdAt, logs.responsePayload)) $
+  fmap (nubBy ((==) `on` (.id))) . CH.findAll $
+    CH.select $
       CH.orderBy_ (\logs _ -> CH.asc logs.createdAt) $
         CH.limit_ limit $
           CH.filter_
@@ -66,3 +71,6 @@ findAllByEntityIdAndApiNames entityId apiNames from to limit =
                   CH.&&. logs.apiName `CH.in_` map Just apiNames
             )
             (CH.all_ @CH.ATLAS_KAFKA externalApiCallLogsTTable)
+
+decodePayload :: FromJSON a => Text -> Maybe a
+decodePayload = rightToMaybe . eitherDecodeStrict . TE.encodeUtf8

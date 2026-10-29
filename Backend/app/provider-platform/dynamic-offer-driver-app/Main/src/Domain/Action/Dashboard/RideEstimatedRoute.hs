@@ -18,10 +18,7 @@ module Domain.Action.Dashboard.RideEstimatedRoute
 where
 
 import qualified "this" API.Types.ProviderPlatform.Management.Ride as Common
-import Data.Aeson (eitherDecodeStrict)
-import qualified Data.List as List
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Beam.Functions (runInReplica)
@@ -31,6 +28,7 @@ import qualified Kernel.External.Maps.OSRM.RoadsClient as OSRM
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Utils.Common
+import Storage.Clickhouse.ExternalApiCallLogs (decodePayload)
 import qualified Storage.Clickhouse.ExternalApiCallLogs as CHExternalApiCallLogs
 import qualified Storage.Queries.Booking as QBooking
 import Tools.Error
@@ -57,32 +55,28 @@ getRideEstimatedRoute ride = do
       (addUTCTime (negate searchLookback) booking.createdAt)
       (addUTCTime searchLookahead booking.createdAt)
       maxCalls
-  -- ReplacingMergeTree, read without FINAL: a row can appear once per unmerged part.
-  let uniqueRows = List.nubBy (\(idA, _, _, _, _) (idB, _, _, _, _) -> idA == idB) rows
   pure
     Common.RideEstimatedRouteRes
       { transactionId = booking.transactionId,
         estimatedDistance = booking.estimatedDistance,
-        calls = mapMaybe toCall uniqueRows
+        calls = mapMaybe toCall rows
       }
 
-toCall :: (Text, Maybe Text, Maybe Text, CH.DateTime, Maybe Text) -> Maybe Common.EstimatedRouteCall
-toCall (_, mbApiName, mbProvider, CH.DateTime calledAt, mbPayload) = do
-  apiName <- mbApiName
-  payload <- mbPayload
+toCall :: CHExternalApiCallLogs.ExternalApiCallLogs -> Maybe Common.EstimatedRouteCall
+toCall row = do
+  apiName <- row.apiName
+  payload <- row.responsePayload
   let routes = filter ((> 1) . length . (.points)) $ parseRoutes apiName payload
   guard (not $ null routes)
-  pure Common.EstimatedRouteCall {apiName, provider = fromMaybe "" mbProvider, calledAt, routes}
+  let CH.DateTime calledAt = row.createdAt
+  pure Common.EstimatedRouteCall {apiName, provider = fromMaybe "" row.svcProvider, calledAt, routes}
 
 parseRoutes :: Text -> Text -> [Common.EstimatedRouteOption]
 parseRoutes apiName payload = case apiName of
-  "advancedDirectionsAPI" -> foldMap (map fromRouteV2 . (.routes)) (decodePayload @Google.AdvancedDirectionsResp)
-  "directions" -> foldMap (map fromDirectionsRoute . (.routes)) (decodePayload @Google.DirectionsResp)
-  "OsrmRouteAPI" -> foldMap (map fromOsrmRoute . (.routes)) (decodePayload @OSRM.OSRMRouteResponse)
+  "advancedDirectionsAPI" -> foldMap (map fromRouteV2 . (.routes)) (decodePayload @Google.AdvancedDirectionsResp payload)
+  "directions" -> foldMap (map fromDirectionsRoute . (.routes)) (decodePayload @Google.DirectionsResp payload)
+  "OsrmRouteAPI" -> foldMap (map fromOsrmRoute . (.routes)) (decodePayload @OSRM.OSRMRouteResponse payload)
   _ -> []
-  where
-    decodePayload :: forall a. FromJSON a => Maybe a
-    decodePayload = rightToMaybe . eitherDecodeStrict $ TE.encodeUtf8 payload
 
 fromRouteV2 :: Google.RouteV2 -> Common.EstimatedRouteOption
 fromRouteV2 route =
