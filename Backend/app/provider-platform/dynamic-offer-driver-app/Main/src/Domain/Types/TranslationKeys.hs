@@ -20,6 +20,7 @@ module Domain.Types.TranslationKeys
     AcUsageMessage (..),
     RcRuleFailure (..),
     DriverPushKey (..),
+    pushNotificationType,
     SmsKey (..),
     VerificationMessage (..),
   )
@@ -35,6 +36,7 @@ import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.ServiceTierType as DST
 import Domain.Types.TranslationKey
 import qualified IssueManagement.Common as IC
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Text.Show
 
@@ -475,6 +477,54 @@ instance IsTranslationKey DriverPushKey where
     DriverPush_Safety_SosResolvedSafe -> Just "SOS_RESOLVED_SAFE"
     DriverPush_Safety_LiveTrackingStopped -> Just "LIVE_TRACKING_STOPPED"
     DriverPush_ConfigAlert requestType audience -> Just ("CONFIG_ALERT_" <> configAlertRequestText requestType <> "_" <> keyName audience)
+
+-- | The notification type a key's first row gets when the dashboard creates it: the one the
+-- sender passes in code, so the row only carries the texts. Nothing for keys whose sender takes
+-- the type from the row, for the bell alerts (not FCM) and for keys nothing sends; their first
+-- row keeps coming from SQL or ConfigPilot.
+pushNotificationType :: DriverPushKey -> Maybe FCM.FCMNotificationType
+pushNotificationType = \case
+  DriverPush_DocumentDecision DMM.DOCUMENT_INVALID -> Just FCM.DOCUMENT_INVALID
+  DriverPush_DocumentDecision DMM.DOCUMENT_VALID -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Onboarding_Approved -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Vehicle_Approved -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Driver_OnboardingAsChanged -> Just FCM.DRIVER_NOTIFY
+  DriverPush_FleetOwner_DriverOnboardingAsChanged -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Driver_FleetOwnerChanged -> Just FCM.DRIVER_NOTIFY
+  DriverPush_FleetOwner_DriverAdded -> Just FCM.DRIVER_NOTIFY
+  DriverPush_FleetOwner_DriverRemoved -> Just FCM.DRIVER_NOTIFY
+  DriverPush_FleetOwner_DriverUnlinked -> Just FCM.DRIVER_UNLINK_FROM_FLEET
+  DriverPush_FleetOwner_DriverLeft -> Just FCM.DRIVER_UNLINK_FROM_FLEET
+  DriverPush_FleetOwner_DriverDeclinedInvite -> Just FCM.DRIVER_UNLINK_FROM_FLEET
+  DriverPush_Driver_RemovedFromFleet -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Driver_LeftFleet -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Driver_DeclinedFleetInvite -> Just FCM.DRIVER_NOTIFY
+  DriverPush_FleetOwner_VehicleUnlinked -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Driver_VehicleUnlinked -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Operator_DriverUnlinked -> Just FCM.DRIVER_UNLINK_FROM_OPERATOR
+  DriverPush_Operator_FleetUnlinked -> Just FCM.FLEET_UNLINK_FROM_OPERATOR
+  DriverPush_Payout_Completed -> Just FCM.PAYOUT_COMPLETED
+  DriverPush_Payout_Failed -> Just FCM.PAYOUT_FAILED
+  DriverPush_IssueStatus _ -> Just FCM.CHAT_MESSAGE
+  DriverPush_IssueChat_Title -> Just FCM.CHAT_MESSAGE
+  DriverPush_IssueChat_ImageFallback -> Just FCM.CHAT_MESSAGE
+  DriverPush_IssueChat_MessageFallback -> Just FCM.CHAT_MESSAGE
+  DriverPush_Ride_Cancelled -> Just FCM.CANCELLED_PRODUCT
+  DriverPush_Ride_NewAvailable -> Just FCM.NEW_RIDE_AVAILABLE
+  DriverPush_Ride_Started -> Just FCM.TRIP_STARTED
+  DriverPush_Ride_StartedAc -> Just FCM.TRIP_STARTED
+  DriverPush_Ride_ClearedFare -> Just FCM.CLEARED_FARE
+  DriverPush_Ride_SearchCancelled -> Just FCM.CANCELLED_SEARCH_REQUEST
+  DriverPush_Ride_StopDetected -> Just FCM.DRIVER_STOP_DETECTED
+  DriverPush_AvailableForRidesEnded_RequestLimitReached -> Just FCM.DRIVER_NOTIFY
+  DriverPush_AvailableForRidesEnded_ConsecutiveRejections -> Just FCM.DRIVER_NOTIFY
+  DriverPush_AvailableForRidesEnded_DriverAtFaultCancellation -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Driver_FeedbackBadge -> Just FCM.FEEDBACK_BADGE_PN
+  DriverPush_Vehicle_UnhygienicWarning -> Just FCM.UNHYGIENIC_VEHICLE_WARNING
+  DriverPush_Vehicle_UnsafeWarning -> Just FCM.VEHICLE_UNSAFE_WARNING
+  DriverPush_Safety_SosResolvedSafe -> Just FCM.SOS_RESOLVED
+  DriverPush_Safety_LiveTrackingStopped -> Just FCM.SOS_RESOLVED
+  _ -> Nothing
 
 -- | The bell-alert pairs the onboarding code can produce. The flag-change actions (approve,
 -- reject, enable, disable, block, unblock, approval pending) have a sender, @notifyFlagChanges@,

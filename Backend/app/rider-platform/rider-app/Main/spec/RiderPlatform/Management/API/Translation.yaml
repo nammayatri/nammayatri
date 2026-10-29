@@ -4,7 +4,7 @@ imports:
 module: Translation
 
 # Code-owned text keys (Domain.Field.Value) and their per-language rows, read and written in
-# each domain's own table for the selected city. See Domain.Types.TranslationKeys (rider: service tiers and rider pushes).
+# each domain's own table for the selected city. See Domain.Types.TranslationKeys.
 apis:
   - GET:
       endpoint: /domains
@@ -24,6 +24,17 @@ apis:
       migrate:
         capability: system-config.translation.read
 
+  - POST:
+      endpoint: /{domain}/upsert
+      auth: ApiAuthV2
+      params:
+        domain: Text
+      request:
+        type: TranslationUpsertReq
+      response:
+        type: TranslationUpsertRes
+      migrate:
+        capability: system-config.translation.write
 
 types:
   TranslationDomainsResp:
@@ -71,3 +82,26 @@ types:
   TranslationTextSource:
     - enum: "City, Shared, Legacy"
 
+  TranslationUpsertReq:
+    - entries: [TranslationUpsertEntry]
+    - derive: "'HideSecrets"
+
+  TranslationUpsertEntry:
+    - key: Text
+    - language: Language
+    - field: Text
+    - variant: "Maybe [(Kernel.Prelude.Text, Kernel.Prelude.Text)]"
+    - text: Text
+
+  # Every entry is tried; saved counts the written ones and failed names each cell that was not,
+  # with the reason. The entries of one key, variant and language stand or fall together.
+  TranslationUpsertRes:
+    - saved: Int
+    - failed: [TranslationUpsertFailure]
+
+  TranslationUpsertFailure:
+    - key: Text
+    - language: Language
+    - field: Text
+    - variant: "Maybe [(Kernel.Prelude.Text, Kernel.Prelude.Text)]"
+    - reason: Text
