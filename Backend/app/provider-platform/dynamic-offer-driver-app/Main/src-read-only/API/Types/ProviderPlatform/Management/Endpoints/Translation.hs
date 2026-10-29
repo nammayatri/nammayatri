@@ -10,6 +10,7 @@ import qualified EulerHS.Types
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import Kernel.Types.Common
+import qualified Kernel.Types.HideSecrets
 import Servant
 import Servant.Client
 
@@ -61,22 +62,60 @@ data TranslationTextSource
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = "translation" :> (GetTranslationDomains :<|> GetTranslationKeys)
+data TranslationUpsertEntry = TranslationUpsertEntry
+  { key :: Kernel.Prelude.Text,
+    language :: Kernel.External.Types.Language,
+    field :: Kernel.Prelude.Text,
+    variant :: Kernel.Prelude.Maybe [(Kernel.Prelude.Text, Kernel.Prelude.Text)],
+    text :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TranslationUpsertFailure = TranslationUpsertFailure
+  { key :: Kernel.Prelude.Text,
+    language :: Kernel.External.Types.Language,
+    field :: Kernel.Prelude.Text,
+    variant :: Kernel.Prelude.Maybe [(Kernel.Prelude.Text, Kernel.Prelude.Text)],
+    reason :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TranslationUpsertReq = TranslationUpsertReq {entries :: [TranslationUpsertEntry]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets TranslationUpsertReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data TranslationUpsertRes = TranslationUpsertRes {saved :: Kernel.Prelude.Int, failed :: [TranslationUpsertFailure]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type API = "translation" :> (GetTranslationDomains :<|> (GetTranslationKeys :<|> PostTranslationUpsert))
 
 type GetTranslationDomains = "domains" :> Get '[JSON] TranslationDomainsResp
 
 type GetTranslationKeys = Capture "domain" Kernel.Prelude.Text :> ("keys" :> Get '[JSON] TranslationKeysResp)
 
-data TranslationAPIs = TranslationAPIs {getTranslationDomains :: EulerHS.Types.EulerClient TranslationDomainsResp, getTranslationKeys :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient TranslationKeysResp}
+type PostTranslationUpsert = Capture "domain" Kernel.Prelude.Text :> ("upsert" :> (ReqBody '[JSON] TranslationUpsertReq :> Post '[JSON] TranslationUpsertRes))
+
+data TranslationAPIs = TranslationAPIs
+  { getTranslationDomains :: EulerHS.Types.EulerClient TranslationDomainsResp,
+    getTranslationKeys :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient TranslationKeysResp,
+    postTranslationUpsert :: Kernel.Prelude.Text -> (TranslationUpsertReq -> EulerHS.Types.EulerClient TranslationUpsertRes)
+  }
 
 mkTranslationAPIs :: Client EulerHS.Types.EulerClient API -> TranslationAPIs
 mkTranslationAPIs translationClient = (TranslationAPIs {..})
   where
-    getTranslationDomains :<|> getTranslationKeys = translationClient
+    getTranslationDomains :<|> getTranslationKeys :<|> postTranslationUpsert = translationClient
 
 data TranslationUserActionType
   = GET_TRANSLATION_DOMAINS
   | GET_TRANSLATION_KEYS
+  | POST_TRANSLATION_UPSERT
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

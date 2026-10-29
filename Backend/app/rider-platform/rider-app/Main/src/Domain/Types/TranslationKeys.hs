@@ -17,9 +17,12 @@
 module Domain.Types.TranslationKeys
   ( RiderTranslationKey (..),
     RiderPushKey (..),
+    SmsKey (..),
+    pushNotificationType,
   )
 where
 
+import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.ServiceTierType as DST
 import Domain.Types.TranslationKey
 import qualified IssueManagement.Common as IC
@@ -314,3 +317,32 @@ instance IsTranslationKey RiderPushKey where
     RiderPush_SharedCab_OnTheWay -> Just "SHARED_CAB_ON_THE_WAY"
     RiderPush_SharedCab_ArrivingSoon -> Just "SHARED_CAB_ARRIVING_SOON"
     RiderPush_Payment serviceType category -> Just (keyName serviceType <> "_" <> keyName category)
+
+-- | The notification type a key's first row gets when the dashboard creates it: the one the
+-- sender passes in code, so the row only carries the texts. Nothing for keys whose sender takes
+-- the type from the row; their first row keeps coming from SQL or ConfigPilot.
+pushNotificationType :: RiderPushKey -> Maybe Notification.Category
+pushNotificationType = \case
+  RiderPush_IssueStatus _ -> Just Notification.CHAT_MESSAGE
+  RiderPush_IssueChat_Title -> Just Notification.CHAT_MESSAGE
+  RiderPush_IssueChat_ImageFallback -> Just Notification.CHAT_MESSAGE
+  RiderPush_IssueChat_MessageFallback -> Just Notification.CHAT_MESSAGE
+  RiderPush_Trip_Updated -> Just Notification.TRIP_UPDATED
+  RiderPush_Safety_SosResolved -> Just Notification.SOS_RESOLVED
+  RiderPush_Safety_SosResolvedSafe -> Just Notification.SOS_RESOLVED
+  RiderPush_Safety_LiveTrackingStarted -> Just Notification.SHARE_RIDE
+  RiderPush_Safety_LiveTrackingStopped -> Just Notification.SOS_RESOLVED
+  RiderPush_Payment _ category -> Just category
+  _ -> Nothing
+
+-- | Text stored in @merchant_message@. The row's key column stays the 'DMM.MessageKey' enum;
+-- this is the key's name in the registry and on the dashboard.
+newtype SmsKey = Sms_Body DMM.MessageKey
+  deriving stock (Eq)
+
+instance Show SmsKey where
+  show (Sms_Body k) = dotted ["Sms", "Body", keyName k]
+
+instance IsTranslationKey SmsKey where
+  allKeys = map Sms_Body [minBound .. maxBound]
+  legacyKeyName (Sms_Body k) = Just (keyName k)
