@@ -37,6 +37,7 @@ import qualified Domain.Types.MerchantPushNotification as Fields
 import Domain.Types.Person
 import Domain.Types.Ride
 import qualified Domain.Types.RideRoute as RI
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.Trip as Trip
 import Environment (RideEventsPublisherCfg)
@@ -340,7 +341,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
       snapToRoad'
       ( \driverId -> do
           person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-          mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "TOLL_CROSSED" Nothing Nothing person.language Nothing
+          mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId DriverPush_Ride_TollCrossed Nothing Nothing person.language Nothing
           whenJust mbMerchantPN $ \merchantPN -> do
             let entityData = TN.NotifReq {entityId = person.id.getId, title = merchantPN.title, message = merchantPN.body}
             TN.notifyDriverOnEvents person.merchantOperatingCityId person.id person.deviceToken entityData merchantPN.fcmNotificationType

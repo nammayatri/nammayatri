@@ -67,6 +67,7 @@ import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy.Common as DFPC
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationMapping as Fields
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.ParcelType as DParcel
 import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
@@ -74,6 +75,7 @@ import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.StopInformation as DSI
+import Domain.Types.TranslationKeys (EarningsLabel (..), TranslationKey (..))
 import qualified Domain.Types.Translations as Fields
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.VehicleVariant as DVeh
@@ -110,6 +112,7 @@ import qualified SharedLogic.RideFootnotes as RFN
 import SharedLogic.Settlement (driverTaxRates, netTaxExclusive, netTaxInclusive, netTotalTaxInclusive)
 import SharedLogic.Type (BillingCategory)
 import Storage.Beam.SpecialZone ()
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -395,23 +398,23 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam mbC
       fillTaxRates label = foldr (\(name, mbRate) acc -> maybe acc (\rate -> T.replace ("{#" <> name <> "#}") rate acc) mbRate) label placeholderRates
       taxInclusiveLabel key fallback mbCfg =
         if isJust (rateOf mbCfg)
-          then (<|> fallback) <$> resolveLabel lang (key <> "_INCL_TAX")
+          then (<|> fallback) <$> resolveLabel ride.merchantOperatingCityId lang key
           else pure fallback
       mkConfiguredSubItem line = do
-        label <- fmap fillTaxRates <$> resolveLabel lang line.key
+        label <- fmap fillTaxRates <$> resolveConfiguredLabel lang line.key
         kids <- mapM mkConfiguredSubItem line.subItems
         let lineType = if line.amount < 0 then Deduction else Earning
         pure FareUISubItem {title = line.key, price = PriceAPIEntity (abs line.amount) cur, uiTranslation = label, _type = lineType, subItems = kids}
       chargeBorneByDriver = customerBearsCharge || driverBearsCharge
-  taxLabel <- resolveLabel lang "TAX"
-  commissionLabel <- taxInclusiveLabel "COMMISSION" lblCommission commissionTax
-  paymentChargeLabel <- taxInclusiveLabel "PAYMENT_CHARGE" lblPaymentCharge paymentChargeTax
+  taxLabel <- resolveLabel ride.merchantOperatingCityId lang Tax
+  commissionLabel <- taxInclusiveLabel CommissionInclTax lblCommission commissionTax
+  paymentChargeLabel <- taxInclusiveLabel PaymentChargeInclTax lblPaymentCharge paymentChargeTax
   farePaidComponentSubItems <-
     mapM mkConfiguredSubItem $
       case mbCancellationDues of
         Just dues -> computeFareBreakupLines cur (fromMaybe [] mbFarePaidSubItemsConfig) (Map.fromList [(CustomerCancellationChargeComponent, dues.cancellationAmount), (PaymentChargePaidByCustomerComponent, customerPaymentCharge)])
         Nothing -> SFB.computeFareBreakup cur (fromMaybe [] mbFarePaidSubItemsConfig) (fromMaybe estimatedFareParam finalFareParam)
-  buyerDiscountLabel <- resolveLabel lang "BUYER_DISCOUNT"
+  buyerDiscountLabel <- resolveLabel ride.merchantOperatingCityId lang BuyerDiscount
   let farePaidSubItems =
         farePaidComponentSubItems
           <> [ FareUISubItem {title = "BUYER_DISCOUNT", price = PriceAPIEntity (roundAmountByCurrency' cur discount) cur, uiTranslation = buyerDiscountLabel <|> lblDiscount, _type = Deduction, subItems = []}
@@ -552,10 +555,20 @@ valueToText = \case
 
 resolveLabel ::
   (CacheFlow m r, EsqDBFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  KET.Language ->
+  EarningsLabel ->
+  m (Maybe Text)
+resolveLabel merchantOpCityId lang key = CQTranslations.findTextByKey (Just merchantOpCityId) lang (Earnings_Label key)
+
+-- | A configured fare-breakup sub-item key is typed by ops into the transporter config, so its
+-- label is read by that text, from the shared rows.
+resolveConfiguredLabel ::
+  (CacheFlow m r, EsqDBFlow m r) =>
   KET.Language ->
   Text ->
   m (Maybe Text)
-resolveLabel lang key = fmap (fmap (.message)) $ getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = key, language = Just lang}) (Just (QTranslations.findByErrorAndLanguage key lang))
+resolveConfiguredLabel lang key = fmap (fmap (.message)) $ getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = key, language = Just lang}) (Just (QTranslations.findByErrorAndLanguage key lang))
 
 data EarningsLabels = EarningsLabels
   { lblAmountPaid :: Maybe Text,
@@ -574,23 +587,26 @@ data EarningsLabels = EarningsLabels
 
 fetchEarningsLabels ::
   (CacheFlow m r, EsqDBFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
   KET.Language ->
   m EarningsLabels
-fetchEarningsLabels lang =
+fetchEarningsLabels merchantOpCityId lang =
   EarningsLabels
     -- TODO MAKE THIS AMOUNT PAID BY CUST TO KEEP IT BACKWARD COMPATIBLE.. WE WILL CHANGBE IN DB.
-    <$> resolveLabel lang "FARE_PAID_BY_CUSTOMER"
-    <*> resolveLabel lang "DISCOUNT"
-    <*> resolveLabel lang "TIPS"
-    <*> resolveLabel lang "COMMISSION"
-    <*> resolveLabel lang "NET_DRIVER_EARNINGS"
-    <*> resolveLabel lang "FARE"
-    <*> resolveLabel lang "AIRPORT_CONVENIENCE_FEE"
-    <*> resolveLabel lang "SERVICE_CHARGE"
-    <*> resolveLabel lang "PAYMENT_CHARGE"
-    <*> resolveLabel lang "PAYMENT_CHARGE_VAT"
-    <*> resolveLabel lang "PAYMENT_CHARGE_PAID_BY_CUSTOMER"
-    <*> resolveLabel lang "TOLL_CHARGES"
+    <$> label FarePaidByCustomer
+    <*> label Discount
+    <*> label Tips
+    <*> label Commission
+    <*> label NetDriverEarnings
+    <*> label Fare
+    <*> label AirportConvenienceFee
+    <*> label ServiceCharge
+    <*> label PaymentCharge
+    <*> label PaymentChargeVat
+    <*> label PaymentChargePaidByCustomer
+    <*> label TollCharges
+  where
+    label = resolveLabel merchantOpCityId lang
 
 mkExoPhone :: Maybe DExophone.Exophone -> DRB.Booking -> Text
 mkExoPhone mbExophone booking =

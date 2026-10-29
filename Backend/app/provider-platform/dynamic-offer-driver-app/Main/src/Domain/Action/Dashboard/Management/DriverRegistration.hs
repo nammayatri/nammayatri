@@ -108,7 +108,7 @@ import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.SubscriptionConfig as Fields
-import qualified Domain.Types.Translations as Fields
+import Domain.Types.TranslationKeys (DriverPushKey (..), TranslationKey (..))
 import qualified Domain.Types.VehicleCategory as DVCat
 import qualified Domain.Types.VehicleFitnessCertificate as DFC
 import qualified Domain.Types.VehicleInsurance as DVI
@@ -166,8 +166,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
-import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BusinessLicense as QBL
@@ -192,7 +192,6 @@ import Storage.Queries.Image as QImage
 import qualified Storage.Queries.OperationHubRequests as QOHR
 import qualified Storage.Queries.Person as QDriver
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Translations as QTranslations
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleFitnessCertificate as QFC
 import qualified Storage.Queries.VehicleInsurance as QVI
@@ -2692,11 +2691,10 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
         mbDriver <- QDriver.findById image.personId
         case mbDriver of
           Nothing -> logWarning $ "Driver not found for rejection notification, skipping: " <> image.personId.getId
-          Just driver -> do
-            let docType = show image.imageType
+          Just driver ->
             void $
               withTryCatch "ImageDocuments:sendRejectionNotification" $
-                sendDocumentDecisionNotification merchantOperatingCityId docType (DocumentRejected reason) driver
+                sendDocumentDecisionNotification merchantOperatingCityId image.imageType (DocumentRejected reason) driver
     Common.CommonDocumentReject commonRejectReq -> do
       let documentId = Id commonRejectReq.documentId.getId
       document <- QCommonDriverOnboardingDocuments.findById documentId >>= fromMaybeM (DocumentNotFound documentId.getId)
@@ -2713,11 +2711,10 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
             Nothing -> logWarning $ "Driver not found for rejection notification, skipping: " <> driverId.getId
             Just driver -> do
               let merchantOpCityId = document.merchantOperatingCityId
-                  docType = show document.documentType
                   reason = commonRejectReq.reason
               void $
                 withTryCatch "CommonDocumentReject:sendRejectionNotification" $
-                  sendDocumentDecisionNotification merchantOpCityId docType (DocumentRejected reason) driver
+                  sendDocumentDecisionNotification merchantOpCityId document.documentType (DocumentRejected reason) driver
     Common.InspectionHubReject inspectionHubRejectReq -> do
       let requestId = Id inspectionHubRejectReq.requestId :: Id DOHR.OperationHubRequests
       request <- QOHR.findByPrimaryKey requestId >>= fromMaybeM (InternalError "Inspection hub request not found")
@@ -2887,53 +2884,37 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
       QSSN.updateVerificationStatusAndReasonBySSN INVALID (Just req.reason) (ssnEnc & hash)
       ssnEntry <- QSSN.findBySSN (ssnEnc & hash) >>= fromMaybeM (InternalError "SSN not found by ssn no")
       driver <- QDriver.findById ssnEntry.driverId >>= fromMaybeM (PersonNotFound ssnEntry.driverId.getId)
-      let docType = "SSN"
-          reason = req.reason
+      let reason = req.reason
       void $
         withTryCatch "SSNReject:sendRejectionNotification" $
-          sendDocumentDecisionNotification _merchantOpCityId docType (DocumentRejected reason) driver
+          sendDocumentDecisionNotification _merchantOpCityId DVC.SocialSecurityNumber (DocumentRejected reason) driver
 
 data DocumentDecision = DocumentApproved | DocumentRejected Text
 
 replacePlaceholders :: Text -> Text -> Text -> Text
 replacePlaceholders translatedDocType reason template = T.replace "{#docType#}" "" $ T.replace "{#documentType#}" translatedDocType $ T.replace "{#reason#}" reason template
 
-translateDocumentType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Lang.Language -> Text -> m Text
-translateDocumentType language docType = do
-  let translationKey = "DOC_TYPE_" <> docType
-  mbTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = translationKey, language = Just language}) (Just (QTranslations.findByErrorAndLanguage translationKey language))
-  case mbTranslation of
-    Just trans -> pure trans.message
-    Nothing
-      | language /= Lang.ENGLISH -> do
-        mbEnglishTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = translationKey, language = Just Lang.ENGLISH}) (Just (QTranslations.findByErrorAndLanguage translationKey Lang.ENGLISH))
-        pure $ maybe docType (.message) mbEnglishTranslation
-      | otherwise -> pure docType
+-- | The document's display name in the driver's language, else English, else the raw type.
+translateDocumentType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Lang.Language -> DVC.DocumentType -> m Text
+translateDocumentType merchantOpCityId language documentType =
+  fromMaybe (show documentType) <$> CQTranslations.findTextByKey (Just merchantOpCityId) language (Document_Name documentType)
 
 fetchDocumentSmsTemplates :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Lang.Language -> DMM.MessageKey -> m (Text, Text)
 fetchDocumentSmsTemplates merchantOpCityId language messageKey = do
   mbMerchantMessage <- QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing
   case mbMerchantMessage of
     Just mm -> pure ("", mm.message)
-    Nothing -> fetchTranslatedTemplates merchantOpCityId language (show messageKey <> "_TITLE") (show messageKey <> "_BODY")
+    Nothing -> do
+      mbTitle <- CQTranslations.findTextByKey (Just merchantOpCityId) language (DocumentDecision_Title messageKey)
+      mbBody <- CQTranslations.findTextByKey (Just merchantOpCityId) language (DocumentDecision_Body messageKey)
+      pure $ fromMaybe ("", "") ((,) <$> mbTitle <*> mbBody)
 
 fetchDocumentPushTemplates :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Lang.Language -> Maybe Lang.Language -> DMM.MessageKey -> m (Text, Text)
 fetchDocumentPushTemplates merchantOpCityId language mbLanguage messageKey = do
-  mbPN <- CPN.findMatchingMerchantPN merchantOpCityId (show messageKey) Nothing Nothing mbLanguage Nothing
+  mbPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId (DriverPush_DocumentDecision messageKey) Nothing Nothing mbLanguage Nothing
   case mbPN of
     Just pn -> pure (pn.title, pn.body)
     Nothing -> fetchDocumentSmsTemplates merchantOpCityId language messageKey
-
-fetchTranslatedTemplates :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Lang.Language -> Text -> Text -> m (Text, Text)
-fetchTranslatedTemplates merchantOpCityId language titleKey bodyKey = do
-  mbTitleTranslation <- lookupTranslation titleKey
-  mbBodyTranslation <- lookupTranslation bodyKey
-  case (mbTitleTranslation, mbBodyTranslation) of
-    (Just titleTrans, Just bodyTrans) -> pure (titleTrans.message, bodyTrans.message)
-    _ -> pure ("", "")
-  where
-    lookupTranslation key =
-      getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = key, language = Just language}) (Just (QTranslations.findByErrorAndLanguage key language))
 
 -- | Text comes only from the configured templates; an empty template means the city has not
 --   configured that channel, and the caller skips it.
@@ -2965,13 +2946,13 @@ isDashboardSmsEnabled merchantOpCityId =
     >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     <&> (.enableDashboardSms)
 
-sendDocumentDecisionNotification :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, ServiceFlow m r, HasFlowEnv m r '["smsCfg" ::: SmsConfig], Redis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Text -> DocumentDecision -> DP.Person -> m ()
+sendDocumentDecisionNotification :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, ServiceFlow m r, HasFlowEnv m r '["smsCfg" ::: SmsConfig], Redis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> DocumentDecision -> DP.Person -> m ()
 sendDocumentDecisionNotification merchantOpCityId docType decision driver = do
   let (messageKey, fcmType, reason) = case decision of
         DocumentRejected r -> (DMM.DOCUMENT_INVALID, FCM.DOCUMENT_INVALID, r)
         DocumentApproved -> (DMM.DOCUMENT_VALID, FCM.DRIVER_NOTIFY, "")
       language = fromMaybe Lang.ENGLISH driver.language
-  translatedDocType <- translateDocumentType language docType
+  translatedDocType <- translateDocumentType merchantOpCityId language docType
   pushTemplates <- fetchDocumentPushTemplates merchantOpCityId language driver.language messageKey
   smsTemplates <- fetchDocumentSmsTemplates merchantOpCityId language messageKey
   let (title, body) = buildPushMessages translatedDocType reason pushTemplates
@@ -3063,7 +3044,7 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
         (Just docType, Just driver) ->
           void $
             withTryCatch "Approve:sendDocumentDecisionNotification" $
-              sendDocumentDecisionNotification merchantOpCityId (show docType) DocumentApproved driver
+              sendDocumentDecisionNotification merchantOpCityId docType DocumentApproved driver
         _ -> logWarning "Skipping approval notification: driver or document type not resolved"
       pure resp
     Common.Reject rejectReq -> do

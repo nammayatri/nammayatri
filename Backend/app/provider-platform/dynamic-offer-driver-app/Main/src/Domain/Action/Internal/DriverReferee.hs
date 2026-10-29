@@ -31,6 +31,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RefereeLink as DRL
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.RiderDetails as DRD
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as VC
@@ -207,7 +208,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
         Nothing -> do
           riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId currency flagReason merchOpCityId
           QRD.create riderDetails
-      mbMerchantPN <- CPN.findMatchingMerchantPN driver.merchantOperatingCityId "REFERRAL_FLOW" Nothing Nothing driver.language Nothing
+      mbMerchantPN <- CPN.findMatchingMerchantPNByKey driver.merchantOperatingCityId DriverPush_Driver_Referral Nothing Nothing driver.language Nothing
       whenJust mbMerchantPN $ \merchantPN -> do
         let entityData = NotifReq {entityId = driver.id.getId, title = merchantPN.title, message = merchantPN.body}
         notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType

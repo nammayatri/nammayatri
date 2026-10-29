@@ -43,6 +43,7 @@ import qualified "dynamic-offer-driver-app" Domain.Types.PayoutConfig as DPC
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as Ride
 import qualified "dynamic-offer-driver-app" Domain.Types.RiderDetails as RD
+import "dynamic-offer-driver-app" Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as Fields
 import "dynamic-offer-driver-app" Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.Vehicle as Fields
@@ -153,12 +154,12 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
     updateReferralStats referredCustomerId referredDriverId mbDailyStats localTime driver merchantOpCityId payoutConfig referredDriver = do
       driverInfo <- QDI.findById (cast referredDriverId) >>= fromMaybeM (PersonNotFound referredDriverId.getId)
       when (isNothing driverInfo.payoutVpa) do
-        mbMerchantPN_ <- CPN.findMatchingMerchantPN merchantOpCityId "PAYOUT_VPA_ALERT" Nothing Nothing driver.language Nothing
+        mbMerchantPN_ <- CPN.findMatchingMerchantPNByKey merchantOpCityId DriverPush_Payout_VpaAlert Nothing Nothing driver.language Nothing
         whenJust mbMerchantPN_ $ \merchantPN_ -> do
           let title = T.replace "{#rewardAmount#}" (show payoutConfig.referralRewardAmountPerRide) merchantPN_.title
               entityData = NotifReq {entityId = referredDriverId.getId, title = title, message = merchantPN_.body}
           notifyDriverOnEvents merchantOpCityId driver.id driver.deviceToken entityData merchantPN_.fcmNotificationType
-      mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "PAYOUT_REFERRAL_REWARD" Nothing Nothing driver.language Nothing
+      mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId DriverPush_Payout_ReferralReward Nothing Nothing driver.language Nothing
       whenJust mbMerchantPN $ \merchantPN -> do
         let title = T.replace "{#rewardAmount#}" (show payoutConfig.referralRewardAmountPerRide) merchantPN.title
             entityData = NotifReq {entityId = referredDriverId.getId, title = title, message = merchantPN.body}

@@ -90,6 +90,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.ServiceTierType
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import Domain.Types.VehicleVariant
 import Environment
 import Kernel.Beam.Functions
@@ -693,12 +694,12 @@ onUpdate = \case
         JM.updateJourneyChangeLogCounter journeyId
     Notify.notifyOnTripUpdate booking ride Nothing
   OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> do
-    mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow booking.merchantOperatingCityId "TOLL_CROSSED" Nothing Nothing person.language booking.configInExperimentVersions
+    mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlowByKey booking.merchantOperatingCityId RiderPush_Ride_TollCrossed Nothing Nothing person.language booking.configInExperimentVersions
     whenJust mbMerchantPN $ \merchantPN -> do
       let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
       TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)
   OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq {..} -> do
-    mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow booking.merchantOperatingCityId "FCM_CHAT_MESSAGE" Nothing Nothing person.language booking.configInExperimentVersions
+    mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlowByKey booking.merchantOperatingCityId RiderPush_Ride_MissedCall Nothing Nothing person.language booking.configInExperimentVersions
     whenJust mbMerchantPN $ \merchantPN -> do
       let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
       TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)
@@ -716,7 +717,7 @@ onUpdate = \case
     let allBookingPartyIds = map (.partyId) allBookingParty
     allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
     mapM_ QPFS.clearCache (nub $ booking.riderId : allBookingPartyIds)
-    Notify.notifyToAllBookingParties allParty booking.tripCategory "DRIVER_HAS_REACHED_DESTINATION"
+    Notify.notifyToAllBookingParties allParty booking.tripCategory RiderPush_Driver_ReachedDestination
   OUValidatedDriverNearPickupReq ValidatedDriverNearPickupReq {..} ->
     -- Near pickup only tells the rider; driverArrivalTime (and waiting charges) wait for the arrival event.
     -- The arrival status only moves forward, so the later arrival does not send this push again.
@@ -728,7 +729,7 @@ onUpdate = \case
     allBookingParty <- QBPL.findAllActiveByBookingId booking.id
     let allBookingPartyIds = map (.partyId) allBookingParty
     allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
-    Notify.notifyToAllBookingParties allParty booking.tripCategory "DRIVER_STARTED_RETURN_TRIP"
+    Notify.notifyToAllBookingParties allParty booking.tripCategory RiderPush_Driver_StartedReturnTrip
   OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq {..} -> do
     QRide.updateEstimatedEndTimeRange (Just estimatedEndTimeRange) ride.id
   OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq {..} ->
@@ -736,7 +737,7 @@ onUpdate = \case
       allBookingParty <- QBPL.findAllActiveByBookingId booking.id
       let allBookingPartyIds = map (.partyId) allBookingParty
       allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
-      Notify.notifyToAllBookingParties allParty booking.tripCategory "PARCEL_IMAGE_UPLOADED"
+      Notify.notifyToAllBookingParties allParty booking.tripCategory RiderPush_Parcel_ImageUploaded
   OUValidatedChangeServiceTierReq ValidatedChangeServiceTierReq {..} -> do
     logInfo $ "Change service tier confirmed for booking: " <> booking.id.getId <> " to tier: " <> show newVehicleServiceTier
     -- Find the BAP quote matching the new tier from the same search request

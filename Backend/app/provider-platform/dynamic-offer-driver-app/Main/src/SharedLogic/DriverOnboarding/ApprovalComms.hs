@@ -26,6 +26,7 @@ import qualified Domain.Types.Image as Fields
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification.Interface.Types as Notification
@@ -49,11 +50,11 @@ import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as TN
 import qualified Tools.SMS as Sms
 
-onboardingApprovedKey :: Text
-onboardingApprovedKey = "ONBOARDING_APPROVED"
+onboardingApprovedKey :: DriverPushKey
+onboardingApprovedKey = DriverPush_Onboarding_Approved
 
-vehicleApprovedKey :: Text
-vehicleApprovedKey = "VEHICLE_APPROVED"
+vehicleApprovedKey :: DriverPushKey
+vehicleApprovedKey = DriverPush_Vehicle_Approved
 
 data ApprovedEntityData = ApprovedEntityData
   { personId :: Text,
@@ -92,7 +93,7 @@ notifyOnce key action =
     approvalNotifiedTtl = 3600
 
 -- | Push from merchant_push_notification; SMS from merchant_message when the city has dashboard SMS enabled. A missing row skips that channel.
-sendApproved :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> DP.Person -> Text -> DMM.MessageKey -> Maybe Text -> m ()
+sendApproved :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> DP.Person -> DriverPushKey -> DMM.MessageKey -> Maybe Text -> m ()
 sendApproved merchantOpCityId recipient pnKey smsKey mbVehicleNo = do
   let params = ("name", recipient.firstName) : maybe [] (\v -> [("vehicleNo", v)]) mbVehicleNo
       entityData = ApprovedEntityData {personId = recipient.id.getId, vehicleNo = mbVehicleNo}

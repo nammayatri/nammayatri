@@ -68,6 +68,7 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as Fields
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import qualified Domain.Types.Yudhishthira as Y
@@ -2081,9 +2082,9 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
       when (isNothing person.payoutVpa) $ do
         let pnKey =
               if oldCustomer
-                then "REFERRAL_REWARD_ADD_VPA"
-                else "REFERRED_BY_REWARD_ADD_VPA"
-        mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow merchantOperatingCityId pnKey Nothing Nothing person.language []
+                then RiderPush_Referral_RewardAddVpa
+                else RiderPush_Referral_ReferredByRewardAddVpa
+        mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlowByKey merchantOperatingCityId pnKey Nothing Nothing person.language []
         whenJust mbMerchantPN $ \merchantPN -> do
           let entityData = Notify.NotifReq {title = merchantPN.title, message = merchantPN.body}
           Notify.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)

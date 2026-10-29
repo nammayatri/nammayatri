@@ -66,6 +66,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Time as DT
 import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as DP
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Domain.Types.TransporterConfig (TransporterConfig (..))
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Notification as Notification
@@ -163,11 +164,16 @@ type AvailableForRidesEndFlow m r =
     HasFlowEnv m r '["maxNotificationShards" ::: Int]
   )
 
+endedPushKey :: AvailableForRidesEndReason -> DriverPushKey
+endedPushKey = \case
+  REQUEST_LIMIT_REACHED -> DriverPush_AvailableForRidesEnded_RequestLimitReached
+  CONSECUTIVE_REJECTIONS -> DriverPush_AvailableForRidesEnded_ConsecutiveRejections
+  DRIVER_AT_FAULT_CANCELLATION -> DriverPush_AvailableForRidesEnded_DriverAtFaultCancellation
+
 notifyEnded :: AvailableForRidesEndFlow m r => DP.Person -> AvailableForRidesEndReason -> m ()
 notifyEnded person reason = do
   let merchantOpCityId = person.merchantOperatingCityId
-      messageKey = availableForRidesEndedEvent <> "_" <> show reason
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId messageKey Nothing Nothing (Just $ fromMaybe ENGLISH person.language) Nothing
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId (endedPushKey reason) Nothing Nothing (Just $ fromMaybe ENGLISH person.language) Nothing
   let (title, body) = maybe (defaultEndedContent reason) (\merchantPN -> (merchantPN.title, merchantPN.body)) mbMerchantPN
   Notify.notifyDriverWithProviders merchantOpCityId Notification.DRIVER_NOTIFY title body person person.deviceToken Nothing $
     AvailableForRidesEndedData {event = availableForRidesEndedEvent, reason}

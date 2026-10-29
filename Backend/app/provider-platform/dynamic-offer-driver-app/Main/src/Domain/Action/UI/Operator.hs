@@ -11,6 +11,7 @@ import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPushNotification as Fields
 import Domain.Types.Person
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -69,7 +70,7 @@ postOperatorConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
     unless (transporterConfig.requiresOnboardingInspection == Just True) $
       unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
         Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "OPERATOR_CONSENT" Nothing Nothing driver.language Nothing
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOperatingCityId DriverPush_Driver_OperatorConsent Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#operatorName#}" operator.firstName merchantPN.title
     let body = T.replace "{#operatorName#}" operator.firstName merchantPN.body

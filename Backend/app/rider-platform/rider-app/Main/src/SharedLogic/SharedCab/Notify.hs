@@ -20,6 +20,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.FRFSTicketBooking as DFTB
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -27,7 +28,7 @@ import Kernel.Utils.Common
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), ApproachPush (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Fields as Fields
-import Tools.Notifications (createNotificationReq, dynamicNotifyPerson)
+import Tools.Notifications (createKeyedNotificationReq, dynamicNotifyPerson)
 
 data SharedCabNotificationType
   = SHARED_CAB_ASSIGNED
@@ -56,6 +57,18 @@ data SharedCabNotificationEntityData = SharedCabNotificationEntityData
 
 notificationKey :: SharedCabNotificationType -> Text
 notificationKey = show
+
+pushKey :: SharedCabNotificationType -> RiderPushKey
+pushKey = \case
+  SHARED_CAB_ASSIGNED -> RiderPush_SharedCab_Assigned
+  SHARED_CAB_ARRIVING -> RiderPush_SharedCab_Arriving
+  SHARED_CAB_REASSIGNED -> RiderPush_SharedCab_Reassigned
+  SHARED_CAB_BOARD_ANY -> RiderPush_SharedCab_BoardAny
+  SHARED_CAB_ROUTE_CHANGE -> RiderPush_SharedCab_RouteChange
+  SHARED_CAB_BOOKING_CANCELLED -> RiderPush_SharedCab_BookingCancelled
+  SHARED_CAB_FINDING_TIMEOUT -> RiderPush_SharedCab_FindingTimeout
+  SHARED_CAB_ON_THE_WAY -> RiderPush_SharedCab_OnTheWay
+  SHARED_CAB_ARRIVING_SOON -> RiderPush_SharedCab_ArrivingSoon
 
 templateParams :: (Maybe Text, Text) -> (Maybe Text, Text) -> Maybe Text -> [(Text, Text)]
 templateParams (boardName, boardCode) (dropName, dropCode) mbVehicleNumber =
@@ -94,7 +107,7 @@ send notificationType mbRouteCode reassignReason mbVehicleNumber extraParams boo
         Just person ->
           dynamicNotifyPerson
             person
-            (createNotificationReq (notificationKey notificationType) identity)
+            (createKeyedNotificationReq (pushKey notificationType) identity)
             EmptyDynamicParam
             (Notification.Entity Notification.Product person.id.getId entityData)
             Nothing

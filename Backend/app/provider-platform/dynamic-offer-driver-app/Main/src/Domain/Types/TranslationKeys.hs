@@ -182,6 +182,9 @@ data EarningsLabel
   | PaymentChargeVat
   | PaymentChargePaidByCustomer
   | TollCharges
+  | CommissionInclTax
+  | PaymentChargeInclTax
+  | BuyerDiscount
   deriving stock (Show, Eq, Ord, Bounded, Enum)
 
 -- | The legacy row key of each earnings label.
@@ -200,6 +203,9 @@ earningsLabelText = \case
   PaymentChargeVat -> "PAYMENT_CHARGE_VAT"
   PaymentChargePaidByCustomer -> "PAYMENT_CHARGE_PAID_BY_CUSTOMER"
   TollCharges -> "TOLL_CHARGES"
+  CommissionInclTax -> "COMMISSION_INCL_TAX"
+  PaymentChargeInclTax -> "PAYMENT_CHARGE_INCL_TAX"
+  BuyerDiscount -> "BUYER_DISCOUNT"
 
 -- | The AC-usage note on the driver's vehicle details.
 data AcUsageMessage = Restricted | Working
@@ -211,6 +217,10 @@ data RcRuleFailure
   | InvalidVehicleClass
   | InvalidOEM
   | InvalidManufacturingYear
+  | FitnessCertificateExpired
+  | InsuranceExpired
+  | PermitExpired
+  | PUCExpired
   deriving stock (Show, Eq, Ord, Bounded, Enum)
 
 -- | Text stored in @merchant_push_notification@. The second segment names the recipient where
@@ -262,6 +272,8 @@ data DriverPushKey
   | DriverPush_Ride_TollCrossed
   | DriverPush_Ride_MissedCall
   | DriverPush_Ride_EkdLiveCallFeedback
+  | DriverPush_SharedCab_Allocation
+  | DriverPush_SharedCab_CheckIn
   | DriverPush_AvailableForRidesEnded_RequestLimitReached
   | DriverPush_AvailableForRidesEnded_ConsecutiveRejections
   | DriverPush_AvailableForRidesEnded_DriverAtFaultCancellation
@@ -354,6 +366,8 @@ instance IsTranslationKey DriverPushKey where
            DriverPush_Ride_TollCrossed,
            DriverPush_Ride_MissedCall,
            DriverPush_Ride_EkdLiveCallFeedback,
+           DriverPush_SharedCab_Allocation,
+           DriverPush_SharedCab_CheckIn,
            DriverPush_AvailableForRidesEnded_RequestLimitReached,
            DriverPush_AvailableForRidesEnded_ConsecutiveRejections,
            DriverPush_AvailableForRidesEnded_DriverAtFaultCancellation,
@@ -432,6 +446,8 @@ instance IsTranslationKey DriverPushKey where
     DriverPush_Ride_TollCrossed -> Just "TOLL_CROSSED"
     DriverPush_Ride_MissedCall -> Just "FCM_CHAT_MESSAGE"
     DriverPush_Ride_EkdLiveCallFeedback -> Just "EKD_LIVE_CALL_FEEDBACK"
+    DriverPush_SharedCab_Allocation -> Just "SHARED_CAB_ALLOCATION"
+    DriverPush_SharedCab_CheckIn -> Just "SHARED_CAB_CHECK_IN"
     DriverPush_AvailableForRidesEnded_RequestLimitReached -> Just "AVAILABLE_FOR_RIDES_ENDED_REQUEST_LIMIT_REACHED"
     DriverPush_AvailableForRidesEnded_ConsecutiveRejections -> Just "AVAILABLE_FOR_RIDES_ENDED_CONSECUTIVE_REJECTIONS"
     DriverPush_AvailableForRidesEnded_DriverAtFaultCancellation -> Just "AVAILABLE_FOR_RIDES_ENDED_DRIVER_AT_FAULT_CANCELLATION"

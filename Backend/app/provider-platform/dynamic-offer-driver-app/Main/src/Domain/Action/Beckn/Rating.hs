@@ -28,6 +28,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDriverCorrelation as RDCD
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import qualified EulerHS.Language as L
@@ -92,7 +93,7 @@ handler merchantId req ride = do
           case mbCorrelationRes of
             Just correlationRes -> do
               when (not correlationRes.favourite) $ do
-                mbMerchantPN_ <- CPN.findMatchingMerchantPNInRideFlow ride.merchantOperatingCityId "FAVOURITE_DRIVER_ALERT" Nothing Nothing driver.language booking.configInExperimentVersions
+                mbMerchantPN_ <- CPN.findMatchingMerchantPNInRideFlowByKey ride.merchantOperatingCityId DriverPush_Driver_MarkedFavourite Nothing Nothing driver.language booking.configInExperimentVersions
                 whenJust mbMerchantPN_ $ \merchantPN_ -> do
                   let title = T.replace "{#riderName#}" (fromMaybe "" req.riderName) merchantPN_.title
                       entityData = NotifReq {entityId = driverId.getId, title = title, message = merchantPN_.body}
@@ -100,7 +101,7 @@ handler merchantId req ride = do
                 RDC.updateFavouriteDriverForRider True (Id riderId) ride.driverId
                 SQD.incFavouriteRiderCount ride.driverId
             Nothing -> do
-              mbMerchantPN_ <- CPN.findMatchingMerchantPNInRideFlow ride.merchantOperatingCityId "FAVOURITE_DRIVER_ALERT" Nothing Nothing driver.language booking.configInExperimentVersions
+              mbMerchantPN_ <- CPN.findMatchingMerchantPNInRideFlowByKey ride.merchantOperatingCityId DriverPush_Driver_MarkedFavourite Nothing Nothing driver.language booking.configInExperimentVersions
               whenJust mbMerchantPN_ $ \merchantPN_ -> do
                 let title = T.replace "{#riderName#}" (fromMaybe "" req.riderName) merchantPN_.title
                     entityData = NotifReq {entityId = driverId.getId, title = title, message = merchantPN_.body}

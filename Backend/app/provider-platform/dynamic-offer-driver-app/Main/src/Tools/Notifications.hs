@@ -19,7 +19,6 @@ import DashboardAlert.Domain.Types.DashboardAlert as DAR
 import Data.Aeson
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
-import Data.Default.Class
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time (defaultTimeLocale, formatTime)
@@ -44,6 +43,8 @@ import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.SearchTry
 import Domain.Types.ServiceTierType
+import Domain.Types.TranslationKey (legacyOrKeyName, parseKey)
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Domain.Types.Trip as Trip
 import qualified Domain.Types.TripTransaction as DTT
 import qualified EulerHS.Prelude hiding (null)
@@ -132,7 +133,7 @@ data UpdateLocationNotificationReq = UpdateLocationNotificationReq
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 data FCMReq = FCMReq
-  { notificationKey :: Text,
+  { notificationKey :: DriverPushKey,
     subCategory :: Maybe Notification.SubCategory,
     showType :: FCM.FCMShowNotification,
     entityId :: Text,
@@ -142,21 +143,19 @@ data FCMReq = FCMReq
     priority :: Maybe FCM.FCMAndroidMessagePriority
   }
 
-instance Default FCMReq where
-  def =
+createFCMReq :: DriverPushKey -> Text -> FCM.FCMEntityType -> (FCMReq -> FCMReq) -> FCMReq
+createFCMReq notificationKey entityId entityType modifier =
+  modifier $
     FCMReq
-      { notificationKey = mempty,
+      { notificationKey = notificationKey,
         subCategory = Nothing,
         showType = FCM.SHOW,
-        entityId = mempty,
-        entityType = FCM.Product,
+        entityId = entityId,
+        entityType = entityType,
         sound = Nothing,
         overlayReq = Nothing,
         priority = Just FCM.HIGH
       }
-
-createFCMReq :: Text -> Text -> FCM.FCMEntityType -> (FCMReq -> FCMReq) -> FCMReq
-createFCMReq notificationKey entityId entityType modifier = modifier $ def {entityId = entityId, notificationKey = notificationKey, entityType = entityType}
 
 showLocalTime :: Seconds -> UTCTime -> Text
 showLocalTime timeDiffFromUtc time = T.pack $ formatTime defaultTimeLocale "%d %b, %I:%M %p" $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) time
@@ -175,7 +174,7 @@ findFCMConfigWithFallback merchantOpCityId personId = do
 --     driver.deviceToken
 --     lang
 --     Nothing
---     (createFCMReq "PICKUP_ZONE_REQUEST" requestId.getId FCM.Person identity)
+--     (createFCMReq DriverPush_PickupZone_Request requestId.getId FCM.Person identity)
 --     (Nothing :: Maybe EmptyDynamicParam)
 --     [ ("gateName", gateName),
 --       ("specialLocationName", specialLocationName)
@@ -201,8 +200,8 @@ dynamicFCMNotifyPerson ::
   m ()
 dynamicFCMNotifyPerson merchantOpCityId personId mbDeviceToken lang tripCategory fcmReq entityData dynamicParams mbConfigInExperimentVersions = do
   fcmConfig <- findFCMConfigWithFallback merchantOpCityId personId
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId fcmReq.notificationKey tripCategory fcmReq.subCategory (Just lang) mbConfigInExperimentVersions
-  when (isNothing mbMerchantPN) $ logError $ "MISSED_FCM - " <> fcmReq.notificationKey
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId fcmReq.notificationKey tripCategory fcmReq.subCategory (Just lang) mbConfigInExperimentVersions
+  when (isNothing mbMerchantPN) $ logError $ "MISSED_FCM - " <> legacyOrKeyName fcmReq.notificationKey
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = FCMNotificationTitle $ buildTemplate dynamicParams merchantPN.title
         body = FCMNotificationBody $ buildTemplate dynamicParams merchantPN.body
@@ -238,7 +237,7 @@ notifyOnNewSearchRequestAvailable merchantOpCityId personId mbDeviceToken langua
     mbDeviceToken
     language
     (Just entityData.tripCategory)
-    (createFCMReq "NEW_RIDE_AVAILABLE" entityData.searchTryId.getId FCM.SearchRequest identity)
+    (createFCMReq DriverPush_Ride_NewAvailable entityData.searchTryId.getId FCM.SearchRequest identity)
     (Just entityData)
     [ ("startTime", showTimeIst entityData.startTime),
       ("distanceToPickup", distanceToText entityData.distanceToPickupWithUnit),
@@ -263,20 +262,24 @@ data FeedbackBadgeEntityData = FeedbackBadgeEntityData
   deriving (Generic, ToJSON, Eq, FromJSON, Show)
 
 notifySoftBlocked :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r) => Person -> IssueBreachEntityData -> m ()
-notifySoftBlocked person entity = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-  dynamicFCMNotifyPerson
-    person.merchantOperatingCityId
-    person.id
-    person.deviceToken
-    (fromMaybe ENGLISH person.language)
-    Nothing
-    (createFCMReq entity.ibName person.id.getId FCM.Person identity)
-    (Just entity)
-    [ ("blockExpirationTime", showLocalTime transporterConfig.timeDiffFromUtc entity.blockExpirationTime),
-      ("blockedSTiers", blockedSTiers)
-    ]
-    Nothing
+notifySoftBlocked person entity =
+  -- The job data names the row (@ISSUE_BREACH_<type>@); the key is read back from it.
+  case parseKey entity.ibName of
+    Nothing -> logError $ "MISSED_FCM - " <> entity.ibName
+    Just pushKey -> do
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+      dynamicFCMNotifyPerson
+        person.merchantOperatingCityId
+        person.id
+        person.deviceToken
+        (fromMaybe ENGLISH person.language)
+        Nothing
+        (createFCMReq pushKey person.id.getId FCM.Person identity)
+        (Just entity)
+        [ ("blockExpirationTime", showLocalTime transporterConfig.timeDiffFromUtc entity.blockExpirationTime),
+          ("blockedSTiers", blockedSTiers)
+        ]
+        Nothing
   where
     blockedSTiers = T.intercalate ", " $ map show entity.blockedSTiers
 
@@ -293,7 +296,7 @@ sendFeedbackBadgeNotification ::
   FeedbackBadgeEntityData ->
   m ()
 sendFeedbackBadgeNotification merchantOpCityId driver entityData = do
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "FEEDBACK_BADGE_PN" Nothing Nothing (Just $ fromMaybe ENGLISH driver.language) Nothing
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId DriverPush_Driver_FeedbackBadge Nothing Nothing (Just $ fromMaybe ENGLISH driver.language) Nothing
   when (isNothing mbMerchantPN) $ logError $ "MISSED_FCM - FEEDBACK_BADGE_PN"
   whenJust mbMerchantPN $ \merchantPN -> do
     let dynamicParams = [("rating", show entityData.rating), ("badgeCount", maybe "0" show entityData.badgeCount)]
@@ -362,7 +365,7 @@ buildCancelNotificationData ::
 buildCancelNotificationData merchantOpCityId driverId mbDeviceToken mbLanguage rideId booking subCategory = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let params = [("startTime", showLocalTime transporterConfig.timeDiffFromUtc booking.startTime)]
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "NOTIFY_DRIVER_ON_CANCEL" (Just booking.tripCategory) (Just subCategory) mbLanguage (Just booking.configInExperimentVersions) >>= fromMaybeM (InternalError "MerchantPushNotification not found for NOTIFY_DRIVER_ON_CANCEL")
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId DriverPush_Ride_Cancelled (Just booking.tripCategory) (Just subCategory) mbLanguage (Just booking.configInExperimentVersions) >>= fromMaybeM (InternalError "MerchantPushNotification not found for NOTIFY_DRIVER_ON_CANCEL")
   return $
     Notification.NotificationReq
       { category = Notification.CANCELLED_PRODUCT,
@@ -432,7 +435,7 @@ notifyOnRegistration merchantOpCityId regToken personId lang mbToken = do
     mbToken
     lang
     Nothing
-    (createFCMReq "REGISTRATION_APPROVED" (getId tokenId) FCM.Merchant (\r -> r {priority = Nothing}))
+    (createFCMReq DriverPush_Driver_RegistrationApproved (getId tokenId) FCM.Merchant (\r -> r {priority = Nothing}))
     (Just ())
     []
     Nothing
@@ -704,7 +707,7 @@ notifyDriverNewAllocation merchantOpCityId booking personId lang mbToken = do
     mbToken
     lang
     (Just booking.tripCategory)
-    (createFCMReq "ALLOCATION_REQUEST" (getId booking.id) FCM.Product identity)
+    (createFCMReq DriverPush_Ride_AllocationRequest (getId booking.id) FCM.Product identity)
     (Just ())
     []
     Nothing
@@ -730,7 +733,7 @@ data SharedCabAllocationEntityData = SharedCabAllocationEntityData
   deriving (Generic, ToJSON, Eq, FromJSON, ToSchema, Show)
 
 -- Shared-cab allocation offer pushed by the internal FCM endpoint, with the dedicated SHARED_CAB_ALLOCATION key/type so the
--- driver app renders a shared-cab card; priority defaults to HIGH via FCMReq def.
+-- driver app renders a shared-cab card; createFCMReq sets the HIGH priority.
 notifySharedCabAllocation ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -749,7 +752,7 @@ notifySharedCabAllocation merchantOpCityId personId mbDeviceToken lang entityDat
     mbDeviceToken
     lang
     Nothing
-    (createFCMReq "SHARED_CAB_ALLOCATION" entityData.bookingId FCM.Product identity)
+    (createFCMReq DriverPush_SharedCab_Allocation entityData.bookingId FCM.Product identity)
     (Just entityData)
     [ ("seats", maybe "" show entityData.seats),
       ("boardingCode", fromMaybe "" entityData.boardingCode),
@@ -778,7 +781,7 @@ notifySharedCabCheckIn merchantOpCityId personId mbDeviceToken lang routeCode =
     mbDeviceToken
     lang
     Nothing
-    (createFCMReq "SHARED_CAB_CHECK_IN" personId.getId FCM.Person identity)
+    (createFCMReq DriverPush_SharedCab_CheckIn personId.getId FCM.Person identity)
     (Just ())
     [("routeCode", routeCode)]
     Nothing
@@ -865,7 +868,7 @@ notifyDriverClearedFare ::
   Price ->
   m ()
 notifyDriverClearedFare merchantOpCityId driver sReqId _ = do
-  notificationData <- buildClearedFareNotificationData merchantOpCityId driver.id driver.deviceToken sReqId
+  notificationData <- buildClearedFareNotificationData merchantOpCityId driver.id driver.language driver.deviceToken sReqId
   runWithServiceConfigForProviders merchantOpCityId driver.clientId driver.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
 
 buildClearedFareNotificationData ::
@@ -874,12 +877,13 @@ buildClearedFareNotificationData ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
+  Maybe Language ->
   Maybe FCM.FCMRecipientToken ->
   Id SearchTry ->
   m (Notification.NotificationReq EmptyDynamicParam EmptyDynamicParam)
-buildClearedFareNotificationData merchantOpCityId driverId mbDeviceToken searchRequestId = do
+buildClearedFareNotificationData merchantOpCityId driverId mbLanguage mbDeviceToken searchRequestId = do
   let params = [("", "")]
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "CLEARED_FARE" Nothing Nothing Nothing Nothing >>= fromMaybeM (InternalError "MerchantPushNotification not found for CLEARED_FARE")
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId DriverPush_Ride_ClearedFare Nothing Nothing mbLanguage Nothing >>= fromMaybeM (InternalError "MerchantPushNotification not found for CLEARED_FARE")
   return $
     Notification.NotificationReq
       { category = Notification.CLEARED_FARE,
@@ -918,7 +922,7 @@ notifyOnCancelSearchRequest ::
   Trip.TripCategory ->
   m ()
 notifyOnCancelSearchRequest merchantOpCityId driver searchTryId tripCategory = do
-  notificationData <- buildCancelSearchNotificationData merchantOpCityId driver.id driver.deviceToken searchTryId tripCategory
+  notificationData <- buildCancelSearchNotificationData merchantOpCityId driver.id driver.language driver.deviceToken searchTryId tripCategory
   runWithServiceConfigForProviders merchantOpCityId driver.clientId driver.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
 
 buildCancelSearchNotificationData ::
@@ -927,13 +931,14 @@ buildCancelSearchNotificationData ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
+  Maybe Language ->
   Maybe FCM.FCMRecipientToken ->
   Id SearchTry ->
   Trip.TripCategory ->
   m (Notification.NotificationReq EmptyDynamicParam EmptyDynamicParam)
-buildCancelSearchNotificationData merchantOpCityId driverId mbDeviceToken searchRequestId tripCategory = do
+buildCancelSearchNotificationData merchantOpCityId driverId mbLanguage mbDeviceToken searchRequestId tripCategory = do
   let params = [("", "")]
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "CANCELLED_SEARCH_REQUEST" (Just tripCategory) Nothing Nothing Nothing >>= fromMaybeM (InternalError "MerchantPushNotification not found for CANCELLED_SEARCH_REQUEST")
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId DriverPush_Ride_SearchCancelled (Just tripCategory) Nothing mbLanguage Nothing >>= fromMaybeM (InternalError "MerchantPushNotification not found for CANCELLED_SEARCH_REQUEST")
   return $
     Notification.NotificationReq
       { category = Notification.CANCELLED_SEARCH_REQUEST,
@@ -976,7 +981,7 @@ notifyPaymentFailed merchantOpCityId person mbDeviceToken orderId = do
     mbDeviceToken
     (fromMaybe ENGLISH person.language)
     Nothing
-    (createFCMReq "PAYMENT_FAILED" orderId.getId FCM.PaymentOrder identity)
+    (createFCMReq DriverPush_Payment_Failed orderId.getId FCM.PaymentOrder identity)
     (pure ())
     []
     Nothing
@@ -1006,7 +1011,7 @@ notifyPaymentPending merchantOpCityId person mbDeviceToken orderId = do
     mbDeviceToken
     (fromMaybe ENGLISH person.language)
     Nothing
-    (createFCMReq "PAYMENT_PENDING" orderId.getId FCM.PaymentOrder identity)
+    (createFCMReq DriverPush_Payment_Pending orderId.getId FCM.PaymentOrder identity)
     (pure ())
     []
     Nothing
@@ -1037,7 +1042,7 @@ notifyPaymentSuccess merchantOpCityId person orderId = do
     person.deviceToken
     (fromMaybe ENGLISH person.language)
     Nothing
-    (createFCMReq "PAYMENT_SUCCESS" orderId.getId FCM.PaymentOrder identity)
+    (createFCMReq DriverPush_Payment_Success orderId.getId FCM.PaymentOrder identity)
     (pure ())
     []
     Nothing
@@ -1079,7 +1084,7 @@ notifyPaymentModeManualOnCancel merchantOpCityId personId lang mbDeviceToken = d
     mbDeviceToken
     lang
     Nothing
-    (createFCMReq "PAYMENT_MODE_MANUAL_ON_CANCEL" personId.getId FCM.Person identity)
+    (createFCMReq DriverPush_Payment_ManualModeOnCancel personId.getId FCM.Person identity)
     (pure ())
     []
     Nothing
@@ -1111,7 +1116,7 @@ notifyPaymentModeManualOnPause merchantOpCityId personId lang mbDeviceToken = do
     mbDeviceToken
     lang
     Nothing
-    (createFCMReq "PAYMENT_MODE_MANUAL_ON_PAUSE" personId.getId FCM.Person identity)
+    (createFCMReq DriverPush_Payment_ManualModeOnPause personId.getId FCM.Person identity)
     (pure ())
     []
     Nothing
@@ -1142,7 +1147,7 @@ notifyPaymentModeManualOnSuspend merchantOpCityId person = do
     person.deviceToken
     (fromMaybe ENGLISH person.language)
     Nothing
-    (createFCMReq "PAYMENT_MODE_MANUAL_ON_SUSPEND" person.id.getId FCM.Person identity)
+    (createFCMReq DriverPush_Payment_ManualModeOnSuspend person.id.getId FCM.Person identity)
     (pure ())
     []
     Nothing
@@ -1365,7 +1370,7 @@ unhygienicVehicleWarningNotify ::
   UnhygienicVehicleWarningData ->
   m ()
 unhygienicVehicleWarningNotify mOpCityId person entityData = do
-  mbMerchantPN <- CPN.findMatchingMerchantPN mOpCityId "UNHYGIENIC_VEHICLE_WARNING" Nothing Nothing (Just $ fromMaybe ENGLISH person.language) Nothing
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey mOpCityId DriverPush_Vehicle_UnhygienicWarning Nothing Nothing (Just $ fromMaybe ENGLISH person.language) Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     fcmConfig <- findFCMConfigWithFallback mOpCityId person.id
     let notifTitle = FCMNotificationTitle merchantPN.title
@@ -1394,7 +1399,7 @@ vehicleUnsafeWarningNotify ::
   VehicleUnsafeWarningData ->
   m ()
 vehicleUnsafeWarningNotify mOpCityId person entityData = do
-  mbMerchantPN <- CPN.findMatchingMerchantPN mOpCityId "VEHICLE_UNSAFE_WARNING" Nothing Nothing (Just $ fromMaybe ENGLISH person.language) Nothing
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey mOpCityId DriverPush_Vehicle_UnsafeWarning Nothing Nothing (Just $ fromMaybe ENGLISH person.language) Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     fcmConfig <- findFCMConfigWithFallback mOpCityId person.id
     let notifTitle = FCMNotificationTitle merchantPN.title
@@ -1469,7 +1474,7 @@ buildSendSearchRequestNotificationData ::
   Maybe TripCategory ->
   m (Notification.NotificationReq SearchRequestForDriverAPIEntity EmptyDynamicParam)
 buildSendSearchRequestNotificationData merchantOpCityId timeDiffFromUtc driverId mbDeviceToken mbLanguage entityData dynamicParam tripCategory = do
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "NEW_RIDE_AVAILABLE" tripCategory Nothing mbLanguage Nothing >>= fromMaybeM (InternalError "MerchantPushNotification not found for NEW_RIDE_AVAILABLE")
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId DriverPush_Ride_NewAvailable tripCategory Nothing mbLanguage Nothing >>= fromMaybeM (InternalError "MerchantPushNotification not found for NEW_RIDE_AVAILABLE")
   return $
     Notification.NotificationReq
       { category = Notification.NEW_RIDE_AVAILABLE,
@@ -1570,7 +1575,7 @@ notifyStopModification rideStatus person entityData tripCategory = do
               }
       FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
     else do
-      let notificationKey = if entityData.isEdit then "EDIT_STOP" else "ADD_STOP"
+      let notificationKey = if entityData.isEdit then DriverPush_Ride_StopEdited else DriverPush_Ride_StopAdded
       dynamicFCMNotifyPerson
         newCityId
         person.id
@@ -1608,8 +1613,8 @@ notifyOnRideStarted ride booking = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   let offerAdjective = if merchantOperatingCity.language == KANNADA then "sakkath" else "great"
-  let notificationKey = if isAirConditioned then "AC_RIDE_STARTED" else "RIDE_STARTED"
-  mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow merchantOperatingCityId notificationKey (Just ride.tripCategory) Nothing person.language booking.configInExperimentVersions >>= fromMaybeM (InternalError "MerchantPushNotification not found for notifyOnRideStarted")
+  let notificationKey = if isAirConditioned then DriverPush_Ride_StartedAc else DriverPush_Ride_Started
+  mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlowByKey merchantOperatingCityId notificationKey (Just ride.tripCategory) Nothing person.language booking.configInExperimentVersions >>= fromMaybeM (InternalError "MerchantPushNotification not found for notifyOnRideStarted")
   let dynamicParams = [("offerAdjective", offerAdjective)]
   let title = buildTemplate dynamicParams mbMerchantPN.title
       body = buildTemplate dynamicParams mbMerchantPN.body
@@ -1724,20 +1729,21 @@ data FleetUnlinkEntityData = FleetUnlinkEntityData
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+-- | The title and body of a code-owned key's row, with the dynamic parameters filled in.
 buildMerchantPNContent ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Maybe Language ->
-  Text ->
+  DriverPushKey ->
   [(Text, Text)] ->
   m (Maybe (Text, Text))
-buildMerchantPNContent merchantOpCityId mbLanguage messageKey dynamicParams = do
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId messageKey Nothing Nothing (Just $ fromMaybe ENGLISH mbLanguage) Nothing
+buildMerchantPNContent merchantOpCityId mbLanguage key dynamicParams = do
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId key Nothing Nothing (Just $ fromMaybe ENGLISH mbLanguage) Nothing
   case mbMerchantPN of
     Nothing -> do
-      logWarning $ "MISSED_FCM - no merchant_push_notification row for key: " <> messageKey
+      logWarning $ "MISSED_FCM - no merchant_push_notification row for key: " <> legacyOrKeyName key
       pure Nothing
     Just merchantPN -> pure $ Just (buildTemplate dynamicParams merchantPN.title, buildTemplate dynamicParams merchantPN.body)
 
@@ -1752,13 +1758,13 @@ notifyDriverOnMerchantPN ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
-  Text ->
+  DriverPushKey ->
   Notification.Category ->
   [(Text, Text)] ->
   a ->
   m ()
-notifyDriverOnMerchantPN merchantOpCityId driver messageKey category dynamicParams entityData = do
-  mbContent <- buildMerchantPNContent merchantOpCityId driver.language messageKey dynamicParams
+notifyDriverOnMerchantPN merchantOpCityId driver key category dynamicParams entityData = do
+  mbContent <- buildMerchantPNContent merchantOpCityId driver.language key dynamicParams
   whenJust mbContent $ \(title, body) ->
     notifyDriverWithProviders merchantOpCityId category title body driver driver.deviceToken Nothing entityData
 
@@ -1771,13 +1777,13 @@ notifyFleetOwnerOnMerchantPN ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
-  Text ->
+  DriverPushKey ->
   Notification.Category ->
   [(Text, Text)] ->
   a ->
   m ()
-notifyFleetOwnerOnMerchantPN merchantOpCityId fleetOwner messageKey category dynamicParams entityData = do
-  mbContent <- buildMerchantPNContent merchantOpCityId fleetOwner.language messageKey dynamicParams
+notifyFleetOwnerOnMerchantPN merchantOpCityId fleetOwner key category dynamicParams entityData = do
+  mbContent <- buildMerchantPNContent merchantOpCityId fleetOwner.language key dynamicParams
   whenJust mbContent $ \(title, body) ->
     notifyWithGRPCProvider merchantOpCityId category title body fleetOwner.id Nothing entityData
 
@@ -2036,7 +2042,7 @@ sendDriverEKDLiveFCM ::
   m ()
 sendDriverEKDLiveFCM merchantOpCityId driverId mbDeviceToken language entityData = do
   logDebug $ "We are in EKD live call feedback"
-  let fcmReq = createFCMReq "EKD_LIVE_CALL_FEEDBACK" driverId.getId FCM.Person (\r -> r {showType = FCM.DO_NOT_SHOW})
+  let fcmReq = createFCMReq DriverPush_Ride_EkdLiveCallFeedback driverId.getId FCM.Person (\r -> r {showType = FCM.DO_NOT_SHOW})
   dynamicFCMNotifyPerson
     merchantOpCityId
     driverId
@@ -2213,7 +2219,7 @@ notifyPickupZoneRequest merchantOpCityId driverId entityData = do
     driver.deviceToken
     lang
     Nothing
-    (createFCMReq "PICKUP_ZONE_REQUEST" entityData.requestId FCM.Person identity)
+    (createFCMReq DriverPush_PickupZone_Request entityData.requestId FCM.Person identity)
     (Just entityData)
     [ ("gateName", entityData.gateName),
       ("specialLocationName", entityData.specialLocationName)
@@ -2255,7 +2261,7 @@ notifyPickupNoShow merchantOpCityId driverId entityData = do
     driver.deviceToken
     lang
     Nothing
-    (createFCMReq "PICKUP_ZONE_NO_SHOW" entityData.requestId FCM.Person identity)
+    (createFCMReq DriverPush_PickupZone_NoShow entityData.requestId FCM.Person identity)
     (Just entityData)
     [ ("gateName", entityData.gateName),
       ("specialLocationName", entityData.specialLocationName)

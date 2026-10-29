@@ -189,6 +189,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.RouteTripStopMapping as Fields
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as DTCConfig
 import qualified Domain.Types.TripAlertRequest as Fields
 import Domain.Types.TripTransaction
@@ -4558,17 +4559,17 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
           ( \driverInfo ->
               DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
           )
-      pure ("FLEET_REQUEST_APPROVED", \pn -> pn.body)
+      pure (DriverPush_Driver_FleetRequestApproved, \pn -> pn.body)
     _ -> do
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) driverId) SGuard.UnlinkFromFleet (SGuard.TargetDriver driverId) $
         QFDV.rejectFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
       SOnboardingComms.resetOnboardingAsIfNoFleet transporterConfig driverId
       pure
-        ( "FLEET_REQUEST_REJECTED",
+        ( DriverPush_Driver_FleetRequestRejected,
           \pn -> pn.body <> maybe "" (" " <>) req.reason
         )
 
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId pnType Nothing Nothing driver.language Nothing
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId pnType Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let notification =
           Notification.NotifReq

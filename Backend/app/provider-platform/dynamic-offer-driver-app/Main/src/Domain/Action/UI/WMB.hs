@@ -41,6 +41,7 @@ import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPushNotification as Fields
 import Domain.Types.Person
 import Domain.Types.Route
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Domain.Types.TripTransaction
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVehCategory
@@ -556,7 +557,7 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
     unless (transporterConfig.requiresOnboardingInspection == Just True) $
       unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
         Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language Nothing
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOperatingCityId DriverPush_Driver_FleetConsent Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.title
     let body = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.body

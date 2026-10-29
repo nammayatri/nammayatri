@@ -74,7 +74,9 @@ data RiderPushKey
   | RiderPush_Driver_OnTheWay
   | RiderPush_Driver_Reaching
   | RiderPush_Driver_Reached
+  | RiderPush_Driver_ReachedOtpLess
   | RiderPush_Driver_ReachedDestination
+  | RiderPush_Driver_ReachingDestination
   | RiderPush_Driver_StartedReturnTrip
   | RiderPush_Trip_Updated
   | RiderPush_Ride_OtpConfirmed
@@ -113,6 +115,7 @@ data RiderPushKey
   | RiderPush_Driver_Birthday
   | -- Public transport
     RiderPush_Bus_TripStarted
+  | RiderPush_Bus_TripEnded
   | RiderPush_Bus_ApproachingNearing
   | RiderPush_Bus_ApproachingRelaxed
   | RiderPush_Bus_PrevStopCrossed
@@ -120,6 +123,16 @@ data RiderPushKey
   | RiderPush_Shuttle_TrackingOnStart
   | RiderPush_Ticket_Cancelled
   | RiderPush_Pass_ExpiryReminder
+  | -- Shared cab
+    RiderPush_SharedCab_Assigned
+  | RiderPush_SharedCab_Arriving
+  | RiderPush_SharedCab_Reassigned
+  | RiderPush_SharedCab_BoardAny
+  | RiderPush_SharedCab_RouteChange
+  | RiderPush_SharedCab_BookingCancelled
+  | RiderPush_SharedCab_FindingTimeout
+  | RiderPush_SharedCab_OnTheWay
+  | RiderPush_SharedCab_ArrivingSoon
   | -- Payment order status, one key per service type and outcome
     RiderPush_Payment DOrder.PaymentServiceType Notification.Category
   deriving stock (Eq, Generic)
@@ -155,7 +168,9 @@ instance IsTranslationKey RiderPushKey where
            RiderPush_Driver_OnTheWay,
            RiderPush_Driver_Reaching,
            RiderPush_Driver_Reached,
+           RiderPush_Driver_ReachedOtpLess,
            RiderPush_Driver_ReachedDestination,
+           RiderPush_Driver_ReachingDestination,
            RiderPush_Driver_StartedReturnTrip,
            RiderPush_Trip_Updated,
            RiderPush_Ride_OtpConfirmed,
@@ -190,13 +205,23 @@ instance IsTranslationKey RiderPushKey where
            RiderPush_Referral_ReferredByRewardAddVpa,
            RiderPush_Driver_Birthday,
            RiderPush_Bus_TripStarted,
+           RiderPush_Bus_TripEnded,
            RiderPush_Bus_ApproachingNearing,
            RiderPush_Bus_ApproachingRelaxed,
            RiderPush_Bus_PrevStopCrossed,
            RiderPush_Frfs_TripDetailsUpdated,
            RiderPush_Shuttle_TrackingOnStart,
            RiderPush_Ticket_Cancelled,
-           RiderPush_Pass_ExpiryReminder
+           RiderPush_Pass_ExpiryReminder,
+           RiderPush_SharedCab_Assigned,
+           RiderPush_SharedCab_Arriving,
+           RiderPush_SharedCab_Reassigned,
+           RiderPush_SharedCab_BoardAny,
+           RiderPush_SharedCab_RouteChange,
+           RiderPush_SharedCab_BookingCancelled,
+           RiderPush_SharedCab_FindingTimeout,
+           RiderPush_SharedCab_OnTheWay,
+           RiderPush_SharedCab_ArrivingSoon
          ]
       <> [ RiderPush_Payment serviceType category
            | serviceType <- [minBound .. maxBound],
@@ -234,7 +259,9 @@ instance IsTranslationKey RiderPushKey where
     RiderPush_Driver_OnTheWay -> Just "DRIVER_ON_THE_WAY"
     RiderPush_Driver_Reaching -> Just "DRIVER_REACHING"
     RiderPush_Driver_Reached -> Just "DRIVER_HAS_REACHED"
+    RiderPush_Driver_ReachedOtpLess -> Just "DRIVER_HAS_REACHED_OTP_LESS"
     RiderPush_Driver_ReachedDestination -> Just "DRIVER_HAS_REACHED_DESTINATION"
+    RiderPush_Driver_ReachingDestination -> Just "DRIVER_REACHING_DESTINATION"
     RiderPush_Driver_StartedReturnTrip -> Just "DRIVER_STARTED_RETURN_TRIP"
     RiderPush_Trip_Updated -> Just "TRIP_UPDATED"
     RiderPush_Ride_OtpConfirmed -> Just "OTP_RIDE_CONFIRMED"
@@ -269,6 +296,7 @@ instance IsTranslationKey RiderPushKey where
     RiderPush_Referral_ReferredByRewardAddVpa -> Just "REFERRED_BY_REWARD_ADD_VPA"
     RiderPush_Driver_Birthday -> Just "DRIVER_BIRTHDAY"
     RiderPush_Bus_TripStarted -> Just "BUS_TRIP_STARTED"
+    RiderPush_Bus_TripEnded -> Just "BUS_TRIP_ENDED"
     RiderPush_Bus_ApproachingNearing -> Just "BUS_APPROACHING_NEARING"
     RiderPush_Bus_ApproachingRelaxed -> Just "BUS_APPROACHING_RELAXED"
     RiderPush_Bus_PrevStopCrossed -> Just "BUS_PREV_STOP_CROSSED"
@@ -276,4 +304,13 @@ instance IsTranslationKey RiderPushKey where
     RiderPush_Shuttle_TrackingOnStart -> Just "SHUTTLE_TRACKING_ON_START"
     RiderPush_Ticket_Cancelled -> Just "TICKET_CANCELLED"
     RiderPush_Pass_ExpiryReminder -> Just "PASS_EXPIRY_REMINDER"
+    RiderPush_SharedCab_Assigned -> Just "SHARED_CAB_ASSIGNED"
+    RiderPush_SharedCab_Arriving -> Just "SHARED_CAB_ARRIVING"
+    RiderPush_SharedCab_Reassigned -> Just "SHARED_CAB_REASSIGNED"
+    RiderPush_SharedCab_BoardAny -> Just "SHARED_CAB_BOARD_ANY"
+    RiderPush_SharedCab_RouteChange -> Just "SHARED_CAB_ROUTE_CHANGE"
+    RiderPush_SharedCab_BookingCancelled -> Just "SHARED_CAB_BOOKING_CANCELLED"
+    RiderPush_SharedCab_FindingTimeout -> Just "SHARED_CAB_FINDING_TIMEOUT"
+    RiderPush_SharedCab_OnTheWay -> Just "SHARED_CAB_ON_THE_WAY"
+    RiderPush_SharedCab_ArrivingSoon -> Just "SHARED_CAB_ARRIVING_SOON"
     RiderPush_Payment serviceType category -> Just (keyName serviceType <> "_" <> keyName category)

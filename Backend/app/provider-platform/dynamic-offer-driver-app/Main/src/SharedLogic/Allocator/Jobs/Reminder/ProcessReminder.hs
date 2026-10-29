@@ -38,6 +38,7 @@ import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Reminder as DR
 import qualified Domain.Types.ReminderConfig as DRC
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Kernel.Beam.Functions as BF
@@ -595,7 +596,9 @@ sendDriverNotifications reminder driver merchantOpCityId notificationType messag
   -- Send FCM notification to driver
   let notificationKey = show notificationType
       documentTypeName = show reminder.documentType
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId notificationKey Nothing Nothing driver.language Nothing
+  mbMerchantPN <- case reminderPushKey notificationType of
+    Just pnKey -> CPN.findMatchingMerchantPNByKey merchantOpCityId pnKey Nothing Nothing driver.language Nothing
+    Nothing -> pure Nothing
   case mbMerchantPN of
     Just merchantPN -> do
       let (title, body) = case notificationType of
@@ -635,6 +638,14 @@ sendDriverNotifications reminder driver merchantOpCityId notificationType messag
       Just phoneNumber -> do
         Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq smsMessage phoneNumber smsSender smsTemplateId messageType) >>= Sms.checkSmsResult
       Nothing -> logInfo "Driver mobile number not available, skipping SMS"
+  where
+    reminderPushKey :: FCM.FCMNotificationType -> Maybe DriverPushKey
+    reminderPushKey = \case
+      FCM.VEHICLE_INSPECTION -> Just DriverPush_Reminder_VehicleInspection
+      FCM.DRIVER_INSPECTION -> Just DriverPush_Reminder_DriverInspection
+      FCM.TRAINING_VIDEO -> Just DriverPush_Reminder_TrainingVideo
+      FCM.DOCUMENT_EXPIRY_REMINDER -> Just DriverPush_Reminder_DocumentExpiry
+      _ -> Nothing
 
 -- Helper function to send GRPC notifications to fleet owners and operators
 sendFleetAndOperatorNotifications ::
