@@ -24,6 +24,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig] -> m ())
 createMany = traverse_ create
 
+findAllByAgencyKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig])
+findAllByAgencyKey agencyKey = do findAllWithKV [Se.Is Beam.agencyKey $ Se.Eq agencyKey]
+
 findByAgencyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
 findByAgencyId agencyKey = do findOneWithKV [Se.And [Se.Is Beam.agencyKey $ Se.Eq agencyKey]]
 

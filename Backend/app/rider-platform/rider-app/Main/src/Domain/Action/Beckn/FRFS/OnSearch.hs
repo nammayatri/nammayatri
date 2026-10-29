@@ -743,6 +743,7 @@ createEntriesInFareTables merchantId merchantOperatingCityId routeCode startStop
                   shortName = show quote.vehicleType,
                   longName = show quote.vehicleType,
                   isAirConditioned = Just False,
+                  payOnBoard = False,
                   integratedBppConfigId,
                   merchantId,
                   merchantOperatingCityId,

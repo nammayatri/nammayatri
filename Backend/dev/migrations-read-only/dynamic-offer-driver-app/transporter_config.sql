@@ -1315,6 +1315,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN email_event_sns
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_fleet_to_link_individual_driver boolean ;
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN shared_cab_reconciler_enabled boolean  default false;
 
 
 
