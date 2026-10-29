@@ -133,8 +133,7 @@ data OfferEligibilityInput = OfferEligibilityInput
     hasTakenValidRide :: Bool,
     totalRidesCount :: Maybe Int,
     personTags :: [Text],
-    -- tripCategory and isAirConditioned are null where no trip is chosen yet (offers list);
-    -- rules should treat null as "any trip".
+    -- null on the offers list (no trip chosen yet)
     tripCategory :: Maybe DCommon.TripCategory,
     isAirConditioned :: Maybe Bool
   }
@@ -142,7 +141,6 @@ data OfferEligibilityInput = OfferEligibilityInput
 
 $(YTH.generateGenericDefault ''OfferEligibilityInput)
 
--- | Per-product facts from the quote or estimate that offer rules can check.
 data ProductOfferContext = ProductOfferContext
   { tripCategory :: Maybe DCommon.TripCategory,
     isAirConditioned :: Maybe Bool
@@ -706,7 +704,7 @@ offerListWithBasket ::
   Id DMOC.MerchantOperatingCity ->
   DOrder.PaymentServiceType ->
   [(Text, Price)] -> -- [(productId, price)]
-  [(Text, ProductOfferContext)] -> -- [(productId, context)] of the quotes/estimates; the booking's values are used when absent
+  [(Text, ProductOfferContext)] -> -- [(productId, context)]
   Maybe DRide.Ride ->
   Maybe DRB.Booking ->
   Maybe SSR.SearchRequest ->
