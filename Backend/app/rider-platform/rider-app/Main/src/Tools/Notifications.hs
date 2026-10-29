@@ -1449,8 +1449,28 @@ notifyOnNewMessage ::
   SRB.Booking ->
   T.Text ->
   m ()
-notifyOnNewMessage booking message = do
-  person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+notifyOnNewMessage booking message = notifyChatMessage booking.riderId message ()
+
+-- | What the rider app routes a cab chat tap on: the booking is the chat channel, the journey is the one to open.
+data SharedCabChatEntityData = SharedCabChatEntityData
+  { sharedCabBookingId :: T.Text,
+    journeyId :: Maybe T.Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | The driver's chat message as a CHAT_MESSAGE push; `entityData` rides in the notification's entity data.
+notifyChatMessage ::
+  ( ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    EsqDBReplicaFlow m r,
+    ToJSON a
+  ) =>
+  Id Person ->
+  T.Text ->
+  a ->
+  m ()
+notifyChatMessage riderId message entityData = do
+  person <- runInReplica $ Person.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.CHAT_MESSAGE merchantOperatingCityId
   let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
@@ -1460,7 +1480,7 @@ notifyOnNewMessage booking message = do
             subCategory = Nothing,
             showNotification = Notification.SHOW,
             messagePriority = Nothing,
-            entity = Notification.Entity Notification.Product person.id.getId (),
+            entity = Notification.Entity Notification.Product person.id.getId entityData,
             body = body,
             title = title,
             dynamicParams = EmptyDynamicParam,

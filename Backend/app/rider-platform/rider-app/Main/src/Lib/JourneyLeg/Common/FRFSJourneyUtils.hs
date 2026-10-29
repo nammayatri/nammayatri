@@ -101,56 +101,60 @@ checkRiderNearBusFRFS vehicleNumber mbRouteCode mbBookingTripId mbBookingStartTi
         Nothing -> pure (False, Nothing, Just "NO_LIVE_BUS_DATA")
         Just busData -> do
           let busPingTime = posixSecondsToUTCTime (fromIntegral busData.timestamp)
-          let pingAgeSeconds = abs (Time.diffUTCTime now busPingTime)
           -- A binary trust gate for one specific vehicle, feeding an action that marks a ticket used --
           -- deliberately tighter than busTrackingConfig.thresholdSeconds (30s), which exists for the voting
           -- system's relative ranking across many candidate buses and tolerates more slop than a moving
           -- bus's position staying meaningfully close to boardingMatchRadiusInMeters.
           let maxPingAgeSeconds = fromMaybe 10.0 riderConfig.boardingBusPingMaxAgeSeconds
-          let isStale = pingAgeSeconds >= realToFrac maxPingAgeSeconds
-          -- Same freshness bar applied to the rider side: picking "whichever point is closest in time
-          -- to the bus ping" from the whole history can otherwise let an old-but-coincidentally-aligned
-          -- rider point win over a genuinely current one that better reflects where the rider actually
-          -- is right now. Filtered against server time, not the client-supplied currTime, since a
-          -- client clock can be skewed.
-          let recentRiderPoints = filter (\p -> abs (Time.diffUTCTime now p.currTime) < realToFrac maxPingAgeSeconds) riderLocationHistory
-          if isStale
-            then pure (False, Nothing, Just "NO_LIVE_BUS_DATA")
-            else
-              if null recentRiderPoints
-                then pure (False, Nothing, Just "NO_RECENT_RIDER_LOCATION")
-                else do
-                  let closestPoint = minimumBy (comparing (\p -> abs (Time.diffUTCTime p.currTime busPingTime))) recentRiderPoints
-                  let busLoc = LatLong busData.latitude busData.longitude
-                  let distanceMeters :: Double = realToFrac (highPrecMetersToMeters (distanceBetweenInMeters closestPoint.latLong busLoc))
-                  let matchRadius = fromMaybe 30.0 riderConfig.boardingMatchRadiusInMeters
-                  -- Same vehicle, different trip: a shuttle can run multiple trips a day, so a rider with two
-                  -- same-day bookings on the same physical bus could otherwise match the wrong one. Verify the
-                  -- vehicle's *currently active* trip is the one this booking was actually made for. Fails open
-                  -- (doesn't block) when either side lacks the data to compare, same as the no-data case above.
-                  isSameActiveTrip <- case (mbRouteCode, mbBookingTripId) of
-                    (Just routeCode, Just bookingTripId) -> do
-                      let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId bookingTripId
-                      scheduleDetails <- OTPRest.getBusTripScheduleForBoardingCheck waybillNo tripNo routeCode integratedBppConfig
-                      -- getBusTripSchedule is already scoped to this exact waybill+trip, but don't rely on that
-                      -- implicitly -- confirm the returned detail really is the requested trip before trusting
-                      -- its is_active_trip flag.
-                      pure $
-                        any
-                          ( \detail ->
-                              detail.is_active_trip == Just True
-                                && detail.vehicle_no == vehicleNumber
-                                && detail.waybill_no == Just waybillNo
-                                && detail.trip_number == Just tripNo
-                          )
-                          scheduleDetails
-                    _ -> pure True
-                  let isMatch = distanceMeters <= matchRadius && isSameActiveTrip
-                  let reason
-                        | isMatch = Nothing
-                        | distanceMeters > matchRadius = Just "TOO_FAR"
-                        | otherwise = Just "TRIP_MISMATCH"
-                  pure (isMatch, Just distanceMeters, reason)
+          case riderNearVehicle now (realToFrac maxPingAgeSeconds) (realToFrac maxPingAgeSeconds) (busPingTime, LatLong busData.latitude busData.longitude) riderLocationHistory of
+            StaleVehiclePing -> pure (False, Nothing, Just "NO_LIVE_BUS_DATA")
+            NoRecentRiderPoint -> pure (False, Nothing, Just "NO_RECENT_RIDER_LOCATION")
+            RiderDistance distanceMeters -> do
+              let matchRadius = fromMaybe 30.0 riderConfig.boardingMatchRadiusInMeters
+              -- Same vehicle, different trip: a shuttle can run multiple trips a day, so a rider with two
+              -- same-day bookings on the same physical bus could otherwise match the wrong one. Verify the
+              -- vehicle's *currently active* trip is the one this booking was actually made for. Fails open
+              -- (doesn't block) when either side lacks the data to compare, same as the no-data case above.
+              isSameActiveTrip <- case (mbRouteCode, mbBookingTripId) of
+                (Just routeCode, Just bookingTripId) -> do
+                  let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId bookingTripId
+                  scheduleDetails <- OTPRest.getBusTripScheduleForBoardingCheck waybillNo tripNo routeCode integratedBppConfig
+                  -- getBusTripSchedule is already scoped to this exact waybill+trip, but don't rely on that
+                  -- implicitly -- confirm the returned detail really is the requested trip before trusting
+                  -- its is_active_trip flag.
+                  pure $
+                    any
+                      ( \detail ->
+                          detail.is_active_trip == Just True
+                            && detail.vehicle_no == vehicleNumber
+                            && detail.waybill_no == Just waybillNo
+                            && detail.trip_number == Just tripNo
+                      )
+                      scheduleDetails
+                _ -> pure True
+              let isMatch = distanceMeters <= matchRadius && isSameActiveTrip
+              let reason
+                    | isMatch = Nothing
+                    | distanceMeters > matchRadius = Just "TOO_FAR"
+                    | otherwise = Just "TRIP_MISMATCH"
+              pure (isMatch, Just distanceMeters, reason)
+
+data VehicleProximity = StaleVehiclePing | NoRecentRiderPoint | RiderDistance Double
+  deriving (Show, Eq)
+
+-- | The boarding match on one vehicle ping: the ping must be younger than `maxPingAge`, and the rider's point closest in time to it
+-- (among points younger than `maxRiderAge`) gives the distance. The bus applies its ping bar to the rider side too: picking
+-- "whichever point is closest in time to the ping" from the whole history can otherwise let an old-but-coincidentally-aligned rider
+-- point win over a genuinely current one. Filtered against server time, not the client-supplied currTime, since a client clock can
+-- be skewed.
+riderNearVehicle :: UTCTime -> NominalDiffTime -> NominalDiffTime -> (UTCTime, LatLong) -> [APITypes.RiderLocationReq] -> VehicleProximity
+riderNearVehicle now maxPingAge maxRiderAge (pingTime, vehicleLoc) riderPoints
+  | abs (Time.diffUTCTime now pingTime) >= maxPingAge = StaleVehiclePing
+  | otherwise = case filter (\p -> abs (Time.diffUTCTime now p.currTime) < maxRiderAge) riderPoints of
+    [] -> NoRecentRiderPoint
+    recent ->
+      let closestPoint = minimumBy (comparing (\p -> abs (Time.diffUTCTime p.currTime pingTime))) recent
+       in RiderDistance (realToFrac (highPrecMetersToMeters (distanceBetweenInMeters closestPoint.latLong vehicleLoc)))
 
 -- | 'stopCodes' is a stop together with its equivalents (see 'OTPRest.getEquivalentStopCodes'):
 -- a bus's eta_data is keyed by the platform it calls at, so a station is matched via its platforms.
