@@ -17,6 +17,22 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.IntegratedBPPConfig as Beam
 import Storage.Queries.OrphanInstances.IntegratedBPPConfig
 
+-- | Which row an agency key names when several rows share it (the shared-cab feed has a MULTIMODAL row for journeys and an
+-- APPLICATION row for the driver proxy): the one row of the caller's platform type. A key shared by several rows of the same
+-- platform names no single row, so it answers Nothing and the caller falls back to its own city lookup.
+pickAgencyRow :: Domain.Types.IntegratedBPPConfig.PlatformType -> (a -> (Domain.Types.IntegratedBPPConfig.PlatformType, Text)) -> [a] -> Maybe a
+pickAgencyRow preferred key rows = case filter ((== preferred) . fst . key) rows of
+  [row] -> Just row
+  [] -> case rows of
+    [row] -> Just row
+    _ -> Nothing
+  _ -> Nothing
+
+-- | The row only if it is of the platform the caller needs (the driver proxy needs its APPLICATION row; a key that has only
+-- a MULTIMODAL row names no proxy config).
+onlyOfPlatform :: Domain.Types.IntegratedBPPConfig.PlatformType -> (a -> Domain.Types.IntegratedBPPConfig.PlatformType) -> Maybe a -> Maybe a
+onlyOfPlatform platform platformOf = mfilter ((== platform) . platformOf)
+
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
