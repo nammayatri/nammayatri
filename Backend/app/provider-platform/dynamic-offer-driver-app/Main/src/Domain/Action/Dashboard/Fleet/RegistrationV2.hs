@@ -239,7 +239,7 @@ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId = do
           phoneNumber = countryCode <> mobileNumber
           sender = smsCfg.sender
       (mbSender, message, templateId, messageType) <-
-        MessageBuilder.buildOnboardingMessage merchantOperatingCityId $
+        MessageBuilder.buildOnboardingMessage merchantOperatingCityId fleetOwner.language $
           MessageBuilder.BuildOnboardingMessageReq {}
       Sms.sendSMS merchant.id merchantOperatingCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId messageType) >>= Sms.checkSmsResult
 
@@ -489,7 +489,7 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled mbDashboardPersonI
     withLogTag ("mobileNumber" <> req.mobileNumber) $
       do
         (mbSender, message, templateId, messageType) <-
-          MessageBuilder.buildSendOTPMessage merchantOpCityId $
+          MessageBuilder.buildSendOTPMessage merchantOpCityId fleetOwnerPerson.language $
             MessageBuilder.BuildSendOTPMessageReq
               { otp = otpCode,
                 hash = otpHash

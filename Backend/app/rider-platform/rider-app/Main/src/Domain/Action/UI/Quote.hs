@@ -69,6 +69,7 @@ import qualified Domain.Types.RouteDetails as Fields
 import Domain.Types.RouteDetailsAPI (RouteDetail, mkRouteDetail)
 import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.ServiceTierType as DVST
+import Domain.Types.TranslationKeys (RiderTranslationKey (..))
 import qualified Domain.Types.Translations as Fields
 import qualified Domain.Types.Trip as DTrip
 import Environment
@@ -289,13 +290,18 @@ safeToLower [] = []
 estimateBuildLockKey :: Text -> Text
 estimateBuildLockKey searchReqid = "Customer:Estimate:Build:" <> searchReqid
 
-translateServiceTierText :: Id DMOC.MerchantOperatingCity -> Lang.Language -> Maybe Text -> Flow (Maybe Text)
-translateServiceTierText mocId language mbText = case mbText of
-  Just text ->
-    getConfig
-      (TranslationDimensions {merchantOperatingCityId = Just mocId.getId, messageKey = text, language = Just language})
-      (Just (CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache mocId text language))
-      <&> Just . maybe text (.message)
+-- | The tier's keyed row first; else the row stored under the English text itself, as before.
+translateServiceTierText :: Id DMOC.MerchantOperatingCity -> Lang.Language -> RiderTranslationKey -> Maybe Text -> Flow (Maybe Text)
+translateServiceTierText mocId language key mbText = case mbText of
+  Just text -> do
+    mbKeyed <- CQTranslations.findTextByKey mocId language key
+    case mbKeyed of
+      Just keyed -> pure (Just keyed)
+      Nothing ->
+        getConfig
+          (TranslationDimensions {merchantOperatingCityId = Just mocId.getId, messageKey = text, language = Just language})
+          (Just (CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache mocId text language))
+          <&> Just . maybe text (.message)
   Nothing -> pure Nothing
 
 getQuotes :: Id SSR.SearchRequest -> Maybe Bool -> Maybe DMPMExtra.PaymentInstrument -> Flow GetQuotesRes
@@ -627,8 +633,8 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
     mbOffer <- case Map.lookup productId offerMap of
       Nothing -> pure Nothing
       Just resp -> SOffer.mkCumulativeOfferRespWithLogics cumulativeLogics searchReq.merchantOperatingCityId resp [] mbBreakup Nothing
-    serviceTierName <- translateServiceTierText searchReq.merchantOperatingCityId language quoteEntity.serviceTierName
-    serviceTierShortDesc <- translateServiceTierText searchReq.merchantOperatingCityId language quoteEntity.serviceTierShortDesc
+    serviceTierName <- translateServiceTierText searchReq.merchantOperatingCityId language (ServiceTier_Name quoteEntity.vehicleVariant) quoteEntity.serviceTierName
+    serviceTierShortDesc <- translateServiceTierText searchReq.merchantOperatingCityId language (ServiceTier_ShortDescription quoteEntity.vehicleVariant) quoteEntity.serviceTierShortDesc
     let grossOffer offer = let gross = Settlement.grossTotalTaxInclusive mbPaymentCharge offer.postOfferAmount in offer {SOffer.postOfferAmount = gross, SOffer.estimatedPostOfferAmount = gross}
         displayedOffers = case DTrip.tripCategoryToPricingPolicy <$> quoteEntity.tripCategory of
           Just DTrip.EstimateBased {} -> mbOffer
@@ -690,8 +696,8 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
       Just resp -> SOffer.mkCumulativeOfferRespWithLogics cumulativeLogics searchRequest.merchantOperatingCityId resp [] mbBreakup Nothing
     (bppDetails, valueAddNP) <- lookupProvider providerLookup estimate.providerId
     apiEntity <- UEstimate.mkEstimateAPIEntity isReferredRide mbOffer mbPaymentCharge bppDetails valueAddNP estimate
-    serviceTierName <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierName
-    serviceTierShortDesc <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierShortDesc
+    serviceTierName <- translateServiceTierText searchRequest.merchantOperatingCityId language (ServiceTier_Name estimate.vehicleServiceTierType) apiEntity.serviceTierName
+    serviceTierShortDesc <- translateServiceTierText searchRequest.merchantOperatingCityId language (ServiceTier_ShortDescription estimate.vehicleServiceTierType) apiEntity.serviceTierShortDesc
     pure apiEntity {UEstimate.serviceTierName = serviceTierName, UEstimate.serviceTierShortDesc = serviceTierShortDesc}
   return . sortBy (compare `on` (.createdAt)) $ estimates
 

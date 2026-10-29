@@ -297,7 +297,7 @@ fleetOwnerLogin req = do
     withLogTag ("mobileNumber" <> req.mobileNumber) $
       do
         (mbSender, message, templateId, messageType) <-
-          MessageBuilder.buildSendOTPMessage merchantOpCityId $
+          MessageBuilder.buildSendOTPMessage merchantOpCityId person.language $
             MessageBuilder.BuildSendOTPMessageReq
               { otp = otpCode,
                 hash = otpHash

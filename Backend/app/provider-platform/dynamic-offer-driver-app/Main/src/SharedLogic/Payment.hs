@@ -360,7 +360,7 @@ sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount mbChannel sendDeep
   webPaymentLink <- getPaymentLinks mbPaymentLink driverId sendDeepLink
   case mbChannel of
     Just MessageKey.WHATSAPP -> do
-      merchantMessage <- QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId mkey Nothing Nothing >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
+      merchantMessage <- QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId mkey driver.language Nothing Nothing >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
       let amount = show <$> mbAmount
       let whatsAppReq =
             Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
@@ -376,7 +376,7 @@ sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount mbChannel sendDeep
     Just MessageKey.SMS -> do
       smsCfg <- asks (.smsCfg)
       (mbSender, message, templateId, messageType) <-
-        MessageBuilder.buildSendPaymentLink merchantOpCityId $
+        MessageBuilder.buildSendPaymentLink merchantOpCityId driver.language $
           MessageBuilder.BuildSendPaymentLinkReq
             { paymentLink = webPaymentLink,
               amount = show (fromMaybe 0 mbAmount)

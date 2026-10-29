@@ -365,7 +365,7 @@ sendEnablementSms merchantOpCityId personId transporterConfig merchantId =
           phoneNumber = countryCode <> mobileNumber
           sender = smsCfg.sender
       (mbSender, message, templateId, messageType) <-
-        MessageBuilder.buildOnboardingMessage merchantOpCityId $
+        MessageBuilder.buildOnboardingMessage merchantOpCityId driver.language $
           MessageBuilder.BuildOnboardingMessageReq {}
       Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId messageType) >>= Sms.checkSmsResult
 
@@ -397,7 +397,7 @@ sendOnboardingLinkSms merchantOpCity transporterConfig driver mbFleetOwner = do
     let countryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) driver.mobileCountryCode
         phoneNumber = countryCode <> mobileNumber
     (mbSender, message, templateId, messageType) <-
-      MessageBuilder.buildDriverOnboardingLinkMessage merchantOpCity.id messageKey $
+      MessageBuilder.buildDriverOnboardingLinkMessage merchantOpCity.id driver.language messageKey $
         MessageBuilder.BuildDriverOnboardingLinkMessageReq
           { code = codeRes.code,
             expiryHours,

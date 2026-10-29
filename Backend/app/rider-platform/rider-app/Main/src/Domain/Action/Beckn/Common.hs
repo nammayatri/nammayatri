@@ -833,8 +833,8 @@ rideAssignedReqHandler req = do
                     MessageBuilder.deliveryMessageType = MessageBuilder.SenderReq
                   }
               receiverSmsReq = senderSmsReq {MessageBuilder.deliveryMessageType = MessageBuilder.ReceiverReq}
-          sbuildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId senderSmsReq
-          rbuildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId receiverSmsReq
+          sbuildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId senderPerson.language senderSmsReq
+          rbuildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId receiverPerson.language receiverSmsReq
           senderMobileNumber <- decrypt encSenderMobileNumber
           receiverMobileNumber <- decrypt encReceiverMobileNumber
           let sphoneNumber = (fromMaybe "+91" senderPerson.mobileCountryCode) <> senderMobileNumber
@@ -923,7 +923,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
                 MessageBuilder.pickedUp = True,
                 MessageBuilder.deliveryMessageType = MessageBuilder.ReceiverReq
               }
-      buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId receiverSmsReq
+      buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId receiverPerson.language receiverSmsReq
       Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
 
     sendRideEndOTPMessage person = fork "sending ride end otp sms" $ do
@@ -937,7 +937,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
               let countryCode = fromMaybe "+91" person.mobileCountryCode
               let phoneNumber = countryCode <> mobileNumber
               buildSmsReq <-
-                MessageBuilder.buildSendRideEndOTPMessage merchantOperatingCityId $
+                MessageBuilder.buildSendRideEndOTPMessage merchantOperatingCityId person.language $
                   MessageBuilder.BuildSendRideEndOTPMessageReq
                     { otp = show endOtp'
                     }
@@ -1926,7 +1926,7 @@ sendRideEndMessage bk = case bk.tripCategory of
                 MessageBuilder.pickedUp = True,
                 MessageBuilder.deliveryMessageType = MessageBuilder.SenderReq
               }
-      buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage bk.merchantOperatingCityId senderSmsReq
+      buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage bk.merchantOperatingCityId senderPerson.language senderSmsReq
       Sms.sendSMS bk.merchantId bk.merchantOperatingCityId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
   _ -> pure ()
 
@@ -2120,7 +2120,7 @@ sendRideBookingDetailsViaWhatsapp personId ride booking riderConfig = do
       trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
       messageKey = bool DMM.WHATSAPP_CALL_BOOKING_FLOW_DETAILS_MESSAGE DMM.WHATSAPP_CALL_BOOKING_REALLOCATED_RIDE_DETAILS_MESSAGE (length bookings > 1)
   trackingUrl <- MessageBuilder.shortenTrackingUrl Nothing trackLink
-  merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyInRideFlow person.merchantOperatingCityId messageKey booking.configInExperimentVersions >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
+  merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyLanguage person.merchantOperatingCityId messageKey person.language (Just booking.configInExperimentVersions) >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
   rideDriverMobileNumber <- getDriverMobileNumber ride >>= fromMaybeM (RideFieldNotPresent "driverMobileNumber")
   let driverNumber = (fromMaybe "+91" ride.driverMobileCountryCode) <> rideDriverMobileNumber
       fare = show booking.estimatedTotalFare.amount
@@ -2143,7 +2143,7 @@ sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
   countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   let phoneNumber = countryCode <> mobileNumber
       messageKey = DMM.WHATSAPP_CALL_BOOKING_CANCELLED_RIDE_MESSAGE
-  merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
+  merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyLanguage person.merchantOperatingCityId messageKey person.language Nothing >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
   result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [Just riderConfig.appUrl] Nothing Nothing merchantMessage.mediaUrl) -- Accepts at most 7 variables using GupShup
   when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Cancelled Booking Whatsapp message")
 

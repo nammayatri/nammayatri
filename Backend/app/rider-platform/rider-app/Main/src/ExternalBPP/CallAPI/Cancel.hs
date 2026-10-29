@@ -15,7 +15,7 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (Language, SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config
@@ -72,7 +72,7 @@ cancel ::
   -- | A shared-cab cancel's refund, as its policy guard decided it; ignored for any other tier.
   Maybe Refund ->
   DBooking.FRFSTicketBooking ->
-  m (Maybe (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters, DBooking.FRFSTicketBooking))
+  m (Maybe (Maybe Text, Maybe Text, Maybe Language, FRFSUtils.FRFSFareParameters, DBooking.FRFSTicketBooking))
 cancel merchant merchantOperatingCity bapConfig cancellationType initiator enforceCap mbLiveDecision mbDecision inputBooking =
   FRFSReschedule.withRescheduleLock inputBooking.id $ do
     booking <- QFRFSTicketBooking.findById inputBooking.id >>= fromMaybeM (InvalidRequest "Booking not found for cancellation")
@@ -124,4 +124,4 @@ cancel merchant merchantOperatingCity bapConfig cancellationType initiator enfor
         onCancelReq <- Flow.cancel merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType mbLiveDecision booking mbSharedCabRefund
         mbSideEffectData <- OnCancelCore.onCancelCore merchant booking onCancelReq
         let updatedBooking = booking {DBooking.bppOrderId = Just onCancelReq.bppOrderId}
-        return $ fmap (\(a, b, c) -> (a, b, c, updatedBooking)) mbSideEffectData
+        return $ fmap (\(a, b, c, d) -> (a, b, c, d, updatedBooking)) mbSideEffectData

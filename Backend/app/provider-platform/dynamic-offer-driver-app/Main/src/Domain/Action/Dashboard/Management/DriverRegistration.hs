@@ -2901,7 +2901,7 @@ translateDocumentType merchantOpCityId language documentType =
 
 fetchDocumentSmsTemplates :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Lang.Language -> DMM.MessageKey -> m (Text, Text)
 fetchDocumentSmsTemplates merchantOpCityId language messageKey = do
-  mbMerchantMessage <- QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing
+  mbMerchantMessage <- QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId messageKey (Just language) Nothing Nothing
   case mbMerchantMessage of
     Just mm -> pure ("", mm.message)
     Nothing -> do

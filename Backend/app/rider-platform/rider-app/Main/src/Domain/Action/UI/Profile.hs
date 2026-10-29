@@ -971,6 +971,7 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
           personId'
           person'.merchantId
           person'.merchantOperatingCityId
+          person'.language
           req'.mobileCountryCode
           req'.mobileNumber
           req'.email

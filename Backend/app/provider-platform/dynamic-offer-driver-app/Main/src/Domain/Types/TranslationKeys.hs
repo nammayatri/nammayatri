@@ -60,6 +60,7 @@ data TranslationKey
   | ServiceTier_Name DST.ServiceTierType
   | ServiceTier_ShortDescription DST.ServiceTierType
   | ServiceTier_LongDescription DST.ServiceTierType
+  | Wallet_Item Text
   deriving stock (Eq)
 
 instance Show TranslationKey where
@@ -82,7 +83,10 @@ instance Show TranslationKey where
     ServiceTier_Name t -> dotted ["ServiceTier", "Name", keyName t]
     ServiceTier_ShortDescription t -> dotted ["ServiceTier", "ShortDescription", keyName t]
     ServiceTier_LongDescription t -> dotted ["ServiceTier", "LongDescription", keyName t]
+    Wallet_Item ref -> dotted ["Wallet", "Item", ref]
 
+-- | A key named by free text is left out of 'allKeys', which lists only what the code can enumerate;
+-- the dashboard lists such keys from where their names live (wallet items from 'allWalletReferences').
 instance IsTranslationKey TranslationKey where
   allKeys =
     concat
@@ -131,6 +135,7 @@ instance IsTranslationKey TranslationKey where
     ServiceTier_Name _ -> Nothing
     ServiceTier_ShortDescription _ -> Nothing
     ServiceTier_LongDescription _ -> Nothing
+    Wallet_Item _ -> Nothing
 
 allDocumentOnboardingStages :: [DocumentOnboardingStage]
 allDocumentOnboardingStages =
@@ -252,6 +257,7 @@ data DriverPushKey
   | DriverPush_OnboardingAlert DOAA.OnboardingAlertAction DAA.DashboardAccessType
   | DriverPush_Payout_Completed
   | DriverPush_Payout_Failed
+  | DriverPush_Payout_FailedWithDetail
   | DriverPush_Payout_VpaAlert
   | DriverPush_Payout_ReferralReward
   | DriverPush_IssueStatus IC.IssueStatus
@@ -346,6 +352,7 @@ instance IsTranslationKey DriverPushKey where
       <> map (uncurry DriverPush_OnboardingAlert) reachableOnboardingAlerts
       <> [ DriverPush_Payout_Completed,
            DriverPush_Payout_Failed,
+           DriverPush_Payout_FailedWithDetail,
            DriverPush_Payout_VpaAlert,
            DriverPush_Payout_ReferralReward
          ]
@@ -427,6 +434,7 @@ instance IsTranslationKey DriverPushKey where
     DriverPush_OnboardingAlert action audience -> Just ("ONBOARDING_ALERT_" <> onboardingAlertActionText action <> "_" <> keyName audience)
     DriverPush_Payout_Completed -> Nothing
     DriverPush_Payout_Failed -> Nothing
+    DriverPush_Payout_FailedWithDetail -> Nothing
     DriverPush_Payout_VpaAlert -> Just "PAYOUT_VPA_ALERT"
     DriverPush_Payout_ReferralReward -> Just "PAYOUT_REFERRAL_REWARD"
     DriverPush_IssueStatus _ -> Nothing
@@ -505,6 +513,7 @@ pushNotificationType = \case
   DriverPush_Operator_FleetUnlinked -> Just FCM.FLEET_UNLINK_FROM_OPERATOR
   DriverPush_Payout_Completed -> Just FCM.PAYOUT_COMPLETED
   DriverPush_Payout_Failed -> Just FCM.PAYOUT_FAILED
+  DriverPush_Payout_FailedWithDetail -> Just FCM.PAYOUT_FAILED
   DriverPush_IssueStatus _ -> Just FCM.CHAT_MESSAGE
   DriverPush_IssueChat_Title -> Just FCM.CHAT_MESSAGE
   DriverPush_IssueChat_ImageFallback -> Just FCM.CHAT_MESSAGE

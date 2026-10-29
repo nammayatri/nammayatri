@@ -513,6 +513,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       person.id
       person.merchantId
       merchantOpCityId
+      person.language
       req.mobileCountryCode
       req.mobileNumber
       req.email
@@ -951,6 +952,7 @@ resend tokenId mbSenderHash = do
       person.id
       person.merchantId
       merchantOpCityId
+      person.language
       person.mobileCountryCode
       mobileNumber
       receiverEmail

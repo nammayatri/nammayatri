@@ -42,12 +42,14 @@ import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Domain.Types.SubscriptionConfig as Fields
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
@@ -115,6 +117,7 @@ import qualified SharedLogic.Ride as SharedRide
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
@@ -371,10 +374,14 @@ defaultSettlementHooks :: (PayoutSettlementFlow m r) => SettlementHooks m
 defaultSettlementHooks =
   SettlementHooks
     { notifyWalletPayout = \person _payoutOrder updPayoutStatus amount -> do
-        let (notificationTitle, notificationMessage, notificationType) =
+        let (pushKey, defaultTitle, defaultMessage, notificationType) =
               if isPayoutOrderSuccess updPayoutStatus
-                then ("Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
-                else ("Payout Failed", "Your payout of Rs." <> show amount <> " has failed. Please retry or contact support.", FCM.PAYOUT_FAILED)
+                then (DriverPush_Payout_Completed, "Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
+                else (DriverPush_Payout_Failed, "Payout Failed", "Your payout of Rs." <> show amount <> " has failed. Please retry or contact support.", FCM.PAYOUT_FAILED)
+        -- A configured row (per language) wins over the built-in English text.
+        mbMerchantPN <- CPN.findMatchingMerchantPNByKey person.merchantOperatingCityId pushKey Nothing Nothing person.language Nothing
+        let params = [("amount", show amount)]
+            (notificationTitle, notificationMessage) = maybe (defaultTitle, defaultMessage) (\pn -> (Notify.buildTemplate params pn.title, Notify.buildTemplate params pn.body)) mbMerchantPN
         Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
     }
 
@@ -906,6 +913,7 @@ sendSpecialZonePayoutSms merchantOpCityId payoutRequest = do
         (mbSender, message, templateId, messageType) <-
           MessageBuilder.buildDriverPayoutMessage
             merchantOpCityId
+            driver.language
             MessageBuilder.BuildDriverPayoutMessageReq
               { payoutAmount = show amountVal,
                 bookingId = mbDisplayBookingId

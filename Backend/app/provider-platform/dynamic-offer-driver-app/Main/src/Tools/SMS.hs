@@ -98,7 +98,7 @@ sendDashboardSms merchantId merchantOpCityId messageType mbRide driverId mbBooki
         BOOKING -> whenJust mbRide \ride ->
           whenJust mbBooking \booking -> do
             (mbSender, message, templateId, msgType) <-
-              MessageBuilder.buildBookingMessage merchantOpCityId $
+              MessageBuilder.buildBookingMessage merchantOpCityId driver.language $
                 MessageBuilder.BuildBookingMessageReq
                   { otp = ride.otp,
                     amount = show booking.estimatedFare
@@ -106,7 +106,7 @@ sendDashboardSms merchantId merchantOpCityId messageType mbRide driverId mbBooki
             sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
         ENDRIDE -> whenJust mbRide \ride -> do
           (mbSender, message, templateId, msgType) <-
-            MessageBuilder.buildEndRideMessage merchantOpCityId $
+            MessageBuilder.buildEndRideMessage merchantOpCityId driver.language $
               MessageBuilder.BuildEndRideMessageReq
                 { rideAmount = show amount,
                   rideShortId = ride.shortId.getShortId
@@ -114,14 +114,14 @@ sendDashboardSms merchantId merchantOpCityId messageType mbRide driverId mbBooki
           sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
         ONBOARDING -> do
           (mbSender, message, templateId, msgType) <-
-            MessageBuilder.buildOnboardingMessage merchantOpCityId $
+            MessageBuilder.buildOnboardingMessage merchantOpCityId driver.language $
               MessageBuilder.BuildOnboardingMessageReq
                 {
                 }
           sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
         CASH_COLLECTED -> do
           (mbSender, message, templateId, msgType) <-
-            MessageBuilder.buildCollectCashMessage merchantOpCityId $
+            MessageBuilder.buildCollectCashMessage merchantOpCityId driver.language $
               MessageBuilder.BuildCollectCashMessageReq
                 { amount = show amount
                 }

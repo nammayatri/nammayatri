@@ -160,7 +160,7 @@ sendCommunicationToCustomer SendCommunicationToCustomerReq {..} = do
     SMS -> do
       smsCfg <- asks (.smsCfg)
       messageKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid message key for SMS")
-      merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyInRideFlow merchantOperatingCityId messageKey configInExperimentVersions >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId notificationKey)
+      merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId messageKey person.language (Just configInExperimentVersions) >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId notificationKey)
       let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
       let (_, smsReqBody) = messageTransformer ("", merchantMessage.message)
       Sms.sendSMS person.merchantId merchantOperatingCityId (Sms.SendSMSReq smsReqBody phoneNumber sender merchantMessage.templateId merchantMessage.messageType) -- TODO: append SMS heading

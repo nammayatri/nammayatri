@@ -19,7 +19,6 @@ module Storage.CachedQueries.Merchant.MerchantMessage
     findAllByMerchantOpCityIdInRideFlow,
     findByMerchantOperatingCityIdAndMessageKey,
     findByMerchantOperatingCityIdAndMessageKeyLanguage,
-    findByMerchantOperatingCityIdAndMessageKeyInRideFlow,
     clearCache,
     clearCacheById,
   )
@@ -69,10 +68,6 @@ findByMerchantOperatingCityIdAndMessageKeyLanguage id messageKey mbLanguage mbCo
 findAllByMerchantOpCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> m [MerchantMessage]
 findAllByMerchantOpCityIdInRideFlow id configVersionMap =
   findAllByMerchantOpCityId id (Just configVersionMap)
-
-findByMerchantOperatingCityIdAndMessageKeyInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
-findByMerchantOperatingCityIdAndMessageKeyInRideFlow id messageKey configVersionMap =
-  findByMerchantOperatingCityIdAndMessageKey id messageKey (Just configVersionMap)
 
 makeMerchantOperatingCityIdAndMessageKey :: Id MerchantOperatingCity -> MessageKey -> Text
 makeMerchantOperatingCityIdAndMessageKey id messageKey = "CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> show messageKey <> ":AllLanguages"

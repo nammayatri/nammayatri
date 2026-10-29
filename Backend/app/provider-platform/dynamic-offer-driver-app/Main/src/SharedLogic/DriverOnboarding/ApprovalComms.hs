@@ -102,7 +102,7 @@ sendApproved merchantOpCityId recipient pnKey smsKey mbVehicleNo = do
     else TN.notifyDriverOnMerchantPN merchantOpCityId recipient pnKey Notification.DRIVER_NOTIFY params entityData
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when transporterConfig.enableDashboardSms $ do
-    mbMerchantMessage <- QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId smsKey Nothing Nothing
+    mbMerchantMessage <- QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId smsKey recipient.language Nothing Nothing
     case mbMerchantMessage of
       Nothing -> logInfo $ "Skipping " <> show smsKey <> " SMS for " <> recipient.id.getId <> ": no merchant_message row"
       Just merchantMessage -> do

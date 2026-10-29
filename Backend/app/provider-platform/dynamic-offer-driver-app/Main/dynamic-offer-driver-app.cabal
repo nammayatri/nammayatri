@@ -315,6 +315,7 @@ library
       Domain.Action.Dashboard.RideEstimatedRoute
       Domain.Action.Dashboard.RideFlowDebug
       Domain.Action.Dashboard.RideSnappedRoute
+      Domain.Action.DashboardAuth.AppManagement.DriverWallet
       Domain.Action.DashboardAuth.AppManagement.SubscriptionTransaction
       Domain.Action.DashboardAuth.Fleet.Driver
       Domain.Action.DashboardAuth.Fleet.LiveMap

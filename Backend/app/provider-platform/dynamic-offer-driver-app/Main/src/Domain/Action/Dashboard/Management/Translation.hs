@@ -26,6 +26,7 @@ import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import Domain.Action.UI.DriverWallet (allWalletReferences)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -89,7 +90,7 @@ bodyField = "body"
 domains :: [Domain]
 domains =
   map translationsDomain ["Document", "FleetOwnerDocument", "OnboardingStage", "Verification", "ServiceTier", "DocumentDecision", "RcRule", "AcUsage", "Coins", "Earnings"]
-    <> [pushDomain, smsDomain]
+    <> [walletDomain, pushDomain, smsDomain]
 
 findDomain :: Text -> Flow Domain
 findDomain name = find ((== name) . (.domainName)) domains & fromMaybeM (InvalidRequest $ "Unknown translation domain: " <> name)
@@ -209,7 +210,7 @@ postTranslationUpsert merchantShortId opCity domainName req = do
         withTryCatch "postTranslationUpsert" (trial cells) >>= \case
           Right () -> pure (okCells <> cells, failed)
           Left exc -> pure (okCells, failed <> map (failure (failureReason exc)) cells)
-  -- Every cells is tried, so a bad cell holds back its own key only, and the response names each
+  -- Every cell is tried, so a bad cell holds back its own key only, and the response names each
   -- cell that was not saved. The placeholders are compared once the other checks have passed, with
   -- the cells that passed them standing in for the stored rows.
   (checkedCells, failedChecks) <- foldM (attempt (mapM_ check)) ([], []) (byGroup (List.sortOn groupOf req.entries))
@@ -241,6 +242,20 @@ translationsDomain name =
     }
   where
     refs = [keyRef k | k <- allKeys @TranslationKey, keyDomain (keyName k) == name]
+
+-- | Wallet item names: the keys come from the ledger reference list, not from an enum.
+walletDomain :: Domain
+walletDomain =
+  Domain
+    { domainName = "Wallet",
+      domainFields = [messageField],
+      domainDimensions = [],
+      domainKeys = refs,
+      readRows = readTranslations refs,
+      writeEntry = mapM_ . writeTranslation
+    }
+  where
+    refs = map (keyRef . Wallet_Item) allWalletReferences
 
 readTranslations :: [KeyRef] -> Id DMOC.MerchantOperatingCity -> Flow [Row]
 readTranslations refs cityId = do
@@ -411,7 +426,8 @@ smsDomain =
 readSms :: Id DMOC.MerchantOperatingCity -> Flow [Row]
 readSms cityId = do
   rows <- CQMM.findAllByMerchantOpCityId cityId Nothing
-  pure [Row (keyName (Sms_Body mm.messageKey)) [] mm.language messageField mm.message Common.City | mm <- rows]
+  -- The page edits the general row of a key; a row stored for one vehicle category is not its text.
+  pure [Row (keyName (Sms_Body mm.messageKey)) [] mm.language messageField mm.message Common.City | mm <- rows, isNothing mm.vehicleCategory]
 
 writeSms :: DMOC.MerchantOperatingCity -> Common.TranslationUpsertEntry -> Flow ()
 writeSms merchantOpCity entry = do
