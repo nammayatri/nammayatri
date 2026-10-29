@@ -244,6 +244,15 @@ apis:
         type: RideEstimatedRouteRes
       migrate:
         capability: city-operations.ride.read
+  - GET: # RideSnappedRouteAPI
+      endpoint: /{rideId}/snappedRoute
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: RideSnappedRouteRes
+      migrate:
+        capability: city-operations.ride.read
   - GET: # TicketRideListAPI
       endpoint: /kapture/list
       auth: ApiAuthV2
@@ -603,6 +612,16 @@ types:
     - distanceMeters: Maybe Int
     - durationSec: Maybe Int
     - points: [LatLong]
+  RideSnappedRouteRes:
+    - calls: [SnapToRoadCall]
+    - derive: "'HideSecrets"
+  SnapToRoadCall:
+    - apiName: Text
+    - provider: Text
+    - calledAt: UTCTime
+    - distanceMeters: Maybe Int
+    - inputPoints: [LatLong]
+    - snappedPoints: [LatLong]
   DriverEdaKafka:
     - driver_id: String
     - rid: Maybe String
