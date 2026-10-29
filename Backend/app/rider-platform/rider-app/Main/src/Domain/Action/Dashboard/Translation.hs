@@ -76,8 +76,8 @@ data Domain = Domain
     domainFields :: [Text],
     -- | The columns that can narrow one key's text to a variant, with every value the column takes.
     domainDimensions :: [Common.TranslationDimension],
-    domainKeys :: [KeyRef],
-    readRows :: Id DMOC.MerchantOperatingCity -> Flow [Row],
+    domainKeys :: Id DMOC.MerchantOperatingCity -> Flow [KeyRef],
+    readRows :: [KeyRef] -> Id DMOC.MerchantOperatingCity -> Flow [Row],
     -- | Saves the cells of one key, variant and language: one row where the domain stores them together.
     writeEntry :: DMOC.MerchantOperatingCity -> [Common.TranslationUpsertEntry] -> Flow ()
   }
@@ -128,7 +128,8 @@ getTranslationDomains :: ShortId DM.Merchant -> Context.City -> Flow Common.Tran
 getTranslationDomains merchantShortId opCity = do
   merchantOpCity <- findCity merchantShortId opCity
   summaries <- forM domains $ \domain -> do
-    rows <- bestRows <$> domain.readRows merchantOpCity.id
+    keyRefs <- domain.domainKeys merchantOpCity.id
+    rows <- bestRows <$> domain.readRows keyRefs merchantOpCity.id
     -- A text is one field of one key and variant with a row in some language; the sender reads
     -- only the variant that matches, so a variant that exists in one language only is a gap in
     -- the others. Keys with no row in any language are not texts yet.
@@ -139,7 +140,7 @@ getTranslationDomains merchantShortId opCity = do
         { domain = domain.domainName,
           fields = domain.domainFields,
           dimensions = domain.domainDimensions,
-          keyCount = length domain.domainKeys,
+          keyCount = length keyRefs,
           textCount = Set.size texts * length domain.domainFields,
           filledTexts = [Common.TranslationLanguageCount {language, count} | (language, count) <- Map.toList counts]
         }
@@ -149,7 +150,8 @@ getTranslationKeys :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common
 getTranslationKeys merchantShortId opCity domainName = do
   merchantOpCity <- findCity merchantShortId opCity
   domain <- findDomain domainName
-  rows <- bestRows <$> domain.readRows merchantOpCity.id
+  keyRefs <- domain.domainKeys merchantOpCity.id
+  rows <- bestRows <$> domain.readRows keyRefs merchantOpCity.id
   let entry ref =
         Common.TranslationKeyEntry
           { key = ref.refKey,
@@ -165,16 +167,17 @@ getTranslationKeys merchantShortId opCity domainName = do
       { domain = domain.domainName,
         fields = domain.domainFields,
         dimensions = domain.domainDimensions,
-        entries = map entry domain.domainKeys
+        entries = map entry keyRefs
       }
 
 postTranslationUpsert :: ShortId DM.Merchant -> Context.City -> Text -> Common.TranslationUpsertReq -> Flow Common.TranslationUpsertRes
 postTranslationUpsert merchantShortId opCity domainName req = do
   merchantOpCity <- findCity merchantShortId opCity
   domain <- findDomain domainName
-  stored <- bestRows <$> domain.readRows merchantOpCity.id
+  keyRefs <- domain.domainKeys merchantOpCity.id
+  stored <- bestRows <$> domain.readRows keyRefs merchantOpCity.id
   let check entry = do
-        unless (any ((== entry.key) . (.refKey)) domain.domainKeys) $
+        unless (any ((== entry.key) . (.refKey)) keyRefs) $
           throwError $ InvalidRequest $ "Key " <> entry.key <> " is not in domain " <> domainName
         unless (entry.field `elem` domain.domainFields) $
           throwError $ InvalidRequest $ "Field " <> entry.field <> " is not in domain " <> domainName
@@ -235,8 +238,8 @@ translationsDomain name =
     { domainName = name,
       domainFields = [messageField],
       domainDimensions = [],
-      domainKeys = refs,
-      readRows = readTranslations refs,
+      domainKeys = const (pure refs),
+      readRows = readTranslations,
       writeEntry = mapM_ . writeTranslation
     }
   where
@@ -293,8 +296,8 @@ pushDomain =
     { domainName = "RiderPush",
       domainFields = [titleField, bodyField],
       domainDimensions = pushDimensions,
-      domainKeys = map keyRef (allKeys @RiderPushKey),
-      readRows = readPushes,
+      domainKeys = const (pure (map keyRef (allKeys @RiderPushKey))),
+      readRows = const readPushes,
       writeEntry = writePush
     }
 
@@ -402,8 +405,8 @@ smsDomain =
     { domainName = "Sms",
       domainFields = [messageField],
       domainDimensions = [],
-      domainKeys = map (keyRef . Sms_Body) [minBound .. maxBound],
-      readRows = readSms,
+      domainKeys = const (pure (map keyRef (allKeys @SmsKey))),
+      readRows = const readSms,
       writeEntry = mapM_ . writeSms
     }
 

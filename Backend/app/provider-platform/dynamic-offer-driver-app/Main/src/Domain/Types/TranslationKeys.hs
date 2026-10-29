@@ -61,6 +61,13 @@ data TranslationKey
   | ServiceTier_ShortDescription DST.ServiceTierType
   | ServiceTier_LongDescription DST.ServiceTierType
   | Wallet_Item Text
+  | DocumentField_Label DVC.DocumentType Text
+  | DocumentField_Hint DVC.DocumentType Text
+  | DocumentField_Placeholder DVC.DocumentType Text
+  | DocumentField_Description DVC.DocumentType Text
+  | -- A sample image's title and text, named by its English title ('textKeyName')
+    DocumentField_ImageTitle DVC.DocumentType Text Text
+  | DocumentField_ImageText DVC.DocumentType Text Text
   deriving stock (Eq)
 
 instance Show TranslationKey where
@@ -84,6 +91,12 @@ instance Show TranslationKey where
     ServiceTier_ShortDescription t -> dotted ["ServiceTier", "ShortDescription", keyName t]
     ServiceTier_LongDescription t -> dotted ["ServiceTier", "LongDescription", keyName t]
     Wallet_Item ref -> dotted ["Wallet", "Item", ref]
+    DocumentField_Label d f -> dotted ["DocumentField", "Label", keyName d, f]
+    DocumentField_Hint d f -> dotted ["DocumentField", "Hint", keyName d, f]
+    DocumentField_Placeholder d f -> dotted ["DocumentField", "Placeholder", keyName d, f]
+    DocumentField_Description d f -> dotted ["DocumentField", "Description", keyName d, f]
+    DocumentField_ImageTitle d f n -> dotted ["DocumentField", "ImageTitle", keyName d, f, n]
+    DocumentField_ImageText d f n -> dotted ["DocumentField", "ImageText", keyName d, f, n]
 
 -- | A key named by free text is left out of 'allKeys', which lists only what the code can enumerate;
 -- the dashboard lists such keys from where their names live (wallet items from 'allWalletReferences').
@@ -136,6 +149,12 @@ instance IsTranslationKey TranslationKey where
     ServiceTier_ShortDescription _ -> Nothing
     ServiceTier_LongDescription _ -> Nothing
     Wallet_Item _ -> Nothing
+    DocumentField_Label _ _ -> Nothing
+    DocumentField_Hint _ _ -> Nothing
+    DocumentField_Placeholder _ _ -> Nothing
+    DocumentField_Description _ _ -> Nothing
+    DocumentField_ImageTitle {} -> Nothing
+    DocumentField_ImageText {} -> Nothing
 
 allDocumentOnboardingStages :: [DocumentOnboardingStage]
 allDocumentOnboardingStages =
