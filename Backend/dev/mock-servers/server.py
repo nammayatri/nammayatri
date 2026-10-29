@@ -92,13 +92,14 @@ def record_hit(hit):
 
 # Route table: (path substring, module, service name for overrides)
 ROUTES = [
+    # before /juspay: the first matching prefix wins and the Exotel account in the URL is "juspay2m"
+    ("/exotel",      exotel,      "exotel"),
     ("/juspay",      juspay,      "juspay"),
     # Retired Haskell mock-payment internal order-status path has no
     # "/juspay" segment (/payment/internal/orders/{id}/status).
     ("/payment/internal", juspay,  "juspay"),
     ("/stripe",      stripe,      "stripe"),
     ("/paytm",       paytm,       "paytm"),
-    ("/exotel",      exotel,      "exotel"),
     ("/acko",        acko,        "acko"),
     ("/erss",        sos,         "sos"),
     ("/sos",         sos,         "sos"),
