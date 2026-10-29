@@ -440,6 +440,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     stations :: [FRFSStationAPI],
     status :: Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus,
     tickets :: [FRFSTicketAPI],
+    txnId :: Data.Maybe.Maybe Data.Text.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory

@@ -225,6 +225,7 @@ types:
     googleWalletJWTUrl: Maybe Text
     integratedBppConfigId: Id IntegratedBPPConfig
     bppOrderId: Maybe Text
+    txnId: Maybe Text
     isSpotBooking: Maybe Bool
     overrideType: Maybe OverrideType
     # Whole booking: this is what the payment order was created for.

@@ -208,7 +208,9 @@ data ShareTicketInfoResp = ShareTicketInfoResp
     partnerOrgTransactionId :: Maybe (Id PartnerOrgTransaction),
     googleWalletJWTUrl :: Maybe Text,
     providerId :: Maybe Text,
-    bppOrderId :: Maybe Text
+    bppOrderId :: Maybe Text,
+    createdAt :: UTCTime,
+    txnId :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -460,6 +462,8 @@ shareTicketInfo ticketBookingId = do
 
   void $ bppStatusSync fromStation'.merchantId pOrgId city ticketBooking
 
+  mbRrn <- Utils.getChargedPaymentRrn paymentBooking.paymentOrderId
+
   let providerId = case integratedBPPConfig.providerConfig of
         DIBC.ONDC DIBC.ONDCBecknConfig {providerInfo} -> providerInfo <&> (.providerId)
         _ -> Nothing
@@ -473,6 +477,8 @@ shareTicketInfo ticketBookingId = do
         city = city.city,
         googleWalletJWTUrl = ticketBooking.googleWalletJWTUrl,
         bppOrderId = ticketBooking.bppOrderId,
+        createdAt = ticketBooking.createdAt,
+        txnId = mbRrn,
         ..
       }
   where
@@ -775,6 +781,7 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
             vehicleType = booking.vehicleType,
             integratedBppConfigId = booking.integratedBppConfigId,
             bppOrderId = booking.bppOrderId,
+            txnId = Nothing,
             isSpotBooking = booking.isSpotBooking
           }
   (regToken, _) <- getRegToken booking.riderId partnerOrg.orgId regPOCfg booking.merchantId True

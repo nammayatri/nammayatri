@@ -70,6 +70,7 @@ updateMultiple transaction = do
       Se.Set BeamPT.taxAmount transaction.taxAmount,
       Se.Set BeamPT.netAmount transaction.netAmount,
       Se.Set BeamPT.epgTxnId transaction.epgTxnId,
+      Se.Set BeamPT.rrn transaction.rrn,
       Se.Set BeamPT.authorizationDateTime transaction.authorizationDateTime,
       Se.Set BeamPT.captureDateTime transaction.captureDateTime,
       Se.Set BeamPT.updatedAt now

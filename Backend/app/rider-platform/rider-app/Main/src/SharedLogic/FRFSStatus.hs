@@ -477,6 +477,7 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
   tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
+  mbTxnId <- maybe (pure Nothing) (const $ FRFSUtils.getBookingChargedPaymentRrn booking) payment
   let qrEncoding = FRFSUtils.getQREncoding integratedBppConfig
       tickets =
         map
@@ -525,6 +526,7 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
         googleWalletJWTUrl = booking.googleWalletJWTUrl,
         integratedBppConfigId = booking.integratedBppConfigId,
         bppOrderId = booking.bppOrderId,
+        txnId = mbTxnId,
         stations = fromMaybe [] stations,
         isSpotBooking = booking.isSpotBooking,
         ..

@@ -60,6 +60,7 @@ data PaymentTransactionT f = PaymentTransactionT
     taxAmount :: B.C f (Maybe HighPrecMoney),
     netAmount :: B.C f (Maybe HighPrecMoney),
     epgTxnId :: B.C f (Maybe Text),
+    rrn :: B.C f (Maybe Text),
     authorizationDateTime :: B.C f (Maybe UTCTime),
     captureDateTime :: B.C f (Maybe UTCTime),
     createdAt :: B.C f UTCTime,
