@@ -533,7 +533,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           ((Just <$>) . createVehicleRC nonTransportRejected person.merchantId person.merchantOperatingCityId rcInput vehicleVariant allFailures)
           (encrypt `mapM` rcVerificationResponse.registrationNumber)
       Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput allFailures
-  if isNothing mbVehicleVariant && mbRemPriorityList /= Just [] && isJust mbRemPriorityList && ((mVehicleRC <&> (.verificationStatus)) == Just Documents.MANUAL_VERIFICATION_REQUIRED || join (mVehicleRC <&> (.reviewRequired)) == Just True)
+  if isNothing mbVehicleVariant && mbRemPriorityList /= Just [] && isJust mbRemPriorityList && (mVehicleRC <&> (.verificationStatus)) == Just Documents.MANUAL_VERIFICATION_REQUIRED
     then do
       flip (maybe (logError "imageExtrationValidation flag or encryptedRC or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
         \(imageExtractionValidation, encryptedRC, remPriorityList, rcNum) -> do

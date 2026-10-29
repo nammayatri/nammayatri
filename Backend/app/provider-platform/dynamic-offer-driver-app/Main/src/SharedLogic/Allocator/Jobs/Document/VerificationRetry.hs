@@ -35,6 +35,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
@@ -45,9 +46,12 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.DriverLicense as DLQuery
+import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.VehicleRegistrationCertificate as VRCQuery
 import Tools.Error
 import qualified Tools.Verification as Verification
 
@@ -75,18 +79,24 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
   case parseDocType verificationReq.docType of
     Nothing -> logWarning $ "Skipping retry for non-document idfy_verification row, requestId: " <> jobData.requestId <> ", docType: " <> verificationReq.docType
     Just parsedDocType -> do
-      documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just parsedDocType, vehicleCategory = Just (fromMaybe DVC.CAR verificationReq.vehicleCategory)}) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show parsedDocType))
-      let maxRetryCount = documentVerificationConfig.maxRetryCount
-      if (fromMaybe 0 verificationReq.retryCount) <= maxRetryCount
+      alreadyTerminal <- isDocAlreadyTerminal parsedDocType person verificationReq
+      if alreadyTerminal
         then do
-          documentNum <- decrypt verificationReq.documentNumber
-          IVQuery.updateStatus "source_down_retried" verificationReq.requestId
-          case parsedDocType of
-            DTO.VehicleRegistrationCertificate -> callVerifyRC documentNum person verificationReq
-            DTO.DriverLicense -> callVerifyDL documentNum person verificationReq
-            _ -> pure ()
+          logInfo $ "Skipping retry — doc already in terminal state for driver " <> verificationReq.driverId.getId <> ", docType: " <> show parsedDocType <> ", requestId: " <> jobData.requestId
+          IVQuery.updateStatus "source_down_cancelled" verificationReq.requestId
         else do
-          IVQuery.updateStatus "source_down_failed" verificationReq.requestId
+          documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just parsedDocType, vehicleCategory = Just (fromMaybe DVC.CAR verificationReq.vehicleCategory)}) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show parsedDocType))
+          let maxRetryCount = documentVerificationConfig.maxRetryCount
+          if (fromMaybe 0 verificationReq.retryCount) <= maxRetryCount
+            then do
+              documentNum <- decrypt verificationReq.documentNumber
+              IVQuery.updateStatus "source_down_retried" verificationReq.requestId
+              case parsedDocType of
+                DTO.VehicleRegistrationCertificate -> callVerifyRC documentNum person verificationReq
+                DTO.DriverLicense -> callVerifyDL documentNum person verificationReq
+                _ -> pure ()
+            else do
+              IVQuery.updateStatus "source_down_failed" verificationReq.requestId
   return Complete
   where
     callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
@@ -131,6 +141,28 @@ mkHyperNewVergeVerificationEntity reqId DIdfyVerification.IdfyVerification {..} 
         updatedAt = now,
         ..
       }
+
+isDocAlreadyTerminal ::
+  (EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  DTO.DocumentType ->
+  DP.Person ->
+  DIdfyVerification.IdfyVerification ->
+  m Bool
+isDocAlreadyTerminal docType person verificationReq =
+  case docType of
+    DTO.DriverLicense -> do
+      mbDL <- B.runInReplica $ DLQuery.findByDriverId person.id
+      pure $ (mbDL <&> (.verificationStatus)) `elem` [Just Documents.VALID, Just Documents.INVALID]
+    DTO.VehicleRegistrationCertificate -> do
+      documentNum <- decrypt verificationReq.documentNumber
+      mbVRC <- B.runInReplica $ VRCQuery.findLastVehicleRCWrapper documentNum
+      case mbVRC of
+        Just vrc | vrc.verificationStatus `elem` [Documents.VALID, Documents.INVALID] -> do
+          now <- getCurrentTime
+          mbLinked <- B.runInReplica $ DAQuery.findLinkedByRCIdAndDriverId person.id vrc.id now
+          pure $ isJust mbLinked
+        _ -> pure False
+    _ -> pure False
 
 mkIdfyNewVerificationEntity :: MonadFlow m => DIdfyVerification.IdfyVerification -> Text -> m DIdfyVerification.IdfyVerification
 mkIdfyNewVerificationEntity verificationReq requestId = do
