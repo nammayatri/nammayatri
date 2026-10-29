@@ -607,6 +607,7 @@ library
       SharedLogic.Finance.CashbackPayout
       SharedLogic.Finance.RidePayment
       SharedLogic.FRFSCancel
+      SharedLogic.FRFSCancelEffects
       SharedLogic.FRFSCancelJourney
       SharedLogic.FRFSConfirm
       SharedLogic.FRFSFareCalculator
@@ -691,18 +692,30 @@ library
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
       SharedLogic.Scheduler.Jobs.SendLegalPolicyNotification
       SharedLogic.Scheduler.Jobs.SettlementReportIngestion
+      SharedLogic.Scheduler.Jobs.SharedCabAllocationTick
+      SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep
+      SharedLogic.Scheduler.Jobs.SharedCabSessionExpiry
       SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
       SharedLogic.Scheduler.Jobs.UnblockCustomer
       SharedLogic.Scheduler.Jobs.UpdateCRISRDSBalance
       SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability
+      SharedLogic.SharedCab.Allocation
+      SharedLogic.SharedCab.Allocation.Claim
+      SharedLogic.SharedCab.Allocation.Reallocate
+      SharedLogic.SharedCab.Allocation.Select
       SharedLogic.SharedCab.Allocation.Types
+      SharedLogic.SharedCab.Approach
       SharedLogic.SharedCab.Booking
       SharedLogic.SharedCab.BookingState
+      SharedLogic.SharedCab.Cancel
       SharedLogic.SharedCab.Config
+      SharedLogic.SharedCab.ConfirmHook
       SharedLogic.SharedCab.Degraded
+      SharedLogic.SharedCab.Demand
       SharedLogic.SharedCab.Enabled
+      SharedLogic.SharedCab.FindingTimeout
       SharedLogic.SharedCab.Interest
       SharedLogic.SharedCab.Keys
       SharedLogic.SharedCab.LegState
@@ -714,8 +727,15 @@ library
       SharedLogic.SharedCab.RateLimit
       SharedLogic.SharedCab.RefundDecision
       SharedLogic.SharedCab.RefundPolicy
+      SharedLogic.SharedCab.RefundRetry
+      SharedLogic.SharedCab.RouteSnapshot
+      SharedLogic.SharedCab.Schedule
       SharedLogic.SharedCab.Seats
+      SharedLogic.SharedCab.Session
       SharedLogic.SharedCab.SessionState
+      SharedLogic.SharedCab.SessionView
+      SharedLogic.SharedCab.StopProgress
+      SharedLogic.SharedCab.StopProgress.Rules
       SharedLogic.SilentReallocation
       SharedLogic.SosLocationTracking
       SharedLogic.SyncSearchDispatch
@@ -2215,9 +2235,15 @@ test-suite rider-app-test
   main-is: Main.hs
   other-modules:
       FRFS.DirectQR
+      SharedCabDegradedSweepTests
       SharedCabDegradedTests
+      SharedCabDemandTests
+      SharedCabExpiryTests
       SharedCabLockTests
       SharedCabNoShowTests
+      SharedCabRefundRetryTests
+      SharedCabSeatTests
+      SharedCabStopProgressTests
       Paths_rider_app
   hs-source-dirs:
       test
