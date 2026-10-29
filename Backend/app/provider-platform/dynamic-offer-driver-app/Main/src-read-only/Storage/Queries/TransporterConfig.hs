@@ -269,6 +269,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.emailEventSnsTopicArn emailEventSnsTopicArn,
       Se.Set Beam.emailEventWebhookToken emailEventWebhookToken,
       Se.Set Beam.emailOtpConfig emailOtpConfig,
+      Se.Set Beam.enableBlacklistDriverOnRating enableBlacklistDriverOnRating,
       Se.Set Beam.enableBotFlow enableBotFlow,
       Se.Set Beam.enableBppReallocation enableBppReallocation,
       Se.Set Beam.enableCoinsToDirectPayout enableCoinsToDirectPayout,

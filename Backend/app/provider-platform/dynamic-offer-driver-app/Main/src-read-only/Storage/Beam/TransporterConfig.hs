@@ -180,6 +180,7 @@ data TransporterConfigT f = TransporterConfigT
     emailEventSnsTopicArn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     emailEventWebhookToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
+    enableBlacklistDriverOnRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableBotFlow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableBppReallocation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableCoinsToDirectPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
