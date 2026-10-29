@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "main"
+      - "backend/feat/shared-cab-image"
   workflow_dispatch:
     inputs:
       # Manual check that the Xyne failure alerts work (secrets, runner network, script): when ticked,
