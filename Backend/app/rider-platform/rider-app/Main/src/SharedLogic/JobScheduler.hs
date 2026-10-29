@@ -81,6 +81,9 @@ data RiderJobType
   | BookingDepositExpiry
   | SilentReallocationExpiry
   | SendLegalPolicyNotification
+  | SharedCabAllocationTick
+  | SharedCabSessionExpiry
+  | SharedCabDegradedSweep
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -131,6 +134,9 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SReconcileRewardInflight jobData = AnyJobInfo <$> restoreJobInfo SReconcileRewardInflight jobData
   restoreAnyJobInfo SSilentReallocationExpiry jobData = AnyJobInfo <$> restoreJobInfo SSilentReallocationExpiry jobData
   restoreAnyJobInfo SSendLegalPolicyNotification jobData = AnyJobInfo <$> restoreJobInfo SSendLegalPolicyNotification jobData
+  restoreAnyJobInfo SSharedCabAllocationTick jobData = AnyJobInfo <$> restoreJobInfo SSharedCabAllocationTick jobData
+  restoreAnyJobInfo SSharedCabSessionExpiry jobData = AnyJobInfo <$> restoreJobInfo SSharedCabSessionExpiry jobData
+  restoreAnyJobInfo SSharedCabDegradedSweep jobData = AnyJobInfo <$> restoreJobInfo SSharedCabDegradedSweep jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -516,3 +522,40 @@ data SendLegalPolicyNotificationJobData = SendLegalPolicyNotificationJobData
 instance JobInfoProcessor 'SendLegalPolicyNotification
 
 type instance JobContent 'SendLegalPolicyNotification = SendLegalPolicyNotificationJobData
+
+data SharedCabAllocationTickJobData = SharedCabAllocationTickJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    chainId :: Maybe Text,
+    -- | how many ticks in a row found the city lease held; Nothing on a normal tick
+    leaseMisses :: Maybe Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+data SharedCabSessionExpiryJobData = SharedCabSessionExpiryJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    chainId :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+-- | Self-rescheduling per-city sweep that ends degraded rides whose rider never polls back, seeded by
+-- SharedLogic.SharedCab.Schedule.
+data SharedCabDegradedSweepJobData = SharedCabDegradedSweepJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    chainId :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SharedCabAllocationTick
+
+type instance JobContent 'SharedCabAllocationTick = SharedCabAllocationTickJobData
+
+instance JobInfoProcessor 'SharedCabSessionExpiry
+
+type instance JobContent 'SharedCabSessionExpiry = SharedCabSessionExpiryJobData
+
+instance JobInfoProcessor 'SharedCabDegradedSweep
+
+type instance JobContent 'SharedCabDegradedSweep = SharedCabDegradedSweepJobData
