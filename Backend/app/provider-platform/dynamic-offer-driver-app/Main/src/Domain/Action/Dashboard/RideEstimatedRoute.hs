@@ -50,7 +50,7 @@ getRideEstimatedRoute ride = do
   booking <- runInReplica (QBooking.findById ride.bookingId) >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   rows <-
     CHExternalApiCallLogs.findAllByEntityIdAndApiNames
-      booking.transactionId
+      [booking.transactionId]
       routeApiNames
       (addUTCTime (negate searchLookback) booking.createdAt)
       (addUTCTime searchLookahead booking.createdAt)

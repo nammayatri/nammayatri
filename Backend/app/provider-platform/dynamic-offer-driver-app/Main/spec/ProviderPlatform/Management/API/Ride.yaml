@@ -619,6 +619,7 @@ types:
     - apiName: Text
     - provider: Text
     - calledAt: UTCTime
+    - rideStatus: Status
     - distanceMeters: Maybe Int
     - inputPoints: [LatLong]
     - snappedPoints: [LatLong]

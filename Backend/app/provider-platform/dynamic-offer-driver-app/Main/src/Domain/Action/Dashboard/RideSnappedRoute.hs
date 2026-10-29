@@ -27,6 +27,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Utils.CalculateDistance (getRouteLinearLength)
 import Kernel.Utils.Common
+import Lib.LocationUpdates (pickupSnapEntityIdSuffix)
 import Storage.Clickhouse.ExternalApiCallLogs (decodePayload)
 import qualified Storage.Clickhouse.ExternalApiCallLogs as CHExternalApiCallLogs
 
@@ -45,17 +46,19 @@ newtype SnapRequestPayload = SnapRequestPayload {points :: [LatLong]}
 getRideSnappedRoute :: DRide.Ride -> Flow Common.RideSnappedRouteRes
 getRideSnappedRoute ride = do
   now <- getCurrentTime
+  let pickupEntityId = ride.id.getId <> pickupSnapEntityIdSuffix
   rows <-
     CHExternalApiCallLogs.findAllByEntityIdAndApiNames
-      ride.id.getId
+      [ride.id.getId, pickupEntityId]
       snapApiNames
       ride.createdAt
       (addUTCTime endLookahead (fromMaybe now ride.tripEndTime))
       maxCalls
-  pure Common.RideSnappedRouteRes {calls = mapMaybe toCall rows}
+  let rideStatusOf row = if row.entityId == Just pickupEntityId then Common.ON_PICKUP else Common.ON_RIDE
+  pure Common.RideSnappedRouteRes {calls = mapMaybe (\row -> toCall (rideStatusOf row) row) rows}
 
-toCall :: CHExternalApiCallLogs.ExternalApiCallLogs -> Maybe Common.SnapToRoadCall
-toCall row = do
+toCall :: Common.Status -> CHExternalApiCallLogs.ExternalApiCallLogs -> Maybe Common.SnapToRoadCall
+toCall rideStatus row = do
   apiName <- row.apiName
   let inputPoints = maybe [] (.points) (decodePayload @SnapRequestPayload =<< row.requestPayload)
       -- A failed call logs the error body instead, which leaves no snapped points.
@@ -66,6 +69,7 @@ toCall row = do
       { apiName,
         provider = fromMaybe "" row.svcProvider,
         calledAt,
+        rideStatus,
         distanceMeters = mbDistance,
         inputPoints,
         snappedPoints
