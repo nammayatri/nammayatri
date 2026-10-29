@@ -2417,8 +2417,7 @@ postIssueApiIntegrationDelete merchantShortId opCity apiIntegrationId issueHandl
 
 postIssueApiIntegrationTest ::
   ( BeamFlow m r,
-    HasField "selfBaseUrl" r Kernel.Types.Common.BaseUrl,
-    HasField "dashboardToken" r T.Text
+    HasField "selfBaseUrl" r Kernel.Types.Common.BaseUrl
   ) =>
   ShortId Merchant ->
   Context.City ->
@@ -2436,9 +2435,12 @@ postIssueApiIntegrationTest merchantShortId opCity req issueHandle _identifier =
   (testUrl, testHeaders) <- case fromMaybe DAI.External definition.kind of
     DAI.External -> pure (definition.urlTemplate, authorHeaders)
     DAI.InternalRider -> do
-      selfBaseUrl <- asks (.selfBaseUrl)
-      dashboardToken <- asks (.dashboardToken)
-      pure (mkDashboardUrl (showBaseUrl selfBaseUrl) moCity definition.urlTemplate, mkTokenHeaders dashboardToken authorHeaders)
+      mbLookupToken <- issueHandle.selfLookupToken
+      case mbLookupToken of
+        Nothing -> throwError $ InvalidRequest "Internal lookups are not configured on this deployment"
+        Just lookupToken -> do
+          selfBaseUrl <- asks (.selfBaseUrl)
+          pure (mkDirectDashboardUrl (showBaseUrl selfBaseUrl) moCity definition.urlTemplate, mkTokenHeaders lookupToken authorHeaders)
     DAI.InternalDriver -> do
       counterpart <- maybe (pure Nothing) (\f -> f moCity.merchantId) issueHandle.mbCounterpartDashboardInfo
       case counterpart of
@@ -2486,8 +2488,7 @@ getIssueFlowSimulate ::
     Esq.EsqDBReplicaFlow m r,
     EncFlow m r,
     CoreMetrics m,
-    HasField "selfBaseUrl" r Kernel.Types.Common.BaseUrl,
-    HasField "dashboardToken" r T.Text
+    HasField "selfBaseUrl" r Kernel.Types.Common.BaseUrl
   ) =>
   ShortId Merchant ->
   Context.City ->
@@ -2513,6 +2514,11 @@ mkDashboardUrl :: T.Text -> MerchantOperatingCity -> T.Text -> T.Text
 mkDashboardUrl base moCity urlTail =
   let basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
    in basePadded <> "dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> urlTail
+
+mkDirectDashboardUrl :: T.Text -> MerchantOperatingCity -> T.Text -> T.Text
+mkDirectDashboardUrl base moCity urlTail =
+  let basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
+   in basePadded <> "direct-dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> urlTail
 
 mkTokenHeaders :: T.Text -> [(T.Text, T.Text)] -> [(T.Text, T.Text)]
 mkTokenHeaders token authorHeaders = ("token", token) : filter (\(k, _) -> T.toLower k /= "token") authorHeaders
