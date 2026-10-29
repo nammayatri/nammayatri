@@ -19,6 +19,7 @@ module Lib.LocationUpdates
     buildRideInterpolationHandler,
     buildRidePickupInterpolationHandler,
     pickupLocationUpdatesDriverId,
+    pickupSnapEntityIdSuffix,
   )
 where
 
@@ -361,7 +362,7 @@ buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRid
   -- or the pickup distance calculation is marked failed. This avoids paying for
   -- Google as a fallback on the pickup leg, which has no accuracy requirement
   -- justifying that cost.
-  let snapToRoad' _shouldRectifyDistantPointsFailure = TMaps.snapToRoadOSRMOnly merchantOpCityId (fmap getId rideId)
+  let snapToRoad' _shouldRectifyDistantPointsFailure = TMaps.snapToRoadOSRMOnly merchantOpCityId ((<> pickupSnapEntityIdSuffix) . getId <$> rideId)
   return $
     mkRideInterpolationHandler
       (fromMaybe transportConfig.normalRideBulkLocUpdateBatchSize mbBatchSize)
@@ -376,6 +377,9 @@ buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRid
       snapToRoad'
       (\_driverId -> pure ())
       (\_driverId -> pure ())
+
+pickupSnapEntityIdSuffix :: Text
+pickupSnapEntityIdSuffix = ":pickup"
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m a -> m a
 whenWithLocationUpdatesLock driverId f = do
