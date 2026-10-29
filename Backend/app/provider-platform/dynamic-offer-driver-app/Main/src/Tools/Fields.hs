@@ -5,6 +5,7 @@ module Tools.Fields (module Fields) where
 import BecknV2.OnDemand.Types as Fields hiding (Location, Person)
 import Domain.Types.BecknConfig as Fields hiding (BAP, BPP)
 import Domain.Types.DriverInformation as Fields
+import Domain.Types.DriverLicense as Fields
 import Domain.Types.FareParameters as Fields
 import Domain.Types.FleetDriverAssociation as Fields
 import Domain.Types.FleetOwnerInformation as Fields hiding (DriverAutoPayStatus (..), PayoutVpaStatus (..))
@@ -16,6 +17,7 @@ import Domain.Types.MerchantServiceUsageConfig as Fields
 import Domain.Types.Person as Fields
 import Domain.Types.RiderDetails as Fields
 import Domain.Types.TransporterConfig as Fields
+import Domain.Types.VehicleRegistrationCertificate as Fields
 import Kernel.External.Maps.Types as Fields
 import Kernel.Types.Id as Fields
 import Kernel.Types.Registry.Subscriber as Fields
