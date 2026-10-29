@@ -23,6 +23,8 @@ module Domain.Action.UI.Call
     GetCallStatusRes,
     AddOzonetelCampaignDataReq (..),
     initiateCallToCustomer,
+    driverCallReq,
+    buildDriverCallStatus,
     callStatusCallback,
     getCallStatus,
     directCallStatusCallback,
@@ -31,6 +33,7 @@ module Domain.Action.UI.Call
     getCallTwillioAccessToken,
     getCallTwillioConnectedEntityTwiml,
     addCampaignData,
+    handleCallStatus,
   )
 where
 
@@ -190,41 +193,44 @@ initiateCallToCustomer rideId merchantOpCityId = do
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   (customerPhone, providerPhone) <- getCustomerAndDriverPhones ride booking
   callStatusId <- generateGUID
-  let callReq =
-        InitiateCallReq
-          { fromPhoneNum = providerPhone,
-            toPhoneNum = Just customerPhone,
-            attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = rideId.getId},
-            appletId = Nothing
-          }
-  exotelResponse <- initiateCall booking.providerId merchantOpCityId callReq
+  exotelResponse <- initiateCall booking.providerId merchantOpCityId (driverCallReq providerPhone customerPhone callStatusId rideId.getId)
   logTagInfo ("RideId: " <> getId rideId) "Call initiated from driver to customer."
-  let dCallStatus = Just $ handleCallStatus exotelResponse.callStatus
-  when (dCallStatus == Just DCallStatus.Failed) $ do
+  when (handleCallStatus exotelResponse.callStatus == DCallStatus.Failed) $ do
     void $ CallBAP.sendPhoneCallRequestUpdateToBAP booking ride
-  callStatus <- buildCallStatus callStatusId exotelResponse dCallStatus booking
+  callStatus <- buildDriverCallStatus callStatusId rideId.getId booking.providerId booking.merchantOperatingCityId exotelResponse
   _ <- QCallStatus.create callStatus
   return $ CallRes callStatusId
-  where
-    buildCallStatus callStatusId exotelResponse dCallStatus booking = do
-      now <- getCurrentTime
-      return $
-        SCS.CallStatus
-          { id = callStatusId,
-            callId = exotelResponse.callId,
-            entityId = Just rideId.getId,
-            dtmfNumberUsed = Nothing,
-            status = exotelResponse.callStatus,
-            conversationDuration = 0,
-            recordingUrl = Nothing,
-            merchantId = Just booking.providerId.getId,
-            merchantOperatingCityId = Just booking.merchantOperatingCityId,
-            callService = Just Exotel,
-            callAttempt = dCallStatus,
-            callError = Nothing,
-            createdAt = now,
-            aiCallAnalyzed = Nothing
-          }
+
+-- | A driver -> rider call keyed by `entityId` (a ride id, or a shared-cab booking id), which the status callback carries back.
+driverCallReq :: Text -> Text -> Id SCS.CallStatus -> Text -> InitiateCallReq CallAttachments
+driverCallReq fromPhone toPhone callStatusId entityId =
+  InitiateCallReq
+    { fromPhoneNum = fromPhone,
+      toPhoneNum = Just toPhone,
+      attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = entityId},
+      appletId = Nothing
+    }
+
+buildDriverCallStatus :: MonadTime m => Id SCS.CallStatus -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CallTypes.InitiateCallResp -> m SCS.CallStatus
+buildDriverCallStatus callStatusId entityId merchantId merchantOpCityId exotelResponse = do
+  now <- getCurrentTime
+  return $
+    SCS.CallStatus
+      { id = callStatusId,
+        callId = exotelResponse.callId,
+        entityId = Just entityId,
+        dtmfNumberUsed = Nothing,
+        status = exotelResponse.callStatus,
+        conversationDuration = 0,
+        recordingUrl = Nothing,
+        merchantId = Just merchantId.getId,
+        merchantOperatingCityId = Just merchantOpCityId,
+        callService = Just Exotel,
+        callAttempt = Just (handleCallStatus exotelResponse.callStatus),
+        callError = Nothing,
+        createdAt = now,
+        aiCallAnalyzed = Nothing
+      }
 
 getDriverMobileNumber :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, HasField "esqDBReplicaEnv" r EsqDBEnv, HasField "loggerEnv" r LoggerEnv, CallBAPConstraints m r c) => (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> m CallRes
 getDriverMobileNumber (driverId, merchantId, merchantOpCityId) rcNo = do
@@ -458,19 +464,25 @@ sendFCMToBAPOnFailedCallStatus callStatus idInfo = do
   if isFailureStatus callStatus
     then do
       deploymentVersion <- asks (.version)
-      (ride, booking) <- case idInfo of
+      mbRideAndBooking <- case idInfo of
         Left driverId -> do
           ride <- runInReplica $ QRide.getLatestActiveByDriverId driverId >>= fromMaybeM (RideForDriverNotFound $ getId driverId)
           booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-          return (ride, booking)
+          return (Just (ride, booking))
         Right maybeEntityId -> do
           rideId <- fromMaybeM (CallStatusFieldNotPresent "rideId") maybeEntityId
-          ride <- runInReplica $ QRide.findById (Id rideId) >>= fromMaybeM (RideNotFound rideId)
-          booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-          return (ride, booking)
-      fork "updating in prometheus" $ incrementCounter (getId booking.merchantOperatingCityId) "call_attempt" deploymentVersion.getDeploymentVersion
-      void $ CallBAP.sendPhoneCallRequestUpdateToBAP booking ride
-      return True
+          runInReplica (QRide.findById (Id rideId)) >>= \case
+            -- the entity is not a ride (a shared-cab booking, a vehicle certificate): there is no ride to nudge the BAP about
+            Nothing -> return Nothing
+            Just ride -> do
+              booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+              return (Just (ride, booking))
+      case mbRideAndBooking of
+        Nothing -> return False
+        Just (ride, booking) -> do
+          fork "updating in prometheus" $ incrementCounter (getId booking.merchantOperatingCityId) "call_attempt" deploymentVersion.getDeploymentVersion
+          void $ CallBAP.sendPhoneCallRequestUpdateToBAP booking ride
+          return True
     else return False
   where
     isFailureStatus :: CallTypes.CallStatus -> Bool

@@ -324,7 +324,7 @@ filterQuotes integratedBPPConfig quotesWithCategories (Just journeyLeg) = do
     [] -> return Nothing
     _ -> do
       case journeyLeg.mode of
-        DTripTypes.Bus -> do
+        mode | mode `elem` [DTripTypes.Bus, DTripTypes.SharedCab] -> do
           mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = journeyLeg.merchantOperatingCityId.getId}) Nothing
           let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
           let cfgMap' = SFU.adjustCfgMapForPreferredTier journeyLeg.userPreferredServiceTier cfgMap
@@ -743,6 +743,7 @@ createEntriesInFareTables merchantId merchantOperatingCityId routeCode startStop
                   shortName = show quote.vehicleType,
                   longName = show quote.vehicleType,
                   isAirConditioned = Just False,
+                  payOnBoard = False,
                   integratedBppConfigId,
                   merchantId,
                   merchantOperatingCityId,

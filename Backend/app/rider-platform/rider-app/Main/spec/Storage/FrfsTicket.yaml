@@ -51,6 +51,7 @@ imports:
   SeatLayout: Domain.Types.SeatLayout
   Seat: Domain.Types.Seat
   SeatSelectionType: Domain.Types.VehicleSeatLayoutMapping
+  VehicleTrip: Domain.Types.VehicleTrip
 
 FRFSSearch:
   tableName: frfs_search
@@ -478,9 +479,12 @@ FRFSTicketBooking:
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version
     isSpotBooking: Maybe Bool
+    vehicleTripId: Maybe (Id VehicleTrip)
+    sharedCabNoShows: Int
 
   default:
     customerCancelled: "false"
+    sharedCabNoShows: "0"
 
   beamFields:
     fromStationCode:
@@ -502,6 +506,7 @@ FRFSTicketBooking:
     cloudType : Maybe CloudType
     clientSdkVersion: Maybe Text
     clientBundleVersion: Maybe Text
+    sharedCabNoShows: Maybe Int
 
   types:
     CashbackStatus:
@@ -517,6 +522,7 @@ FRFSTicketBooking:
     toStationPoint: Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon|E
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
+    sharedCabNoShows: Kernel.Prelude.fromMaybe 0|I
 
   toTType:
     price: (.amount)|I
@@ -528,7 +534,7 @@ FRFSTicketBooking:
     toStationLon: (.lon) <$> toStationPoint|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
-
+    sharedCabNoShows: Kernel.Prelude.Just|I
 
   sqlType:
     busLocationData: "json"
@@ -653,11 +659,55 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [ondcOnInitReceived, ondcOnInitReceivedAt, updatedAt]
       where: id
+    # Compare-and-set: Se.Eq on a Maybe column is IS NULL / =, i.e. IS NOT DISTINCT FROM. Returns (): the caller holds
+    # sharedcab:lock:booking:{id} and checks the expected vehicleNumber via a KV read (findById) first, not a DB read-back,
+    # which can be stale mid-drain on this KV table.
+    updateAllocatedVehicle:
+      kvFunction: updateOneWithKV
+      params: [vehicleNumber]
+      where:
+        and:
+          - id
+          - vehicleNumber: expectedVehicleNumber
+    # Same CAS as updateAllocatedVehicle, plus the rider no-show counter: one KV write under the booking lock.
+    releaseAllocatedVehicle:
+      kvFunction: updateOneWithKV
+      params: [vehicleNumber, sharedCabNoShows]
+      where:
+        and:
+          - id
+          - vehicleNumber: expectedVehicleNumber
+    updateVehicleTripId:
+      kvFunction: updateOneWithKV
+      params: [vehicleTripId]
+      where: id
+    # Stamps updatedAt alone: the degrade time the shared-cab sweep window keys on.
+    updateUpdatedAtById:
+      kvFunction: updateOneWithKV
+      params: [updatedAt]
+      where: id
+    # A city's live bookings of one tier: the allocation tick's FINDING + ALLOCATED scan; partial index in ddl 1580.
+    findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - merchantOperatingCityId
+          - serviceTierType
+          - in: [status]
+    # A cab's live bookings by canonical plate (recovery, on-board guard); partial index in ddl 1578.
+    findAllByVehicleNumberAndServiceTierTypeAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - vehicleNumber
+          - serviceTierType
+          - in: [status]
 
   extraIndexes:
     - columns: [tripId]
     - columns: [waybillNo]
     - columns: [overrideAppliedEntityId]
+    - columns: [riderId]
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -1206,7 +1256,6 @@ StopFare:
   extraOperations:
     - GENERATE_INDEXES
 
-
 FRFSStageFare:
   tableName: frfs_stage_fare
   fields:
@@ -1332,6 +1381,13 @@ FRFSVehicleServiceTier:
     integratedBppConfigId: Id IntegratedBPPConfig
     merchantOperatingCityId: Id MerchantOperatingCity
     trainType: Maybe Text
+    payOnBoard: Bool
+  beamType:
+    payOnBoard: Maybe Bool
+  toTType:
+    payOnBoard: Kernel.Prelude.Just|I
+  fromTType:
+    payOnBoard: fromMaybe False payOnBoard|E
   constraints:
     id: PrimaryKey
   cachedQueries:
@@ -1375,6 +1431,8 @@ FRFSVehicleServiceTier:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, integratedBppConfigId]
+  default:
+    payOnBoard: "false"
 
 RouteTripMapping:
   tableName: route_trip_mapping

@@ -70,6 +70,7 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import qualified SharedLogic.DriverSupplyMetrics as DSM
+import SharedLogic.SharedCab.RiderClient (prepareRiderClientHttpManager, riderClientTimeoutMs)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
@@ -181,7 +182,8 @@ runDynamicOfferDriverApp' appCfg = do
                 Just (Just 15000, prepareMorthHttpManager 15000),
                 Just (Just 150000, prepareEkatraHttpManager 150000),
                 Just (Just 10000, prepareInternalOCRHttpManager 10000),
-                Just (Just 10000, prepareInternalImageDetectionHttpManager 10000)
+                Just (Just 10000, prepareInternalImageDetectionHttpManager 10000),
+                Just (Just riderClientTimeoutMs, prepareRiderClientHttpManager)
               ]
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))

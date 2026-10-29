@@ -4,6 +4,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.JourneyLeg as DJL
+import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -14,6 +15,56 @@ import qualified Storage.Beam.FRFSTicketBooking as Beam
 import Storage.Queries.OrphanInstances.FRFSTicketBooking ()
 
 -- Extra code goes here --
+
+-- | This city's CONFIRMED shared-cab bookings with no cab, updated in [windowStart, upperBound), paged newest-first on an
+-- updatedAt keyset. updatedAt is the degrade time (degradedBoarding touches the booking and nothing else writes a cab-less
+-- CONFIRMED booking after it), whereas createdAt can be hours older. Bounded: fixed page limit, window fronted at 3x the horizon.
+findSharedCabDegradedCandidates ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  m [FRFSTicketBooking]
+findSharedCabDegradedCandidates = sharedCabCandidates False
+
+-- | The same window over the bookings that HAVE a cab: a boarding writes updatedAt, so it dates the ride.
+findSharedCabPlatedCandidates ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  m [FRFSTicketBooking]
+findSharedCabPlatedCandidates = sharedCabCandidates True
+
+sharedCabCandidates ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Bool ->
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  m [FRFSTicketBooking]
+sharedCabCandidates plated merchantOperatingCityId windowStart upperBound mbCursor limit = do
+  findAllWithOptionsKV
+    [ Se.And
+        ( [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId,
+            Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB),
+            Se.Is Beam.vehicleNumber $ if plated then Se.Not (Se.Eq Nothing) else Se.Eq Nothing,
+            Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED,
+            Se.Is Beam.updatedAt $ Se.GreaterThanOrEq windowStart,
+            Se.Is Beam.updatedAt $ Se.LessThan upperBound
+          ]
+            <> [Se.Is Beam.updatedAt $ Se.LessThan (fromJust mbCursor) | isJust mbCursor]
+        )
+    ]
+    (Se.Desc Beam.updatedAt)
+    limit
+    Nothing
 
 updateFRFSTicketBookingVehicleDataById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -140,5 +191,72 @@ findAllConfirmedByWaybillNo waybillNo = do
     [ Se.And
         [ Se.Is Beam.waybillNo $ Se.Eq (Just waybillNo),
           Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED
+        ]
+    ]
+
+-- | A route's FINDING shared-cab bookings in a city: CONFIRMED with no cab yet. The predicates are ddl 1582's partial index's.
+findSharedCabFindingOnRoute ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Text ->
+  m [FRFSTicketBooking]
+findSharedCabFindingOnRoute merchantOperatingCityId routeCode =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.vehicleNumber $ Se.Eq Nothing,
+          Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED,
+          Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB),
+          Se.Is Beam.routeCode $ Se.Eq (Just routeCode),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId
+        ]
+    ]
+
+-- | A city's FINDING shared-cab bookings: CONFIRMED with no cab yet, on ddl 1582's partial index. No time bound: a booking still
+-- waiting is exactly what it returns.
+findSharedCabFindingInCity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  m [FRFSTicketBooking]
+findSharedCabFindingInCity merchantOperatingCityId =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.vehicleNumber $ Se.Eq Nothing,
+          Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED,
+          Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId
+        ]
+    ]
+
+-- | A city's CONFIRMED shared-cab bookings that have a cab, touched since `since`: allocated and riding, without the ride history.
+findSharedCabPlatedCityUpdatedSince ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  m [FRFSTicketBooking]
+findSharedCabPlatedCityUpdatedSince merchantOperatingCityId since =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId,
+          Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED,
+          Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB),
+          Se.Is Beam.vehicleNumber $ Se.Not (Se.Eq Nothing),
+          Se.Is Beam.updatedAt $ Se.GreaterThanOrEq since
+        ]
+    ]
+
+-- | A plate's shared-cab bookings in these statuses touched since `since`: the plate's runs without its past.
+findSharedCabPlateUpdatedSince ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  [DFRFSTicketBookingStatus.FRFSTicketBookingStatus] ->
+  UTCTime ->
+  m [FRFSTicketBooking]
+findSharedCabPlateUpdatedSince plate statuses since =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.vehicleNumber $ Se.Eq (Just plate),
+          Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB),
+          Se.Is Beam.status $ Se.In statuses,
+          Se.Is Beam.updatedAt $ Se.GreaterThanOrEq since
         ]
     ]

@@ -237,3 +237,4 @@ castDashboardVehicleVariantToDomain = \case
   Common.EV_HATCHBACK -> DV.EV_HATCHBACK
   Common.EV_SEDAN -> DV.EV_SEDAN
   Common.EV_SUV -> DV.EV_SUV
+  Common.SHARED_CAB -> DV.SHARED_CAB

@@ -544,7 +544,7 @@ conductorTokenAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbR
   merchantOpCity <-
     CQMOC.findByMerchantShortIdAndCity req.merchantId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> req.merchantId.getShortId <> " ,city: " <> show city)
-  bppConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOpCity.id (fromMaybe BecknSpec.BUS req.vehicleType) DIBC.MULTIMODAL
+  bppConfig <- SIBC.findBusIntegratedBPPConfig merchantOpCity.id (fromMaybe BecknSpec.BUS req.vehicleType) DIBC.MULTIMODAL
   baseUrl <- MM.getOTPRestServiceReq bppConfig.merchantId merchantOpCity.id
   let gtfsId = bppConfig.feedKey
   -- Call GIMS verify endpoint
