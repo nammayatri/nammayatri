@@ -27,6 +27,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetConfigUpdate,
     getDriverFleetDriverAutoAssign,
     postDriverFleetDriverAutoAssign,
+    postDriverFleetDriverRideConsent,
     postDriverFleetRemoveVehicle,
     postDriverFleetRemoveDriver,
     getDriverFleetTotalEarning,
@@ -225,6 +226,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Fleet (getFleetOwnerId, getFleetOwnerIds, getFleetOwnersInfoMerchantBased)
 import qualified SharedLogic.FleetDriverSettings as FDS
+import qualified SharedLogic.FleetRideConsent as FleetRideConsent
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
@@ -5375,6 +5377,8 @@ postDriverFleetConfigUpdate merchantShortId opCity requestorId mbFleetOwnerId re
             unlinkDriverAndVehicleOnTripTermination = True,
             autoAssign = Just autoAssign,
             allowCancellationByDriver = fromMaybe True req.allowCancellationByDriver,
+            allowConsentPopup = False,
+            rideTimeBound = Nothing,
             fleetPoolingPriority = poolingPriority Nothing,
             merchantId = Just merchant.id,
             merchantOperatingCityId = Just merchantOpCityId,
@@ -5455,4 +5459,38 @@ postDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFl
         when (null tiers) $ throwError NoAutoAcceptTierForVehicle
         FDS.applyFleetSettings True cityTiers driver vehicle
       else FDS.removeAutoAssign tiers driver vehicle
+  pure Success
+
+-- | Ops grants today's ride consent for an already-linked fleet driver (same perk sync as the driver app).
+postDriverFleetDriverRideConsent ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Id Common.Driver ->
+  Common.FleetDriverRideConsentReq ->
+  Flow APISuccess
+postDriverFleetDriverRideConsent merchantShortId opCity requestorId driverId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCityId) $
+    throwError (PersonDoesNotExist personId.getId)
+  association <-
+    FDV.findByDriverId personId True
+      >>= fromMaybeM (InvalidRequest "Driver is not associated with any active fleet")
+  void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) association.fleetOwnerId
+  fleetConfig <- QFC.findByPrimaryKey (Id association.fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound association.fleetOwnerId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FDV.updateRideConsent (Just True) (Just req.consentValidTill) association.id
+  let updatedAssociation =
+        association
+          { consentGiven = Just True,
+            consentValidTill = Just req.consentValidTill
+          } ::
+          FleetDriverAssociation
+  now <- getCurrentTime
+  localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  FleetRideConsent.syncFleetRidePerks personId merchantOpCityId now localNow fleetConfig updatedAssociation
+  logInfo $ "Dashboard ride consent granted for driver " <> personId.getId <> " fleetOwnerId=" <> association.fleetOwnerId
   pure Success

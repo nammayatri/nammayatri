@@ -12,6 +12,8 @@ module Domain.Action.UI.WMB
     postFleetConsent,
     postFleetConsentDecline,
     getFleetConfig,
+    postFleetRideConsent,
+    getFleetInfo,
     getWmbRouteDetails,
     getWmbFleetBadges,
   )
@@ -25,6 +27,8 @@ import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import Data.Maybe
 import qualified Data.Text as T
+import qualified Data.Time as Time
+import qualified Data.Time.Calendar.WeekDate as WeekDate
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import Domain.Types.Alert
@@ -50,6 +54,7 @@ import Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
+import qualified Kernel.Types.TimeBound as TimeBound
 import qualified Kernel.Utils.CalculateDistance as KU
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
@@ -60,6 +65,7 @@ import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.FleetDriverSettings as FDS
+import qualified SharedLogic.FleetRideConsent as FleetRideConsent
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.DashboardAlert ()
@@ -526,7 +532,15 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
     mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId driverId
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
     FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
-    fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver driverId merchantOperatingCityId
+    fork "applyFleetSettings" $ do
+      FDS.applyFleetSettingsToDriver driverId merchantOperatingCityId
+      -- Consent fleets do not get pooling/auto-accept until today's ride consent is yes.
+      mbFleetConfig <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId)
+      whenJust mbFleetConfig $ \fleetConfig ->
+        when fleetConfig.allowConsentPopup $ do
+          now <- getCurrentTime
+          localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+          FleetRideConsent.syncFleetRidePerks driverId merchantOperatingCityId now localNow fleetConfig (fleetDriverAssociation {isActive = True})
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig
@@ -575,6 +589,112 @@ getFleetConfig (mbDriverId, _, _) = do
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
   fleetConfig <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetDriverAssociation.fleetOwnerId)
   pure $ fleetConfig
+
+postFleetRideConsent ::
+  ( ( Maybe (Id Person),
+      Id Merchant,
+      Id MerchantOperatingCity
+    ) ->
+    RideConsentReq ->
+    Flow APISuccess
+  )
+postFleetRideConsent (mbDriverId, _, merchantOperatingCityId) req = do
+  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
+  fleetConfig <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetDriverAssociation.fleetOwnerId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  FDV.updateRideConsent (Just req.consentGiven) (Just req.consentValidTill) fleetDriverAssociation.id
+  let updatedAssociation = fleetDriverAssociation {consentGiven = Just req.consentGiven, consentValidTill = Just req.consentValidTill} :: FleetDriverAssociation
+  now <- getCurrentTime
+  localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  -- Grant or revoke pooling/auto-accept from this answer. isActive is unchanged.
+  FleetRideConsent.syncFleetRidePerks driverId merchantOperatingCityId now localNow fleetConfig updatedAssociation
+  logInfo $ "Fleet ride consent stored for driver " <> driverId.getId <> " consentGiven=" <> show req.consentGiven
+  pure Success
+
+getFleetInfo ::
+  ( ( Maybe (Id Person),
+      Id Merchant,
+      Id MerchantOperatingCity
+    ) ->
+    Flow FleetInfoRes
+  )
+getFleetInfo (mbDriverId, _, merchantOperatingCityId) = do
+  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  mbAssociation <- FDV.findByDriverId driverId True
+  case mbAssociation of
+    Nothing ->
+      pure
+        FleetInfoRes
+          { shouldShowPopup = False,
+            consentGiven = Nothing,
+            consentValidTill = Nothing
+          }
+    Just fleetDriverAssociation -> do
+      fleetConfig <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetDriverAssociation.fleetOwnerId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+      now <- getCurrentTime
+      localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+      let shouldShowPopup = fleetConfig.allowConsentPopup && rideConsentPopupOpen now localNow fleetConfig.rideTimeBound fleetDriverAssociation
+          perksActive = FleetRideConsent.isRideConsentActive now localNow fleetConfig fleetDriverAssociation
+      -- If the clear job missed and today's answer is stale, drop LTS/tags here so perks do not leak into the next day.
+      unless perksActive $
+        FleetRideConsent.syncFleetRidePerks driverId merchantOperatingCityId now localNow fleetConfig fleetDriverAssociation
+      pure
+        FleetInfoRes
+          { shouldShowPopup,
+            consentGiven = fleetDriverAssociation.consentGiven,
+            consentValidTill = fleetDriverAssociation.consentValidTill
+          }
+
+-- Nothing and Unbounded mean the driver can take rides all day. A bounded window is shown only
+-- before today's earliest start. Either way, an answer hides the popup only for the local day
+-- of consentValidTill. The next local day asks again even if the daily clear job did not run.
+rideConsentPopupOpen :: Time.UTCTime -> Time.UTCTime -> Maybe TimeBound.TimeBound -> FleetDriverAssociation -> Bool
+rideConsentPopupOpen now localNow Nothing association = not (rideConsentAnswerCurrent now localNow association)
+rideConsentPopupOpen now localNow (Just TimeBound.Unbounded) association = not (rideConsentAnswerCurrent now localNow association)
+rideConsentPopupOpen now localNow (Just timeBound) association =
+  rideWindowNotStarted timeBound localNow && not (rideConsentAnswerCurrent now localNow association)
+
+-- True when this answer still covers the current local day. consentValidTill may still be in the
+-- future after midnight if the clear job missed; a different local day is a new consent.
+rideConsentAnswerCurrent :: Time.UTCTime -> Time.UTCTime -> FleetDriverAssociation -> Bool
+rideConsentAnswerCurrent now localNow association =
+  isJust association.consentGiven && maybe False (validForThisLocalDay now localNow) association.consentValidTill
+  where
+    validForThisLocalDay nowUtc localTime validTill =
+      let localOffset = Time.diffUTCTime localTime nowUtc
+          validTillLocalDay = Time.utctDay (Time.addUTCTime localOffset validTill)
+       in nowUtc < validTill && validTillLocalDay == Time.utctDay localTime
+
+-- True only before today's earliest ride window starts. An overnight window that is still running counts as already started.
+rideWindowNotStarted :: TimeBound.TimeBound -> Time.UTCTime -> Bool
+rideWindowNotStarted timeBound localNow =
+  let nowTod = Time.timeToTimeOfDay (Time.utctDayTime localNow)
+      today = Time.utctDay localNow
+      (_, _, weekDayNumber) = WeekDate.toWeekDate today
+      windows = case timeBound of
+        TimeBound.Unbounded -> []
+        TimeBound.BoundedByWeekday peaks -> weekdayPeaks weekDayNumber peaks
+        TimeBound.BoundedByDay days -> fromMaybe [] (lookup today days)
+   in case windows of
+        [] -> False
+        _ ->
+          let stillInOvernightTail = any (\(start, end) -> end < start && nowTod < end) windows
+              earliestStart = minimum (fmap fst windows)
+           in not stillInOvernightTail && nowTod < earliestStart
+
+weekdayPeaks :: Int -> TimeBound.BoundedPeaks -> [(Time.TimeOfDay, Time.TimeOfDay)]
+weekdayPeaks weekDayNumber peaks =
+  case weekDayNumber of
+    1 -> peaks.monday
+    2 -> peaks.tuesday
+    3 -> peaks.wednesday
+    4 -> peaks.thursday
+    5 -> peaks.friday
+    6 -> peaks.saturday
+    7 -> peaks.sunday
+    _ -> []
 
 getWmbRouteDetails ::
   ( ( Maybe (Id Person),

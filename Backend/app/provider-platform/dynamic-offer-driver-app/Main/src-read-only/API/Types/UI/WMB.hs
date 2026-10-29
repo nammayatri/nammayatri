@@ -47,7 +47,15 @@ data EndTripStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FleetInfoRes = FleetInfoRes {consentGiven :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, consentValidTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime, shouldShowPopup :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RequestDetails = RequestDetails {body :: Data.Text.Text, requestData :: Domain.Types.Alert.AlertRequestData.AlertRequestData, title :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RideConsentReq = RideConsentReq {consentGiven :: Kernel.Prelude.Bool, consentValidTill :: Kernel.Prelude.UTCTime}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

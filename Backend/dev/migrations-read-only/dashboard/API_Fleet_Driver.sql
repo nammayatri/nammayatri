@@ -44,12 +44,9 @@ UPDATE atlas_dashboard.transaction
 
 -- {"api":"PostDriverFleetVehicleChangeFleetOwner","migration":"capability","param":"city-operations.onboarding.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.onboarding.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_VEHICLE_CHANGE_FLEET_OWNER' ) ON CONFLICT DO NOTHING;
-
-
-------- SQL updates -------
-
--- {"api":"PostDriverFleetCashRideUpdate","migration":"capability","param":"city-operations.driver.write","schema":"atlas_dashboard"}
-INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_CASH_RIDE_UPDATE' ) ON CONFLICT DO NOTHING;
+-- {"api":"PostDriverFleetCashRideUpdate","migration":"capability","param":"fleet.driver.write","schema":"atlas_dashboard"}
+-- LOCAL FIX: was city-operations.driver_management.write (not in capability catalog → FK fail). Revert/regen overwrites.
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_CASH_RIDE_UPDATE' ) ON CONFLICT DO NOTHING;
 
 
 ------- SQL updates -------
@@ -74,3 +71,12 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostDriverFleetDriverAutoAssign","migration":"capability","param":"fleet.driver.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_DRIVER_AUTO_ASSIGN' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverFleetCashRideUpdate","migration":"capability","param":"city-operations.driver.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_CASH_RIDE_UPDATE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostDriverFleetDriverRideConsent","migration":"capability","param":"fleet.driver.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_DRIVER_RIDE_CONSENT' ) ON CONFLICT DO NOTHING;

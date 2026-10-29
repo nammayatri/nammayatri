@@ -15,6 +15,8 @@ import qualified Tools.Beam.UtilsTH
 data FleetDriverAssociation = FleetDriverAssociation
   { associatedOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     associatedTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    consentGiven :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    consentValidTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     createdAt :: Kernel.Prelude.UTCTime,
     docsVerificationStatusUpdatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,

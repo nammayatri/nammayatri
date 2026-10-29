@@ -39,6 +39,7 @@ updateByPrimaryKey (Domain.Types.FleetConfig.FleetConfig {..}) = do
   updateWithKV
     [ Se.Set Beam.allowAutomaticRoundTripAssignment allowAutomaticRoundTripAssignment,
       Se.Set Beam.allowCancellationByDriver (Just allowCancellationByDriver),
+      Se.Set Beam.allowConsentPopup (Just allowConsentPopup),
       Se.Set Beam.allowEndingMidRoute allowEndingMidRoute,
       Se.Set Beam.allowStartRideFromQR allowStartRideFromQR,
       Se.Set Beam.autoAssign (Data.Aeson.toJSON <$> autoAssign),
@@ -47,6 +48,7 @@ updateByPrimaryKey (Domain.Types.FleetConfig.FleetConfig {..}) = do
       Se.Set Beam.endRideDistanceThreshold (Just endRideDistanceThreshold),
       Se.Set Beam.fleetPoolingPriority (Data.Aeson.toJSON <$> fleetPoolingPriority),
       Se.Set Beam.rideEndApproval rideEndApproval,
+      Se.Set Beam.rideTimeBound rideTimeBound,
       Se.Set Beam.unlinkDriverAndVehicleOnTripTermination (Just unlinkDriverAndVehicleOnTripTermination),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -61,6 +63,7 @@ instance FromTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
         Domain.Types.FleetConfig.FleetConfig
           { allowAutomaticRoundTripAssignment = allowAutomaticRoundTripAssignment,
             allowCancellationByDriver = fromMaybe True allowCancellationByDriver,
+            allowConsentPopup = fromMaybe False allowConsentPopup,
             allowEndingMidRoute = allowEndingMidRoute,
             allowStartRideFromQR = allowStartRideFromQR,
             autoAssign = Kernel.Utils.JSON.valueToMaybe =<< autoAssign,
@@ -70,6 +73,7 @@ instance FromTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
             fleetOwnerId = Kernel.Types.Id.Id fleetOwnerId,
             fleetPoolingPriority = Kernel.Utils.JSON.valueToMaybe =<< fleetPoolingPriority,
             rideEndApproval = rideEndApproval,
+            rideTimeBound = rideTimeBound,
             unlinkDriverAndVehicleOnTripTermination = fromMaybe True unlinkDriverAndVehicleOnTripTermination,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -82,6 +86,7 @@ instance ToTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
     Beam.FleetConfigT
       { Beam.allowAutomaticRoundTripAssignment = allowAutomaticRoundTripAssignment,
         Beam.allowCancellationByDriver = Just allowCancellationByDriver,
+        Beam.allowConsentPopup = Just allowConsentPopup,
         Beam.allowEndingMidRoute = allowEndingMidRoute,
         Beam.allowStartRideFromQR = allowStartRideFromQR,
         Beam.autoAssign = Data.Aeson.toJSON <$> autoAssign,
@@ -91,6 +96,7 @@ instance ToTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
         Beam.fleetOwnerId = Kernel.Types.Id.getId fleetOwnerId,
         Beam.fleetPoolingPriority = Data.Aeson.toJSON <$> fleetPoolingPriority,
         Beam.rideEndApproval = rideEndApproval,
+        Beam.rideTimeBound = rideTimeBound,
         Beam.unlinkDriverAndVehicleOnTripTermination = Just unlinkDriverAndVehicleOnTripTermination,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,

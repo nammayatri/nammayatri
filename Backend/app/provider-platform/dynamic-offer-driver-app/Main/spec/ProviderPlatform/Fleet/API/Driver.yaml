@@ -505,6 +505,29 @@ apis:
             response:
               type: APISuccess
 
+  - POST: # FleetDriverRideConsentAPI — ops grants today's ride consent when the driver missed the popup
+      endpoint: /fleet/driver/{driverId}/rideConsent
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: FleetDriverRideConsentReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: fleet.driver.write
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/fleet/driver/{driverId}/rideConsent
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+              driverId: Id Driver
+            request:
+              type: FleetDriverRideConsentReq
+            response:
+              type: APISuccess
+
   - POST: # FleetRemoveDriverAPI
       endpoint: /{driverId}/fleet/remove/driver
       appServerHandler: custom
@@ -2328,6 +2351,9 @@ types:
     - derive: "'HideSecrets"
   FleetDriverAutoAssignReq:
     - enable: Bool
+    - derive: "'HideSecrets"
+  FleetDriverRideConsentReq:
+    - consentValidTill: UTCTime
     - derive: "'HideSecrets"
   VerifyFleetJoiningOtpReq:
     - mobileCountryCode: Text

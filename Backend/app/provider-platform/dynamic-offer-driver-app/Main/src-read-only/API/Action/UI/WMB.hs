@@ -169,10 +169,25 @@ type API =
       :> Get
            '[JSON]
            Domain.Types.FleetConfig.FleetConfig
+      :<|> TokenAuth
+      :> "fleet"
+      :> "rideConsent"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.WMB.RideConsentReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "fleet"
+      :> "info"
+      :> Get
+           '[JSON]
+           API.Types.UI.WMB.FleetInfoRes
   )
 
 handler :: Environment.FlowServer API
-handler = getWmbFleetBadges :<|> postWmbAvailableRoutes :<|> postWmbQrStart :<|> getWmbTripActive :<|> getWmbRouteDetails :<|> getWmbTripList :<|> postWmbTripStart :<|> postWmbTripEnd :<|> postWmbTripRequest :<|> getWmbRequestsStatus :<|> postWmbRequestsCancel :<|> postFleetConsent :<|> postFleetConsentDecline :<|> getFleetConfig
+handler = getWmbFleetBadges :<|> postWmbAvailableRoutes :<|> postWmbQrStart :<|> getWmbTripActive :<|> getWmbRouteDetails :<|> getWmbTripList :<|> postWmbTripStart :<|> postWmbTripEnd :<|> postWmbTripRequest :<|> getWmbRequestsStatus :<|> postWmbRequestsCancel :<|> postFleetConsent :<|> postFleetConsentDecline :<|> getFleetConfig :<|> postFleetRideConsent :<|> getFleetInfo
 
 getWmbFleetBadges ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -317,3 +332,22 @@ getFleetConfig ::
     Environment.FlowHandler Domain.Types.FleetConfig.FleetConfig
   )
 getFleetConfig a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.WMB.getFleetConfig (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+postFleetRideConsent ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.WMB.RideConsentReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postFleetRideConsent a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.WMB.postFleetRideConsent (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getFleetInfo ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.FlowHandler API.Types.UI.WMB.FleetInfoRes
+  )
+getFleetInfo a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.WMB.getFleetInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

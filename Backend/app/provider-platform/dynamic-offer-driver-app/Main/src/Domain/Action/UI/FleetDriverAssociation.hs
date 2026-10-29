@@ -28,6 +28,8 @@ makeFleetDriverAssociation driverId fleetOwnerId onboardedOperatorId end merchan
         onboardedOperatorId,
         requestReason = Nothing,
         responseReason = Nothing,
+        consentGiven = Nothing,
+        consentValidTill = Nothing,
         enableCashRide = Nothing,
         docsVerificationStatusUpdatedAt = mbDriverInfo >>= (.docsVerificationStatusUpdatedAt),
         merchantId,

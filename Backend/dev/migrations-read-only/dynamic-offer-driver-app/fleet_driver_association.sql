@@ -41,3 +41,9 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN enable_ca
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN docs_verification_status_updated_at timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN consent_valid_till timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN consent_given boolean ;

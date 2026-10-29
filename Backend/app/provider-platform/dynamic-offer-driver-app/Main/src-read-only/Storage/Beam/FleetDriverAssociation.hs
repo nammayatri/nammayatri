@@ -14,6 +14,8 @@ import Tools.Beam.UtilsTH
 data FleetDriverAssociationT f = FleetDriverAssociationT
   { associatedOn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     associatedTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    consentGiven :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    consentValidTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     docsVerificationStatusUpdatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverId :: B.C f Kernel.Prelude.Text,
