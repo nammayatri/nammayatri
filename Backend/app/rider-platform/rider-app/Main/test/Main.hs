@@ -1,6 +1,9 @@
+{-# LANGUAGE PackageImports #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
 import App
 import qualified Data.Text as T
-import Environment
+import "rider-app" Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Runtime (withFlowRuntime)
@@ -13,8 +16,12 @@ import Kernel.Utils.App
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall
 import Kernel.Utils.FlowLogging
+import qualified SharedCabDegradedTests
+import qualified SharedCabLockTests
+import qualified SharedCabNoShowTests
 import System.Environment (lookupEnv)
 import System.Environment as Env (setEnv)
+import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()
 main = do
@@ -32,4 +39,4 @@ main = do
 
   -- -- Let the Logs be flushed
   -- threadDelaySec (Seconds 10)
-  pure ()
+  defaultMain $ testGroup "rider-app" [SharedCabDegradedTests.tests, SharedCabNoShowTests.tests, SharedCabLockTests.tests]
