@@ -120,6 +120,7 @@ driverIssueHandle =
       findMerchantConfig = buildMerchantConfig,
       mbGetRideCardInfoByRideIds = Nothing,
       mbCounterpartDashboardInfo = Nothing,
+      selfLookupToken = pure Nothing,
       mbReportACIssue = Nothing,
       mbReportIssue = Nothing,
       mbFindLatestBookingByPersonId = Nothing,

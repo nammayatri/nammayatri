@@ -123,6 +123,7 @@ customerIssueHandle =
         mbMerchant <- CQM.findById (cast merchantId)
         mbToken <- asks (.driverDashboardToken)
         pure $ (,) <$> (mbMerchant <&> (.driverOfferBaseUrl)) <*> mbToken,
+      selfLookupToken = asks (.issueLookupToken),
       mbReportACIssue = Just reportACIssue,
       mbReportIssue = Just reportIssue,
       mbFindLatestBookingByPersonId = Just findLatestBookingByRiderId,

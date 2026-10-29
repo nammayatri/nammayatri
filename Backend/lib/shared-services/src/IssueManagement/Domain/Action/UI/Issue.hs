@@ -88,6 +88,7 @@ data ServiceHandle m = ServiceHandle
     -- for a merchant so InternalDriver lookups can call across; Nothing where
     -- unsupported (driver-app itself, or deployments without the config).
     mbCounterpartDashboardInfo :: Maybe (Id Merchant -> m (Maybe (BaseUrl, Text))),
+    selfLookupToken :: m (Maybe Text),
     mbReportACIssue :: Maybe (BaseUrl -> Text -> Text -> m APISuccess), -- Deprecated
     mbReportIssue :: Maybe (BaseUrl -> Text -> Text -> IssueReportType -> m APISuccess),
     mbFindLatestBookingByPersonId :: Maybe (Id Person -> m (Maybe Booking)),
@@ -221,8 +222,7 @@ getIssueOption ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CoreMetrics m,
-    HasField "selfBaseUrl" r BaseUrl,
-    HasField "dashboardToken" r Text
+    HasField "selfBaseUrl" r BaseUrl
   ) =>
   (Id Person, Id Merchant, Id MerchantOperatingCity) ->
   Id D.IssueCategory ->
@@ -2161,8 +2161,7 @@ saveFlowContext personId categoryId ctx =
 -- to the action's onError/default branch - a lookup may fail, the chat may not.
 resolveApiCallSteps ::
   ( BeamFlow m r,
-    HasField "selfBaseUrl" r BaseUrl,
-    HasField "dashboardToken" r Text
+    HasField "selfBaseUrl" r BaseUrl
   ) =>
   Id Person ->
   Id D.IssueCategory ->
@@ -2242,14 +2241,17 @@ resolveApiCallSteps personId categoryId mbRideId mbMerchantOpCity language ident
             DAI.InternalRider -> case mbMerchantOpCity of
               Nothing -> pure (internalFailure "Internal lookup: merchant operating city could not be resolved")
               Just moCity -> do
-                selfBaseUrl <- asks (.selfBaseUrl)
-                dashboardToken <- asks (.dashboardToken)
-                let base = showBaseUrl selfBaseUrl
-                    basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
-                    url = basePadded <> "dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> integration.urlTemplate
-                    -- The engine's token must win: drop any author-supplied token header.
-                    internalHeaders = ("token", dashboardToken) : filter (\(k, _) -> T.toLower k /= "token") headers
-                Executor.executeIntegration (show integration.method) url internalHeaders integration.bodyTemplate integration.timeoutMs fields params
+                mbLookupToken <- issueHandle.selfLookupToken
+                case mbLookupToken of
+                  Nothing -> pure (internalFailure "Internal lookups are not configured on this deployment")
+                  Just lookupToken -> do
+                    selfBaseUrl <- asks (.selfBaseUrl)
+                    let base = showBaseUrl selfBaseUrl
+                        basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
+                        url = basePadded <> "direct-dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> integration.urlTemplate
+                        -- The engine's token must win: drop any author-supplied token header.
+                        internalHeaders = ("token", lookupToken) : filter (\(k, _) -> T.toLower k /= "token") headers
+                    Executor.executeIntegration (show integration.method) url internalHeaders integration.bodyTemplate integration.timeoutMs fields params
           case result.errorMessage of
             Nothing -> do
               let extracted = Map.mapMaybe identity result.extractedFields
