@@ -26,6 +26,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as CB
+import SharedLogic.SharedCab (SharedCabConfirmFlow)
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
@@ -52,7 +53,8 @@ confirm ::
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
     HasField "cloudType" r (Maybe CloudType),
-    HasMasterCloudForwarder r
+    HasMasterCloudForwarder r,
+    SharedCabConfirmFlow m r
   ) =>
   Merchant ->
   MerchantOperatingCity ->
@@ -134,7 +136,8 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
         HasField "isMetroTestTransaction" r Bool,
         HasField "blackListedJobs" r [Text],
         HasField "cloudType" r (Maybe CloudType),
-        HasMasterCloudForwarder r
+        HasMasterCloudForwarder r,
+        SharedCabConfirmFlow m r
       ) =>
       DOrder ->
       m ()

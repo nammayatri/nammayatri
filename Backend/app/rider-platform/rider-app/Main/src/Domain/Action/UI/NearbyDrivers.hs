@@ -204,6 +204,10 @@ postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
 
     withLogTag = Log.withLogTag ("BAP:API:UI:NearByDriver:" <> personId.getId)
 
+-- Shared cabs run fixed routes and are never shown as ride-hailing supply.
+rideHailingServiceTiers :: [DST.ServiceTierType]
+rideHailingServiceTiers = filter (/= DST.SHARED_CAB) DST.allServiceTiersTypes
+
 getVariantToApplicableServiceTierTypeMapping :: VVToSTT
 getVariantToApplicableServiceTierTypeMapping =
   foldr'
@@ -213,7 +217,7 @@ getVariantToApplicableServiceTierTypeMapping =
         Map.insert variant (tierType : existingTiersTypes) acc
     )
     Map.empty
-    DST.allServiceTiersTypes
+    rideHailingServiceTiers
 
 getServiceTierTypeToVariantMapping :: Map DST.ServiceTierType DV.VehicleVariant
 getServiceTierTypeToVariantMapping =
@@ -223,7 +227,7 @@ getServiceTierTypeToVariantMapping =
         Map.insert tierType variant acc
     )
     Map.empty
-    DST.allServiceTiersTypes
+    rideHailingServiceTiers
 
 checkRateLimit ::
   ( Redis.HedisFlow m r,

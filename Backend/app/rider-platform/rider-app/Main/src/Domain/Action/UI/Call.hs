@@ -66,6 +66,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Common
 import Kernel.Types.Id as ID
@@ -77,8 +78,8 @@ import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Servant (FromHttpApiData (..))
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.SharedCab.Call as SharedCabCall
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -299,7 +300,7 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
   where
     updateCallStatus id callStatus url callAttemptStatus callDuration = QCallStatus.updateCallStatus (fromMaybe 0 callDuration) url callStatus callAttemptStatus id
 
-getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => DriverNumberType -> Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
+getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, Metrics.CoreMetrics m, HasRequestId r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => DriverNumberType -> Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
 getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
   id <- generateGUID
 
@@ -308,41 +309,62 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
       to = dropFirstZero to_
 
   exophone <-
-    CQExophone.findByPhone to >>= \case
-      Nothing -> CQExophone.findByPhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
+    SharedCabCall.findExophoneByDialled to >>= \case
+      Nothing -> SharedCabCall.findExophoneByDialled callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
       Just phone -> return phone
   merchantId <- CQMOC.findById exophone.merchantOperatingCityId >>= fmap (.merchantId) . fromMaybeM (MerchantOperatingCityDoesNotExist exophone.merchantOperatingCityId.getId)
 
   mobileNumberHash <- getDbHash callFrom
   mbRiderDetails <- findRiderDetails merchantId mobileNumberHash
-  let driverNumberType' = if driverNumberType == BothNumber then (if exophone.callService == CallTypes.Exotel && exophone.enableAlternateNumber == Just True then BothNumber else PrimaryNumber) else driverNumberType
+  -- a rider with no ride-hailing booking may be calling the driver of their shared cab
+  mbSharedCabNumber <- case mbRiderDetails of
+    Nothing ->
+      runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash merchantId) >>= \case
+        Nothing -> pure Nothing
+        Just person -> SharedCabCall.driverNumberForRider person.id
+    Just _ -> pure Nothing
+  case mbSharedCabNumber of
+    Just number -> do
+      createSharedCabCallStatus id callSid callStatus exophone merchantId
+      QCallStatus.updateCallStatusInformation (Just merchantId.getId) (Just exophone.callService) Nothing id
+      DCE.sendCallDataToKafka (Just "EXOTEL") Nothing (Just "ANONYMOUS_CALLER") (Just callSid) Nothing System (Just to)
+      return number
+    Nothing -> do
+      let driverNumberType' = if driverNumberType == BothNumber then (if exophone.callService == CallTypes.Exotel && exophone.enableAlternateNumber == Just True then BothNumber else PrimaryNumber) else driverNumberType
 
-  (resNumber, ride, callType, dtmfNumberUsed) <-
-    case mbRiderDetails of
-      Just (dtmfNumberUsed, booking) -> do
-        ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
-        ensureCallStatusExists id callSid ride.id callStatus booking.merchantOperatingCityId booking.merchantId
-        decRide <- decrypt ride
-        number <- getNumberBasedOnType driverNumberType' decRide
-        return (number, ride, "ANONYMOUS_CALLER", dtmfNumberUsed)
-      Nothing -> do
-        ride <- runInReplica $ QRide.findLatestByDriverPhoneNumber callFrom >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
-        booking <- runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-        ensureCallStatusExists id callSid ride.id callStatus booking.merchantOperatingCityId booking.merchantId
-        isValueAddNP <- CQVAN.isValueAddNP booking.providerId
-        when isValueAddNP $
-          throwCallError id (PersonWithPhoneNotFound callFrom) (Just exophone.merchantId.getId) (Just exophone.callService)
-        rider <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-        decRider <- decrypt rider
-        riderMobileNumber <- decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
-        return (riderMobileNumber, ride, "DRIVER", Nothing)
+      (resNumber, ride, callType, dtmfNumberUsed) <-
+        case mbRiderDetails of
+          Just (dtmfNumberUsed, booking) -> do
+            ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
+            ensureCallStatusExists id callSid ride.id callStatus booking.merchantOperatingCityId booking.merchantId
+            decRide <- decrypt ride
+            number <- getNumberBasedOnType driverNumberType' decRide
+            return (number, ride, "ANONYMOUS_CALLER", dtmfNumberUsed)
+          Nothing -> do
+            ride <- runInReplica $ QRide.findLatestByDriverPhoneNumber callFrom >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
+            booking <- runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+            ensureCallStatusExists id callSid ride.id callStatus booking.merchantOperatingCityId booking.merchantId
+            isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+            when isValueAddNP $
+              throwCallError id (PersonWithPhoneNotFound callFrom) (Just exophone.merchantId.getId) (Just exophone.callService)
+            rider <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+            decRider <- decrypt rider
+            riderMobileNumber <- decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+            return (riderMobileNumber, ride, "DRIVER", Nothing)
 
-  QCallStatus.updateCallStatusInformation (Just merchantId.getId) (Just exophone.callService) dtmfNumberUsed id
-  DCE.sendCallDataToKafka (Just "EXOTEL") (Just ride.id) (Just callType) (Just callSid) Nothing System (Just to)
+      QCallStatus.updateCallStatusInformation (Just merchantId.getId) (Just exophone.callService) dtmfNumberUsed id
+      DCE.sendCallDataToKafka (Just "EXOTEL") (Just ride.id) (Just callType) (Just callSid) Nothing System (Just to)
 
-  return resNumber
+      return resNumber
   where
     dropFirstZero = T.dropWhile (== '0')
+
+    createSharedCabCallStatus id callId callStatus' exophone merchantId = do
+      QCallStatus.findByCallSid callId >>= \case
+        Just _ -> pure ()
+        Nothing -> do
+          callStatusObj <- buildCallStatus id callId Nothing (exotelStatusToInterfaceStatus callStatus') exophone.merchantOperatingCityId merchantId
+          void $ QCallStatus.create callStatusObj
 
     findRiderDetails merchantId mobileNumberHash =
       runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash merchantId) >>= \case

@@ -999,11 +999,11 @@ journeyFullyPassCovered ::
 journeyFullyPassCovered booking = do
   mbJourneyLeg <- QJL.findByLegSearchId (Just booking.searchId.getId)
   case mbJourneyLeg of
-    Nothing -> pure (Nothing, [booking], FRFSPassOverride.isFullyPassCovered booking.overriddenAmount)
+    Nothing -> (Nothing,[booking],) <$> noPaymentDue booking
     Just leg -> do
       legs <- QJL.getJourneyLegs leg.journeyId
       bookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
-      let frfsLegs = filter (\l -> l.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) legs
+      let frfsLegs = filter (\l -> DTrip.isFrfsTransitMode l.mode) legs
           live b =
             b.status
               `notElem` [ DFRFSTicketBooking.FAILED,
@@ -1011,11 +1011,12 @@ journeyFullyPassCovered booking = do
                           DFRFSTicketBooking.COUNTER_CANCELLED,
                           DFRFSTicketBooking.TECHNICAL_CANCEL_REJECTED
                         ]
-          covered = case frfsLegs of
+      free <- mapM noPaymentDue bookings
+      let covered = case frfsLegs of
             [] -> False
             _ ->
               length frfsLegs == length bookings
-                && all (\b -> live b && FRFSPassOverride.isFullyPassCovered b.overriddenAmount) bookings
+                && and (zipWith (\b isFree -> live b && isFree) bookings free)
       pure (Just leg.journeyId, bookings, covered)
 
 getQuoteOfferSegment ::
@@ -1434,7 +1435,8 @@ totalOrderValue paymentBookingStatus booking =
 updateTotalOrderValueAndSettlementAmount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> BecknConfig -> m ()
 updateTotalOrderValueAndSettlementAmount booking _quoteCategories bapConfig = do
   mbPaymentBooking <- runInReplica $ QFRFSTicketBookingPayment.findTicketBookingPayment booking
-  unless (isJust mbPaymentBooking || FRFSPassOverride.isFullyPassCovered booking.overriddenAmount) $
+  isFree <- noPaymentDue booking
+  unless (isJust mbPaymentBooking || isFree) $
     throwError (InvalidRequest "Payment booking not found for approved TicketBookingId")
   -- Divide by the number of recon rows, which is one per ticket the BPP issued -- NOT by the
   -- ticket quantity. buildReconTable splits the fare across `length tickets`, and an operator
@@ -1916,6 +1918,18 @@ getServiceTierTypeFromRouteStationsJson mbJson = do
   firstRoute <- listToMaybe routeStations
   vst <- firstRoute.vehicleServiceTier
   Just vst._type
+
+-- | trip_id is a bus key ("<waybillNo>-<tripNo>") that the client sends; a shared cab never has one, and every trip_id-keyed
+-- path must stay a no-op for it.
+tripIdForServiceTier :: Maybe Spec.ServiceTierType -> Maybe Text -> Maybe Text
+tripIdForServiceTier (Just Spec.SHARED_CAB) _ = Nothing
+tripIdForServiceTier _ mbTripId = mbTripId
+
+-- | A shared cab gets its plate from allocation. The only booking born with one is a spot booking made from inside the cab;
+-- any other plate would skip allocation and claim a seat.
+birthVehicleNumber :: Maybe Spec.ServiceTierType -> Bool -> Maybe Text -> Maybe Text
+birthVehicleNumber (Just Spec.SHARED_CAB) False _ = Nothing
+birthVehicleNumber _ _ mbVehicleNumber = mbVehicleNumber
 
 riderSpendKey :: Id DP.Person -> Text
 riderSpendKey personId = "rider:spend:" <> personId.getId
