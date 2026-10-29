@@ -18,6 +18,7 @@ module Lib.LocationUpdates
     whenWithLocationUpdatesLock,
     buildRideInterpolationHandler,
     buildRidePickupInterpolationHandler,
+    pickupSnapEntityIdSuffix,
   )
 where
 
@@ -362,7 +363,7 @@ buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRid
   -- or the pickup distance calculation is marked failed. This avoids paying for
   -- Google as a fallback on the pickup leg, which has no accuracy requirement
   -- justifying that cost.
-  let snapToRoad' _shouldRectifyDistantPointsFailure = TMaps.snapToRoadOSRMOnly merchantOpCityId (fmap getId rideId)
+  let snapToRoad' _shouldRectifyDistantPointsFailure = TMaps.snapToRoadOSRMOnly merchantOpCityId ((<> pickupSnapEntityIdSuffix) . getId <$> rideId)
   return $
     mkRideInterpolationHandler
       (fromMaybe transportConfig.normalRideBulkLocUpdateBatchSize mbBatchSize)
@@ -379,6 +380,9 @@ buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRid
       snapToRoad'
       (\_driverId -> pure ())
       (\_driverId -> pure ())
+
+pickupSnapEntityIdSuffix :: Text
+pickupSnapEntityIdSuffix = ":pickup"
 
 -- | Ratio of measured-to-estimated pickup distance past which the measurement is treated
 -- as a snap-to-road artefact rather than a real detour. The pickup leg runs OSRM-only and

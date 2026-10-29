@@ -52,13 +52,13 @@ $(TH.mkClickhouseInstances ''ExternalApiCallLogsT 'NO_SELECT_MODIFIER)
 
 findAllByEntityIdAndApiNames ::
   CH.HasClickhouseEnv CH.ATLAS_KAFKA m =>
-  Text ->
+  [Text] ->
   [Text] ->
   UTCTime ->
   UTCTime ->
   Int ->
   m [ExternalApiCallLogs]
-findAllByEntityIdAndApiNames entityId apiNames from to limit =
+findAllByEntityIdAndApiNames entityIds apiNames from to limit =
   fmap (nubBy ((==) `on` (.id))) . CH.findAll $
     CH.select $
       CH.orderBy_ (\logs _ -> CH.asc logs.createdAt) $
@@ -67,7 +67,7 @@ findAllByEntityIdAndApiNames entityId apiNames from to limit =
             ( \logs ->
                 logs.createdAt >=. CH.DateTime from
                   CH.&&. logs.createdAt <=. CH.DateTime to
-                  CH.&&. logs.entityId CH.==. Just entityId
+                  CH.&&. logs.entityId `CH.in_` map Just entityIds
                   CH.&&. logs.apiName `CH.in_` map Just apiNames
             )
             (CH.all_ @CH.ATLAS_KAFKA externalApiCallLogsTTable)
