@@ -62,6 +62,7 @@ Merchant:
     driverOfferBaseUrl: BaseUrl
     driverOfferApiKey: Text
     driverOfferMerchantId: Text
+    driverOfferMerchantShortId: Maybe Text
     geoHashPrecisionValue: Int
     minimumDriverRatesCount: Int
     signingPublicKey: Base64

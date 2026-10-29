@@ -35,6 +35,7 @@ data MerchantT f = MerchantT
     driverOfferApiKey :: B.C f Kernel.Prelude.Text,
     driverOfferBaseUrl :: B.C f Kernel.Prelude.Text,
     driverOfferMerchantId :: B.C f Kernel.Prelude.Text,
+    driverOfferMerchantShortId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverOnTheWayNotifyExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     editPickupDistanceThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
