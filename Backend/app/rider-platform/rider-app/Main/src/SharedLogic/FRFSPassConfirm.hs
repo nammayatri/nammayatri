@@ -30,7 +30,6 @@ import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.FRFSFareCalculator (mkCategoryPriceItemFromQuoteCategories, mkFareParameters)
-import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils (getAllJourneyFrfsBookings)
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -65,13 +64,13 @@ confirmPassCoveredLegs ::
   [DFRFSTicketBooking.FRFSTicketBooking] ->
   m ()
 confirmPassCoveredLegs bookings = do
-  let coveredLegs =
-        filter
-          ( \b ->
-              FRFSPassOverride.isFullyPassCovered b.overriddenAmount
-                && b.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.APPROVED]
-          )
-          bookings
+  coveredLegs <-
+    filterM
+      ( \b ->
+          (&& b.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.APPROVED])
+            <$> FRFSUtils.noPaymentDue b
+      )
+      bookings
   forM_ coveredLegs $ \booking ->
     void $ withTryCatch "FRFSPassConfirm:confirmLeg" (confirmOne booking)
 
