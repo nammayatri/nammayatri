@@ -374,6 +374,7 @@ castRideInfo merchantId _ rideId = do
           estimatedFare = toHighPrecMoney res.estimatedFare,
           computedPrice = res.computedPrice,
           fareBreakup = transformFareBreakup <$> res.fareBreakup,
+          estimateFareBreakup = maybe [] ((\bp -> Common.EstimateFareBreakup {title = bp.title, amount = bp.price.value.amount}) <$>) res.estimateFareBP,
           rideCreatedAt = res.rideCreatedAt,
           rideStartTime = res.rideStartTime,
           rideStatus = castRideStatus res.rideStatus,
