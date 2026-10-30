@@ -151,7 +151,8 @@ data BusRideInfo = BusRideInfo
 data CarRideInfo = CarRideInfo
   { pickupLocation :: LatLong,
     minDistanceBetweenTwoPoints :: Maybe Int,
-    rideStops :: Maybe [LatLong]
+    rideStops :: Maybe [LatLong],
+    isManualArrival :: Maybe Bool -- When True, LTS never auto-marks the driver as reached; the driver marks arrival in the app
   }
   deriving (Show, Eq, Generic, ToSchema)
 
@@ -190,6 +191,7 @@ instance FromJSON RideInfo where
                       CarRideInfo <$> carObj .: "pickupLocation"
                         <*> carObj .:? "minDistanceBetweenTwoPoints"
                         <*> carObj .:? "rideStops"
+                        <*> carObj .:? "isManualArrival"
                   )
           )
       <|> ( Pilot
@@ -222,13 +224,14 @@ instance ToJSON RideInfo where
                 "groupId" .= groupId
               ]
         ]
-    Car (CarRideInfo pickupLocation minDistanceBetweenTwoPoints rideStops) ->
+    Car (CarRideInfo pickupLocation minDistanceBetweenTwoPoints rideStops isManualArrival) ->
       object
         [ "car"
             .= object
               [ "pickupLocation" .= pickupLocation,
                 "minDistanceBetweenTwoPoints" .= minDistanceBetweenTwoPoints,
-                "rideStops" .= rideStops
+                "rideStops" .= rideStops,
+                "isManualArrival" .= isManualArrival
               ]
         ]
     Pilot (PilotRideInfo {..}) ->

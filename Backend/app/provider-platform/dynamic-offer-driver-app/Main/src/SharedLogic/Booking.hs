@@ -149,7 +149,7 @@ cancelBooking' notifyBAP booking mbDriver transporter = do
         CS.withDriverScheduledHoldLock (cast ride.driverId) $ do
           mbNextHold <- SBOC.nextScheduledHoldAfterRelease transporterConfig (cast ride.driverId) booking.id
           QDI.updateLatestScheduledBookingAndPickup (fst <$> mbNextHold) (snd <$> mbNextHold) (cast ride.driverId)
-      void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
+      void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops, isManualArrival = Nothing}))
 
     -- Terminal system/error cancel (ByApplication source): drop demand and release the
     -- assigned driver's pickup-zone supply commitment. Idempotent on bookingId/requestId,

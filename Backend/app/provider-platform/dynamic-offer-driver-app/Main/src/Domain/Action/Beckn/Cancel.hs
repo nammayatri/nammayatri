@@ -117,7 +117,7 @@ cancel req merchant booking mbActiveSearchTry = do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
       updateOnRideStatusWithAdvancedRideCheck ride.driverId mbRide
       Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
-      void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
+      void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops, isManualArrival = Nothing}))
       QRide.updateStatus ride.id SRide.CANCELLED
       fork "FleetEngine: cancel trip on BAP cancel" $
         FleetEngine.notifyTripCancelled booking.merchantOperatingCityId ride.id

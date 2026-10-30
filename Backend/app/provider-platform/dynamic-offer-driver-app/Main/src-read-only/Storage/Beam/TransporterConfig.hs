@@ -194,6 +194,7 @@ data TransporterConfigT f = TransporterConfigT
     enableGoOnlinePolicyBlocker :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableGpsTollBehavior :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableLegalComplianceDocuments :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableManualArrival :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableMobileNumberValidation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableMobilityBilling :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOndcScheduledRideSupport :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

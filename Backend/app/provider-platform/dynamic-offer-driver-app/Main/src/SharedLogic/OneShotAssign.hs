@@ -276,4 +276,4 @@ buildAssignedDriverRideRes driver driverInfo transporterConfig booking ride ride
   resolvedCalling <- DRideUI.resolveCallingNumber booking ride transporterConfig.driverCallingOption (fromMaybe False transporterConfig.forceDirectCalling) (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else pure []
-  RideCommon.mkDriverRideRes driverLanguage Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling transporterConfig.showRoutePerRequest
+  RideCommon.mkDriverRideRes driverLanguage Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling transporterConfig.showRoutePerRequest transporterConfig.enableManualArrival

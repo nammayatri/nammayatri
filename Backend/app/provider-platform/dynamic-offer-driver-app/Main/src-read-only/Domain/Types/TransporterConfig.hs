@@ -199,6 +199,7 @@ data TransporterConfig = TransporterConfig
     enableGoOnlinePolicyBlocker :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableGpsTollBehavior :: Kernel.Prelude.Bool,
     enableLegalComplianceDocuments :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableManualArrival :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableMobileNumberValidation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableMobilityBilling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableOndcScheduledRideSupport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
