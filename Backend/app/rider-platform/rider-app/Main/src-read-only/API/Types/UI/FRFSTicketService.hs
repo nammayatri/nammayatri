@@ -362,6 +362,7 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
 data FRFSSearchAPIReq = FRFSSearchAPIReq
   { busLocationData :: Data.Maybe.Maybe [API.Types.UI.RiderLocation.BusLocation],
     fromStationCode :: Data.Text.Text,
+    imeiNumber :: Data.Maybe.Maybe Data.Text.Text,
     platformType :: Data.Maybe.Maybe Domain.Types.IntegratedBPPConfig.PlatformType,
     quantity :: Kernel.Prelude.Int,
     recentLocationId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),

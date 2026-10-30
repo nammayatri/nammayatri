@@ -63,6 +63,7 @@ types:
     busLocationData: Maybe [BusLocation]
     vehicleNumber: Maybe Text
     tripTime: Maybe UTCTime
+    imeiNumber: Maybe Text
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
