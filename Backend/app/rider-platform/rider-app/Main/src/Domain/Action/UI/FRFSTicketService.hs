@@ -1948,7 +1948,8 @@ getFrfsActiveRoutes (mbPersonId, merchantId) vehicleType = do
       personId <- mbPersonId & fromMaybeM (InvalidRequest "Invalid person id")
       personCityInfo <- CQP.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
       baseUrl <- MM.getOTPRestServiceReq merchantId personCityInfo.merchantOperatingCityId
-      nandiRoutes <- NandiFlow.getRoutesServedToday baseUrl
+      bppConfigs <- SIBC.findAllIntegratedBPPConfig personCityInfo.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.MULTIMODAL
+      nandiRoutes <- concat <$> mapM (NandiFlow.getRoutesServedToday baseUrl) (nub $ map (.feedKey) bppConfigs)
       pure $ map (\r -> FRFSTicketService.ActiveRouteRes {routeId = r.routeId, lastScheduleTime = r.lastScheduleTime}) nandiRoutes
     _ -> pure []
 

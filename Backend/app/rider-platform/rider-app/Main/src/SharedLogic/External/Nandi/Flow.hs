@@ -366,9 +366,9 @@ operatorExportRouteStopMapping :: (CoreMetrics m, MonadFlow m, MonadReader r m, 
 operatorExportRouteStopMapping baseUrl gtfsId =
   withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorExportRouteStopMapping gtfsId) "operatorExportRouteStopMapping" NandiAPI.operatorExportRouteStopMappingAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_EXPORT_ROUTE_STOP_MAPPING_API") baseUrl)
 
-getRoutesServedToday :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> m [RoutesServedTodayItem]
-getRoutesServedToday baseUrl =
-  withShortRetry $ callAPI baseUrl NandiAPI.getNandiRoutesServedToday "getRoutesServedToday" NandiAPI.nandiRoutesServedTodayAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTES_SERVED_TODAY_API") baseUrl)
+getRoutesServedToday :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [RoutesServedTodayItem]
+getRoutesServedToday baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiRoutesServedToday gtfsId) "getRoutesServedToday" NandiAPI.nandiRoutesServedTodayAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTES_SERVED_TODAY_API") baseUrl)
 
 gimsCurrentOperation :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> GimsOperationAnchor -> m GimsCurrentOperationResp
 gimsCurrentOperation baseUrl gtfsId req =

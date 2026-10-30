@@ -70,7 +70,7 @@ type DepotNameByIdAPI = "getDepotNameById" :> Capture "depotId" Text :> Get '[JS
 
 type AlternateStopsByGtfsIdAndStopCodeAPI = "alternateStops" :> Capture "gtfs_id" Text :> Capture "stop_code" Text :> Get '[JSON] [RouteStopMappingInMemoryServer]
 
-type RoutesServedTodayAPI = "routes-served-today" :> Get '[JSON] [RoutesServedTodayItem]
+type RoutesServedTodayAPI = "v2" :> Capture "gtfs_id" Text :> "routes-served-today" :> Get '[JSON] [RoutesServedTodayItem]
 
 type WaybillMetadataAPI = "waybill" :> Capture "gtfs_id" Text :> "metadata" :> Capture "waybill_no" Text :> Get '[JSON] WaybillMetadataResponse
 
@@ -260,7 +260,7 @@ getNandiDepotNameById = ET.client nandiDepotNameByIdAPI
 getNandiAlternateStopsByGtfsIdAndStopCode :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiAlternateStopsByGtfsIdAndStopCode = ET.client nandiAlternateStopsByGtfsIdAndStopCodeAPI
 
-getNandiRoutesServedToday :: ET.EulerClient [RoutesServedTodayItem]
+getNandiRoutesServedToday :: Text -> ET.EulerClient [RoutesServedTodayItem]
 getNandiRoutesServedToday = ET.client nandiRoutesServedTodayAPI
 
 getNandiWaybillMetadata :: Text -> Text -> ET.EulerClient WaybillMetadataResponse
