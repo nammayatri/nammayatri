@@ -1147,7 +1147,7 @@ instance IsBaseError MultimodalError where
     OTPServiceUnavailable reason -> Just $ "OTP service unavailable: " <> reason
     UnsupportedVehicleType reason -> Just $ "Unsupported vehicle type: " <> reason
     VehicleUnserviceableOnRoute reason -> Just $ "Vehicle unserviceable on route: " <> reason
-    VehicleServiceTierUnserviceable reason -> Just $ "Vehicle service tier unserviceable: " <> reason
+    VehicleServiceTierUnserviceable reason -> Just reason
     InvalidVehicleNumber reason -> Just $ "Invalid vehicle number: " <> reason
     FleetRouteMapMissing reason -> Just $ "Fleet route map missing: " <> reason
     PublicTransportDataUnavailable reason -> Just $ "Public transport data unavailable: " <> reason

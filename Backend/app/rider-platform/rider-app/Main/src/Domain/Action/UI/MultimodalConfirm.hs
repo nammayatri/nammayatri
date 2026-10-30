@@ -3010,8 +3010,9 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
   case mbServiceTier of
     Just serviceTier -> do
       let allowedVariants = maybe (Utils.defaultBusBoardingRelationshitCfg serviceTier._type) (.canBoardIn) $ find (\serviceRelationShip -> serviceRelationShip.vehicleType == Enums.BUS && serviceRelationShip.serviceTierType == serviceTier._type) =<< riderConfig.serviceTierRelationshipCfg
-      unless (vehicleLiveRouteInfo.serviceType `elem` allowedVariants) $
-        throwError $ VehicleServiceTierUnserviceable ("Vehicle " <> vehicleLiveRouteInfo.vehicleNumber <> ", the service tier" <> show vehicleLiveRouteInfo.serviceType <> ", not found on any route: " <> show allowedVariants)
+      unless (vehicleLiveRouteInfo.serviceType `elem` allowedVariants) $ do
+        let displayTier tier = T.replace "_" " " (show tier)
+        throwError $ VehicleServiceTierUnserviceable ("You are trying to activate in " <> displayTier vehicleLiveRouteInfo.serviceType <> " bus, but it is valid only in the following service tier types: " <> T.intercalate ", " (map displayTier allowedVariants) <> ".")
     Nothing -> do
       -- todo: MERTRICS add metric here
       logError $ "CRITICAL: Service tier not found for vehicle, skipping validation " <> vehicleLiveRouteInfo.vehicleNumber
