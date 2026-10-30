@@ -272,7 +272,9 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                           vehicleVariant = mbVehicleVariant,
                           seatSelectionType = seatSelType,
                           isUpcomingTrip = bus.busData.is_upcoming_trip,
-                          previousRouteId = bus.busData.previous_route_id
+                          previousRouteId = bus.busData.previous_route_id,
+                          availableSeats = Nothing,
+                          occupiedSeats = Nothing
                         }
                   Nothing -> do
                     logError $ "Vehicle info not found for bus: " <> bus.vehicleNumber
