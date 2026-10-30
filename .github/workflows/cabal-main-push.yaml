@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "main"
+      - "nammayatri-sandbox"
   workflow_dispatch:
     inputs:
       # Manual check that the Xyne failure alerts work (secrets, runner network, script): when ticked,
@@ -43,7 +44,7 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            host: x86_64_main_push
+            host: x86_64_prodHotPush-BAP_push
             arch: amd64
             name: Cabal Unoptimized Master Release Build
             continue-on-error: false
@@ -229,7 +230,7 @@ jobs:
     needs: [check-conditions, cabal-build]
     if: needs.check-conditions.outputs.should-proceed == 'true'
     continue-on-error: true
-    runs-on: x86_64_main_push
+    runs-on: x86_64_prodHotPush-BAP_push
     env:
       CACHE_RUNNER: ${{ needs.cabal-build.outputs.runner-name }}
     steps:
@@ -339,7 +340,7 @@ jobs:
     name: Analyze Cabal Build Times
     needs: [cabal-build, check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: x86_64_main_push
+    runs-on: x86_64_prodHotPush-BAP_push
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -380,7 +381,7 @@ jobs:
     name: Integration Tests (collections/)
     needs: [check-conditions, cabal-build]
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: x86_64_main_push
+    runs-on: x86_64_prodHotPush-BAP_push
     timeout-minutes: 150
     env:
       CACHE_RUNNER: ${{ needs.cabal-build.outputs.runner-name }}
