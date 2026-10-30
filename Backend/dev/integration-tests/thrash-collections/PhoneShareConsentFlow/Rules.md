@@ -5,7 +5,7 @@ rider's real mobile number (`callingNumber`) only when the merchant's
 `driver_calling_option` allows direct calling **and** the rider consented
 (`SafetySettings.consentToShareMobileNumber`, pushed to the BPP through its
 internal consent API whenever the rider changes it while
-`rider_config.enable_share_number_with_driver` is on, and also sent in the confirm tag
+`rider_config.push_consent_to_bpp` is on, and also sent in the confirm tag
 `CONSENT_TO_SHARE_MOBILE_NUMBER`). The legacy
 `riderMobileNumber` field is gated by the merchant option alone.
 
@@ -78,8 +78,9 @@ consent can never expose the number: ride 2's positive assertion fails with
 kill switch working as designed).
 
 The seed also sets `atlas_app.rider_config.enable_share_number_with_driver = true`
-(BAP), which makes confirm carry the consent tag and turns on the push.
-Without the flag, the rider app hides the toggle and nothing reaches the BPP.
+(BAP), which makes confirm carry the consent tag, and
+`atlas_app.rider_config.push_consent_to_bpp = true`, which turns on the push.
+Without the push flag, a mid-ride revoke is not seen until the next confirm.
 
 Three run paths, each with its own seeding story:
 

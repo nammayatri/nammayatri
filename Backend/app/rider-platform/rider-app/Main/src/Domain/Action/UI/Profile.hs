@@ -378,7 +378,7 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
   safetySettings <- Lib.findSafetySettingsWithFallback (cast personId) (Lib.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   logInfo "[Profile.getPersonDetails] findSafetySettings done"
   -- Temporary consent catch-up; see RCP.syncConsentIfNeeded for the removal plan.
-  when (fromMaybe False riderConfig.enableShareNumberWithDriver && isJust safetySettings.consentToShareMobileNumber && isNothing safetySettings.consentSyncedAt) $
+  when (fromMaybe False riderConfig.pushConsentToBpp && isJust safetySettings.consentToShareMobileNumber && isNothing safetySettings.consentSyncedAt) $
     fork "sync rider consent to BPP" $ RCP.syncConsentIfNeeded person
   isSafetyCenterDisabled_ <- SLP.checkSafetyCenterDisabled person safetySettings
   hasTakenValidRide <- QCP.findAllByPersonId personId
@@ -752,7 +752,7 @@ updateEmergencySettings personId req = do
   oldConsent <- (.consentToShareMobileNumber) <$> Lib.findSafetySettingsWithFallback (cast personId) (Lib.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let consentChanged = maybe False (\newConsent -> oldConsent /= Just newConsent) req.consentToShareMobileNumber
-      pushEnabled = fromMaybe False riderConfig.enableShareNumberWithDriver
+      pushEnabled = fromMaybe False riderConfig.pushConsentToBpp
   when (consentChanged && pushEnabled) $
     whenJust req.consentToShareMobileNumber (RCP.pushConsent person)
   void $ updateSafetySettings req
