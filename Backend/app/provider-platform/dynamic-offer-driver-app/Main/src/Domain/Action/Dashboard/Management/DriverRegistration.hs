@@ -3508,7 +3508,7 @@ postDriverRegistrationAddVehicles merchantShortId opCity driverId mbAutoApprove 
     foldlM
       ( \unprocessed (rcReq, _, _, _, mbFleetNo, _) ->
           withTryCatch "process:postDriverRegistrationAddVehicles" (registerRow (rcReq, mbFleetNo)) <&> \case
-            Left err -> unprocessed <> ["Unable to add Vehicle (" <> rcReq.vehicleRegistrationCertNumber <> "): " <> T.pack (displayException err)]
+            Left err -> unprocessed <> ["Unable to add Vehicle (" <> rcReq.vehicleRegistrationCertNumber <> "): " <> BulkUpload.rowErrorMessage err]
             Right () -> unprocessed
       )
       []
