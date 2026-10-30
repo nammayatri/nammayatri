@@ -280,6 +280,7 @@ data DriverRideRes = DriverRideRes
     constantWaitingCharge :: Maybe PriceAPIEntity,
     customerRating :: Maybe Centesimal,
     showRoutePerRequest :: Maybe Bool,
+    enableManualArrival :: Maybe Bool,
     invoiceId ::
       Maybe Text -- finance invoice id (booking.financeInvoiceId); the client fetches the PDF on demand via /finance/invoice/pdf (kept out of the hot list path — no per-row presign)
   }
@@ -568,8 +569,9 @@ mkDriverRideRes ::
   [DSI.StopInformation] ->
   ResolvedCalling ->
   Maybe Bool ->
+  Maybe Bool ->
   m DriverRideRes
-mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling showRoutePerRequest = do
+mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling showRoutePerRequest enableManualArrival = do
   let estimatedFareParams = booking.fareParams
       bearerFlags mbT =
         let mb = (mbT >>= (readMaybe . T.unpack)) :: Maybe PaymentChargeBearer
@@ -830,6 +832,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
             DFPC.PerMinuteWaitingCharge _ -> Nothing,
         customerRating = mbRiderDetails >>= (.customerRating),
         showRoutePerRequest,
+        enableManualArrival,
         invoiceId = mbInvoiceId
       }
 

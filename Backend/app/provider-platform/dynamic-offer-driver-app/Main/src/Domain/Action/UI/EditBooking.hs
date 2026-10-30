@@ -26,6 +26,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging (logError)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.LocationUpdates.Internal (updatePassedThroughDrop)
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -33,6 +34,7 @@ import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Ride
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.DriverInformation as QDI
@@ -113,7 +115,9 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
               FleetEngine.notifyDropoffChanged ride.merchantOperatingCityId ride.id LatLong {lat = lat, lon = lon}
             when (ride.status == DRide.INPROGRESS) $
               whenJust ride.tripStartPos $ \startPoint -> do
-                rideInfo <- SInternal.mkInProgressRideLtsInfo ride {DRide.toLocation = Just updatedloc} startPoint
+                -- LTS checks pickup arrival on every RideInfo it gets, so a manual-arrival ride must keep the flag here too.
+                mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
+                rideInfo <- SInternal.mkInProgressRideLtsInfo ride {DRide.toLocation = Just updatedloc} startPoint (mbTransporterConfig >>= (.enableManualArrival))
                 void $ LF.rideStart ride.id startPoint.lat startPoint.lon bookingUpdateReq.merchantId driverId (Just rideInfo)
           Notify.notifyEditDestination ride.merchantOperatingCityId driverId driver.deviceToken -- when ride.status in [INPROGRESS, NEW]
           return Success
