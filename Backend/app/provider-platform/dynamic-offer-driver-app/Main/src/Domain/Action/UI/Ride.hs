@@ -286,7 +286,12 @@ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels trans
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
   let goHomeReqId = ride.driverGoHomeRequestId
-  RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling (transporterConfig >>= DTC.showRoutePerRequest) (transporterConfig >>= DTC.enableManualArrival)
+  -- arrivedAtPickup decides with the booking city's config, so the flag shown for this ride must come from there too, not the city the request came from.
+  bookingCityConfig <-
+    if ((.merchantOperatingCityId) <$> transporterConfig) == Just booking.merchantOperatingCityId
+      then pure transporterConfig
+      else getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+  RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling (transporterConfig >>= DTC.showRoutePerRequest) (bookingCityConfig >>= DTC.enableManualArrival)
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig], HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl], Hedis.HedisLTSFlowEnv r, Alloc.SchedulerJobFlow r) => Id DRide.Ride -> ArrivedAtPickupReq -> m APISuccess
 arrivedAtPickup rideId req = do

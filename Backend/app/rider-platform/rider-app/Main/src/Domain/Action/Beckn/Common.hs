@@ -2187,13 +2187,18 @@ updateAndNotifyDriverArrivalStatus booking ride newStatus =
     when (freshRide.status /= DRide.INPROGRESS && isHigherStatus) $ do
       void $ QRide.updateDriverArrivalStatus (Just newStatus) ride.id
       -- Both LTS's automatic arrival and the BPP's arrival on_update land here, so the multimodal leg follows either.
-      now <- getCurrentTime
-      mbJourneyLeg <- QJL.findByLegSearchId (Just booking.transactionId)
+      -- Caught so a leg failure can't cost the rider the notification below: the status is already saved, so a redelivery wouldn't send it.
       let trackingStatus = case newStatus of
             DRide.DRIVER_ON_THE_WAY -> JMState.Arriving
             DRide.DRIVER_REACHING -> JMState.AlmostArrived
             DRide.DRIVER_REACHED -> JMState.Arrived
-      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing trackingStatus now
+      legResult <- withTryCatch "updateAndNotifyDriverArrivalStatus:journeyLeg" $ do
+        now <- getCurrentTime
+        mbJourneyLeg <- QJL.findByLegSearchId (Just booking.transactionId)
+        whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing trackingStatus now
+      case legResult of
+        Left err -> logError $ "journey leg arrival status update failed for ride " <> ride.id.getId <> ": " <> show err
+        Right _ -> pure ()
       case newStatus of
         DRide.DRIVER_ON_THE_WAY -> Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory ride
         DRide.DRIVER_REACHING -> Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride
