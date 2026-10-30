@@ -115,7 +115,8 @@ data AvailableForRidesInfo = AvailableForRidesInfo
     requestsUsed :: Int,
     requestsAllowed :: Int,
     activationsUsedToday :: Int,
-    activationsAllowedPerDay :: Int
+    activationsAllowedPerDay :: Int,
+    availableForRidesMinIdleMinutes :: Maybe Minutes
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
@@ -332,5 +333,6 @@ getAvailableForRidesInfo transporterConfig driverId driverTags =
           requestsUsed = min maxRequests requestsUsed,
           requestsAllowed = maxRequests,
           activationsUsedToday = min dailyLimit activationsUsed,
-          activationsAllowedPerDay = dailyLimit
+          activationsAllowedPerDay = dailyLimit,
+          availableForRidesMinIdleMinutes = mfilter ((> 0) . (.getMinutes)) transporterConfig.availableForRidesMinIdleMinutes
         }
