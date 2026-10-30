@@ -121,7 +121,7 @@ storeLedgerAdjustmentDocument merchantOpCity personId document = do
   documentPath <- Image.createPath personId.getId merchantOpCity.merchantId.getId DVC.LedgerAdjustmentProof document.storedExtension
   s3Result <-
     withTryCatch "S3:put:ledgerAdjustmentDocument" $
-      Redis.withLockRedis (Image.imageS3Lock documentPath) 5 $
+      Redis.withWaitAndLockRedis (Image.imageS3Lock documentPath) 5 50000 $
         S3.put (T.unpack documentPath) document.base64Content
   case s3Result of
     Left err -> do
@@ -971,7 +971,7 @@ ledgerAdjustmentPostAction ::
   DLA.LedgerAdjustmentRequest ->
   Flow (Maybe (Id DLE.LedgerEntry))
 ledgerAdjustmentPostAction transporterConfig checkerId adminCheckerName adjustmentRequest =
-  Redis.withLockRedisAndReturnValue (makeWalletRunningBalanceLockKey adjustmentRequest.personId.getId) 10 $ do
+  Redis.withWaitAndLockRedis (makeWalletRunningBalanceLockKey adjustmentRequest.personId.getId) 10 50000 $ do
     logInfo $
       "Ledger adjustment post triggered: "
         <> adjustmentRequest.id.getId

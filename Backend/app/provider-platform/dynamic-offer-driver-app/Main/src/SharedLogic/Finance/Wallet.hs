@@ -1097,7 +1097,7 @@ reserveWalletForCashRide transporterConfig driver booking mbFleetOwnerId mbSearc
               booking.fareParams.govtCharges
               booking.fareParams.tollCharges
               booking.fareParams.parkingCharge
-      Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey walletOwnerId) 10 10 $ do
+      Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey walletOwnerId) 10 10 50000 $ do
         availableBalance <- fromMaybe 0 <$> getWalletAvailableBalanceByOwner walletCounterpartyType walletOwnerId
         otherOfferHolds <- getWalletOfferHoldTotalExcluding walletOwnerId mbSearchTryId
         existingBookingHold <- getPendingWalletHoldAmountByReference walletCounterpartyType walletOwnerId booking.id.getId

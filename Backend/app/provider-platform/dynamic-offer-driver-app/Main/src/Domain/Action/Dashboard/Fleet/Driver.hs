@@ -1269,7 +1269,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
       DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
       mbNewOperator <- forM operatorCode $ SA.resolveOperatorByCode merchantOpCityId
 
-      Redis.withLockRedis (driverAssociationC personId) 10 $ do
+      Redis.withWaitAndLockRedis (driverAssociationC personId) 10 50000 $ do
         mbActiveAssociation <- SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id entityId) personId) SGuard.UnlinkFromFleet (SGuard.TargetDriver personId) $ do
           -- Check if there's an active association before ending it (under the onboarding lock, so a
           -- consent that just completed is seen)
@@ -1310,7 +1310,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
       case mbNewOperator of
         Just newOperator | newOperator.id.getId == entityId -> throwError (InvalidRequest "Driver is already associated with this operator")
         _ ->
-          Redis.withLockRedis (driverAssociationC personId) 10 $ do
+          Redis.withWaitAndLockRedis (driverAssociationC personId) 10 50000 $ do
             SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id entityId) personId) SGuard.UnlinkFromOperator (SGuard.TargetDriver personId) $ do
               -- Check if there's an active association before ending it (under the onboarding lock)
               mbActiveAssociation <- DOV.findByDriverIdAndOperatorId personId (Id entityId) True
@@ -4736,7 +4736,7 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
         DP.DRIVER -> do
           driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
           let dob = fmap (\d -> UTCTime d 0) req.dob <|> driverInfo.driverDob
-          Redis.withLockRedis (DIInfo.driverIdentityInfoLockKey personId) 10 $ do
+          Redis.withWaitAndLockRedis (DIInfo.driverIdentityInfoLockKey personId) 10 50000 $ do
             mbExisting <- QDII.findByDriverId personId
             void $ DIInfo.upsertDriverIdentityInfo mbExisting personId driver.merchantId driver.merchantOperatingCityId driverInfo req.nomineeName req.nomineeRel req.nomineeDob req.address (DDriver.castFromCommon <$> req.addressDocumentType) req.addressState
           QDriverInfo.updateDriverDobAndAddress dob Nothing Nothing personId
@@ -5465,7 +5465,7 @@ postDriverFleetDriverAutoAssign ::
 postDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFleetOwnerId req = do
   (_, _, validatedDriver, cityTiers) <- getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId
   let personId = validatedDriver.id
-  Redis.withWaitOnLockRedisWithExpiry (SVST.selectedServiceTiersLockKey personId) 5 10 $ do
+  Redis.withWaitAndLockRedisWithTimeout (SVST.selectedServiceTiersLockKey personId) 5 10 50000 $ do
     driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
     vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
     let tiers = FDS.vehicleAutoAcceptTiers cityTiers vehicle

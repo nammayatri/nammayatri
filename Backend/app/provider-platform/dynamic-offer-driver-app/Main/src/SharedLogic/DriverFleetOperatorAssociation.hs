@@ -421,7 +421,7 @@ performAssociationChange merchant merchantOpCity requestorId subjectId operatorC
     -- link are read under the onboarding lock, so a concurrent consent or move can't change them after.
     changeDriverOperator merchant' moc' transporterConfig mbRequestor subject newOperator = do
       let personId = subject.id
-      Redis.withLockRedisAndReturnValue (driverOperatorAssociationLockKey personId) 10 $ do
+      Redis.withWaitAndLockRedis (driverOperatorAssociationLockKey personId) 10 50000 $ do
         -- Nothing: already with this operator. Just mbOld: moved, from mbOld's operator if any.
         mbMove <- SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.UnlinkFromOperator (SGuard.TargetDriver personId) $ do
           ensureRequestorMayChange mbRequestor subject
@@ -441,7 +441,7 @@ performAssociationChange merchant merchantOpCity requestorId subjectId operatorC
 
     changeFleetOperator merchant' moc' transporterConfig subject newOperator = do
       let fleetOwnerId = subject.id.getId
-      Redis.withLockRedis (fleetOperatorAssociationLockKey fleetOwnerId) 10 $ do
+      Redis.withWaitAndLockRedis (fleetOperatorAssociationLockKey fleetOwnerId) 10 50000 $ do
         mbActiveAssociation <- QFOA.findActiveByFleetOwnerId subject.id
         case mbActiveAssociation of
           Just old | old.operatorId == newOperator.id.getId -> pure ()

@@ -2009,7 +2009,7 @@ postFinanceManagementTdsReimbursementRequestSubmit ::
   Flow API.TdsReimbursementRequestSubmitRes
 postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity requestorId req = do
   let lockKey = "tdsReimbursementSubmitLock:" <> requestorId
-  Redis.withLockRedisAndReturnValue lockKey 60 $ do
+  Redis.withWaitAndLockRedis lockKey 60 50000 $ do
     (tdsRequest, mappingRows) <- buildTdsReimbursementRequest merchantShortId opCity requestorId req
     QTdsReq.create tdsRequest
     mapM_ QTdsMap.create mappingRows

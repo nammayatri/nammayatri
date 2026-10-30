@@ -668,7 +668,7 @@ postScheduledBookingOpsNote merchantShortId opCity transactionId mbRequestorId r
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   booking <- findScheduledTransactionBooking merchant merchantOpCity transactionId
-  Redis.withWaitOnLockRedisWithExpiry (opsNoteLockKey merchantOpCity.id transactionId) 10 10 $ do
+  Redis.withWaitAndLockRedisWithTimeout (opsNoteLockKey merchantOpCity.id transactionId) 10 10 50000 $ do
     issueReportId <- getOrCreateScheduledBookingIssueReport booking
     commentId <- generateGUID
     now <- getCurrentTime

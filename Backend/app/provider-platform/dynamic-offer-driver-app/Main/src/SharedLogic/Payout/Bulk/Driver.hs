@@ -341,7 +341,7 @@ rerunWalletLedgerStep ::
   m ()
 rerunWalletLedgerStep merchantOpCityId merchantId personId request amount status afterLedger = do
   settleRan <- liftIO (newIORef False)
-  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey personId) 10 10 $ do
+  Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey personId) 10 10 50000 $ do
     person <- QPerson.findById (Id personId) >>= fromMaybeM (PersonNotFound personId)
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId)
     UIPayout.settleDriverWalletPayoutLedgerFor (Id merchantOpCityId) merchantId person transporterConfig request amount status

@@ -155,7 +155,7 @@ generateReferralCode mbRole (driverId, merchantId, merchantOpCityId) = do
     Just driverReferral -> pure $ GenerateReferralCodeRes driverReferral.referralCode.getId driverReferral.dynamicReferralCode driverReferral.dynamicReferralCodeValidTill
     Nothing -> do
       Redis.runInMasterCloudRedisCell $
-        Redis.withLockRedisAndReturnValue makeLastRefferalCodeKey 60 $ do
+        Redis.withWaitAndLockRedis makeLastRefferalCodeKey 60 50000 $ do
           refferalCodeNumber <- CQD.getNextRefferalCode
           dynamicReferralCode <- CQD.getDynamicRefferalCode
           let referralCode' = T.pack $ formatReferralCode (show refferalCodeNumber) 6

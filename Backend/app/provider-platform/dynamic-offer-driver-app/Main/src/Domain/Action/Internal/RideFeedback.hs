@@ -249,7 +249,7 @@ postRideFeedback bookingId apiKey req = do
       ruleContext = evaluation.context
       eligibleTop = HS.fromList [c.id | (c, Eligible _) <- evaluation.decisions]
   results <-
-    Hedis.withLockRedisAndReturnValue (submitLockKey journey.transactionId) submitLockSeconds $ do
+    Hedis.withWaitAndLockRedis (submitLockKey journey.transactionId) submitLockSeconds 50000 $ do
       existing <- QRFR.findAllByTransactionId journey.transactionId
       let initial = currentResponses journey existing
           env = SubmitEnv {..}
@@ -486,7 +486,7 @@ postActionResults :: Id DB.Booking -> Id DRFR.RideFeedbackResponse -> Maybe Text
 postActionResults bookingId responseId apiKey req = do
   journey <- fetchAuthorisedJourney bookingId apiKey
   -- Read-merge-write under the journey's lock: the first run and a retry can report at the same time.
-  Hedis.withLockRedisAndReturnValue (submitLockKey journey.transactionId) submitLockSeconds $ do
+  Hedis.withWaitAndLockRedis (submitLockKey journey.transactionId) submitLockSeconds 50000 $ do
     response <- fetchJourneyResponse journey responseId
     let previous = fromMaybe [] response.actionResults
         -- A retry reports its own run; attempts add up so the inspector shows every try.
@@ -513,7 +513,7 @@ getRetryableActions bookingId responseId apiKey = do
     _ -> throwError (InvalidRequest "Only answered responses have actions")
   config <- find ((== response.configId) . (.id)) <$> cityQuestions booking booking.merchantOperatingCityId Nothing >>= fromMaybeM (RideFeedbackConfigNotFound response.configId.getId)
   now <- getCurrentTime
-  Hedis.withLockRedisAndReturnValue (submitLockKey journey.transactionId) submitLockSeconds $ do
+  Hedis.withWaitAndLockRedis (submitLockKey journey.transactionId) submitLockSeconds 50000 $ do
     current <- fetchJourneyResponse journey responseId
     let results = fromMaybe [] current.actionResults
         retryable r = r.status == DRFR.FAILED || (r.status == DRFR.PENDING && diffUTCTime now r.updatedAt > stalePendingSeconds)

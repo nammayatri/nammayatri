@@ -81,7 +81,7 @@ createFleetDriverAssociationIfNotExists ::
   m ()
 createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorId onboardingVehicleCategory isActive requestReason merchantId merchantOperatingCityId onCreated = do
   now <- getCurrentTime
-  Redis.withWaitOnLockRedisWithExpiry (driverFleetLockKey driverId.getId fleetOwnerId.getId) 10 10 $ do
+  Redis.withWaitAndLockRedisWithTimeout (driverFleetLockKey driverId.getId fleetOwnerId.getId) 10 10 50000 $ do
     mbFleetDriverAssociation <- findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId, Se.Is BeamFDVA.isActive $ Se.Eq isActive, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
     case mbFleetDriverAssociation of
       Just fleetDriverAssociation ->
@@ -563,7 +563,7 @@ findActiveDriverByFleetOwnerId fleetOwnerId = do
 endFleetDriverAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Text -> Id Person -> m ()
 endFleetDriverAssociation fleetOwnerId (Id driverId) = do
   now <- getCurrentTime
-  Redis.withWaitOnLockRedisWithExpiry (driverFleetLockKey driverId fleetOwnerId) 10 10 $ do
+  Redis.withWaitAndLockRedisWithTimeout (driverFleetLockKey driverId fleetOwnerId) 10 10 50000 $ do
     updateWithKV
       [Se.Set BeamFDVA.associatedTill $ Just now, Se.Set BeamFDVA.isActive False]
       [Se.And [Se.Is BeamFDVA.fleetOwnerId (Se.Eq fleetOwnerId), Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now), Se.Is BeamFDVA.driverId (Se.Eq driverId)]]
@@ -955,7 +955,7 @@ approveFleetDriverAssociation ::
   m ()
 approveFleetDriverAssociation driverId fleetOwnerId responseReason = do
   now <- getCurrentTime
-  Redis.withWaitOnLockRedisWithExpiry (driverFleetLockKey driverId.getId fleetOwnerId.getId) 10 10 $ do
+  Redis.withWaitAndLockRedisWithTimeout (driverFleetLockKey driverId.getId fleetOwnerId.getId) 10 10 50000 $ do
     updateWithKV
       [ Se.Set BeamFDVA.isActive True,
         Se.Set BeamFDVA.responseReason responseReason,
@@ -997,7 +997,7 @@ revokeFleetDriverAssociation ::
   m ()
 revokeFleetDriverAssociation driverId fleetOwnerId = do
   now <- getCurrentTime
-  Redis.withWaitOnLockRedisWithExpiry (driverFleetLockKey driverId.getId fleetOwnerId.getId) 10 10 $ do
+  Redis.withWaitAndLockRedisWithTimeout (driverFleetLockKey driverId.getId fleetOwnerId.getId) 10 10 50000 $ do
     updateWithKV
       [ Se.Set BeamFDVA.associatedTill (Just now),
         Se.Set BeamFDVA.isActive False,

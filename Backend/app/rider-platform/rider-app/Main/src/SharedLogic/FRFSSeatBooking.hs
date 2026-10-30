@@ -113,7 +113,7 @@ releaseHold ::
 releaseHold tripId holdId = do
   logInfo $ "SeatBooking:releaseHold attempting holdId=" <> holdId <> " tripId=" <> tripId
   Redis.runInMasterCloudRedisCell $
-    Redis.withLockRedis (holdLockKey tripId holdId) 10 $ do
+    Redis.withWaitAndLockRedis (holdLockKey tripId holdId) 10 50000 $ do
       let mKey = metaKey tripId holdId
           tKey = timerKey tripId holdId
       mbMeta :: Maybe SeatHoldMeta <- Redis.get mKey
@@ -152,7 +152,7 @@ confirmBooking ::
 confirmBooking tripId holdId = do
   logInfo $ "SeatBooking:confirmBooking attempting holdId=" <> holdId <> " tripId=" <> tripId
   Redis.runInMasterCloudRedisCell $
-    Redis.withLockRedis (holdLockKey tripId holdId) 10 $ do
+    Redis.withWaitAndLockRedis (holdLockKey tripId holdId) 10 50000 $ do
       let mKey = metaKey tripId holdId
           tKey = timerKey tripId holdId
       mbMeta :: Maybe SeatHoldMeta <- Redis.get mKey
