@@ -538,6 +538,10 @@ postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.
 postFrfsSearch (mbPersonId, merchantId) mbCity mbHasPasses mbIntegratedBPPConfigId mbNewServiceTiers vehicleType_ req = withTimeAPI "frfsSearch" "total" $
   Metrics.withTimeFRFSMerchant "frfsSearch" "total" merchantId.getId $ do
     personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+    whenJust req.imeiNumber $ \imeiNumber ->
+      unless (imeiNumber == "") $ do
+        encryptedImeiNumber <- encrypt imeiNumber
+        QP.updateImeiNumber (Just encryptedImeiNumber) personId
     let platformType = fromMaybe DIBC.APPLICATION req.platformType
     merchantOperatingCityId <-
       case mbCity of
@@ -798,6 +802,18 @@ getCrisSdkToken personId merchantOperatingCityId integratedBPPConfig vehicleType
       lastStation <- listToMaybe (reverse routeStation.stations)
       Just CallAPI.BasicRouteDetail {routeCode = routeStation.code, startStopCode = firstStation.code, endStopCode = lastStation.code, color = routeStation.color}
 
+routeStationsDistance :: Maybe [FRFSRouteStationsAPI] -> Maybe Meters
+routeStationsDistance mbRouteStations = do
+  routeStations <- mbRouteStations
+  guard (not $ null routeStations)
+  highPrecMetersToMeters . sum <$> mapM segmentDistance routeStations
+  where
+    segmentDistance routeStation = do
+      points <- mapM (\station -> LatLong <$> station.lat <*> station.lon) routeStation.stations
+      case points of
+        (_ : rest@(_ : _)) -> Just $ sum (zipWith CD.distanceBetweenInMeters points rest)
+        _ -> Nothing
+
 enrichQuotesWithPassOverride ::
   (CacheFlow m r, EsqDBFlow m r) =>
   DIBC.IntegratedBPPConfig ->
@@ -923,7 +939,10 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
                 vehicleType = quote.vehicleType,
                 discountedTickets = quote.discountedTickets,
                 eventDiscountAmount = quote.eventDiscountAmount,
-                distance = if quote.vehicleType == Spec.SUBWAY then quote.fareDetails <&> (.distance) else Nothing,
+                distance = case quote.vehicleType of
+                  Spec.SUBWAY -> quote.fareDetails <&> (.distance)
+                  Spec.METRO -> routeStationsDistance decodedRouteStations
+                  _ -> Nothing,
                 integratedBppConfigId = quote.integratedBppConfigId,
                 stations = fromMaybe [] stations,
                 observingFailures = Just observingFailures,
