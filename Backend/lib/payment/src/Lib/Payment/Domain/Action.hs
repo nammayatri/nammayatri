@@ -51,6 +51,7 @@ module Lib.Payment.Domain.Action
     invalidateOfferListCacheServiceForAllServiceTypes,
     listDomainOffers,
     listDomainOffersWithBasket,
+    offersBudgetSpent,
     splitOfferRespByProduct,
     createWalletService,
     walletPostingService,
@@ -1229,19 +1230,42 @@ eligibleDomainOffers ::
   m [(DOffer.Offer, Maybe Int)]
 eligibleDomainOffers merchantId merchantOperatingCityId mbDomainContext mbRider = do
   now <- getCurrentTime
-  activeOffers <- activeDomainOffers merchantId merchantOperatingCityId now
+  -- only offer lists come here, so a used-up budget hides the offer
+  activeOffers <- activeDomainOffers merchantId merchantOperatingCityId True now
   catMaybes <$> forM activeOffers (\offer -> offersEligibilityFlow offer mbDomainContext mbRider now)
 
--- | Active offers of the merchant city that are inside their validity window at `now`.
+-- | Active offers of the merchant city that are inside their validity window at `now` and, when enforced, have budget left.
 activeDomainOffers ::
   (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
   Text ->
   Text ->
+  Bool -> -- enforce the campaign budget
   UTCTime ->
   m [DOffer.Offer]
-activeDomainOffers merchantId merchantOperatingCityId now = do
+activeDomainOffers merchantId merchantOperatingCityId enforceBudget now = do
   allActiveOffers <- QOffer.findAllActiveByMerchant merchantId merchantOperatingCityId True
-  pure $ filter (\offer -> maybe True (<= now) offer.validFrom && maybe True (> now) offer.validTill) allActiveOffers
+  let inWindow = filter (\offer -> maybe True (<= now) offer.validFrom && maybe True (> now) offer.validTill) allActiveOffers
+  if enforceBudget
+    then do
+      -- one stats query for all capped offers; offers without a budget need none
+      spentByOffer <- offersBudgetSpent $ map (.id) (filter (isJust . (.budgetAmount)) inWindow)
+      pure $ filter (\offer -> maybe True (\budget -> Map.findWithDefault 0 offer.id.getId spentByOffer < budget) offer.budgetAmount) inWindow
+    else pure inWindow
+
+-- | Discount plus cashback each offer gave out so far, keyed by offer id, from the offer-level stats rows
+--   (their entityId is the offer id). An offer with no row is absent: it spent nothing.
+offersBudgetSpent ::
+  (PaymentBeamFlow.BeamFlow m r) =>
+  [Id DOffer.Offer] ->
+  m (Map.Map Text HighPrecMoney)
+offersBudgetSpent [] = pure Map.empty
+offersBudgetSpent offerIds = do
+  let offerIdTexts = map (.getId) offerIds
+  offerLevelStats <- QOfferStats.findAllByEntityIdsAndEntityType offerIdTexts DOfferStats.Offer
+  pure $ Map.fromList (map (\stats -> (stats.entityId, spentOf stats)) offerLevelStats)
+  where
+    spentOf :: DOfferStats.OfferStats -> HighPrecMoney
+    spentOf stats = fromMaybe 0 stats.totalDiscountAmount + fromMaybe 0 stats.totalCashbackAmount
 
 listDomainOffers ::
   (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
@@ -1356,10 +1380,11 @@ listDomainOffersWithBasket ::
   Currency ->
   (Text -> Maybe Value) -> -- domain context for a productId
   Maybe Counters.OfferRiderContext ->
+  Bool -> -- enforce the campaign budget
   m [(Text, PInterface.OfferListResp)]
-listDomainOffersWithBasket merchantId merchantOperatingCityId products _currency mkDomainContext mbRider = do
+listDomainOffersWithBasket merchantId merchantOperatingCityId products _currency mkDomainContext mbRider enforceBudget = do
   now <- getCurrentTime
-  activeOffers <- filter (.isActive) <$> activeDomainOffers merchantId merchantOperatingCityId now
+  activeOffers <- filter (.isActive) <$> activeDomainOffers merchantId merchantOperatingCityId enforceBudget now
   passedIdsByProduct <-
     forM products $ \(productId, _) ->
       fmap catMaybes . forM activeOffers $ \offer -> do
@@ -1641,7 +1666,8 @@ upsertOfferStats offerId statsInput discountAmount payoutAmount payoutCurr merch
   -- Upsert OfferStats for each entity type
   forM_ entities $ \(entityType, entityId) -> do
     let lockKey = "UpsertOfferStats:OfferId:" <> offerId.getId <> ":EntityType:" <> show entityType <> ":EntityId:" <> entityId
-    Redis.whenWithLockRedis lockKey 60 $ do
+    -- wait, not skip: the offer-level row is shared by every rider, and its totals are the campaign budget spend
+    Redis.withWaitOnLockRedisWithExpiry lockKey 10 20 $ do
       mbStats <- QOfferStats.findByOfferIdAndEntityIdAndEntityType offerId entityId entityType
       case mbStats of
         Just stats ->

@@ -78,6 +78,7 @@ types:
     - frequencyType: Maybe OfferFrequency
     - maxApplyCount: Maybe Int
     - showMilestoneCard: Maybe Bool
+    - budgetAmount: Maybe HighPrecMoney
     - derive: "'HideSecrets"
 
   UpdateOfferReq:
@@ -97,6 +98,7 @@ types:
     - frequencyType: Maybe OfferFrequency
     - maxApplyCount: Maybe Int
     - showMilestoneCard: Maybe Bool
+    - budgetAmount: Maybe HighPrecMoney
     - derive: "'HideSecrets"
 
   OfferResp:
@@ -121,6 +123,8 @@ types:
     - frequencyType: Maybe OfferFrequency
     - maxApplyCount: Maybe Int
     - showMilestoneCard: Maybe Bool
+    - budgetAmount: Maybe HighPrecMoney
+    - budgetSpent: HighPrecMoney
     - createdAt: UTCTime
     - updatedAt: UTCTime
 

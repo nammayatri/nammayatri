@@ -28,6 +28,11 @@ findAllByEntityIdAndEntityType ::
   (Kernel.Prelude.Text -> Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> m [Lib.Payment.Domain.Types.OfferStats.OfferStats])
 findAllByEntityIdAndEntityType entityId entityType = do findAllWithKV [Se.And [Se.Is Beam.personId $ Se.Eq entityId, Se.Is Beam.entityType $ Se.Eq (Kernel.Prelude.Just entityType)]]
 
+findAllByEntityIdsAndEntityType ::
+  (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  ([Kernel.Prelude.Text] -> Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> m [Lib.Payment.Domain.Types.OfferStats.OfferStats])
+findAllByEntityIdsAndEntityType entityId entityType = do findAllWithKV [Se.And [Se.Is Beam.personId $ Se.In entityId, Se.Is Beam.entityType $ Se.Eq (Kernel.Prelude.Just entityType)]]
+
 findByOfferIdAndEntityIdAndEntityType ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> Kernel.Prelude.Text -> Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> m (Maybe Lib.Payment.Domain.Types.OfferStats.OfferStats))

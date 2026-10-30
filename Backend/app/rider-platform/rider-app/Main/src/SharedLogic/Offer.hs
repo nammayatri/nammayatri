@@ -745,7 +745,9 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
                       personTags = offerEligibilityTags person.customerNammaTags
                     }
             currency = maybe INR ((.currency) . snd) (listToMaybe products)
-        offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContextFor mbRider
+            -- a booking means the rider already chose this offer, so a used-up budget does not take it away
+            enforceBudget = isNothing mbBooking
+        offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContextFor mbRider enforceBudget
         let mbRideData = mkRideData <$> mbRide
             mbBookingData = mkBookingData <$> mbBooking
             language = fromMaybe ENGLISH person.language
