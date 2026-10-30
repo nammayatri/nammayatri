@@ -364,6 +364,7 @@ data TransporterConfig = TransporterConfig
     thresholdCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tripConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.TripConfig,
     tripEndGeofenceRadius :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     tripStartGeofenceRadius :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     tripStartLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
@@ -531,6 +532,9 @@ data GstBreakup = GstBreakup
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
+data InterCityConfig = InterCityConfig {minDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters, supportNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
 data InvoiceConfig = InvoiceConfig
   { categoryOfServices :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cityState :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -629,6 +633,8 @@ data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY | REALLOCATE_SCHE
 
 data ProjectFareParamsComponent = RIDE_FARE | TOLL_FARE | CANCELLATION_FARE | PARKING_CHARGE | PAYMENT_CHARGE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data RentalConfig = RentalConfig {supportNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
 data RideEvidenceConfig = RideEvidenceConfig
   { completedRideWindowHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -698,6 +704,9 @@ data TaxConfig = TaxConfig
     subscriptionGst :: Domain.Types.TransporterConfig.GstBreakup,
     subscriptionTdsRate :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig
   }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data TripConfig = TripConfig {interCity :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.InterCityConfig, rental :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.RentalConfig}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallingOption)

@@ -361,6 +361,7 @@ data TransporterConfigT f = TransporterConfigT
     thresholdCancellationScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    tripConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     tripEndGeofenceRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     tripStartGeofenceRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     tripStartLeadTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Minutes),

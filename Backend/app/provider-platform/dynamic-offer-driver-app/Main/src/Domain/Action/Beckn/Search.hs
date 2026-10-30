@@ -1193,13 +1193,27 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
         if isScheduledForSearch tConf now dsReq
           then (dsReq.pickupTime, True)
           else (now, False)
+      tripCategories = getTripCategories tConf dsReq isScheduled isInterCity isCrossCity destinationTravelCityName
+  TripOption {..}
+
+getTripCategories :: DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Bool -> Maybe Text -> [TripCategory]
+getTripCategories tConf dsReq isScheduled isInterCity isCrossCity destinationTravelCityName = do
+  let mbMinInterCityDistance = tConf.tripConfig >>= (.interCity) >>= (.minDistance)
+      belowInterCityDistanceThreshold = case (mbMinInterCityDistance, dsReq.routeDistance) of
+        (Just minDistance, Just routeDistance) -> routeDistance < minDistance
+        _ -> False
+      shouldFallbackToOneWay = belowInterCityDistanceThreshold && not dsReq.roundTrip
+      -- Cross-city rentals and round trips retain their dedicated products.
+      shouldUseInterCity = isInterCity && (dsReq.riderPreferredOption == DRPO.Rental || not shouldFallbackToOneWay)
+      oneWayBundle =
+        if isScheduled
+          then [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer]
+          else [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer]
       -- Local (non-intercity) bundle, scoped to what the rider actually asked for.
       -- Cuts wasted DB/ML work for categories the rider didn't pick.
       localBundleForPreference = case dsReq.riderPreferredOption of
-        DRPO.OneWay ->
-          if isScheduled
-            then [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer]
-            else [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer]
+        DRPO.OneWay -> oneWayBundle
+        DRPO.InterCity | shouldFallbackToOneWay -> [OneWay OneWayOnDemandStaticOffer]
         DRPO.Rental ->
           [Rental OnDemandStaticOffer]
             <> [Rental RideOtp | not isScheduled]
@@ -1212,40 +1226,37 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
           -- to a follow-up PR (mirrors Rental's own two-mode dispatch above once added).
           [EasyBooking OnDemandStaticOffer]
         _ -> []
-      tripCategories =
-        if checkIfMeterRideSearch dsReq.isMeterRideSearch
-          then [OneWay MeterRide]
-          else do
-            case dsReq.dropLocation of
-              Just _ -> case dsReq.riderPreferredOption of
-                DRPO.Rental
-                  | isInterCity ->
-                    [IntercityRental OnDemandStaticOffer destinationTravelCityName]
-                      <> [IntercityRental RideOtp destinationTravelCityName | not isScheduled]
-                _ ->
-                  if isInterCity
-                    then
-                      if isCrossCity
-                        then
-                          [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                            <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
-                        else
-                          [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                            <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
-                    else localBundleForPreference
-              -- FIX (per review): rerouting this whole branch through localBundleForPreference
-              -- had a much bigger blast radius than intended — riderPreferredOption falls
-              -- back to OneWay in several places (no tag, unparseable tag, unrecognized
-              -- category code from an external BPP), and localBundleForPreference's catch-all
-              -- (`_ -> []`) would then return zero categories for InterCity/PublicTransport/
-              -- FixedRoute, or OneWay categories that need a destination we don't have here.
-              -- Scoped down to only carve out EasyBooking; every other preference keeps the
-              -- exact previous hardcoded-to-Rental behavior for destination-less searches.
-              Nothing -> case dsReq.riderPreferredOption of
-                DRPO.EasyBooking -> [EasyBooking OnDemandStaticOffer]
-                _ -> [Rental OnDemandStaticOffer] <> [Rental RideOtp | not isScheduled]
-
-  TripOption {..}
+  if checkIfMeterRideSearch dsReq.isMeterRideSearch
+    then [OneWay MeterRide]
+    else do
+      case dsReq.dropLocation of
+        Just _ -> case dsReq.riderPreferredOption of
+          DRPO.Rental
+            | shouldUseInterCity ->
+              [IntercityRental OnDemandStaticOffer destinationTravelCityName]
+                <> [IntercityRental RideOtp destinationTravelCityName | not isScheduled]
+          _ ->
+            if shouldUseInterCity
+              then
+                if isCrossCity
+                  then
+                    [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
+                      <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                  else
+                    [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
+                      <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+              else localBundleForPreference
+        -- FIX (per review): rerouting this whole branch through localBundleForPreference
+        -- had a much bigger blast radius than intended — riderPreferredOption falls
+        -- back to OneWay in several places (no tag, unparseable tag, unrecognized
+        -- category code from an external BPP), and localBundleForPreference's catch-all
+        -- (`_ -> []`) would then return zero categories for InterCity/PublicTransport/
+        -- FixedRoute, or OneWay categories that need a destination we don't have here.
+        -- Scoped down to only carve out EasyBooking; every other preference keeps the
+        -- exact previous hardcoded-to-Rental behavior for destination-less searches.
+        Nothing -> case dsReq.riderPreferredOption of
+          DRPO.EasyBooking -> [EasyBooking OnDemandStaticOffer]
+          _ -> [Rental OnDemandStaticOffer] <> [Rental RideOtp | not isScheduled]
   where
     checkIfMeterRideSearch isMeterRideSearch = case isMeterRideSearch of
       Just isMeterRide -> isMeterRide

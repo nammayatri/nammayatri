@@ -1220,6 +1220,17 @@ TransporterConfig:
       smsBodyLimit: Maybe Int
       whatsappBodyLimit: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    InterCityConfig:
+      minDistance: Maybe Meters
+      supportNumber: Maybe Text
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    RentalConfig:
+      supportNumber: Maybe Text
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    TripConfig:
+      interCity: Maybe InterCityConfig
+      rental: Maybe RentalConfig
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     StclConfig:
       # Cap on total shares a single driver may hold across all SUBMITTED rows.
       maxSharesPerDriver: Maybe Int
@@ -1256,6 +1267,7 @@ TransporterConfig:
     pickupLocThreshold: Meters
     dropLocThreshold: Meters
     interCityDropLocThreshold: Maybe Meters
+    tripConfig: Maybe TripConfig
     tripStartGeofenceRadius: Maybe Meters
     tripEndGeofenceRadius: Maybe Meters
     tripStartLeadTime: Maybe Minutes
@@ -1694,6 +1706,7 @@ TransporterConfig:
     sameRiderDriverRideCountThreshold: Maybe Int
     favouriteDriverDailyCoinRideThreshold: Maybe Int
     communicationChannelCharLimits: Maybe Value
+    tripConfig: Maybe Value
     stclConfig: Maybe Value
 
   beamFields:
@@ -1809,6 +1822,7 @@ TransporterConfig:
     sameRiderDriverRideCountThreshold: Just sameRiderDriverRideCountThreshold|E
     favouriteDriverDailyCoinRideThreshold: Just favouriteDriverDailyCoinRideThreshold|E
     communicationChannelCharLimits: Data.Aeson.toJSON <$> communicationChannelCharLimits|E
+    tripConfig: Data.Aeson.toJSON <$> tripConfig|E
     stclConfig: Data.Aeson.toJSON <$> stclConfig|E
 
   intermediateTransformers:
@@ -1951,6 +1965,8 @@ TransporterConfig:
     communicationChannelCharLimits: (\val -> case Data.Aeson.fromJSON val of
       Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<<
       communicationChannelCharLimits|E
+    tripConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< tripConfig|E
     stclConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< stclConfig|E
 
@@ -2040,6 +2056,7 @@ TransporterConfig:
     minBaseFare: double precision
     allowFarePolicyUpdateBelowMinBaseFare: boolean
     communicationChannelCharLimits: json
+    tripConfig: json
     allowedPaymentInstrumentForPayout: "text[]"
     stclConfig: json
     defaultOnboardingAs: character varying(255)

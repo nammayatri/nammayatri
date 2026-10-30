@@ -449,6 +449,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.thresholdCancellationScore thresholdCancellationScore,
       Se.Set Beam.timeDiffFromUtc timeDiffFromUtc,
       Se.Set Beam.trackingShortUrlPattern trackingShortUrlPattern,
+      Se.Set Beam.tripConfig (Data.Aeson.toJSON <$> tripConfig),
       Se.Set Beam.tripEndGeofenceRadius tripEndGeofenceRadius,
       Se.Set Beam.tripStartGeofenceRadius tripStartGeofenceRadius,
       Se.Set Beam.tripStartLeadTime tripStartLeadTime,
