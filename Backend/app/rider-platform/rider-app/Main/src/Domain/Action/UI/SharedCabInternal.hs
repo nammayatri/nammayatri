@@ -110,7 +110,7 @@ getSharedCabRoutes agencyId driverLat driverLon mbToken = do
   let distanceFrom = distanceBetweenInMeters (LatLong driverLat driverLon)
       distanceKm route stops =
         realToFrac . (/ 1000) . foldl' min (distanceFrom route.startPoint) $ map distanceFrom (route.endPoint : map (.stopPoint) stops)
-      toResp ((route, stops), waitingCount) searchingCount =
+      toResp (route, stops) (waitingCount, searchingCount) =
         View.SharedCabRoute
           { code = route.code,
             name = route.longName,
@@ -127,9 +127,8 @@ getSharedCabRoutes agencyId driverLat driverLon mbToken = do
   cfg <- Config.getTunables integratedBppConfig.merchantOperatingCityId
   finding <- Demand.findingByRoute <$> QFRFSTicketBooking.findSharedCabFindingInCity integratedBppConfig.merchantOperatingCityId
   let routeFinding route = Map.findWithDefault [] route.code finding
-  waiting <- mapM (\(route, _) -> Demand.waitingOnRoute cfg (routeFinding route) route.code) routes
-  searching <- forM routes $ \(route, stops) -> Demand.searchingOnRoute cfg integratedBppConfig.merchantOperatingCityId.getId (routeFinding route) (map (.stopCode) stops)
-  pure API.SharedCabRoutesResp {routes = sortOn (.distanceKm) (zipWith toResp (zip routes waiting) searching)}
+  counts <- forM routes $ \(route, stops) -> Demand.routeDemand cfg integratedBppConfig.merchantOperatingCityId.getId (routeFinding route) route.code (map (.stopCode) stops)
+  pure API.SharedCabRoutesResp {routes = sortOn (.distanceKm) (zipWith toResp routes counts)}
 
 postSharedCabRouteSelect :: Maybe Text -> API.SelectRouteReq -> Environment.Flow API.SelectRouteResp
 postSharedCabRouteSelect mbToken req = do

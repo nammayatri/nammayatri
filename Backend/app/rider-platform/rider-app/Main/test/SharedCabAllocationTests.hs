@@ -32,7 +32,7 @@ import "rider-app" SharedLogic.SharedCab.Approach (cabStopEta)
 import "rider-app" SharedLogic.SharedCab.Boarding (boardingGate)
 import "rider-app" SharedLogic.SharedCab.Booking (alignByKey, boardedTouchDue, cityLiveWindowSec, liveSince, plateLiveWindowSec)
 import "rider-app" SharedLogic.SharedCab.Config (SharedCabTunables (allocationWindowSec, driverAcceptEnabled, fallbackAfterSec, findingTimeoutSec, movingTimerSec, offerRetryTimeoutSec, offerTimeoutSec, standTimerSec), defaultTunables)
-import "rider-app" SharedLogic.SharedCab.Demand (StopDemand (..), demandAheadRows, searchingRiders, waitingRiders)
+import "rider-app" SharedLogic.SharedCab.Demand (StopDemand (..), demandAheadRows, routeCounts, searchingRiders, waitingRiders)
 import "rider-app" SharedLogic.SharedCab.DriverAction (DriverAction (..), offerBlocks)
 import "rider-app" SharedLogic.SharedCab.FindingTimeout (findingTimeoutRefund)
 import "rider-app" SharedLogic.SharedCab.Interest (bestEffort, windowStart)
@@ -441,6 +441,12 @@ tests =
           searchingRiders [Set.fromList ["r1"]] (Set.fromList ["r1"])
         )
           @?= (3, 2, 0, 0),
+      testCase "a route card counts each rider once: one who opened the stand and searched is waiting, not also searching" $
+        ( routeCounts 1200 t0 [] ["r1"] [Set.fromList ["r1"]],
+          routeCounts 1200 t0 [(addUTCTime (-60) t0, "r1")] ["r2"] [Set.fromList ["r1", "r2", "r3"]],
+          routeCounts 1200 t0 [] [] [Set.fromList ["r1"], Set.fromList ["r1"]]
+        )
+          @?= ((1, 0), (2, 1), (0, 1)),
       testCase "an interest entry ages out at the window's start, to the second" $
         ( windowStart t0 600 - windowStart (addUTCTime (-600) t0) 0,
           windowStart t0 600 + 600 - windowStart t0 0,
