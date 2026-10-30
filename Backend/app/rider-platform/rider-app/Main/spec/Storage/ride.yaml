@@ -72,7 +72,7 @@ Ride:
     status: RideStatus|NoRelation
     driverName: Text
     driverRating: Maybe Centesimal
-    driverMobileNumber: Text
+    driverMobileNumber: Maybe Text
     driverPhoneNumber: Maybe (EncryptedHashedField e Text)
     driverAlternateNumber: Maybe (EncryptedHashedField e Text)
     driverMobileCountryCode: Maybe Text
@@ -183,6 +183,9 @@ Ride:
     driverAlternateNumberHash: bytea
     tipAmount: numeric(30,2)
     rideTags: "text[]"
+
+  default:
+    driverMobileNumber: "NULL"
 
 # FIXME separate distanceUnit/currency for each column
   beamFields:
@@ -313,6 +316,7 @@ Ride:
     bppRideId: SecondaryKey
     bookingId: SecondaryKey
     shortId: SecondaryKey
+    driverNumberHash: "!SecondaryKey"
 
   queries:
     updateReturnOtp:

@@ -77,6 +77,7 @@ import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Servant (FromHttpApiData (..))
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import SharedLogic.DriverNumber (getDriverMobileNumber, getDriverMobileNumberFromDecrypted)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as SMerchant
@@ -392,13 +393,15 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
 
     getNumberBasedOnType numberType ride =
       case numberType of
-        PrimaryNumber -> return $ fromMaybe ride.driverMobileNumber ride.driverPhoneNumber
+        PrimaryNumber -> getDecryptedPrimaryNumber ride
         AlternateNumber ->
           maybe (throwError $ RideFieldNotPresent "driverAlternateNumber") pure ride.driverAlternateNumber
         BothNumber -> do
-          let primaryNumber = fromMaybe ride.driverMobileNumber ride.driverPhoneNumber
+          primaryNumber <- getDecryptedPrimaryNumber ride
           let alternateNumber = maybe "" ("," <>) ride.driverAlternateNumber
           return $ primaryNumber <> alternateNumber
+
+    getDecryptedPrimaryNumber ride = getDriverMobileNumberFromDecrypted ride & fromMaybeM (RideFieldNotPresent "driverMobileNumber")
 
 -- getDtmfFlow :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe Text -> Id Merchant -> Text -> Exophone -> m (Maybe (Maybe Text, BT.Booking))
 -- getDtmfFlow dtmfNumber_ merchantId callSid exophone = do
@@ -433,7 +436,8 @@ getCustomerAndDriverPhones :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => SRi
 getCustomerAndDriverPhones ride booking = do
   person <- getPerson booking
   customerPhone <- getPersonPhone person
-  return (customerPhone, ride.driverMobileNumber)
+  driverPhone <- getDriverMobileNumber ride >>= fromMaybeM (RideFieldNotPresent "driverMobileNumber")
+  return (customerPhone, driverPhone)
 
 throwCallError ::
   ( HasCallStack,

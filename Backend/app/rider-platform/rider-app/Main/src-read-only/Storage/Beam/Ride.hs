@@ -57,7 +57,7 @@ data RideT f = RideT
     driverArrivalTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     driverImage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     driverMobileCountryCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    driverMobileNumber :: (B.C f Kernel.Prelude.Text),
+    driverMobileNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     driverName :: (B.C f Kernel.Prelude.Text),
     driverNumberEncrypted :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     driverNumberHash :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash)),
@@ -132,6 +132,6 @@ instance B.Table RideT where
 
 type Ride = RideT Identity
 
-$(enableKVPG (''RideT) [('id)] [[('bookingId)], [('bppRideId)], [('shortId)]])
+$(enableKVPG (''RideT) [('id)] [[('bookingId)], [('bppRideId)], [('driverNumberHash)], [('shortId)]])
 
 $(mkTableInstances (''RideT) "ride")

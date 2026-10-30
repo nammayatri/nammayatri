@@ -89,6 +89,7 @@ import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import SharedLogic.DriverNumber (getDriverMobileNumber)
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -172,9 +173,10 @@ buildShareRideInfo merchantId ride = do
         DB.InterCityDetails details -> Just details.distance
         DB.DeliveryDetails details -> Just details.distance
         _ -> Nothing
+  mbDriverMobileNumber <- getDriverMobileNumber ride
   let driverNumber =
         ( case booking.tripCategory of
-            Just (Delivery _) -> Just ride.driverMobileNumber
+            Just (Delivery _) -> mbDriverMobileNumber
             _ -> Nothing
         )
           <&> (\number -> if ride.status `elem` [DRide.NEW, DRide.INPROGRESS] then number else "xxxx")
@@ -252,12 +254,13 @@ getRideList merchantShortId _ mbLimit mbOffset mbBookingStatus mbReqShortRideId 
       offset_ = fromMaybe 0 mbOffset
   let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
+  mbDriverPhoneHash <- getDbHash `traverse` mbDriverPhone
   now <- getCurrentTime
   when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhone) $ throwError $ InvalidRequest "Atleast one of the filter is required"
   case (mbFrom, mbTo) of
     (Just from', Just to') -> when (from' > to') $ throwError $ InvalidRequest "from date should be less than to date"
     _ -> pure ()
-  rideItems <- B.runInReplica $ QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now
+  rideItems <- B.runInReplica $ QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneHash mbFrom mbTo now
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
@@ -270,6 +273,7 @@ getRideList merchantShortId _ mbLimit mbOffset mbBookingStatus mbReqShortRideId 
 buildRideListItem :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => QRide.RideItem -> m Common.RideListItem
 buildRideListItem QRide.RideItem {..} = do
   customerPhoneNo <- mapM decrypt person.mobileNumber
+  driverPhoneNo <- fromMaybe "" <$> getDriverMobileNumber ride
   let fareProductType = mkFareProductType bookingDetails
   pure
     Common.RideListItem
@@ -279,7 +283,7 @@ buildRideListItem QRide.RideItem {..} = do
         customerName = person.firstName,
         customerPhoneNo,
         driverName = ride.driverName,
-        driverPhoneNo = ride.driverMobileNumber,
+        driverPhoneNo,
         vehicleNo = ride.vehicleNumber,
         endOtp = ride.endOtp,
         nextStopLocation = getStopFromBookingDetails bookingDetails,
@@ -411,6 +415,7 @@ rideInfo merchantId reqRideId = do
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
   unencryptedDriverAlternateNumber <- mapM decrypt ride.driverAlternateNumber
+  mbDriverPhoneNo <- getDriverMobileNumber ride
   let fareProductType = mkFareProductType booking.bookingDetails
   mbSos <- SafetyCQSos.findByRideId (cast ride.id)
   let mbSosId = (cast @SafetyDSos.Sos @Dashboard.Common.Sos . (.id)) <$> mbSos
@@ -425,7 +430,7 @@ rideInfo merchantId reqRideId = do
         customerPickupLocation = mkCommonBookingLocation booking.fromLocation,
         customerDropLocation = mbtoLocation,
         driverName = ride.driverName,
-        driverPhoneNo = Just ride.driverMobileNumber,
+        driverPhoneNo = mbDriverPhoneNo,
         driverAlternatePhoneNo = unencryptedDriverAlternateNumber,
         driverRegisteredAt = ride.driverRegisteredAt,
         vehicleNo = ride.vehicleNumber,
