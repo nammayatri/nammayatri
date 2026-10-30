@@ -952,7 +952,6 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_xyne_support_bot boolean ;
 
 
 
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN flow_status_unpaid_journey_window_sec integer ;
@@ -976,3 +975,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_email_enabled boolean ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.rider_config ADD COLUMN auto_favourite_driver_on_five_star_rating boolean  default false;

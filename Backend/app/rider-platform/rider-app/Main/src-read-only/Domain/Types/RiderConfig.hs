@@ -30,6 +30,7 @@ data RiderConfig = RiderConfig
   { allowMultipleOpenMeterRides :: Kernel.Prelude.Bool,
     alwaysAllowedNotificationCategories :: [Domain.Types.Extra.RiderPreferences.NotificationCategory],
     appUrl :: Kernel.Prelude.Text,
+    autoFavouriteDriverOnFiveStarRating :: Kernel.Prelude.Bool,
     autoSendBookingDetailsViaWhatsapp :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoUnblockSafetyCenterAfterDays :: Kernel.Prelude.Int,
     avgSpeedInKmPerHr :: Kernel.Types.Common.Kilometers,

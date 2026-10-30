@@ -27,6 +27,7 @@ data RiderConfigT f = RiderConfigT
   { allowMultipleOpenMeterRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     alwaysAllowedNotificationCategories :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     appUrl :: B.C f Kernel.Prelude.Text,
+    autoFavouriteDriverOnFiveStarRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autoSendBookingDetailsViaWhatsapp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autoUnblockSafetyCenterAfterDays :: B.C f Kernel.Prelude.Int,
     avgSpeedInKmPerHr :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Kilometers),
