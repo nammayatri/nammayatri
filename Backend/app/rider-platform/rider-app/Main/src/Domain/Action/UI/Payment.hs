@@ -667,21 +667,29 @@ isTerminalStatus = \case
 
 -- | Concurrent callers queue on orderStatusHandler's per-order lock and re-check the attempt, so the gateway is
 --   called again only while the attempt is still PENDING.
-syncBookingDepositOrderStatus :: Id DM.Merchant -> Id DP.Person -> Id DOrder.PaymentOrder -> Flow ()
+--   False when a still-PENDING attempt could not be checked with the gateway, so the stored verdict may predate a charge.
+syncBookingDepositOrderStatus :: Id DM.Merchant -> Id DP.Person -> Id DOrder.PaymentOrder -> Flow Bool
 syncBookingDepositOrderStatus merchantId personId orderId = do
   mbOrder <- QOrder.findById orderId
   case mbOrder of
-    Nothing -> logError $ "BookingDeposit status sync: order not found " <> orderId.getId
+    Nothing -> do
+      logError $ "BookingDeposit status sync: order not found " <> orderId.getId
+      pure True
     Just order -> do
       stillPending <- any (\r -> r.status == DBP.PENDING) <$> QBookingPayment.findAllByOrderId orderId
-      unless (BookingDeposit.isDeadDepositOrder order.status || not stillPending) $ do
-        let fulfillmentHandler = mkFulfillmentHandler DOrder.BookingDeposit (cast order.merchantId) order.id
-        eitherResult <- withTryCatch "BookingDeposit:StatusSync" $ SPayment.syncOrderStatus fulfillmentHandler merchantId personId order
-        case eitherResult of
-          Left err -> logError $ "BookingDeposit status sync for order " <> orderId.getId <> " errored: " <> show err
-          Right statusResp -> do
-            resolvedStatus <- DPayment.getTransactionStatus statusResp
-            logInfo $ "BookingDeposit status sync: order " <> orderId.getId <> " at " <> show resolvedStatus
+      if BookingDeposit.isDeadDepositOrder order.status || not stillPending
+        then pure True
+        else do
+          let fulfillmentHandler = mkFulfillmentHandler DOrder.BookingDeposit (cast order.merchantId) order.id
+          eitherResult <- withTryCatch "BookingDeposit:StatusSync" $ SPayment.syncOrderStatus fulfillmentHandler merchantId personId order
+          case eitherResult of
+            Left err -> do
+              logError $ "BookingDeposit status sync for order " <> orderId.getId <> " errored: " <> show err
+              pure False
+            Right statusResp -> do
+              resolvedStatus <- DPayment.getTransactionStatus statusResp
+              logInfo $ "BookingDeposit status sync: order " <> orderId.getId <> " at " <> show resolvedStatus
+              pure True
 
 -- | Background polling for Paytm EDC payment status.
 -- Reuses orderStatusHandler (via syncOrderStatus): one status fetch + fulfillment handling per attempt.
