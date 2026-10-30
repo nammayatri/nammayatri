@@ -1069,6 +1069,7 @@ TransporterConfig:
     ScheduledRideVisibilityStage:
       stage: Text
       untilRemainingMinutes: Int # the stage applies while the minutes left to pickup are above this value
+      vehicleServiceTiers: Maybe [ServiceTierType] # absent applies the stage to every service tier
       rules: ScheduledRideVisibilityRules
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     ScheduledRideConfig:

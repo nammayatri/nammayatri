@@ -5,6 +5,7 @@
 module Domain.Types.TransporterConfig (module Domain.Types.TransporterConfig, module ReExport) where
 
 import Data.Aeson
+import qualified Domain.Types.Common
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.MerchantPaymentMethod
 import Domain.Types.Extra.TransporterConfig as ReExport
@@ -663,7 +664,7 @@ data ScheduledRideVisibilityRules = ScheduledRideVisibilityRules
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data ScheduledRideVisibilityStage = ScheduledRideVisibilityStage {rules :: Domain.Types.TransporterConfig.ScheduledRideVisibilityRules, stage :: Kernel.Prelude.Text, untilRemainingMinutes :: Kernel.Prelude.Int}
+data ScheduledRideVisibilityStage = ScheduledRideVisibilityStage {rules :: Domain.Types.TransporterConfig.ScheduledRideVisibilityRules, stage :: Kernel.Prelude.Text, untilRemainingMinutes :: Kernel.Prelude.Int, vehicleServiceTiers :: Kernel.Prelude.Maybe [Domain.Types.Common.ServiceTierType]}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}

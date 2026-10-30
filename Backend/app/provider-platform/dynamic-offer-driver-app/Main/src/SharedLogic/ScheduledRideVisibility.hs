@@ -31,6 +31,7 @@ import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as KM
 import Data.List (nub, sortOn)
 import qualified Data.Text as T
+import Domain.Types.Common (ServiceTierType)
 import Domain.Types.TransporterConfig (ScheduledRideVisibilityRules, ScheduledRideVisibilityStage)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
@@ -57,13 +58,20 @@ data VisibilityFactNeeds = VisibilityFactNeeds
     needsFavouriteLookup :: Bool
   }
 
--- | The stage with the largest threshold that is still below the remaining time.
+-- | The applicable stage with the largest threshold that is still below the remaining time.
 -- A ride closer to pickup than every threshold matches no stage and is open to everyone.
-resolveVisibilityStage :: [ScheduledRideVisibilityStage] -> NominalDiffTime -> Maybe ScheduledRideVisibilityStage
-resolveVisibilityStage stages remaining =
+-- Tier-specific stages win over a generic stage at the same threshold.
+resolveVisibilityStage :: ServiceTierType -> [ScheduledRideVisibilityStage] -> NominalDiffTime -> Maybe ScheduledRideVisibilityStage
+resolveVisibilityStage serviceTier stages remaining =
   listToMaybe $
-    sortOn (negate . (.untilRemainingMinutes)) $
-      filter (\s -> s.untilRemainingMinutes >= 0 && fromIntegral (s.untilRemainingMinutes * 60) < remaining) stages
+    sortOn (\s -> (negate s.untilRemainingMinutes, isNothing s.vehicleServiceTiers)) $
+      filter
+        ( \s ->
+            maybe True (serviceTier `elem`) s.vehicleServiceTiers
+              && s.untilRemainingMinutes >= 0
+              && fromIntegral (s.untilRemainingMinutes * 60) < remaining
+        )
+        stages
 
 factsNeededBy :: ScheduledRideVisibilityRules -> VisibilityFactNeeds
 factsNeededBy rules =
@@ -121,7 +129,7 @@ splitTag tag =
    in (name, if T.null value then Nothing else Just value)
 
 knownStageKeys :: [Text]
-knownStageKeys = ["stage", "untilRemainingMinutes", "rules"]
+knownStageKeys = ["stage", "untilRemainingMinutes", "vehicleServiceTiers", "rules"]
 
 knownRuleKeys :: [Text]
 knownRuleKeys =
@@ -171,6 +179,9 @@ validateVisibilityStages stages = do
   forM_ stages $ \s -> do
     let label = "stage " <> s.stage <> ": "
         rules = s.rules
+    whenJust s.vehicleServiceTiers $ \tiers -> do
+      when (null tiers) $ Left $ label <> "vehicleServiceTiers cannot be empty"
+      when (length (nub tiers) /= length tiers) $ Left $ label <> "vehicleServiceTiers cannot contain duplicates"
     whenJust rules.minRating $ \r -> unless (r >= 0 && r <= 5) $ Left $ label <> "minRating must be between 0 and 5"
     whenJust rules.maxCancellationRatePct $ \r -> unless (r >= 0 && r <= 100) $ Left $ label <> "maxCancellationRatePct must be between 0 and 100"
     whenJust rules.minCompletedRides $ \n -> when (n < 0) $ Left $ label <> "minCompletedRides cannot be negative"
