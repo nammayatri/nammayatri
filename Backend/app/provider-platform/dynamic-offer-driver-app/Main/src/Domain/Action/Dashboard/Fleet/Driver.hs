@@ -122,7 +122,7 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
-import Domain.Action.Dashboard.Common.BulkUpload (DriverDetails (..), castCommonOnboardingAsToDomain, checkAndUpdateAddDriverLimit, convertToAddVehicleReq, fetchOrCreatePerson, processDriverRows, readDriversCsv, readVehiclesCsv, validateDriverName)
+import Domain.Action.Dashboard.Common.BulkUpload (DriverDetails (..), castCommonOnboardingAsToDomain, checkAndUpdateAddDriverLimit, convertToAddVehicleReq, fetchOrCreatePerson, processDriverRows, readDriversCsv, readVehiclesCsv, rowErrorMessage, validateDriverName)
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegV2
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
@@ -1220,7 +1220,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
         void $ postDriverFleetAddVehicleHelper True autoApproved merchant.shortId opCity phoneNo requestorId mbFleetOwnerId mbCountryCode mbRole addVehicleReq
 
       case result of
-        Left e -> return $ Left $ "Error: " <> T.pack (displayException e)
+        Left e -> return $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): " <> rowErrorMessage e
         Right _ -> return $ Right ()
 
     isVehicleAlreadyAssociatedWithFleetOrDriver :: Text -> Flow () -- checking vehicle present in the system or not

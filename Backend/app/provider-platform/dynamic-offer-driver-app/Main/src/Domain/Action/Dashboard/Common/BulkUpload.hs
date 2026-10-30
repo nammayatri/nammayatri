@@ -23,6 +23,7 @@ module Domain.Action.Dashboard.Common.BulkUpload
     processDriverRows,
     readDriversCsv,
     readVehiclesCsv,
+    rowErrorMessage,
     validateDriverName,
   )
 where
