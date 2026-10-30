@@ -447,6 +447,7 @@ apis:
         vehicleNo: Text
         tagNumber: Text
         fleetNo: Text
+        vehicleTag: Text
       response:
         type: "[Fleet]"
 

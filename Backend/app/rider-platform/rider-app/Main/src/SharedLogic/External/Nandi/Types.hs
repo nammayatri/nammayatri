@@ -38,6 +38,7 @@ data NandiTable
   | WaybillsInternal
   | BusShiftTypeInternal
   | BusScheduleTypeInternal
+  | VehicleTagInternal
   deriving (Show, Read, Eq, Ord, Generic, ToSchema)
 
 nandiTableToText :: NandiTable -> Text
@@ -59,6 +60,7 @@ nandiTableToText FleetObuMappingInternal = "fleet_obu_mapping_internal"
 nandiTableToText WaybillsInternal = "waybills_internal"
 nandiTableToText BusShiftTypeInternal = "bus_shift_type_internal"
 nandiTableToText BusScheduleTypeInternal = "bus_schedule_type_internal"
+nandiTableToText VehicleTagInternal = "vehicle_tag_internal"
 
 nandiTableFromText :: Text -> Either Text NandiTable
 nandiTableFromText "route_internal" = Right RouteInternal
@@ -79,6 +81,7 @@ nandiTableFromText "fleet_obu_mapping_internal" = Right FleetObuMappingInternal
 nandiTableFromText "waybills_internal" = Right WaybillsInternal
 nandiTableFromText "bus_shift_type_internal" = Right BusShiftTypeInternal
 nandiTableFromText "bus_schedule_type_internal" = Right BusScheduleTypeInternal
+nandiTableFromText "vehicle_tag_internal" = Right VehicleTagInternal
 nandiTableFromText t = Left $ "Unknown NandiTable: " <> t
 
 instance ToJSON NandiTable where
@@ -99,7 +102,7 @@ instance ToParamSchema NandiTable where
 
 instance Bounded NandiTable where
   minBound = RouteInternal
-  maxBound = BusScheduleTypeInternal
+  maxBound = VehicleTagInternal
 
 instance Enum NandiTable where
   toEnum 0 = RouteInternal
@@ -120,6 +123,7 @@ instance Enum NandiTable where
   toEnum 15 = WaybillsInternal
   toEnum 16 = BusShiftTypeInternal
   toEnum 17 = BusScheduleTypeInternal
+  toEnum 18 = VehicleTagInternal
   toEnum n = error $ "NandiTable.toEnum: bad argument " <> show n
   fromEnum RouteInternal = 0
   fromEnum RoutePointInternal = 1
@@ -139,6 +143,7 @@ instance Enum NandiTable where
   fromEnum WaybillsInternal = 15
   fromEnum BusShiftTypeInternal = 16
   fromEnum BusScheduleTypeInternal = 17
+  fromEnum VehicleTagInternal = 18
 
 -- | Waybill lifecycle statuses.
 data WaybillStatus
@@ -643,6 +648,17 @@ data NandiScheduleTypeRow = NandiScheduleTypeRow
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
+-- | A fare-classification tag of a feed; vehicles_internal.vehicle_tags holds these tags, highest priority first.
+data NandiVehicleTagRow = NandiVehicleTagRow
+  { vehicle_tag_id :: Text,
+    gtfs_id :: Text,
+    tag :: Text,
+    deleted :: Bool,
+    created_at :: Maybe UTCTime,
+    updated_at :: Maybe UTCTime
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
 -- ─── NandiRow sum type ────────────────────────────────────────────────────────
 
 -- | One row from any of the 18 operator DB tables.
@@ -666,6 +682,7 @@ data NandiRow
   | RowWaybill NandiWaybillRow
   | RowShiftType NandiShiftTypeRow
   | RowScheduleType NandiScheduleTypeRow
+  | RowVehicleTag NandiVehicleTagRow
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 -- | Decode a raw Aeson Value into the correct NandiRow constructor
@@ -689,6 +706,7 @@ decodeNandiRow FleetObuMappingInternal v = RowFleetObuMapping <$> parseEither pa
 decodeNandiRow WaybillsInternal v = RowWaybill <$> parseEither parseJSON v
 decodeNandiRow BusShiftTypeInternal v = RowShiftType <$> parseEither parseJSON v
 decodeNandiRow BusScheduleTypeInternal v = RowScheduleType <$> parseEither parseJSON v
+decodeNandiRow VehicleTagInternal v = RowVehicleTag <$> parseEither parseJSON v
 
 newtype FilteredServiceSubTypes = FilteredServiceSubTypes [BecknV2.FRFS.Enums.ServiceSubType]
   deriving (Show)
@@ -851,6 +869,7 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
     conductor_id :: Maybe Text,
     busTagNumber :: Maybe Text,
     vehicleVariant :: Maybe BecknV2.FRFS.Enums.BusVehicleVariant,
+    vehicleTags :: Maybe [Text],
     eligible_pass_ids :: Maybe [Text],
     seatLayoutId :: Maybe Text,
     is_historic :: Maybe Bool,
@@ -882,6 +901,7 @@ instance FromJSON VehicleServiceTypeResponse where
     busTagNumber <- v .:? "busTagNumber"
     rawVehicleVariant <- v .:? "busVehicleVariant" :: Parser (Maybe FilteredBusVehicleVariant)
     let vehicleVariant = normalizeBusVehicleVariant rawVehicleVariant
+    vehicleTags <- v .:? "busVehicleTags"
     eligible_pass_ids <- v .:? "eligible_pass_ids"
     seatLayoutId <- v .:? "seatLayoutId"
     is_historic <- v .:? "is_historic"
@@ -894,17 +914,19 @@ data VehicleMetadataResponse = VehicleMetadataResponse
     serviceSubTypes :: Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     busTagNumber :: Maybe Text,
     vehicleVariant :: Maybe BecknV2.FRFS.Enums.BusVehicleVariant,
+    vehicleTags :: Maybe [Text],
     isActuallyValid :: Maybe Bool
   }
   deriving (Generic, ToSchema, Show)
 
 instance ToJSON VehicleMetadataResponse where
-  toJSON (VehicleMetadataResponse serviceType serviceSubTypes busTagNumber vehicleVariant isActuallyValid) =
+  toJSON (VehicleMetadataResponse serviceType serviceSubTypes busTagNumber vehicleVariant vehicleTags isActuallyValid) =
     object
       [ "serviceType" .= serviceType,
         "serviceSubTypes" .= serviceSubTypes,
         "busTagNumber" .= busTagNumber,
         "busVehicleVariant" .= vehicleVariant,
+        "busVehicleTags" .= vehicleTags,
         "is_actually_valid" .= isActuallyValid
       ]
 
@@ -916,6 +938,7 @@ instance FromJSON VehicleMetadataResponse where
     busTagNumber <- v .:? "busTagNumber"
     rawVehicleVariant <- v .:? "busVehicleVariant" :: Parser (Maybe FilteredBusVehicleVariant)
     let vehicleVariant = normalizeBusVehicleVariant rawVehicleVariant
+    vehicleTags <- v .:? "busVehicleTags"
     isActuallyValid <- v .:? "is_actually_valid"
     pure VehicleMetadataResponse {..}
 
@@ -1257,6 +1280,7 @@ data Fleet = Fleet
     fleet_no :: Maybe Text,
     tag_number :: Maybe Text,
     vehicle_variant :: Maybe Text,
+    vehicle_tags :: Maybe [Text],
     created_at :: Maybe UTCTime,
     status :: Maybe Text,
     updated_at :: Maybe UTCTime,
@@ -1274,6 +1298,7 @@ data VehicleUpsertRequest = VehicleUpsertRequest
     tag_number :: Maybe Text,
     status :: Maybe Text,
     vehicle_variant :: Maybe Text,
+    vehicle_tags :: Maybe [Text],
     bus_service_type_id :: Maybe Text,
     entity_id :: Maybe Text,
     organization_id :: Maybe Text
@@ -1475,7 +1500,8 @@ data WaybillMetadataResponse = WaybillMetadataResponse
     driverName :: Maybe Text,
     driverMobileNumber :: Maybe Text,
     busTagNumber :: Maybe Text,
-    vehicleVariant :: Maybe BecknV2.FRFS.Enums.BusVehicleVariant
+    vehicleVariant :: Maybe BecknV2.FRFS.Enums.BusVehicleVariant,
+    vehicleTags :: Maybe [Text]
   }
   deriving (Generic, ToJSON, ToSchema, Show)
 
@@ -1490,6 +1516,7 @@ instance FromJSON WaybillMetadataResponse where
     busTagNumber <- v .:? "busTagNumber"
     rawVehicleVariant <- v .:? "busVehicleVariant" :: Parser (Maybe FilteredBusVehicleVariant)
     let vehicleVariant = normalizeBusVehicleVariant rawVehicleVariant
+    vehicleTags <- v .:? "busVehicleTags"
     return WaybillMetadataResponse {..}
 
 -- | Request body for the fleet-operator verify endpoint.

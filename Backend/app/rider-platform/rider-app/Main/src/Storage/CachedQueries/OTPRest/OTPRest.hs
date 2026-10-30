@@ -561,10 +561,18 @@ getVehicleMetadata integratedBPPConfig vehicleNumber mbPassVerifyReq =
           whenJust mbRes $ \res -> Hedis.setExp vehicleMetadataKey res 3600
           pure mbRes
   where
-    vehicleMetadataKey = "CachedQueries:VehicleMetadata:" <> integratedBPPConfig.feedKey <> ":" <> vehicleNumber
+    vehicleMetadataKey = vehicleMetadataCacheKey integratedBPPConfig.feedKey vehicleNumber
     fetch = do
       baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
       Flow.getVehicleMetadata baseUrl integratedBPPConfig.feedKey vehicleNumber mbPassVerifyReq
+
+vehicleMetadataCacheKey :: Text -> Text -> Text
+vehicleMetadataCacheKey feedKey vehicleNumber = "CachedQueries:VehicleMetadata:" <> feedKey <> ":" <> vehicleNumber
+
+-- | Dropped on a vehicle upsert so the next read sees the new tags/variant; GIMS itself serves vehicle properties uncached.
+clearVehicleMetadataCache :: CacheFlow m r => Text -> Text -> m ()
+clearVehicleMetadataCache feedKey vehicleNumber =
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (vehicleMetadataCacheKey feedKey vehicleNumber)
 
 getVehicleInfo ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>

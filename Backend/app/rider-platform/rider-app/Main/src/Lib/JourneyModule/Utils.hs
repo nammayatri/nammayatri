@@ -1841,7 +1841,7 @@ getConfigVehicleMetadataFromInMem integratedBPPConfig vehicleNumber =
   IM.withInMemCache ["CACHED_VEHICLE_METADATA_LOOKUP", integratedBPPConfig.id.getId, vehicleNumber] 30 $
     either (\VehicleMetadataNotFound -> Nothing) Just
       <$> try
-        ( IM.withInMemCache ["CACHED_VEHICLE_METADATA", integratedBPPConfig.id.getId, vehicleNumber] 43200 $
+        ( IM.withInMemCache ["CACHED_VEHICLE_METADATA", integratedBPPConfig.id.getId, vehicleNumber] 600 $
             OTPRest.getVehicleMetadata integratedBPPConfig vehicleNumber Nothing
               >>= maybe (throwM VehicleMetadataNotFound) pure
         )

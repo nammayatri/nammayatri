@@ -625,6 +625,7 @@ type OperatorQueryVehicleAPI =
     :> QueryParam "vehicle_no" Text
     :> QueryParam "tag_number" Text
     :> QueryParam "fleet_no" Text
+    :> QueryParam "vehicle_tag" Text
     :> Get '[JSON] [Fleet]
 
 type OperatorDeleteVehicleAPI =
@@ -643,7 +644,7 @@ operatorDeleteVehicleAPI = Proxy
 postOperatorUpsertVehicles :: Text -> [VehicleUpsertRequest] -> ET.EulerClient [Fleet]
 postOperatorUpsertVehicles = ET.client operatorUpsertVehiclesAPI
 
-getOperatorQueryVehicle :: Text -> Maybe Text -> Maybe Text -> Maybe Text -> ET.EulerClient [Fleet]
+getOperatorQueryVehicle :: Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> ET.EulerClient [Fleet]
 getOperatorQueryVehicle = ET.client operatorQueryVehicleAPI
 
 deleteOperatorVehicle :: Text -> Text -> ET.EulerClient RowsAffectedResp
