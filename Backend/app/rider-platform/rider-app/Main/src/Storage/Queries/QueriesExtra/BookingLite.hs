@@ -30,6 +30,9 @@ findByIdLite id = findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id
 findByBPPBookingIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Booking.BPPBooking -> m (Maybe BookingLite)
 findByBPPBookingIdLite (Kernel.Types.Id.Id bppRbId) = findOneWithKV [Se.Is Beam.bppBookingId $ Se.Eq $ Just bppRbId]
 
+findAllByTransactionIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> m [BookingLite]
+findAllByTransactionIdLite transactionId = findAllWithKV [Se.Is Beam.riderTransactionId $ Se.Eq transactionId]
+
 data BookingLite = BookingLite
   { id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     status :: Domain.Types.BookingStatus.BookingStatus,
@@ -46,6 +49,8 @@ data BookingLite = BookingLite
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
     createdAt :: Kernel.Prelude.UTCTime,
+    displayBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    isScheduled :: Kernel.Prelude.Bool,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
@@ -75,6 +80,8 @@ instance FromTType' BookingLiteTable BookingLite where
             isAirConditioned = isAirConditioned,
             paymentMode = paymentMode,
             createdAt = createdAt,
+            displayBookingId = displayBookingId,
+            isScheduled = fromMaybe False isScheduled,
             estimatedDistance = mkDistanceWithDefault distanceUnit estimatedDistanceValue <$> estimatedDistance,
             estimatedDuration = estimatedDuration
           }

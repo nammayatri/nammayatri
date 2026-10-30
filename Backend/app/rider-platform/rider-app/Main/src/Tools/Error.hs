@@ -771,6 +771,25 @@ instance IsHTTPError PaymentError where
 
 instance IsAPIError PaymentError
 
+data FindAnotherDriverError
+  = FindAnotherDriverLimitReached Int
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FindAnotherDriverError
+
+instance IsBaseError FindAnotherDriverError where
+  toMessage = \case
+    FindAnotherDriverLimitReached limit -> Just $ "Find another driver can be used at most " <> show limit <> " times for a scheduled booking."
+
+instance IsHTTPError FindAnotherDriverError where
+  toErrorCode = \case
+    FindAnotherDriverLimitReached _ -> "FIND_ANOTHER_DRIVER_LIMIT_REACHED"
+
+  toHttpCode = \case
+    FindAnotherDriverLimitReached _ -> E400
+
+instance IsAPIError FindAnotherDriverError
+
 data FRFSTicketBookingPaymentError
   = FRFSTicketBookingPaymentNotFound Text
   | FRFSTicketBookingPaymentDoesNotExist Text

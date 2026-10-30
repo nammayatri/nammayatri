@@ -190,6 +190,22 @@ buildLocalCancelRes booking bppBookingId = do
         cancellationReason = Nothing
       }
 
+scheduledFindAnotherDriverLimit :: Int
+scheduledFindAnotherDriverLimit = 2
+
+-- | Scheduled searches only yield static offers, which reallocate by copying the booking (quote repetition), so
+--   the copies keep transactionId and displayBookingId. The rider's earlier "find another driver" taps are the
+--   REALLOCATED copies whose cancellation reason is ByUser
+checkScheduledFindAnotherDriverLimit :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> m ()
+checkScheduledFindAnotherDriverLimit booking =
+  whenJust booking.displayBookingId $ \displayId -> do
+    copies <- filter (\b -> b.displayBookingId == Just displayId) <$> QBookingLite.findAllByTransactionIdLite booking.transactionId
+    when (any (.isScheduled) copies) $ do
+      reasons <- QBCR.findAllByBookingIds ((.id) <$> filter (\b -> b.status == SRB.REALLOCATED) copies)
+      let used = length (filter (\reason -> reason.source == SBCR.ByUser) reasons)
+      when (used >= scheduledFindAnotherDriverLimit) $
+        throwError $ FindAnotherDriverLimitReached scheduledFindAnotherDriverLimit
+
 cancel ::
   ( EncFlow m r,
     Esq.EsqDBReplicaFlow m r,
@@ -209,6 +225,8 @@ cancel booking mRide req cancellationSource = do
   canCancelBooking <- isBookingCancellable booking mRide
   unless canCancelBooking $
     throwError $ RideInvalidStatus "Cannot cancel this ride"
+  when (cancellationSource == SBCR.ByUser && req.reallocate == Just True) $
+    checkScheduledFindAnotherDriverLimit booking
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
