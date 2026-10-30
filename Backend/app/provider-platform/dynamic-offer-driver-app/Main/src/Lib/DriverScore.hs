@@ -109,6 +109,10 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   when countsTowardCancellationRate $ do
     let windowSize = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
     void $ SCR.incrementCancelledCount driverId windowSize
+  -- Count this cancellation BEFORE the ladder reads the counters. ELIGIBLE_COUNT already
+  -- includes this ride (incremented at assignment), so incrementing ACTION_COUNT after the
+  -- evaluation made every rung fire one offence late and understated the rate.
+  when countsTowardCancellationCount $ DP.incrementCancellationCount merchantOpCityId driverId
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   IBM.issueBreachMitigation EXTRA_FARE_MITIGATION merchantConfig driverInfo
   when (doCancellationRateBasedBlocking == Just True && not (driverInfo.onRide)) $ do
@@ -156,25 +160,26 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
             }
     BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
     BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications
-  mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId)
-  -- mbDriverStats <- DSQ.findById (cast driverId)
-  driverStats <- getDriverStats currency distanceUnit mbDriverStats driverId rideFare
-  cancellationRateExceeded <- overallCancellationRate driverStats merchantConfig
-  -- Guard overall block with cooldown check to prevent re-blocking during cooldown period
-  dailyCooldownActive <- BT.isEntityInCooldown BTT.DRIVER driverId.getId "CancellationRateDaily"
-  weeklyCooldownActive <- BT.isEntityInCooldown BTT.DRIVER driverId.getId "CancellationRateWeekly"
-  let inCooldown = dailyCooldownActive || weeklyCooldownActive
-  when (not inCooldown && driverStats.totalRidesAssigned > merchantConfig.minRidesToUnlist && cancellationRateExceeded) $ do
-    logDebug $ "Blocking Driver: " <> driverId.getId
-    SFlags.markBlockFlags (cast driverId) $
-      SFlags.SimpleBlock
-        SFlags.SimplePayload
-          { SFlags.spModifier = Just "AUTOMATICALLY_BLOCKED_DUE_TO_CANCELLATIONS",
-            SFlags.spMerchantId = merchantId,
-            SFlags.spMerchantOperatingCityId = merchantOpCityId,
-            SFlags.spBlockedBy = DTDBT.Application
-          }
-  when countsTowardCancellationCount $ DP.incrementCancellationCount merchantOpCityId driverId
+  -- Legacy lifetime-rate block and driver-stats upkeep: driver-cancel behaviours only, so a
+  -- rider-pressed at-fault cancel reaching this handler changes nothing outside the ladder.
+  when cancelledByDriver $ do
+    mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId)
+    driverStats <- getDriverStats currency distanceUnit mbDriverStats driverId rideFare
+    cancellationRateExceeded <- overallCancellationRate driverStats merchantConfig
+    -- Guard overall block with cooldown check to prevent re-blocking during cooldown period
+    dailyCooldownActive <- BT.isEntityInCooldown BTT.DRIVER driverId.getId "CancellationRateDaily"
+    weeklyCooldownActive <- BT.isEntityInCooldown BTT.DRIVER driverId.getId "CancellationRateWeekly"
+    let inCooldown = dailyCooldownActive || weeklyCooldownActive
+    when (not inCooldown && driverStats.totalRidesAssigned > merchantConfig.minRidesToUnlist && cancellationRateExceeded) $ do
+      logDebug $ "Blocking Driver: " <> driverId.getId
+      SFlags.markBlockFlags (cast driverId) $
+        SFlags.SimpleBlock
+          SFlags.SimplePayload
+            { SFlags.spModifier = Just "AUTOMATICALLY_BLOCKED_DUE_TO_CANCELLATIONS",
+              SFlags.spMerchantId = merchantId,
+              SFlags.spMerchantOperatingCityId = merchantOpCityId,
+              SFlags.spBlockedBy = DTDBT.Application
+            }
   where
     overallCancellationRate driverStats merchantConfig = do
       let rate = div ((fromMaybe 0 driverStats.ridesCancelled) * 100 :: Int) (nonZero driverStats.totalRidesAssigned :: Int)

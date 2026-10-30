@@ -90,7 +90,6 @@ import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.AutoAcceptCancellation as AutoAcceptCancellation
-import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
 import SharedLogic.CallBAPInternal
@@ -276,7 +275,7 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     -- source-based cancellation analytics + operator dashboard counters (moved from the
     -- retired RideCancel tag computation — the fault verdict is the judgment now)
     applyCancellationAnalytics =
-      Analytics.updateCancellationAnalyticsAndDriverStats ctx.transporterConfig ctx.ride ctx.source
+      Analytics.updateCancellationAnalyticsAndDriverStats ctx.transporterConfig ctx.ride ctx.source ((.atFault) <$> ctx.decision.faultVerdict)
 
     -- column: driverDeduction (MoneyDeduction charges the driver via DriverFee/wallet;
     -- MoneyAddition credits them, wallet only — the adapter in CancellationConsequence
@@ -309,13 +308,16 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     applyDriverCancellationRateCount driver = do
       let countsTowardRate = maybe False (.countsTowardDriverCancellationRate) row
           countsTowardCount = maybe (ctx.source == SBCR.ByDriver) ((== CancellationFault.DriverAtFault) . (.atFault)) ctx.decision.faultVerdict
-      when (ctx.source == SBCR.ByDriver) $
-        DS.driverScoreEventHandler ctx.ride.merchantOperatingCityId DST.OnDriverCancellation {countsTowardCancellationRate = countsTowardRate, countsTowardCancellationCount = countsTowardCount, merchantId = ctx.merchant.id, driver = driver, rideFare = Just ctx.booking.estimatedFare, currency = ctx.booking.currency, distanceUnit = ctx.booking.distanceUnit, doCancellationRateBasedBlocking = doCancellationRateBasedBlocking}
-      when (ctx.source == SBCR.ByUser && countsTowardRate) $ do
-        let windowSize = toInteger $ fromMaybe 7 ctx.transporterConfig.cancellationRateWindow
-        void $ SCR.incrementCancelledCount ctx.ride.driverId windowSize
-      when (ctx.source == SBCR.ByUser && countsTowardCount) $
-        DP.incrementCancellationCount ctx.ride.merchantOperatingCityId ctx.ride.driverId
+      -- Gate on the fault verdict, not on who pressed cancel. A driver who stalls until the
+      -- rider cancels is at fault just the same; those cancels already bumped the counters but
+      -- never triggered an evaluation, so the driver was judged only on their next self-cancel.
+      -- The handler owns both counter increments now, and keeps its driver-cancel-only side
+      -- effects behind cancelledByDriver. Ops cancels (ByApplication / ByMerchant) still never
+      -- reach the ladder.
+      let cancelledByDriver = ctx.source == SBCR.ByDriver
+          riderPressedButDriverAtFault = ctx.source == SBCR.ByUser && (countsTowardCount || countsTowardRate)
+      when (cancelledByDriver || riderPressedButDriverAtFault) $
+        DS.driverScoreEventHandler ctx.ride.merchantOperatingCityId DST.OnDriverCancellation {countsTowardCancellationRate = countsTowardRate, countsTowardCancellationCount = countsTowardCount, merchantId = ctx.merchant.id, driver = driver, rideFare = Just ctx.booking.estimatedFare, currency = ctx.booking.currency, distanceUnit = ctx.booking.distanceUnit, doCancellationRateBasedBlocking = doCancellationRateBasedBlocking, cancelledByDriver = cancelledByDriver}
 
     applyAutoAcceptCancellationBehaviour =
       when (ctx.booking.isAutoAccepted == Just True) $

@@ -37,6 +37,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.AnalyticsExtra
+import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.DriverFlowStatus as SDFStatus
 import SharedLogic.FleetAnalytics.Realtime
 import qualified SharedLogic.FleetOperatorStats as SFleetOperatorStats
@@ -65,17 +66,33 @@ updateCancellationAnalyticsAndDriverStats ::
   TC.TransporterConfig ->
   DRide.Ride ->
   SBCR.CancellationSource ->
+  -- | the fault verdict's party, Nothing in cities with no fault rules configured
+  Maybe CancellationFault.FaultParty ->
   m ()
-updateCancellationAnalyticsAndDriverStats transporterConfig ride source = do
+updateCancellationAnalyticsAndDriverStats transporterConfig ride source mbAtFault = do
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  -- Fleet-operator analytics describe the event, so they stay keyed on who pressed cancel.
   case source of
-    SBCR.ByDriver -> do
-      recordFleetOperatorAnalyticsImpl transporterConfig (DriverCancelled ride.driverId ride.id.getId)
-      QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
-    SBCR.ByUser -> do
-      recordFleetOperatorAnalyticsImpl transporterConfig (CustomerCancelled ride.driverId ride.id.getId)
-      QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId
+    SBCR.ByDriver -> recordFleetOperatorAnalyticsImpl transporterConfig (DriverCancelled ride.driverId ride.id.getId)
+    SBCR.ByUser -> recordFleetOperatorAnalyticsImpl transporterConfig (CustomerCancelled ride.driverId ride.id.getId)
     _ -> pure ()
+  -- The "valid ... cancellation" counters are an attribution, not a record of who pressed the
+  -- button, so they follow the fault verdict: a driver who stalls until the rider cancels used
+  -- to land in the CUSTOMER bucket. Cities with no fault rules keep the old source-based split.
+  case attributedParty of
+    Just CancellationFault.DriverAtFault ->
+      QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
+    Just CancellationFault.CustomerAtFault ->
+      QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId
+    -- SharedFault / NoFault are attributed to nobody
+    _ -> pure ()
+  where
+    attributedParty = case mbAtFault of
+      Just party -> Just party
+      Nothing -> case source of
+        SBCR.ByDriver -> Just CancellationFault.DriverAtFault
+        SBCR.ByUser -> Just CancellationFault.CustomerAtFault
+        _ -> Nothing
 
 -- | Update fleet owner analytics counters in Redis. Passing Nothing deletes the key.
 updateFleetOwnerAnalyticsKeys ::
