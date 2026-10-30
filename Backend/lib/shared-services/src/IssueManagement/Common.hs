@@ -202,8 +202,10 @@ data RideInfoRes = RideInfoRes
     estimatedFare :: HighPrecMoney,
     computedPrice :: Maybe HighPrecMoney,
     fareBreakup :: [FareBreakup],
+    initialFareBreakup :: [FareBreakup],
     estimateFareBreakup :: [EstimateFareBreakup],
     rideCreatedAt :: UTCTime,
+    driverArrivalTime :: Maybe UTCTime,
     rideStartTime :: Maybe UTCTime,
     mobileCountryCode :: Maybe Text
   }

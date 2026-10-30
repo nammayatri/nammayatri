@@ -18,6 +18,7 @@ import qualified Domain.Action.UI.SupportBot as SupportBot
 import Domain.Types.Booking
 import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -56,6 +57,7 @@ import Servant hiding (throwError)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CallIGMBPP as CallBPP
 import SharedLogic.FRFSUtils
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
@@ -71,6 +73,7 @@ import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingExtra as QBE
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
+import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
@@ -353,9 +356,11 @@ castRideInfo merchantId _ rideId = do
     Redis.safeGet makeRideInfoCacheKey >>= \case
       Just res -> pure res
       Nothing -> cacheRideInfo /=<< DRide.rideInfo (cast merchantId) (cast rideId)
-  return $ castRideInfoRes rideInfoRes
+  let bookingId = rideInfoRes.bookingId.getId
+  initialFareBreakup <- SFareBreakupInfo.getFareBreakupsWithFallback bookingId DFareBreakup.INITIAL_BOOKING (runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType bookingId DFareBreakup.INITIAL_BOOKING)
+  return $ castRideInfoRes initialFareBreakup rideInfoRes
   where
-    castRideInfoRes res =
+    castRideInfoRes initialFareBreakup res =
       Common.RideInfoRes
         { customerName = res.customerName,
           customerPhoneNo = fromMaybe "" res.customerPhoneNo,
@@ -374,8 +379,10 @@ castRideInfo merchantId _ rideId = do
           estimatedFare = toHighPrecMoney res.estimatedFare,
           computedPrice = res.computedPrice,
           fareBreakup = transformFareBreakup <$> res.fareBreakup,
+          initialFareBreakup = (\fb -> Common.FareBreakup {amount = fb.amount, description = fb.description, entityId = fb.entityId, entityType = Common.INITIAL_BOOKING}) <$> initialFareBreakup,
           estimateFareBreakup = maybe [] ((\bp -> Common.EstimateFareBreakup {title = bp.title, amount = bp.price.value.amount}) <$>) res.estimateFareBP,
           rideCreatedAt = res.rideCreatedAt,
+          driverArrivalTime = res.actualDriverArrivalTime,
           rideStartTime = res.rideStartTime,
           rideStatus = castRideStatus res.rideStatus,
           -- "OneWay_OneWayOnDemandDynamicOffer" -> "OneWay"
