@@ -61,7 +61,7 @@ getOfferDiscount _token bppBookingId req = do
       let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
       unless enableRideHailingOffers $ throwError $ InternalError "RideHailing offers disabled"
       mbRide <- B.runInReplica $ QRide.findOneByBookingId booking.id
-      productOffers <- SOffer.offerListWithBasket booking.merchantId booking.riderId booking.merchantOperatingCityId DOrder.RideHailing [(productId, price)] mbRide (Just booking) Nothing
+      productOffers <- SOffer.offerListWithBasket booking.merchantId booking.riderId booking.merchantOperatingCityId DOrder.RideHailing [(productId, price)] [] [] mbRide (Just booking) Nothing
       case snd <$> find (\(pid, _) -> pid == productId) productOffers of
         Nothing -> throwError $ InternalError "No product offer found"
         Just resp -> do

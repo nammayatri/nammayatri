@@ -249,6 +249,77 @@ data BookingData = BookingData
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+data EstimateData = EstimateData
+  { id :: Text,
+    requestId :: Text,
+    bppEstimateId :: Text,
+    itemId :: Text,
+    providerId :: Text,
+    providerName :: Text,
+    providerCompletedRidesCount :: Int,
+    status :: Text,
+    tripCategory :: Maybe DCommon.TripCategory,
+    vehicleServiceTierType :: DServiceTierType.ServiceTierType,
+    vehicleCategory :: Maybe BecknV2.OnDemand.Enums.VehicleCategory,
+    serviceTierName :: Maybe Text,
+    isAirConditioned :: Maybe Bool,
+    vehicleServiceTierAirConditioned :: Maybe Double,
+    vehicleServiceTierSeatingCapacity :: Maybe Int,
+    vehicleServiceTierLuggageCapacity :: Maybe Int,
+    estimatedFare :: Price,
+    estimatedTotalFare :: Price,
+    minTotalFare :: Price,
+    maxTotalFare :: Price,
+    discount :: Maybe Price,
+    estimatedDistance :: Maybe Distance,
+    estimatedDuration :: Maybe Seconds,
+    estimatedStaticDuration :: Maybe Seconds,
+    estimatedPickupDuration :: Maybe Seconds,
+    distanceUnit :: DistanceUnit,
+    specialLocationTag :: Maybe Text,
+    specialLocationName :: Maybe Text,
+    fareSettlementType :: Maybe Text,
+    area :: Maybe Text,
+    isInsured :: Bool,
+    isBlockedRoute :: Maybe Bool,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isMultimodalSearch :: Maybe Bool,
+    createdAt :: UTCTime,
+    validTill :: UTCTime
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data QuoteData = QuoteData
+  { id :: Text,
+    requestId :: Text,
+    itemId :: Text,
+    providerId :: Text,
+    tripCategory :: Maybe DCommon.TripCategory,
+    vehicleServiceTierType :: DServiceTierType.ServiceTierType,
+    serviceTierName :: Maybe Text,
+    isAirConditioned :: Maybe Bool,
+    vehicleServiceTierAirConditioned :: Maybe Double,
+    vehicleServiceTierSeatingCapacity :: Maybe Int,
+    vehicleServiceTierLuggageCapacity :: Maybe Int,
+    estimatedFare :: Price,
+    estimatedTotalFare :: Price,
+    discount :: Maybe Price,
+    estimatedPickupDuration :: Maybe Seconds,
+    distanceUnit :: DistanceUnit,
+    specialLocationTag :: Maybe Text,
+    specialLocationName :: Maybe Text,
+    fareSettlementType :: Maybe Text,
+    area :: Maybe Text,
+    billingCategory :: SLT.BillingCategory,
+    isSafetyPlus :: Bool,
+    bookingDeposit :: Maybe HighPrecMoney,
+    isBlockedRoute :: Maybe Bool,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    createdAt :: UTCTime,
+    validTill :: UTCTime
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
 data CancelRideTagData = CancelRideTagData
   { ride :: DRide.Ride,
     booking :: DRB.Booking,
@@ -350,6 +421,8 @@ $(YTH.generateGenericDefault ''LoginTagData)
 $(YTH.generateGenericDefault ''RideData)
 $(YTH.generateGenericDefault ''SearchRequestData)
 $(YTH.generateGenericDefault ''BookingData)
+$(YTH.generateGenericDefault ''EstimateData)
+$(YTH.generateGenericDefault ''QuoteData)
 $(YTH.generateGenericDefault ''CustomerData)
 $(YTH.generateGenericDefault ''EndRideOffersTagData)
 
