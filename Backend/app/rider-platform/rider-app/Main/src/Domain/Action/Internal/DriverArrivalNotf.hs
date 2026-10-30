@@ -13,10 +13,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyModule.State.Types as JMState
-import qualified Lib.JourneyModule.State.Utils as JMState
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -39,24 +36,15 @@ data DANTypeValidationReq = DANTypeValidationReq
 
 driverArrivalNotfHandler :: DANTypeValidationReq -> Flow APISuccess
 driverArrivalNotfHandler (DANTypeValidationReq bppRideId driverIdValue status) = do
-  now <- getCurrentTime
   ride <- B.runInReplica $ QRide.findByBPPRideId (Id bppRideId) >>= fromMaybeM (RideDoesNotExist bppRideId)
   when (ride.status == COMPLETED || ride.status == CANCELLED) $
     throwError $ RideInvalidStatus ("Cannot track this ride: " <> pack (show ride.status))
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just booking.transactionId)
   case status of
-    DRIVER_ON_THE_WAY -> do
-      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing JMState.Arriving now
-      Common.updateAndNotifyDriverArrivalStatus booking ride DRide.DRIVER_ON_THE_WAY
-    DRIVER_PICKUP_INSTRUCTION -> do
-      PIHandler.handlePickupInstruction ride booking driverIdValue
-    DRIVER_REACHING -> do
-      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing JMState.AlmostArrived now
-      Common.updateAndNotifyDriverArrivalStatus booking ride DRide.DRIVER_REACHING
-    DRIVER_REACHED -> do
-      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing JMState.Arrived now
-      Common.updateAndNotifyDriverArrivalStatus booking ride DRide.DRIVER_REACHED
+    DRIVER_ON_THE_WAY -> Common.updateAndNotifyDriverArrivalStatus booking ride DRide.DRIVER_ON_THE_WAY
+    DRIVER_PICKUP_INSTRUCTION -> PIHandler.handlePickupInstruction ride booking driverIdValue
+    DRIVER_REACHING -> Common.updateAndNotifyDriverArrivalStatus booking ride DRide.DRIVER_REACHING
+    DRIVER_REACHED -> Common.updateAndNotifyDriverArrivalStatus booking ride DRide.DRIVER_REACHED
     DRIVER_REACHING_DESTINATION ->
       when (ride.status == INPROGRESS) $ do
         isFirst <- Redis.tryLockRedis (driverReachingDestinationKey ride.id.getId) 21600

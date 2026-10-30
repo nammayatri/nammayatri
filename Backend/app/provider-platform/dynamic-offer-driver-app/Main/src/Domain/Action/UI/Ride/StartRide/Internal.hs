@@ -60,7 +60,8 @@ startRideTransaction ::
   m ()
 startRideTransaction driverId ride bookingId firstPoint merchantId odometer transporterConfig driverInfo = do
   triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
-  rideInfo <- mkInProgressRideLtsInfo ride firstPoint
+  -- LTS doesn't reset its pickup notification status at start, so without the flag it would report DRIVER_REACHED at the start point.
+  rideInfo <- mkInProgressRideLtsInfo ride firstPoint transporterConfig.enableManualArrival
   void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon merchantId driverId (Just rideInfo)
   QRide.updateStartTimeAndLoc ride.id firstPoint
   whenJust odometer $ \odometerReading -> QRide.updateStartOdometerReading ride.id odometerReading
@@ -69,8 +70,8 @@ startRideTransaction driverId ride bookingId firstPoint merchantId odometer tran
   QRide.updateStatus ride.id SRide.INPROGRESS
   QBE.logRideCommencedEvent (cast driverId) bookingId ride.id ride.distanceUnit
 
-mkInProgressRideLtsInfo :: (MonadReader r m, HasField "minDistanceBetweenTwoPoints" r Int) => SRide.Ride -> LatLong -> m LT.RideInfo
-mkInProgressRideLtsInfo ride startPoint = do
+mkInProgressRideLtsInfo :: (MonadReader r m, HasField "minDistanceBetweenTwoPoints" r Int) => SRide.Ride -> LatLong -> Maybe Bool -> m LT.RideInfo
+mkInProgressRideLtsInfo ride startPoint isManualArrival = do
   minDistanceBetweenTwoPoints <- bool (pure Nothing) (Just <$> asks (.minDistanceBetweenTwoPoints)) (ride.tripCategory == DTC.OneWay DTC.MeterRide)
   pure $
     LT.Car
@@ -78,5 +79,6 @@ mkInProgressRideLtsInfo ride startPoint = do
         { pickupLocation = startPoint,
           minDistanceBetweenTwoPoints,
           rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) ride.stops,
-          dropLocation = (\loc -> LatLong loc.lat loc.lon) <$> ride.toLocation
+          dropLocation = (\loc -> LatLong loc.lat loc.lon) <$> ride.toLocation,
+          isManualArrival
         }
