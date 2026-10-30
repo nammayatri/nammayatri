@@ -18,6 +18,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as Domain
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as TIT
@@ -69,6 +70,7 @@ handler = externalHandler
         :<|> getChatMessages (personId, merchantId)
         :<|> postChatRead (personId, merchantId)
         :<|> getChatState (personId, merchantId)
+        :<|> getIssueTicketDetails (personId, merchantId, merchantOpCityId)
 
 postChatMessage ::
   (Id SP.Person, Id DM.Merchant) ->
@@ -139,8 +141,15 @@ driverIssueHandle =
         getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) Nothing,
       mbUpdateTicketOnService = Nothing,
       mbUpdateTicketStatus = Just castUpdateTicketStatus,
-      mbUpdateTicketCsat = Just castUpdateTicketCsat
+      mbUpdateTicketCsat = Just castUpdateTicketCsat,
+      mbKapturePullTicket = Just (\mId moCityId req -> TT.kapturePullTicket (cast mId) (cast moCityId) req),
+      mbUseKaptureAsSourceForOngoingIssues = Just getUseKaptureFlag
     }
+
+getUseKaptureFlag :: Id Common.MerchantOperatingCity -> Flow Bool
+getUseKaptureFlag mocId = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  pure $ fromMaybe False transporterConfig.useKaptureAsSourceForOngoingIssues
 
 isXyneTicketService :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Flow Bool
 isXyneTicketService _merchantId mocId = do
@@ -369,8 +378,8 @@ buildMerchantConfig _merchantId merchantOpCityId _mbPersonId = do
         sensitiveWordsForExactMatch = Nothing
       }
 
-issueReportDriverList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> FlowHandler Common.IssueReportListRes
-issueReportDriverList (driverId, merchantId, merchantOpCityId) language = withFlowHandlerAPI $ Common.issueReportList (cast driverId, cast merchantId, cast merchantOpCityId) language driverIssueHandle Common.DRIVER
+issueReportDriverList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> Maybe Common.IssueListType -> Maybe Int -> Maybe Int -> FlowHandler Common.IssueReportListRes
+issueReportDriverList (driverId, merchantId, merchantOpCityId) language mbIssueListType mbLimit mbOffset = withFlowHandlerAPI $ Common.issueReportList (cast driverId, cast merchantId, cast merchantOpCityId) language driverIssueHandle Common.DRIVER mbIssueListType mbLimit mbOffset
 
 fetchMedia :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler Text
 fetchMedia (driverId, merchantId, _) filePath = withFlowHandlerAPI $ Common.fetchMedia (cast driverId, cast merchantId) filePath
@@ -380,7 +389,14 @@ mediaFileDownloadLink (driverId, merchantId, _) issueReportId mediaFileId =
   withFlowHandlerAPI $ Common.mediaFileDownloadLink (cast driverId, cast merchantId) Common.DRIVER issueReportId mediaFileId
 
 createIssueReport :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> Common.IssueReportReq -> FlowHandler Common.IssueReportRes
-createIssueReport (driverId, merchantId, _merchantOpCityId) mbLanguage req = withFlowHandlerAPI $ Common.createIssueReport (cast driverId, cast merchantId) mbLanguage req driverIssueHandle Common.DRIVER Nothing
+createIssueReport (driverId, merchantId, merchantOpCityId) mbLanguage req = withFlowHandlerAPI $ do
+  res <- Common.createIssueReport (cast driverId, cast merchantId) mbLanguage req driverIssueHandle Common.DRIVER Nothing Nothing
+  when (fromMaybe False req.triggerNotification) $ do
+    person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    let categoryName = fromMaybe "" req.categoryName
+    fork "ticketCreatedNotification" $
+      Notify.notifyTicketCreated merchantOpCityId person categoryName
+  pure res
 
 issueMediaUpload :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Common.IssueMediaUploadReq -> FlowHandler Common.IssueMediaUploadRes
 issueMediaUpload (driverId, merchantId, _merchantOpCityId) req = withFlowHandlerAPI $ Common.issueMediaUpload (cast driverId, cast merchantId) driverIssueHandle req
@@ -405,3 +421,10 @@ igmIssueStatus _ = withFlowHandlerAPI $ throwError $ InvalidRequest "IGM Issue S
 
 updateIssueStatus :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id Domain.IssueReport -> Maybe Language -> Common.IssueStatusUpdateReq -> FlowHandler Common.IssueStatusUpdateRes
 updateIssueStatus (driverId, merchantId, merchantOpCityId) issueReportId language req = withFlowHandlerAPI $ Common.updateIssueStatus (cast driverId, cast merchantId, cast merchantOpCityId) issueReportId language req driverIssueHandle Common.DRIVER
+
+getIssueTicketDetails :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id Domain.IssueReport -> FlowHandler Common.IssueTicketDetailsRes
+getIssueTicketDetails (driverId, _merchantId, _merchantOpCityId) issueReportId = withFlowHandlerAPI $ do
+  issueReport <- QIR.findById (cast issueReportId) >>= fromMaybeM (InvalidRequest "Issue report not found")
+  unless (issueReport.personId == cast driverId) $
+    throwError (InvalidRequest "This issue does not belong to the caller.")
+  Common.getTicketDetails (cast issueReportId) driverIssueHandle False

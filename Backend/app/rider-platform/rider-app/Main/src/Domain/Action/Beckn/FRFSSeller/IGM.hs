@@ -102,7 +102,7 @@ handleIssue operator req = do
   bapId <- ctx.contextBapId & fromMaybeM (InvalidRequest "BapId missing on issue context")
   bapUriText <- ctx.contextBapUri & fromMaybeM (InvalidRequest "BapUri missing on issue context")
   bapUri <- parseBaseUrl bapUriText
-  dIssue <- IssueACL.buildIssueReq req
+  dIssue <- IssueACL.buildIssueReq req True
   seller <- sellerContext operator
   recordIssue seller dIssue BecknOrigin {originBapUri = bapUriText, originTransactionId = transactionId} >>= \case
     Left failure -> logWarning $ "FRFS seller issue rejected: " <> failureMessage failure
@@ -112,13 +112,15 @@ handleIssue operator req = do
 
 recordIssue :: SellerContext -> DIssue.DIssue -> BecknOrigin -> Flow (Either IssueFailure DIssue.IssueRes)
 recordIssue seller dIssue origin = runExceptT $ do
-  issueStatus <- lift $ DIssue.mapStatusAndTypeToStatus dIssue.issueStatusText dIssue.issueTypeText
-  issueType <- lift $ DIssue.mapType dIssue.issueTypeText
+  let issueTypeText = fromMaybe "ISSUE" dIssue.issueTypeText
+  issueStatus <- lift $ DIssue.mapStatusAndTypeToStatus dIssue.issueStatusText issueTypeText
+  issueType <- lift $ DIssue.mapType issueTypeText
+  bookingId <- maybe (throwE (Unprocessable "BookingId not found")) pure dIssue.bookingId
   booking <-
-    lift (QBooking.findByBppOrderId (Just dIssue.bookingId))
-      >>= maybe (throwE (OrderNotFound dIssue.bookingId)) pure
+    lift (QBooking.findByBppOrderId (Just bookingId))
+      >>= maybe (throwE (OrderNotFound bookingId)) pure
   unless (Common.isSellerRider booking.riderId) $
-    throwE (OrderNotFound dIssue.bookingId)
+    throwE (OrderNotFound bookingId)
   igmConfig <-
     lift (QIGMConfig.findByMerchantId (cast seller.merchant.id))
       >>= maybe (throwE (Unprocessable $ "No IGM config for merchant " <> seller.merchant.id.getId <> " - seed igm_config for FRFS_SELLER_*")) pure
@@ -164,7 +166,29 @@ openIssue seller booking igmConfig dIssue issueType now origin = do
             DIGM.respondentName = Nothing,
             DIGM.respondentEmail = Nothing,
             DIGM.respondentPhone = Nothing,
-            DIGM.merchantId = Just (cast seller.merchant.id)
+            DIGM.merchantId = Just (cast seller.merchant.id),
+            DIGM.resolutionShortDesc = Nothing,
+            DIGM.resolutionLongDesc = Nothing,
+            DIGM.resolutionActionTriggered = Nothing,
+            DIGM.resolutionRefundAmount = Nothing,
+            DIGM.descriptionShort = Nothing,
+            DIGM.descriptionLong = Nothing,
+            DIGM.orderState = Nothing,
+            DIGM.orderProviderId = Nothing,
+            DIGM.orderMerchantOrderId = Nothing,
+            DIGM.orderItemId = Nothing,
+            DIGM.orderItemQuantity = Nothing,
+            DIGM.orderFulfillmentId = Nothing,
+            DIGM.orderFulfillmentState = Nothing,
+            DIGM.igmCategory = Nothing,
+            DIGM.igmSubCategory = Nothing,
+            DIGM.sourceType = Nothing,
+            DIGM.sourceNpId = Nothing,
+            DIGM.contextTransactionId = Nothing,
+            DIGM.contextDomain = Nothing,
+            DIGM.expectedResponseTime = Nothing,
+            DIGM.expectedResolutionTime = Nothing,
+            DIGM.issueRating = Nothing
           }
       pure (mkIssueRes seller igmConfig dIssue DIGM.OPEN dIssue.createdAt (UTCTimeRFC3339 now))
 
@@ -190,13 +214,21 @@ mkIssueRes seller igmConfig dIssue issueStatus createdAt updatedAt =
       groName = igmConfig.groName,
       groPhone = igmConfig.groPhone,
       groEmail = igmConfig.groEmail,
+      respondentName = fromMaybe igmConfig.groName igmConfig.respondentName,
+      respondentPhone = fromMaybe igmConfig.groPhone igmConfig.respondentPhone,
+      respondentEmail = fromMaybe igmConfig.groEmail igmConfig.respondentEmail,
+      resolutionProviderName = fromMaybe igmConfig.groName igmConfig.resolutionProviderName,
+      resolutionProviderPhone = fromMaybe igmConfig.groPhone igmConfig.resolutionProviderPhone,
+      resolutionProviderEmail = fromMaybe igmConfig.groEmail igmConfig.resolutionProviderEmail,
       createdAt,
       updatedAt,
       merchant = seller.igmMerchant,
       merchantOperatingCity = seller.igmCity,
       issueStatus,
       bapId = dIssue.bapId,
-      bppId = seller.self.subscriberId
+      bppId = seller.self.subscriberId,
+      domain = IGMEnums.PUBLIC_TRANSPORT,
+      isValueAddNP = True
     }
 
 handleIssueStatus :: Text -> IGMSpec.IssueStatusReq -> Flow ()
@@ -228,6 +260,7 @@ handleIssueStatus operator req = do
           merchantOperatingCity = seller.igmCity,
           bapId
         }
+      True
   let echoed = issueStatusRes{DIssueStatus.issueId = Id dIssueStatus.issueId}
   onIssueStatusReq <- IssueStatusACL.buildOnIssueStatusReq transactionId messageId bapId bapUriText echoed
   void $ IGMCallAPI.callOnIssueStatus onIssueStatusReq bapUri seller.igmMerchant

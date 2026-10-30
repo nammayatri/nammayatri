@@ -144,7 +144,9 @@ data ServiceHandle m = ServiceHandle
     -- or a status change. The domain-level 'updateTicketCsat' invokes this
     -- when a status update carries a 'Common.CustomerRating'. @Nothing@ makes
     -- the call a no-op. Only XyneSpaces has a matching endpoint.
-    mbUpdateTicketCsat :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketCsatReq -> m ())
+    mbUpdateTicketCsat :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketCsatReq -> m ()),
+    mbKapturePullTicket :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.KapturePullTicketReq -> m TIT.KapturePullTicketResp),
+    mbUseKaptureAsSourceForOngoingIssues :: Maybe (Id MerchantOperatingCity -> m Bool)
   }
 
 data IssueReportCreationContext = IssueReportCreationContext
@@ -191,7 +193,8 @@ getIssueCategory (personId, merchantId, merchantOpCityId) mbLanguage mbEnableXyn
         defaults <- CQIC.findAllActiveByMerchantOpCityIdAndLanguage defaultMerchantOpCityId language identifier
         case identifier of
           CUSTOMER -> pure $ filter (\(c, _) -> c.showInDefault == Just True) defaults
-          _ -> pure defaults
+          DRIVER -> pure defaults
+          IGM -> pure defaults
       _ -> return categoriesWithTranslations
   let visibleIssueCategories
         | xyneEnabled == Just True = filter (\(c, _) -> c.categoryType == DIC.FAQ) issueCategoryTranslationList
@@ -214,8 +217,9 @@ getIssueCategory (personId, merchantId, merchantOpCityId) mbLanguage mbEnableXyn
         }
 
     shortId = case identifier of
-      DRIVER -> ShortId "NAMMA_YATRI_PARTNER"
       CUSTOMER -> ShortId "NAMMA_YATRI"
+      DRIVER -> ShortId "NAMMA_YATRI_PARTNER"
+      IGM -> ShortId "NAMMA_YATRI_PARTNER"
 
 getIssueOption ::
   ( BeamFlow m r,
@@ -327,20 +331,44 @@ issueReportList ::
   Maybe Language ->
   ServiceHandle m ->
   Identifier ->
+  Maybe Common.IssueListType ->
+  Maybe Int ->
+  Maybe Int ->
   m Common.IssueReportListRes
-issueReportList (personId, _, merchantOpCityId) mbLanguage issueHandle identifier = do
+issueReportList (personId, merchantId, merchantOpCityId) mbLanguage issueHandle identifier mbIssueListType mbLimit mbOffset = do
+  useKaptureForOngoing <- case issueHandle.mbUseKaptureAsSourceForOngoingIssues of
+    Just getFlag -> getFlag merchantOpCityId
+    Nothing -> pure False
+  let useKapture = useKaptureForOngoing && mbIssueListType /= Just Common.ISSUES_COMPLETED
+      statusFilter
+        | useKaptureForOngoing && mbIssueListType == Just Common.ISSUES_COMPLETED = Just [CLOSED, RESOLVED]
+        | otherwise = Nothing
+  issueReports <-
+    if useKapture
+      then fetchIssueReportsFromKapture
+      else fetchIssueReportsFromDomain statusFilter
   language <- getLanguage personId mbLanguage issueHandle
-  issueReports <- QIR.findAllByPerson personId
-  let validIssueReports = filter (\r -> isJust r.categoryId || isJust r.categoryName) issueReports
   issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
-  let rideIds = mapMaybe (.rideId) validIssueReports
+  let rideIds = mapMaybe (.rideId) issueReports
   rideInfoMap <- case issueHandle.mbGetRideCardInfoByRideIds of
     Just getRideCardInfo | not (null rideIds) -> Map.fromList <$> getRideCardInfo rideIds
     _ -> pure mempty
-  issues <- mapM (processIssueReport issueConfig now language rideInfoMap) validIssueReports
+  issues <- mapM (processIssueReport issueConfig now language rideInfoMap) issueReports
   return $ Common.IssueReportListRes {issues}
   where
+    fetchIssueReportsFromKapture = do
+      case issueHandle.mbKapturePullTicket of
+        Just pullTicket -> do
+          let pullReq = TIT.KapturePullTicketReq {customerCode = personId.getId, status = "P", offset = show (fromMaybe 0 mbOffset), limit = show (fromMaybe 100 mbLimit)}
+          resp <- pullTicket merchantId merchantOpCityId pullReq
+          logDebug $ "Pull ticket resp: " <> show resp
+          QIR.findAllByTicketIds (map (.ticketId) resp.message)
+        Nothing -> fetchIssueReportsFromDomain Nothing
+
+    fetchIssueReportsFromDomain mbStatuses =
+      filter (\r -> isJust r.categoryId || isJust r.categoryName) <$> QIR.findAllByPerson personId mbStatuses mbLimit mbOffset
+
     processIssueReport ::
       ( BeamFlow m r,
         EncFlow m r
@@ -382,6 +410,7 @@ issueReportList (personId, _, merchantOpCityId) mbLanguage issueHandle identifie
             category = fromMaybe (fromMaybe "" rowCategory) issueReport.categoryName,
             rideId = issueReport.rideId,
             ticketBookingId = issueReport.ticketBookingId,
+            ticketId = issueReport.ticketId,
             optionLabel = mbIssueOption >>= (.label),
             status = fromMaybe issueReport.status issueStatus,
             createdAt = issueReport.createdAt,
@@ -731,6 +760,7 @@ createIssueReport ::
   ServiceHandle m ->
   Identifier ->
   Maybe Text ->
+  Maybe IssueFlowType ->
   m Common.IssueReportRes
 createIssueReport = createIssueReportWithContext Nothing
 
@@ -752,8 +782,9 @@ createIssueReportWithContext ::
   ServiceHandle m ->
   Identifier ->
   Maybe Text ->
+  Maybe IssueFlowType ->
   m Common.IssueReportRes
-createIssueReportWithContext creationContext args@(personId, _merchantId) mbLanguage req0 issueHandle identifier becknIssueId = do
+createIssueReportWithContext creationContext args@(personId, _merchantId) mbLanguage req0 issueHandle identifier becknIssueId issueFlowType = do
   let req@Common.IssueReportReq {..} = normalizeCategoryName req0
   validateIssueDescription description
   -- Guard against a client retrying the same submission (e.g. after a
@@ -774,7 +805,7 @@ createIssueReportWithContext creationContext args@(personId, _merchantId) mbLang
   wonClaim <- Redis.setNxExpire dedupKey 60 (Nothing :: Maybe Common.IssueReportRes)
   if wonClaim
     then do
-      result <- withTryCatch "createIssueReportImpl:dedup" (createIssueReportImpl creationContext args mbLanguage req issueHandle identifier becknIssueId)
+      result <- withTryCatch "createIssueReportImpl:dedup" (createIssueReportImpl creationContext args mbLanguage req issueHandle identifier becknIssueId issueFlowType)
       case result of
         Right response -> do
           Redis.setExp dedupKey (Just response) 60
@@ -791,7 +822,7 @@ createIssueReportWithContext creationContext args@(personId, _merchantId) mbLang
         Just Nothing -> do
           threadDelaySec $ Seconds 1
           awaitDedupedResponse dedupKey
-        Nothing -> createIssueReportWithContext creationContext args mbLanguage req0 issueHandle identifier becknIssueId
+        Nothing -> createIssueReportWithContext creationContext args mbLanguage req0 issueHandle identifier becknIssueId issueFlowType
 
 botTranscriptHistory :: UTCTime -> Text -> Maybe ([(Chat, Either Text Text)], Maybe Text)
 botTranscriptHistory now description
@@ -825,8 +856,9 @@ createIssueReportImpl ::
   ServiceHandle m ->
   Identifier ->
   Maybe Text ->
+  Maybe IssueFlowType ->
   m Common.IssueReportRes
-createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
+createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier becknIssueId issueFlowType = do
   mbCategory <- forM categoryId \catId -> CQIC.findById catId identifier >>= fromMaybeM (IssueCategoryDoesNotExist catId.getId)
   -- What the ticket and the customer's own views call this category. A name sent by
   -- the client (the menu the rider picked in a pre-ticket bot) wins over the row's
@@ -990,6 +1022,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
             reopenedCount = 0,
             becknIssueId,
             customerResponse = Nothing,
+            issueFlowType,
             submitLabel
           }
     createJsonMessage :: Text -> T.Text
@@ -1269,6 +1302,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
     castIdentifierToClassification = \case
       DRIVER -> TIT.DRIVER
       CUSTOMER -> TIT.CUSTOMER
+      IGM -> TIT.IGM
 
     generateDashboardRideInfoUrl :: MerchantConfig -> Maybe Ride -> Text -> Text -> Maybe Text
     generateDashboardRideInfoUrl merchantConfig mbRide merchantShortId cityCode =
@@ -1863,6 +1897,7 @@ createChatMessage personId issueReportId identifier issueHandle req = do
       senderType = case identifier of
         CUSTOMER -> DCM.SENDER_RIDER
         DRIVER -> DCM.SENDER_DRIVER
+        IGM -> DCM.SENDER_DRIVER
       chatMsg =
         DCM.ChatMessage
           { id = msgId,
@@ -2313,3 +2348,52 @@ interpolateMessage ctx msg =
     valueText (A.Number n) = T.pack (show n)
     valueText (A.Bool b) = bool "false" "true" b
     valueText v = TL.toStrict (TLE.decodeUtf8 (A.encode v))
+
+getTicketDetails ::
+  ( BeamFlow m r,
+    EncFlow m r
+  ) =>
+  Id D.IssueReport ->
+  ServiceHandle m ->
+  Bool ->
+  m Common.IssueTicketDetailsRes
+getTicketDetails issueReportId issueHandle includeDashboardFields = do
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  let ticketId = issueReport.ticketId
+  mbKaptureResp <- case (ticketId, issueHandle.kaptureGetTicket) of
+    (Just tid, Just getTicket) -> do
+      merchantId <- issueReport.merchantId & fromMaybeM (InvalidRequest "MerchantId not found on issue report")
+      merchantOpCityId <- issueReport.merchantOperatingCityId & fromMaybeM (InvalidRequest "MerchantOperatingCityId not found on issue report")
+      listToMaybe <$> getTicket (cast merchantId) (cast merchantOpCityId) (TIT.GetTicketReq tid "all")
+    _ -> pure Nothing
+  pure $ mapToTicketDetailsRes issueReport mbKaptureResp includeDashboardFields
+
+mapToTicketDetailsRes :: D.IssueReport -> Maybe TIT.GetTicketResp -> Bool -> Common.IssueTicketDetailsRes
+mapToTicketDetailsRes issueReport mbResp includeDashboardFields =
+  let td :: Maybe TIT.TicketTaskDetails
+      td = mbResp >>= (.taskDetails)
+      dashField :: (TIT.TicketTaskDetails -> Maybe Text) -> Maybe Text
+      dashField f = if includeDashboardFields then td >>= f else Nothing
+   in Common.IssueTicketDetailsRes
+        { issueReportId = Just issueReport.id,
+          issueReportShortId = issueReport.shortId,
+          personId = Just issueReport.personId.getId,
+          rideId = (.getId) <$> issueReport.rideId,
+          categoryId = (.getId) <$> issueReport.categoryId,
+          issueDescription = Just issueReport.description,
+          issueStatus = Just $ show issueReport.status,
+          createdAt = Just issueReport.createdAt,
+          updatedAt = Just issueReport.updatedAt,
+          ticketId = issueReport.ticketId,
+          kaptureStatus = td >>= (.status),
+          kaptureCategory = td >>= (.title),
+          lastFollowUp = td >>= (.lastFollowUp),
+          substatus = dashField (.substatus),
+          assignedToName = dashField (.assignedToName),
+          disposition = dashField (.disposition),
+          slaStatus = dashField (.slaStatus),
+          tat = dashField (.tat),
+          sla = dashField (.sla),
+          ticketUrl = dashField (.url),
+          priority = dashField (.priority)
+        }

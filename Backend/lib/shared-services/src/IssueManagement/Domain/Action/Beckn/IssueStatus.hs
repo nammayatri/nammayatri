@@ -16,6 +16,7 @@ module IssueManagement.Domain.Action.Beckn.IssueStatus where
 
 import qualified IGM.Enums as Spec
 import IssueManagement.Common
+import IssueManagement.Domain.Action.Beckn.Issue (mkResContactFields)
 import IssueManagement.Domain.Action.UI.Issue
 import IssueManagement.Domain.Types.Issue.IGMConfig
 import qualified IssueManagement.Domain.Types.Issue.IGMIssue as DIGM
@@ -52,11 +53,23 @@ data IssueStatusRes = IssueStatusRes
     groName :: Text,
     groPhone :: Text,
     groEmail :: Text,
+    respondentName :: Text,
+    respondentPhone :: Text,
+    respondentEmail :: Text,
+    resolutionProviderName :: Text,
+    resolutionProviderPhone :: Text,
+    resolutionProviderEmail :: Text,
     merchant :: Merchant,
     merchantOperatingCity :: MerchantOperatingCity,
     createdAt :: UTCTimeRFC3339,
     updatedAt :: UTCTimeRFC3339,
-    bapId :: Text
+    bapId :: Text,
+    domain :: Spec.Domain,
+    resolutionShortDesc :: Maybe Text,
+    resolutionLongDesc :: Maybe Text,
+    resolutionActionTriggered :: Maybe Text,
+    resolutionRefundAmount :: Maybe Text,
+    isValueAddNP :: Bool
   }
   deriving (Show, Generic)
 
@@ -70,6 +83,9 @@ validateRequest ::
   m ValidatedDIssueStatus
 validateRequest DIssueStatus {..} iHandle = do
   issue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
+  when (issue.issueRaisedByMerchant /= Just bapId) $
+    throwError $ InvalidRequest "BAP is not authorized to query this issue"
+  logDebug $ "IGM /issue_status validated: issueId=" <> issueId <> " bapId=" <> bapId
   booking <- iHandle.findByBookingId (Id issue.bookingId) >>= fromMaybeM (BookingDoesNotExist issue.bookingId)
   let merchantId = fromMaybe booking.providerId issue.merchantId
   merchant <- iHandle.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -83,15 +99,21 @@ handler ::
     CoreMetrics m
   ) =>
   ValidatedDIssueStatus ->
+  Bool ->
   m IssueStatusRes
-handler ValidatedDIssueStatus {..} = do
-  now <- getCurrentTime
+handler ValidatedDIssueStatus {..} isValueAddNP = do
   let issueStatus = issue.issueStatus
       issueId = issue.id
       respondentAction = fromMaybe (show Spec.PROCESSING) issue.respondentAction
       groName = igmConfig.groName
       groPhone = igmConfig.groPhone
       groEmail = igmConfig.groEmail
+      (respondentName, respondentPhone, respondentEmail, resolutionProviderName, resolutionProviderPhone, resolutionProviderEmail) = mkResContactFields igmConfig
       createdAt = UTCTimeRFC3339 issue.createdAt
-      updatedAt = UTCTimeRFC3339 now
+      updatedAt = UTCTimeRFC3339 issue.updatedAt
+      domain = issue.domain
+      resolutionShortDesc = issue.resolutionShortDesc
+      resolutionLongDesc = issue.resolutionLongDesc
+      resolutionActionTriggered = issue.resolutionActionTriggered
+      resolutionRefundAmount = issue.resolutionRefundAmount
   pure IssueStatusRes {..}

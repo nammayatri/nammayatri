@@ -104,6 +104,7 @@ handler = externalHandler
         :<|> getChatMessages (personId, merchantId)
         :<|> postChatRead (personId, merchantId)
         :<|> getChatState' (personId, merchantId)
+        :<|> getIssueTicketDetails' (personId, merchantId)
 
 customerIssueHandle :: Common.ServiceHandle Flow
 customerIssueHandle =
@@ -145,7 +146,9 @@ customerIssueHandle =
         getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) Nothing,
       mbUpdateTicketOnService = Just castUpdateTicketOnService,
       mbUpdateTicketStatus = Just castUpdateTicketStatus,
-      mbUpdateTicketCsat = Just castUpdateTicketCsat
+      mbUpdateTicketCsat = Just castUpdateTicketCsat,
+      mbKapturePullTicket = Nothing,
+      mbUseKaptureAsSourceForOngoingIssues = Nothing
     }
 
 -- | Fetch a MediaFile's bytes directly from S3 (returning the base64 payload
@@ -537,10 +540,10 @@ syncRide merchantId rideId = do
   merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
   void $ DRide.rideSync merchant (cast rideId)
 
-issueReportCustomerList :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> FlowHandler Common.IssueReportListRes
-issueReportCustomerList (personId, merchantId) language = withFlowHandlerAPI $ do
+issueReportCustomerList :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> Maybe Common.IssueListType -> Maybe Int -> Maybe Int -> FlowHandler Common.IssueReportListRes
+issueReportCustomerList (personId, merchantId) language _mbIssueListType mbLimit mbOffset = withFlowHandlerAPI $ do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Common.issueReportList (cast personId, cast merchantId, cast person.merchantOperatingCityId) language customerIssueHandle CUSTOMER
+  Common.issueReportList (cast personId, cast merchantId, cast person.merchantOperatingCityId) language customerIssueHandle CUSTOMER Nothing mbLimit mbOffset
 
 fetchMedia :: (Id SP.Person, Id DM.Merchant) -> Text -> FlowHandler Text
 fetchMedia (personId, merchantId) = withFlowHandlerAPI . Common.fetchMedia (cast personId, cast merchantId)
@@ -573,7 +576,7 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
         Nothing -> return Nothing
       else return Nothing
 
-  Common.createIssueReport (cast personId, cast merchantId) mbLanguage req customerIssueHandle CUSTOMER becknIssueId
+  Common.createIssueReport (cast personId, cast merchantId) mbLanguage req customerIssueHandle CUSTOMER becknIssueId Nothing
   where
     processIssueRequest igmReq person reqBody = do
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -766,6 +769,16 @@ getChatState' ::
   FlowHandler Common.ChatStateRes
 getChatState' (personId, _) issueReportId =
   withFlowHandlerAPI $ Common.getChatState (cast personId) issueReportId
+
+getIssueTicketDetails' ::
+  (Id SP.Person, Id DM.Merchant) ->
+  Id Domain.IssueReport ->
+  FlowHandler Common.IssueTicketDetailsRes
+getIssueTicketDetails' (personId, _merchantId) issueReportId = withFlowHandlerAPI $ do
+  issueReport <- QIR.findById (cast issueReportId) >>= fromMaybeM (InvalidRequest "Issue report not found")
+  unless (issueReport.personId == cast personId) $
+    throwError (InvalidRequest "This issue does not belong to the caller.")
+  Common.getTicketDetails (cast issueReportId) customerIssueHandle False
 
 fromFRFSTicketBooking :: (MonadFlow m) => FRFSTicketBooking -> FRFSFareParameters -> m RideBooking
 fromFRFSTicketBooking b fareParameters = do

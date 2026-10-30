@@ -4,6 +4,7 @@ import qualified IssueManagement.Storage.Beam.Issue.ChatMessage as BeamCM
 import qualified IssueManagement.Storage.Beam.Issue.Comment as BeamC
 import qualified IssueManagement.Storage.Beam.Issue.IGMConfig as BeamIGMC
 import qualified IssueManagement.Storage.Beam.Issue.IGMIssue as BeamIGI
+import qualified IssueManagement.Storage.Beam.Issue.IGMIssueAction as BeamIGA
 import qualified IssueManagement.Storage.Beam.Issue.IssueApiIntegration as BeamAI
 import qualified IssueManagement.Storage.Beam.Issue.IssueCategory as BeamIC
 import qualified IssueManagement.Storage.Beam.Issue.IssueChat as BeamIC
@@ -24,6 +25,7 @@ type BeamFlow m r =
     HasSchemaName BeamCM.ChatMessageT,
     HasSchemaName BeamC.CommentT,
     HasSchemaName BeamIGI.IGMIssueT,
+    HasSchemaName BeamIGA.IGMIssueActionT,
     HasSchemaName BeamIGMC.IGMConfigT,
     HasSchemaName BeamIC.IssueCategoryT,
     HasSchemaName BeamIC.IssueConfigT,
