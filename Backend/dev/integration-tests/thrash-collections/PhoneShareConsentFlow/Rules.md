@@ -5,7 +5,7 @@ rider's real mobile number (`callingNumber`) only when the merchant's
 `driver_calling_option` allows direct calling **and** the rider consented
 (`SafetySettings.consentToShareMobileNumber`, pushed to the BPP through its
 internal consent API whenever the rider changes it while
-`rider_config.push_consent_to_bpp` is on, and also sent in the confirm tag
+`rider_config.enable_share_number_with_driver` is on, and also sent in the confirm tag
 `CONSENT_TO_SHARE_MOBILE_NUMBER`). The legacy
 `riderMobileNumber` field is gated by the merchant option alone.
 
@@ -20,9 +20,11 @@ The rider's consent reaches the BPP (`RiderDetails.consentToShareMobileNumber`)
 through the internal consent API and the confirm tag, and is snapshotted on the
 booking at confirm (`Booking.numberShareConsent`).
 
-Calling rule: `callingNumber` is `DIRECT` only when `forceDirectCalling` is on, or
-the merchant option allows direct calling AND the booking snapshot is `true` AND
-the rider's live consent is still `true`. Anything else is `ANONYMOUS`.
+Calling rule: `callingNumber` is `DIRECT` only when `driver_calling_option` is
+`ForceDirectCall` (the legacy `force_direct_calling = true` is still read as
+`ForceDirectCall`), or it is `DirectCall`/`DualCall` AND the booking snapshot is
+`true` AND the rider's live consent is still `true`. Anything else (including a
+NULL option) is `ANONYMOUS`.
 `riderMobileNumber` is unchanged: present whenever the option allows direct calling.
 
 | Step | Rider consent state | snapshot | live | `riderMobileNumber` | `callingNumber.numberType` |
@@ -42,7 +44,7 @@ only `callingNumber`, the field new builds dial.
 
 The two mid-ride steps (`Grant Consent Mid-Ride (Ride 1)`,
 `Revoke Consent Mid-Ride (Ride 2)`) each follow with a `Get Ride After ...` fetch of
-the still-active ride. `forceDirectCalling` cities are not covered in-collection
+the still-active ride. `ForceDirectCall` cities are not covered in-collection
 (ConfigPilot in-memory cache, see below).
 
 Between rides it also asserts the rider API's tri-state directly via
@@ -76,9 +78,8 @@ consent can never expose the number: ride 2's positive assertion fails with
 kill switch working as designed).
 
 The seed also sets `atlas_app.rider_config.enable_share_number_with_driver = true`
-(BAP), which makes confirm carry the consent tag, and
-`atlas_app.rider_config.push_consent_to_bpp = true`, which turns on the push.
-Without the push flag, a mid-ride revoke is not seen until the next confirm.
+(BAP), which makes confirm carry the consent tag and turns on the push.
+Without the flag, the rider app hides the toggle and nothing reaches the BPP.
 
 Three run paths, each with its own seeding story:
 
@@ -125,9 +126,10 @@ table has the same staleness window.
   suite (no `tests:` stanza in `Main/package.yaml`), so the kill-switch case
   — `AnonymousCall` + consent `true` → still masked — has no automated
   coverage. Adding that suite is tracked separately.
-- **`forceDirectCalling`** (`transporter_config` break-glass override that serves
-  the rider's real number as `DIRECT` on active rides regardless of the merchant
-  option or rider consent, for use while exophones are down). Untestable
+- **`ForceDirectCall`** (`driver_calling_option` break-glass value that serves
+  the rider's real number as `DIRECT` on active rides regardless of rider
+  consent, for use while exophones are down; the legacy `force_direct_calling =
+  true` is read the same way). Untestable
   in-collection for the same cache reason as the kill switch: raising it needs a
   Redis flush plus a `dynamic-offer-driver-app` restart between Newman steps. The
   default-false path is what this suite exercises.

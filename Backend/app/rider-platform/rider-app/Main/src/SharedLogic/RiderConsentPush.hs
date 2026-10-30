@@ -62,8 +62,8 @@ pushConsent person consent = do
       throwError (InternalError "Unable to update number sharing preference, please try again")
 
 -- One-time catch-up: pushes consent chosen before the BPP push existed (or while
--- push_consent_to_bpp was off) when the rider next opens the app. Temporary;
--- remove with consent_synced_at once the consent tag and push flag are retired
+-- enable_share_number_with_driver was off) when the rider next opens the app. Temporary;
+-- remove with consent_synced_at once the consent tag is retired
 -- (target: Jan 2027).
 syncConsentIfNeeded ::
   ( MonadFlow m,
