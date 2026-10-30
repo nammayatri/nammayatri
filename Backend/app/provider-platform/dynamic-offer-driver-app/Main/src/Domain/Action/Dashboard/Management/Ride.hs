@@ -100,12 +100,13 @@ getRideList ::
   Maybe (ShortId Common.Ride) ->
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
+  Maybe Text ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerCountryCode mbCustomerPhone mbDetailGroups mbDriverCountryCode mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbHasSos mbLimit mbOffset mbPaymentCollectedBy mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount = do
+getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerCountryCode mbCustomerPhone mbDetailGroups mbDriverCountryCode mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbHasSos mbLimit mbOffset mbPaymentCollectedBy mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount mbVehicleNo = do
   logInfo $ "Ride list requested by: " <> requestorId
   let customerCountryCode = DCommon.appendPlusInMobileCountryCode mbCustomerCountryCode
       driverCountryCode = DCommon.appendPlusInMobileCountryCode mbDriverCountryCode
-  DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount (getId <$> mbDriverId) customerCountryCode driverCountryCode mbPaymentCollectedBy mbHasSos (fromMaybe [] mbDetailGroups) requestorId
+  DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount (getId <$> mbDriverId) customerCountryCode driverCountryCode mbPaymentCollectedBy mbHasSos (fromMaybe [] mbDetailGroups) mbVehicleNo requestorId
 
 getRideAgentList ::
   ShortId DM.Merchant ->
