@@ -386,6 +386,9 @@ data MembershipFeeInfo = MembershipFeeInfo
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data ActiveRideType = SHARED_CAB
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,
     firstName :: Text,
@@ -481,6 +484,8 @@ data DriverInformationRes = DriverInformationRes
     -- active behaviour warnings pinned to the profile (WARN with showOnProfile);
     -- text is pre-localized to the driver's language with placeholders filled
     behaviourWarnings :: Maybe [BTT.ProfileWarningInfo],
+    -- | Set while the driver runs a session with no driver-side Ride row, so the app can reopen it on launch.
+    activeRideType :: Maybe ActiveRideType,
     onboardingVehicleCategory :: Maybe VehicleCategory,
     subscriptionDown :: Maybe Bool,
     qrUrl :: Maybe Text,
@@ -1953,6 +1958,8 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           disabledReasonFlag = driverInfo.disabledReasonFlag,
           preferredMapProvider = driverInfo.preferredMapProvider,
           behaviourWarnings = if null activeProfileWarnings then Nothing else Just activeProfileWarnings,
+          -- module-qualified: VehicleVariant's SHARED_CAB is also in scope
+          activeRideType = if driverInfo.sharedCabSessionActive then Just Domain.Action.UI.Driver.SHARED_CAB else Nothing,
           ..
         }
 
