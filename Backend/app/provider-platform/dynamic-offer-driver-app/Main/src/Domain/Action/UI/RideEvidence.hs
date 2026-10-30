@@ -95,8 +95,8 @@ postRideEvidence (mbDriverId, merchantId, merchantOpCityId) rideId req = do
     when (T.length d > maxDescriptionLength) $
       throwError (InvalidRequest $ "Description cannot exceed " <> show maxDescriptionLength <> " characters")
   -- The file lock keeps one file from being attached twice at the same time. The ride lock keeps the count check and the insert together.
-  Redis.withLockRedisAndReturnValue (attachFileLockKey req.fileId) 60 $
-    Redis.withLockRedisAndReturnValue (attachRideLockKey rideId) 60 $ do
+  Redis.withWaitAndLockRedis (attachFileLockKey req.fileId) 60 50000 $
+    Redis.withWaitAndLockRedis (attachRideLockKey rideId) 60 50000 $ do
       mediaFile <- QMediaFile.findById req.fileId >>= fromMaybeM (InvalidRequest "Evidence file not found")
       validateEvidenceFile driverId mediaFile
       thumbnailFileId :: Maybe Text <- Redis.safeGet (thumbnailHandoffKey req.fileId)

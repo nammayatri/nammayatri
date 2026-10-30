@@ -461,7 +461,7 @@ settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amoun
     Just DPayment.DRIVER_DAILY_STATS -> do
       forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
         dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
-        Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
+        Redis.withWaitAndLockRedisWithTimeout (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 50000 $ do
           let dPayoutStatus = castPayoutOrderStatus payoutStatus
           when (dailyStats.payoutStatus /= DS.Success) $ do
             QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
@@ -494,7 +494,7 @@ settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amoun
     Just DPayment.DAILY_STATS_VIA_DASHBOARD -> do
       forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
         dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
-        Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
+        Redis.withWaitAndLockRedisWithTimeout (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 50000 $ do
           let dPayoutStatus = castPayoutOrderStatus payoutStatus
           when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
         fork "Update Payout Status For DailyStats Via Dashboard" $ do
@@ -504,7 +504,7 @@ settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amoun
       driverIdsWithServiceName <- do
         forM (fromMaybe [] payoutOrder.entityIds) $ \driverFeeId -> do
           driverFee <- QDF.findById (Id driverFeeId) >>= fromMaybeM (InternalError "DriverFee Not Found")
-          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey driverFee.driverId.getId) 3 3 $ do
+          Redis.withWaitAndLockRedisWithTimeout (payoutProcessingLockKey driverFee.driverId.getId) 3 3 50000 $ do
             let refundData =
                   DDF.RefundInfo
                     { status = Just dPayoutStatus,
@@ -529,7 +529,7 @@ settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amoun
         Nothing -> pure Nothing
         Just prId -> QPR.findById (Id prId)
 
-      Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
+      Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey driverId.getId) 10 10 50000 $ do
         (updPayoutStatus, _) <- callPayoutServiceAction payoutOrder.orderId driverId payoutConfig
         person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
@@ -557,7 +557,7 @@ settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amoun
     updateStatsWithLock payoutConfig dStatsId = do
       let dPayoutStatus = castPayoutOrderStatus payoutStatus
       dailyStats <- QDailyStats.findByPrimaryKey dStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
-      Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
+      Redis.withWaitAndLockRedisWithTimeout (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 50000 $ do
         when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dStatsId
       callPayoutServiceAction payoutOrder.orderId dailyStats.driverId payoutConfig
 
@@ -728,7 +728,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
       case (payoutVpaValid, pendingAmount <= payoutConfig.thresholdPayoutAmountPerPerson) of
         (True, True) -> do
           uid <- generateGUID
-          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
+          Redis.withWaitAndLockRedisWithTimeout (payoutProcessingLockKey personId.getId) 3 3 50000 $ do
             mapM_ (QDailyStats.updatePayoutStatusById DS.Processing) statsIds
             mapM_ (QDailyStats.updatePayoutOrderId (Just uid)) statsIds
           phoneNo <- mapM decrypt person.mobileNumber
@@ -739,7 +739,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
           logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show pendingAmount <> " | orderId: " <> show uid
           void $ DPayment.createPayoutService (cast person.merchantId) (Just $ cast merchOpCity) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
         (_, False) -> do
-          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
+          Redis.withWaitAndLockRedisWithTimeout (payoutProcessingLockKey personId.getId) 3 3 50000 $ do
             mapM_ (QDailyStats.updatePayoutStatusById DS.ManualReview) statsIds -- don't pay if amount is greater than threshold amount
         _ -> pure ()
   where

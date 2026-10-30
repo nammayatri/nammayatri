@@ -374,7 +374,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
     processEndRidePrepaidSubscription fare mbVC expiredPurchases = do
       case ride.fleetOwnerId of
         Just fleetOwnerId -> do
-          Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
+          Redis.withWaitAndLockRedisWithTimeout (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 50000 $ do
             revenueAmount <- getPrepaidRevenueAmount fare mbVC
             mbMetadata <- mkRideDebitAllocationMetadata counterpartyFleetOwner fleetOwnerId.getId DSP.FLEET_OWNER fare mbVC
             _ <-
@@ -407,7 +407,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                     }
             finalizeDeferredExpiry expiredPurchases fleetOwnerId.getId DSP.FLEET_OWNER mbVC
         Nothing -> do
-          Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
+          Redis.withWaitAndLockRedisWithTimeout (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 50000 $ do
             revenueAmount <- getPrepaidRevenueAmount fare mbVC
             mbMetadata <- mkRideDebitAllocationMetadata counterpartyDriver ride.driverId.getId DSP.DRIVER fare mbVC
             newBalance <-
@@ -575,7 +575,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       (holdCounterparty, holdOwnerId) = case ride.fleetOwnerId of
         Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
         Nothing -> (counterpartyDriver, ride.driverId.getId)
-  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverOrFleetPersonId.getId) 10 10 $ do
+  Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey driverOrFleetPersonId.getId) 10 10 50000 $ do
     voidWalletHoldByReference holdCounterparty holdOwnerId booking.id.getId "Ride completed - replaced by actual deductions"
     isOnline <- do
       let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
@@ -623,9 +623,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     -- lock -- the enclosing wallet lock is keyed on driverId and so would not
     -- serialise two drivers of the same fleet.
     mbTdsAmount <-
-      -- withWaitAndLockRedis (not withWaitOnLockRedisWithExpiry) because the gate's
-      -- decision has to come back out of the lock. 10s expiry, 1ms retry backoff --
-      -- note it sleeps once even on an uncontended acquire, so keep the delay small.
+      -- withWaitAndLockRedis (not withWaitAndLockRedisWithTimeout, which returns ()) because
+      -- the gate's decision has to come back out of the lock. 10s expiry, 1ms retry backoff
+      -- slept only while the lock is contended.
       Redis.withWaitAndLockRedis (SDFE.makeFyEarningsLockKey driverOrFleetPersonId.getId) 10 1000 $ do
         mbPersistedFareParams <- join <$> forM ride.fareParametersId QFare.findById
         case mbPersistedFareParams of

@@ -348,7 +348,7 @@ verifyRC isDashboard autoApproved mbMerchant (personId, _, merchantOpCityId) req
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_.getId)
       unless (imageMetadata.imageType == ODC.VehicleRegistrationCertificate) $
         throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) "")
-      Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
+      Redis.withWaitAndLockRedis (imageS3Lock (imageMetadata.s3Path)) 5 50000 $
         S3.get $ T.unpack imageMetadata.s3Path
 
     -- When enabled via transporterConfig, update any existing VehicleRegistrationCertificate

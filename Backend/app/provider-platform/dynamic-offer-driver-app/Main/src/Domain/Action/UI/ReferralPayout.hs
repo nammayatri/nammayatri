@@ -310,7 +310,7 @@ getPayoutOrderStatus (mbPersonId, _merchantId, merchantOpCityId) orderId = do
         when (maybe False (`elem` [DLP.DRIVER_DAILY_STATS, DLP.BACKLOG]) payoutOrder.entityName) do
           whenJust payoutOrder.entityIds $ \dStatsIds -> do
             forM_ dStatsIds $ \dStatsId -> do
-              Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey personId.getId) 3 3 $ do
+              Redis.withWaitAndLockRedisWithTimeout (DAP.payoutProcessingLockKey personId.getId) 3 3 50000 $ do
                 QDS.updatePayoutStatusById newStatus dStatsId
   (_payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getPayoutStatusServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.PayoutService person.clientSdkVersion merchantOpCityId personId
   PayoutStatus.refreshPayoutStatusWithResponse

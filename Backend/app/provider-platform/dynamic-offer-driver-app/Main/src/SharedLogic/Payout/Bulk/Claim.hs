@@ -91,7 +91,7 @@ claimBeneficiary config payoutType transporterConfig payoutServiceName merchantI
     -- inner wait alone can take 10 s). Inner: the balance lock ride end and settlement take.
     -- Always in this order; never take a payout lock inside the inner one.
     PayoutRequest.runPayoutUnderLock walletLockKey 30 (pure (Just ())) $ \() ->
-      Redis.withWaitOnLockRedisWithExpiry walletLockKey 10 10 $ do
+      Redis.withWaitAndLockRedisWithTimeout walletLockKey 10 10 50000 $ do
         standing <- readPayoutSnapshot transporterConfig candidate.beneficiary
         case classifyBulkCandidate config candidate.beneficiary standing of
           Left reason -> do
