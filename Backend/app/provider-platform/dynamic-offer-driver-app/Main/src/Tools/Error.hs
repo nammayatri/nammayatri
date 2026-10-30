@@ -2545,6 +2545,21 @@ instance IsHTTPError RideEvidenceError where
 
 instance IsAPIError RideEvidenceError
 
+-- RSF verify / allocate / send for a message date whose IST day has not ended yet.
+newtype RsfError = RsfDayNotClosed Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instance IsBaseError RsfError where
+  toMessage (RsfDayNotClosed msg) = Just msg
+
+instance IsHTTPError RsfError where
+  toErrorCode (RsfDayNotClosed _) = "RSF_DAY_NOT_CLOSED"
+  toHttpCode (RsfDayNotClosed _) = E400
+
+instance IsAPIError RsfError
+
+instanceExceptionWithParent 'HTTPException ''RsfError
+
 data DepotManagerError
   = DepotManagerNotFound Text
   | DepotFleetInfoNotFound Text

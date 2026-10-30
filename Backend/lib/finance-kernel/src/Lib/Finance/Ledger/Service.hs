@@ -63,6 +63,7 @@ module Lib.Finance.Ledger.Service
     -- * Settlement reservation (Option A — DB-level in-flight guard)
     markEntriesAsProcessing,
     markEntriesAsUnsettled,
+    releaseExternalPendingByReferenceIds,
 
     -- * Input types (re-export from Interface)
     module Lib.Finance.Ledger.Interface,
@@ -733,17 +734,23 @@ findCreditsByAccountAfterTime accountId from to =
     [ Se.And
         [ Se.Is BeamLE.toAccountId $ Se.Eq (getId accountId),
           Se.Is BeamLE.status $ Se.Eq SETTLED,
-          Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from,
-          Se.Is BeamLE.timestamp $ Se.LessThanOrEq to,
           Se.Or
-            [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
-              Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+            [ Se.And
+                [ Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from,
+                  Se.Is BeamLE.timestamp $ Se.LessThanOrEq to,
+                  Se.Or
+                    [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
+                      Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+                    ]
+                ],
+              Se.Is BeamLE.settlementStatus $ Se.Eq (Just EXTERNAL_PENDING)
             ]
         ]
     ]
 
--- | Find unsettled entries (both credits and debits) for an account after a given time.
---   Used for computing non-redeemable balance (recent net movement that can't be paid out yet).
+-- | Find held-back entries (both credits and debits) for an account: unsettled entries after
+--   the cut-off, plus EXTERNAL_PENDING entries of any age (awaiting external settlement).
+--   Used for computing non-redeemable balance (net movement that can't be paid out yet).
 findUnsettledByAccountAfterTime ::
   (BeamFlow.BeamFlow m r) =>
   Id Account ->
@@ -758,11 +765,16 @@ findUnsettledByAccountAfterTime accountId from to =
               Se.Is BeamLE.fromAccountId $ Se.Eq (getId accountId)
             ],
           Se.Is BeamLE.status $ Se.Eq SETTLED,
-          Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from,
-          Se.Is BeamLE.timestamp $ Se.LessThanOrEq to,
           Se.Or
-            [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
-              Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+            [ Se.And
+                [ Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from,
+                  Se.Is BeamLE.timestamp $ Se.LessThanOrEq to,
+                  Se.Or
+                    [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
+                      Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+                    ]
+                ],
+              Se.Is BeamLE.settlementStatus $ Se.Eq (Just EXTERNAL_PENDING)
             ]
         ]
     ]
@@ -825,6 +837,10 @@ the cut-off must stay in the wallet to fund the next cycle, so we hold it back:
     nonRedeemable = max 0 (min walletBalance (creditsAboveCutOff - debitsAboveCutOff))
                   = max 0 (min walletBalance netAbove)
     payout        = max 0 (walletBalance - nonRedeemable)
+
+Entries stamped EXTERNAL_PENDING (e.g. ride earnings whose fare the BAP collected
+but has not yet settled to us) count as "above the cut-off" whatever their age,
+and are never redeemable, until they move to UNSETTLED.
 
 Each clamp matters: `max 0` so that post-cut-off deductions exceeding
 post-cut-off earnings never *add* to the payout (Scenario 2); `min walletBalance`
@@ -1109,3 +1125,35 @@ markEntriesAsUnsettled entryIds = do
         ]
     ]
   auditBatchSettlementUpdates actorInfo StatusChanged beforeEntries
+
+-- | Release entries held as EXTERNAL_PENDING once the counterparty has confirmed settlement
+--   (e.g. the RSF collector ACKed an order reported 01 Paid). First settles the PENDING legs held
+--   the same way (the BuyerAsset receivable: the counterparty has now paid), then flips the
+--   SETTLED entries of the given references to UNSETTLED, so they leave the non-redeemable
+--   hold-back and become redeemable by their timestamp, see Note [Redeemable payout calculation].
+releaseExternalPendingByReferenceIds ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  Text -> -- merchant id: only this merchant's entries are released
+  [Text] -> -- reference ids (booking ids)
+  m ()
+releaseExternalPendingByReferenceIds _ [] = pure ()
+releaseExternalPendingByReferenceIds merchantId referenceIds = do
+  actorInfo <- asks (.actorInfo)
+  heldEntries <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamLE.merchantId $ Se.Eq merchantId,
+            Se.Is BeamLE.referenceId $ Se.In referenceIds,
+            Se.Is BeamLE.status $ Se.In [PENDING, SETTLED],
+            Se.Is BeamLE.settlementStatus $ Se.Eq (Just EXTERNAL_PENDING)
+          ]
+      ]
+  unless (null heldEntries) $ do
+    forM_ (filter ((== PENDING) . (.status)) heldEntries) $ \leg -> settleEntry leg.id
+    now <- getCurrentTime
+    updateWithKV
+      [ Se.Set BeamLE.settlementStatus (Just UNSETTLED),
+        Se.Set BeamLE.updatedAt now
+      ]
+      [Se.Is BeamLE.id $ Se.In (map (.id.getId) heldEntries)]
+    auditBatchSettlementUpdates actorInfo StatusChanged heldEntries

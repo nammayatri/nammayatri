@@ -21,6 +21,9 @@ import qualified Lib.Finance.Storage.Beam.DirectTaxTransaction as BeamDTT
 import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamITT
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLE
 import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgReport
+import qualified Lib.Finance.Storage.Beam.RsfOrderState as BeamRsfOrderState
+import qualified Lib.Finance.Storage.Beam.RsfReconLedgerEntry as BeamRsfLedger
+import qualified Lib.Finance.Storage.Beam.RsfUtrState as BeamRsfUtrState
 import qualified Lib.Finance.Storage.Beam.SapJournalEntry as BeamSapJournal
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
@@ -129,7 +132,10 @@ atlasDB =
         financeLedgerEntry = BeamLE.ledgerEntryTable,
         pgPaymentSettlementReport = BeamPgReport.pgPaymentSettlementReportTable,
         sapJournalEntry = BeamSapJournal.sapJournalEntryTable,
-        depotManager = depotManagerTable
+        rsfReconLedgerEntry = BeamRsfLedger.rsfReconLedgerEntryTable,
+        depotManager = depotManagerTable,
+        rsfOrderState = BeamRsfOrderState.rsfOrderStateTable,
+        rsfUtrState = BeamRsfUtrState.rsfUtrStateTable
       }
 
 data AtlasDB f = AtlasDB
@@ -186,6 +192,9 @@ data AtlasDB f = AtlasDB
     financeLedgerEntry :: f (B.TableEntity BeamLE.LedgerEntryT),
     pgPaymentSettlementReport :: f (B.TableEntity BeamPgReport.PgPaymentSettlementReportT),
     sapJournalEntry :: f (B.TableEntity BeamSapJournal.SapJournalEntryT),
-    depotManager :: f (B.TableEntity DepotManagerT)
+    rsfReconLedgerEntry :: f (B.TableEntity BeamRsfLedger.RsfReconLedgerEntryT),
+    depotManager :: f (B.TableEntity DepotManagerT),
+    rsfOrderState :: f (B.TableEntity BeamRsfOrderState.RsfOrderStateT),
+    rsfUtrState :: f (B.TableEntity BeamRsfUtrState.RsfUtrStateT)
   }
   deriving (Generic, B.Database be)

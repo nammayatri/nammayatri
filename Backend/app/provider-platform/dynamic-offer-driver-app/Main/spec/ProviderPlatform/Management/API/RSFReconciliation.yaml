@@ -1,0 +1,262 @@
+imports:
+  RsfClaimStatus: Lib.Finance.Domain.Types.RsfReconLedgerEntry
+  Day: Data.Time
+
+module: RSFReconciliation
+
+apis:
+  # Orders whose latest receiver_recon claim falls on `date` (IST day), one row per order.
+  - GET: # OrderListAPI
+      endpoint: /rsf/orders
+      migrate:
+        capability: financeManagement.rsfOrders.list
+      auth: ApiAuthV2
+      query:
+        date: Day
+        limit: Int
+        offset: Int
+        bapId: Text
+      response:
+        type: OrderListRes
+
+  # The day's tiles: claimed / received / allocated / unallocated / awaiting bank / needs attention.
+  - GET: # DaySummaryAPI
+      endpoint: /rsf/summary
+      migrate:
+        capability: financeManagement.rsfSummary.read
+      auth: ApiAuthV2
+      query:
+        date: Day
+      response:
+        type: DaySummaryRes
+
+  # UTRs whose latest receiver_recon mention falls on `date` (IST day).
+  - GET: # UtrListAPI
+      endpoint: /rsf/utrs
+      migrate:
+        capability: financeManagement.rsfUtrs.list
+      auth: ApiAuthV2
+      query:
+        date: Day
+        limit: Int
+        offset: Int
+        bapId: Text
+      response:
+        type: UtrListRes
+
+  - GET: # UtrDetailAPI
+      endpoint: /rsf/utrs/{utr}
+      name: getRSFReconciliationRsfUtr
+      migrate:
+        capability: financeManagement.rsfUtrs.detail
+      auth: ApiAuthV2
+      params:
+        utr: Text
+      response:
+        type: UtrDetailRes
+
+  # Phase 3 (step 10): finance enters the bank figure for a UTR -- once, then final (it can't be adjusted).
+  # Verifies and locks only; allocation is a separate step (autoAllocation).
+  # Rejected (400 RSF_DAY_NOT_CLOSED) until the IST day the UTR is listed under (rsf/utrs?date) has ended.
+  - POST: # UtrBankVerifyAPI
+      endpoint: /rsf/utrs/{utr}/verify
+      name: postRSFReconciliationRsfUtrBankVerify
+      migrate:
+        capability: financeManagement.rsfUtrs.bankVerify
+      auth: ApiAuthV2
+      params:
+        utr: Text
+      request:
+        type: BankVerifyReq
+      response:
+        type: APISuccess
+
+  # Phase 3 (step 11): pooled allocation over the day's orders. Every UTR the day's
+  # claims mention must be verified first, else the call fails.
+  # Rejected (400 RSF_DAY_NOT_CLOSED) until the IST day `date` has ended.
+  - POST: # AutoAllocationAPI
+      endpoint: /rsf/autoAllocation
+      migrate:
+        capability: financeManagement.rsfAllocation.auto
+      auth: ApiAuthV2
+      query:
+        date: Day
+      response:
+        type: AutoAllocationRes
+
+  # Phase 3 (step 11a): ops sets an order's allocation on one UTR by hand.
+  - POST: # OrderManualConfirmAPI
+      endpoint: /rsf/orders/{orderId}/confirm
+      migrate:
+        capability: financeManagement.rsfOrders.confirm
+      auth: ApiAuthV2
+      params:
+        orderId: Text
+      request:
+        type: ManualConfirmReq
+      response:
+        type: APISuccess
+
+  # Phase 3 (step 11a, batch): set several (order, UTR) allocations at once. Every line is checked before anything
+  # is written: the net change per UTR must fit in what the bank left unallocated on it, so money can move between
+  # orders of one UTR in one call; a claim already answered to the collector is frozen. All lines or none are written.
+  - POST: # ManualAllocationAPI
+      endpoint: /rsf/allocations/manual
+      migrate:
+        capability: financeManagement.rsfOrders.confirm
+      auth: ApiAuthV2
+      request:
+        type: ManualAllocationReq
+      response:
+        type: APISuccess
+
+  # Phase 4: skips messages of the day already answered, then checks (gates 1-3) and sends each remaining
+  # one on its own: a message that fails a check or is NACKed is listed in messagesFailed with the reason,
+  # and the others are still sent.
+  # Rejected up front (400 RSF_DAY_NOT_CLOSED) until the IST day `date` has ended.
+  - POST: # SendForDateAPI
+      endpoint: /rsf/send
+      migrate:
+        capability: financeManagement.rsfSettlements.send
+      auth: ApiAuthV2
+      query:
+        date: Day
+      response:
+        type: SendForDateRes
+
+  # Rides completed on the platform on `date` (IST day) that no receiver_recon ever claimed.
+  - GET: # ReconUnmatchedAPI
+      endpoint: /rsf/recon/unmatched
+      migrate:
+        capability: financeManagement.rsfRecon.unmatched
+      auth: ApiAuthV2
+      query:
+        date: Day
+        limit: Int
+        offset: Int
+      response:
+        type: ReconGridListRes
+
+types:
+  # Live order-level verdict. REJECTED = the claim failed a Phase 2 check (see claimStatus);
+  # AWAITING = not judged yet, or no allocation has run for it.
+  OrderReconVerdict:
+    - enum: "AWAITING, PAID, UNDERPAID, OVERPAID, REJECTED"
+
+  DaySummaryRes:
+    - claimedByCollector: HighPrecMoney          # Σ payment.params.amount over the day's orders (latest claim)
+    - orderCount: Int
+    - utrCount: Int
+    - bankReceived: HighPrecMoney                # Σ receipt + adjustments over the day's verified UTRs
+    - utrsVerified: Int
+    - allocatedToOrders: HighPrecMoney           # Σ BANK_ALLOCATION to the day's orders
+    - unallocated: HighPrecMoney                 # Σ (received − allocated) over verified UTRs
+    - unallocatedUtrCount: Int                   # verified UTRs with money left
+    - awaitingBankFigure: HighPrecMoney          # Σ claimed on UTRs not yet verified
+    - unverifiedUtrCount: Int
+    - needsAttention: Int                        # distinct orders rejected, mismatched or not yet sent
+    - rejectedOrders: Int
+    - mismatchedOrders: Int                      # UNDERPAID / OVERPAID
+    - unsentOrders: Int                          # latest claim not yet answered
+
+  OrderListRes:
+    - totalItems: Int                             # total matching records for the filters, ignoring limit/offset
+    - orders: [OrderRow]
+
+  OrderRow:
+    - orderId: Text
+    - rideId: Maybe Text
+    - driverId: Maybe Text
+    - bapId: Text
+    - platformGrossFare: Maybe HighPrecMoney
+    - claimedTotalAmount: HighPrecMoney           # payment.params.amount of the latest claim
+    - receivedTotal: HighPrecMoney                # Σ BANK_ALLOCATION to this order
+    - orderVerdict: OrderReconVerdict
+    - orderDiff: HighPrecMoney
+    - claimStatus: Maybe RsfClaimStatus
+    - settlementUtrs: [Text]
+    - allocations: [OrderAllocation]
+    - anyManuallyConfirmed: Bool
+    - allSent: Bool                               # reported to the collector (frozen)
+    - receivedAt: UTCTime
+
+  OrderAllocation:
+    - utr: Text
+    - amount: HighPrecMoney
+
+  UtrListRes:
+    - totalItems: Int                             # total matching records for the filters, ignoring limit/offset
+    - utrs: [UtrSummary]
+
+  UtrSummary:
+    - utr: Text
+    - bapId: Text
+    - claimedTotalAmount: HighPrecMoney
+    - bankVerifiedAmount: Maybe HighPrecMoney     # Nothing until finance verifies
+    - allocatedAmount: HighPrecMoney
+    - unallocatedAmount: HighPrecMoney            # received − Σ allocated
+    - totalOrders: Int
+    - reportedStatus: Maybe Text                  # rsf_utr_state: 01..04 once reported
+    - createdAt: UTCTime
+
+  UtrDetailRes:
+    - utr: UtrSummary
+    - orders: [OrderRow]
+
+  # The ledger actor is the authenticated dashboard user, never a body field.
+  BankVerifyReq:
+    - bankVerifiedAmount: HighPrecMoney
+    - reason: Maybe Text
+
+  # confirmedAmount is what this order should hold from this UTR afterwards.
+  ManualConfirmReq:
+    - utr: Text
+    - reason: Maybe Text
+    - confirmedAmount: HighPrecMoney
+
+  # confirmedAmount is what the order should hold from the UTR afterwards; one optional reason for the whole batch.
+  ManualAllocationReq:
+    - reason: Maybe Text
+    - allocations: [ManualAllocationLine]
+
+  ManualAllocationLine:
+    - orderId: Text
+    - utr: Text
+    - confirmedAmount: HighPrecMoney
+
+  SendForDateRes:
+    - messagesSent: [Text]
+    - messagesAlreadySent: [Text]               # answered earlier; skipped this run
+    - messagesFailed: [SendFailure]             # not sent this run (a check failed or the collector NACKed); retried on the next send
+
+  SendFailure:
+    - messageId: Text
+    - reason: Text
+
+  AutoAllocationRes:
+    - ordersConsidered: Int
+    - ordersSettled: Int
+    - ordersPartiallyFunded: Int
+    - allocations: [AllocationLine]
+
+  AllocationLine:
+    - orderId: Text
+    - utr: Text
+    - amount: HighPrecMoney
+
+  ReconGridListRes:
+    - totalItems: Int                             # total matching records for the filters, ignoring limit/offset
+    - rows: [ReconGridRow]
+
+  ReconGridRow:
+    - rideId: Maybe Text
+    - orderId: Text
+    - buyerAppName: Text
+    - rideDateTime: Maybe UTCTime
+    - driverId: Maybe Text
+    - grossFarePlatform: Maybe HighPrecMoney
+    - payoutEligible: Bool
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE

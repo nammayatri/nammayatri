@@ -19,18 +19,19 @@ import qualified SharedLogic.Type
 import Tools.Beam.UtilsTH
 
 data RideT f = RideT
-  { backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    billingCategory :: B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory),
-    bookingId :: B.C f Kernel.Prelude.Text,
+  { backendAppVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    backendConfigVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    bapSettled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    billingCategory :: (B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory)),
+    bookingId :: (B.C f Kernel.Prelude.Text),
     cancellationAdditionalInfo :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    cancellationChargesOnCancel :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    cancellationCommission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    cancellationConsequenceRowIdIfCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    cancellationFaultRule :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    cancellationFaultVerdict :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    cancellationFeeIfCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    cancellationFeeTaxIfCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationChargesOnCancel :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    cancellationCommission :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    cancellationConsequenceRowIdIfCancelled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    cancellationFaultRule :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    cancellationFaultVerdict :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    cancellationFeeIfCancelled :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    cancellationFeeTaxIfCancelled :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     cancellationReasonCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     cancelledBy :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     chargeableDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
@@ -151,6 +152,6 @@ instance B.Table RideT where
 
 type Ride = RideT Identity
 
-$(enableKVPG ''RideT ['id] [['bookingId], ['driverGoHomeRequestId], ['driverId], ['fleetOwnerId], ['shortId]])
+$(enableKVPG (''RideT) [('id)] [[('bookingId)], [('driverGoHomeRequestId)], [('driverId)], [('fleetOwnerId)], [('shortId)]])
 
-$(mkTableInstances ''RideT "ride")
+$(mkTableInstances (''RideT) "ride")

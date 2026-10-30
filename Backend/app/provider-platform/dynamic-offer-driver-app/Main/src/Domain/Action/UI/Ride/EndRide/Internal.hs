@@ -92,9 +92,10 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, transfer, transferWithoutAttribution, transfer_)
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, transfer, transferPending, transferWithoutAttribution, transfer_)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
+import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
 import Lib.Scheduler.Environment (JobCreatorEnv)
@@ -130,6 +131,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
@@ -575,19 +577,24 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       (holdCounterparty, holdOwnerId) = case ride.fleetOwnerId of
         Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
         Nothing -> (counterpartyDriver, ride.driverId.getId)
+  let requireBapConfirm = fromMaybe False transporterConfig.driverWalletConfig.requireBapSettlementConfirmation
+      forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
+  -- one payment-method read, outside the wallet lock and only when the BAP check or the online check needs it
+  mbPaymentMethod <-
+    if requireBapConfirm || not forceOnline
+      then forM booking.paymentMethodId $ \paymentMethodId ->
+        CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+          >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+      else pure Nothing
+  let isCollectedByBap = maybe False ((== BAP) . (.collectedBy)) mbPaymentMethod
+  isExternalBap <- if requireBapConfirm && isCollectedByBap then not <$> CQVAN.isValueAddNP booking.bapId else pure False
+  let shouldSetBapPending = requireBapConfirm && isCollectedByBap && isExternalBap
+      initialSettlementStatus = if shouldSetBapPending then Just LE.EXTERNAL_PENDING else Nothing
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverOrFleetPersonId.getId) 10 10 $ do
     voidWalletHoldByReference holdCounterparty holdOwnerId booking.id.getId "Ride completed - replaced by actual deductions"
+
     isOnline <- do
-      let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
-      resolvedIsOnline <-
-        if forceOnline
-          then pure True
-          else do
-            mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
-              do
-                CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-                >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-            pure $ maybe False (isOnlinePaymentInstrument . (.paymentInstrument)) mbPaymentMethod
+      let resolvedIsOnline = forceOnline || maybe False (isOnlinePaymentInstrument . (.paymentInstrument)) mbPaymentMethod
       -- Persist the computed ledger write mode on the booking for reconciliation
       QRB.updateLedgerWriteMode booking.id (Just resolvedIsOnline)
       pure resolvedIsOnline
@@ -668,7 +675,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         mbFleetInfo
         (Just driverInfo)
         (taxAmount + absorbedVat)
-    ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
+    ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline initialSettlementStatus
     let tollWithVat = tollAmount + tollVatAmount
     let parkingWithVat = parkingAmount + parkingVatAmount
     let mbPaymentBearer =
@@ -832,7 +839,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       let postEarning (amt, ref) =
             if isOnline
               then do
-                transfer_ BuyerAsset BuyerExternal amt ref
+                if shouldSetBapPending
+                  then void $ transferPending BuyerAsset BuyerExternal amt ref
+                  else transfer_ BuyerAsset BuyerExternal amt ref
                 void $ transfer BuyerExternal OwnerLiability amt ref Nothing
               else void $ transfer BuyerControl OwnerControl amt ref Nothing
       if isVat
@@ -855,7 +864,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           --          cash   → driver remits cash-collected GST from wallet.
           if isOnline
             then do
-              transfer_ BuyerAsset BuyerExternal taxAmount taxRefOnline
+              if shouldSetBapPending
+                then void $ transferPending BuyerAsset BuyerExternal taxAmount taxRefOnline
+                else transfer_ BuyerAsset BuyerExternal taxAmount taxRefOnline
               void $ transfer BuyerExternal GovtIndirect taxAmount taxRefOnline Nothing
             else void $ transfer OwnerLiability GovtIndirect taxAmount taxRefCash Nothing
       -- TDS — driver wallet reduces in both modes (cash driver owes platform).
@@ -866,7 +877,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       -- BAP subsidy — BAP remits to BPP in both modes (2-leg pass-through); credits driver wallet.
       let discountsRef = if isOnline then walletReferenceDiscountsOnline else walletReferenceDiscountsCash
       when (customerDiscountAmount > 0) $ do
-        transfer_ BuyerAsset BuyerExternal customerDiscountAmount discountsRef
+        if shouldSetBapPending
+          then void $ transferPending BuyerAsset BuyerExternal customerDiscountAmount discountsRef
+          else transfer_ BuyerAsset BuyerExternal customerDiscountAmount discountsRef
         void $ transfer BuyerExternal OwnerLiability customerDiscountAmount discountsRef Nothing
       -- Tip — online: BuyerAsset → OwnerLiability (1 leg). Cash: Control.
       when (tipAmount > 0) $

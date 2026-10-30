@@ -1,0 +1,39 @@
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+
+# RSF receiver side: what we last told the collector about a UTR.
+# A row (reportedStatus NULL) is created the first time a receiver_recon mentions the UTR (Phase 2);
+# Phase 4 stamps reportedStatus after the collector ACKs. A set reportedStatus closes the UTR for stage C.
+# lastClaimedAt is bumped every time a receiver_recon names the UTR, so the dashboard lists it
+# under the IST day of its latest claim; createdAt stays the day it was first seen. Nullable only because
+# NammaDSL refuses new NOT NULL columns: the ddl migration backfills it and every writer sets it.
+RsfUtrState:
+  tableName: rsf_utr_state
+
+  fields:
+    merchantId: Text
+    utr: Text
+    bapId: Maybe Text
+    reportedStatus: Maybe Text
+    reportedDiff: Maybe HighPrecMoney
+    lastReportedMessageId: Maybe Text
+    lastReportedAt: Maybe UTCTime
+    lastClaimedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    merchantId: PrimaryKey
+    utr: PrimaryKey
+
+  sqlType:
+    reportedDiff: numeric(30,2)
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
