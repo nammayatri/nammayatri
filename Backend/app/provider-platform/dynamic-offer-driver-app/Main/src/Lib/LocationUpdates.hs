@@ -20,6 +20,8 @@ module Lib.LocationUpdates
     buildRidePickupInterpolationHandler,
     pickupLocationUpdatesDriverId,
     pickupSnapEntityIdSuffix,
+    editDestinationSnapEntityIdSuffix,
+    snapToRoadReqPoints,
   )
 where
 
@@ -306,7 +308,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
   return $
     mkRideInterpolationHandler
       (fromMaybe transportConfig.normalRideBulkLocUpdateBatchSize mbBatchSize) -- keeping batch size of 98 by default for bulk location updates to trigger snapToRoad
-      98
+      snapToRoadReqPoints
       isEndRide
       (\driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed -> QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed)
       (\driverId tollCharges tollNames tollIds -> void (QRide.updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds))
@@ -366,7 +368,7 @@ buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRid
   return $
     mkRideInterpolationHandler
       (fromMaybe transportConfig.normalRideBulkLocUpdateBatchSize mbBatchSize)
-      98
+      snapToRoadReqPoints
       isEndRide
       (\_driverId dist _googleSnapCalls _osrmSnapCalls _numberOfSelfTuned isDistCalcFailed -> whenJust rideId $ \rid -> QRide.updateDistanceToPickup rid dist isDistCalcFailed)
       (\_driverId _tollCharges _tollNames _tollIds -> pure ()) -- no toll accounting on the pickup leg
@@ -378,8 +380,14 @@ buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRid
       (\_driverId -> pure ())
       (\_driverId -> pure ())
 
+snapToRoadReqPoints :: Integer
+snapToRoadReqPoints = 98
+
 pickupSnapEntityIdSuffix :: Text
 pickupSnapEntityIdSuffix = ":pickup"
+
+editDestinationSnapEntityIdSuffix :: Text
+editDestinationSnapEntityIdSuffix = ":editDestination"
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m a -> m a
 whenWithLocationUpdatesLock driverId f = do

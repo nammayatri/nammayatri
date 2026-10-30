@@ -712,7 +712,7 @@ newtype RideRouteRes = RideRouteRes {actualRoute :: [ActualRoute]}
 instance Kernel.Types.HideSecrets.HideSecrets RideRouteRes where
   hideSecrets = Kernel.Prelude.identity
 
-data RideSnappedRouteRes = RideSnappedRouteRes {calls :: [SnapToRoadCall]}
+data RideSnappedRouteRes = RideSnappedRouteRes {batches :: [SnapBatch], distanceFailures :: [SnapDistanceFailure]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -742,15 +742,28 @@ data SetRideEvidenceVisibilityReq = SetRideEvidenceVisibilityReq {isHidden :: Ke
 instance Kernel.Types.HideSecrets.HideSecrets SetRideEvidenceVisibilityReq where
   hideSecrets = Kernel.Prelude.identity
 
-data SnapToRoadCall = SnapToRoadCall
-  { apiName :: Kernel.Prelude.Text,
-    provider :: Kernel.Prelude.Text,
-    calledAt :: Kernel.Prelude.UTCTime,
-    rideStatus :: Status,
-    distanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    inputPoints :: [Kernel.External.Maps.Types.LatLong],
-    snappedPoints :: [Kernel.External.Maps.Types.LatLong]
-  }
+data SnapAttempt = SnapAttempt {provider :: Kernel.Prelude.Text, reason :: SnapRejectReason, confidence :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SnapBatch = SnapBatch {rideStatus :: Status, calledAt :: Kernel.Prelude.UTCTime, inputPoints :: [Kernel.External.Maps.Types.LatLong], snapped :: Kernel.Prelude.Maybe SnappedResult}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SnapDistanceFailure = SnapDistanceFailure {rideStatus :: Status, calledAt :: Kernel.Prelude.UTCTime, attempts :: [SnapAttempt]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SnapRejectReason
+  = LOW_CONFIDENCE
+  | POINTS_TOO_FAR_APART
+  | END_TOO_FAR
+  | SPLIT_ROUTE
+  | CALL_FAILED
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SnappedResult = SnappedResult {provider :: Kernel.Prelude.Text, distanceMeters :: Kernel.Prelude.Int, snappedPoints :: [Kernel.External.Maps.Types.LatLong]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
