@@ -408,6 +408,9 @@ whenConfig predicate guardFlow = ask >>= \ctx -> when (predicate ctx.gcConfig) g
 blocksDriverOwnRc :: DTC.TransporterConfig -> Bool
 blocksDriverOwnRc transporterConfig = transporterConfig.blockDriverOwnRCForFleetDrivers == Just True
 
+allowsFleetToLinkIndividual :: DTC.TransporterConfig -> Bool
+allowsFleetToLinkIndividual transporterConfig = transporterConfig.allowFleetToLinkIndividualDriver == Just True
+
 -------------------------------------------------------------------------------
 -- The flow: verb, actor, target, guard -- every matching line runs, in order.
 -------------------------------------------------------------------------------
@@ -431,7 +434,7 @@ onboardingFlow = do
   check [LinkToFleet, LinkToOperator] AnyActor DriverTarget ensureNoActiveFleetAssociation -- no live fleet or operator association
   check Delete AnyActor DriverTarget driverDeletable -- driver strands no association
   check Delete AnyActor FleetTarget fleetDeletable -- fleet strands no association
-  check SetOnboardingAs FleetActor DriverTarget driverOnboardingSettableByFleet -- only an admin moves a self-employed driver
+  whenConfig (not . allowsFleetToLinkIndividual) $ check SetOnboardingAs FleetActor DriverTarget driverOnboardingSettableByFleet -- only an admin moves a self-employed driver
   whenConfig blocksDriverOwnRc $ do
     checkM LinkVehicle AnyActor RcTarget rcNotActiveWithAnotherDriver -- RC not driven by someone else
     checkM ActivateVehicle AnyActor RcTarget rcNotActiveWithAnotherDriver -- RC not driven by someone else
