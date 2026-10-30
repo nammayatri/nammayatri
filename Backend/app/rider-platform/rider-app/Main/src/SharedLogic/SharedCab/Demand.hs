@@ -5,10 +5,10 @@ module SharedLogic.SharedCab.Demand
     StopDemand (..),
     demandByStop,
     waitingRiders,
-    waitingOnRoute,
+    routeCounts,
+    routeDemand,
     demandAheadRows,
     searchingRiders,
-    searchingOnRoute,
     findingByRoute,
     tallyDemand,
   )
@@ -75,14 +75,20 @@ waitingRiders :: Int -> UTCTime -> [(UTCTime, Text)] -> [Text] -> Int
 waitingRiders findingTimeoutSec now bookings interested =
   Set.size (Set.fromList ([rider | (createdAt, rider) <- bookings, isRecentFinding findingTimeoutSec now createdAt] <> interested))
 
--- | Riders waiting on the route for a cab: the driver's pre-start route cards.
--- | The route's waiting riders among the city's FINDING bookings ('findingByRoute'), read once for the whole route list.
-waitingOnRoute :: (CacheFlow m r, MonadFlow m, Redis.HedisFlow m r, MonadCatch m) => Config.SharedCabTunables -> [DFRFSTicketBooking.FRFSTicketBooking] -> Text -> m Int
-waitingOnRoute cfg routeFinding routeCode = do
+-- | The driver's pre-start route card as (waiting, searching), each rider counted once: searching leaves out everyone already
+-- waiting, whether known by a FINDING booking or by interest (a rider who opened the stand and searched used to count twice).
+routeCounts :: Int -> UTCTime -> [(UTCTime, Text)] -> [Text] -> [Set.Set Text] -> (Int, Int)
+routeCounts findingTimeoutSec now bookings interested searchedPerStop = (Set.size waiting, searchingRiders searchedPerStop waiting)
+  where
+    waiting = Set.fromList ([rider | (createdAt, rider) <- bookings, isRecentFinding findingTimeoutSec now createdAt] <> interested)
+
+-- | 'routeCounts' for one route; its FINDING bookings come from 'findingByRoute', read once for the whole route list.
+routeDemand :: (CacheFlow m r, MonadFlow m, Redis.HedisFlow m r, MonadCatch m) => Config.SharedCabTunables -> Text -> [DFRFSTicketBooking.FRFSTicketBooking] -> Text -> [Text] -> m (Int, Int)
+routeDemand cfg cityId routeFinding routeCode stopCodes = do
   now <- getCurrentTime
-  let finding = [(b.createdAt, b.riderId.getId) | b <- routeFinding]
   interested <- fromMaybe [] <$> bestEffort (logError . ("shared-cab interest read failed: " <>)) (interestedRiders cfg routeCode)
-  pure (waitingRiders cfg.findingTimeoutSec now finding interested)
+  searched <- map snd <$> searchedAtStops cityId now stopCodes
+  pure (routeCounts cfg.findingTimeoutSec now [(b.createdAt, b.riderId.getId) | b <- routeFinding] interested searched)
 
 -- | The stops of the route that have anyone waiting or searching, in route order: the driver session's demandAhead.
 demandAheadRows :: [(Text, Text)] -> Map.Map Text StopDemand -> [SCS.DemandAtStop]
@@ -96,12 +102,6 @@ demandAheadRows stops demand =
 -- | Distinct riders who searched at any of the route's stops within the window and have no recent FINDING booking on it.
 searchingRiders :: [Set.Set Text] -> Set.Set Text -> Int
 searchingRiders searchedPerStop waiting = Set.size (Set.unions searchedPerStop `Set.difference` waiting)
-
-searchingOnRoute :: (CacheFlow m r, MonadFlow m) => Config.SharedCabTunables -> Text -> [DFRFSTicketBooking.FRFSTicketBooking] -> [Text] -> m Int
-searchingOnRoute cfg cityId routeFinding stopCodes = do
-  now <- getCurrentTime
-  searched <- map snd <$> searchedAtStops cityId now stopCodes
-  pure (searchingRiders searched (Set.fromList [b.riderId.getId | b <- routeFinding, isRecentFinding cfg.findingTimeoutSec now b.createdAt]))
 
 -- | The city's FINDING bookings by route: one query serves every route of the driver's route list.
 findingByRoute :: [DFRFSTicketBooking.FRFSTicketBooking] -> Map.Map Text [DFRFSTicketBooking.FRFSTicketBooking]
