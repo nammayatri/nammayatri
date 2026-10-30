@@ -1197,6 +1197,7 @@ library
       Tools.Metrics.SendSearchRequestToDriverMetrics
       Tools.Metrics.SendSearchRequestToDriverMetrics.Types
       Tools.Notifications
+      Tools.OcrProviderResponse
       Tools.OpenAPIInstances
       Tools.PartnerSdk
       Tools.Payment
