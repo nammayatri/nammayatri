@@ -57,7 +57,7 @@ data RideE e = Ride
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverMobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    driverMobileNumber :: Kernel.Prelude.Text,
+    driverMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverName :: Kernel.Prelude.Text,
     driverPhoneNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,

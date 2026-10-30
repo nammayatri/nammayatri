@@ -244,12 +244,12 @@ findAllRideItems ::
   Maybe Common.BookingStatus ->
   Maybe (ShortId Ride) ->
   Maybe DbHash ->
-  Maybe Text ->
+  Maybe DbHash ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   UTCTime ->
   m [RideItem]
-findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now =
+findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneHash mbFrom mbTo now =
   case mbRideShortId of
     Just rideShortId -> do
       ride' <- findOneWithKV [Se.Is BeamR.shortId $ Se.Eq $ getShortId rideShortId] >>= fromMaybeM (RideNotFound $ "for ride shortId: " <> rideShortId.getShortId)
@@ -259,13 +259,13 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
     Nothing -> do
       zippedRides <- case mbTo of
         Just toDate | roundToMidnightUTCToDate toDate >= now -> do
-          case (mbDriverPhone, mbCustomerPhoneDBHash) of
-            (Just driverPhone, _) -> do
+          case (mbDriverPhoneHash, mbCustomerPhoneDBHash) of
+            (Just driverPhoneHash, _) -> do
               rides <-
                 mkBookingStatusFilter
                   <$> findAllFromKvRedis
                     [ Se.And
-                        ( [Se.Is BeamR.driverMobileNumber $ Se.Eq driverPhone, Se.Is BeamR.merchantId $ Se.Eq $ Just $ getId merchantID]
+                        ( [Se.Is BeamR.driverNumberHash $ Se.Eq (Just driverPhoneHash), Se.Is BeamR.merchantId $ Se.Eq $ Just $ getId merchantID]
                             <> [Se.Is BeamR.status $ Se.Eq (castBookingStatusToRideStatus $ fromJust mbBookingStatus) | isJust mbBookingStatus]
                             <> [Se.Is BeamR.createdAt $ Se.GreaterThanOrEq (roundToMidnightUTC $ fromJust mbFrom) | isJust mbFrom]
                             <> [Se.Is BeamR.createdAt $ Se.LessThanOrEq (roundToMidnightUTCToDate $ fromJust mbTo) | isJust mbTo]
@@ -296,7 +296,7 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
                       booking.merchantId B.==?. B.val_ (getId merchantID)
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> person.mobileNumberHash B.==?. B.val_ (Just hash)) mbCustomerPhoneDBHash
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverMobileNumber -> ride.driverMobileNumber B.==?. B.val_ driverMobileNumber) mbDriverPhone
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverPhoneHash -> ride.driverNumberHash B.==?. B.val_ (Just driverPhoneHash)) mbDriverPhoneHash
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
@@ -544,23 +544,24 @@ updateEditPickupLocationAttempts rideId attempts = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-driverMobileNumberKey :: Text -> ByteString
-driverMobileNumberKey driverMobileNumber = TE.encodeUtf8 $ "Ride:DriverMobileNumber:" <> driverMobileNumber
+driverMobileNumberKey :: DbHash -> ByteString
+driverMobileNumberKey driverMobileNumberHash = TE.encodeUtf8 "Ride:DriverMobileNumber:" <> unDbHash driverMobileNumberHash
 
 extractRideIds :: KVDBAnswer [ByteString] -> [Text]
 extractRideIds (Right value) = TE.decodeUtf8 <$> value
 extractRideIds _ = []
 
-findLatestByDriverPhoneNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Ride)
+findLatestByDriverPhoneNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Text -> m (Maybe Ride)
 findLatestByDriverPhoneNumber driverMobileNumber = do
-  let lookupKey = driverMobileNumberKey driverMobileNumber
+  driverMobileNumberHash <- getDbHash driverMobileNumber
+  let lookupKey = driverMobileNumberKey driverMobileNumberHash
   rideIds_ <- L.runKVDB meshConfig.kvRedis $ L.smembers lookupKey
   let rideIds = extractRideIds rideIds_
-  logTagDebug "findLatestByDriverPhoneNumber" $ "RideIds for driverMobileNumber:-" <> driverMobileNumber <> ", KVDBAnswer:-" <> show rideIds_ <> ", decoded rideIds:-" <> show rideIds
+  logTagDebug "findLatestByDriverPhoneNumber" $ "KVDBAnswer:-" <> show rideIds_ <> ", decoded rideIds:-" <> show rideIds
   case rideIds of
     [] -> do
-      logTagError "findLatestByDriverPhoneNumber" $ "Redis Lookup Empty, RideIds for driverMobileNumber:-" <> driverMobileNumber <> ", KVDBAnswer:-" <> show rideIds_ <> ", decoded rideIds:-" <> show rideIds
-      findLatestActiveByDriverNumber driverMobileNumber
+      logTagError "findLatestByDriverPhoneNumber" $ "Redis Lookup Empty, KVDBAnswer:-" <> show rideIds_ <> ", decoded rideIds:-" <> show rideIds
+      findLatestActiveByDriverNumber driverMobileNumber driverMobileNumberHash
     _ -> findLatestActiveByRideIds rideIds
   where
     findLatestActiveByRideIds :: (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => [Text] -> m (Maybe Ride)
@@ -575,13 +576,16 @@ findLatestByDriverPhoneNumber driverMobileNumber = do
           (Just (Se.Desc BeamR.createdAt))
         <&> listToMaybe
 
-    findLatestActiveByDriverNumber :: (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Ride)
-    findLatestActiveByDriverNumber driverNum =
+    findLatestActiveByDriverNumber :: (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => Text -> DbHash -> m (Maybe Ride)
+    findLatestActiveByDriverNumber driverNum driverNumHash =
       do
         let limit = 1
         findAllWithOptionsKV
           [ Se.And
-              [ Se.Is BeamR.driverMobileNumber $ Se.Eq driverNum,
+              [ Se.Or
+                  [ Se.Is BeamR.driverNumberHash $ Se.Eq (Just driverNumHash),
+                    Se.Is BeamR.driverMobileNumber $ Se.Eq (Just driverNum)
+                  ],
                 Se.Is BeamR.status $ Se.Eq Ride.NEW
               ]
           ]
@@ -593,13 +597,14 @@ findLatestByDriverPhoneNumber driverMobileNumber = do
 appendByDriverPhoneNumber :: (MonadFlow m, Hedis.HedisFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
 appendByDriverPhoneNumber ride = do
   storeRidesTimeLimit <- asks (.storeRidesTimeLimit)
-  let lookupKey = driverMobileNumberKey ride.driverMobileNumber
-      rideId = [TE.encodeUtf8 $ getId ride.id]
-      expTime = toInteger storeRidesTimeLimit -- 60 minutes
-  void $
-    L.runKVDB meshConfig.kvRedis $ do
-      void $ L.sadd lookupKey rideId
-      L.expire lookupKey expTime
+  whenJust (ride.driverPhoneNumber <&> (.hash)) $ \driverNumberHash -> do
+    let lookupKey = driverMobileNumberKey driverNumberHash
+        rideId = [TE.encodeUtf8 $ getId ride.id]
+        expTime = toInteger storeRidesTimeLimit
+    void $
+      L.runKVDB meshConfig.kvRedis $ do
+        void $ L.sadd lookupKey rideId
+        L.expire lookupKey expTime
 
 updateshowDriversPreviousRideDropLoc :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Id Ride -> m ()
 updateshowDriversPreviousRideDropLoc showDriversPreviousRideDropLoc (Kernel.Types.Id.Id id) = do

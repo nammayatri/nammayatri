@@ -33,6 +33,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler
 import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Sos as SafetyDSos
+import SharedLogic.DriverNumber (getDriverMobileNumber)
 import SharedLogic.JobScheduler
 import SharedLogic.Person as SLP
 import Storage.Beam.Sos ()
@@ -100,8 +101,8 @@ createSafetyTicket person ride = do
           riderConfig.dashboardMediaFileUrlPattern
       mediaLinks = dashboardRideInfoUrl
   phoneNumber <- mapM decrypt person.mobileNumber
-  let rideInfo = buildRideInfo ride person phoneNumber
-      kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
+  rideInfo <- buildRideInfo ride person phoneNumber
+  let kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
   ticketResponse <- withTryCatch "createTicket:safetyCSAlert" (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber mediaLinks (Just rideInfo) SafetyDSos.CSAlertSosTicket riderConfig.kaptureConfig.disposition kaptureQueue))
   ticketId <- do
     case ticketResponse of
@@ -147,25 +148,27 @@ mkTicket person phoneNumber mediaLinks mbInfo flow disposition queue = do
       SafetyDSos.CustomerCare -> "Customer care called."
       _ -> "SOS activated"
 
-buildRideInfo :: DRide.Ride -> DP.Person -> Maybe Text -> Ticket.RideInfo
-buildRideInfo ride person phoneNumber =
-  Ticket.RideInfo
-    { rideShortId = ride.shortId.getShortId,
-      rideCity = show person.currentCity,
-      customerName = Just $ SLP.getName person,
-      customerPhoneNo = phoneNumber,
-      driverName = Just ride.driverName,
-      driverPhoneNo = Just ride.driverMobileNumber,
-      vehicleNo = ride.vehicleNumber,
-      vehicleCategory = Just $ show ride.vehicleVariant,
-      vehicleServiceTier = show <$> ride.vehicleServiceTierType,
-      status = show ride.status,
-      rideType = Nothing,
-      rideCreatedAt = ride.createdAt,
-      pickupLocation = castLocationAPIEntity ride.fromLocation,
-      dropLocation = castLocationAPIEntity <$> ride.toLocation,
-      fare = Nothing
-    }
+buildRideInfo :: EncFlow m r => DRide.Ride -> DP.Person -> Maybe Text -> m Ticket.RideInfo
+buildRideInfo ride person phoneNumber = do
+  driverPhoneNo <- getDriverMobileNumber ride
+  pure
+    Ticket.RideInfo
+      { rideShortId = ride.shortId.getShortId,
+        rideCity = show person.currentCity,
+        customerName = Just $ SLP.getName person,
+        customerPhoneNo = phoneNumber,
+        driverName = Just ride.driverName,
+        driverPhoneNo,
+        vehicleNo = ride.vehicleNumber,
+        vehicleCategory = Just $ show ride.vehicleVariant,
+        vehicleServiceTier = show <$> ride.vehicleServiceTierType,
+        status = show ride.status,
+        rideType = Nothing,
+        rideCreatedAt = ride.createdAt,
+        pickupLocation = castLocationAPIEntity ride.fromLocation,
+        dropLocation = castLocationAPIEntity <$> ride.toLocation,
+        fare = Nothing
+      }
   where
     castLocationAPIEntity ent =
       Ticket.Location
