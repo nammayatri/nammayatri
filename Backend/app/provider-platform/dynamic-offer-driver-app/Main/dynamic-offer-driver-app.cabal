@@ -84,7 +84,6 @@ library
       API.Internal.PersonCreate
       API.Internal.PickupInstruction
       API.Internal.PopulateTipAmount
-      API.Internal.ProdLoopStatus
       API.Internal.QuoteRespond
       API.Internal.RadarXyneWebhook
       API.Internal.RefundLedger
@@ -102,7 +101,6 @@ library
       API.Internal.SyncSearch
       API.Internal.TollChargeApproval
       API.Internal.TollList
-      API.Internal.TollUpsert
       API.Internal.VehicleServiceTierList
       API.Internal.VerifyEmailUpdate
       API.Internal.ViolationDetection
@@ -350,7 +348,6 @@ library
       Domain.Action.Internal.PickupInstruction
       Domain.Action.Internal.PopulateTipAmount
       Domain.Action.Internal.ProcessingChangeOnline
-      Domain.Action.Internal.ProdLoopStatus
       Domain.Action.Internal.QuoteRespond
       Domain.Action.Internal.RefundLedger
       Domain.Action.Internal.ReportACIssue
@@ -363,7 +360,6 @@ library
       Domain.Action.Internal.SendSMS
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
-      Domain.Action.Internal.TollUpsert
       Domain.Action.Internal.VehicleServiceTierList
       Domain.Action.Internal.VerifyEmailUpdate
       Domain.Action.Internal.ViolationDetection

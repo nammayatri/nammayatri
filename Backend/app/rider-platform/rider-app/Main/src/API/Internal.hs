@@ -14,7 +14,6 @@ import qualified API.Internal.Auth as Auth
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.DriverArrivalNotf as DriverArrivalNotf
 import qualified API.Internal.EKDLiveCallFeedback as EKDLiveCallFeedback
-import qualified API.Internal.FRFS as FRFS
 import qualified API.Internal.FrequentLocUser as FrequentLocUser
 import qualified API.Internal.GetPickupInstructions as GetPickupInstructions
 import qualified API.Internal.InMemManagement as InMemManagement
@@ -40,7 +39,6 @@ type API =
   "internal"
     :> ( Auth.API
            :<|> Rating.API
-           :<|> FRFS.API
            :<|> Cac.API
            :<|> StopEvents.API
            :<|> FrequentLocUser.API
@@ -74,7 +72,6 @@ handler :: FlowServer API
 handler =
   Auth.handler
     :<|> Rating.handler
-    :<|> FRFS.handler
     :<|> Cac.handler
     :<|> StopEvents.handler
     :<|> FrequentLocUser.handler
