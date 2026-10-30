@@ -433,7 +433,7 @@ data InspectionHubRejectDetails = InspectionHubRejectDetails {reason :: Kernel.P
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LDCApproveDetails = LDCApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
+data LDCApproveDetails = LDCApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double, ldcNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
