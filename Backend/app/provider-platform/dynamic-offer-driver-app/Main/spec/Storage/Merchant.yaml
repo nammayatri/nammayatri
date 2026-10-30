@@ -1665,6 +1665,7 @@ TransporterConfig:
     peerBapMerchantShortId: Maybe Text # BAP merchant whose FRFS bookings anna-checker ticket-verify validates against; no default since proxying to the wrong BAP would check another operator's tickets
     sharedCabDailyTripTarget: Maybe Int
     sharedCabTripEarningsTarget: Maybe HighPrecMoney
+    enableManualArrival: Maybe Bool # When True, the driver marks arrival in the app: LTS never auto-marks the driver as reached, scheduled-ride activation doesn't auto-arrive, and arrivedAtPickup skips the arrivedPickupThreshold distance check
 
   beamType:
     currency: Maybe Currency
@@ -2287,6 +2288,7 @@ TransporterConfig:
     forceDirectCalling: "false"
     showRoutePerRequest: "false"
     enableOndcScheduledRideSupport: "false"
+    enableManualArrival: "false"
   excludedDefaultQueries:
     - findByPrimaryKey
   queries:
