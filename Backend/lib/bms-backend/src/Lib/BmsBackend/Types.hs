@@ -12,7 +12,9 @@ data ReportEventReq = ReportEventReq
     alertType :: Text,
     busId :: Text,
     depotId :: Maybe Text,
-    description :: Maybe Text
+    description :: Maybe Text,
+    reportedByPersonId :: Maybe Text,
+    reportedByName :: Maybe Text
   }
   deriving (Generic, Show)
 
@@ -23,7 +25,9 @@ instance ToJSON ReportEventReq where
         "alert_type" .= alertType,
         "bus_id" .= busId,
         "depot_id" .= depotId,
-        "description" .= description
+        "description" .= description,
+        "reported_by_person_id" .= reportedByPersonId,
+        "reported_by_name" .= reportedByName
       ]
 
 instance FromJSON ReportEventReq where
@@ -34,3 +38,5 @@ instance FromJSON ReportEventReq where
       <*> o .: "bus_id"
       <*> o .:? "depot_id"
       <*> o .:? "description"
+      <*> o .:? "reported_by_person_id"
+      <*> o .:? "reported_by_name"
