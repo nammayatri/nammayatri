@@ -46,6 +46,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import SharedLogic.DriverNumber (getDriverMobileNumber)
 import SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -178,7 +179,7 @@ buildDBIssue (Id customerId) SendIssueReq {..} merchantId = do
         merchantId = Just merchantId
       }
 
-mkTicket :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DIssue.Issue -> Person.Person -> Maybe Text -> Text -> Text -> Maybe Text -> m Ticket.CreateTicketReq
+mkTicket :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EncFlow m r) => DIssue.Issue -> Person.Person -> Maybe Text -> Text -> Text -> Maybe Text -> m Ticket.CreateTicketReq
 mkTicket issue person phoneNumber disposition queue deleteAccountCategory = do
   rideDesc <- mkRideInfo Nothing person Nothing
   pure $
@@ -204,9 +205,10 @@ mkTicket issue person phoneNumber disposition queue deleteAccountCategory = do
         xyneBotLabel = Nothing
       }
 
-mkRideInfo :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Ride.Ride -> Person.Person -> Maybe Text -> m Ticket.RideInfo
+mkRideInfo :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EncFlow m r) => Maybe Ride.Ride -> Person.Person -> Maybe Text -> m Ticket.RideInfo
 mkRideInfo mbRide person mbPhoneNumber = do
   now <- getCurrentTime
+  mbDriverPhoneNo <- join <$> mapM getDriverMobileNumber mbRide
   pure $
     Ticket.RideInfo
       { rideShortId = maybe "" (.shortId.getShortId) mbRide,
@@ -214,7 +216,7 @@ mkRideInfo mbRide person mbPhoneNumber = do
         customerName = Just $ SLP.getName person,
         customerPhoneNo = mbPhoneNumber,
         driverName = (.driverName) <$> mbRide,
-        driverPhoneNo = (.driverMobileNumber) <$> mbRide,
+        driverPhoneNo = mbDriverPhoneNo,
         vehicleNo = maybe "" (.vehicleNumber) mbRide,
         vehicleCategory = show . (.vehicleVariant) <$> mbRide,
         vehicleServiceTier = show . (.vehicleServiceTierType) <$> mbRide,

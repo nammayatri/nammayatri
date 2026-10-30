@@ -60,7 +60,7 @@ data RideData = RideData
     driverArrivalTime :: Maybe UTCTime,
     driverImage :: Maybe Text,
     driverMobileCountryCode :: Maybe Text,
-    driverMobileNumber :: Text,
+    driverMobileNumber :: Maybe Text,
     driverName :: Text,
     driverRating :: Maybe Centesimal,
     driverRegisteredAt :: Maybe UTCTime,

@@ -14,6 +14,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import SharedLogic.DriverNumber (getDriverMobileNumber)
 import Storage.ConfigPilot.Config.InsuranceConfig (InsuranceConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Insurance as QInsurance
@@ -30,6 +31,7 @@ createInsurance ride = do
     person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist $ "RiderId:-" <> booking.riderId.getId)
     let personName = (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.lastName)
     personPhone <- mapM decrypt person.mobileNumber >>= fromMaybeM (InternalError "Person phone not found")
+    driverPhone <- getDriverMobileNumber ride >>= fromMaybeM (RideFieldNotPresent "driverMobileNumber")
     let vehicleCategory = DV.castServiceTierToVehicleCategory booking.vehicleServiceTierType
     insuranceConfig <-
       ( maybeM
@@ -73,7 +75,7 @@ createInsurance ride = do
                                   { insured =
                                       Insurance.Insured
                                         { name = ride.driverName,
-                                          phone = ride.driverMobileNumber
+                                          phone = driverPhone
                                         }
                                   }
                               ],
@@ -119,6 +121,7 @@ vehicleCategoryToInsuranceMode = \case
 createInsuranceEntry :: (MonadFlow m, MonadReader r m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DRide.Ride -> DBooking.Booking -> Text -> Text -> (Text, Text) -> (Maybe Text, Maybe Text) -> Insurance.InsuranceResponse -> m ()
 createInsuranceEntry ride booking partnerId plan (personName, personPhone) (insuredAmount, driverInsuredAmount) insuranceResponse = do
   now <- getCurrentTime
+  mbDriverPhone <- getDriverMobileNumber ride
   let insurance =
         DI.Insurance
           { id = Id.Id ride.id.getId,
@@ -136,7 +139,7 @@ createInsuranceEntry ride booking partnerId plan (personName, personPhone) (insu
             customerName = personName,
             customerPhone = personPhone,
             driverName = Just ride.driverName,
-            driverPhone = Just ride.driverMobileNumber,
+            driverPhone = mbDriverPhone,
             insuredAmount = insuredAmount,
             driverInsuredAmount = driverInsuredAmount,
             fairBreakup = Nothing,
