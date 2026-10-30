@@ -33,8 +33,18 @@ import Kernel.Utils.GenericPretty
 import Servant
 import qualified Text.Show
 
-data MultimodalTravelMode = Metro | Bus | Walk | Taxi | Subway
+data MultimodalTravelMode = Metro | Bus | Walk | Taxi | Subway | SharedCab
   deriving (Generic, FromJSON, ToJSON, Read, ToSchema, Show, Eq, Ord)
+
+-- Modes booked through the FRFS rails (search, quote, confirm, payment, tickets).
+isFrfsTransitMode :: MultimodalTravelMode -> Bool
+isFrfsTransitMode = \case
+  Metro -> True
+  Bus -> True
+  Subway -> True
+  SharedCab -> True
+  Walk -> False
+  Taxi -> False
 
 data TripCategory
   = OneWay OneWayMode
