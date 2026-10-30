@@ -283,6 +283,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.enableGoOnlinePolicyBlocker enableGoOnlinePolicyBlocker,
       Se.Set Beam.enableGpsTollBehavior (Just enableGpsTollBehavior),
       Se.Set Beam.enableLegalComplianceDocuments enableLegalComplianceDocuments,
+      Se.Set Beam.enableManualArrival enableManualArrival,
       Se.Set Beam.enableMobileNumberValidation enableMobileNumberValidation,
       Se.Set Beam.enableMobilityBilling enableMobilityBilling,
       Se.Set Beam.enableOndcScheduledRideSupport enableOndcScheduledRideSupport,

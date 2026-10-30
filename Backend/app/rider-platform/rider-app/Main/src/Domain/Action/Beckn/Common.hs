@@ -90,6 +90,8 @@ import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.IncentiveJourney as IJ
+import qualified Lib.JourneyModule.State.Types as JMState
+import qualified Lib.JourneyModule.State.Utils as JMState
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
@@ -2184,6 +2186,14 @@ updateAndNotifyDriverArrivalStatus booking ride newStatus =
     let isHigherStatus = maybe True (newStatus >) freshRide.driverArrivalStatus
     when (freshRide.status /= DRide.INPROGRESS && isHigherStatus) $ do
       void $ QRide.updateDriverArrivalStatus (Just newStatus) ride.id
+      -- Both LTS's automatic arrival and the BPP's arrival on_update land here, so the multimodal leg follows either.
+      now <- getCurrentTime
+      mbJourneyLeg <- QJL.findByLegSearchId (Just booking.transactionId)
+      let trackingStatus = case newStatus of
+            DRide.DRIVER_ON_THE_WAY -> JMState.Arriving
+            DRide.DRIVER_REACHING -> JMState.AlmostArrived
+            DRide.DRIVER_REACHED -> JMState.Arrived
+      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing trackingStatus now
       case newStatus of
         DRide.DRIVER_ON_THE_WAY -> Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory ride
         DRide.DRIVER_REACHING -> Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride

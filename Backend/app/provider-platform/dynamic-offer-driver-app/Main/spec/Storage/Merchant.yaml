@@ -1618,6 +1618,7 @@ TransporterConfig:
     enableGoOnlinePolicyBlocker: Maybe Bool
     driverImagePresignedUrlExpiry: Maybe Seconds # Expiry of the pre-signed S3 URL of the driver image shared with non value-add BAPs. Nothing = 3600 seconds
     peerBapMerchantShortId: Maybe Text # BAP merchant whose FRFS bookings anna-checker ticket-verify validates against; no default since proxying to the wrong BAP would check another operator's tickets
+    enableManualArrival: Maybe Bool # When True, the driver marks arrival in the app: LTS never auto-marks the driver as reached, scheduled-ride activation doesn't auto-arrive, and arrivedAtPickup skips the arrivedPickupThreshold distance check
 
   beamType:
     currency: Maybe Currency
@@ -2224,6 +2225,7 @@ TransporterConfig:
     forceDirectCalling: "false"
     showRoutePerRequest: "false"
     enableOndcScheduledRideSupport: "false"
+    enableManualArrival: "false"
   excludedDefaultQueries:
     - findByPrimaryKey
   queries:

@@ -61,7 +61,8 @@ startRideTransaction ::
 startRideTransaction driverId ride bookingId firstPoint merchantId odometer transporterConfig driverInfo = do
   triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
   minDistanceBetweenTwoPoints <- bool (pure Nothing) (Just <$> asks (.minDistanceBetweenTwoPoints)) (ride.tripCategory == DTC.OneWay DTC.MeterRide)
-  void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon merchantId driverId (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = firstPoint, minDistanceBetweenTwoPoints = minDistanceBetweenTwoPoints, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) ride.stops}))
+  -- LTS doesn't reset its pickup notification status at start, so without the flag it would report DRIVER_REACHED at the start point.
+  void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon merchantId driverId (Just (LT.Car $ LT.CarRideInfo {pickupLocation = firstPoint, minDistanceBetweenTwoPoints = minDistanceBetweenTwoPoints, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) ride.stops, isManualArrival = transporterConfig.enableManualArrival}))
   QRide.updateStartTimeAndLoc ride.id firstPoint
   whenJust odometer $ \odometerReading -> QRide.updateStartOdometerReading ride.id odometerReading
   logTagInfo "startRide" ("Updating driver_flow_status to ON_RIDE for DriverId " <> getId driverId)

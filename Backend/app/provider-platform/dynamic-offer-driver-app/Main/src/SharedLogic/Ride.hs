@@ -235,7 +235,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   -- reallocated before start would otherwise leave waypoints and a cumulative distance
   -- behind for the keys' TTL, and this ride's distanceToPickup would include them.
   LocUpd.resetPickupLegState ride.driverId
-  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
+  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops, isManualArrival = transporterConfig.enableManualArrival}))
   -- Monitoring is opted in by the caller: remote-driver assignments (Beckn confirm) monitor;
   -- OTP/meter rides (customer is already with the driver) and scheduled-booking accepts don't.
   when (monitorPickupProgress && not booking.isScheduled) $
