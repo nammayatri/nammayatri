@@ -57,6 +57,7 @@ import qualified "lib-dashboard" Domain.Types.Merchant as DDashboardMerchant
 import qualified "lib-dashboard" Domain.Types.Person as DDashboardPerson
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
 import qualified "lib-dashboard" Domain.Types.ServerName as DSN
+import Environment (Flow)
 import Kernel.Beam.Functions (runInDashboardDb)
 import Kernel.External.Encryption (EncryptedHashed, decrypt, encrypt)
 import Kernel.Prelude
@@ -68,11 +69,15 @@ import Kernel.Types.Id (Id (..), ShortId (..))
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import "lib-dashboard" Storage.Beam.BeamFlow (BeamFlow)
 import "lib-dashboard" Storage.Beam.SchemaInstances ()
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified "lib-dashboard" Storage.Queries.AuditTransaction as QAudit
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified "lib-dashboard" Storage.Queries.Merchant as QDashboardMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QDashboardAccess
+import qualified Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.Queries.Person as QDashboardPerson
 import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QDashboardRegistrationToken
 import qualified "lib-dashboard" Storage.Queries.Role as QDashboardRole
@@ -208,14 +213,20 @@ requestorIsFleetOwner dashboardUser = DDashboardPerson.isFleetOwner dashboardUse
 -- | Refuse an unverified fleet owner.
 --
 -- provider-dashboard ran this guard (@Domain.Action.ProviderPlatform.CheckVerification@)
--- before forwarding the fleet write endpoints. Both the role and the verified
--- flag live in the dashboard database, so the check has to happen here rather
--- than in driver-app's own domain layer.
-checkFleetOwnerVerification :: DashboardAuthFlow m r => DashboardUser -> m ()
+-- before forwarding the fleet write endpoints. Where the unified onboarding recompute
+-- keeps fleet_owner_information current, its verified flag decides; elsewhere the dashboard copy does.
+checkFleetOwnerVerification :: DashboardUser -> Flow ()
 checkFleetOwnerVerification dashboardUser = do
   isFleetOwner <- requestorFleetFlag dashboardUser
-  when (isFleetOwner && dashboardUser.person.verified == Just False) $
-    throwError (InvalidRequest "Fleet owner is not verified")
+  when isFleetOwner $ do
+    let fleetOwnerId = dashboardRequestorId dashboardUser
+    mbFleetOwner <- QP.findById (Id fleetOwnerId)
+    mbTransporterConfig <- maybe (pure Nothing) (\fleetOwner -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetOwner.merchantOperatingCityId.getId}) Nothing) mbFleetOwner
+    verified <-
+      if (mbTransporterConfig >>= (.unifiedOnboardingFlagsRecompute)) == Just True
+        then maybe False (.verified) <$> QFOI.findByPrimaryKey (Id fleetOwnerId)
+        else pure (dashboardUser.person.verified /= Just False)
+    unless verified $ throwError (InvalidRequest "Fleet owner is not verified")
 
 -- | The alert topic the calling operator subscribes to.
 --
