@@ -1193,13 +1193,27 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
         if isScheduledForSearch tConf now dsReq
           then (dsReq.pickupTime, True)
           else (now, False)
+      tripCategories = getTripCategories tConf dsReq isScheduled isInterCity isCrossCity destinationTravelCityName
+  TripOption {..}
+
+getTripCategories :: DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Bool -> Maybe Text -> [TripCategory]
+getTripCategories tConf dsReq isScheduled isInterCity isCrossCity destinationTravelCityName = do
+  let mbMinInterCityDistance = tConf.tripConfig >>= (.interCity) >>= (.minDistance)
+      belowInterCityDistanceThreshold = case (mbMinInterCityDistance, dsReq.routeDistance) of
+        (Just minDistance, Just routeDistance) -> routeDistance < minDistance
+        _ -> False
+      shouldFallbackToOneWay = belowInterCityDistanceThreshold && not dsReq.roundTrip
+      -- Cross-city rentals and round trips retain their dedicated products.
+      shouldUseInterCity = isInterCity && (dsReq.riderPreferredOption == DRPO.Rental || not shouldFallbackToOneWay)
+      oneWayBundle =
+        if isScheduled
+          then [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer]
+          else [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer]
       -- Local (non-intercity) bundle, scoped to what the rider actually asked for.
       -- Cuts wasted DB/ML work for categories the rider didn't pick.
       localBundleForPreference = case dsReq.riderPreferredOption of
-        DRPO.OneWay ->
-          if isScheduled
-            then [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer]
-            else [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer]
+        DRPO.OneWay -> oneWayBundle
+        DRPO.InterCity | shouldFallbackToOneWay -> [OneWay OneWayOnDemandStaticOffer]
         DRPO.Rental ->
           [Rental OnDemandStaticOffer, Rental RideOtp]
         DRPO.Ambulance ->
@@ -1218,10 +1232,10 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
             case dsReq.dropLocation of
               Just _ -> case dsReq.riderPreferredOption of
                 DRPO.Rental
-                  | isInterCity ->
+                  | shouldUseInterCity ->
                     [IntercityRental OnDemandStaticOffer destinationTravelCityName, IntercityRental RideOtp destinationTravelCityName]
                 _ ->
-                  if isInterCity
+                  if shouldUseInterCity
                     then
                       if isCrossCity
                         then
