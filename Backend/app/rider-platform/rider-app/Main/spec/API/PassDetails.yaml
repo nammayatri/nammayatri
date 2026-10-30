@@ -50,17 +50,22 @@ types:
     year: Maybe Text
     idCardPicture: "Maybe (Id MediaFile)"
     routePairs: "[RoutePair]"
-    selfImage: Id MediaFile
+    selfImage: "Maybe (Id MediaFile)"
     gender: Gender
     pincode: Maybe Text
-    passOrganizationId: Id PassOrganization
-    passOrganizationName: Text
+    passOrganizationId: "Maybe (Id PassOrganization)"
+    passOrganizationName: Maybe Text
     registerNo: Maybe Text
     academicYearStart: Maybe Day
     academicYearEnd: Maybe Day
     verificationStatus: VerificationStatus
     validTill: UTCTime
     remark: Maybe Text
+    umisId: Maybe Text
+    studentStatus: Maybe Text
+    academicYearOfJoining: Maybe Text
+    umisMobileNumber: Maybe Text
+    applicableRouteIds: "Maybe [Text]"
 
 
   PassStatusResp:
@@ -79,6 +84,21 @@ types:
   UploadDocumentResp:
     - recordType: NewType
     - documentId: Id MediaFile
+
+  UmisVerifyReq:
+    umisId: Text
+
+  UmisVerifyResp:
+    umisMobileNumber: Text
+
+  UmisOtpVerifyReq:
+    otp: Text
+
+  RouteDetailsUpdateReq:
+    routeDetails: "[RouteDetails]"
+
+  RouteDetailsUpdateResp:
+    applicableRouteIds: "[Text]"
 
 apis:
   - GET:
@@ -103,7 +123,7 @@ apis:
       params:
         passEnum: Text
       response:
-        type: PassDetailsDataResp
+        type: (Maybe PassDetailsDataResp)
   - GET:
       endpoint: /passDetails/{passEnum}/verificationStatus
       auth: TokenAuth
@@ -125,3 +145,37 @@ apis:
         documentId: Id MediaFile
       response:
         type: Text
+  - POST:
+      endpoint: /passDetails/{passEnum}/verifyWithUmis
+      auth: TokenAuth
+      params:
+        passEnum: Text
+      request:
+        type: UmisVerifyReq
+      response:
+        type: UmisVerifyResp
+  - POST:
+      endpoint: /passDetails/{passEnum}/routeDetail/update
+      auth: TokenAuth
+      params:
+        passEnum: Text
+      request:
+        type: RouteDetailsUpdateReq
+      response:
+        type: RouteDetailsUpdateResp
+  - POST:
+      endpoint: /passDetails/{passEnum}/resendUmisOtp
+      auth: TokenAuth
+      params:
+        passEnum: Text
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /passDetails/{passEnum}/verifyUmisOtp
+      auth: TokenAuth
+      params:
+        passEnum: Text
+      request:
+        type: UmisOtpVerifyReq
+      response:
+        type: APISuccess

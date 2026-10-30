@@ -43,3 +43,21 @@ CREATE INDEX CONCURRENTLY pass_details_idx_reference_number ON atlas_app.pass_de
 
 ALTER TABLE atlas_app.pass_details ALTER COLUMN self_image TYPE character varying(36);
 ALTER TABLE atlas_app.pass_details ALTER COLUMN id_card_picture TYPE character varying(36);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass_details ALTER COLUMN self_image SET DEFAULT NULL;
+ALTER TABLE atlas_app.pass_details ALTER COLUMN self_image DROP NOT NULL;
+ALTER TABLE atlas_app.pass_details ALTER COLUMN pass_organization_id SET DEFAULT NULL;
+ALTER TABLE atlas_app.pass_details ALTER COLUMN pass_organization_id DROP NOT NULL;
+ALTER TABLE atlas_app.pass_details ADD COLUMN umis_id text ;
+ALTER TABLE atlas_app.pass_details ADD COLUMN student_status text ;
+ALTER TABLE atlas_app.pass_details ADD COLUMN academic_year_of_joining text ;
+CREATE INDEX CONCURRENTLY pass_details_idx_umis_id ON atlas_app.pass_details USING btree (umis_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass_details ADD COLUMN umis_verified_mobile_number_hash bytea ;
+ALTER TABLE atlas_app.pass_details ADD COLUMN umis_verified_mobile_number_encrypted character varying(255) ;

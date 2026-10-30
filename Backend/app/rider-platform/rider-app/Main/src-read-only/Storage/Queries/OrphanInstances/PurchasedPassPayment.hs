@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.PurchasedPassPayment where
 
+import qualified Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.PurchasedPassPayment
 import Kernel.Beam.Functions
@@ -23,6 +24,7 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
         Domain.Types.PurchasedPassPayment.PurchasedPassPayment
           { activatedAt = activatedAt,
             amount = amount,
+            applicableRouteIds = applicableRouteIds,
             availableTripCount = availableTripCount,
             benefitDescription = Kernel.Prelude.fromMaybe "" benefitDescription,
             benefitType = benefitType,
@@ -43,6 +45,7 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
             personId = Kernel.Types.Id.Id personId,
             profilePicture = profilePicture,
             purchasedPassId = Kernel.Types.Id.Id purchasedPassId,
+            routePairs = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< routePairs,
             startDate = startDate,
             status = status,
             createdAt = createdAt,
@@ -54,6 +57,7 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
     Beam.PurchasedPassPaymentT
       { Beam.activatedAt = activatedAt,
         Beam.amount = amount,
+        Beam.applicableRouteIds = applicableRouteIds,
         Beam.availableTripCount = availableTripCount,
         Beam.benefitDescription = Kernel.Prelude.Just benefitDescription,
         Beam.benefitType = benefitType,
@@ -74,6 +78,7 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.profilePicture = profilePicture,
         Beam.purchasedPassId = Kernel.Types.Id.getId purchasedPassId,
+        Beam.routePairs = Kernel.Prelude.toJSON <$> routePairs,
         Beam.startDate = startDate,
         Beam.status = status,
         Beam.createdAt = createdAt,

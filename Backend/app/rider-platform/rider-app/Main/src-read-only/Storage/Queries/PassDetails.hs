@@ -48,11 +48,11 @@ findAllByMerchantIdAndMerchantOperatingCityId limit offset merchantId merchantOp
 
 findAllByPassOrganizationIdAndVerificationStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> [Domain.Types.PassDetails.VerificationStatus] -> m [Domain.Types.PassDetails.PassDetails])
+  (Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> [Domain.Types.PassDetails.VerificationStatus] -> m [Domain.Types.PassDetails.PassDetails])
 findAllByPassOrganizationIdAndVerificationStatus limit offset passOrganizationId verificationStatus = do
   findAllWithOptionsKV
     [ Se.And
-        [ Se.Is Beam.passOrganizationId $ Se.Eq (Kernel.Types.Id.getId passOrganizationId),
+        [ Se.Is Beam.passOrganizationId $ Se.Eq (Kernel.Types.Id.getId <$> passOrganizationId),
           Se.Is Beam.verificationStatus $ Se.In verificationStatus
         ]
     ]
@@ -60,20 +60,8 @@ findAllByPassOrganizationIdAndVerificationStatus limit offset passOrganizationId
     limit
     offset
 
-findAllByPassOrganizationIdsAndVerificationStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> [Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization] -> [Domain.Types.PassDetails.VerificationStatus] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.PassDetails.PassDetails])
-findAllByPassOrganizationIdsAndVerificationStatus limit offset passOrganizationId verificationStatus merchantOperatingCityId = do
-  findAllWithOptionsKV
-    [ Se.And
-        [ Se.Is Beam.passOrganizationId $ Se.In (Kernel.Types.Id.getId <$> passOrganizationId),
-          Se.Is Beam.verificationStatus $ Se.In verificationStatus,
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
-        ]
-    ]
-    (Se.Asc Beam.updatedAt)
-    limit
-    offset
+findAllByUmisId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.PassDetails.PassDetails])
+findAllByUmisId umisId = do findAllWithKV [Se.Is Beam.umisId $ Se.Eq umisId]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails -> m (Maybe Domain.Types.PassDetails.PassDetails))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -81,14 +69,17 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.PassType.PassEnum -> m (Maybe Domain.Types.PassDetails.PassDetails))
 findByPersonId personId passEnum = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.passEnum $ Se.Eq passEnum]]
 
+findByUmisId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.PassDetails.PassDetails))
+findByUmisId umisId = do findOneWithKV [Se.Is Beam.umisId $ Se.Eq umisId]
+
 updatePassDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> Kernel.Prelude.Maybe Domain.Types.PassDetails.PassDetailAddress -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> [Domain.Types.PassDetails.RoutePair] -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Domain.Types.PassDetails.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.PassType.PassEnum -> m ())
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> Kernel.Prelude.Maybe Domain.Types.PassDetails.PassDetailAddress -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> [Domain.Types.PassDetails.RoutePair] -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Domain.Types.PassDetails.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.PassType.PassEnum -> m ())
 updatePassDetails name passOrganizationId idCardPicture address age guardianName department year routePairs academicYearStart academicYearEnd verificationStatus numberOfStages applicableRouteIds personId passEnum = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.name name,
-      Se.Set Beam.passOrganizationId (Kernel.Types.Id.getId passOrganizationId),
+      Se.Set Beam.passOrganizationId (Kernel.Types.Id.getId <$> passOrganizationId),
       Se.Set Beam.idCardPicture (Kernel.Types.Id.getId <$> idCardPicture),
       Se.Set Beam.address (Kernel.Prelude.toJSON <$> address),
       Se.Set Beam.age age,
@@ -108,6 +99,20 @@ updatePassDetails name passOrganizationId idCardPicture address age guardianName
           Se.Is Beam.passEnum $ Se.Eq passEnum
         ]
     ]
+
+updateRouteDetails ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Domain.Types.PassDetails.RoutePair] -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Domain.Types.PassDetails.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails -> m ())
+updateRouteDetails routePairs applicableRouteIds numberOfStages verificationStatus id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.routePairs (Just (Kernel.Prelude.toJSON routePairs)),
+      Se.Set Beam.applicableRouteIds applicableRouteIds,
+      Se.Set Beam.numberOfStages numberOfStages,
+      Se.Set Beam.verificationStatus verificationStatus,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateVerificationStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -135,6 +140,7 @@ updateByPrimaryKey (Domain.Types.PassDetails.PassDetails {..}) = do
     [ Se.Set Beam.aadharNoEncrypted (aadharNo <&> unEncrypted . (.encrypted)),
       Se.Set Beam.aadharNoHash (aadharNo <&> (.hash)),
       Se.Set Beam.academicYearEnd academicYearEnd,
+      Se.Set Beam.academicYearOfJoining academicYearOfJoining,
       Se.Set Beam.academicYearStart academicYearStart,
       Se.Set Beam.address (Kernel.Prelude.toJSON <$> address),
       Se.Set Beam.age age,
@@ -150,14 +156,18 @@ updateByPrimaryKey (Domain.Types.PassDetails.PassDetails {..}) = do
       Se.Set Beam.name name,
       Se.Set Beam.numberOfStages numberOfStages,
       Se.Set Beam.passEnum passEnum,
-      Se.Set Beam.passOrganizationId (Kernel.Types.Id.getId passOrganizationId),
+      Se.Set Beam.passOrganizationId (Kernel.Types.Id.getId <$> passOrganizationId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.pincode pincode,
       Se.Set Beam.referenceNumber referenceNumber,
       Se.Set Beam.registerNo registerNo,
       Se.Set Beam.remark remark,
       Se.Set Beam.routePairs (Just (Kernel.Prelude.toJSON routePairs)),
-      Se.Set Beam.selfImage (Kernel.Types.Id.getId selfImage),
+      Se.Set Beam.selfImage (Kernel.Types.Id.getId <$> selfImage),
+      Se.Set Beam.studentStatus studentStatus,
+      Se.Set Beam.umisId umisId,
+      Se.Set Beam.umisVerifiedMobileNumberEncrypted (umisVerifiedMobileNumber <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.umisVerifiedMobileNumberHash (umisVerifiedMobileNumber <&> (.hash)),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validTill validTill,
       Se.Set Beam.verificationStatus verificationStatus,

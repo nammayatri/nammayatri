@@ -69,3 +69,9 @@ ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN pass_photo_change_count 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN activated_at timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN route_pairs jsonb ;
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN applicable_route_ids text[] ;

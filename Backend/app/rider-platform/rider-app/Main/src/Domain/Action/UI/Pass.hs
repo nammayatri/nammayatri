@@ -210,6 +210,13 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
 
   unless pass.enable $ throwError (InvalidRequest "Pass is not enabled")
 
+  --for student pass type only payment ready status will be allowed to purchase pass..
+  passType <- B.runInReplica $ QPassType.findById pass.passTypeId >>= fromMaybeM (PassTypeNotFound pass.passTypeId.getId)
+  when (passType.passEnum == Just DPassType.StudentPass) $ do
+    passDetails <- QPassDetails.findByPersonId person.id DPassType.StudentPass >>= fromMaybeM (PassDetailsNotFound person.id.getId)
+    unless (passDetails.verificationStatus == DPassDetails.PAYMENT_READY) $
+      throwError (PassNotPaymentReady pass.id.getId)
+
   -- Purchase eligibility is enforced here, not only surfaced as a flag on the
   -- listing: a pass restricted to a customer tag (say, a discounted test price)
   -- is otherwise purchasable by anyone who knows its passId. Dashboard purchases
@@ -361,6 +368,11 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         return newPurchasedPassId
 
   mbMaxTripCount <- FRFSPassOverride.maxTripCountFromPass pass
+  -- read route pairs json, and applicable route ids from pass details and store in purchased pass payment
+  mbStudentPassDetails <-
+    if (passType >>= (.passEnum)) == Just DPassType.StudentPass
+      then QPassDetails.findByPersonId personId DPassType.StudentPass
+      else pure Nothing
   let purchasedPassPayment =
         DPurchasedPassPayment.PurchasedPassPayment
           { id = purchasedPassPaymentId,
@@ -387,6 +399,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             passPhotoChangeCount = Just 0,
             activatedAt = Nothing,
             clientSdkVersion = person.clientSdkVersion,
+            routePairs = (.routePairs) <$> mbStudentPassDetails,
+            applicableRouteIds = mbStudentPassDetails >>= (.applicableRouteIds),
             createdAt = now,
             updatedAt = now
           }
@@ -1036,6 +1050,18 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         Just primary ->
           filter (\t -> hasDateOverlap (t.startDate, t.endDate) (primary.startDate, primary.endDate)) (drop 1 liveTerms)
   overlappingPassEntities <- buildPurchasedPassPaymentAPIEntities overlappingTerms
+  studentPassActivation <-
+    if passType.passEnum == Just DPassType.StudentPass
+      then do
+        mbStudentPassRoutes <- getStudentPassRoutes purchasedPass today
+        activatedCount <- fromMaybe 0 <$> Redis.get @Integer (mkPassRouteActivationCountKey purchasedPass.personId purchasedPass.passTypeId)
+        pure $
+          Just
+            PassAPI.StudentPassActivation
+              { maxActivationLimit = studentPassActivationLimit mbStudentPassRoutes,
+                activatedCount = fromIntegral activatedCount
+              }
+      else pure Nothing
   return $
     PassAPI.PurchasedPassAPIEntity
       { id = purchasedPass.id,
@@ -1061,7 +1087,8 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         overlappingPasses = overlappingPassEntities,
         photoUploadTimeLimit = reUploadValidTill,
         photoChangedCount = mbActivePayment >>= (.passPhotoChangeCount),
-        maxPhotoChangeConfigCount = passType.maxPhotoChangeLimit
+        maxPhotoChangeConfigCount = passType.maxPhotoChangeLimit,
+        studentPassActivation
       }
 
 passTypeLabel :: Maybe DPassType.PassEnum -> Text
@@ -1468,12 +1495,12 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
 
   mbPassType <- CQPassType.findById purchasedPass.passTypeId
   let mbPassEnum = mbPassType >>= (.passEnum)
-  mbStudentPassDetails <- case mbPassEnum of
-    Just DPassType.StudentPass -> QPassDetails.findByPersonId purchasedPass.personId DPassType.StudentPass
+  mbStudentPassRoutes <- case mbPassEnum of
+    Just DPassType.StudentPass -> getStudentPassRoutes purchasedPass (DT.utctDay istTime)
     _ -> pure Nothing
   let isStudentPass = mbPassEnum == Just DPassType.StudentPass
   when isStudentPass $
-    reserveStudentPassActivationSlot purchasedPass mbStudentPassDetails istTime
+    reserveStudentPassActivationSlot purchasedPass (studentPassActivationLimit mbStudentPassRoutes) istTime
   let throwAndReleaseSlot :: PassError -> Environment.Flow a
       throwAndReleaseSlot err = do
         when isStudentPass $ rollbackStudentPassActivation purchasedPass
@@ -1543,11 +1570,11 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
 
   mbVerifyStatus <- case mbPassEnum of
     Just DPassType.StudentPass ->
-      case mbStudentPassDetails of
+      case mbStudentPassRoutes of
         Nothing -> pure $ Just DPassVerifyTransaction.NOT_VERIFIED
-        Just passDetails -> do
+        Just studentPassRoutes -> do
           riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-          pure $ Just $ verifyStudentPass passDetails vehicleInfo.routeCode routeStopMapping riderConfig
+          pure $ Just $ verifyStudentPass studentPassRoutes vehicleInfo.routeCode routeStopMapping riderConfig
     _ -> pure Nothing
 
   let sourceStop =
@@ -1609,23 +1636,23 @@ mkPassRouteActivationCountKey personId passTypeId =
   "PassRouteActivation:PersonId:" <> personId.getId <> ":PassTypeId:" <> passTypeId.getId
 
 verifyStudentPass ::
-  DPassDetails.PassDetails ->
+  ([DPassDetails.RoutePair], Maybe [Text]) ->
   Maybe Text ->
   [SharedLogic.External.Nandi.Types.RouteStopMappingInMemoryServer] ->
   Domain.Types.RiderConfig.RiderConfig ->
   DPassVerifyTransaction.PassVerifiedStatus
-verifyStudentPass passDetails mbBusRouteCode routeStopMapping riderConfig =
+verifyStudentPass (routePairs, mbApplicableRouteIds) mbBusRouteCode routeStopMapping riderConfig =
   let cfg = riderConfig.studentPassVerifyConfig
       thresholdMeters = maybe 2000 ((.distanceThresholdMeters) >>> getMeters) cfg
       minMatchingStops = maybe 0 (.minMatchingStops) cfg
-      applicableRouteIds = filter (not . T.null) (map T.strip (fromMaybe [] passDetails.applicableRouteIds))
+      applicableRouteIds = filter (not . T.null) (map T.strip (fromMaybe [] mbApplicableRouteIds))
       primaryMatch = case T.strip <$> mbBusRouteCode of
         Just rc | not (T.null rc) -> rc `elem` applicableRouteIds
         _ -> False
    in if primaryMatch
         then DPassVerifyTransaction.FULLY_VERIFIED
         else
-          let userStops = concatMap (\rp -> [rp.srcLatLong, rp.destLatLong]) passDetails.routePairs
+          let userStops = concatMap (\rp -> [rp.srcLatLong, rp.destLatLong]) routePairs
               busStops = map (.stopPoint) routeStopMapping
               isWithinThreshold bus user =
                 getMeters (highPrecMetersToMeters (distanceBetweenInMeters bus user)) <= thresholdMeters
@@ -1634,19 +1661,32 @@ verifyStudentPass passDetails mbBusRouteCode routeStopMapping riderConfig =
                 then DPassVerifyTransaction.PARTIALLY_VERIFIED
                 else DPassVerifyTransaction.NOT_VERIFIED
 
-studentPassActivationLimit :: Maybe DPassDetails.PassDetails -> Int
-studentPassActivationLimit mbPassDetails =
-  let routePairCount = maybe 0 (length . (.routePairs)) mbPassDetails
+getStudentPassRoutes ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  DPurchasedPass.PurchasedPass ->
+  DT.Day ->
+  m (Maybe ([DPassDetails.RoutePair], Maybe [Text]))
+getStudentPassRoutes purchasedPass today = do
+  activeTerms <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus Nothing Nothing purchasedPass.id [DPurchasedPass.Active] today
+  let mbCurrentTerm = listToMaybe (filter (\term -> term.startDate <= today) activeTerms)
+  case mbCurrentTerm >>= (.routePairs) of
+    Just routePairs -> pure $ Just (routePairs, mbCurrentTerm >>= (.applicableRouteIds))
+    Nothing ->
+      fmap (\pd -> (pd.routePairs, pd.applicableRouteIds))
+        <$> QPassDetails.findByPersonId purchasedPass.personId DPassType.StudentPass
+
+studentPassActivationLimit :: Maybe ([DPassDetails.RoutePair], Maybe [Text]) -> Int
+studentPassActivationLimit mbStudentPassRoutes =
+  let routePairCount = maybe 0 (length . fst) mbStudentPassRoutes
    in if routePairCount > 0 then routePairCount else 6
 
 reserveStudentPassActivationSlot ::
   DPurchasedPass.PurchasedPass ->
-  Maybe DPassDetails.PassDetails ->
+  Int ->
   DT.UTCTime ->
   Environment.Flow ()
-reserveStudentPassActivationSlot purchasedPass mbPassDetails istTime = do
+reserveStudentPassActivationSlot purchasedPass activationLimit istTime = do
   let countKey = mkPassRouteActivationCountKey purchasedPass.personId purchasedPass.passTypeId
-      activationLimit = studentPassActivationLimit mbPassDetails
   newCount <- Hedis.incr countKey
   let istOffset = 19800 :: NominalDiffTime
       tomorrowMidnightIST = DT.UTCTime (DT.addDays 1 (DT.utctDay istTime)) 0

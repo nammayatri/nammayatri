@@ -8,6 +8,10 @@ module Domain.Action.UI.PassDetails
     getPassDetailsVerificationStatus,
     postPassDetailsUploadDocument,
     getPassDetailsDocument,
+    postPassDetailsVerifyWithUmis,
+    postPassDetailsRouteDetailUpdate,
+    postPassDetailsResendUmisOtp,
+    postPassDetailsVerifyUmisOtp,
     fetchPassDocumentFromS3,
     parsePassEnum,
     parseVerificationStatus,
@@ -19,6 +23,7 @@ import qualified API.Types.UI.PassDetails as PassDetailsAPI
 import AWS.S3 as S3
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.ByteString as BS
+import Data.Char (isDigit)
 import qualified Data.List as L
 import qualified Data.Text as T
 import qualified Data.Time
@@ -41,7 +46,7 @@ import GHC.IO.IOMode (IOMode (..))
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt, encrypt)
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import qualified Kernel.External.Maps.Google.MapsClient.Types as GT
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
@@ -49,15 +54,22 @@ import Kernel.External.MultiModal.Interface.Types (GeneralVehicleType (..), GetT
 import qualified Kernel.External.MultiModal.OpenTripPlanner.Types as OTPTypes
 import qualified Kernel.Prelude
 import Kernel.ServantMultipart
+import Kernel.Sms.Config (useFakeSms)
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Id as Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Types.TryException (withTryCatch)
-import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logInfo)
+import Kernel.Utils.Common (fromMaybeM, generateGUID, generateOTPCode, getCurrentTime, logInfo)
 import qualified Kernel.Utils.Common as Utils
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.JourneyModule.Utils as JLU
+import qualified SharedLogic.External.Nandi.Types as NandiTypes
+import qualified SharedLogic.External.Umis.Flow as Umis
+import qualified SharedLogic.External.Umis.Types as Umis
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.OTP as SOTP
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -82,6 +94,9 @@ parseVerificationStatus "CLG_VERIFIED" = pure DPassDetails.CLG_VERIFIED
 parseVerificationStatus "MTC_VERIFIED" = pure DPassDetails.MTC_VERIFIED
 parseVerificationStatus "REJECTED" = pure DPassDetails.REJECTED
 parseVerificationStatus "EXPIRED" = pure DPassDetails.EXPIRED
+parseVerificationStatus "UMIS_VERIFIED" = pure DPassDetails.UMIS_VERIFIED
+parseVerificationStatus "PAYMENT_READY" = pure DPassDetails.PAYMENT_READY
+parseVerificationStatus "UMIS_OTP_PENDING" = pure DPassDetails.UMIS_OTP_PENDING
 parseVerificationStatus _ = Utils.throwError $ InvalidRequest "Invalid verification status"
 
 getGetOrganizations ::
@@ -141,7 +156,7 @@ createPassDetail req person passEnum = do
             age = req.age,
             gender = req.gender,
             idCardPicture = req.idCardPicture,
-            selfImage = req.selfImage,
+            selfImage = Just req.selfImage,
             address = req.address,
             pincode = req.pincode,
             aadharNo = encAadharNo,
@@ -149,7 +164,7 @@ createPassDetail req person passEnum = do
             registerNo = req.registerNo,
             personId = person.id,
             passEnum = passEnum,
-            passOrganizationId = req.passOrganizationId,
+            passOrganizationId = Just req.passOrganizationId,
             verificationStatus = DPassDetails.PENDING,
             validTill = validTill,
             remark = Nothing,
@@ -158,6 +173,10 @@ createPassDetail req person passEnum = do
             numberOfStages = numberOfStages,
             referenceNumber = Just (fromInteger refNumber),
             applicableRouteIds = applicableRouteIds,
+            umisId = Nothing,
+            studentStatus = Nothing,
+            academicYearOfJoining = Nothing,
+            umisVerifiedMobileNumber = Nothing,
             createdAt = now,
             updatedAt = now,
             merchantId = person.merchantId,
@@ -177,6 +196,227 @@ getNextReferenceNumber =
     refNumberKey :: Kernel.Prelude.Text
     refNumberKey = "CachedQueries:PassDetails:NextReferenceNumber"
 
+postPassDetailsVerifyWithUmis ::
+  ( ( Kernel.Prelude.Maybe (Id.Id DPerson.Person),
+      Id.Id DMerchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    PassDetailsAPI.UmisVerifyReq ->
+    Environment.Flow PassDetailsAPI.UmisVerifyResp
+  )
+postPassDetailsVerifyWithUmis (mbPersonId, _) passEnumText req = do
+  passEnum <- parsePassEnum passEnumText
+  unless (passEnum == DPassType.StudentPass) $
+    Utils.throwError $ InvalidRequest "UMIS verification is only available for StudentPass"
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
+  let umisId = T.strip req.umisId
+  unless (isValidUmisId umisId) $ Utils.throwError $ InvalidRequest "Invalid UMIS id"
+  rateLimitOptions <- asks (.umisLookupRateLimitOptions)
+  checkSlidingWindowLimitWithOptions ("UmisLookup:PersonId:" <> personId.getId) rateLimitOptions
+  person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  umisConfig <- asks (.umisConfig) >>= fromMaybeM (InternalError "UMIS is not configured")
+
+  Hedis.whenWithLockRedisAndReturnValue (umisVerifyLockKey umisId) 60 (verifyAndStore person umisConfig umisId passEnum) >>= \case
+    Left _ -> Utils.throwError $ InvalidRequest "Verification for this UMIS id is already in progress, please try again"
+    Right mobileNumber -> do
+      sendUmisOtp person mobileNumber
+      pure PassDetailsAPI.UmisVerifyResp {umisMobileNumber = maskMobileNumber mobileNumber}
+  where
+    isValidUmisId t = not (T.null t) && T.length t <= 20 && T.all isDigit t
+
+verifyAndStore :: DPerson.Person -> Umis.UmisConfig -> Kernel.Prelude.Text -> DPassType.PassEnum -> Environment.Flow Kernel.Prelude.Text
+verifyAndStore person umisConfig umisId passEnum = do
+  ensureUmisIdNotLinkedToOthers person.id umisId
+  student <- Umis.getStudentDetails umisConfig umisId >>= fromMaybeM (UmisStudentNotFound umisId)
+  when (isCourseCompleted student.currentStatusOfStudent) $
+    Utils.throwError $ UmisStudentCourseCompleted umisId
+  name <- student.studentName & fromMaybeM (InvalidRequest "UMIS record has no student name")
+  mobileNumber <- (student.mobileNumber >>= normalizeIndianMobile) & fromMaybeM (UmisMobileNumberNotAvailable umisId)
+  encMobileNumber <- encrypt mobileNumber
+  now <- getCurrentTime
+  validTill <- computeValidTill now person.merchantOperatingCityId
+  let gender = fromMaybe DPerson.UNKNOWN (student.gender >>= parseUmisGender)
+  QPassDetails.findByPersonId person.id passEnum >>= \case
+    Just passDetail ->
+      QPassDetails.updateByPrimaryKey
+        passDetail
+          { DPassDetails.name = name,
+            DPassDetails.gender = gender,
+            DPassDetails.umisId = Just umisId,
+            DPassDetails.studentStatus = student.currentStatusOfStudent,
+            DPassDetails.academicYearOfJoining = student.academicYearOfJoining,
+            DPassDetails.umisVerifiedMobileNumber = Just encMobileNumber,
+            DPassDetails.validTill = validTill,
+            DPassDetails.verificationStatus = DPassDetails.UMIS_OTP_PENDING,
+            DPassDetails.remark = Nothing,
+            DPassDetails.updatedAt = now
+          }
+    Nothing -> do
+      passDetailId <- generateGUID
+      refNumber <- getNextReferenceNumber
+      QPassDetails.create
+        DPassDetails.PassDetails
+          { id = passDetailId,
+            personId = person.id,
+            passOrganizationId = Nothing,
+            name = name,
+            registerNo = Nothing,
+            department = Nothing,
+            year = Nothing,
+            age = Nothing,
+            gender = gender,
+            guardianName = Nothing,
+            guardianMobileNumber = Nothing,
+            address = Nothing,
+            pincode = Nothing,
+            idCardPicture = Nothing,
+            selfImage = Nothing,
+            verificationStatus = DPassDetails.UMIS_OTP_PENDING,
+            validTill = validTill,
+            aadharNo = Nothing,
+            remark = Nothing,
+            routePairs = [],
+            academicYearStart = Nothing,
+            academicYearEnd = Nothing,
+            numberOfStages = Nothing,
+            referenceNumber = Just (fromInteger refNumber),
+            createdAt = now,
+            updatedAt = now,
+            passEnum = passEnum,
+            applicableRouteIds = Nothing,
+            umisId = Just umisId,
+            studentStatus = student.currentStatusOfStudent,
+            academicYearOfJoining = student.academicYearOfJoining,
+            umisVerifiedMobileNumber = Just encMobileNumber,
+            merchantId = person.merchantId,
+            merchantOperatingCityId = person.merchantOperatingCityId
+          }
+  pure mobileNumber
+  where
+    isCourseCompleted = maybe False (\s -> T.toLower (T.strip s) == "course completed")
+
+umisVerifyLockKey :: Kernel.Prelude.Text -> Kernel.Prelude.Text
+umisVerifyLockKey umisId = "PassDetails:UmisVerify:" <> umisId
+
+umisOtpKey :: Id.Id DPerson.Person -> Kernel.Prelude.Text
+umisOtpKey personId = "PassDetails:UmisOtp:PersonId:" <> personId.getId
+
+ensureUmisIdNotLinkedToOthers :: Id.Id DPerson.Person -> Kernel.Prelude.Text -> Environment.Flow ()
+ensureUmisIdNotLinkedToOthers personId umisId = do
+  linked <- QPassDetails.findAllByUmisId (Just umisId)
+  when (any (\pd -> pd.personId /= personId && pd.verificationStatus /= DPassDetails.UMIS_OTP_PENDING) linked) $
+    Utils.throwError $ UmisIdAlreadyLinked umisId
+
+normalizeIndianMobile :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text
+normalizeIndianMobile raw =
+  let digits = T.filter isDigit raw
+      tenDigit
+        | T.length digits == 12 && "91" `T.isPrefixOf` digits = T.drop 2 digits
+        | T.length digits == 11 && "0" `T.isPrefixOf` digits = T.drop 1 digits
+        | otherwise = digits
+   in if T.length tenDigit == 10 then Just tenDigit else Nothing
+
+maskMobileNumber :: Kernel.Prelude.Text -> Kernel.Prelude.Text
+maskMobileNumber m = T.replicate (T.length m - 4) "*" <> T.takeEnd 4 m
+
+sendUmisOtp :: DPerson.Person -> Kernel.Prelude.Text -> Environment.Flow ()
+sendUmisOtp person mobileNumber = do
+  smsCfg <- asks (.smsCfg)
+  let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+  otpCode <- maybe generateOTPCode pure useFakeOtpM
+  otpHash <- getDbHash otpCode
+  Hedis.setExp (umisOtpKey person.id) otpHash (smsCfg.sessionConfig.authExpiry * 60)
+  when (isNothing useFakeOtpM) $ do
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+    SOTP.sendOTP SOTP.SMS otpCode person.id person.merchantId person.merchantOperatingCityId (Just "+91") (Just mobileNumber) Nothing riderConfig.emailOtpConfig Nothing
+
+postPassDetailsResendUmisOtp ::
+  ( ( Kernel.Prelude.Maybe (Id.Id DPerson.Person),
+      Id.Id DMerchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postPassDetailsResendUmisOtp (mbPersonId, _) passEnumText = do
+  passEnum <- parsePassEnum passEnumText
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
+  rateLimitOptions <- asks (.umisLookupRateLimitOptions)
+  checkSlidingWindowLimitWithOptions ("UmisOtpResend:PersonId:" <> personId.getId) rateLimitOptions
+  passDetail <- QPassDetails.findByPersonId personId passEnum >>= fromMaybeM (PassDetailsNotFound personId.getId)
+  unless (passDetail.verificationStatus == DPassDetails.UMIS_OTP_PENDING) $
+    Utils.throwError $ UmisOtpNotPending (show passDetail.verificationStatus)
+  umisId <- passDetail.umisId & fromMaybeM (InternalError "UMIS id missing on a UMIS_OTP_PENDING pass detail")
+  mobileNumber <- passDetail.umisVerifiedMobileNumber & fromMaybeM (UmisMobileNumberNotAvailable umisId) >>= decrypt
+  person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  sendUmisOtp person mobileNumber
+  pure APISuccess.Success
+
+postPassDetailsVerifyUmisOtp ::
+  ( ( Kernel.Prelude.Maybe (Id.Id DPerson.Person),
+      Id.Id DMerchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    PassDetailsAPI.UmisOtpVerifyReq ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postPassDetailsVerifyUmisOtp (mbPersonId, _) passEnumText req = do
+  passEnum <- parsePassEnum passEnumText
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
+  rateLimitOptions <- asks (.umisLookupRateLimitOptions)
+  checkSlidingWindowLimitWithOptions ("UmisOtpVerify:PersonId:" <> personId.getId) rateLimitOptions
+  passDetail <- QPassDetails.findByPersonId personId passEnum >>= fromMaybeM (PassDetailsNotFound personId.getId)
+  unless (passDetail.verificationStatus == DPassDetails.UMIS_OTP_PENDING) $
+    Utils.throwError $ UmisOtpNotPending (show passDetail.verificationStatus)
+  umisId <- passDetail.umisId & fromMaybeM (InternalError "UMIS id missing on a UMIS_OTP_PENDING pass detail")
+  storedOtpHash <- Hedis.get (umisOtpKey personId) >>= fromMaybeM UmisOtpExpired
+  reqOtpHash <- getDbHash (T.strip req.otp)
+  unless (storedOtpHash == reqOtpHash) $ Utils.throwError UmisOtpInvalid
+  Hedis.whenWithLockRedisAndReturnValue (umisVerifyLockKey umisId) 60 (confirmUmisOtp personId umisId passEnum) >>= \case
+    Left _ -> Utils.throwError $ InvalidRequest "Verification for this UMIS id is already in progress, please try again"
+    Right () -> do
+      void $ Hedis.del (umisOtpKey personId)
+      pure APISuccess.Success
+
+confirmUmisOtp :: Id.Id DPerson.Person -> Kernel.Prelude.Text -> DPassType.PassEnum -> Environment.Flow ()
+confirmUmisOtp personId umisId passEnum = do
+  ensureUmisIdNotLinkedToOthers personId umisId
+  passDetail <- QPassDetails.findByPersonId personId passEnum >>= fromMaybeM (PassDetailsNotFound personId.getId)
+  now <- getCurrentTime
+  QPassDetails.updateByPrimaryKey
+    passDetail
+      { DPassDetails.verificationStatus = if null passDetail.routePairs then DPassDetails.UMIS_VERIFIED else DPassDetails.PAYMENT_READY,
+        DPassDetails.updatedAt = now
+      }
+
+postPassDetailsRouteDetailUpdate ::
+  ( ( Kernel.Prelude.Maybe (Id.Id DPerson.Person),
+      Id.Id DMerchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    PassDetailsAPI.RouteDetailsUpdateReq ->
+    Environment.Flow PassDetailsAPI.RouteDetailsUpdateResp
+  )
+postPassDetailsRouteDetailUpdate (mbPersonId, _) passEnumText req = do
+  passEnum <- parsePassEnum passEnumText
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
+  person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  passDetail <- QPassDetails.findByPersonId person.id passEnum >>= fromMaybeM (PassDetailsNotFound personId.getId)
+  unless (passDetail.verificationStatus `elem` [DPassDetails.UMIS_VERIFIED, DPassDetails.PAYMENT_READY]) $
+    Utils.throwError $ PassRouteUpdateNotAllowed (show passDetail.verificationStatus)
+  when (null req.routeDetails) $ Utils.throwError $ InvalidRequest "routeDetails cannot be empty"
+  (applicableRouteIds, routePairs, numberOfStages) <- processRouteDetails person.merchantOperatingCityId req.routeDetails
+  when (null routePairs) $ Utils.throwError $ InvalidRequest "None of the given routes could be resolved"
+  QPassDetails.updateRouteDetails routePairs applicableRouteIds numberOfStages DPassDetails.PAYMENT_READY passDetail.id
+  pure PassDetailsAPI.RouteDetailsUpdateResp {applicableRouteIds = fromMaybe [] applicableRouteIds}
+
+parseUmisGender :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe DPerson.Gender
+parseUmisGender g = case T.toLower (T.strip g) of
+  "male" -> Just DPerson.MALE
+  "female" -> Just DPerson.FEMALE
+  "transgender" -> Just DPerson.OTHER
+  "other" -> Just DPerson.OTHER
+  _ -> Nothing
+
 computeValidTill ::
   Data.Time.UTCTime ->
   Id.Id DMOC.MerchantOperatingCity ->
@@ -195,9 +435,9 @@ updatePassDetail req person passDetail = do
   let updatedPassDetails =
         passDetail
           { DPassDetails.name = req.name,
-            DPassDetails.passOrganizationId = req.passOrganizationId,
+            DPassDetails.passOrganizationId = Just req.passOrganizationId,
             DPassDetails.idCardPicture = req.idCardPicture <|> passDetail.idCardPicture,
-            DPassDetails.selfImage = req.selfImage,
+            DPassDetails.selfImage = Just req.selfImage,
             DPassDetails.address = req.address <|> passDetail.address,
             DPassDetails.pincode = req.pincode <|> passDetail.pincode,
             DPassDetails.age = req.age <|> passDetail.age,
@@ -241,32 +481,33 @@ processOneRouteDetail ::
 processOneRouteDetail riderConfig integratedBPPConfig (accRouteIds, accRoutePairs, accStages) rd = do
   let srcStopCode = rd.srcStopId
       destStopCode = rd.destStopId
-  srcMappings <- OTPRest.getRouteStopMappingByStopCode srcStopCode integratedBPPConfig
-  destMappings <- OTPRest.getRouteStopMappingByStopCode destStopCode integratedBPPConfig
-  let destRouteSet = map (.routeCode) destMappings
-      commonRoutes = L.nub $ filter (`elem` destRouteSet) (map (.routeCode) srcMappings)
+  forwardConnections <- fromMaybe [] <$> JLU.getClusterRoutesFromTo srcStopCode destStopCode integratedBPPConfig
+  reverseConnections <- fromMaybe [] <$> JLU.getClusterRoutesFromTo destStopCode srcStopCode integratedBPPConfig
+  let clusterRouteCodes = L.nub (map (.routeCode) (forwardConnections <> reverseConnections))
+      stageCandidates =
+        [(c.routeCode, c.sourceStopCode, c.destinationStopCode) | c <- forwardConnections]
+          <> [(c.routeCode, c.destinationStopCode, c.sourceStopCode) | c <- reverseConnections]
+  mbSrcLL <- tryStationLatLong integratedBPPConfig srcStopCode
+  mbDestLL <- tryStationLatLong integratedBPPConfig destStopCode
+  let firstClusterStages [] = pure Nothing
+      firstClusterStages ((routeCode, candidateSrc, candidateDest) : rest) = do
+        mbStages <- tryStagesFromStageFare integratedBPPConfig [routeCode] candidateSrc candidateDest
+        mbResult <- case (mbStages, mbSrcLL, mbDestLL) of
+          (Just stages, Just srcLL, Just destLL) -> pure $ Just (stages, srcLL, destLL)
+          _ ->
+            either (const Nothing) Just
+              <$> withTryCatch "processOneRouteDetail:stagesAndCoordsFromTrip" (stagesAndCoordsFromTrip integratedBPPConfig routeCode candidateSrc candidateDest mbSrcLL mbDestLL)
+        maybe (firstClusterStages rest) (pure . Just) mbResult
 
-  mbSrcStationLatLong <- tryStationLatLong integratedBPPConfig srcStopCode
-  mbDestStationLatLong <- tryStationLatLong integratedBPPConfig destStopCode
-  let mbSrcMappingPt = (.stopPoint) <$> Kernel.Prelude.listToMaybe srcMappings
-      mbDestMappingPt = (.stopPoint) <$> Kernel.Prelude.listToMaybe destMappings
-
-  (routeIdsForPair, stages, srcLatLong, destLatLong) <- case commonRoutes of
-    (routeCode : _) -> do
-      mbStages <- tryStagesFromStageFare integratedBPPConfig commonRoutes srcStopCode destStopCode
-      (s, srcLL, destLL) <- case mbStages of
-        Just stages -> do
-          srcLL <- (mbSrcStationLatLong <|> mbSrcMappingPt) & fromMaybeM (InternalError $ "Missing coordinates for stop " <> srcStopCode)
-          destLL <- (mbDestStationLatLong <|> mbDestMappingPt) & fromMaybeM (InternalError $ "Missing coordinates for stop " <> destStopCode)
-          pure (stages, srcLL, destLL)
-        Nothing -> stagesAndCoordsFromTrip integratedBPPConfig routeCode srcStopCode destStopCode mbSrcStationLatLong mbDestStationLatLong
-      pure (commonRoutes, s, srcLL, destLL)
-    [] -> do
+  mbClusterStages <- firstClusterStages stageCandidates
+  (routeIdsForPair, stages, srcLatLong, destLatLong) <- case mbClusterStages of
+    Just (s, srcLL, destLL) -> pure (clusterRouteCodes, s, srcLL, destLL)
+    Nothing -> do
       logInfo $ "PassDetails OTP fallback for srcStop=" <> srcStopCode <> " destStop=" <> destStopCode
-      srcLL <- (mbSrcStationLatLong <|> mbSrcMappingPt) & fromMaybeM (InvalidRequest $ "Missing coordinates for stop " <> srcStopCode)
-      destLL <- (mbDestStationLatLong <|> mbDestMappingPt) & fromMaybeM (InvalidRequest $ "Missing coordinates for stop " <> destStopCode)
+      srcLL <- mbSrcLL & fromMaybeM (InvalidRequest $ "Missing coordinates for stop " <> srcStopCode)
+      destLL <- mbDestLL & fromMaybeM (InvalidRequest $ "Missing coordinates for stop " <> destStopCode)
       (otpRouteIds, otpStages) <- stagesViaOTP riderConfig integratedBPPConfig srcStopCode destStopCode srcLL destLL
-      pure (otpRouteIds, otpStages, srcLL, destLL)
+      pure (L.nub (clusterRouteCodes <> otpRouteIds), otpStages, srcLL, destLL)
   let forwardPair =
         DPassDetails.RoutePair
           { srcStopName = rd.srcStopName,
@@ -434,24 +675,28 @@ getPassDetailsData ::
       Id.Id DMerchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
-    Environment.Flow PassDetailsAPI.PassDetailsDataResp
+    Environment.Flow (Kernel.Prelude.Maybe PassDetailsAPI.PassDetailsDataResp)
   )
 getPassDetailsData (mbPersonId, _) passEnumText = do
   passEnum <- parsePassEnum passEnumText
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
-  person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  passDetail <- QPassDetails.findByPersonId person.id passEnum >>= fromMaybeM (PassDetailsNotFound personId.getId)
-  org <- QPassOrganization.findById passDetail.passOrganizationId >>= fromMaybeM (PassOrganizationNotFound passDetail.passOrganizationId.getId)
-  decGuardianMobile <- mapM decrypt passDetail.guardianMobileNumber
-  pure $ mkPassDetailResp decGuardianMobile passDetail org
+  QPassDetails.findByPersonId personId passEnum >>= \case
+    Nothing -> pure Nothing
+    Just passDetail -> do
+      mbOrg <- forM passDetail.passOrganizationId $ \orgId ->
+        QPassOrganization.findById orgId >>= fromMaybeM (PassOrganizationNotFound orgId.getId)
+      decGuardianMobile <- mapM decrypt passDetail.guardianMobileNumber
+      umisMobileNumber <- fmap maskMobileNumber <$> mapM decrypt passDetail.umisVerifiedMobileNumber
+      pure $ Just $ mkPassDetailResp decGuardianMobile umisMobileNumber passDetail mbOrg
 
-mkPassDetailResp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> DPassDetails.PassDetails -> DPassOrganization.PassOrganization -> PassDetailsAPI.PassDetailsDataResp
-mkPassDetailResp decGuardianMobile DPassDetails.PassDetails {..} org =
+mkPassDetailResp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> DPassDetails.PassDetails -> Kernel.Prelude.Maybe DPassOrganization.PassOrganization -> PassDetailsAPI.PassDetailsDataResp
+mkPassDetailResp decGuardianMobile umisMobileNumber DPassDetails.PassDetails {..} mbOrg =
   PassDetailsAPI.PassDetailsDataResp
     { passDetailsId = id,
-      passOrganizationId = org.id,
-      passOrganizationName = org.name,
+      passOrganizationId = (.id) <$> mbOrg,
+      passOrganizationName = (.name) <$> mbOrg,
       guardianMobileNumber = decGuardianMobile,
+      umisMobileNumber,
       ..
     }
 

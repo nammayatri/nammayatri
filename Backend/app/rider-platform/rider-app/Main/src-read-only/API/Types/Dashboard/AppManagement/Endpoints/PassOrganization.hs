@@ -60,7 +60,7 @@ data PassDetailsInfoResp = PassDetailsInfoResp
     pincode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     remark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routePairs :: [Domain.Types.PassDetails.RoutePair],
-    selfImage :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile,
+    selfImage :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     updatedAt :: Data.Time.UTCTime,
     validTill :: Data.Time.UTCTime,
     verificationStatus :: Domain.Types.PassDetails.VerificationStatus,

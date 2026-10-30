@@ -164,6 +164,7 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
     purchasedPassPaymentId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment),
     startDate :: Data.Time.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
+    studentPassActivation :: Data.Maybe.Maybe StudentPassActivation,
     tripsLeft :: Data.Maybe.Maybe Kernel.Prelude.Int,
     unlimitedTripCount :: Kernel.Prelude.Bool
   }
@@ -200,5 +201,9 @@ data RefundAPIEntity = RefundAPIEntity
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SetPassPrefSrcAndDestReq = SetPassPrefSrcAndDestReq {prefDest :: Data.Text.Text, prefSrc :: Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data StudentPassActivation = StudentPassActivation {activatedCount :: Kernel.Prelude.Int, maxActivationLimit :: Kernel.Prelude.Int}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

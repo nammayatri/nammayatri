@@ -339,6 +339,16 @@ data PassError
   | PassAlreadyInProgress Text -- passId
   | PassOverlappingFRFSBooking Text -- purchasedPassPaymentId
   | PassNotActiveForTripDate Text Text -- purchasedPassPaymentId, reason
+  | UmisStudentNotFound Text -- umisId
+  | UmisLookupFailed
+  | UmisStudentCourseCompleted Text -- umisId
+  | UmisIdAlreadyLinked Text -- umisId
+  | PassRouteUpdateNotAllowed Text -- current verification status
+  | PassNotPaymentReady Text -- passId
+  | UmisMobileNumberNotAvailable Text -- umisId
+  | UmisOtpNotPending Text -- current verification status
+  | UmisOtpExpired
+  | UmisOtpInvalid
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''PassError
@@ -360,6 +370,16 @@ instance IsBaseError PassError where
   toMessage (PassAlreadyInProgress _passId) = Just "Pass purchase already in progress, please try again."
   toMessage (PassOverlappingFRFSBooking _paymentId) = Just "You already have a ticket booked with this pass for this time period."
   toMessage (PassNotActiveForTripDate _paymentId reason) = Just reason
+  toMessage (UmisStudentNotFound umisId) = Just $ "No student record found in UMIS for id: " <> umisId
+  toMessage UmisLookupFailed = Just "Unable to fetch student details from UMIS. Please try again later."
+  toMessage (UmisStudentCourseCompleted _umisId) = Just "Student pass is only available to current students. UMIS shows this course as completed."
+  toMessage (UmisIdAlreadyLinked _umisId) = Just "This UMIS id is already linked to another account."
+  toMessage (PassRouteUpdateNotAllowed status) = Just $ "Routes can only be updated after UMIS verification. Current status: " <> status
+  toMessage (PassNotPaymentReady _passId) = Just "Please verify with UMIS and select your routes before buying the student pass."
+  toMessage (UmisMobileNumberNotAvailable _umisId) = Just "UMIS has no valid mobile number for this student, so the OTP cannot be sent. Please update your mobile number in UMIS."
+  toMessage (UmisOtpNotPending status) = Just $ "No UMIS OTP verification is pending. Current status: " <> status
+  toMessage UmisOtpExpired = Just "OTP has expired. Please request a new OTP."
+  toMessage UmisOtpInvalid = Just "Invalid OTP. Please check and try again."
 
 instance IsHTTPError PassError where
   toErrorCode = \case
@@ -379,6 +399,16 @@ instance IsHTTPError PassError where
     PassAlreadyInProgress _ -> "PASS_ALREADY_IN_PROGRESS"
     PassOverlappingFRFSBooking _ -> "PASS_OVERLAPPING_FRFS_BOOKING"
     PassNotActiveForTripDate _ _ -> "PASS_NOT_ACTIVE_FOR_TRIP_DATE"
+    UmisStudentNotFound _ -> "UMIS_STUDENT_NOT_FOUND"
+    UmisLookupFailed -> "UMIS_LOOKUP_FAILED"
+    UmisStudentCourseCompleted _ -> "UMIS_STUDENT_COURSE_COMPLETED"
+    UmisIdAlreadyLinked _ -> "UMIS_ID_ALREADY_LINKED"
+    PassRouteUpdateNotAllowed _ -> "PASS_ROUTE_UPDATE_NOT_ALLOWED"
+    PassNotPaymentReady _ -> "PASS_NOT_PAYMENT_READY"
+    UmisMobileNumberNotAvailable _ -> "UMIS_MOBILE_NUMBER_NOT_AVAILABLE"
+    UmisOtpNotPending _ -> "UMIS_OTP_NOT_PENDING"
+    UmisOtpExpired -> "UMIS_OTP_EXPIRED"
+    UmisOtpInvalid -> "UMIS_OTP_INVALID"
   toHttpCode = \case
     PassNotFound _ -> E500
     PassCategoryNotFound _ -> E500
@@ -396,6 +426,16 @@ instance IsHTTPError PassError where
     PassAlreadyInProgress _ -> E409
     PassOverlappingFRFSBooking _ -> E400
     PassNotActiveForTripDate _ _ -> E400
+    UmisStudentNotFound _ -> E400
+    UmisLookupFailed -> E503
+    UmisStudentCourseCompleted _ -> E400
+    UmisIdAlreadyLinked _ -> E409
+    PassRouteUpdateNotAllowed _ -> E400
+    PassNotPaymentReady _ -> E400
+    UmisMobileNumberNotAvailable _ -> E400
+    UmisOtpNotPending _ -> E400
+    UmisOtpExpired -> E400
+    UmisOtpInvalid -> E400
 
 instance IsAPIError PassError
 

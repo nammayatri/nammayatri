@@ -21,6 +21,7 @@ data PassDetailsT f = PassDetailsT
   { aadharNoEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     aadharNoHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     academicYearEnd :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
+    academicYearOfJoining :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     academicYearStart :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
     address :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     age :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -38,14 +39,18 @@ data PassDetailsT f = PassDetailsT
     name :: B.C f Kernel.Prelude.Text,
     numberOfStages :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     passEnum :: B.C f Domain.Types.PassType.PassEnum,
-    passOrganizationId :: B.C f Kernel.Prelude.Text,
+    passOrganizationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     personId :: B.C f Kernel.Prelude.Text,
     pincode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referenceNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     registerNo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     remark :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routePairs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
-    selfImage :: B.C f Kernel.Prelude.Text,
+    selfImage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    studentStatus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    umisId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    umisVerifiedMobileNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    umisVerifiedMobileNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     updatedAt :: B.C f Data.Time.UTCTime,
     validTill :: B.C f Data.Time.UTCTime,
     verificationStatus :: B.C f Domain.Types.PassDetails.VerificationStatus,
@@ -59,6 +64,6 @@ instance B.Table PassDetailsT where
 
 type PassDetails = PassDetailsT Identity
 
-$(enableKVPG ''PassDetailsT ['id] [['passOrganizationId], ['personId]])
+$(enableKVPG ''PassDetailsT ['id] [['passOrganizationId], ['personId], ['umisId]])
 
 $(mkTableInstances ''PassDetailsT "pass_details")

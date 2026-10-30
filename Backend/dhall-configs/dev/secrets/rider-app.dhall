@@ -43,4 +43,5 @@ in  { dbUserId = "atlas_app_user"
     , googleSAPrivateKey
     , parkingApiKey = "test-parking-api-key"
     , corporatePartnerApiToken = "test-partner-api-token"
+    , umisAuthToken = "<UMIS_AUTH_TOKEN>"
     }

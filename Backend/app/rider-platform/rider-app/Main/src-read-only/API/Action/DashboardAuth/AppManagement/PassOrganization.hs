@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.AppManagement.PassOrganization
 where
 
 import qualified API.Types.Dashboard.AppManagement.PassOrganization
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.AppManagement.PassOrganization
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.PassOrganization

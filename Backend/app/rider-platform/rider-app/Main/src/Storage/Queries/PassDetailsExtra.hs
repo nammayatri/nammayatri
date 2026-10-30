@@ -3,7 +3,9 @@
 
 module Storage.Queries.PassDetailsExtra where
 
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PassDetails as DPassDetails
+import qualified Domain.Types.PassOrganization as DPassOrganization
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -27,3 +29,24 @@ getLastReferenceNumber = do
   pure $ case listToMaybe passDetails of
     Just pd -> fromMaybe 0 pd.referenceNumber
     Nothing -> 0
+
+-- Hand-written: the DSL's `in:` on a Maybe column generates a wrong getId mapping.
+findAllByPassOrganizationIdsAndVerificationStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Int ->
+  Maybe Int ->
+  [Id DPassOrganization.PassOrganization] ->
+  [DPassDetails.VerificationStatus] ->
+  Id DMOC.MerchantOperatingCity ->
+  m [DPassDetails.PassDetails]
+findAllByPassOrganizationIdsAndVerificationStatus limit offset passOrganizationIds verificationStatus merchantOperatingCityId =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.passOrganizationId $ Se.In (Just . getId <$> passOrganizationIds),
+          Se.Is Beam.verificationStatus $ Se.In verificationStatus,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId)
+        ]
+    ]
+    (Se.Asc Beam.updatedAt)
+    limit
+    offset

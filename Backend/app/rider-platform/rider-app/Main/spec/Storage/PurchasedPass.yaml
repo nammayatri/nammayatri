@@ -13,6 +13,8 @@ imports:
   PassEnum: Domain.Types.PassType
   MediaFile: IssueManagement.Domain.Types.MediaFile
   Version: Kernel.Types.Version
+  RoutePair: Domain.Types.PassDetails
+  Value: Data.Aeson
 
 PurchasedPass:
   tableName: purchased_pass
@@ -157,18 +159,26 @@ PurchasedPassPayment:
     availableTripCount: Maybe Int
     passPhotoChangeCount: Maybe Int
     activatedAt: Maybe UTCTime
+    routePairs: "Maybe [RoutePair]"
+    applicableRouteIds: "Maybe [Text]"
 
   beamType:
     benefitDescription: Maybe Text
     clientSdkVersion: Maybe Text
+    routePairs: Maybe Value
 
   fromTType:
     benefitDescription: Kernel.Prelude.fromMaybe ""|I
     clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
+    routePairs: ((\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< routePairs)|E
 
   toTType:
     benefitDescription: Kernel.Prelude.Just|I
     clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
+    routePairs: (Kernel.Prelude.toJSON <$> routePairs)|E
+
+  sqlType:
+    routePairs: jsonb
 
   constraints:
     id: PrimaryKey

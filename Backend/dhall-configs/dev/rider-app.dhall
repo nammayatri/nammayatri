@@ -439,6 +439,11 @@ let seatBookingConfirmAPIRateLimitOptions =
 
 let passSelectAPIRateLimitOptions = { limit = +10, limitResetTimeInSec = +300 }
 
+let umisLookupRateLimitOptions = { limit = +5, limitResetTimeInSec = +3600 }
+
+let umisConfig =
+      Some { url = "https://umisapi.tnega.org/", authToken = sec.umisAuthToken }
+
 let sosTrackingRateLimitOptions = { limit = +60, limitResetTimeInSec = +60 }
 
 let erssStatusUpdateRateLimitOptions =
@@ -632,6 +637,8 @@ in  { esqDBCfg
     , nearByDriverAPIRateLimitOptions
     , seatBookingConfirmAPIRateLimitOptions
     , passSelectAPIRateLimitOptions
+    , umisLookupRateLimitOptions
+    , umisConfig
     , sosTrackingRateLimitOptions
     , erssStatusUpdateRateLimitOptions
     , inMemConfig

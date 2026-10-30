@@ -44,7 +44,7 @@ import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
 allVerificationStatuses :: [DPassDetails.VerificationStatus]
-allVerificationStatuses = [DPassDetails.PENDING, DPassDetails.CLG_VERIFIED, DPassDetails.MTC_VERIFIED, DPassDetails.REJECTED, DPassDetails.EXPIRED]
+allVerificationStatuses = [DPassDetails.PENDING, DPassDetails.CLG_VERIFIED, DPassDetails.MTC_VERIFIED, DPassDetails.REJECTED, DPassDetails.EXPIRED, DPassDetails.UMIS_VERIFIED, DPassDetails.PAYMENT_READY, DPassDetails.UMIS_OTP_PENDING]
 
 getPassOrganizationGetPassOrganization :: (Id.ShortId DMerchant.Merchant -> Context.City -> Id.Id DPerson.Person -> Environment.Flow PassOrganizationAPI.GetOrganizationResp)
 getPassOrganizationGetPassOrganization merchantShortId opCity personId = do
@@ -75,14 +75,16 @@ getPassOrganizationPassDetails merchantShortId opCity mbPassOrganizationId mbSta
       passOrganization <- QPassOrganization.findById passOrganizationId >>= fromMaybeM (PassOrganizationNotFound passOrganizationId.getId)
       unless (passOrganization.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
       unless (passOrganization.passEnum == passEnum) $ Utils.throwError (InvalidRequest "Organization's passEnum does not match the path passEnum")
-      QPassDetails.findAllByPassOrganizationIdAndVerificationStatus cappedLimit offset passOrganizationId statuses
+      QPassDetails.findAllByPassOrganizationIdAndVerificationStatus cappedLimit offset (Just passOrganizationId) statuses
     Nothing ->
       QPassDetails.findAllByMerchantIdAndMerchantOperatingCityId cappedLimit offset callerMoc.merchantId callerMoc.id passEnum statuses
   let offset' = fromMaybe 0 offset
   passDetailsInfo <- forM passDetails $ \pd -> do
     decGuardianMobile <- mapM decrypt pd.guardianMobileNumber
-    org <- QPassOrganization.findById pd.passOrganizationId >>= fromMaybeM (PassOrganizationNotFound pd.passOrganizationId.getId)
-    pure $ mkPassDetailsInfoResp decGuardianMobile org.name pd
+    -- UMIS-verified students have no organization.
+    mbOrg <- forM pd.passOrganizationId $ \orgId ->
+      QPassOrganization.findById orgId >>= fromMaybeM (PassOrganizationNotFound orgId.getId)
+    pure $ mkPassDetailsInfoResp decGuardianMobile (maybe "" (.name) mbOrg) pd
   pure $
     PassOrganizationAPI.PassDetailsListResp
       { PassOrganizationAPI.passDetails = passDetailsInfo,
@@ -135,7 +137,7 @@ getPassOrganizationPassDetailsDepot merchantShortId opCity limit offset depotPer
       effectiveLimit = min 100 (fromMaybe 10 limit)
       offset' = fromMaybe 0 offset
   passDetails <- QPassDetails.findAllByPassOrganizationIdsAndVerificationStatus (Just effectiveLimit) (Just offset') scopedOrgIds [status] callerMoc.id
-  let orgNameById oid = case [o.name | o <- orgs, o.id == oid] of (n : _) -> n; [] -> ""
+  let orgNameById mbOid = case [o.name | o <- orgs, Just o.id == mbOid] of (n : _) -> n; [] -> ""
   passDetailsInfo <- forM passDetails $ \pd -> do
     decGuardianMobile <- mapM decrypt pd.guardianMobileNumber
     pure $ mkPassDetailsInfoResp decGuardianMobile (orgNameById pd.passOrganizationId) pd

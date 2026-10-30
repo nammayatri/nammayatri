@@ -8,6 +8,7 @@ import qualified Data.Time.Calendar
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Pass
+import qualified Domain.Types.PassDetails
 import qualified Domain.Types.PassType
 import qualified Domain.Types.Person
 import qualified Domain.Types.PurchasedPass
@@ -22,6 +23,7 @@ import qualified Tools.Beam.UtilsTH
 data PurchasedPassPayment = PurchasedPassPayment
   { activatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     amount :: Kernel.Types.Common.HighPrecMoney,
+    applicableRouteIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     availableTripCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     benefitDescription :: Kernel.Prelude.Text,
     benefitType :: Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType,
@@ -42,6 +44,7 @@ data PurchasedPassPayment = PurchasedPassPayment
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
+    routePairs :: Kernel.Prelude.Maybe [Domain.Types.PassDetails.RoutePair],
     startDate :: Data.Time.Calendar.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
     createdAt :: Kernel.Prelude.UTCTime,

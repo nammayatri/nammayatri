@@ -134,6 +134,12 @@ types:
     futureRenewals: [PurchasedPassTransactionAPIEntity]
     overlappingPasses: [PurchasedPassTransactionAPIEntity]
     isPreferredSourceAndDestinationSet: Bool
+    studentPassActivation: Maybe StudentPassActivation
+    derive: "Show"
+
+  StudentPassActivation:
+    maxActivationLimit: Int
+    activatedCount: Int
     derive: "Show"
 
   PassDetailsAPIEntity:

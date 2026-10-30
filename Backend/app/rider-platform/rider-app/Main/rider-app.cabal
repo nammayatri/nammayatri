@@ -597,6 +597,9 @@ library
       SharedLogic.External.Nandi.API.Nandi
       SharedLogic.External.Nandi.Flow
       SharedLogic.External.Nandi.Types
+      SharedLogic.External.Umis.API
+      SharedLogic.External.Umis.Flow
+      SharedLogic.External.Umis.Types
       SharedLogic.FareBreakupInfo
       SharedLogic.FeedbackForm
       SharedLogic.Finance.CashbackPayout

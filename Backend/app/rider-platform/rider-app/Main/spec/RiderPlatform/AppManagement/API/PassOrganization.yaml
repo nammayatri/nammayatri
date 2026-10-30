@@ -31,7 +31,7 @@ types:
     address: "Maybe PassDetailAddress"
     gender: Gender
     pincode: Maybe Text
-    selfImage: Id MediaFile
+    selfImage: "Maybe (Id MediaFile)"
     routePairs: "[RoutePair]"
     age: Maybe Int
     guardianName: Maybe Text

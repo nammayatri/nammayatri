@@ -3,6 +3,7 @@
 
 module Storage.Beam.PurchasedPassPayment where
 
+import qualified Data.Aeson
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import Domain.Types.Common ()
@@ -17,6 +18,7 @@ import Tools.Beam.UtilsTH
 data PurchasedPassPaymentT f = PurchasedPassPaymentT
   { activatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    applicableRouteIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     availableTripCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     benefitDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     benefitType :: B.C f (Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType),
@@ -37,6 +39,7 @@ data PurchasedPassPaymentT f = PurchasedPassPaymentT
     personId :: B.C f Kernel.Prelude.Text,
     profilePicture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     purchasedPassId :: B.C f Kernel.Prelude.Text,
+    routePairs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     startDate :: B.C f Data.Time.Calendar.Day,
     status :: B.C f Domain.Types.PurchasedPass.StatusType,
     createdAt :: B.C f Kernel.Prelude.UTCTime,

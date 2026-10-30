@@ -81,6 +81,7 @@ import Passetto.Client
 import Passetto.Lib (mkPassettoContextAuto)
 import qualified Registry.Beckn.Nammayatri.Types as NyRegistry
 import SharedLogic.External.LocationTrackingService.Types
+import SharedLogic.External.Umis.Types (UmisConfig)
 import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
 import Slack.Types (SlackNotificationConfig)
@@ -248,11 +249,13 @@ data AppCfg = AppCfg
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     seatBookingConfirmAPIRateLimitOptions :: APIRateLimitOptions,
     passSelectAPIRateLimitOptions :: APIRateLimitOptions,
+    umisLookupRateLimitOptions :: APIRateLimitOptions,
     sosTrackingRateLimitOptions :: APIRateLimitOptions,
     erssStatusUpdateRateLimitOptions :: APIRateLimitOptions,
     selfBaseUrl :: BaseUrl,
     tsServiceConfig :: CPT.TSServiceConfig,
     inMemConfig :: CF.InMemConfig,
+    umisConfig :: Maybe UmisConfig,
     disableViaPointTimetableCheck :: Bool,
     parkingApiKey :: Text,
     corporatePartnerApiToken :: Text,
@@ -412,11 +415,13 @@ data AppEnv = AppEnv
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     seatBookingConfirmAPIRateLimitOptions :: APIRateLimitOptions,
     passSelectAPIRateLimitOptions :: APIRateLimitOptions,
+    umisLookupRateLimitOptions :: APIRateLimitOptions,
     sosTrackingRateLimitOptions :: APIRateLimitOptions,
     erssStatusUpdateRateLimitOptions :: APIRateLimitOptions,
     selfBaseUrl :: BaseUrl,
     tsServiceConfig :: CPT.TSServiceConfig,
     inMemEnv :: CF.InMemEnv,
+    umisConfig :: Maybe UmisConfig,
     disableViaPointTimetableCheck :: Bool,
     url :: Maybe Text,
     parkingApiKey :: Text,

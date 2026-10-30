@@ -24,6 +24,7 @@ import qualified Tools.Beam.UtilsTH
 data PassDetailsE e = PassDetails
   { aadharNo :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     academicYearEnd :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
+    academicYearOfJoining :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     academicYearStart :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     address :: Kernel.Prelude.Maybe Domain.Types.PassDetails.PassDetailAddress,
     age :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -40,14 +41,17 @@ data PassDetailsE e = PassDetails
     name :: Kernel.Prelude.Text,
     numberOfStages :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     passEnum :: Domain.Types.PassType.PassEnum,
-    passOrganizationId :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
+    passOrganizationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization),
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     pincode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referenceNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     registerNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     remark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routePairs :: [Domain.Types.PassDetails.RoutePair],
-    selfImage :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile,
+    selfImage :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
+    studentStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    umisId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    umisVerifiedMobileNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     updatedAt :: Data.Time.UTCTime,
     validTill :: Data.Time.UTCTime,
     verificationStatus :: Domain.Types.PassDetails.VerificationStatus,
@@ -64,10 +68,12 @@ instance EncryptedItem PassDetails where
   encryptItem (entity, salt) = do
     aadharNo_ <- encryptItem $ (,salt) <$> aadharNo entity
     guardianMobileNumber_ <- encryptItem $ (,salt) <$> guardianMobileNumber entity
+    umisVerifiedMobileNumber_ <- encryptItem $ (,salt) <$> umisVerifiedMobileNumber entity
     pure
       PassDetails
         { aadharNo = aadharNo_,
           academicYearEnd = academicYearEnd entity,
+          academicYearOfJoining = academicYearOfJoining entity,
           academicYearStart = academicYearStart entity,
           address = address entity,
           age = age entity,
@@ -92,6 +98,9 @@ instance EncryptedItem PassDetails where
           remark = remark entity,
           routePairs = routePairs entity,
           selfImage = selfImage entity,
+          studentStatus = studentStatus entity,
+          umisId = umisId entity,
+          umisVerifiedMobileNumber = umisVerifiedMobileNumber_,
           updatedAt = updatedAt entity,
           validTill = validTill entity,
           verificationStatus = verificationStatus entity,
@@ -100,10 +109,12 @@ instance EncryptedItem PassDetails where
   decryptItem entity = do
     aadharNo_ <- fmap fst <$> decryptItem (aadharNo entity)
     guardianMobileNumber_ <- fmap fst <$> decryptItem (guardianMobileNumber entity)
+    umisVerifiedMobileNumber_ <- fmap fst <$> decryptItem (umisVerifiedMobileNumber entity)
     pure
       ( PassDetails
           { aadharNo = aadharNo_,
             academicYearEnd = academicYearEnd entity,
+            academicYearOfJoining = academicYearOfJoining entity,
             academicYearStart = academicYearStart entity,
             address = address entity,
             age = age entity,
@@ -128,6 +139,9 @@ instance EncryptedItem PassDetails where
             remark = remark entity,
             routePairs = routePairs entity,
             selfImage = selfImage entity,
+            studentStatus = studentStatus entity,
+            umisId = umisId entity,
+            umisVerifiedMobileNumber = umisVerifiedMobileNumber_,
             updatedAt = updatedAt entity,
             validTill = validTill entity,
             verificationStatus = verificationStatus entity,
@@ -154,7 +168,16 @@ data RoutePair = RoutePair
   }
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data VerificationStatus = PENDING | CLG_VERIFIED | MTC_VERIFIED | REJECTED | EXPIRED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data VerificationStatus
+  = PENDING
+  | CLG_VERIFIED
+  | MTC_VERIFIED
+  | REJECTED
+  | EXPIRED
+  | UMIS_VERIFIED
+  | PAYMENT_READY
+  | UMIS_OTP_PENDING
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''VerificationStatus)
 

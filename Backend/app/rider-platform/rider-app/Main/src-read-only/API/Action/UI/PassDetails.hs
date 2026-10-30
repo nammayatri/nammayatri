@@ -48,7 +48,7 @@ type API =
       :> "data"
       :> Get
            '[JSON]
-           API.Types.UI.PassDetails.PassDetailsDataResp
+           (Kernel.Prelude.Maybe API.Types.UI.PassDetails.PassDetailsDataResp)
       :<|> TokenAuth
       :> "passDetails"
       :> Capture
@@ -76,10 +76,56 @@ type API =
       :> Get
            '[JSON]
            Kernel.Prelude.Text
+      :<|> TokenAuth
+      :> "passDetails"
+      :> Capture
+           "passEnum"
+           Kernel.Prelude.Text
+      :> "verifyWithUmis"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.PassDetails.UmisVerifyReq
+      :> Post
+           '[JSON]
+           API.Types.UI.PassDetails.UmisVerifyResp
+      :<|> TokenAuth
+      :> "passDetails"
+      :> Capture
+           "passEnum"
+           Kernel.Prelude.Text
+      :> "routeDetail"
+      :> "update"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.PassDetails.RouteDetailsUpdateReq
+      :> Post
+           '[JSON]
+           API.Types.UI.PassDetails.RouteDetailsUpdateResp
+      :<|> TokenAuth
+      :> "passDetails"
+      :> Capture
+           "passEnum"
+           Kernel.Prelude.Text
+      :> "resendUmisOtp"
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "passDetails"
+      :> Capture
+           "passEnum"
+           Kernel.Prelude.Text
+      :> "verifyUmisOtp"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.PassDetails.UmisOtpVerifyReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getGetOrganizations :<|> postPassDetailsUpdate :<|> getPassDetailsData :<|> getPassDetailsVerificationStatus :<|> postPassDetailsUploadDocument :<|> getPassDetailsDocument
+handler = getGetOrganizations :<|> postPassDetailsUpdate :<|> getPassDetailsData :<|> getPassDetailsVerificationStatus :<|> postPassDetailsUploadDocument :<|> getPassDetailsDocument :<|> postPassDetailsVerifyWithUmis :<|> postPassDetailsRouteDetailUpdate :<|> postPassDetailsResendUmisOtp :<|> postPassDetailsVerifyUmisOtp
 
 getGetOrganizations ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -105,7 +151,7 @@ getPassDetailsData ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
-    Environment.FlowHandler API.Types.UI.PassDetails.PassDetailsDataResp
+    Environment.FlowHandler (Kernel.Prelude.Maybe API.Types.UI.PassDetails.PassDetailsDataResp)
   )
 getPassDetailsData a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.PassDetails.getPassDetailsData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
@@ -135,3 +181,42 @@ getPassDetailsDocument ::
     Environment.FlowHandler Kernel.Prelude.Text
   )
 getPassDetailsDocument a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.PassDetails.getPassDetailsDocument (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postPassDetailsVerifyWithUmis ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    API.Types.UI.PassDetails.UmisVerifyReq ->
+    Environment.FlowHandler API.Types.UI.PassDetails.UmisVerifyResp
+  )
+postPassDetailsVerifyWithUmis a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.PassDetails.postPassDetailsVerifyWithUmis (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postPassDetailsRouteDetailUpdate ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    API.Types.UI.PassDetails.RouteDetailsUpdateReq ->
+    Environment.FlowHandler API.Types.UI.PassDetails.RouteDetailsUpdateResp
+  )
+postPassDetailsRouteDetailUpdate a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.PassDetails.postPassDetailsRouteDetailUpdate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postPassDetailsResendUmisOtp ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postPassDetailsResendUmisOtp a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.PassDetails.postPassDetailsResendUmisOtp (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postPassDetailsVerifyUmisOtp ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    API.Types.UI.PassDetails.UmisOtpVerifyReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postPassDetailsVerifyUmisOtp a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.PassDetails.postPassDetailsVerifyUmisOtp (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

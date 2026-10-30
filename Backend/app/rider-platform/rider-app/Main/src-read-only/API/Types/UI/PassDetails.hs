@@ -21,9 +21,11 @@ data GetOrganizationResp = GetOrganizationResp {address :: Kernel.Prelude.Maybe 
 
 data PassDetailsDataResp = PassDetailsDataResp
   { academicYearEnd :: Kernel.Prelude.Maybe Data.Time.Day,
+    academicYearOfJoining :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     academicYearStart :: Kernel.Prelude.Maybe Data.Time.Day,
     address :: Kernel.Prelude.Maybe Domain.Types.PassDetails.PassDetailAddress,
     age :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    applicableRouteIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     department :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gender :: Domain.Types.Person.Gender,
     guardianMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -31,13 +33,16 @@ data PassDetailsDataResp = PassDetailsDataResp
     idCardPicture :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     name :: Kernel.Prelude.Text,
     passDetailsId :: Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails,
-    passOrganizationId :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
-    passOrganizationName :: Kernel.Prelude.Text,
+    passOrganizationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization),
+    passOrganizationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pincode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registerNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     remark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routePairs :: [Domain.Types.PassDetails.RoutePair],
-    selfImage :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile,
+    selfImage :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
+    studentStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    umisId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    umisMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     validTill :: Data.Time.UTCTime,
     verificationStatus :: Domain.Types.PassDetails.VerificationStatus,
     year :: Kernel.Prelude.Maybe Kernel.Prelude.Text
@@ -72,6 +77,26 @@ data PassStatusResp = PassStatusResp {remark :: Kernel.Prelude.Maybe Kernel.Prel
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RouteDetails = RouteDetails {destStopId :: Kernel.Prelude.Text, destStopName :: Kernel.Prelude.Text, srcStopId :: Kernel.Prelude.Text, srcStopName :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RouteDetailsUpdateReq = RouteDetailsUpdateReq {routeDetails :: [RouteDetails]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RouteDetailsUpdateResp = RouteDetailsUpdateResp {applicableRouteIds :: [Kernel.Prelude.Text]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UmisOtpVerifyReq = UmisOtpVerifyReq {otp :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UmisVerifyReq = UmisVerifyReq {umisId :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UmisVerifyResp = UmisVerifyResp {umisMobileNumber :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
