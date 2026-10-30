@@ -817,7 +817,6 @@ data MetroHopLeg = MetroHopLeg
     destStopCode :: Text,
     routeCode :: Text,
     lineName :: Text,
-    numStops :: Int,
     alternateRouteCodes :: [Text]
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)

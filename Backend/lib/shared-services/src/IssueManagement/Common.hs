@@ -202,6 +202,7 @@ data RideInfoRes = RideInfoRes
     estimatedFare :: HighPrecMoney,
     computedPrice :: Maybe HighPrecMoney,
     fareBreakup :: [FareBreakup],
+    estimateFareBreakup :: [EstimateFareBreakup],
     rideCreatedAt :: UTCTime,
     rideStartTime :: Maybe UTCTime,
     mobileCountryCode :: Maybe Text
@@ -232,6 +233,12 @@ data FareBreakup = FareBreakup
     description :: Text,
     entityId :: Text,
     entityType :: FareBreakupEntityType
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data EstimateFareBreakup = EstimateFareBreakup
+  { title :: Text,
+    amount :: HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

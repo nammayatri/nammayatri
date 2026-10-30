@@ -68,7 +68,12 @@ data DriverRideRequest
         countsTowardCancellationRate :: Bool,
         -- gates the bt: RIDE_CANCELLATION ACTION_COUNT: DriverAtFault verdict, or True when the
         -- city has no fault rules (no verdict) so every driver cancel counts
-        countsTowardCancellationCount :: Bool
+        countsTowardCancellationCount :: Bool,
+        -- True only when the driver pressed cancel. The handler now also runs for rider-pressed
+        -- cancels judged DriverAtFault (so the cancellation-rate ladder sees them), and the
+        -- driver-cancel-only side effects — extra-fare mitigation, the legacy lifetime-rate
+        -- block, driver-stats upkeep — stay gated on this.
+        cancelledByDriver :: Bool
       }
   | OnRideCompletion
       { merchantId :: Id DM.Merchant,

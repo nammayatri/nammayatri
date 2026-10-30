@@ -325,15 +325,12 @@ instance FromJSON InvoiceTemplateScope where
 
 data LogicDomain
   = POOLING
-  | CANCELLATION_COIN_POLICY
   | FARE_POLICY
   | CUMULATIVE_OFFER_POLICY
   | FRFS_OFFER_SEGMENT_POLICY
   | OFFERS_FRAUD_CHECKS
   | DYNAMIC_PRICING_UNIFIED
   | PICKUP_ETA_CALCULATION
-  | USER_CANCELLATION_DUES
-  | USER_CANCELLATION_DUES_WAIVE_OFF
   | CANCELLATION_FAULT_VERDICT
   | FRFS_TICKET_CATEGORIES
   | GPS_TOLL_BEHAVIOR
@@ -367,10 +364,12 @@ data LogicDomain
   | INVOICE_TEMPLATE InvoiceTemplateScope
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
--- | Dashboard-listable domains: the retired cancellation domains
--- (USER_CANCELLATION_DUES, USER_CANCELLATION_DUES_WAIVE_OFF, CANCELLATION_COIN_POLICY —
--- absorbed by the CancellationConsequenceMatrix) are excluded so no NEW configs can be
--- created for them; constructors and Show/Read stay for persisted rows.
+-- | Dashboard-listable domains. USER_CANCELLATION_DUES, USER_CANCELLATION_DUES_WAIVE_OFF
+-- and CANCELLATION_COIN_POLICY were absorbed by the CancellationConsequenceMatrix and have
+-- now been removed outright — their persisted rows are dropped by
+-- dev/feature-migrations/0075-drop-retired-cancellation-logic-domains.sql, which must land
+-- with (or before) this change because Flow.Dashboard reads rollouts per city without a
+-- domain filter and would fail to parse the retired values.
 instance Enumerable LogicDomain where
   allValues =
     [ POOLING,
@@ -488,8 +487,6 @@ generateLogicDomainShowInstances =
     ++ [show FARE_POLICY]
     ++ [show DYNAMIC_PRICING_UNIFIED]
     ++ [show PICKUP_ETA_CALCULATION]
-    ++ [show USER_CANCELLATION_DUES]
-    ++ [show USER_CANCELLATION_DUES_WAIVE_OFF]
     ++ [show CANCELLATION_FAULT_VERDICT]
     ++ [show FRFS_TICKET_CATEGORIES]
     ++ [show (CONFIG configType) | configType <- configTypes]
@@ -498,7 +495,6 @@ generateLogicDomainShowInstances =
     ++ [show (RIDER_CONFIG_OVERRIDES configType) | configType <- configTypes]
     ++ [show (UI_DRIVER a b) | a <- a', b <- b']
     ++ [show (UI_RIDER a b) | a <- a', b <- b']
-    ++ [show CANCELLATION_COIN_POLICY]
     ++ [show CUMULATIVE_OFFER_POLICY]
     ++ [show FRFS_OFFER_SEGMENT_POLICY]
     ++ [show OFFERS_FRAUD_CHECKS]
@@ -545,8 +541,6 @@ instance Show LogicDomain where
   show FARE_POLICY = "FARE-POLICY"
   show DYNAMIC_PRICING_UNIFIED = "DYNAMIC-PRICING-UNIFIED"
   show PICKUP_ETA_CALCULATION = "PICKUP-ETA-CALCULATION"
-  show USER_CANCELLATION_DUES = "USER-CANCELLATION-DUES"
-  show USER_CANCELLATION_DUES_WAIVE_OFF = "USER-CANCELLATION-DUES-WAIVE-OFF"
   show CANCELLATION_FAULT_VERDICT = "CANCELLATION-FAULT-VERDICT"
   show FRFS_TICKET_CATEGORIES = "FRFS-TICKET-CATEGORIES"
   show (CONFIG configType) = "CONFIG_" ++ show configType
@@ -555,7 +549,6 @@ instance Show LogicDomain where
   show (RIDER_CONFIG_OVERRIDES configType) = "RIDER-CONFIG-OVERRIDES_" ++ show configType
   show (UI_DRIVER a b) = "UI-DRIVER_" ++ show a ++ "_" ++ show b
   show (UI_RIDER a b) = "UI-RIDER_" ++ show a ++ "_" ++ show b
-  show CANCELLATION_COIN_POLICY = "CANCELLATION-COIN-POLICY"
   show CUMULATIVE_OFFER_POLICY = "CUMULATIVE-OFFER-POLICY"
   show FRFS_OFFER_SEGMENT_POLICY = "FRFS-OFFER-SEGMENT-POLICY"
   show OFFERS_FRAUD_CHECKS = "OFFERS-FRAUD-CHECKS"
@@ -596,16 +589,10 @@ instance Read LogicDomain where
             [(DYNAMIC_PRICING_UNIFIED, drop 1 rest)]
           "PICKUP-ETA-CALCULATION" ->
             [(PICKUP_ETA_CALCULATION, drop 1 rest)]
-          "USER-CANCELLATION-DUES" ->
-            [(USER_CANCELLATION_DUES, drop 1 rest)]
-          "USER-CANCELLATION-DUES-WAIVE-OFF" ->
-            [(USER_CANCELLATION_DUES_WAIVE_OFF, drop 1 rest)]
           "CANCELLATION-FAULT-VERDICT" ->
             [(CANCELLATION_FAULT_VERDICT, drop 1 rest)]
           "FRFS-TICKET-CATEGORIES" ->
             [(FRFS_TICKET_CATEGORIES, drop 1 rest)]
-          "CANCELLATION-COIN-POLICY" ->
-            [(CANCELLATION_COIN_POLICY, drop 1 rest)]
           "CUMULATIVE-OFFER-POLICY" ->
             [(CUMULATIVE_OFFER_POLICY, drop 1 rest)]
           "FRFS-OFFER-SEGMENT-POLICY" ->

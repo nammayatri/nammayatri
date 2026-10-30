@@ -1683,6 +1683,10 @@ getConfigValue language issueConfig mbRideInfoRes key = do
       boothCharges = maybe 0.0 (.amount.amount) (getFareFromArray "BOOTH_CHARGE" fareBreakup)
       returnCharges = maybe 0.0 (.amount.amount) (getFareFromArray "RETURN_FEE" fareBreakup)
       schedulingCharges = maybe 0.0 (.amount.amount) (getFareFromArray "SCHEDULING_CHARGE" fareBreakup)
+      waitingCharges = maybe 0.0 (.amount.amount) (getFareFromArray "WAITING_OR_PICKUP_CHARGES" fareBreakup)
+      estimateFareBreakup = maybe [] (.estimateFareBreakup) mbRideInfoRes
+      freeWaitingMinutes = maybe 0.0 (.amount) (getEstimateFromArray "FREE_WAITING_TIME_IN_MINUTES" estimateFareBreakup)
+      waitingChargeRatePerMin = maybe 0.0 (.amount) (getEstimateFromArray "WAITING_CHARGE_RATE_PER_MIN" estimateFareBreakup)
       vehicleNo = maybe "" (formatVehicleNo . (.vehicleNo)) mbRideInfoRes
       driverName = maybe "" (.driverName) mbRideInfoRes
       driverPhoneNo = fromMaybe "" $ (.driverPhoneNo) =<< mbRideInfoRes
@@ -1703,7 +1707,7 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "DISTANCE_DIFFERENCE" -> show distanceDifference
         "ESTIMATED_FARE" -> show estimatedFare
         "FINAL_FARE" -> show finalFare
-        "FARE_DIFFERENCE" -> show fareDifference
+        "FARE_DIFFERENCE" -> show (roundHighPrecMoney 2 fareDifference :: HighPrecMoney)
         "DRIVER_PICKUP_CHARGE" -> show driverPickupCharges
         "TOLL_CHARGES" -> show tollCharges
         "PET_CHARGES" -> show petCharges
@@ -1719,6 +1723,9 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "BOOTH_CHARGE" -> show boothCharges
         "RETURN_FEE" -> show returnCharges
         "SCHEDULING_CHARGE" -> show schedulingCharges
+        "WAITING_CHARGES" -> show waitingCharges
+        "FREE_WAITING_TIME_IN_MINUTES" -> show (round freeWaitingMinutes :: Int)
+        "WAITING_CHARGE_RATE_PER_MIN" -> show waitingChargeRatePerMin
         "HEADING" -> "{SUBPART}{HEADING}{!!!}"
         "BODY" -> "{SUBPART}{BODY}{!!!}"
         "VEHICLE_NUMBER" -> vehicleNo
@@ -1729,6 +1736,9 @@ getConfigValue language issueConfig mbRideInfoRes key = do
   where
     getFareFromArray :: Text -> [FareBreakup] -> Maybe FareBreakup
     getFareFromArray fareKey = find (\fareBreakup -> fareBreakup.description == fareKey)
+
+    getEstimateFromArray :: Text -> [EstimateFareBreakup] -> Maybe EstimateFareBreakup
+    getEstimateFromArray estimateKey = find (\estimate -> estimate.title == estimateKey)
 
     formatVehicleNo :: Text -> Text
     formatVehicleNo vehicleNo =
