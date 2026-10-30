@@ -5,6 +5,7 @@ on:
     branches:
       - "main"
       - "backend/feat/shared-cab-image-a17b"
+      - "nammayatri-sandbox"
   workflow_dispatch:
     inputs:
       # Manual check that the Xyne failure alerts work (secrets, runner network, script): when ticked,
