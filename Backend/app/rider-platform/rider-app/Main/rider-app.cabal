@@ -592,6 +592,7 @@ library
       SharedLogic.Confirm
       SharedLogic.CreateFareForMultiModal
       SharedLogic.DisplayBookingId
+      SharedLogic.DriverNumber
       SharedLogic.DummySignatureAuth
       SharedLogic.EditLocationThrottle
       SharedLogic.External.BbpsService.Flow

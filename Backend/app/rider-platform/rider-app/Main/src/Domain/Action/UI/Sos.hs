@@ -64,6 +64,7 @@ import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Safety.Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
+import SharedLogic.DriverNumber (getDriverMobileNumber)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import qualified SharedLogic.External.LocationTrackingService.Types as LTSTypes
 import SharedLogic.JobScheduler
@@ -368,8 +369,8 @@ createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId
             phoneNumber <- mapM decrypt person.mobileNumber
             let rideMocId = fromMaybe merchantOperatingCityId ride.merchantOperatingCityId
             (merchantShortId, rideCityCode) <- fetchDashboardLinkContext person.merchantId rideMocId
-            let rideInfo = SIVR.buildRideInfo ride person phoneNumber
-                kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
+            rideInfo <- SIVR.buildRideInfo ride person phoneNumber
+            let kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
                 mediaLinks =
                   buildDashboardMediaUrls
                     riderConfig.dashboardMediaFileUrlPattern
@@ -544,8 +545,8 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
           ride <- QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist (getId rideId))
           let rideMocId = fromMaybe person.merchantOperatingCityId ride.merchantOperatingCityId
           rideMoc <- CQMOC.findById rideMocId >>= fromMaybeM (MerchantOperatingCityNotFound rideMocId.getId)
-          let rideInfo = SIVR.buildRideInfo ride person phoneNumber
-              merchantShortId = merchantConfig.shortId.getShortId
+          rideInfo <- SIVR.buildRideInfo ride person phoneNumber
+          let merchantShortId = merchantConfig.shortId.getShortId
               rideCityCode =
                 case A.toJSON rideMoc.city of
                   A.String code -> code
@@ -1061,8 +1062,8 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
     phoneNumber <- mapM decrypt person.mobileNumber
     let rideMocId = fromMaybe person.merchantOperatingCityId ride.merchantOperatingCityId
     (merchantShortId, rideCityCode) <- fetchDashboardLinkContext person.merchantId rideMocId
-    let rideInfo = SIVR.buildRideInfo ride person phoneNumber
-        kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
+    rideInfo <- SIVR.buildRideInfo ride person phoneNumber
+    let kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
         dashboardRideInfoUrl =
           buildDashboardMediaUrls
             riderConfig.dashboardMediaFileUrlPattern
@@ -1143,6 +1144,7 @@ buildExternalSOSDetails ::
 buildExternalSOSDetails req person sosConfig _serviceConfig mbRide emergencyContacts merchantOpCity riderConfig mbComments mbSosId = do
   now <- getCurrentTime
   mobileNo <- fmap (fromMaybe "0000000000") $ traverse decrypt person.mobileNumber
+  mbDriverContactNo <- join <$> mapM getDriverMobileNumber mbRide
   emailText <- traverse decrypt person.email
   imeiText <- traverse decrypt person.imeiNumber
   customerDisability <- runInReplica $ PDisability.findByPersonId person.id
@@ -1180,7 +1182,7 @@ buildExternalSOSDetails req person sosConfig _serviceConfig mbRide emergencyCont
         gender = Just $ T.pack $ show person.gender,
         attachmentFileName = Nothing,
         driverName = (.driverName) <$> mbRide,
-        driverContactNo = (.driverMobileNumber) <$> mbRide,
+        driverContactNo = mbDriverContactNo,
         vehicleNo = (.vehicleNumber) <$> mbRide,
         vehicleModel = (.vehicleModel) <$> mbRide,
         vehicleColor = mbRide >>= (.vehicleColor),

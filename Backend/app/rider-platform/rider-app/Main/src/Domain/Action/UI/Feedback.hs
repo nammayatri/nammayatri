@@ -155,8 +155,8 @@ feedback request personId = do
   when isLOFeedback $
     fork "Creating ticket and notifying on slack" $ do
       phoneNumber <- mapM decrypt person.mobileNumber
-      let rideInfo = SIVR.buildRideInfo ride person phoneNumber
-          queue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.l0FeedbackQueue
+      rideInfo <- SIVR.buildRideInfo ride person phoneNumber
+      let queue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.l0FeedbackQueue
           ticketReq = mkTicket person phoneNumber rideInfo filePath riderConfig.kaptureConfig.disposition queue
       createTicketResp <- withTryCatch "createTicket:feedback" $ Ticket.createTicket merchant.id merchantOperatingCityId ticketReq
       case createTicketResp of

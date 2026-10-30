@@ -79,6 +79,7 @@ import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import SharedLogic.Booking (getfareBreakups)
+import SharedLogic.DriverNumber (getDriverMobileNumber)
 import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Sos ()
@@ -777,7 +778,8 @@ buildRideAPIEntity ::
   (Id Person.Person, Booking, Bool) ->
   DRide.Ride ->
   m RideAPIEntity
-buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = do
+buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) ride@DRide.Ride {..} = do
+  mbDriverNumber <- getDriverMobileNumber ride
   stopsInfo <- if (fromMaybe False hasStops) then QSI.findAllByRideId id else return []
   let oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
@@ -840,7 +842,7 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = d
   return $
     RideAPIEntity
       { shortRideId = shortId,
-        driverNumber = Just driverMobileNumber,
+        driverNumber = mbDriverNumber,
         driverRatings = driverRating',
         driverRegisteredAt = Just driverRegisteredAt',
         rideOtp = otp,

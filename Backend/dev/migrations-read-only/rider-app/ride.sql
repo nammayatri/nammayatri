@@ -485,3 +485,5 @@ ALTER TABLE atlas_app.ride ADD COLUMN return_otp text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.ride ALTER COLUMN driver_mobile_number SET DEFAULT NULL;
+ALTER TABLE atlas_app.ride ALTER COLUMN driver_mobile_number DROP NOT NULL;

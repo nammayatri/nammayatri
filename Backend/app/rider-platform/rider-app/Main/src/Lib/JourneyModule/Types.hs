@@ -80,6 +80,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as YTypes
 import SharedLogic.Booking (getfareBreakups)
+import SharedLogic.DriverNumber (getDriverMobileNumber)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FRFSLiveTrip as FRFSLiveTrip
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
@@ -661,6 +662,7 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
   (fareBreakups, estimatedFareBreakups) <- getfareBreakups booking mRide
   tollDifference <- getTollDifference fareBreakups estimatedFareBreakups
   batchConfig <- SharedRedisKeys.getBatchConfig booking.transactionId
+  mbDriverMobileNumber <- join <$> mapM getDriverMobileNumber mRide
   (oldStatus, bookingStatus, trackingStatus, trackingStatusLastUpdatedAt) <- JMStateUtils.getTaxiAllStatuses journeyLeg (Just booking) mRide Nothing
   return $
     LegInfo
@@ -707,7 +709,7 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
                 fareProductType = Just $ getBookingDetailsConstructor booking.bookingDetails,
                 extraDistanceFare = (.amount) <$> find (\item -> item.description == "DIST_BASED_FARE") fareBreakups,
                 bppRideId = mRide <&> (.bppRideId),
-                driverMobileNumber = (\item -> Just $ item.driverMobileNumber) =<< mRide,
+                driverMobileNumber = mbDriverMobileNumber,
                 exoPhoneNumber = Just booking.primaryExophone,
                 legStartTime = listToMaybe journeyLeg.routeDetails >>= (.legStartTime),
                 legEndTime = listToMaybe journeyLeg.routeDetails >>= (.legEndTime),
