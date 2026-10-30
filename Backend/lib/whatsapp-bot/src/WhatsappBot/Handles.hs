@@ -56,6 +56,11 @@ data BackendHandle m = BackendHandle
     markRideAsSafe :: BotAuth -> Text -> m (Either BotError ()),
     -- | bookingId, ride status (drives reasonStage) -> ().
     cancelRide :: BotAuth -> Text -> Text -> m (Either BotError ()),
+    -- | estimateId -> (). Stops a regular search that 'selectEstimate' left
+    -- looking for a driver; if a booking was already made from it, cancels that
+    -- booking instead. Not in the TS port: there, a cancelled or timed-out
+    -- regular search kept running and could still book a driver.
+    cancelEstimate :: BotAuth -> Text -> m (Either BotError ()),
     updateProfile :: BotAuth -> BotProfileUpdate -> m (Either BotError ())
   }
 

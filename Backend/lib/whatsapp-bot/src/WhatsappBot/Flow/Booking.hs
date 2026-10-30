@@ -320,45 +320,75 @@ startFlexiSearch env ev ctx = do
             Left _ -> flexiNoAuto env ev ctx
             Right [] -> flexiNoAuto env ev ctx
             Right quotes@(q0 : _) -> do
-              let chosen = fromMaybe q0 (find (\q -> q.vehicleVariant == Just "AUTO_RICKSHAW") quotes)
-              ebid <- env.backend.confirmQuote auth chosen.quoteId
-              case ebid of
-                Left _ -> flexiNoAuto env ev ctx
-                Right bookingId
-                  | T.null bookingId -> flexiNoAuto env ev ctx
-                  | otherwise -> do
-                    -- Re-read: a "Cancel search" tap can land during the blocking
-                    -- search/confirm above (engine.ts:1099-1103).
-                    afterConfirm <- fromMaybe initialContext <$> getCtx env ev
-                    if afterConfirm.cancelRequested == Just True || afterConfirm.state == Idle
-                      then pure ()
-                      else do
-                        let ac =
-                              afterConfirm
-                                { flexiBookingId = Just bookingId,
-                                  activeBookingId = Just bookingId,
-                                  selectStartedAt = Just (addUTCTime (-120) flowStartedAt),
-                                  state = Tracking
-                                }
-                        save env ev ac
-                        registerRide' env ev bookingId ac "confirmed"
-                        outcome <- pollFlexiDriver env ev auth bookingId ctx.language 0
-                        case outcome of
-                          PollAborted -> pure ()
-                          PollNotFound -> flexiNoAuto env ev ctx
-                          PollFound b -> do
-                            -- Claim 'assigned' so the tracker doesn't also send
-                            -- this card (engine.ts:1153-1160).
-                            -- Bump only on a delivered card; a failed send releases the
-                            -- claim so the tracker retries it. Not bumping on a lost claim
-                            -- either: the tracker holding it advances the stage itself.
-                            won <- env.registry.claimStage bookingId "assigned"
-                            when won $ do
-                              delivered <- sendFlexiDriverCard env ev b
-                              if delivered
-                                then bumpStage env bookingId "assigned"
-                                else env.registry.releaseStage bookingId "assigned"
+              -- Re-read BEFORE confirming: a "Cancel search" tap during the quote
+              -- poll finds no booking to cancel and only resets the session, so
+              -- confirming now would book a ride the rider was told is cancelled.
+              beforeConfirm <- fromMaybe initialContext <$> getCtx env ev
+              unless (searchCancelled beforeConfirm) $ do
+                let chosen = fromMaybe q0 (find (\q -> q.vehicleVariant == Just "AUTO_RICKSHAW") quotes)
+                ebid <- env.backend.confirmQuote auth chosen.quoteId
+                case ebid of
+                  Left _ -> flexiNoAuto env ev ctx
+                  Right bookingId
+                    | T.null bookingId -> flexiNoAuto env ev ctx
+                    | otherwise -> do
+                      -- Re-read: a "Cancel search" tap can land during the blocking
+                      -- confirm above (engine.ts:1099-1103). That cancel ran before
+                      -- this booking existed, so cancel the booking here; the rider
+                      -- has already been told it is cancelled.
+                      afterConfirm <- fromMaybe initialContext <$> getCtx env ev
+                      if searchCancelled afterConfirm
+                        then void $ env.backend.cancelRide auth bookingId ""
+                        else continueFlexiBooking env ev ctx auth bookingId flowStartedAt afterConfirm
     _ -> promptForPickup env ev ctx False
+
+-- | After a flexi booking is confirmed and not cancelled: register it with the
+-- tracker, wait for a driver, send the card. On a timeout the booking is
+-- cancelled before saying "no auto", so no driver turns up for a rider who was
+-- told none was found.
+continueFlexiBooking :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> BotAuth -> Text -> UTCTime -> FlowContext -> m ()
+continueFlexiBooking env ev ctx auth bookingId flowStartedAt afterConfirm = do
+  let ac =
+        afterConfirm
+          { flexiBookingId = Just bookingId,
+            activeBookingId = Just bookingId,
+            selectStartedAt = Just (addUTCTime (-120) flowStartedAt),
+            state = Tracking
+          }
+  save env ev ac
+  registerRide' env ev bookingId ac "confirmed"
+  outcome <- pollFlexiDriver env ev auth bookingId ctx.language 0
+  case outcome of
+    PollAborted -> pure ()
+    PollNotFound -> do
+      ec <- env.backend.cancelRide auth bookingId ""
+      case ec of
+        Right () -> do
+          -- Claim 'cancelled' so the tracker stops watching without sending its
+          -- own "ride was cancelled" on top of the "no auto" below.
+          _ <- env.registry.claimStage bookingId "cancelled"
+          env.registry.removeRide bookingId
+          flexiNoAuto env ev ctx
+        -- Could not cancel: most likely a driver took it just now. The ride is
+        -- still registered, so the tracker sends the card (or the cancellation).
+        Left _ -> pure ()
+    PollFound b -> do
+      -- Claim 'assigned' so the tracker doesn't also send
+      -- this card (engine.ts:1153-1160).
+      -- Bump only on a delivered card; a failed send releases the
+      -- claim so the tracker retries it. Not bumping on a lost claim
+      -- either: the tracker holding it advances the stage itself.
+      won <- env.registry.claimStage bookingId "assigned"
+      when won $ do
+        delivered <- sendFlexiDriverCard env ev b
+        if delivered
+          then bumpStage env bookingId "assigned"
+          else env.registry.releaseStage bookingId "assigned"
+
+-- | The rider cancelled or left the search (Cancel tap, main menu, or a tracker
+-- reset): the context a running search re-reads to decide whether to go on.
+searchCancelled :: FlowContext -> Bool
+searchCancelled c = c.cancelRequested == Just True || c.state == Idle
 
 -- | Poll @getFlexiQuotes@ up to @flexiQuotePollAttempts@ times (@engine.ts:1074-1078@).
 pollFlexiQuotes :: Monad m => BotEnv m -> BotAuth -> Text -> Int -> m (Either BotError [BotQuote])
@@ -381,7 +411,7 @@ pollFlexiDriver env ev auth bookingId lang attempt
   | attempt >= env.cfg.driverPollAttempts = pure PollNotFound
   | otherwise = do
     fresh <- fromMaybe initialContext <$> getCtx env ev
-    if fresh.cancelRequested == Just True || fresh.state == Idle
+    if searchCancelled fresh
       then pure PollAborted
       else do
         eb <- env.backend.getBookingDetails auth bookingId
@@ -491,20 +521,24 @@ startRegularSearch env ev ctx = do
   case (ctx.personId, ctx.origin, ctx.destination) of
     (Just pid, Just origin, Just destination) -> do
       let auth = BotAuth pid
+          -- selectStartedAt unset = the fare search, not the booking wait (the
+          -- RegularSearching reply in Engine reads it); clears one left from an
+          -- earlier ride.
+          ctx1 = ctx {selectStartedAt = Nothing}
       -- No "Getting your fare..." message: the fare confirmation follows within
       -- seconds. A message sent while searching still gets that reply (stateSwitch).
-      save env ev ctx {state = RegularSearching}
+      save env ev ctx1 {state = RegularSearching}
       esid <- env.backend.searchRide auth origin destination
       case esid of
-        Left _ -> flexiNoAuto env ev ctx
+        Left _ -> flexiNoAuto env ev ctx1
         Right searchId -> do
           eest <- pollEstimates env auth searchId 0
           case eest of
-            Left _ -> flexiNoAuto env ev ctx
-            Right [] -> flexiNoAuto env ev ctx
+            Left _ -> flexiNoAuto env ev ctx1
+            Right [] -> flexiNoAuto env ev ctx1
             Right estimates@(e0 : _) -> do
               let autoEst = fromMaybe e0 (find (\e -> e.vehicleVariant == "AUTO_RICKSHAW") estimates)
-              sendRegularFareConfirm env ev ctx {regularEstimateId = Just autoEst.estimateId, regularFare = Just autoEst.estimatedFare}
+              sendRegularFareConfirm env ev ctx1 {regularEstimateId = Just autoEst.estimateId, regularFare = Just autoEst.estimatedFare}
     _ -> do
       reply env to s.sessionExpired
       save env ev ctx {state = Idle}
@@ -547,34 +581,58 @@ confirmRegularBooking env ev ctx = do
   case (ctx.personId, ctx.regularEstimateId) of
     (Just pid, Just estimateId) -> do
       let auth = BotAuth pid
-      save env ev ctx {cancelRequested = Just False}
-      replyButtons env to s.regularBooking [btn s.flexiCancelSearch "cancel"]
       -- Reference time BEFORE select (minus skew) so the booking clears listV2.
       selectCalledAt <- addUTCTime (-120) <$> env.clock.now
+      -- RegularSearching from here until the ride is registered, not Tracking:
+      --   * a second "Book auto" tap no longer matches (Engine requires
+      --     ConfirmingRegularFare), so a double tap can't select twice;
+      --   * a message typed while waiting gets "Booking your auto..." instead of
+      --     the Tracking handler, which finds no registered ride yet and resets the
+      --     session, which the wait below would take for a cancel.
+      -- selectStartedAt set marks the booking wait (Engine's RegularSearching reply)
+      -- and is the window a Cancel lists bookings from.
+      save env ev ctx {cancelRequested = Just False, state = RegularSearching, selectStartedAt = Just selectCalledAt}
+      replyButtons env to s.regularBooking [btn s.flexiCancelSearch "cancel"]
       esel <- env.backend.selectEstimate auth estimateId
       case esel of
         Left _ -> flexiNoAuto env ev ctx
         Right () -> do
+          -- select leaves the search looking for a driver with auto-assign on. A
+          -- cancel that lands before any booking exists finds nothing to cancel
+          -- (handleCancel lists bookings), so stop the search itself here, or a
+          -- driver can still accept a ride the rider was told is cancelled.
           afterSelect <- fromMaybe initialContext <$> getCtx env ev
-          if afterSelect.cancelRequested == Just True || afterSelect.state == Idle
-            then pure ()
+          if searchCancelled afterSelect
+            then void $ env.backend.cancelEstimate auth estimateId
             else do
-              save env ev afterSelect {state = Tracking, selectStartedAt = Just selectCalledAt}
               outcome <- pollRegularBooking env ev auth selectCalledAt ctx.language 0
               case outcome of
-                PollAborted -> pure ()
-                PollNotFound -> flexiNoAuto env ev ctx
+                PollAborted -> void $ env.backend.cancelEstimate auth estimateId
+                PollNotFound -> do
+                  ec <- env.backend.cancelEstimate auth estimateId
+                  case ec of
+                    Right () -> flexiNoAuto env ev ctx
+                    -- Could not stop it. Nothing is registered with the tracker
+                    -- yet, so tell the rider rather than go quiet; "book" starts over.
+                    Left _ -> reply env to s.somethingWentWrong
                 PollFound b -> do
                   registerRide' env ev b.bookingId ctx "confirmed"
+                  -- Registered now, so Tracking's status/track finds the ride.
+                  afterFound <- fromMaybe initialContext <$> getCtx env ev
+                  unless (searchCancelled afterFound) $ save env ev afterFound {state = Tracking}
                   let hasDriver = isJust b.driverName || isJust b.rideOtp
-                  won <- if hasDriver then env.registry.claimStage b.bookingId "assigned" else pure False
-                  delivered <- sendFlexiDriverCard env ev b
-                  -- Same rule as the flexi path: advance only on a delivered card,
-                  -- otherwise release so the tracker retries.
-                  when won $
-                    if delivered
-                      then bumpStage env b.bookingId "assigned"
-                      else env.registry.releaseStage b.bookingId "assigned"
+                  -- No driver yet: send nothing; the tracker sends the card once the
+                  -- driver is attached. Driver there: send only if we win the claim,
+                  -- same as the flexi path, so the tracker doesn't send it too.
+                  when hasDriver $ do
+                    won <- env.registry.claimStage b.bookingId "assigned"
+                    when won $ do
+                      delivered <- sendFlexiDriverCard env ev b
+                      -- Advance only on a delivered card, otherwise release so the
+                      -- tracker retries.
+                      if delivered
+                        then bumpStage env b.bookingId "assigned"
+                        else env.registry.releaseStage b.bookingId "assigned"
     _ -> reply env to s.sessionExpired
 
 -- | Poll @getActiveBookings(createdAfter)@ for the just-booked ride
@@ -584,7 +642,7 @@ pollRegularBooking env ev auth createdAfter lang attempt
   | attempt >= env.cfg.driverPollAttempts = pure PollNotFound
   | otherwise = do
     fresh <- fromMaybe initialContext <$> getCtx env ev
-    if fresh.cancelRequested == Just True || fresh.state == Idle
+    if searchCancelled fresh
       then pure PollAborted
       else do
         -- The booking is not in the ledger yet (registerRide' runs only once the

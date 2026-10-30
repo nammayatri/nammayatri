@@ -107,7 +107,11 @@ runEngine env ev ctx = do
       -- 'handleCancel' takes the post-cancel menu row as a parameter: the row is
       -- booking-flow-specific (Flow.Booking) and Ride must not import a flow.
       | lower `elem` env.cfg.merchant.cancelTriggers || "cancel:" `T.isPrefixOf` input -> handleCancel env ev ctx (menuRow env ev) input -- :126-129
-      | any (`T.isInfixOf` lower) env.cfg.merchant.statusTriggers -> case ctx.personId of -- :131-140
+      -- Not while still searching: no ride is registered yet, so the status
+      -- screen would find none and reset the session, which the running search
+      -- takes for a cancel. Those messages fall through to stateSwitch's
+      -- "still searching" reply instead.
+      | any (`T.isInfixOf` lower) env.cfg.merchant.statusTriggers && ctx.state `notElem` [FlexiSearching, RegularSearching] -> case ctx.personId of -- :131-140
         Nothing -> handleIdle env ev ctx {pendingAction = Just PendingStatus} "book"
         Just _ -> handleStatus env ev ctx
       | input == "main_menu" -> do
@@ -147,10 +151,12 @@ runEngine env ev ctx = do
       | input == "more_ride_types" && ctx.state == Idle -> replyButtons env to s.rideTypePrompt (hiddenRideTypeButtons s env.cfg.merchant.maxDirectButtons env.cfg.merchant.rideTypesOrder)
       | input == "pickup_confirm" && isJust ctx.personId && isJust ctx.origin && ctx.state == ConfirmingPickup ->
         handlePickupConfirm env ev ctx -- :293-305
-      | input == "pickup_adjust" -> promptForPickup env ev ctx True -- :306-310
+        -- Change location / Change drop only before a booking exists: WhatsApp keeps
+        -- old buttons tappable, and a stale tap mid-ride would restart booking.
+      | input == "pickup_adjust" && ctx.state `elem` preBookingStates -> promptForPickup env ev ctx True -- :306-310
       | input == "regular_book" && isJust ctx.personId && isJust ctx.regularEstimateId && ctx.state == ConfirmingRegularFare ->
         confirmRegularBooking env ev ctx -- :312-315
-      | input == "regular_change_drop" && isJust ctx.personId -> promptForRegularDrop env ev ctx -- :316-319
+      | input == "regular_change_drop" && isJust ctx.personId && ctx.state `elem` preBookingStates -> promptForRegularDrop env ev ctx -- :316-319
       | "flexi_end_otp:" `T.isPrefixOf` input -> handleFlexiEndOtp env ev ctx (T.drop 14 input) -- :325-359
       | input == "more" -> handleMore env ev ctx -- :365-375
       | input == "help" -> handleHelp env ev ctx -- :376-380
@@ -177,7 +183,8 @@ stateSwitch env ev ctx input =
         AwaitingRegularDrop -> handleRegularDrop env ev ctx input
         ConfirmingRegularDrop -> handleConfirmingRegularDrop env ev ctx input
         ConfirmingRegularFare -> sendRegularFareConfirm env ev ctx
-        RegularSearching -> reply env to s.regularSearching
+        -- selectStartedAt is set only during the booking wait after "Book auto".
+        RegularSearching -> reply env to (if isJust ctx.selectStartedAt then s.regularBooking else s.regularSearching)
         Tracking -> handleTracking env ev ctx
         ConfirmingSos -> replyButtons env to s.sosConfirm [btn s.yesTriggerSOS "sos_trigger", btn s.noGoBack "sos_cancel"]
         ConfirmingMarkSafe -> replyButtons env to s.markSafeConfirm [btn s.yesMarkSafe "mark_safe_trigger", btn s.noGoBack "mark_safe_cancel"]
@@ -343,6 +350,13 @@ sendIntroVideo env ev ctx = do
 -- ---------------------------------------------------------------------------
 -- Small pure/effect helpers
 -- ---------------------------------------------------------------------------
+
+-- | The steps before anything is booked: pickup, drop and fare. The Change
+-- location / Change drop buttons are shown only here (on the pickup confirmation
+-- and the fare message); the drop steps are included because the fare message's
+-- old buttons are still on screen right after a "Change drop".
+preBookingStates :: [FlowState]
+preBookingStates = [AwaitingPickup, ConfirmingPickup, AwaitingRegularDrop, ConfirmingRegularDrop, ConfirmingRegularFare]
 
 -- | Emergency helpline reply (@engine.ts:261@).
 emergencyMsg :: Text

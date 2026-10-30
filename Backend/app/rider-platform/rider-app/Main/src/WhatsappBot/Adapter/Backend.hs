@@ -26,6 +26,7 @@
 module WhatsappBot.Adapter.Backend (mkBackendHandle) where
 
 import qualified API.Types.UI.Sos as SosAPI
+import qualified API.UI.CancelSearch as UICancelSearch
 import qualified API.UI.Confirm as UIConfirm
 import qualified API.UI.Search as UISearch
 import qualified API.UI.Select as UISelect
@@ -41,6 +42,7 @@ import qualified Domain.Action.UI.Registration as Reg
 import qualified Domain.Action.UI.SavedReqLocation as DSavedReqLocation
 import qualified Domain.Action.UI.Serviceability as DServiceability
 import qualified Domain.Action.UI.Sos as DSos
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.API as DBAPI
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingStatus as DBS
@@ -60,13 +62,15 @@ import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (fromMaybeM, getCurrentTime, logError, throwError, withShortRetry)
 import qualified Safety.Domain.Types.Sos as SafetySos
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Cancel as SCancel
 import qualified SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.PersonExtra as Person
 import qualified Storage.Queries.Ride as QR
 import qualified Tools.ActorInfo as ActorInfo
-import Tools.Error (BookingError (BookingDoesNotExist), GenericError (InvalidRequest), MerchantError (MerchantOperatingCityNotFound))
+import Tools.Error (BookingError (BookingDoesNotExist), EstimateError (EstimateDoesNotExist), GenericError (InvalidRequest), MerchantError (MerchantOperatingCityNotFound))
 import qualified Tools.Maps as Maps
 import WhatsappBot.Handles (BackendHandle (..))
 import WhatsappBot.Types
@@ -239,6 +243,8 @@ mkBackendHandle merchantId mocId _ctx =
               SosAPI.MarkAsSafeReq {contacts = Nothing, isEndLiveTracking = Nothing, isMock = Nothing, isRideEnded = Nothing},
       cancelRide = \auth bookingId _rideStatus ->
         runBot "cancelRide" $ cancelRideImpl merchantId (Id auth.personId) bookingId,
+      cancelEstimate = \auth estimateId ->
+        runBot "cancelEstimate" $ cancelEstimateImpl merchantId (Id auth.personId) estimateId,
       updateProfile = \auth upd ->
         runBot "updateProfile" $
           void $
@@ -397,6 +403,21 @@ cancelRideImpl merchantId pid bookingId = do
           }
   dCancelRes <- DCancel.cancel booking mRide cancelReq SBCR.ByUser
   void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes Nothing
+
+-- | Stop a selected estimate's driver search, via the app's own cancel-search
+-- (@API/UI/CancelSearch.hs:62@). If a booking was already created from it, cancel
+-- that booking instead (it is not visible to the bot yet, so nothing else would).
+cancelEstimateImpl :: Id DM.Merchant -> Id SP.Person -> Text -> Flow ()
+cancelEstimateImpl merchantId pid estimateId =
+  UICancelSearch.cancelSearch' (pid, merchantId) (Id estimateId) >>= \case
+    SCancel.Success -> pure ()
+    SCancel.BookingAlreadyCreated -> do
+      estimate <- QEstimate.findById (Id estimateId) >>= fromMaybeM (EstimateDoesNotExist estimateId)
+      booking <-
+        B.runInReplica (QRB.findByTransactionIdAndStatus estimate.requestId.getId DRB.activeBookingStatus)
+          >>= fromMaybeM (BookingDoesNotExist estimateId)
+      cancelRideImpl merchantId pid booking.id.getId
+    SCancel.FailedToCancel -> throwError (InvalidRequest "could not cancel the search")
 
 --------------------------------------------------------------------------------
 -- helpers

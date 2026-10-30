@@ -150,7 +150,7 @@
       ]
     },
     {
-      "note": "pickup_confirm starts a search (gated). A Cancel tap lands mid-search; the search then aborts cleanly — no ride registered, no driver card. Outbound = [finding+Cancel, then cancelled+menu]; backend interleaves searchFlexi, getFlexiQuotes, getActiveBookings, cancelRide, confirmQuote. [2026-10-29 message cuts: Language moved from the menu row to More]",
+      "note": "pickup_confirm starts a search (gated). A Cancel tap lands mid-search; the search then aborts cleanly — no ride registered, no driver card. Outbound = [finding+Cancel, then cancelled+menu]; backend interleaves searchFlexi, getFlexiQuotes, getActiveBookings, cancelRide. [2026-10-29 message cuts: Language moved from the menu row to More] [2026-10-29 cancel fix: confirmQuote no longer runs after the cancel; the TS recording booked the ride anyway]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -284,12 +284,6 @@
           "args": [
             "mock-booking-001",
             "TRIP_ASSIGNED"
-          ]
-        },
-        {
-          "method": "confirmQuote",
-          "args": [
-            "mock-flexi-quote-auto"
           ]
         }
       ]

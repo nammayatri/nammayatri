@@ -441,6 +441,9 @@ mkBackend rb =
       cancelRide = \_a bid st -> do
         recordCall (rbCalls rb) "cancelRide" [String bid, String st]
         guard1 rb "cancelRide" (pure ()),
+      cancelEstimate = \_a eid -> do
+        recordCall (rbCalls rb) "cancelEstimate" [String eid]
+        guard1 rb "cancelEstimate" (pure ()),
       updateProfile = \_a upd -> do
         recordCall (rbCalls rb) "updateProfile" [toJSON upd]
         guard1 rb "updateProfile" (pure ())
