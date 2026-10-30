@@ -133,6 +133,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.allowDuplicatePan allowDuplicatePan,
       Se.Set Beam.allowDuplicateUdyam allowDuplicateUdyam,
       Se.Set Beam.allowFarePolicyUpdateBelowMinBaseFare allowFarePolicyUpdateBelowMinBaseFare,
+      Se.Set Beam.allowFleetToLinkIndividualDriver allowFleetToLinkIndividualDriver,
       Se.Set Beam.allowGstReupload allowGstReupload,
       Se.Set Beam.allowInvalidRcDeletionOnReplacement allowInvalidRcDeletionOnReplacement,
       Se.Set Beam.allowMultiFleetOperatorLink allowMultiFleetOperatorLink,
