@@ -615,16 +615,28 @@ types:
     - durationSec: Maybe Int
     - points: [LatLong]
   RideSnappedRouteRes:
-    - calls: [SnapToRoadCall]
+    - batches: [SnapBatch]
+    - distanceFailures: [SnapDistanceFailure]
     - derive: "'HideSecrets"
-  SnapToRoadCall:
-    - apiName: Text
-    - provider: Text
-    - calledAt: UTCTime
+  SnapBatch:
     - rideStatus: Status
-    - distanceMeters: Maybe Int
+    - calledAt: UTCTime
     - inputPoints: [LatLong]
+    - snapped: Maybe SnappedResult
+  SnappedResult:
+    - provider: Text
+    - distanceMeters: Int
     - snappedPoints: [LatLong]
+  SnapDistanceFailure:
+    - rideStatus: Status
+    - calledAt: UTCTime
+    - attempts: [SnapAttempt]
+  SnapAttempt:
+    - provider: Text
+    - reason: SnapRejectReason
+    - confidence: Maybe Double
+  SnapRejectReason:
+    - enum: "LOW_CONFIDENCE, POINTS_TOO_FAR_APART, END_TOO_FAR, SPLIT_ROUTE, CALL_FAILED"
   DriverEdaKafka:
     - driver_id: String
     - rid: Maybe String
