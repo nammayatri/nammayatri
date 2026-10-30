@@ -65,6 +65,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSUtils as FRFSUtils
+import qualified SharedLogic.Finance.Rails as FinanceRails
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import qualified SharedLogic.JobScheduler as JobScheduler
@@ -603,6 +604,9 @@ refundStatusHandler paymentOrder paymentServiceType = do
       m ()
     bookingDepositRefundStatusHandler refund = do
       let newStatus = if BookingDepositLedger.unknownRefundOutcome refund then DBP.REFUND_INITIATED else refundStatusToBookingPaymentStatus refund
+      -- A thrown refund call is not a decline: it is not recorded as a failed transfer either.
+      unless (BookingDepositLedger.unknownRefundOutcome refund) $
+        FinanceRails.updateDepositRefundTransferStatus refund.id.getId (Just (show refund.status)) (FinanceRails.refundStatusToTransferStatus refund.status)
       depositReqs <- filter (\r -> r.refundPurpose == DRefundRequest.BOOKING_DEPOSIT) <$> QRefundRequest.findAllByOrderId paymentOrder.id
       case depositReqs of
         [] -> pure ()
@@ -661,21 +665,20 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
       m ()
     processRefund person paymentOrder paymentServiceType = do
       let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
-      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
       let refundsOrderCall = TPayment.refundOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
       let commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
       mbRefundResp <- DPayment.createRefundService commonMerchantOperatingCityId paymentOrder.shortId refundsOrderCall
       whenJust mbRefundResp $ \refundResp -> do
         let refundRequestId = (listToMaybe refundResp.refunds) <&> (.requestId) -- TODO :: When will refunds be more than one ? even if more than 1 there requestId would be same right ?
         whenJust refundRequestId $ \refundId -> do
-          let scheduleAfter = riderConfig.refundStatusUpdateInterval -- Schedule for 24 hours later
-              jobData =
+          (scheduleAfter, _) <- FinanceRails.refundPollPacing person.merchantId.getId merchantOperatingCityId.getId
+          let jobData =
                 JobScheduler.CheckRefundStatusJobData
                   { JobScheduler.refundId = refundId,
                     JobScheduler.numberOfRetries = 0
                   }
           createJobIn @_ @'CheckRefundStatus (Just person.merchantId) (Just merchantOperatingCityId) scheduleAfter (jobData :: JobScheduler.CheckRefundStatusJobData)
-          logInfo $ "Scheduled refund status check job for " <> refundId <> " in 24 hours (initial check)"
+          logInfo $ "Scheduled refund status check job for " <> refundId <> " in " <> show scheduleAfter <> " (initial check)"
 
 markRefundPendingWithAmount ::
   ( CacheFlow m r,

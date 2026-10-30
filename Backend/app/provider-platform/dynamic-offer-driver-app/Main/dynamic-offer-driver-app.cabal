@@ -541,7 +541,6 @@ library
       Domain.Types.Extra.Plan
       Domain.Types.Extra.SurgeConfig
       Domain.Types.Extra.TransporterConfig
-      Domain.Types.Extra.WalletTransaction
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
       Domain.Types.FarePolicy.Common
@@ -738,6 +737,7 @@ library
       SharedLogic.Finance.LedgerAdjustmentCast
       SharedLogic.Finance.PostActions
       SharedLogic.Finance.Prepaid
+      SharedLogic.Finance.Rails
       SharedLogic.Finance.Reconciliation.EntitySync
       SharedLogic.Finance.Reconciliation.Recipes.PostpaidDriverFeeVsPaymentOrder
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidDsrVsLedger

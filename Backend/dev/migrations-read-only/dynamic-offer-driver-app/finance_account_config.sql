@@ -1,0 +1,29 @@
+CREATE TABLE atlas_driver_offer_bpp.finance_account_config ();
+
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN account_type text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN allow_negative_balance boolean NOT NULL default true;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN auto_transfer_out text ;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN counterparty_type text ;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN instant_transfer_out_enabled boolean NOT NULL default false;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN max_transfer_out_per_day integer ;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN merchant_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN merchant_operating_city_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN min_retained_balance numeric(30,2) NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN min_transfer_out_amount numeric(30,2) NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN redeemable_cutoff json ;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN sub_ledger text ;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN transfer_in_enabled boolean NOT NULL default false;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN transfer_out_enabled boolean NOT NULL default false;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN transfer_out_fee json ;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN status_check_max_attempts integer ;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN status_check_interval_sec integer ;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN points_conversion_rate double precision ;

@@ -23,23 +23,25 @@ module Lib.Payment.Payout.Request
     retryPayoutWith,
     toPaymentState,
     getStatusMessage,
+    isOrderNotFoundAtPartner,
+    markPayoutOrderNeverReceived,
     runPayoutUnderLock,
-    stashPayoutLedgerEntryIds,
     getPayoutLedgerEntryIds,
     clearPayoutLedgerEntryIds,
   )
 where
 
 import Control.Applicative ((<|>))
-import Data.Time.Clock (addUTCTime)
+import qualified Data.Text as T
+import Data.Time.Clock (addUTCTime, diffUTCTime)
 import Kernel.External.Encryption (EncFlow)
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.Payout.Interface.Types as IPayout
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Error (ExternalAPICallError (..), GenericError (InvalidRequest))
+import Kernel.Types.Error (ExternalAPICallError (..), GenericError (InternalError, InvalidRequest))
 import Kernel.Types.Id (Id (..))
-import Kernel.Utils.Common (CacheFlow, Currency, HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logDebug, logError, logInfo, throwError)
+import Kernel.Utils.Common (CacheFlow, Currency, HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logDebug, logError, logInfo, throwError, withTryCatch)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
@@ -50,8 +52,10 @@ import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import Lib.Payment.Domain.Types.PayoutRequest
 import Lib.Payment.Payout.RequestStatus (getStatusMessage, recordHistory, toPaymentState, updatePayoutRequestStatusWithHistory)
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
-import Servant.Client (ClientError (..))
+import Network.HTTP.Types.Status (statusCode)
+import Servant.Client (ClientError (..), ResponseF (..))
 
 -- | Flat data record supplied by the domain to request a payout.
 --   The lib uses this to construct both the PayoutRequest and CreatePayoutOrderReq.
@@ -87,8 +91,8 @@ data PayoutSubmission = PayoutSubmission
   deriving (Show, Generic)
 
 -- | Result of a payout submission or execution.
---   PayoutFailed means nothing was paid. PayoutAmbiguous (bulk only) means no clear rejection, so
---   the request stays PROCESSING.
+--   PayoutFailed means nothing was paid. PayoutAmbiguous means no clear rejection (the partner may have
+--   processed it), so the request stays PROCESSING.
 data PayoutResult
   = PayoutInitiated PayoutRequest PayoutOrder.PayoutOrder
   | PayoutProcessing PayoutRequest PayoutRequestStatus
@@ -224,18 +228,12 @@ runPayoutUnderLock lockKey lockTtl findPayoutAmount initiatePayout =
 makePayoutEntryIdsKey :: Text -> Text
 makePayoutEntryIdsKey payoutRequestId = "payout-entry-ids:" <> payoutRequestId
 
-payoutEntryIdsTtl :: Int
-payoutEntryIdsTtl = 30 * 86400
-
--- | Stash the ledger entry ids reserved for a payout so the webhook can settle or
---   release them once the payout reaches a terminal status.
-stashPayoutLedgerEntryIds :: (CacheFlow m r) => Text -> [Text] -> m ()
-stashPayoutLedgerEntryIds payoutRequestId entryIds =
-  unless (null entryIds) $ Redis.setExp (makePayoutEntryIdsKey payoutRequestId) entryIds payoutEntryIdsTtl
-
--- | Redis first, then the ids persisted on the PayoutRequest (payouts created before the
---   stash flow), and finally the ledger rows stamped with this PayoutRequest id as settlementId
---   (reserved as PROCESSING at initiate), so a lost stash can still be settled or released.
+-- | PRE-MIGRATION READ ONLY. Covered entry ids now live on finance_transfer rows; this
+--   accessor exists solely so the kernel backfill (Lib.Finance.Transfer.Backfill) can
+--   reconstruct payouts initiated before the kernel owned the flow. Nothing writes the
+--   Redis stash anymore — delete this (and the key helpers) once pre-migration payouts
+--   have drained. Reads: the PayoutRequest's persisted ids, the legacy Redis stash, and
+--   finally the ledger rows stamped with this PayoutRequest id as settlementId.
 getPayoutLedgerEntryIds :: (CacheFlow m r, FinanceBeamFlow.BeamFlow m r) => PayoutRequest -> m [Text]
 getPayoutLedgerEntryIds payoutRequest = do
   mbStashed <- Redis.get (makePayoutEntryIdsKey payoutRequest.id.getId)
@@ -327,18 +325,56 @@ executePayoutRequestWithOutcome = executePayoutRequestInternal
 -- ---------------------------------------------------------------------------
 
 -- | Outcome of one execution attempt. ConfirmedFailure means nothing was paid; AmbiguousFailure
---   (bulk only) means no clear rejection.
+--   means no clear rejection, so the payout may have gone through.
 data ExecutionOutcome
   = Executed PayoutOrder.PayoutOrder
   | ConfirmedFailure Text
   | AmbiguousFailure Text
   | NotExecutable PayoutRequestStatus
 
--- | True only when the partner returned a non-2xx we could decode, so we know nothing was paid.
+-- | The status API answered "no such order" (HTTP 404, code E09): the partner never received the
+--   create call, so nothing was sent and the money is safe to free. The shared Juspay client reports
+--   API errors as an InternalError carrying the response text, so this matches on that text.
+isOrderNotFoundAtPartner :: SomeException -> Bool
+isOrderNotFoundAtPartner e = case fromException e of
+  Just (InternalError msg) -> "statusCode = 404" `T.isInfixOf` msg && "E09" `T.isInfixOf` msg
+  _ -> False
+
+-- | Close a local payout order the partner never received, as failed, so the usual failure
+--   settlement frees the held money. Applied ONLY to an order whose create call threw (it carries the
+--   marker written by 'DPayment.createPayoutServiceWithStatusCheck'), is still INITIATED, and is at
+--   least ten minutes old: a status answer of "no such order" for any other order, or one given while
+--   the create call may still be landing, proves nothing. Returns True when the order is closed this
+--   way (including when an earlier call already closed it).
+markPayoutOrderNeverReceived ::
+  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
+  PayoutOrder.PayoutOrder ->
+  m Bool
+markPayoutOrderNeverReceived stale = do
+  now <- getCurrentTime
+  QPayoutOrder.findByOrderId stale.orderId >>= \case
+    Nothing -> pure False
+    Just order
+      | order.status == IPayout.FAILURE && order.responseCode == Just neverReceivedCode -> pure True
+      | order.status /= IPayout.INITIATED || order.responseCode /= Just DPayment.payoutCreateCallFailedCode -> pure False
+      | diffUTCTime now order.createdAt < neverReceivedMinAgeSeconds -> pure False
+      | otherwise -> do
+        QPayoutOrder.updateBulkSettled IPayout.FAILURE order.transferStatus order.settlementRef order.settlementRefType (Just neverReceivedCode) (Just "Payout partner never received this order") order.id
+        DPayment.updatePayoutRequestStatusFromOrder order IPayout.FAILURE
+        pure True
+  where
+    neverReceivedCode = "E09"
+    neverReceivedMinAgeSeconds = 600
+
+-- | True only when the partner refused the request with a client error (4xx, except 408 timeout and
+--   409 conflict), so we know nothing was paid. A 5xx, a timeout, a dropped connection or an
+--   unreadable answer proves nothing: the partner may have processed the request.
 isConfirmedRejection :: SomeException -> Bool
 isConfirmedRejection e = case fromException e of
   Just (extErr :: ExternalAPICallError) -> case extErr.clientError of
-    FailureResponse _ _ -> True
+    FailureResponse _ resp ->
+      let code = statusCode (responseStatusCode resp)
+       in code >= 400 && code < 500 && code `notElem` [408, 409]
     _ -> False
   Nothing -> False
 
@@ -372,31 +408,52 @@ executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutR
 
       logDebug $ "Executing payout for PayoutRequest " <> payoutRequest.id.getId <> " | orderId: " <> orderId <> " | amount: " <> show (fromMaybe 0 payoutRequest.amount)
 
-      result <- try $ DPayment.createPayoutService merchantId mbMocId personId (Just [payoutRequest.id.getId]) (Just entityName) city createPayoutOrderReq payoutCall Nothing afterPayoutOrderCreated
+      result <- try $ DPayment.createPayoutServiceWithStatusCheck merchantId mbMocId personId (Just [payoutRequest.id.getId]) (Just entityName) city createPayoutOrderReq payoutCall Nothing afterPayoutOrderCreated
       case result of
         Left (err :: SomeException)
-          -- Only bulk splits a confirmed rejection from an ambiguous one. Other rails fail the
-          -- request, since leaving it PROCESSING would strand a Juspay payout. No ledger write
-          -- here: settlement handles the caller's hold.
-          | payoutServiceFlow /= Payout.BulkFlow -> do
-            let msg = "Payout service error: " <> show err
-            logError $ "Payout service call failed for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err
-            updateStatusWithHistoryById AUTO_PAY_FAILED (Just msg) payoutRequest
-            pure $ ConfirmedFailure msg
+          -- Only a clear refusal from the partner counts as "nothing was paid". Anything else (a
+          -- timeout, a 5xx, a dropped connection) may have reached the bank, so it must NOT free the
+          -- money for another attempt, which would pay it twice. No ledger write here: settlement
+          -- handles the caller's hold.
           | isConfirmedRejection err -> do
             let msg = "Payout service error: " <> show err
             logError $ "Payout service call rejected for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err
             updateStatusWithHistoryById AUTO_PAY_FAILED (Just msg) payoutRequest
             pure $ ConfirmedFailure msg
           | otherwise -> do
-            let msg = "Payout service call outcome unknown: " <> show err
-            logError $ "Payout service call for PayoutRequest " <> payoutRequest.id.getId <> " errored ambiguously (may have reached the bank): " <> show err <> " -- leaving request PROCESSING, needs manual reconciliation"
-            updateStatusWithHistoryById PROCESSING (Just msg) payoutRequest
-            pure $ AmbiguousFailure msg
+            -- The order row is written BEFORE the partner call, with the id the partner keys on. No row
+            -- therefore means the call was never made (a failure while preparing it): nothing was sent.
+            -- Bulk has no partner call at this step, so its failures are never about a sent request.
+            mbOrderLookup <- withTryCatch "ambiguousPayoutOrderLookup" (QPayoutOrder.findByOrderId orderId)
+            case mbOrderLookup of
+              Right Nothing | payoutServiceFlow /= Payout.BulkFlow -> do
+                let msg = "Payout service error before the partner call: " <> show err
+                logError $ "Payout call for PayoutRequest " <> payoutRequest.id.getId <> " failed before reaching the partner: " <> show err
+                updateStatusWithHistoryById AUTO_PAY_FAILED (Just msg) payoutRequest
+                pure $ ConfirmedFailure msg
+              _ -> do
+                let msg = "Payout service call outcome unknown: " <> show err
+                logError $ "Payout service call for PayoutRequest " <> payoutRequest.id.getId <> " errored ambiguously (may have reached the bank): " <> show err <> " -- leaving request PROCESSING, needs manual reconciliation"
+                -- not over a later status a webhook or refresh may already have written
+                mbRequestNow <- QPR.findById payoutRequest.id
+                when (maybe True isPayoutExecutable mbRequestNow) $
+                  updateStatusWithHistoryById PROCESSING (Just msg) payoutRequest
+                -- The order id is the idempotency key at the partner. The status check that settles the
+                -- outcome is scheduled by createPayoutServiceWithStatusCheck when the partner call throws.
+                -- (Bulk has no per-order status API; its batch check resolves it.)
+                when (payoutServiceFlow /= Payout.BulkFlow) $
+                  case mbOrderLookup of
+                    Right (Just order) -> QPR.updatePayoutTransactionIdById (Just order.id.getId) payoutRequest.id
+                    _ -> pure ()
+                pure $ AmbiguousFailure msg
         Right (_mbResp, mbPayoutOrder) -> do
           let payoutOrderIdText = maybe "unknown" (\po -> po.id.getId) mbPayoutOrder
           QPR.updatePayoutTransactionIdById (Just payoutOrderIdText) payoutRequest.id
-          updateStatusWithHistoryById PROCESSING (Just $ "Payout request sent to Bank. OrderId: " <> payoutOrderIdText) payoutRequest
+          -- A webhook or status refresh can already have settled the request while the call was in
+          -- flight; PROCESSING must not be written over a later status.
+          mbRequestNow <- QPR.findById payoutRequest.id
+          when (maybe True isPayoutExecutable mbRequestNow) $
+            updateStatusWithHistoryById PROCESSING (Just $ "Payout request sent to Bank. OrderId: " <> payoutOrderIdText) payoutRequest
           pure $ maybe (NotExecutable PROCESSING) Executed mbPayoutOrder
 
 -- | Build a CreatePayoutOrderReq from the stored PayoutRequest fields.

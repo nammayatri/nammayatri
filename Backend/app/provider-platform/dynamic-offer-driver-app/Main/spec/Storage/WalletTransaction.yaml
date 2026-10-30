@@ -1,3 +1,9 @@
+# TRANSITIONAL DUAL-WRITE (finance-kernel unification): the canonical topup process
+# record is finance_transfer (INBOUND, refType WalletTopup). This table is still
+# written in parallel ONLY so old pods / pre-release orders keep working during the
+# staggered release. Removal plan: complete rollout -> run migration 0017 (backfills
+# finance_transfer from this table) -> delete the dual-write (postWalletTopup
+# mirrorWalletTransaction + the webhook transitionalWalletStatus update) -> drop table.
 imports:
   HighPrecMoney: Kernel.Types.Common
   Person: Domain.Types.Person
