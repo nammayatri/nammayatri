@@ -734,3 +734,34 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS atlas_driver_offer_bpp.subscription_purch
 TO atlas_driver_offer_bpp.subscription_purchase AS
 SELECT id, owner_id, owner_type, merchant_id, merchant_operating_city_id, plan_id, plan_fee, plan_frequency, payment_order_id, service_name, status, start_date, expiry_date, purchase_timestamp, enable_service_usage_charge, created_at, updated_at, updated_at AS version
 FROM atlas_driver_offer_bpp.subscription_purchase_queue;
+
+CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.ocr_provider_response (
+    `id` String,
+    `merchant_id` String,
+    `merchant_operating_city_id` String,
+    `provider_type` Nullable(String),
+    `image_type` String,
+    `response` String,
+    `created_at` DateTime DEFAULT now(),
+    `updated_at` DateTime DEFAULT now(),
+    `version` DateTime DEFAULT now()
+) ENGINE = ReplacingMergeTree(version)
+ORDER BY (created_at, id)
+TTL created_at + INTERVAL 90 DAY;
+
+CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.ocr_provider_response_queue (
+    `id` String,
+    `merchant_id` String,
+    `merchant_operating_city_id` String,
+    `provider_type` Nullable(String),
+    `image_type` String,
+    `response` String,
+    `created_at` Nullable(DateTime),
+    `updated_at` Nullable(DateTime)
+) ENGINE = Kafka
+SETTINGS kafka_broker_list='localhost:29092', kafka_topic_list='driver-ocr-provider-response', kafka_group_name='ch-atlas_driver_offer_bpp-ocr_provider_response', kafka_format='JSONEachRow', kafka_num_consumers=1, kafka_skip_broken_messages=100;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS atlas_driver_offer_bpp.ocr_provider_response_mv
+TO atlas_driver_offer_bpp.ocr_provider_response AS
+SELECT id, merchant_id, merchant_operating_city_id, provider_type, image_type, response, created_at, updated_at, updated_at AS version
+FROM atlas_driver_offer_bpp.ocr_provider_response_queue;
