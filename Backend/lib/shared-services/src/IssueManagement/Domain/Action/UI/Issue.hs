@@ -5,6 +5,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -44,7 +45,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (DbHash, decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import qualified Kernel.External.Ticket.Types as TicketTypes
-import Kernel.External.Types (Language (ENGLISH))
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -1723,9 +1724,11 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "BOOTH_CHARGE" -> show boothCharges
         "RETURN_FEE" -> show returnCharges
         "SCHEDULING_CHARGE" -> show schedulingCharges
-        "WAITING_CHARGES" -> show waitingCharges
+        "WAITING_CHARGES" -> formatMoney "" waitingCharges
         "FREE_WAITING_TIME_IN_MINUTES" -> show (round freeWaitingMinutes :: Int)
-        "WAITING_CHARGE_RATE_PER_MIN" -> show waitingChargeRatePerMin
+        "WAITING_CHARGE_RATE_PER_MIN" -> formatMoney "" waitingChargeRatePerMin
+        "WAITING_TIME" -> waitingTimeText language freeWaitingMinutes waitingChargeRatePerMin waitingCharges mbRideInfoRes
+        "FARE_INVOICE" -> maybe "" (fareInvoiceText language) mbRideInfoRes
         "HEADING" -> "{SUBPART}{HEADING}{!!!}"
         "BODY" -> "{SUBPART}{BODY}{!!!}"
         "VEHICLE_NUMBER" -> vehicleNo
@@ -1750,6 +1753,110 @@ getConfigValue language issueConfig mbRideInfoRes key = do
               let formatted = unwords [grp1, grp2] ++ (if null grp3 then "" else " " ++ grp3) ++ " " ++ grp4
                in T.pack formatted
             _ -> vehicleNo
+
+toCents :: HighPrecMoney -> Integer
+toCents money = round (money * 100)
+
+formatMoney :: Text -> HighPrecMoney -> Text
+formatMoney symbol money =
+  let cents = toCents money
+   in (if cents < 0 then "-" else "") <> symbol <> show (abs cents `div` 100) <> "." <> T.justifyRight 2 '0' (show (abs cents `mod` 100))
+
+waitingTimeText :: Language -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> Maybe RideInfoRes -> Text
+waitingTimeText language freeMinutes ratePerMin charges mbRideInfoRes =
+  show minutes <> " " <> invoiceLabel language "MINUTES"
+  where
+    minutes :: Int
+    minutes = case (mbRideInfoRes >>= (.driverArrivalTime), mbRideInfoRes >>= (.rideStartTime)) of
+      (Just arrivedAt, Just startedAt) -> max 0 (floor (diffUTCTime startedAt arrivedAt / 60))
+      _ -> round (freeMinutes + if ratePerMin > 0 then charges / ratePerMin else 0)
+
+fareInvoiceText :: Language -> RideInfoRes -> Text
+fareInvoiceText language rideInfo =
+  T.intercalate "<br>" $
+    [ label "TOTAL_FARE" <> ":",
+      compareLine (money rideInfo.estimatedFare) (money finalFare),
+      label "DIFFERENCE" <> ": <b>" <> moneyDiff (finalFare - rideInfo.estimatedFare) <> "</b>",
+      "",
+      label "BREAKUP" <> ":"
+    ]
+      <> DL.intersperse "" (map chargeLine baseCharges <> distanceLines <> map chargeLine otherCharges)
+  where
+    label = invoiceLabel language
+    symbol = case listToMaybe ((.amount.currency) <$> rideInfo.fareBreakup) of
+      Just EUR -> "€"
+      Just INR -> "₹"
+      Just USD -> "$"
+      Nothing -> ""
+    money = formatMoney symbol
+    moneyDiff amount = (if toCents amount > 0 then "+" else "") <> money amount
+    finalFare = fromMaybe 0 rideInfo.computedPrice
+    hasEstimate = not (null rideInfo.initialFareBreakup)
+    estimates = groupInvoiceAmounts rideInfo.initialFareBreakup
+    finals = groupInvoiceAmounts rideInfo.fareBreakup
+    charges =
+      [ (chargeCode, estimated, final)
+        | chargeCode <- DL.sortOn (\code -> (code == "VAT", code)) (Map.keys (Map.union finals estimates)),
+          let estimated = Map.findWithDefault 0 chargeCode estimates,
+          let final = Map.findWithDefault 0 chargeCode finals,
+          toCents estimated /= 0 || toCents final /= 0
+      ]
+    (baseCharges, otherCharges) = DL.partition (\(chargeCode, _, _) -> chargeCode == "BASE_FARE") charges
+    compareLine estimated final = label "ESTIMATED" <> ": <b>" <> estimated <> "</b> → " <> label "FINAL" <> ": <b>" <> final <> "</b>"
+    chargeLine (chargeCode, estimated, final) =
+      label chargeCode <> ":<br>"
+        <> if hasEstimate
+          then compareLine (money estimated) (money final) <> " (" <> moneyDiff (final - estimated) <> ")"
+          else label "FINAL" <> ": <b>" <> money final <> "</b>"
+    distanceLines = case (rideInfo.estimatedDistance, rideInfo.chargeableDistance) of
+      (Just estimatedDistance, Just finalDistance) ->
+        let estimatedMeters = round estimatedDistance :: Integer
+            finalMeters = round finalDistance :: Integer
+            diffMeters = finalMeters - estimatedMeters
+         in [label "DISTANCE" <> ":<br>" <> compareLine (show estimatedMeters <> " m") (show finalMeters <> " m") <> " (" <> (if diffMeters > 0 then "+" else "") <> show diffMeters <> " m)"]
+      _ -> []
+
+groupInvoiceAmounts :: [FareBreakup] -> Map.Map Text HighPrecMoney
+groupInvoiceAmounts fareBreakups =
+  Map.fromListWith (+) [(invoiceCode fareBreakup.description, fareBreakup.amount.amount) | fareBreakup <- fareBreakups, isInvoiceCharge fareBreakup.description]
+  where
+    invoiceCode description = if description `elem` ["RIDE_VAT", "TOLL_VAT"] then "VAT" else description
+    isInvoiceCharge description =
+      not ("_TAX" `T.isSuffixOf` description || "_TAX_EXCLUSIVE" `T.isSuffixOf` description)
+        && description `notElem` ["FIXED_GOVERNMENT_RATE", "CANCELLATION_CHARGES", "RIDE_CANCELLATION_CHARGES"]
+
+invoiceLabel :: Language -> Text -> Text
+invoiceLabel language labelCode =
+  fromMaybe (T.replace "_" " " labelCode) $ do
+    labels <- lookup labelCode invoiceTranslations
+    lookup language labels <|> lookup ENGLISH labels
+
+invoiceTranslations :: [(Text, [(Language, Text)])]
+invoiceTranslations =
+  [ ("TOTAL_FARE", [(ENGLISH, "Total fare"), (FINNISH, "Kokonaishinta"), (SWEDISH, "Totalpris"), (ARABIC, "إجمالي الأجرة")]),
+    ("ESTIMATED", [(ENGLISH, "Estimated"), (FINNISH, "Arvioitu"), (SWEDISH, "Uppskattat"), (ARABIC, "المقدّر")]),
+    ("FINAL", [(ENGLISH, "Final"), (FINNISH, "Lopullinen"), (SWEDISH, "Slutligt"), (ARABIC, "النهائي")]),
+    ("DIFFERENCE", [(ENGLISH, "Difference"), (FINNISH, "Erotus"), (SWEDISH, "Skillnad"), (ARABIC, "الفرق")]),
+    ("BREAKUP", [(ENGLISH, "Breakup"), (FINNISH, "Erittely"), (SWEDISH, "Specifikation"), (ARABIC, "تفاصيل الأجرة")]),
+    ("DISTANCE", [(ENGLISH, "Distance"), (FINNISH, "Matka"), (SWEDISH, "Sträcka"), (ARABIC, "المسافة")]),
+    ("MINUTES", [(ENGLISH, "min"), (FINNISH, "min"), (SWEDISH, "min"), (ARABIC, "دقيقة")]),
+    ("VAT", [(ENGLISH, "VAT"), (FINNISH, "ALV"), (SWEDISH, "Moms"), (ARABIC, "ضريبة القيمة المضافة")]),
+    ("BASE_FARE", [(ENGLISH, "Base fare"), (FINNISH, "Perushinta"), (SWEDISH, "Grundpris"), (ARABIC, "الأجرة الأساسية")]),
+    ("DISTANCE_FARE", [(ENGLISH, "Distance fare"), (FINNISH, "Matkan hinta"), (SWEDISH, "Avståndsavgift"), (ARABIC, "أجرة المسافة")]),
+    ("WAITING_OR_PICKUP_CHARGES", [(ENGLISH, "Waiting charges"), (FINNISH, "Odotusmaksut"), (SWEDISH, "Väntetidsavgifter"), (ARABIC, "رسوم الانتظار")]),
+    ("DEAD_KILOMETER_FARE", [(ENGLISH, "Pickup charge"), (FINNISH, "Noutomaksu"), (SWEDISH, "Upphämtningsavgift"), (ARABIC, "رسوم الوصول إليك")]),
+    ("NIGHT_SHIFT_CHARGE", [(ENGLISH, "Night charge"), (FINNISH, "Yölisä"), (SWEDISH, "Nattillägg"), (ARABIC, "رسوم الليل")]),
+    ("CONGESTION_CHARGE", [(ENGLISH, "Congestion charge"), (FINNISH, "Ruuhkamaksu"), (SWEDISH, "Trängselavgift"), (ARABIC, "رسوم الازدحام")]),
+    ("SERVICE_CHARGE", [(ENGLISH, "Service charge"), (FINNISH, "Palvelumaksu"), (SWEDISH, "Serviceavgift"), (ARABIC, "رسوم الخدمة")]),
+    ("TOLL_CHARGES", [(ENGLISH, "Tolls"), (FINNISH, "Tiemaksut"), (SWEDISH, "Vägtullar"), (ARABIC, "رسوم الطرق")]),
+    ("BOOTH_CHARGE", [(ENGLISH, "Booth charge"), (FINNISH, "Tolppamaksu"), (SWEDISH, "Stationsavgift"), (ARABIC, "رسوم نقطة الحجز")]),
+    ("RETURN_FEE", [(ENGLISH, "Return fee"), (FINNISH, "Paluumaksu"), (SWEDISH, "Returavgift"), (ARABIC, "رسوم العودة")]),
+    ("PET_CHARGES", [(ENGLISH, "Pet charge"), (FINNISH, "Lemmikkimaksu"), (SWEDISH, "Husdjursavgift"), (ARABIC, "رسوم الحيوانات الأليفة")]),
+    ("CUSTOMER_SELECTED_FARE", [(ENGLISH, "Amount you added"), (FINNISH, "Lisäämäsi summa"), (SWEDISH, "Belopp du lade till"), (ARABIC, "المبلغ الذي أضفته")]),
+    ("DRIVER_SELECTED_FARE", [(ENGLISH, "Amount added by driver"), (FINNISH, "Kuljettajan lisäämä summa"), (SWEDISH, "Belopp tillagt av föraren"), (ARABIC, "المبلغ الذي أضافه السائق")]),
+    ("RIDE_TIP", [(ENGLISH, "Tip"), (FINNISH, "Juomaraha"), (SWEDISH, "Dricks"), (ARABIC, "البقشيش")]),
+    ("OFFER_DISCOUNT", [(ENGLISH, "Offer discount"), (FINNISH, "Tarjousalennus"), (SWEDISH, "Erbjudanderabatt"), (ARABIC, "خصم العرض")])
+  ]
 
 mkIssueOptionList ::
   D.IssueConfig -> Language -> Maybe RideInfoRes -> (D.IssueOption, Maybe D.IssueTranslation) -> Common.IssueOptionRes
