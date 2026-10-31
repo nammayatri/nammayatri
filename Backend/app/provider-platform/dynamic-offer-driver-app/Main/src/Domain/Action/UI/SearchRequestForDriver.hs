@@ -16,6 +16,7 @@ module Domain.Action.UI.SearchRequestForDriver where
 
 import Control.Applicative ((<|>))
 import Data.Aeson.TH
+import qualified Data.Text as T
 import Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
@@ -148,6 +149,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       netBaseFare = rawBaseFare - fromMaybe 0 nearbyReq.commissionCharges - paymentChargeDeduction
       shownDistanceToPickup = fromMaybe nearbyReq.actualDistanceToPickup nearbyReq.displayDistanceToPickup
       shownDurationToPickup = fromMaybe nearbyReq.durationToPickup nearbyReq.displayDurationToPickup
+      toLocation = withDropSpecialLocationArea searchRequest.specialLocationTag searchRequest.specialLocationName <$> searchRequest.toLocation
    in SearchRequestForDriverAPIEntity
         { searchRequestId = nearbyReq.searchTryId,
           searchTryId = nearbyReq.searchTryId,
@@ -166,7 +168,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           customerExtraFee = roundToIntegral <$> searchTry.customerExtraFee,
           customerExtraFeeWithCurrency = flip PriceAPIEntity searchTry.currency <$> searchTry.customerExtraFee,
           fromLocation = convertDomainType searchRequest.fromLocation,
-          toLocation = convertDomainType <$> searchRequest.toLocation,
+          toLocation = convertDomainType <$> toLocation,
           -- newFromLocation = searchRequest.fromLocation,
           -- newToLocation = searchRequest.toLocation,
           distance = searchRequest.estimatedDistance,
@@ -241,6 +243,16 @@ extractDriverPickupCharges farePolicyDetails =
     DFP.RentalDetails det -> Just det.deadKmFare
     DFP.InterCityDetails det -> Just det.deadKmFare
     _ -> Nothing
+
+dropAreaOverrideCategories :: [Text]
+dropAreaOverrideCategories = ["SureAirport", "SureMetro", "SureStation"]
+
+withDropSpecialLocationArea :: Maybe Text -> Maybe Text -> DLoc.Location -> DLoc.Location
+withDropSpecialLocationArea mbSpecialLocationTag mbSpecialLocationName location =
+  case (T.splitOn "_" <$> mbSpecialLocationTag, mbSpecialLocationName) of
+    (Just (_ : dropCategory : "PriorityDrop" : _), Just name)
+      | dropCategory `elem` dropAreaOverrideCategories -> location{address = location.address{area = Just name}}
+    _ -> location
 
 convertDomainType :: DLoc.Location -> DSSL.SearchReqLocation
 convertDomainType DLoc.Location {..} =
