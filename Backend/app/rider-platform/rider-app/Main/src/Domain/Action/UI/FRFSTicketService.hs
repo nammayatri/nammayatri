@@ -2352,7 +2352,8 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
         Left _ -> pure $ instantBookResp Nothing [] False True
         Right res -> pure res
   where
-    instantBookResp booking recentBookingIds isRecentBooking inProgress = FRFSTicketService.FRFSPassInstantBookResp {booking, recentBookingIds, isRecentBooking, inProgress}
+    instantBookResp booking recentBookingIds isRecentBooking inProgress =
+      FRFSTicketService.FRFSPassInstantBookResp {booking, recentBookingIds, isRecentBooking, inProgress, routeCode = Nothing, applicableRouteCodes = Nothing}
 
     inProgressKey = PassInstantBook.inProgressKey req.purchasedPassPaymentId
 
@@ -2396,7 +2397,16 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
       void $ Hedis.del inProgressKey
       case result of
         Left err -> throwM err
-        Right bookingStatus -> pure $ instantBookResp (Just bookingStatus) [] False False
+        Right (bookingStatus, mbRouteCode, applicableRouteCodes) ->
+          pure
+            FRFSTicketService.FRFSPassInstantBookResp
+              { booking = Just bookingStatus,
+                recentBookingIds = [],
+                isRecentBooking = False,
+                inProgress = False,
+                routeCode = mbRouteCode,
+                applicableRouteCodes = applicableRouteCodes
+              }
 
     isLiveBooking booking =
       booking.status
@@ -2411,11 +2421,19 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
       mbServiceTier <- case (req.serviceTier, req.vehicleNumber) of
         (Nothing, Just vehicleNumber) -> fmap ((.serviceType) . snd) <$> JMU.getVehicleMetadataFromInMem [integratedBPPConfig] vehicleNumber
         _ -> pure req.serviceTier
+      (mbRouteCode, mbApplicableRouteCodes) <- case req.routeCode of
+        Just routeCode -> pure (Just routeCode, Nothing)
+        Nothing
+          | vehicleType == Spec.BUS -> do
+            routeCodes <- FRFSUtils.stopPairRouteCodes integratedBPPConfig vehicleType mbServiceTier integratedBPPConfig.merchantOperatingCityId req.sourceStopCode req.destinationStopCode
+            routeCode <- listToMaybe routeCodes & fromMaybeM (InvalidRequest "No bus route serves this stop pair")
+            pure (Just routeCode, Just routeCodes)
+          | otherwise -> pure (Nothing, Nothing)
       let searchReq =
             FRFSSearchAPIReq
               { fromStationCode = req.sourceStopCode,
                 toStationCode = req.destinationStopCode,
-                routeCode = req.routeCode,
+                routeCode = mbRouteCode,
                 serviceTier = mbServiceTier,
                 quantity = quantity,
                 platformType = Just integratedBPPConfig.platformType,
@@ -2427,7 +2445,7 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
               }
       searchRes <- postFrfsSearch (Just personId, merchantId) (Just city) (Just True) (Just True) (Just integratedBPPConfig.id) (pure <$> mbServiceTier) vehicleType searchReq
       setInProgress (Just searchRes.searchId) attemptStartedAt
-      quoteRes <- pickPassCoveredQuote mbServiceTier searchRes.quotes
+      quoteRes <- pickPassCoveredQuote mbServiceTier mbRouteCode searchRes.quotes
       quote <- QFRFSQuote.findById quoteRes.quoteId >>= fromMaybeM (InvalidRequest $ "Invalid quote id: " <> quoteRes.quoteId.getId)
       quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
       let selections =
@@ -2448,13 +2466,14 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
             recordBooking booking.id booking.status booking.searchId booking.createdAt
           throwM err
       recordBooking confirmRes.bookingId confirmRes.status searchRes.searchId confirmRes.createdAt
-      getFrfsBookingStatus (Just personId, merchantId) confirmRes.bookingId
+      bookingStatus <- getFrfsBookingStatus (Just personId, merchantId) confirmRes.bookingId
+      pure (bookingStatus, mbRouteCode, mbApplicableRouteCodes)
 
-    pickPassCoveredQuote mbServiceTier quotes = do
+    pickPassCoveredQuote mbServiceTier mbRouteCode quotes = do
       let passOptions quote = filter (\option -> option.purchasedPassPaymentId == req.purchasedPassPaymentId) quote.applicablePasses
           fullyCovers quote = any (\option -> option.overriddenTotalPrice.amount <= 0) (passOptions quote)
           tierMatches quote = maybe True (\tier -> quote.serviceTierType == Just tier) mbServiceTier
-          routeMatches quote = maybe True (\routeCode -> quote.routeCode == Just routeCode) req.routeCode
+          routeMatches quote = maybe True (\routeCode -> quote.routeCode == Just routeCode) mbRouteCode
           candidates = filter (\quote -> tierMatches quote && routeMatches quote) quotes
           covered = filter fullyCovers candidates
       case covered of
