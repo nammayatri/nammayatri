@@ -1211,6 +1211,7 @@ library
       Tools.Encryption
       Tools.Error
       Tools.Event
+      Tools.EventTracking
       Tools.FieldParse
       Tools.Maps
       Tools.MarketingEvents
