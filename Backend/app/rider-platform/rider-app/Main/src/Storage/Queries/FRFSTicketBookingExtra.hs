@@ -244,19 +244,25 @@ findSharedCabPlatedCityUpdatedSince merchantOperatingCityId since =
         ]
     ]
 
--- | A plate's shared-cab bookings in these statuses touched since `since`: the plate's runs without its past.
-findSharedCabPlateUpdatedSince ::
+-- | The plates' shared-cab bookings in these statuses touched since `since`: the plates' runs without their past.
+findSharedCabPlatesUpdatedSince ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Text ->
+  [Text] ->
   [DFRFSTicketBookingStatus.FRFSTicketBookingStatus] ->
   UTCTime ->
   m [FRFSTicketBooking]
-findSharedCabPlateUpdatedSince plate statuses since =
+findSharedCabPlatesUpdatedSince [] _ _ = pure []
+findSharedCabPlatesUpdatedSince plates statuses since =
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.vehicleNumber $ Se.Eq (Just plate),
+        [ Se.Is Beam.vehicleNumber $ Se.In (Just <$> plates),
           Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB),
           Se.Is Beam.status $ Se.In statuses,
           Se.Is Beam.updatedAt $ Se.GreaterThanOrEq since
         ]
     ]
+
+-- | By primary key, so KV answers: a write not yet drained to the DB is seen.
+findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id FRFSTicketBooking] -> m [FRFSTicketBooking]
+findAllByIds [] = pure []
+findAllByIds ids = findAllWithKV [Se.Is Beam.id $ Se.In (getId <$> ids)]

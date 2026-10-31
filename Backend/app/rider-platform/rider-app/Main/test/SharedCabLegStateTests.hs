@@ -61,6 +61,11 @@ tests =
           testCase "a journey of walks only has none" $ onlyTransitLeg [DTrip.Walk, DTrip.Walk] @?= False
         ],
       testGroup
+        "waybill refresh"
+        [ testCase "a waybill moves a bus or metro booking, never a shared cab's plate" $
+            map waybillMovesBooking [DTrip.Bus, DTrip.Metro, DTrip.SharedCab] @?= [True, True, False]
+        ],
+      testGroup
         "driver info beside the session"
         [ testCase "round trips" $ decode (encode (CabDriverInfo (Just "Asha K") (Just "Maruti Dzire"))) @?= Just (CabDriverInfo (Just "Asha K") (Just "Maruti Dzire")),
           testCase "a field the driver-app did not send is Nothing" $ decode "{\"driverName\":\"Asha K\"}" @?= Just (CabDriverInfo (Just "Asha K") Nothing)

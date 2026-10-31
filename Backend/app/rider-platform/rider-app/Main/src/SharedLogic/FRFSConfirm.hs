@@ -249,22 +249,26 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
 
     selectAndHoldWithRetries :: (CallExternalBPP.FRFSConfirmFlow m r c) => Text -> [Id Seat.Seat] -> Int -> Int -> Int -> Int -> Int -> Int -> m ([Id Seat.Seat], Text)
     selectAndHoldWithRetries tripId orderedSeatIds fromIdx toIdx defaultTtl seatBitMapTtl requiredSeatCount maxAttempts =
-      SeatBooking.selectAndHold tryHold orderedSeatIds requiredSeatCount maxAttempts >>= \case
-        Right held -> pure held
-        Left SeatBooking.TooFewSeats -> throwError (InvalidRequest "Not enough seats available.")
-        Left (SeatBooking.SeatsTaken chosen) -> do
-          logWarning $ "FRFSConfirm:confirmAndUpsertBooking auto-seat FAILED tripId=" <> tripId <> " attempts=" <> show maxAttempts
-          throwError (SeatsNotFound (map (.getId) chosen))
+      go 0
       where
-        tryHold attempt chosen = do
+        go attempt = do
+          let offset = attempt * requiredSeatCount
+              chosen = take requiredSeatCount (drop offset orderedSeatIds)
+          when (length chosen < requiredSeatCount) $
+            throwError (InvalidRequest "Not enough seats available.")
           holdId <- generateGUID
           logInfo $ "FRFSConfirm:confirmAndUpsertBooking auto-seat attempt=" <> show (attempt + 1) <> "/" <> show maxAttempts <> " tripId=" <> tripId <> " seatCount=" <> show requiredSeatCount
           success <- SeatBooking.holdSeats tripId chosen fromIdx toIdx holdId defaultTtl seatBitMapTtl
           if success
             then do
               logInfo $ "FRFSConfirm:confirmAndUpsertBooking auto-seat SUCCESS tripId=" <> tripId <> " holdId=" <> holdId <> " seatIds=" <> show (map (.getId) chosen)
-              pure (Just holdId)
-            else pure Nothing
+              pure (chosen, holdId)
+            else
+              if attempt + 1 >= maxAttempts
+                then do
+                  logWarning $ "FRFSConfirm:confirmAndUpsertBooking auto-seat FAILED tripId=" <> tripId <> " attempts=" <> show maxAttempts
+                  throwError (SeatsNotFound (map (.getId) chosen))
+                else go (attempt + 1)
 
     processCategorySelection :: CallExternalBPP.FRFSConfirmFlow m r c => FRFSCategorySelectionReq -> m FRFSUtils.QuoteCategorySelection
     processCategorySelection categoryReq = do

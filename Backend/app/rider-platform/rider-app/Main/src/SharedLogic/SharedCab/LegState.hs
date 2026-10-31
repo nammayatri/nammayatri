@@ -14,6 +14,7 @@ module SharedLogic.SharedCab.LegState
     isSharedCabAgency,
     legNeedsChains,
     sharedCabLegMode,
+    waybillMovesBooking,
     sharedCabFareTiers,
     deriveSharedCabState,
     isDroppable,
@@ -96,6 +97,10 @@ isSharedCabAgency agencyGtfsId = gtfsIdtoDomainCode agencyGtfsId == "SHARED_CAB"
 sharedCabLegMode :: Maybe ServiceTierType -> DTrip.MultimodalTravelMode -> DTrip.MultimodalTravelMode
 sharedCabLegMode (Just SHARED_CAB) _ = DTrip.SharedCab
 sharedCabLegMode _ mode = mode
+
+-- | A waybill names the bus running a service; a shared cab's plate comes only from a claim or a boarding under its plate lock.
+waybillMovesBooking :: DTrip.MultimodalTravelMode -> Bool
+waybillMovesBooking = (/= DTrip.SharedCab)
 
 -- | Shared cabs are frequency-based GTFS, so the bus-schedule availability filter returns nothing for them; their fares resolve under the SHARED_CAB tier.
 sharedCabFareTiers :: Maybe Text -> Maybe [ServiceTierType]
