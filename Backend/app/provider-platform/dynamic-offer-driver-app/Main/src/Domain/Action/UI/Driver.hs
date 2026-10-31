@@ -113,7 +113,7 @@ import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Digest.Pure.MD5 as MD5
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
-import Data.List (intersect, nub, (\\))
+import Data.List (intersect, nub)
 import qualified Data.List as DL
 import qualified Data.Map as M
 import Data.Maybe (listToMaybe)
@@ -253,6 +253,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Domain.Types.PaymentTransaction
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQTransaction
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (ExecutionResult (..))
@@ -2952,61 +2953,81 @@ clearDriverDues ::
   Maybe ClearManualSelectedDues ->
   Maybe SPayment.DeepLinkData ->
   m ClearDuesRes
-clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq mbDeepLinkData = do
-  subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
-      >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
-  now <- getCurrentTime
-  (dueDriverFees', mKey) <- do
-    case clearSelectedReq of
-      Just req -> do
-        dfees <- runInMasterDbAndRedis $ QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] (Just $ req.driverFeeIds) serviceName
-        let len = length dfees
-        let paymentIdLength = length req.driverFeeIds
-        unless (len == paymentIdLength) $
-          throwError $ InvalidRequest "Status of some id is not PAYMENT_OVERDUE."
-        return (dfees, subscriptionConfig.partialDueClearanceMessageKey)
-      Nothing -> do
-        dfees <- runInMasterDbAndRedis $ QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] Nothing serviceName
-        return (dfees, Nothing)
+clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq mbDeepLinkData =
+  -- One clear-dues per driver at a time: two concurrent taps would each find no active invoice and
+  -- create two separate payable orders for the same dues. The second tap waits and reuses the first.
+  Redis.withWaitAndLockRedis ("DriverDuesOrder:" <> personId.getId) 60 100000 $ do
+    subscriptionConfig <-
+      CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
+        >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
+    now <- getCurrentTime
+    (dueDriverFees', mKey) <- do
+      case clearSelectedReq of
+        Just req -> do
+          dfees <- runInMasterDbAndRedis $ QDF.findAllByStatusAndDriverIdWithServiceName (Just _merchantId) personId [DDF.PAYMENT_OVERDUE] (Just $ req.driverFeeIds) serviceName
+          let len = length dfees
+          let paymentIdLength = length req.driverFeeIds
+          unless (len == paymentIdLength) $
+            throwError $ InvalidRequest "Some selected fees are not overdue or belong to another merchant."
+          return (dfees, subscriptionConfig.partialDueClearanceMessageKey)
+        Nothing -> do
+          dfees <- runInMasterDbAndRedis $ QDF.findAllByStatusAndDriverIdWithServiceName (Just _merchantId) personId [DDF.PAYMENT_OVERDUE] Nothing serviceName
+          return (dfees, Nothing)
 
-  --------- to crub up cases related to double debit ----------
-  successfulInvoices <- mapM (\fee -> runInMasterDbAndRedis (QINV.findInvoiceByFeeIdAndStatus fee.id Domain.SUCCESS)) dueDriverFees'
-  let allPaidFeeNotMarkedCleared = nub $ map INV.driverFeeId (concat successfulInvoices)
-  -- collectedAt must be when the payment actually succeeded (the SUCCESS
-  -- invoice's updatedAt), not "now": this path can run days after a missed
-  -- clear, and stamping "now" lands the fee in the wrong collection window
-  -- in finance reports.
-  forM_ allPaidFeeNotMarkedCleared $ \feeId -> do
-    let paidAt = maybe now minimum $ nonEmpty [inv.updatedAt | inv <- concat successfulInvoices, inv.driverFeeId == feeId]
-    QDF.updateClearedStatusByIdsWithCollectedAt [feeId] paidAt now
-  let dueDriverFees = filter (\fee -> not $ fee.id `elem` allPaidFeeNotMarkedCleared) dueDriverFees'
-  ----------------------------------------------------------
-  Redis.runInMasterCloudRedisCell $
-    forM_ dueDriverFees $ \fee -> Redis.setExp (DDF.manualPaymentInProgressKey fee.id.getId) True DDF.manualPaymentInProgressTtl
-  invoices <- mapM (\fee -> runInMasterDbAndRedis (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees
-  let paymentService = subscriptionConfig.paymentServiceName
-      sortedInvoices = mergeSortAndRemoveDuplicate invoices
-      splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
-  vendorFees' <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) dueDriverFees else pure []
-  let roundedVendorFees = map SPayment.roundVendorFee vendorFees'
-  (vendorFees, finalInvoices) <- applyVendorMigrations subscriptionConfig.vendorMigrationMappings roundedVendorFees sortedInvoices
-  clearDueResp <- do
-    case finalInvoices of
-      [] -> mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing vendorFees mbDeepLinkData splitEnabled Nothing
-      (invoice_ : restinvoices) -> do
-        mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
-        (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ dueDriverFees
-        let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) dueDriverFees
-        let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) dueDriverFees
-        mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing INV.MANUAL_INVOICE invoice vendorFees mbDeepLinkData splitEnabled Nothing
-  let mbPaymentLink = clearDueResp.orderResp.payment_links
-      payload = clearDueResp.orderResp.sdk_payload.payload
-      mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
-  whenJust mKey $ \messageKey -> do
-    fork "send link through dasboard" $ do
-      SPayment.sendLinkTroughChannelProvided mbPaymentLink personId mbAmount (Just subscriptionConfig.paymentLinkChannel) False messageKey
-  return clearDueResp
+    --------- to crub up cases related to double debit ----------
+    successfulInvoices <- mapM (\fee -> runInMasterDbAndRedis (QINV.findInvoiceByFeeIdAndStatus fee.id Domain.SUCCESS)) dueDriverFees'
+    let allPaidFeeNotMarkedCleared = nub $ map INV.driverFeeId (concat successfulInvoices)
+    -- collectedAt must be when the payment actually succeeded (the SUCCESS
+    -- invoice's updatedAt), not "now": this path can run days after a missed
+    -- clear, and stamping "now" lands the fee in the wrong collection window
+    -- in finance reports.
+    forM_ allPaidFeeNotMarkedCleared $ \feeId -> do
+      let paidAt = maybe now minimum $ nonEmpty [inv.updatedAt | inv <- concat successfulInvoices, inv.driverFeeId == feeId]
+      QDF.updateClearedStatusByIdsWithCollectedAt [feeId] paidAt now
+    let unpaidDueDriverFees = filter (\fee -> fee.id `notElem` allPaidFeeNotMarkedCleared) dueDriverFees'
+    -- A fee can also sit on another live invoice (any payment mode, including the manual one about to be
+    -- reused) whose order the gateway already CHARGED while that charge is not processed yet: webhook
+    -- pending, or skipped because the payment lock was held, and the status poller treats CHARGED as
+    -- final. Charging the fee again collects it twice and skipping it leaves it unpayable, so record it
+    -- as paid by that order, as the SUCCESS-invoice reconciliation above does.
+    liveInvoices <- runInMasterDbAndRedis (QINV.findActiveByDriverFeeIds (unpaidDueDriverFees <&> (.id)))
+    chargedElsewhere <- fmap concat . forM liveInvoices $ \inv -> do
+      mbOrder <- QPaymentOrder.findById (cast inv.id)
+      pure [(inv, paidOrder) | Just paidOrder <- [mbOrder], paidOrder.status == Payment.CHARGED]
+    forM_ chargedElsewhere $ \(inv, paidOrder) -> do
+      logError $ "clearDriverDues: driverFeeId " <> inv.driverFeeId.getId <> " already charged via order " <> paidOrder.id.getId <> ", marking it paid instead of charging again"
+      QDF.updateClearedStatusByIdsWithCollectedAt [inv.driverFeeId] paidOrder.updatedAt now
+      QINV.updateInvoiceStatusByInvoiceIdAndDriverFeeIds INV.SUCCESS inv.id [inv.driverFeeId]
+    let feesChargedElsewhere = (.driverFeeId) . fst <$> chargedElsewhere
+        dueDriverFees = filter (\fee -> fee.id `notElem` feesChargedElsewhere) unpaidDueDriverFees
+    when (null dueDriverFees) $
+      throwError $ InvalidRequest "No overdue fees left to clear."
+    ----------------------------------------------------------
+    Redis.runInMasterCloudRedisCell $
+      forM_ dueDriverFees $ \fee -> Redis.setExp (DDF.manualPaymentInProgressKey fee.id.getId) True DDF.manualPaymentInProgressTtl
+    invoices <- mapM (\fee -> runInMasterDbAndRedis (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees
+    let paymentService = subscriptionConfig.paymentServiceName
+        sortedInvoices = mergeSortAndRemoveDuplicate invoices
+        splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
+    vendorFees' <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) dueDriverFees else pure []
+    let roundedVendorFees = map SPayment.roundVendorFee vendorFees'
+    (vendorFees, finalInvoices) <- applyVendorMigrations subscriptionConfig.vendorMigrationMappings roundedVendorFees sortedInvoices
+    clearDueResp <- do
+      case finalInvoices of
+        [] -> mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing vendorFees mbDeepLinkData splitEnabled Nothing
+        (invoice_ : restinvoices) -> do
+          mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
+          (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ dueDriverFees
+          let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) dueDriverFees
+          let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) dueDriverFees
+          mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing INV.MANUAL_INVOICE invoice vendorFees mbDeepLinkData splitEnabled Nothing
+    let mbPaymentLink = clearDueResp.orderResp.payment_links
+        payload = clearDueResp.orderResp.sdk_payload.payload
+        mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
+    whenJust mKey $ \messageKey -> do
+      fork "send link through dasboard" $ do
+        SPayment.sendLinkTroughChannelProvided mbPaymentLink personId mbAmount (Just subscriptionConfig.paymentLinkChannel) False messageKey
+    return clearDueResp
   where
     applyVendorMigrations mbMappings vendorFees' sortedInvoices = do
       let (vendorFees, hasMigrations) = SPayment.applyVendorMigrations mbMappings vendorFees'
@@ -3020,22 +3041,32 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
       return (vendorFees, finalInvoices)
 
     validateExistingInvoice invoice driverFees = do
-      invoices <- runInMasterDbAndRedis $ QINV.findAllByInvoiceId invoice.id
+      invoices <- runInMasterDbAndRedis $ QINV.findAllRowsByInvoiceId invoice.id
       let driverFeeIds = driverFees <&> getId . (.id)
       let currentDueDriverFee = (invoices <&> getId . (.driverFeeId)) `intersect` driverFeeIds
       if isJust clearSelectedReq
         then do
           QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE invoice.id
           return (Nothing, driverFeeIds, [])
-        else
-          if length currentDueDriverFee <= length invoices
+        else -- Reuse only when the invoice holds exactly the fees being paid now. Reusing it for a subset
+        -- charged less than the invoice's fees while payment success clears every fee on the invoice.
+
+          if isSameFeeSet currentDueDriverFee invoices driverFeeIds
             then do
-              return (Just (invoice.id, invoice.invoiceShortId), currentDueDriverFee, (driverFees <&> getId . (.id)) \\ (invoices <&> getId . (.driverFeeId)))
+              return (Just (invoice.id, invoice.invoiceShortId), currentDueDriverFee, [])
             else do
               QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE invoice.id
               return (Nothing, driverFeeIds, [])
 
     mkClearDuesResp (orderResp, orderId) = ClearDuesRes {orderId = orderId, orderResp}
+
+-- | An existing invoice can be reused only when its rows cover exactly the fees being paid now:
+-- every invoice fee is currently due and every due fee is on the invoice.
+isSameFeeSet :: [Text] -> [INV.Invoice] -> [Text] -> Bool
+isSameFeeSet currentDueOnInvoice invoiceRows dueFeeIds =
+  let invoiceFeeIds = nub (invoiceRows <&> getId . (.driverFeeId))
+      matched = length (nub currentDueOnInvoice)
+   in matched == length invoiceFeeIds && matched == length (nub dueFeeIds)
 
 mergeSortAndRemoveDuplicate :: [[INV.Invoice]] -> [INV.Invoice]
 mergeSortAndRemoveDuplicate invoices = do
@@ -3108,7 +3139,7 @@ getDriverPaymentsHistoryV2 (driverId, _, merchantOpCityId) mPaymentMode mbLimit 
 
 mkManualPaymentEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Map (Id DDF.DriverFee) DDF.DriverFee -> INV.Invoice -> m (Maybe ManualInvoiceHistory)
 mkManualPaymentEntity mapDriverFeeByDriverFeeId' manualInvoice = do
-  allEntriesByInvoiceId <- QINV.findAllByInvoiceId manualInvoice.id
+  allEntriesByInvoiceId <- QINV.findAllRowsByInvoiceId manualInvoice.id
   allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntriesByInvoiceId <&> (.driverFeeId))
   let amount = sum $ mapToAmount $ filter ((DDF.CLEARED_BY_YATRI_COINS /=) . (.status)) allDriverFeeForInvoice
   case mapDriverFeeByDriverFeeId' M.!? (manualInvoice.driverFeeId) of
@@ -3774,12 +3805,13 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
   return resp
   where
     validateExistingInvoice invoice driverFees = do
-      invoices <- runInReplica $ QINV.findAllByInvoiceId invoice.id
+      invoices <- QINV.findAllRowsByInvoiceId invoice.id
       let driverFeeIds = driverFees <&> getId . (.id)
       let currentDueDriverFee = (invoices <&> getId . (.driverFeeId)) `intersect` driverFeeIds
-      if length currentDueDriverFee <= length invoices
+      -- Reuse only when the invoice holds exactly the fees being paid now (see clearDriverDues).
+      if isSameFeeSet currentDueDriverFee invoices driverFeeIds
         then do
-          return (Just (invoice.id, invoice.invoiceShortId), currentDueDriverFee, (driverFees <&> getId . (.id)) \\ (invoices <&> getId . (.driverFeeId)))
+          return (Just (invoice.id, invoice.invoiceShortId), currentDueDriverFee, [])
         else do
           QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE invoice.id
           return (Nothing, driverFeeIds, [])
@@ -3943,7 +3975,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
       pendingDriverFees <- runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [DDF.RECURRING_EXECUTION_INVOICE] [DDF.PAYMENT_PENDING]
       unless (null pendingDriverFees) $ throwError (InternalError "some driver fee currently in auto pay execution")
       driverFees <- runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [driverFeeType] [DDF.CLEARED, DDF.REFUND_FAILED, DDF.COLLECTED_CASH]
-      dueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] Nothing serviceName
+      dueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName Nothing personId [DDF.PAYMENT_OVERDUE] Nothing serviceName
       let totalSecurityDeposit = sum $ map mapToAmount driverFees
           dueDriverFeesAmount = sum $ map mapToAmount dueDriverFees
           refundAmount = totalSecurityDeposit - dueDriverFeesAmount - refundAmountDeduction
