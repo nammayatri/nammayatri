@@ -217,6 +217,7 @@ data IssueUpdateReq = IssueUpdateReq
 
 type IssueCategoryAPI =
   QueryParam "language" Language
+    :> QueryParam "enableXyne" Bool
     :> Get '[JSON] IssueCategoryListRes
 
 data IssueCategoryRes = IssueCategoryRes
@@ -233,8 +234,9 @@ data IssueCategoryRes = IssueCategoryRes
   }
   deriving (Generic, Show, ToJSON, ToSchema)
 
-newtype IssueCategoryListRes = IssueCategoryListRes
-  { categories :: [IssueCategoryRes]
+data IssueCategoryListRes = IssueCategoryListRes
+  { categories :: [IssueCategoryRes],
+    xyneEnabled :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, ToSchema)
 

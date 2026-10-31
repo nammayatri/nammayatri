@@ -21,6 +21,7 @@ import qualified IssueManagement.Common.UI.Issue as Common
 import qualified IssueManagement.Domain.Types.Issue.ChatMessage as DCM
 import qualified IssueManagement.Domain.Types.Issue.IssueApiIntegration as DAI
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as D
+import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIC
 import qualified IssueManagement.Domain.Types.Issue.IssueConfig as D
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage as D
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as D
@@ -117,6 +118,7 @@ data ServiceHandle m = ServiceHandle
     -- support S3 fetches (e.g. Beckn IGM flow) — the shared handler then
     -- falls back to @mediaFile.url@.
     mbFetchMediaBase64 :: Maybe (D.MediaFile -> m (Maybe Text)),
+    mbProbeSupportBot :: Maybe (Id Person -> Id Merchant -> Id MerchantOperatingCity -> Maybe Language -> m Bool),
     findIssueConfig :: Id MerchantOperatingCity -> Identifier -> m (Maybe D.IssueConfig),
     -- | Optional target-a-specific-service updateTicket. Used by the chat
     -- forwarding path so we can push the comment to XyneSpaces even when
@@ -168,11 +170,16 @@ getIssueCategory ::
   ) =>
   (Id Person, Id Merchant, Id MerchantOperatingCity) ->
   Maybe Language ->
+  Maybe Bool ->
   ServiceHandle m ->
   Identifier ->
   m Common.IssueCategoryListRes
-getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifier = do
+getIssueCategory (personId, merchantId, merchantOpCityId) mbLanguage mbEnableXyne issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
+  xyneEnabled <- case (mbEnableXyne, issueHandle.mbProbeSupportBot) of
+    (Just True, Just probe) -> Just <$> probe personId merchantId merchantOpCityId mbLanguage
+    (Just True, Nothing) -> pure (Just False)
+    _ -> pure Nothing
   issueCategoryTranslationList <- do
     categoriesWithTranslations <- CQIC.findAllActiveByMerchantOpCityIdAndLanguage merchantOpCityId language identifier
     case categoriesWithTranslations of
@@ -185,7 +192,10 @@ getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifi
           CUSTOMER -> pure $ filter (\(c, _) -> c.showInDefault == Just True) defaults
           _ -> pure defaults
       _ -> return categoriesWithTranslations
-  pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> issueCategoryTranslationList}
+  let visibleIssueCategories
+        | xyneEnabled == Just True = filter (\(c, _) -> c.categoryType == DIC.FAQ) issueCategoryTranslationList
+        | otherwise = issueCategoryTranslationList
+  pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> visibleIssueCategories, xyneEnabled}
   where
     mkIssueCategory :: (D.IssueCategory, Maybe D.IssueTranslation) -> Common.IssueCategoryRes
     mkIssueCategory (issueCategory, issueTranslation) =
