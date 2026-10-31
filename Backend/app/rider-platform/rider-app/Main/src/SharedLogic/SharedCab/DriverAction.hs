@@ -20,7 +20,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Base as JM
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (RouteChanged), AllocationState, isOffered)
-import SharedLogic.SharedCab.Booking (isSharedCabBooking, withBookingLock)
+import SharedLogic.SharedCab.Booking (isSharedCabBooking, noteOnPlate, withBookingLock)
 import SharedLogic.SharedCab.BookingState (clearAlloc, readAlloc)
 import SharedLogic.SharedCab.Cancel (CancelStage (ConfirmCancel), withSharedCabCancel)
 import SharedLogic.SharedCab.LegState (isDroppable)
@@ -121,4 +121,6 @@ runDriverAction action driver plate mbReason bookingId = do
       forM_ (filter ((== DFRFSTicket.ACTIVE) . (.status)) tickets) $ \ticket ->
         QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.INPROGRESS (Just plate) booking.id ticket.ticketNumber
       QFRFSTicketBooking.updateVehicleTripId (Just s.vehicleTripId) booking.id
+      -- already on this plate, so already counted; a spot booking born in the cab may not be indexed yet
+      noteOnPlate plate booking.id
       clearAlloc booking.id

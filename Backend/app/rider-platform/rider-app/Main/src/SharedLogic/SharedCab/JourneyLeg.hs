@@ -128,10 +128,11 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
                 plate /= c.session.vehicleNumber,
                 Just etaSec <- [Approach.plausibleEtaFrom now cfg booking.fromStationCode =<< c.track]
             ]
-      forM (SharedCabLeg.nearestAfter snd assignedEtaSec approachingCabs) $ \(c, etaSec) -> do
-        seats <- SharedCabSeats.cabSeats c.session
-        let freeSeats = maybe 0 (SharedCabSeats.freeOverBitmaps (RouteSnapshot.cabBitmapsOf c)) (SharedCabSeats.bookingRange seats booking.fromStationCode booking.toStationCode)
-        pure SharedCabLeg.UpcomingCab {cabId = c.session.vehicleTripId.getId, etaSec, freeSeats}
+      pure
+        [ SharedCabLeg.UpcomingCab {cabId = c.session.vehicleTripId.getId, etaSec, freeSeats}
+          | (c, etaSec) <- SharedCabLeg.nearestAfter snd assignedEtaSec approachingCabs,
+            let freeSeats = maybe 0 (SharedCabSeats.freeOver c.seats) (SharedCabSeats.bookingRange c.seats booking.fromStationCode booking.toStationCode)
+        ]
     _ -> pure []
   pure $
     JT.Single

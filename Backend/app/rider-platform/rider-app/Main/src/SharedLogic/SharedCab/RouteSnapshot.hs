@@ -1,19 +1,17 @@
 -- | A route's live cabs for display paths, read once per pod every couple of seconds: every rider polling the route's cab list, a
--- leg's upcoming cabs or a stop's cabs reads the same sessions, LTS fixes and seat bitmaps. Claim, boarding, drop and cancel never
--- read it: they read sessions and seats fresh under their locks, and the seat engine's hold stays the arbiter.
+-- leg's upcoming cabs or a stop's cabs reads the same sessions, LTS fixes and seat counts. Claim, boarding, drop and cancel never
+-- read it: they read sessions and seats fresh under their locks, and the seat check under the plate lock stays the arbiter.
 -- One request rebuilds an expired snapshot while the others keep serving the old one (a plain TTL cache let every queued request
 -- rebuild at once under load).
 module SharedLogic.SharedCab.RouteSnapshot
   ( SnapshotCab (..),
     routeSnapshot,
-    cabBitmapsOf,
     filterCabLegs,
     SnapshotRead (..),
     snapshotRead,
   )
 where
 
-import Data.ByteString (ByteString)
 import Data.IORef (IORef, atomicModifyIORef', newIORef)
 import qualified Data.Map.Strict as Map
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
@@ -35,12 +33,8 @@ import System.IO.Unsafe (unsafePerformIO)
 data SnapshotCab = SnapshotCab
   { session :: Session,
     track :: Maybe LT.VehicleTrackingOnRouteResp,
-    -- | seat 1 to capacity
-    bitmaps :: [Maybe ByteString]
+    seats :: Seats.CabSeats
   }
-
-cabBitmapsOf :: SnapshotCab -> [Maybe ByteString]
-cabBitmapsOf = (.bitmaps)
 
 data Slot = Slot
   { built :: Maybe ([SnapshotCab], UTCTime),
@@ -68,9 +62,9 @@ snapshotRead now mbBuiltAt rebuilding = case mbBuiltAt of
     where
       age = diffUTCTime now builtAt
 
--- | The route's ACTIVE sessions, their fixes from one HGETALL of the LTS route hash, and each cab's seat bitmaps from one MGET.
+-- | The route's ACTIVE sessions, their fixes from one HGETALL of the LTS route hash, and their cabs' seats from one read of bookings.
 routeSnapshot ::
-  (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m) =>
+  (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m) =>
   Text ->
   m [SnapshotCab]
 routeSnapshot routeCode = do
@@ -92,18 +86,17 @@ routeSnapshot routeCode = do
       pure cabs
 
 buildSnapshot ::
-  (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m) =>
+  (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m) =>
   Text ->
   m [SnapshotCab]
 buildSnapshot routeCode = do
   sessions <- Session.activeSessionsOnRoute routeCode
   positions <- either (const []) identity <$> withTryCatch "sharedCab:snapshot:positions" (Lts.readRoutePositions routeCode)
-  forM sessions $ \s -> do
-    bitmaps <- Seats.cabBitmaps s
-    pure SnapshotCab {session = s, track = find ((== s.vehicleNumber) . (.vehicleNumber)) positions, bitmaps}
+  seats <- Seats.cabsSeats sessions
+  pure [SnapshotCab {session = s, track = find ((== s.vehicleNumber) . (.vehicleNumber)) positions, seats = c} | (s, c) <- zip sessions seats]
 
 -- | A shared-cab itinerary is shown only while a cab is running its route. TODO: also require the cab not to have passed the board stop.
-filterCabLegs :: (Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadMask m) => Id DMOC.MerchantOperatingCity -> [MultiModalTypes.MultiModalLeg] -> m (Maybe [MultiModalTypes.MultiModalLeg])
+filterCabLegs :: (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m) => Id DMOC.MerchantOperatingCity -> [MultiModalTypes.MultiModalLeg] -> m (Maybe [MultiModalTypes.MultiModalLeg])
 filterCabLegs cityId legs = case filter isSharedCabLeg legs of
   [] -> pure (Just legs)
   cabLegs -> do

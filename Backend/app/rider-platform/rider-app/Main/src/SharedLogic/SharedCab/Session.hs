@@ -35,10 +35,8 @@ import Kernel.Utils.Common
 import Lib.Scheduler (JobCreator)
 import SharedLogic.SharedCab.Booking (ridersOnBoard, shared)
 import qualified SharedLogic.SharedCab.Booking as Booking
-import qualified SharedLogic.SharedCab.Degraded as Degraded
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
 import SharedLogic.SharedCab.Keys (driverInfoKey, plateLockKey, routeKey, sessionKey)
-import SharedLogic.SharedCab.LegState (seatsHeld)
 import SharedLogic.SharedCab.Lock (withOwnedLock)
 import SharedLogic.SharedCab.LtsAttach
 import qualified SharedLogic.SharedCab.Notify as Notify
@@ -98,6 +96,8 @@ getSessionWith cached plate =
     rebuild trip = do
       s <- sessionFromTrip trip <$> getCurrentTime
       bookings <- Booking.liveBookingsForVehicle plate
+      -- the flush took the plate's assignment index: re-seed it from the rows read, so the next seat count sees them through KV
+      forM_ bookings $ \b -> Booking.noteOnPlate plate b.id
       logInfo $
         "sharedCab: rebuilt session for " <> plate <> " from vehicle_trip " <> trip.id.getId
           <> " (route "
@@ -105,25 +105,10 @@ getSessionWith cached plate =
           <> ", "
           <> show (length bookings)
           <> " live app bookings)"
-      walkups <- restoreSeats s bookings
+      walkups <- Seats.setWalkups s s.walkupCount
       rebuilt <- saveSession Nothing s {walkupCount = walkups}
       ensureExpiryJob s.merchantId s.merchantOperatingCityId
       pure rebuilt
-
--- | The flush took the seat holds with the session: the live bookings' seats are held again, then the walk-ups' as far as seats are left.
--- Returns the walk-ups held.
-restoreSeats :: (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r) => Session -> [DFRFSTicketBooking.FRFSTicketBooking] -> m Int
-restoreSeats s bookings = do
-  tickets <- if null bookings then pure [] else QTicket.findAllByTicketBookingIds (map (.id) bookings)
-  parties <- Booking.partySizes bookings
-  forM_ bookings $ \b -> do
-    let seated = b.status == DBookingStatus.CONFIRMED && b.vehicleNumber == Just s.vehicleNumber && seatsHeld [t.status | t <- tickets, t.frfsTicketBookingId == b.id] > 0
-    degraded <- Degraded.isMarkerAlive b.id
-    held <- Seats.bookingHold b.id
-    when (seated && not degraded && isNothing held) $
-      Seats.holdForStops s b.fromStationCode b.toStationCode (Booking.partyOf parties b)
-        >>= maybe (logError $ "sharedCab: no seat to restore for booking " <> b.id.getId <> " on " <> s.vehicleNumber) (Seats.recordHold b.id)
-  Seats.setWalkups s s.walkupCount
 
 -- | The route set is an index, the session key is truth: a stale member is repaired lazily under the plate lock (not re-entrant, so
 -- no caller may hold it), and the SREM is skipped if the plate flapped back onto this route, so an A->B->A move isn't undone.
@@ -176,8 +161,7 @@ switchTo reason newRoute s = do
   tripId <- generateGUID
   let s' = switchRoute newRoute tripId s
   switched <- withAttach (Just s) s' (replaceLiveTrip reason now (Just s) s')
-  onBoard <- ridersOnBoard s.vehicleNumber
-  walkups <- Seats.carryOver s switched (map (.id) onBoard)
+  walkups <- Seats.carryOver switched
   when (walkups /= switched.walkupCount) $ logError $ "sharedCab: " <> show walkups <> " of " <> show switched.walkupCount <> " walk-ups carried onto " <> switched.vehicleTripId.getId
   pure switched
 
@@ -207,7 +191,6 @@ finish reason s = do
   onBoard <- ridersOnBoard s.vehicleNumber
   results <- forM onBoard $ \b -> (b,) <$> withTryCatch "sharedCab:dropOnFinish" (Seats.markDropped b)
   forM_ (stranded results) $ \b -> logError $ "sharedCab: rider still on board after the session ended, booking=" <> b.id.getId <> " plate=" <> s.vehicleNumber
-  Seats.clearWalkups s
   now <- getCurrentTime
   -- ENDED first, since the tick claims onto ACTIVE sessions only: a crash between the steps never leaves a phantom ACTIVE cab.
   ended <- saveSession (Just s) (endSession s)

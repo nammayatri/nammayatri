@@ -1,6 +1,5 @@
 module SharedLogic.SharedCab.Booking
   ( isSharedCabBooking,
-    reseatOnWaybill,
     withBookingLock,
     tryWithBookingLock,
     ridersOnBoard,
@@ -12,6 +11,10 @@ module SharedLogic.SharedCab.Booking
     shared,
     nonTerminalStatuses,
     liveBookingsForVehicle,
+    plateBookings,
+    candidateIds,
+    stillOn,
+    noteOnPlate,
     bookingSeats,
     partySizes,
     partyMap,
@@ -25,6 +28,7 @@ module SharedLogic.SharedCab.Booking
   )
 where
 
+import Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
@@ -35,7 +39,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Allocation.Types (RiderFix)
-import SharedLogic.SharedCab.Keys (bookingLockKey, cancelReasonKey, riderFixKey)
+import SharedLogic.SharedCab.Keys (bookingLockKey, cabBookingsKey, cancelReasonKey, riderFixKey)
 import SharedLogic.SharedCab.LegState (CancelReason, seatsHeld)
 import SharedLogic.SharedCab.Lock (shared, tryWithOwnedLock, withOwnedLock)
 import SharedLogic.SharedCab.RefundDecision (isSharedCabBooking)
@@ -74,8 +78,7 @@ tryWithBookingLock bookingId = tryWithOwnedLock (bookingLockKey bookingId) booki
 
 ridersOnBoard :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
 ridersOnBoard plate = do
-  now <- getCurrentTime
-  bookings <- QFRFSTicketBooking.findSharedCabPlateUpdatedSince plate [DFRFSTicketBookingStatus.CONFIRMED] (liveSince plateLiveWindowSec now)
+  bookings <- plateBookings [plate] [DFRFSTicketBookingStatus.CONFIRMED]
   if null bookings
     then pure []
     else do
@@ -137,11 +140,26 @@ nonTerminalStatuses :: [DFRFSTicketBookingStatus.FRFSTicketBookingStatus]
 nonTerminalStatuses = [DFRFSTicketBookingStatus.NEW, DFRFSTicketBookingStatus.APPROVED, DFRFSTicketBookingStatus.PAYMENT_PENDING, DFRFSTicketBookingStatus.CONFIRMING, DFRFSTicketBookingStatus.CONFIRMED, DFRFSTicketBookingStatus.TECHNICAL_CANCEL_REJECTED]
 
 liveBookingsForVehicle :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
-liveBookingsForVehicle plate = getCurrentTime >>= QFRFSTicketBooking.findSharedCabPlateUpdatedSince plate nonTerminalStatuses . liveSince plateLiveWindowSec
+liveBookingsForVehicle plate = plateBookings [plate] nonTerminalStatuses
 
--- | Seats move under the booking lock with expected-value CAS writes; a waybill refresh holds no lock, so it is guarded the same way.
-reseatOnWaybill :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Id DFRFSTicketBooking.FRFSTicketBooking -> m ()
-reseatOnWaybill effectiveBus bookingId = withBookingLock bookingId $ do
-  mbFresh <- QFRFSTicketBooking.findById bookingId
-  whenJust (mbFresh >>= (.vehicleNumber)) $ \held ->
-    QFRFSTicketBooking.updateAllocatedVehicle effectiveBus bookingId (Just held)
+-- | The plates' shared-cab bookings in these statuses. A query by plate reads only the DB (vehicleNumber is no KV key), which an
+-- assignment still draining from KV hasn't reached; so the plates' assignment index joins it, and every row is re-read by id from KV.
+plateBookings :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => [Text] -> [DFRFSTicketBookingStatus.FRFSTicketBookingStatus] -> m [DFRFSTicketBooking.FRFSTicketBooking]
+plateBookings [] _ = pure []
+plateBookings plates statuses = do
+  now <- getCurrentTime
+  fromDb <- QFRFSTicketBooking.findSharedCabPlatesUpdatedSince plates statuses (liveSince plateLiveWindowSec now)
+  indexed <- concat <$> mapM (shared . Redis.sMembers . cabBookingsKey) plates
+  rows <- QFRFSTicketBooking.findAllByIds (map Id (candidateIds (map (.id.getId) fromDb) indexed))
+  pure [b | b <- rows, stillOn plates statuses b.vehicleNumber b.status]
+
+candidateIds :: [Text] -> [Text] -> [Text]
+candidateIds fromDb indexed = nub (fromDb <> indexed)
+
+-- | The KV row decides: an index member since released, cancelled or moved to another plate is no longer the plate's.
+stillOn :: [Text] -> [DFRFSTicketBookingStatus.FRFSTicketBookingStatus] -> Maybe Text -> DFRFSTicketBookingStatus.FRFSTicketBookingStatus -> Bool
+stillOn plates statuses mbPlate status = maybe False (`elem` plates) mbPlate && status `elem` statuses
+
+-- | Under the plate lock, before the write that puts the booking on the cab; the TTL outlives the plate's session.
+noteOnPlate :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Id DFRFSTicketBooking.FRFSTicketBooking -> m ()
+noteOnPlate plate bookingId = shared $ Redis.sAddExp (cabBookingsKey plate) [bookingId.getId] plateLiveWindowSec

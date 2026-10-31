@@ -33,8 +33,7 @@ module SharedLogic.SharedCab.Keys
     sweepRunKey,
     sweepLeaseKey,
     refundRetryRunKey,
-    seatHoldKey,
-    walkupSeatsKey,
+    cabBookingsKey,
   )
 where
 
@@ -148,10 +147,6 @@ sweepLeaseKey cityId = "sharedcab:degradedSweepLease:" <> cityId.getId
 refundRetryRunKey :: CityId -> Text
 refundRetryRunKey cityId = "sharedcab:refundretryRun:" <> cityId.getId
 
--- | The seats a booking's party holds in the seat engine (a SeatHoldMeta), so a release gives back exactly those.
-seatHoldKey :: BookingId -> Text
-seatHoldKey bookingId = "sharedcab:seats:" <> bookingId.getId
-
--- | A trip's walk-up seats, one hold per walk-up.
-walkupSeatsKey :: Text -> Text
-walkupSeatsKey tripId = "sharedcab:walkups:" <> tripId
+-- | The bookings assigned to a plate, each added under its plate lock: what a seat count reads beside the DB, which lags KV.
+cabBookingsKey :: Text -> Text
+cabBookingsKey plate = "sharedcab:cab:bookings:" <> plate

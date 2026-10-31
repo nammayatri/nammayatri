@@ -12,7 +12,7 @@ import qualified Domain.Types.SeatLayout as SeatLayout
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logInfo, logWarning, withTryCatch)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logInfo, logWarning)
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.FRFSSeatBooking.Lua as Lua
 import qualified Storage.Queries.Seat as QSeat
@@ -113,7 +113,7 @@ releaseHold ::
 releaseHold tripId holdId = do
   logInfo $ "SeatBooking:releaseHold attempting holdId=" <> holdId <> " tripId=" <> tripId
   Redis.runInMasterCloudRedisCell $
-    Redis.withLockRedis (holdLockKey tripId holdId) 10 $ do
+    Redis.withWaitAndLockRedis (holdLockKey tripId holdId) 10 50000 $ do
       let mKey = metaKey tripId holdId
           tKey = timerKey tripId holdId
       mbMeta :: Maybe SeatHoldMeta <- Redis.get mKey
@@ -152,7 +152,7 @@ confirmBooking ::
 confirmBooking tripId holdId = do
   logInfo $ "SeatBooking:confirmBooking attempting holdId=" <> holdId <> " tripId=" <> tripId
   Redis.runInMasterCloudRedisCell $
-    Redis.withLockRedis (holdLockKey tripId holdId) 10 $ do
+    Redis.withWaitAndLockRedis (holdLockKey tripId holdId) 10 50000 $ do
       let mKey = metaKey tripId holdId
           tKey = timerKey tripId holdId
       mbMeta :: Maybe SeatHoldMeta <- Redis.get mKey
@@ -212,42 +212,9 @@ releaseConfirmedSeats tripId seatIds fromIdx toIdx = do
 -- | Standard functions (Availability check doesn't need hold hashtags)
 getTripAvailability :: (MonadFlow m, Redis.HedisFlow m r) => Text -> Int -> Int -> [Seat.Seat] -> m [SeatWithStatus]
 getTripAvailability tripId fromIdx toIdx seats = do
-  bitmaps <- seatBitmaps tripId (map (.id) seats)
+  let keys = map (\s -> seatKey tripId s.id) seats
+  bitmaps <- Redis.runInMasterCloudRedisCell $ mapM Redis.tryGetFromCluster keys
   return $ zipWith (checkSeatStatus fromIdx toIdx) seats bitmaps
-
--- | One MGET for a trip's seats: their keys share the trip's hash tag, so they sit in one cluster slot. A failed read reads as no
--- bitmap for every seat, as a failed GET did for each.
-seatBitmaps :: (MonadFlow m, Redis.HedisFlow m r) => Text -> [Id Seat.Seat] -> m [Maybe BS.ByteString]
-seatBitmaps _ [] = pure []
-seatBitmaps tripId seatIds = Redis.runInMasterCloudRedisCell $ do
-  keys <- traverse (Redis.buildKey . seatKey tripId) seatIds
-  bitmapsOrNone (length seatIds) <$> withTryCatch "seatBitmaps" (Redis.runHedis (RawRedis.mget keys))
-
-bitmapsOrNone :: Int -> Either e [Maybe BS.ByteString] -> [Maybe BS.ByteString]
-bitmapsOrNone n = either (const (replicate n Nothing)) identity
-
--- | The seats free for the whole of [fromIdx, toIdx), for callers that have seat ids but no seat rows.
-freeSeatIds :: (MonadFlow m, Redis.HedisFlow m r) => Text -> Int -> Int -> [Id Seat.Seat] -> m [Id Seat.Seat]
-freeSeatIds tripId fromIdx toIdx seatIds = do
-  bitmaps <- seatBitmaps tripId seatIds
-  pure [seatId | (seatId, bitmap) <- zip seatIds bitmaps, maybe True (\bs -> isRangeFree bs fromIdx toIdx) bitmap]
-
-data AutoSeatMiss = TooFewSeats | SeatsTaken [Id Seat.Seat]
-
--- | Count-based auto-seating: hold `requiredSeatCount` of `orderedSeatIds`, a fresh slice per attempt when a hold loses a race.
-selectAndHold :: Monad m => (Int -> [Id Seat.Seat] -> m (Maybe a)) -> [Id Seat.Seat] -> Int -> Int -> m (Either AutoSeatMiss ([Id Seat.Seat], a))
-selectAndHold tryHold orderedSeatIds requiredSeatCount maxAttempts = go 0
-  where
-    go attempt = do
-      let chosen = take requiredSeatCount (drop (attempt * requiredSeatCount) orderedSeatIds)
-      if length chosen < requiredSeatCount
-        then pure (Left TooFewSeats)
-        else
-          tryHold attempt chosen >>= \case
-            Just held -> pure (Right (chosen, held))
-            Nothing
-              | attempt + 1 >= maxAttempts -> pure (Left (SeatsTaken chosen))
-              | otherwise -> go (attempt + 1)
 
 checkSeatStatus :: Int -> Int -> Seat.Seat -> Maybe BS.ByteString -> SeatWithStatus
 checkSeatStatus fromIdx toIdx seat mbBitmap =

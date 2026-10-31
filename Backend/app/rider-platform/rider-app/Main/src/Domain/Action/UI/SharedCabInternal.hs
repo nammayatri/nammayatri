@@ -348,7 +348,7 @@ stopAddresses :: Id DMOC.MerchantOperatingCity -> [Text] -> Environment.Flow (Ma
 stopAddresses cityId codes =
   Map.fromList . mapMaybe (\info -> (info.stationId,) <$> info.address) <$> CQStationsExtraInformation.getBystationIdsAndCity codes cityId
 
--- | Until the tick lands: moving, next stops are the whole route. `available` is what the seat engine has free from the cab's next stop
+-- | Until the tick lands: moving, next stops are the whole route. `available` is the seats free from the cab's next stop
 -- to the route's end: what walk-ups could still take.
 data CabReads = FreshCab | CachedCab
 
@@ -371,9 +371,7 @@ mkSessionRespFrom cabReads s = do
     FreshCab -> pure Nothing
   -- a cab missing from the snapshot (PAUSED, or not yet in it) is read fresh
   (mbTrack, available) <- case snapshotCab of
-    Just c -> do
-      seats <- Seats.cabSeats s
-      pure (c.track, Seats.freeOverBitmaps (RouteSnapshot.cabBitmapsOf c) (Seats.nextStopIdx seats ((.vehicleInfo) <$> c.track), Seats.routeEnd seats))
+    Just c -> pure (c.track, Seats.freeOver c.seats (Seats.nextStopIdx c.seats ((.vehicleInfo) <$> c.track), Seats.routeEnd c.seats))
     Nothing -> do
       mbTrack <- Lts.readRoutePosition s.routeCode s.vehicleNumber
       (mbTrack,) <$> Seats.freeAhead s ((.vehicleInfo) <$> mbTrack)

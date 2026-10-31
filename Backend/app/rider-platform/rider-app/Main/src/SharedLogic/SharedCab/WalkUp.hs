@@ -331,7 +331,7 @@ sharedCabRouteServiceability person cabIbc req legReqs = do
       let wanted = filter (\c -> maybe True (\plate -> c.session.vehicleNumber == plate) req.vehicleNumber) snapshot
           boardStop = req.sourceStopCode >>= \stopCode -> (stopCode,) . (.stopPoint) <$> find ((== stopCode) . (.stopCode)) stops
           cabOf c =
-            let load = Seats.riderLoad (Seats.cabSeatsOn (map (.stopCode) stops) c.session) (RouteSnapshot.cabBitmapsOf c) req.sourceStopCode req.destinationStopCode ((.vehicleInfo) <$> c.track)
+            let load = Seats.riderLoad c.seats req.sourceStopCode req.destinationStopCode ((.vehicleInfo) <$> c.track)
              in cabVehicle now cfg (isJust req.vehicleNumber) boardStop load c.session c.track
           (scheduled, live) = partitionEithers (map cabOf wanted)
           boardEta v = (.arrivalTimeUnix) <$> (find (\e -> Just e.stopCode == req.sourceStopCode) =<< v.eta)

@@ -380,7 +380,7 @@ tests =
           verdict [] 0 [pickable {vehicleNumber = "ML05A7777"}] 4 2 "ML05A1234"
         )
           @?= (Lost PrefOffRoute, Lost PrefOffRoute, Lost PrefOffRoute),
-      testCase "a picked cab is lost when the seat engine no longer has the party's seats free for its ride" $
+      testCase "a picked cab is lost when the cab no longer has the party's seats free for its ride" $
         (verdict [] 0 [pickable] 2 2 "ML05A1234", verdict [] 0 [pickable] 1 2 "ML05A1234")
           @?= (Honour "ML05A1234", Lost PrefFull),
       testCase "a cabId names the active cab with that trip, and nothing else" $

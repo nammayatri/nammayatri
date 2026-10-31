@@ -27,7 +27,6 @@ import SharedLogic.SharedCab.LegState (CancelReason (DRIVER, RIDER))
 import SharedLogic.SharedCab.RefundDecision (Refund (..), clearRefundDecision, gateByPayment, isSharedCabBooking, setRefundDecision)
 import SharedLogic.SharedCab.RefundPolicy
 import SharedLogic.SharedCab.Seats (markDropped)
-import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -46,7 +45,7 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
     checkFresh fresh
     refund <- decide by fresh
     setRefundDecision booking.id refund
-    (cancelAction >> when (stage == ConfirmCancel) (BookingState.clearBookingState booking.id >> Seats.releaseBooking booking.id)) `finally` clearRefundDecision booking.id
+    (cancelAction >> when (stage == ConfirmCancel) (BookingState.clearBookingState booking.id)) `finally` clearRefundDecision booking.id
   when (stage == ConfirmCancel) $ do
     -- the leg-state surface shows why. Swallowed: the booking is cancelled by now, so a Redis hiccup here must not error a
     -- finished cancel. The leg is cancelled for good: the journey ends with it when it was the journey's only non-walk leg.

@@ -125,7 +125,7 @@ closable expectedPlate status mbPlate statuses = phase status mbPlate statuses =
 claimable :: FRFSTicketBookingStatus -> Maybe Text -> [DFRFSTicket.FRFSTicketStatus] -> Bool -> Bool
 claimable status mbPlate statuses markerAlive = phase status mbPlate statuses == Finding && all (== DFRFSTicket.ACTIVE) statuses && not markerAlive
 
--- | Candidates with room for the party over its ride, before any lock is taken; the claim still holds the seats under its locks.
+-- | Candidates with room for the party over its ride, before any lock is taken; the claim still checks the seats under its locks.
 withRoomFor :: (Session -> Int) -> Int -> [RankedCandidate] -> [RankedCandidate]
 withRoomFor freeFor party = filter ((>= party) . freeFor . (.rcSession))
 
@@ -155,7 +155,7 @@ isFreshPosition now maxAgeSec vi = case vi.timestamp >>= parseLtsTimestamp of
   Just ts -> let age = diffUTCTime now ts in 0 <= age && age <= fromIntegral maxAgeSec
 
 -- | Nearest first. A cab not past the board stop (LTS keeps the stop Upcoming while the cab stands at it), big enough for the party
--- (Phase 2 holds the seats under the lock), and ETA within allocationWindowSec.
+-- (Phase 2 checks the seats under the lock), and ETA within allocationWindowSec.
 eligibleCandidates ::
   UTCTime ->
   Config.SharedCabTunables ->
@@ -242,7 +242,7 @@ data PreferenceVerdict = Honour Text | Lost PreferenceLoss
   deriving (Show, Eq)
 
 -- | The picked cab holds only while it was not skipped, the rider has waited less than fallbackAfterSec, the cab still has an ACTIVE session
--- on the route and room for the whole party (`freeSeats` = the seat engine's free seats on it for the booking's ride).
+-- on the route and room for the whole party (`freeSeats` = the cab's free seats for the booking's ride).
 preferenceVerdict :: Config.SharedCabTunables -> UTCTime -> UTCTime -> [Text] -> [Session] -> Int -> Int -> Text -> PreferenceVerdict
 preferenceVerdict cfg now findingSince skipped sessions freeSeats seats plate
   | plate `elem` skipped = Lost PrefSkipped

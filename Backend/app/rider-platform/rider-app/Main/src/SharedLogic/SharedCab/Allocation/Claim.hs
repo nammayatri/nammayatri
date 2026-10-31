@@ -78,7 +78,7 @@ data ClaimMiss = ClaimSessionGone | ClaimSeatsGone | ClaimCasLost | ClaimSkipped
   deriving (Show, Eq)
 
 -- | The claim's decision under both locks, pure: the plate was not skipped and the booking is still waiting for a cab with no
--- degrade marker. The seats are then held in the seat engine, which decides ClaimSeatsGone.
+-- degrade marker. The cab's seat count then decides ClaimSeatsGone.
 claimGate :: Session -> [Text] -> Maybe LiveBooking -> Bool -> Either ClaimMiss ()
 claimGate s skipped mbLive markerAlive
   | s.vehicleNumber `elem` skipped = Left ClaimSkipped
@@ -86,7 +86,7 @@ claimGate s skipped mbLive markerAlive
     Just (LiveBooking b statuses) | claimable b.status b.vehicleNumber statuses markerAlive -> Right ()
     _ -> Left ClaimCasLost
 
--- | One candidate under both locks: re-read the session, hold the seats, CAS vehicleNumber, write the alloc key. A miss counts no attempt.
+-- | One candidate under both locks: re-read the session, check the seats, CAS vehicleNumber, write the alloc key. A miss counts no attempt.
 attemptClaim ::
   (Seats.SeatFlow m r, MonadMask m) =>
   Config.SharedCabTunables ->
@@ -101,7 +101,7 @@ attemptClaim cfg booking cand =
   where
     plate = cand.rcSession.vehicleNumber
 
--- | The seat hold is the seat guard: two bookings claiming the cab's last seat in one tick can't both win it, whatever a DB read says.
+-- | The seat check under the plate lock is the seat guard: two bookings claiming the cab's last seat in one tick can't both win it.
 claimUnderLocks ::
   (Seats.SeatFlow m r, MonadMask m) =>
   Config.SharedCabTunables ->
@@ -118,20 +118,17 @@ claimUnderLocks cfg booking cand s = do
   case claimGate s skipped mbLive markerAlive of
     Left miss -> pure (Left miss)
     Right () -> do
-      -- a FINDING booking holds no seat; drop any a lost write left behind
-      Seats.releaseBooking booking.bookingId
-      Seats.holdForStops s booking.boardStopCode booking.dropStopCode booking.seats >>= \case
-        Nothing -> pure (Left ClaimSeatsGone)
-        Just held -> Right <$> (commit now held `onException` Seats.releaseHeld held)
+      Seats.takeSeats s booking.bookingId booking.boardStopCode booking.dropStopCode booking.seats >>= \case
+        False -> pure (Left ClaimSeatsGone)
+        True -> Right <$> commit now
   where
-    commit now held = do
+    commit now = do
       offersMade <- readOffersMade booking.bookingId
       QFRFSTicketBooking.updateAllocatedVehicle (Just s.vehicleNumber) booking.bookingId Nothing
       -- the key's TTL is only a garbage-collection backstop and must outlive the stacked timers (allocKeyTtl)
       let st = AllocationState {vehicleNumber = s.vehicleNumber, timer = armedTimer cfg now offersMade cand.rcStance}
       writeAlloc (allocKeyTtl cfg) booking.bookingId st
       when cfg.driverAcceptEnabled $ writeOffersMade (allocKeyTtl cfg) booking.bookingId (offersMade + 1)
-      Seats.recordHold booking.bookingId held
       pure st
 
 claimFallbackPush :: (Redis.HedisFlow m r, MonadFlow m) => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> m Bool

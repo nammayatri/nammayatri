@@ -24,7 +24,7 @@ import Lib.Scheduler
 import SharedLogic.SharedCab.Allocation (triggerSharedCabAllocation)
 import SharedLogic.SharedCab.Allocation.Select (cabForId)
 import SharedLogic.SharedCab.Allocation.Types (allocKeyTtl)
-import SharedLogic.SharedCab.Booking (isSharedCabBooking, shared)
+import SharedLogic.SharedCab.Booking (isSharedCabBooking, noteOnPlate, shared)
 import SharedLogic.SharedCab.BookingState (writePreferred)
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Keys (pickedCabKey)
@@ -56,6 +56,8 @@ confirmHook booking =
 
 onBookingCreated :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DFTB.FRFSTicketBooking -> Maybe DJL.JourneyLeg -> m (Maybe DJL.JourneyLeg)
 onBookingCreated booking mbJourneyLeg = do
+  -- a spot booking is born in the cab, plate and all: the seat count must see it before the DB does
+  when (isSharedCabBooking booking) $ whenJust booking.vehicleNumber (`noteOnPlate` booking.id)
   forM mbJourneyLeg $ \leg ->
     let legMode = sharedCabLegMode booking.serviceTierType leg.mode
      in if legMode == leg.mode
