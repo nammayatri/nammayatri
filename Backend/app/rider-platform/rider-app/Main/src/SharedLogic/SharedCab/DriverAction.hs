@@ -7,8 +7,8 @@ module SharedLogic.SharedCab.DriverAction
   )
 where
 
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Text as T
-import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
@@ -104,8 +104,8 @@ runDriverAction action driver plate mbReason bookingId = do
     -- the booking lock inside re-decides (a boarding since the plate lock flips a ticket, and the cancel is refused)
     cancelByDriver reason booking = do
       leg <- QJourneyLeg.findByLegSearchId (Just booking.searchId.getId) >>= fromMaybeM (InvalidRequest "No journey leg for this booking")
-      withSharedCabCancel ByDriver ConfirmCancel (Just reason) stillOnThisCab booking $
-        JM.cancelLeg leg (SCR.CancellationReasonCode "") False Nothing
+      withSharedCabCancel ByDriver ConfirmCancel (Just reason) stillOnThisCab booking $ \refund ->
+        JM.cancelLegWithRefund (Just refund) Spec.CONFIRM_CANCEL leg
     stillOnThisCab fresh = do
       unless (fresh.status == DFRFSTicketBookingStatus.CONFIRMED) $ throwError BookingNotLive
       unless (fresh.vehicleNumber == Just plate) $ throwError BookingNotOnThisCab

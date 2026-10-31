@@ -17,7 +17,6 @@ module SharedLogic.SharedCab.Keys
     cancelReasonKey,
     degradedKey,
     dropClockKey,
-    refundKey,
     refundRetryKey,
     boardAttemptsKey,
     chatAttemptsKey,
@@ -95,9 +94,6 @@ degradedKey bookingId = "sharedcab:degraded:" <> bookingId.getId
 
 dropClockKey :: BookingId -> Text
 dropClockKey bookingId = "sharedcab:dropclock:" <> bookingId.getId
-
-refundKey :: BookingId -> Text
-refundKey bookingId = "sharedcab:refund:" <> bookingId.getId
 
 refundRetryKey :: BookingId -> Text
 refundRetryKey bookingId = "sharedcab:refundretry:" <> bookingId.getId

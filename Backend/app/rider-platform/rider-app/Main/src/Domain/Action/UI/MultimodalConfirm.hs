@@ -1557,8 +1557,8 @@ postMultimodalOrderSoftCancel (mbPersonId, _) journeyId legOrder = do
   checkIfAnyTaxiLegOngoing legs -- check for any ongoing taxi legs, remove this once handled properly from UI
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   mbLegBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId
-  maybe identity (SharedCab.guardRiderCancel SharedCab.SoftCancel) mbLegBooking $
-    JM.softCancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
+  maybe ($ Nothing) (SharedCab.guardRiderCancel SharedCab.SoftCancel) mbLegBooking $ \mbRefund ->
+    JM.cancelLegWithRefund mbRefund Spec.SOFT_CANCEL journeyLeg
   return Kernel.Types.APISuccess.Success
 
 getMultimodalOrderCancelStatus ::
@@ -1597,9 +1597,9 @@ postMultimodalOrderCancel (mbPersonId, _) journeyId legOrder = do
   mbLegBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId
   whenJust mbLegBooking FRFSUtils.checkCancellationQuota
   legs <- QJourneyLeg.getJourneyLegs journeyId
-  maybe identity (SharedCab.guardRiderCancel SharedCab.ConfirmCancel) mbLegBooking $ do
+  maybe ($ Nothing) (SharedCab.guardRiderCancel SharedCab.ConfirmCancel) mbLegBooking $ \mbRefund -> do
     cancelOngoingTaxiLegs legs -- shouldn't be there once we have leg wise cancellation
-    JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
+    JM.cancelLegWithRefund mbRefund Spec.CONFIRM_CANCEL journeyLeg
   return Kernel.Types.APISuccess.Success
 
 -- | Journey-keyed endpoints act only on the caller's own journey.
@@ -1608,7 +1608,7 @@ checkJourneyOwner mbPersonId journey =
   unless (mbPersonId == Just journey.riderId) $ throwError (InvalidRequest "journey does not belong to the caller")
 
 dropSharedCabRider :: DJourneyLeg.JourneyLeg -> Environment.Flow Bool
-dropSharedCabRider journeyLeg = SharedCab.dropRider (JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing) journeyLeg
+dropSharedCabRider journeyLeg = SharedCab.dropRider (\mbRefund -> JM.cancelLegWithRefund mbRefund Spec.CONFIRM_CANCEL journeyLeg) journeyLeg
 
 postMultimodalOrderReschedule ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

@@ -1,4 +1,4 @@
--- | What a shared-cab cancel refunds, handed from the cancel guard to `ExternalBPP.Flow.Common.cancel` via a short-lived key.
+-- | What a shared-cab cancel refunds, passed from the cancel guard down to `ExternalBPP.Flow.Common.cancel`.
 module SharedLogic.SharedCab.RefundDecision
   ( Refund (..),
     isSharedCabBooking,
@@ -8,21 +8,15 @@ module SharedLogic.SharedCab.RefundDecision
     refundAmounts,
     refundWithheld,
     cancelRefund,
-    setRefundDecision,
-    readRefundDecision,
-    clearRefundDecision,
   )
 where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common (HighPrecMoney)
-import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import SharedLogic.FRFSUtils (getServiceTierTypeFromRouteStationsJson)
-import SharedLogic.SharedCab.Keys (refundKey)
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 
 data Refund = FullRefund | NoRefund | NothingPaid
@@ -58,12 +52,3 @@ cancelRefund isSharedCab riderInitiated mbDecision
   | Just refund <- mbDecision = Right (Just refund)
   | riderInitiated = Left ()
   | otherwise = Right (Just FullRefund)
-
-setRefundDecision :: (MonadFlow m, Redis.HedisFlow m r) => Id DFRFSTicketBooking.FRFSTicketBooking -> Refund -> m ()
-setRefundDecision bookingId refund = Redis.setExp (refundKey bookingId) refund 120
-
-readRefundDecision :: (MonadFlow m, Redis.HedisFlow m r) => Id DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe Refund)
-readRefundDecision = Redis.safeGet . refundKey
-
-clearRefundDecision :: (MonadFlow m, Redis.HedisFlow m r) => Id DFRFSTicketBooking.FRFSTicketBooking -> m ()
-clearRefundDecision = void . Redis.del . refundKey

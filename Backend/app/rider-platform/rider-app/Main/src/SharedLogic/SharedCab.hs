@@ -33,7 +33,6 @@ module SharedLogic.SharedCab
     dropRider,
     Refund,
     cancelRefund,
-    readRefundDecision,
     refundAmounts,
     refundWithheld,
   )
@@ -46,7 +45,7 @@ import SharedLogic.SharedCab.Demand (recordSearch, sharedCabBoardStops)
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
 import SharedLogic.SharedCab.JourneyLeg (getSharedCabLegState, liveCabLegCities, noBookingLegState)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency, sharedCabFareTiers)
-import SharedLogic.SharedCab.RefundDecision (Refund, cancelRefund, isSharedCabBooking, readRefundDecision, refundAmounts, refundWithheld)
+import SharedLogic.SharedCab.RefundDecision (Refund, cancelRefund, isSharedCabBooking, refundAmounts, refundWithheld)
 import SharedLogic.SharedCab.RouteSnapshot (filterCabLegs)
 import SharedLogic.SharedCab.Schedule (keepChainsAlive)
 import SharedLogic.SharedCab.WalkUp (cabRouteServiceTier, cabRouteStations, routeServiceability, trackStopRoutes, walkUpVehicleData, withoutCabRows)

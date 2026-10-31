@@ -476,14 +476,18 @@ confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse v
         void $ postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId Nothing mbVehicleNumber Nothing mbPurchasedPassPaymentId True
 
 cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> m ()
-cancel searchId cancellationType = do
+cancel = cancelWithRefund Nothing
+
+-- | `cancel` carrying a shared-cab cancel's refund, as its policy guard decided it.
+cancelWithRefund :: JT.CancelFlow m r c => Maybe SharedCab.Refund -> Id FRFSSearch -> Spec.CancellationType -> m ()
+cancelWithRefund mbRefund searchId cancellationType = do
   mbBooking <- QTBooking.findBySearchId searchId
   whenJust mbBooking $ \booking -> do
     merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantDoesNotExist booking.merchantId.getId)
     merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
     bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
     mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision booking
-    mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType CallExternalBPP.UserInitiated False mbLiveDecision booking
+    mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType CallExternalBPP.UserInitiated False mbLiveDecision mbRefund booking
     whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, fareParameters, updatedBooking) -> do
       FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode fareParameters
       FRFSCancelJourney.cancelJourney updatedBooking
