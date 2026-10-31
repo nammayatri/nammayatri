@@ -405,11 +405,11 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
 makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe [Text] -> Vehicle
 makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now vehicleTag = do
   let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now vehicleTag
-  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction AutoSelectedVariants driverInfo vehicle vehicleServiceTiers Nothing driver.driverTag now
+  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction AutoSelectedVariants driverInfo vehicle vehicleServiceTiers Nothing driver.driverTag Nothing now
       -- Rating-gated tiers are eligibility-driven, not auto-selected: a vehicle whose RC
       -- already carries a qualifying rating must get/keep them on (re)activation, or an RC
       -- refresh would strip tiers the vehicle still qualifies for.
-      ratingGatedTiers = eligibleRatingGatedTiers driverInfo vehicle vehicleServiceTiers Nothing driver.driverTag now
+      ratingGatedTiers = eligibleRatingGatedTiers driverInfo vehicle vehicleServiceTiers Nothing driver.driverTag Nothing now
   addSelectedServiceTiers (DL.nub (availableServiceTiersForDriver <> ratingGatedTiers)) vehicle
   where
     addSelectedServiceTiers :: [DVST.ServiceTierType] -> Vehicle -> Vehicle
