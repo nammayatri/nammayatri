@@ -1029,3 +1029,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_demand_stops_per_route 
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_max_demand_routes integer ;

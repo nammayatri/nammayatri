@@ -48,6 +48,8 @@ data SharedCabTunables = SharedCabTunables
     interestWindowSec :: Int,
     -- | How many stops from the start of each route count towards its demand.
     demandStopsPerRoute :: Int,
+    -- | The most routes one demand read may ask for.
+    maxDemandRoutes :: Int,
     -- | A claim is an offer the driver accepts or declines; off unless the city's rider_config turns it on.
     driverAcceptEnabled :: Bool,
     -- | Seconds the driver has to answer the first offer to a booking, and each later one (after a decline or a timeout).
@@ -83,6 +85,7 @@ defaultTunables =
       pickEnabled = False,
       interestWindowSec = 10 * 60,
       demandStopsPerRoute = 5,
+      maxDemandRoutes = 50,
       driverAcceptEnabled = False,
       offerTimeoutSec = 30,
       offerRetryTimeoutSec = 15
@@ -116,6 +119,7 @@ tunablesFrom (Just rc) =
       pickEnabled = pick rc.sharedCabPickEnabled (.pickEnabled),
       interestWindowSec = pick rc.sharedCabInterestWindowSec (.interestWindowSec),
       demandStopsPerRoute = pick rc.sharedCabDemandStopsPerRoute (.demandStopsPerRoute),
+      maxDemandRoutes = pick rc.sharedCabMaxDemandRoutes (.maxDemandRoutes),
       driverAcceptEnabled = pick rc.sharedCabDriverAcceptEnabled (.driverAcceptEnabled),
       offerTimeoutSec = pick rc.sharedCabOfferTimeoutSec (.offerTimeoutSec),
       offerRetryTimeoutSec = pick rc.sharedCabOfferRetryTimeoutSec (.offerRetryTimeoutSec)

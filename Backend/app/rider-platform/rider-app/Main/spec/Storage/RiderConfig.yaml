@@ -203,7 +203,8 @@ RiderConfig:
     sharedCabOfferTimeoutSec: Maybe Int # seconds to answer the first offer to a booking; null = 30
     sharedCabOfferRetryTimeoutSec: Maybe Int # seconds to answer each later offer to the same booking; null = 15
     sharedCabInterestWindowSec: Maybe Int # seconds a rider who opened a stand's cab view counts as waiting; null = 600
-    sharedCabDemandStopsPerRoute: Maybe Int # stops from the start of each route that count towards its demand; null = 3
+    sharedCabDemandStopsPerRoute: Maybe Int # stops from the start of each route that count towards its demand; null = 5
+    sharedCabMaxDemandRoutes: Maybe Int # most routes one demand read may ask for; null = 50
     sharedCabPickEnabled: Maybe Bool # the rider picks a specific cab; null or Just False is off
     sharedCabEnabled: Maybe Bool # ops off switch: Just False turns shared cab off for the city; null follows the SHARED_CAB IntegratedBPPConfig
     journeyOptionsSortingType: Maybe JourneyOptionsSortingType

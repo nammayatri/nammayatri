@@ -122,16 +122,13 @@ getSharedCabRoutesData agencyId mbToken = do
           }
   pure View.SharedCabRouteDataResp {publicTransportVersion, routes = map toResp routes}
 
-maxDemandRoutes :: Int
-maxDemandRoutes = 50
-
 postSharedCabRoutesDemand :: Maybe Text -> API.SharedCabDemandReq -> Environment.Flow View.SharedCabDemandResp
 postSharedCabRoutesDemand mbToken req = do
   checkToken mbToken
-  when (length req.routeCodes > maxDemandRoutes) $ throwError (InvalidRequest "Too many routes for one demand read")
   integratedBppConfig <- getIntegratedBppConfigByAgency req.agencyId
   let cityId = integratedBppConfig.merchantOperatingCityId
   cfg <- Config.getTunables cityId
+  when (length req.routeCodes > cfg.maxDemandRoutes) $ throwError (InvalidRequest "Too many routes for one demand read")
   candidates <- forM req.routeCodes $ \routeCode -> (routeCode,) . take cfg.demandStopsPerRoute . map (.stopCode) <$> routeStops integratedBppConfig routeCode
   stops <- Demand.demandOnRoutes cfg cityId.getId candidates
   publicTransportVersion <- feedVersion integratedBppConfig
