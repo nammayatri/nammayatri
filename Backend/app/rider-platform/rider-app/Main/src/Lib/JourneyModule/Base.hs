@@ -61,6 +61,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.JourneyLeg.Bus ()
+import qualified Lib.JourneyLeg.Common.FRFS as CFRFS
 import qualified Lib.JourneyLeg.Interface as JLI
 import Lib.JourneyLeg.Metro ()
 import Lib.JourneyLeg.Subway ()
@@ -1091,7 +1092,7 @@ softCancelLeg ::
   Maybe (Id DEstimate.Estimate) ->
   m ()
 softCancelLeg journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancelEstimateId = do
-  cancelLegUtil journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancelEstimateId Spec.SOFT_CANCEL
+  cancelLegUtil Nothing journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancelEstimateId Spec.SOFT_CANCEL
 
 cancelLeg ::
   ( CacheFlow m r,
@@ -1107,7 +1108,23 @@ cancelLeg ::
   Maybe (Id DEstimate.Estimate) ->
   m ()
 cancelLeg journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancelEstimateId = do
-  cancelLegUtil journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancelEstimateId Spec.CONFIRM_CANCEL
+  cancelLegUtil Nothing journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancelEstimateId Spec.CONFIRM_CANCEL
+
+-- | A shared-cab leg's cancel (soft or confirm) with the refund its policy guard decided.
+cancelLegWithRefund ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    m ~ Kernel.Types.Flow.FlowR AppEnv
+  ) =>
+  Maybe SharedCab.Refund ->
+  Spec.CancellationType ->
+  DJourneyLeg.JourneyLeg ->
+  m ()
+cancelLegWithRefund mbRefund cancellationType journeyLeg =
+  cancelLegUtil mbRefund journeyLeg (SCR.CancellationReasonCode "") False Nothing cancellationType
 
 cancelLegUtil ::
   ( CacheFlow m r,
@@ -1117,13 +1134,14 @@ cancelLegUtil ::
     Monad m,
     m ~ Kernel.Types.Flow.FlowR AppEnv
   ) =>
+  Maybe SharedCab.Refund ->
   DJourneyLeg.JourneyLeg ->
   SCR.CancellationReasonCode ->
   Bool ->
   Maybe (Id DEstimate.Estimate) ->
   Spec.CancellationType ->
   m ()
-cancelLegUtil journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancelEstimateId cancellationType = do
+cancelLegUtil mbRefund journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancelEstimateId cancellationType = do
   whenJust journeyLeg.legSearchId $ \searchId -> do
     case journeyLeg.mode of
       DTrip.Taxi ->
@@ -1160,7 +1178,7 @@ cancelLegUtil journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancel
                 cancellationType
               }
       DTrip.Bus -> cancelBus searchId
-      DTrip.SharedCab -> cancelBus searchId
+      DTrip.SharedCab -> CFRFS.cancelWithRefund mbRefund (Id searchId) cancellationType
   when shouldUpdateJourneyStatus $ do
     journey <- getJourney journeyLeg.journeyId
     updatedLegStatus <- getAllLegsStatus journey Nothing
