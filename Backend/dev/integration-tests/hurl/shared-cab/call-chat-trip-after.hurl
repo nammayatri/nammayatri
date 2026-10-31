@@ -45,7 +45,7 @@ HTTP *
 [Asserts]
 jsonpath "$.errorCode" exists
 
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END", "force": true}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "operation": "END_ROUTE", "forceEnd": true}
 HTTP *

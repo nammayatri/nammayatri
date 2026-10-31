@@ -3,19 +3,19 @@
 # Needs --variable token=<rider token>. The city must have a short finding timeout (seed/05-local-config.sql, 25 s).
 
 # any other running cab (the boarding flow's cab B) would take the waiting booking, so it is ended too
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "next": "END", "force": true}
+{"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "operation": "END_ROUTE", "forceEnd": true}
 HTTP *
 
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END", "force": true}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "operation": "END_ROUTE", "forceEnd": true}
 HTTP *
 
-POST {{base_url}}/internal/sharedCab/route/select
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 4, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
+{"operation": "SELECT_ROUTE", "driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 4, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
 HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
