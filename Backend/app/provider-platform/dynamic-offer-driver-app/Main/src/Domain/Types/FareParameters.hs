@@ -107,9 +107,9 @@ data FareParameters = FareParameters
     -- cap config. Used to size holds and balance checks at offer/accept time.
     bufferedFare :: Maybe HighPrecMoney,
     -- | Total charge for the rider add-ons selected at /select
-    -- (pricePerQuantity x selectedQuantity, priced from add_on_config at
-    -- selection time and frozen here, so a later catalogue price edit never
-    -- changes an existing quote's or booking's fare).
+    -- (pricePerQuantity x selectedQuantity, priced from the add-on snapshot
+    -- taken on the search request at on_search and frozen here, so a later
+    -- catalogue price edit never changes an existing quote's or booking's fare).
     --
     -- It is part of the fare sum, and exposed to 'buildComponentMap' as
     -- 'AddOnChargeComponent', so whether VAT/GST or commission applies to it is
