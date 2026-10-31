@@ -69,10 +69,10 @@ tests =
           testCase "the driver's cancel refunds in full with the rider away" $ driver ALLOCATED 0 False @?= Allowed FullRefund
         ],
       testGroup
-        "3: near = within the board radius by a fresh fix; unknown or stale counts as near"
-        [ testCase "no fix" $ nearStop (Just stop) Nothing @?= True,
-          testCase "no stop to measure from" $ nearStop Nothing (fixAt 5 far) @?= True,
-          testCase "stale fix, far" $ nearStop (Just stop) (fixAt 61 far) @?= True,
+        "3: near = within the board radius by a fresh fix; unknown or stale is not near"
+        [ testCase "no fix" $ nearStop (Just stop) Nothing @?= False,
+          testCase "no stop to measure from" $ nearStop Nothing (fixAt 5 nearby) @?= False,
+          testCase "stale fix, even beside the stop" $ nearStop (Just stop) (fixAt 61 nearby) @?= False,
           testCase "fresh fix at the age limit, far" $ nearStop (Just stop) (fixAt 60 far) @?= False,
           testCase "fresh fix inside the radius" $ nearStop (Just stop) (fixAt 5 nearby) @?= True,
           testCase "fresh fix outside the radius" $ nearStop (Just stop) (fixAt 5 far) @?= False,
