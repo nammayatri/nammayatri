@@ -69,6 +69,7 @@ import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
 import qualified API.Action.UI.SpecialZoneQueue as SpecialZoneQueue
 import qualified API.Action.UI.StclMembership as StclMembership
 import qualified API.Action.UI.SubscriptionTransaction as SubscriptionTransaction
+import qualified API.Action.UI.UnserviceableCityLead as UnserviceableCityLead
 import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.TicketVerify as TicketVerify
 import qualified API.Action.UI.Tokenization as Tokenization
@@ -215,6 +216,7 @@ type API =
            :<|> DriverAreaPreference.API
            :<|> AvailableForRides.API
            :<|> DriverTag.API
+           :<|> UnserviceableCityLead.API
            :<|> PolicyDocument.API
            :<|> DriverFyEarnings.API
            :<|> PaymentCustomer.API
@@ -311,6 +313,7 @@ handler =
     :<|> DriverAreaPreference.handler
     :<|> AvailableForRides.handler
     :<|> DriverTag.handler
+    :<|> UnserviceableCityLead.handler
     :<|> PolicyDocument.handler
     :<|> DriverFyEarnings.handler
     :<|> PaymentCustomer.handler
