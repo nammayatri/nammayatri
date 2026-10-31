@@ -381,7 +381,7 @@ rideInfo merchantId reqRideId = do
     Just quoteId -> B.runInReplica $ QQuote.findById quoteId
     Nothing -> pure Nothing
   estBreakup <- case mbQuote of
-    Just q -> Just <$> EstimateBP.getEstimateBreakupFromQuote q
+    Just q -> Just <$> EstimateBP.getEstimateBreakupFromQuote booking.estimatedDistance booking.estimatedDuration q
     Nothing -> pure Nothing
   mbSearchRequest <- case mbQuote of
     Just q -> B.runInReplica $ QSearchRequest.findById q.requestId
