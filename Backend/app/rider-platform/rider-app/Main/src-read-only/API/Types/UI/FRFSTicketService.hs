@@ -204,10 +204,12 @@ data FRFSPassInstantBookReq = FRFSPassInstantBookReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSPassInstantBookResp = FRFSPassInstantBookResp
-  { booking :: Data.Maybe.Maybe FRFSTicketBookingStatusAPIRes,
+  { applicableRouteCodes :: Data.Maybe.Maybe [Data.Text.Text],
+    booking :: Data.Maybe.Maybe FRFSTicketBookingStatusAPIRes,
     inProgress :: Kernel.Prelude.Bool,
     isRecentBooking :: Kernel.Prelude.Bool,
-    recentBookingIds :: [Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking]
+    recentBookingIds :: [Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking],
+    routeCode :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
