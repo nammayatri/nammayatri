@@ -13,6 +13,8 @@ imports:
   PassEnum: Domain.Types.PassType
   MediaFile: IssueManagement.Domain.Types.MediaFile
   Version: Kernel.Types.Version
+  OverrideBenefitConfig: Domain.Types.PassOverrideConfig
+  Value: Data.Aeson
 
 PurchasedPass:
   tableName: purchased_pass
@@ -157,18 +159,29 @@ PurchasedPassPayment:
     availableTripCount: Maybe Int
     passPhotoChangeCount: Maybe Int
     activatedAt: Maybe UTCTime
+    overrideBenefitConfigJson: Maybe OverrideBenefitConfig
+    sourceStopCode: Maybe Text
+    destinationStopCode: Maybe Text
+    maximumOverrideableFarePerTicket: Maybe HighPrecMoney
+    validityDays: Maybe Int
 
   beamType:
     benefitDescription: Maybe Text
     clientSdkVersion: Maybe Text
+    overrideBenefitConfigJson: Maybe Value
 
   fromTType:
     benefitDescription: Kernel.Prelude.fromMaybe ""|I
     clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
+    overrideBenefitConfigJson: (overrideBenefitConfigJson >>= Kernel.Utils.JSON.valueToMaybe)|E
 
   toTType:
     benefitDescription: Kernel.Prelude.Just|I
     clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
+    overrideBenefitConfigJson: (Data.Aeson.toJSON <$> overrideBenefitConfigJson)|E
+
+  sqlType:
+    overrideBenefitConfigJson: jsonb
 
   constraints:
     id: PrimaryKey

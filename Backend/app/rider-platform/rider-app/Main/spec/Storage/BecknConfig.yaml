@@ -121,6 +121,7 @@ IntegratedBPPConfig:
     providerName: Maybe Text
     isTicketValidOnMultipleRoutes: Maybe Bool
     passOverrideApplicable: Maybe Bool
+    autoEnforceFRFSPass: Maybe Bool
     sortQuotesByRouteServiceTiers: Maybe Bool
     operatorConfig: Maybe OperatorConfig
     ondcRegistryPublicKey: Maybe Text
@@ -190,6 +191,7 @@ IntegratedBPPConfig:
     platformType: "'APPLICATION'"
     feedKey: "'UNKNOWN'"
     agencyKey: "'UNKNOWN'"
+    autoEnforceFRFSPass: "true"
 
   queries:
     findById:

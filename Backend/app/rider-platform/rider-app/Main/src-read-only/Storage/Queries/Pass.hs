@@ -4,6 +4,7 @@
 
 module Storage.Queries.Pass (module Storage.Queries.Pass, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.Pass
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -35,8 +36,10 @@ updateByPrimaryKey (Domain.Types.Pass.Pass {..}) = do
       Se.Set Beam.benefit benefit,
       Se.Set Beam.benefitDescription benefitDescription,
       Se.Set Beam.code code,
+      Se.Set Beam.dayCountRecommendations dayCountRecommendations,
       Se.Set Beam.description description,
       Se.Set Beam.documentsRequired documentsRequired,
+      Se.Set Beam.dynamicDayCount dynamicDayCount,
       Se.Set Beam.enable enable,
       Se.Set Beam.formVerificationConfig formVerificationConfig,
       Se.Set Beam.frfsCancelLimit frfsCancelLimit,
@@ -51,7 +54,7 @@ updateByPrimaryKey (Domain.Types.Pass.Pass {..}) = do
       Se.Set Beam.minTripsAllowingOverlap minTripsAllowingOverlap,
       Se.Set Beam.name name,
       Se.Set Beam.order order,
-      Se.Set Beam.overrideBenefitConfigJson overrideBenefitConfigJson,
+      Se.Set Beam.overrideBenefitConfigJson (Data.Aeson.toJSON <$> overrideBenefitConfigJson),
       Se.Set Beam.maxSwitchCount ((.maxSwitchCount) <$> passConfig),
       Se.Set Beam.passTypeId (Kernel.Types.Id.getId passTypeId),
       Se.Set Beam.pricingTiers pricingTiers,
