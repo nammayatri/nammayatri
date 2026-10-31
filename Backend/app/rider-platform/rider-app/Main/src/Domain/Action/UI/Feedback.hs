@@ -116,10 +116,13 @@ data DriverProfileResponse = DriverProfileResponse
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
+maxRatingValue :: Int
+maxRatingValue = 5
+
 feedback :: FeedbackReq -> Id Person.Person -> App.Flow FeedbackRes
 feedback request personId = do
   let ratingValue = request.rating
-  unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
+  unless (ratingValue `elem` [1 .. maxRatingValue]) $ throwError InvalidRatingValue
   let rideId = request.rideId
       feedbackDetails = request.feedbackDetails
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
@@ -151,6 +154,13 @@ feedback request personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
+  -- A 5 star rating auto-favourites the driver when the city has it enabled, so the
+  -- rider does not have to tap the heart explicitly. An explicit flag from the rider
+  -- always wins, including an explicit False, so opting out is still respected.
+  let autoFavDriver = riderConfig.autoFavouriteDriverOnFiveStarRating && ratingValue == maxRatingValue
+      shouldFavDriver = case request.shouldFavDriver of
+        Just riderChoice -> Just riderChoice
+        Nothing -> if autoFavDriver then Just True else Nothing
   let isLOFeedback = ratingValue <= riderConfig.feedbackAlertRatingThreshold && IC.checkForLOFeedback riderConfig.sensitiveWords riderConfig.sensitiveWordsForExactMatch feedbackDetails
   when isLOFeedback $
     fork "Creating ticket and notifying on slack" $ do
@@ -175,7 +185,7 @@ feedback request personId = do
         issueId = issueId',
         vehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTierType,
         vehicleServiceTierType = booking.vehicleServiceTierType,
-        shouldFavDriver = request.shouldFavDriver,
+        shouldFavDriver = shouldFavDriver,
         riderPhoneNum = unencryptedMobileNumber,
         riderName = fromMaybe "User" person.firstName,
         badgeMetadata = badgeMetadata,

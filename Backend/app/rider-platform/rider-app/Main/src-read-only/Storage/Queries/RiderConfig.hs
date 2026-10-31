@@ -51,6 +51,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
   updateWithKV
     [ Se.Set Beam.alwaysAllowedNotificationCategories (Just (map show alwaysAllowedNotificationCategories)),
       Se.Set Beam.appUrl appUrl,
+      Se.Set Beam.autoFavouriteDriverOnFiveStarRating (Just autoFavouriteDriverOnFiveStarRating),
       Se.Set Beam.autoSendBookingDetailsViaWhatsapp autoSendBookingDetailsViaWhatsapp,
       Se.Set Beam.autoUnblockSafetyCenterAfterDays autoUnblockSafetyCenterAfterDays,
       Se.Set Beam.avgSpeedInKmPerHr (Just avgSpeedInKmPerHr),
@@ -281,6 +282,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Domain.Types.RiderConfig.RiderConfig
           { alwaysAllowedNotificationCategories = fromMaybe [Domain.Types.Extra.RiderPreferences.RIDE_RELATED, Domain.Types.Extra.RiderPreferences.SAFETY] (alwaysAllowedNotificationCategories >>= traverse (readMaybe . Data.Text.unpack)),
             appUrl = appUrl,
+            autoFavouriteDriverOnFiveStarRating = fromMaybe False autoFavouriteDriverOnFiveStarRating,
             autoSendBookingDetailsViaWhatsapp = autoSendBookingDetailsViaWhatsapp,
             autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
             avgSpeedInKmPerHr = fromMaybe 20 avgSpeedInKmPerHr,
@@ -508,6 +510,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
     Beam.RiderConfigT
       { Beam.alwaysAllowedNotificationCategories = Just (map show alwaysAllowedNotificationCategories),
         Beam.appUrl = appUrl,
+        Beam.autoFavouriteDriverOnFiveStarRating = Just autoFavouriteDriverOnFiveStarRating,
         Beam.autoSendBookingDetailsViaWhatsapp = autoSendBookingDetailsViaWhatsapp,
         Beam.autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
         Beam.avgSpeedInKmPerHr = Just avgSpeedInKmPerHr,
