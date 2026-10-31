@@ -1202,9 +1202,14 @@ getTripCategories tConf dsReq isScheduled isInterCity isCrossCity destinationTra
       belowInterCityDistanceThreshold = case (mbMinInterCityDistance, dsReq.routeDistance) of
         (Just minDistance, Just routeDistance) -> routeDistance < minDistance
         _ -> False
-      shouldFallbackToOneWay = belowInterCityDistanceThreshold && not dsReq.roundTrip
-      -- Cross-city rentals and round trips retain their dedicated products.
-      shouldUseInterCity = isInterCity && (dsReq.riderPreferredOption == DRPO.Rental || not shouldFallbackToOneWay)
+      shouldFallbackToOneWay =
+        isInterCity
+          && not isCrossCity
+          && dsReq.riderPreferredOption == DRPO.InterCity
+          && belowInterCityDistanceThreshold
+          && not dsReq.roundTrip
+      -- Cross-city trips, rentals and round trips retain their dedicated products.
+      shouldUseInterCity = isInterCity && not shouldFallbackToOneWay
       oneWayBundle =
         if isScheduled
           then [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer]
@@ -1213,7 +1218,7 @@ getTripCategories tConf dsReq isScheduled isInterCity isCrossCity destinationTra
       -- Cuts wasted DB/ML work for categories the rider didn't pick.
       localBundleForPreference = case dsReq.riderPreferredOption of
         DRPO.OneWay -> oneWayBundle
-        DRPO.InterCity | shouldFallbackToOneWay -> [OneWay OneWayOnDemandStaticOffer]
+        DRPO.InterCity | shouldFallbackToOneWay -> oneWayBundle
         DRPO.Rental ->
           [Rental OnDemandStaticOffer]
             <> [Rental RideOtp | not isScheduled]

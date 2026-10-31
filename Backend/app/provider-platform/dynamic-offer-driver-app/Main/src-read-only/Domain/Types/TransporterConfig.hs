@@ -532,7 +532,7 @@ data GstBreakup = GstBreakup
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data InterCityConfig = InterCityConfig {minDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters, supportNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data InterCityConfig = InterCityConfig {minDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data InvoiceConfig = InvoiceConfig
@@ -633,8 +633,6 @@ data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY | REALLOCATE_SCHE
 
 data ProjectFareParamsComponent = RIDE_FARE | TOLL_FARE | CANCELLATION_FARE | PARKING_CHARGE | PAYMENT_CHARGE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data RentalConfig = RentalConfig {supportNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
-
 data RideEvidenceConfig = RideEvidenceConfig
   { completedRideWindowHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -706,7 +704,7 @@ data TaxConfig = TaxConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data TripConfig = TripConfig {interCity :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.InterCityConfig, rental :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.RentalConfig}
+data TripConfig = TripConfig {interCity :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.InterCityConfig}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallingOption)

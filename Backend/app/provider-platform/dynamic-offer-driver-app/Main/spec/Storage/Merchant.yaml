@@ -1222,14 +1222,9 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     InterCityConfig:
       minDistance: Maybe Meters
-      supportNumber: Maybe Text
-      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
-    RentalConfig:
-      supportNumber: Maybe Text
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     TripConfig:
       interCity: Maybe InterCityConfig
-      rental: Maybe RentalConfig
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     StclConfig:
       # Cap on total shares a single driver may hold across all SUBMITTED rows.
