@@ -5,11 +5,13 @@ module SharedCabRefundPolicyTests (tests) where
 
 import qualified "rider-app" API.Types.UI.SharedCabInternal as API
 import Data.Aeson (decode)
+import Data.IORef (modifyIORef', newIORef, readIORef)
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import "beckn-spec" Domain.Types.FRFSTicketStatus (FRFSTicketStatus (ACTIVE, INPROGRESS, USED))
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "rider-app" SharedLogic.SharedCab.Allocation.Types (RiderFix (..))
+import "rider-app" SharedLogic.SharedCab.Cancel (routeCancel)
 import "rider-app" SharedLogic.SharedCab.DriverAction (requireReason)
 import "rider-app" SharedLogic.SharedCab.LegState (SharedCabState (..))
 import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..), cancelRefund, gateNoPayment, owesRefund, refundAmounts, refundWithheld)
@@ -138,7 +140,16 @@ tests =
           testCase "shared cab, system cancel with no decision: full refund" $ cancelRefund True False Nothing @?= Right (Just FullRefund),
           testCase "shared cab, the guard's decision wins (no refund)" $ cancelRefund True True (Just NoRefund) @?= Right (Just NoRefund),
           testCase "shared cab, the guard's decision wins (full refund)" $ cancelRefund True True (Just FullRefund) @?= Right (Just FullRefund),
-          testCase "shared cab, a system cancel keeps a published decision" $ cancelRefund True False (Just NoRefund) @?= Right (Just NoRefund)
+          testCase "shared cab, a system cancel keeps a published decision" $ cancelRefund True False (Just NoRefund) @?= Right (Just NoRefund),
+          testCase "the guard's decision reaches the FRFS cancel as its argument; any other tier gets Nothing and keeps its table" $ do
+            -- what CallAPI.Cancel resolves from the argument the cancel action was handed, for a rider's cancel
+            let reachingCancel isSharedCab decided = do
+                  handed <- newIORef []
+                  routeCancel isSharedCab ($ decided) (\mbRefund -> modifyIORef' handed (mbRefund :))
+                  map (cancelRefund isSharedCab True) <$> readIORef handed
+            sharedCab <- mapM (reachingCancel True) [NoRefund, FullRefund, NothingPaid]
+            bus <- reachingCancel False NoRefund
+            (sharedCab, bus) @?= ([[Right (Just NoRefund)], [Right (Just FullRefund)], [Right (Just NothingPaid)]], [Right Nothing])
         ],
       testGroup
         "driver cancel reason"
