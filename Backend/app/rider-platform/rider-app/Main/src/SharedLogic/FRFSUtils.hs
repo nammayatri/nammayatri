@@ -722,14 +722,34 @@ stageFareBetweenStops ::
   Text ->
   m (Maybe Price)
 stageFareBetweenStops integratedBPPConfig vehicleType serviceTier merchantOperatingCityId fromStopCode toStopCode = do
+  routeSpans <- stopPairStageSpans integratedBPPConfig fromStopCode toStopCode
+  fmap fst <$> stageFareRoutes integratedBPPConfig vehicleType serviceTier merchantOperatingCityId routeSpans
+
+stopPairStageSpans ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  IntegratedBPPConfig ->
+  Text ->
+  Text ->
+  m [RouteStageSpan]
+stopPairStageSpans integratedBPPConfig fromStopCode toStopCode = do
   fromStopCodes <- OTPRest.getEquivalentStopCodes fromStopCode integratedBPPConfig
   toStopCodes <- OTPRest.getEquivalentStopCodes toStopCode integratedBPPConfig
   fromMappings <- OTPRest.getRouteStopMappingByStopCodes integratedBPPConfig fromStopCodes
   toMappings <- OTPRest.getRouteStopMappingByStopCodes integratedBPPConfig toStopCodes
   let routeSpans = stageSpansBetween fromMappings toMappings
-      mbStage = mostCommonStage routeSpans
-  logDebug $ "stageFareBetweenStops " <> fromStopCode <> " -> " <> toStopCode <> " stages=" <> show (map (.stage) routeSpans) <> " selected=" <> show mbStage
-  case mbStage of
+  logDebug $ "stopPairStageSpans " <> fromStopCode <> " -> " <> toStopCode <> " stages=" <> show (map (\routeSpan -> (routeSpan.routeCode, routeSpan.stage)) routeSpans)
+  pure routeSpans
+
+stageFareRoutes ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  IntegratedBPPConfig ->
+  Spec.VehicleCategory ->
+  Spec.ServiceTierType ->
+  Id DMOC.MerchantOperatingCity ->
+  [RouteStageSpan] ->
+  m (Maybe (Price, [Text]))
+stageFareRoutes integratedBPPConfig vehicleType serviceTier merchantOperatingCityId routeSpans =
+  case mostCommonStage routeSpans of
     Nothing -> pure Nothing
     Just stage ->
       QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier merchantOperatingCityId integratedBPPConfig.id >>= \case
@@ -737,18 +757,45 @@ stageFareBetweenStops integratedBPPConfig vehicleType serviceTier merchantOperat
         Just vehicleServiceTier -> do
           stageFares <- QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType stage merchantOperatingCityId
           let tierFares = filter ((== vehicleServiceTier.id) . (.vehicleServiceTierId)) stageFares
-              stageRoutes = nub [routeSpan.routeCode | routeSpan <- routeSpans, routeSpan.stage == stage]
-          routeTags <-
-            if any (isJust . (.routeTag)) tierFares
-              then forM stageRoutes $ \routeCode -> (>>= (.routeTag)) <$> OTPRest.getRouteByRouteId integratedBPPConfig routeCode
-              else pure [Nothing]
-          let farePrice fare =
+              stageRoutes = routesAtStage stage routeSpans
+              farePrice fare =
                 let amount = fare.amount + fromMaybe 0 fare.cessCharge
                  in Price {amountInt = roundToIntegral amount, amount = amount, currency = fare.currency}
-              routePrices = mapMaybe (\mbRouteTag -> farePrice <$> listToMaybe (selectStageFaresForRoute mbRouteTag tierFares)) routeTags
-              priceCounts = M.fromListWith (+) [(price.amount, 1 :: Int) | price <- routePrices]
+              priceForTag mbRouteTag = farePrice <$> listToMaybe (selectStageFaresForRoute mbRouteTag tierFares)
+          routePrices <-
+            if any (isJust . (.routeTag)) tierFares
+              then do
+                routes <- OTPRest.getRoutesByRouteIds integratedBPPConfig stageRoutes
+                let routeTags = M.fromList [(route.code, route.routeTag) | route <- routes]
+                pure $ mapMaybe (\routeCode -> (routeCode,) <$> priceForTag (join (M.lookup routeCode routeTags))) stageRoutes
+              else pure $ maybe [] (\price -> map (,price) stageRoutes) (priceForTag Nothing)
+          let priceCounts = M.fromListWith (+) [(price.amount, 1 :: Int) | (_, price) <- routePrices]
               mbAmount = fst <$> listToMaybe (sortOn (\(amount, routeCount) -> (Down routeCount, Down amount)) (M.toList priceCounts))
-          pure $ mbAmount >>= \amount -> find ((== amount) . (.amount)) routePrices
+          pure $ do
+            amount <- mbAmount
+            let matching = filter ((== amount) . (.amount) . snd) routePrices
+            (_, price) <- listToMaybe matching
+            pure (price, map fst matching)
+
+routesAtStage :: Int -> [RouteStageSpan] -> [Text]
+routesAtStage stage routeSpans = sort (nub [routeSpan.routeCode | routeSpan <- routeSpans, routeSpan.stage == stage])
+
+stopPairRouteCodes ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  IntegratedBPPConfig ->
+  Spec.VehicleCategory ->
+  Maybe Spec.ServiceTierType ->
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  Text ->
+  m [Text]
+stopPairRouteCodes integratedBPPConfig vehicleType mbServiceTier merchantOperatingCityId fromStopCode toStopCode = do
+  routeSpans <- stopPairStageSpans integratedBPPConfig fromStopCode toStopCode
+  let stageRoutes = maybe [] (`routesAtStage` routeSpans) (mostCommonStage routeSpans)
+  mbFareRoutes <- case mbServiceTier of
+    Just serviceTier -> stageFareRoutes integratedBPPConfig vehicleType serviceTier merchantOperatingCityId routeSpans
+    Nothing -> pure Nothing
+  pure $ maybe stageRoutes (sort . snd) mbFareRoutes
 
 getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
 getFares riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do

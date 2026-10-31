@@ -181,6 +181,8 @@ types:
     recentBookingIds: "[Id FRFSTicketBooking]"
     isRecentBooking: Bool
     inProgress: Bool
+    routeCode: Maybe Text
+    applicableRouteCodes: Maybe [Text]
 
   FRFSQuoteConfirmReq:
     offered: Maybe [FRFSCategorySelectionReq]
