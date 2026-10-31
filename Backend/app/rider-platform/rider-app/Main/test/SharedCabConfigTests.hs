@@ -94,6 +94,7 @@ tests =
               chatEnabled = False,
               pickEnabled = False,
               interestWindowSec = 600,
+              demandStopsPerRoute = 3,
               driverAcceptEnabled = False,
               offerTimeoutSec = 30,
               offerRetryTimeoutSec = 15

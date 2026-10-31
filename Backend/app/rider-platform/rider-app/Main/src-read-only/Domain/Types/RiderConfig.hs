@@ -219,6 +219,7 @@ data RiderConfig = RiderConfig
     sharedCabCallEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sharedCabChatEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sharedCabDegradedTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabDemandStopsPerRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabDriverAcceptEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sharedCabEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sharedCabFallbackAfterSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

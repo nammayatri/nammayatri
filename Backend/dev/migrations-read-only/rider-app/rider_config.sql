@@ -1013,3 +1013,19 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_driver_accept_enabled b
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_demand_stops_per_route integer ;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

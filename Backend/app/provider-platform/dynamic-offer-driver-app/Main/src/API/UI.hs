@@ -62,6 +62,7 @@ import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.ReferralPayout as ReferralPayout
 import qualified API.Action.UI.RideEvidence as RideEvidence
 import qualified API.Action.UI.SearchRoute as SearchRoute
+import qualified API.Action.UI.SharedCab as SharedCab
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
@@ -105,8 +106,6 @@ import qualified API.UI.Ride as Ride
 import qualified API.UI.RideRoute as RideRoute
 import qualified API.UI.RideSummary as RideSummary
 import qualified API.UI.Route as Route
-import qualified API.UI.SharedCab as SharedCab
-import qualified API.UI.SharedCabBooking as SharedCabBooking
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Whatsapp as Whatsapp
@@ -223,7 +222,6 @@ type API =
            :<|> PublicTransport.API
            :<|> TicketVerify.API
            :<|> SharedCab.API
-           :<|> SharedCabBooking.API
        )
 
 handler :: FlowServer API
@@ -320,4 +318,3 @@ handler =
     :<|> PublicTransport.handler
     :<|> TicketVerify.handler
     :<|> SharedCab.handler
-    :<|> SharedCabBooking.handler

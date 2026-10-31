@@ -2,9 +2,9 @@
 # Needs --variable token=<rider token from login.hurl>. Allocation is gated off, so a booking stays FINDING throughout.
 
 # Clean start: no cab on the route
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END", "force": true}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "operation": "END_ROUTE", "forceEnd": true}
 HTTP *
 
 # No cab on the route: the shared-cab itinerary is hidden (the cab check reads a route snapshot cached up to 2 s per pod)
@@ -21,9 +21,9 @@ HTTP 200
 jsonpath "$.journeys[*].journeyLegs[*].routeDetails[?(@.routeCode == '{{route_a}}')]" not exists
 
 # A cab goes ACTIVE on the route
-POST {{base_url}}/internal/sharedCab/route/select
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
+{"operation": "SELECT_ROUTE", "driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
 HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
@@ -148,9 +148,9 @@ HTTP 200
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "CANCELLED"
 
 # The cab leaves: the itinerary is hidden again
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END"}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "operation": "END_ROUTE"}
 HTTP 200
 
 POST {{base_url}}/v2/multimodalSearch

@@ -24,16 +24,6 @@ walkMinutesAway meters = ceiling (meters / walkMetersPerMinute)
 walkMetersPerMinute :: Double
 walkMetersPerMinute = 5000 / 60
 
--- | END closes the run as END_ROUTE at the last stop, else END_FOR_NOW. RETURN / END are refused while riders are on board unless `force`.
-data EndRouteReq = EndRouteReq
-  { driverId :: Text,
-    vehicleNumber :: Text,
-    next :: EndRouteNext,
-    atLastStop :: Maybe Bool,
-    force :: Maybe Bool
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
 data RiderRow = RiderRow
   { bookingId :: Text,
     firstName :: Text,
