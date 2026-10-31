@@ -4,6 +4,7 @@ module SharedLogic.SharedCab.Cancel
   ( CancelStage (..),
     withSharedCabCancel,
     guardRiderCancel,
+    routeCancel,
     dropRider,
   )
 where
@@ -55,10 +56,13 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
       >>= either (\err -> logError $ "shared-cab cancel-reason not recorded for booking " <> booking.id.getId <> ": " <> show err) pure
     whenJust mbReason $ \reason -> logInfo $ "shared-cab booking " <> booking.id.getId <> " cancelled by " <> byText by <> ": " <> T.take 200 reason
 
--- | The cancel gets the shared-cab policy's refund; Nothing for any other tier, which keeps its tier table.
 guardRiderCancel :: CancelStage -> DFTB.FRFSTicketBooking -> (Maybe Refund -> Flow ()) -> Flow ()
-guardRiderCancel stage booking cancelAction
-  | isSharedCabBooking booking = withSharedCabCancel ByRider stage Nothing (const $ pure ()) booking (cancelAction . Just)
+guardRiderCancel stage booking = routeCancel (isSharedCabBooking booking) (withSharedCabCancel ByRider stage Nothing (const $ pure ()) booking)
+
+-- | The cancel gets the shared-cab guard's refund; Nothing for any other tier, which keeps its tier table.
+routeCancel :: Bool -> ((Refund -> m ()) -> m ()) -> (Maybe Refund -> m ()) -> m ()
+routeCancel isSharedCab sharedCabGuard cancelAction
+  | isSharedCab = sharedCabGuard (cancelAction . Just)
   | otherwise = cancelAction Nothing
 
 -- | "I got down" and journey complete end a boarded shared-cab ticket (USED) before the leg is marked finished. A ticket that
