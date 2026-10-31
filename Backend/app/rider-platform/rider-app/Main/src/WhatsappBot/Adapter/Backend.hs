@@ -51,6 +51,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.SavedReqLocation as DSRL
+import qualified Domain.Types.Trip as DTC
 import Environment (Flow)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (getDbHash)
@@ -549,6 +550,7 @@ toBotBooking e =
           vehicleNumber = (\r -> r.vehicleNumber) <$> mRide,
           rideOtp = (\r -> r.rideOtp) <$> mRide,
           endOtp = mRide >>= (.endOtp),
+          endOtpRequired = maybe False DTC.isEndOtpRequired e.tripCategory,
           driverRating = realToFrac <$> (mRide >>= (.driverRatings)),
           etaMinutes = Nothing,
           computedFare = (\m -> fromIntegral m.getMoney) <$> (mRide >>= (.computedPrice)),
