@@ -337,11 +337,6 @@ liveRiderRows cfg sessionTrip stopPoints polyline addresses plate = do
               riderRating = View.roundedRating (realToFrac <$> listToMaybe [r | p <- persons, p.id == b.riderId, Just r <- [p.rating]])
             }
 
--- | The stops' addresses from the city's station information (cached); a stop without one is left out.
-stopAddresses :: Id DMOC.MerchantOperatingCity -> [Text] -> Environment.Flow (Map.Map Text Text)
-stopAddresses cityId codes =
-  Map.fromList . mapMaybe (\info -> (info.stationId,) <$> info.address) <$> CQStationsExtraInformation.getBystationIdsAndCity codes cityId
-
 -- | Until the tick lands: moving, next stops are the whole route. `available` is the seats free from the cab's next stop
 -- to the route's end: what walk-ups could still take.
 data CabReads = FreshCab | CachedCab
