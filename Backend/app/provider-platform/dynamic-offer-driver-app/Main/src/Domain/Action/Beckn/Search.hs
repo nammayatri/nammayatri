@@ -250,7 +250,8 @@ data DSearchRes = DSearchRes
     transporterConfig :: DTMT.TransporterConfig,
     bapId :: Text,
     fareParametersInRateCard :: Maybe Bool,
-    isMultimodalSearch :: Maybe Bool
+    isMultimodalSearch :: Maybe Bool,
+    searchRequestId :: Id DSR.SearchRequest
   }
 
 data NearestDriverInfo = NearestDriverInfo
@@ -455,7 +456,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
 
   driverInfoQuotes <- withTimeAPI "search" "addNearestDriverInfoQuotes" $ addNearestDriverInfo merchantOpCityId driverPool quotes configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
   driverInfoEstimates <- withTimeAPI "search" "addNearestDriverInfoEstimates" $ addNearestDriverInfo merchantOpCityId driverPool estimates configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
-  buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber allFarePoliciesProduct.fareSettlementType now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch
+  buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber allFarePoliciesProduct.fareSettlementType now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch searchReq.id
   where
     stopsLatLong = map (.gps)
     --   Check if the pickup gate supports queueing and get default driver extra.
@@ -529,7 +530,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
           logError $ "Vehicle service tier not found for " <> show fp'.vehicleServiceTier
           pure (estimates, quotes)
 
-    buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName specialLocationSupportNumber fareSettlementType now startTime fareParametersInRateCard isMultimodalSearch = do
+    buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName specialLocationSupportNumber fareSettlementType now startTime fareParametersInRateCard isMultimodalSearch searchRequestId = do
       merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       return $
@@ -578,7 +579,10 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
       return $
         BapMetadata
           { id = Id sReq.bapId,
-            domain = Just $ show Domain.MOBILITY,
+            domain = Just (show Domain.MOBILITY),
+            merchantId = Just merchant.id,
+            merchantOperatingCityId = Just merchantOpCityId,
+            enableOndcScheduledRideSupport = Nothing,
             name = "THIRD PARTY BAP",
             logoUrl = Nothing, -- TODO: Parse this from on_search req
             staticTermsUrl = Nothing, -- populated later, if at all, by Beckn.OnDemand.Utils.OndcScheduledRide.Common (ONDC scheduled-ride pilot only)
@@ -735,6 +739,8 @@ buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mb
         bapCity = Just bapCity,
         bapCountry = Just bapCountry,
         autoAssignEnabled = Nothing,
+        -- Filled in after the fact by the on_search transformer, for pilot BAPs only (see OSROnSearch.ondcScheduledRideOnSearchMessageBuild).
+        offeredAddOns = [],
         merchantOperatingCityId = merchantOpCityId,
         toLocation = mbToLocation,
         estimatedDistance = mbDistance,

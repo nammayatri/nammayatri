@@ -202,7 +202,6 @@ data TransporterConfig = TransporterConfig
     enableLegalComplianceDocuments :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableMobileNumberValidation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableMobilityBilling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    enableOndcScheduledRideSupport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableOverchargingBlocker :: Kernel.Prelude.Bool,
     enablePullPendingDocVerification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableScheduleReallocation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
