@@ -2058,7 +2058,8 @@ data RouteServiceabilityContext = RouteServiceabilityContext
     merchantId :: Id Domain.Types.Merchant.Merchant,
     maxLiveVehiclesPerRoute :: Int,
     maxAlternateRouteVehicles :: Int,
-    allowUpcomingTrips :: Bool
+    allowUpcomingTrips :: Bool,
+    includeFareClass :: Bool
   }
 
 data ResolvedLeg = ResolvedLeg
@@ -2098,7 +2099,8 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
               merchantId = person.merchantId,
               maxLiveVehiclesPerRoute = riderConfig.maxLiveVehiclesPerRoute,
               maxAlternateRouteVehicles = riderConfig.maxAlternateRouteVehicles,
-              allowUpcomingTrips = fromMaybe False req.allowUpcomingTrips
+              allowUpcomingTrips = fromMaybe False req.allowUpcomingTrips,
+              includeFareClass = fromMaybe False req.includeFareClass
             }
     let userRequestedCodes = maybe [] (concatMap (.routeCodes)) req.routeCodes
     case req.vehicleNumber of
@@ -2196,15 +2198,19 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
           mbVehicleTagNumber = mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber)
           mbVehicleVariant = mbVehicleMetadata >>= (\(_, metadata) -> metadata.vehicleVariant)
       -- Get service tier name from FRFS config (shared)
-      frfsServiceTierName <- case mbServiceTier of
-        Just serviceTier -> do
-          mbTier <-
-            CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId
-              serviceTier
-              ctx.merchantOperatingCityId
-              ctx.integratedBPPConfig.id
-          return $ (.shortName) <$> mbTier
+      mbFrfsServiceTier <- case mbServiceTier of
+        Just serviceTier ->
+          CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId
+            serviceTier
+            ctx.merchantOperatingCityId
+            ctx.integratedBPPConfig.id
         Nothing -> return Nothing
+      fareClassLookup <-
+        if ctx.includeFareClass
+          then FRFSUtils.loadFareClassLookup ctx.integratedBPPConfig ctx.merchantOperatingCityId (maybeToList mbFrfsServiceTier)
+          else pure FRFSUtils.emptyFareClassLookup
+      let frfsServiceTierName = (.shortName) <$> mbFrfsServiceTier
+          fareClassAt = JMRouteServiceability.fareClassInfoFor fareClassLookup mbFrfsServiceTier route.routeTag (snd <$> mbVehicleMetadata)
       -- Find the current trip ID from the active trip
       let mbCurrentTripId = do
             activeDetail <- find (\d -> d.is_active_trip == Just True) busScheduleDetails
@@ -2215,6 +2221,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
       mbSeatLayoutMapping <-
         CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vno ctx.integratedBPPConfig.feedKey
       let seatSelType = mbSeatLayoutMapping >>= (.seatSelectionType)
+      now <- getCurrentTime
       let buildScheduleInfo detail =
             let thisTripId = do
                   waybill <- detail.waybill_no
@@ -2233,7 +2240,8 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
                     vehicleTagNumber = mbVehicleTagNumber,
                     vehicleVariant = mbVehicleVariant,
                     availableSeats = Nothing,
-                    seatSelectionType = seatSelType
+                    seatSelectionType = seatSelType,
+                    fareClass = fareClassAt (maybe now (FRFSUtils.unixToUTC . (.arrivalTimeUnix)) (listToMaybe detail.eta))
                   }
       let allSchedules = map buildScheduleInfo busScheduleDetails
       -- Build live vehicle info if live data exists
@@ -2605,6 +2613,10 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
             JMU.measureLatency
               (map (\t -> (t._type, t)) <$> CQFRFSVehicleServiceTier.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId ctx.merchantOperatingCityId ctx.integratedBPPConfig.id)
               ("enrichResolvedLegs: frfsTierMap lookup")
+          fareClassLookup <-
+            if ctx.includeFareClass
+              then FRFSUtils.loadFareClassLookup ctx.integratedBPPConfig ctx.merchantOperatingCityId (map snd frfsTierMap)
+              else pure FRFSUtils.emptyFareClassLookup
           routesWithLiveVehicles <-
             catMaybes
               <$> mapConcurrently
@@ -2623,7 +2635,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
                             lon' <- station.lon
                             pure $ LatLong lat' lon'
                     JMU.measureLatency
-                      (JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig routeFromStopCode routeToStopCode frfsTierMap routeSourceLatLong ctx.maxLiveVehiclesPerRoute ctx.allowUpcomingTrips mbOverrideSource mbOverrideDest)
+                      (JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig routeFromStopCode routeToStopCode frfsTierMap routeSourceLatLong ctx.maxLiveVehiclesPerRoute ctx.allowUpcomingTrips mbOverrideSource mbOverrideDest fareClassLookup)
                       ("enrichResolvedLegs: buildRouteWithLiveVehicle route=" <> r.routeId <> " from=" <> routeFromStopCode <> " to=" <> routeToStopCode)
                 )
                 (zip busesForRoutes schedulesForRoutes)

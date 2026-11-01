@@ -317,7 +317,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
       return (True, Nothing)
     _ ->
       let fareRoute = mkFareRouteFromFRFSDetails routeDetails mbProviderRouteId
-       in JMU.measureLatency (withTryCatch "getFares:getFaresForRouteDetails" $ Flow.getFares riderId merchant.id merchantOperatingCity.id integratedBPPConfig fareRoute vehicleCategory serviecType mbSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode) ("getFares" <> show vehicleCategory <> " routeDetails: " <> show fareRoute.segments)
+       in JMU.measureLatency (withTryCatch "getFares:getFaresForRouteDetails" $ Flow.getFares riderId merchant.id merchantOperatingCity.id integratedBPPConfig fareRoute vehicleCategory serviecType mbSearchReqId Nothing blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode) ("getFares" <> show vehicleCategory <> " routeDetails: " <> show fareRoute.segments)
             >>= \case
               Right (isFareMandatory, []) -> do
                 logError $ "Getting Empty Fares for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId

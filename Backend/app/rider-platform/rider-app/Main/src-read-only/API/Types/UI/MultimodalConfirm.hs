@@ -113,6 +113,10 @@ data ExtendLegReq = ExtendLegReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FareClassInfo = FareClassInfo {classCode :: Kernel.Prelude.Text, displayName :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data IntegratedQRReq = IntegratedQRReq {integratedQR :: Lib.JourneyModule.Types.UnifiedTicketQRV2, provider :: Lib.JourneyModule.Types.Provider}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -375,6 +379,7 @@ data RouteServiceabilityReq = RouteServiceabilityReq
   { allowClusteredStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowUpcomingTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    includeFareClass :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     latLong :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     routeCodes :: Kernel.Prelude.Maybe [RouteCodesWithLeg],
@@ -408,6 +413,7 @@ data RouteWithLiveVehicle = RouteWithLiveVehicle
 data ScheduledVehicleInfo = ScheduledVehicleInfo
   { availableSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
+    fareClass :: Kernel.Prelude.Maybe FareClassInfo,
     isActiveTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     locationUTCTimestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     position :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,

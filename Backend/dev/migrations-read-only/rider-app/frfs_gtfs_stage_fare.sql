@@ -19,3 +19,8 @@ ALTER TABLE atlas_app.frfs_gtfs_stage_fare ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_gtfs_stage_fare ADD COLUMN route_tag text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_gtfs_stage_fare ADD COLUMN fare_class_id character varying(36) ;

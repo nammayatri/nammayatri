@@ -44,6 +44,7 @@ data FRFSSearch = FRFSSearch
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchAsParentStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     toStationAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     toStationCode :: Kernel.Prelude.Text,
     toStationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

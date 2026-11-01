@@ -24,7 +24,7 @@ import BecknV2.FRFS.Utils
 import Control.Monad.Extra (mapMaybeM)
 import Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
-import Data.List (groupBy, nub, sort, sortBy, sortOn)
+import Data.List (elemIndex, groupBy, nub, partition, sort, sortBy, sortOn)
 import qualified Data.Map.Strict as M
 import Data.Ord (Down (..))
 import qualified Data.Text as T
@@ -34,6 +34,7 @@ import Domain.Types.AadhaarVerification as DAadhaarVerification
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Extra.VendorSplitDetails as VendorSplitDetails
 import qualified Domain.Types.FRFSConfig as Config
+import qualified Domain.Types.FRFSFareClass as DFRFSFareClass
 import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
 import qualified Domain.Types.FRFSGtfsStageFare as DFRFSGtfsStageFare
 import qualified Domain.Types.FRFSQuote as Quote
@@ -53,6 +54,7 @@ import qualified Domain.Types.FRFSTicketBookingPaymentCategory as DTBPC
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketCategoryMetadataConfig as DFRFSTicketCategoryMetadataConfig
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
+import qualified Domain.Types.FRFSVehicleServiceTier as DFRFSVehicleServiceTier
 import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as DJourney
@@ -85,6 +87,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -103,12 +106,14 @@ import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
+import qualified Storage.CachedQueries.FRFSFareClass as CQFRFSFareClass
 import qualified Storage.CachedQueries.FRFSGtfsStageFare as QFRFSGtfsStageFare
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import Storage.CachedQueries.Merchant.MultiModalBus (utcToIST)
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -406,8 +411,16 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
+data FareContext = FareContext
+  { vehicleNumber :: Maybe Text,
+    startTime :: Maybe UTCTime,
+    topFareClassPerTier :: Maybe (M.Map (Id DFRFSVehicleServiceTier.FRFSVehicleServiceTier) DFRFSFareClass.FRFSFareClass)
+  }
+  deriving (Show)
+
 data FRFSFare = FRFSFare
   { farePolicyId :: Maybe (Id DFRFSFarePolicy.FRFSFarePolicy),
+    fareClassId :: Maybe (Id DFRFSFareClass.FRFSFareClass),
     categories :: [FRFSTicketCategory],
     fareDetails :: Maybe Quote.FRFSFareDetails,
     vehicleServiceTier :: FRFSVehicleServiceTier,
@@ -492,6 +505,7 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
   return $
     FRFSFare
       { farePolicyId = Just farePolicy.id,
+        fareClassId = Nothing,
         categories = categories,
         fareDetails = Nothing,
         vehicleServiceTier =
@@ -531,6 +545,112 @@ selectStageFaresForRoute mbRouteTag stageFares =
     matchesRouteTag stageFare = normalizedRouteTagOf stageFare.routeTag == normalizedRouteTag
     pickForTier (_vehicleServiceTierId, tierStageFares) =
       find matchesRouteTag tierStageFares <|> find (isNothing . normalizedRouteTagOf . (.routeTag)) tierStageFares
+
+data FareClassLookup = FareClassLookup
+  { fareClassesByTier :: M.Map (Id DFRFSVehicleServiceTier.FRFSVehicleServiceTier) [DFRFSFareClass.FRFSFareClass],
+    timeDiffFromUtc :: Seconds
+  }
+
+emptyFareClassLookup :: FareClassLookup
+emptyFareClassLookup = FareClassLookup {fareClassesByTier = M.empty, timeDiffFromUtc = Seconds 0}
+
+fareClassesApply :: IntegratedBPPConfig -> Bool
+fareClassesApply integratedBPPConfig = case integratedBPPConfig.providerConfig of
+  DIBC.DIRECT _ -> True
+  _ -> False
+
+loadFareClassLookup ::
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  IntegratedBPPConfig ->
+  Id DMOC.MerchantOperatingCity ->
+  [DFRFSVehicleServiceTier.FRFSVehicleServiceTier] ->
+  m FareClassLookup
+loadFareClassLookup integratedBPPConfig merchantOperatingCityId vehicleServiceTiers = do
+  let enabledTiers =
+        if fareClassesApply integratedBPPConfig
+          then filter (\vehicleServiceTier -> vehicleServiceTier.enableFareClass == Just True) vehicleServiceTiers
+          else []
+  fareClassesByTier <-
+    M.fromList . filter (not . null . snd)
+      <$> forM enabledTiers (\vehicleServiceTier -> (\fareClasses -> (vehicleServiceTier.id, fareClasses)) <$> CQFRFSFareClass.findAllEnabledByVehicleServiceTierId vehicleServiceTier.id)
+  timeDiffFromUtc <-
+    if M.null fareClassesByTier
+      then pure (Seconds 0)
+      else maybe (Seconds 19800) (.timeDiffFromUtc) <$> getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+  pure FareClassLookup {..}
+
+activeFareClassesAt :: UTCTime -> [DFRFSFareClass.FRFSFareClass] -> [DFRFSFareClass.FRFSFareClass]
+activeFareClassesAt localTime fareClasses =
+  DTB.findBoundedDomain fareClasses localTime <> filter (\fareClass -> fareClass.timeBounds == DTB.Unbounded) fareClasses
+
+rankFareClasses ::
+  Maybe Text ->
+  [Text] ->
+  Maybe Spec.BusVehicleVariant ->
+  [DFRFSFareClass.FRFSFareClass] ->
+  [DFRFSFareClass.FRFSFareClass]
+rankFareClasses mbRouteTag vehicleTags mbVehicleVariant fareClasses =
+  map snd . sortOn fst $ mapMaybe score fareClasses
+  where
+    routeTag = normalizedRouteTagOf mbRouteTag
+    score fareClass = do
+      vehicleTagRank <- maybe (Just (length vehicleTags)) (`elemIndex` vehicleTags) fareClass.vehicleTag
+      routeTagRank <- case normalizedRouteTagOf fareClass.routeTag of
+        Nothing -> Just (1 :: Int)
+        Just tag -> if Just tag == routeTag then Just 0 else Nothing
+      variantRank <- case fareClass.vehicleVariant of
+        Nothing -> Just (1 :: Int)
+        Just variant -> if Just variant == mbVehicleVariant then Just 0 else Nothing
+      pure ((vehicleTagRank, routeTagRank, variantRank), fareClass)
+
+rankedFareClassesFor ::
+  FareClassLookup ->
+  Id DFRFSVehicleServiceTier.FRFSVehicleServiceTier ->
+  Maybe Text ->
+  [Text] ->
+  Maybe Spec.BusVehicleVariant ->
+  UTCTime ->
+  [DFRFSFareClass.FRFSFareClass]
+rankedFareClassesFor fareClassLookup vehicleServiceTierId mbRouteTag vehicleTags mbVehicleVariant time =
+  case M.lookup vehicleServiceTierId fareClassLookup.fareClassesByTier of
+    Nothing -> []
+    Just tierFareClasses ->
+      let localTime = addUTCTime (fromIntegral fareClassLookup.timeDiffFromUtc.getSeconds) time
+       in rankFareClasses mbRouteTag vehicleTags mbVehicleVariant (activeFareClassesAt localTime tierFareClasses)
+
+topFareClassByTier ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  IntegratedBPPConfig ->
+  Id DMOC.MerchantOperatingCity ->
+  [DFRFSVehicleServiceTier.FRFSVehicleServiceTier] ->
+  Text ->
+  Maybe FareContext ->
+  m (M.Map (Id DFRFSVehicleServiceTier.FRFSVehicleServiceTier) DFRFSFareClass.FRFSFareClass)
+topFareClassByTier integratedBPPConfig merchantOperatingCityId vehicleServiceTiers routeCode mbFareContext = do
+  fareClassLookup <- loadFareClassLookup integratedBPPConfig merchantOperatingCityId vehicleServiceTiers
+  if M.null fareClassLookup.fareClassesByTier
+    then pure M.empty
+    else do
+      classRouteTag <- (>>= (.routeTag)) <$> OTPRest.getRouteByRouteId integratedBPPConfig routeCode
+      mbVehicleMetadata <- maybe (pure Nothing) (\busNumber -> OTPRest.getVehicleMetadata integratedBPPConfig busNumber Nothing) (mbFareContext >>= (.vehicleNumber))
+      tripStartTime <- maybe getCurrentTime pure (mbFareContext >>= (.startTime))
+      let topFareClassOf vehicleServiceTierId = listToMaybe $ rankedFareClassesFor fareClassLookup vehicleServiceTierId classRouteTag (fromMaybe [] (mbVehicleMetadata >>= (.vehicleTags))) (mbVehicleMetadata >>= (.vehicleVariant)) tripStartTime
+      pure $ M.mapMaybeWithKey (\vehicleServiceTierId _ -> topFareClassOf vehicleServiceTierId) fareClassLookup.fareClassesByTier
+
+resolveTopFareClassPerTier ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  IntegratedBPPConfig ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Spec.ServiceTierType ->
+  Text ->
+  Maybe FareContext ->
+  m (M.Map (Id DFRFSVehicleServiceTier.FRFSVehicleServiceTier) DFRFSFareClass.FRFSFareClass)
+resolveTopFareClassPerTier integratedBPPConfig merchantOperatingCityId mbServiceTier routeCode mbFareContext = do
+  vehicleServiceTiers <- filter (\vehicleServiceTier -> maybe True (== vehicleServiceTier._type) mbServiceTier) <$> CQFRFSVehicleServiceTier.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId merchantOperatingCityId integratedBPPConfig.id
+  topFareClassByTier integratedBPPConfig merchantOperatingCityId vehicleServiceTiers routeCode mbFareContext
+
+fareClassCacheKeySuffix :: M.Map (Id DFRFSVehicleServiceTier.FRFSVehicleServiceTier) DFRFSFareClass.FRFSFareClass -> Text
+fareClassCacheKeySuffix fareClassPerTier = foldMap (\fareClass -> ":fc-" <> fareClass.id.getId) (M.elems fareClassPerTier)
 
 stageFareFallbackLogTtlSec :: Int
 stageFareFallbackLogTtlSec = 600
@@ -585,8 +705,8 @@ logStageFareRouteTagFallbacks vehicleType merchantOperatingCityId stage routeCod
             <> show untaggedTiers
             <> ", fell back to the untagged fare"
 
-getFareThroughGTFS :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
-getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
+getFareThroughGTFS :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> Maybe FareContext -> m [FRFSFare]
+getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchantId merchantOperatingCityId routeCode startStopCode endStopCode mbFareContext = do
   tripDetails <- OTPRest.getExampleTrip integratedBPPConfig routeCode
   case tripDetails of
     Just trip -> do
@@ -609,7 +729,7 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
               let adjustedStage = case endIsStageStop of
                     Just True -> stage - 1 -- Reduce stage by 1 if found, but ensure minimum is 1
                     _ -> stage -- Use original stage if not found or Nothing
-              allStageFares <- QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
+              (classStageFares, allStageFares) <- partition (isJust . (.fareClassId)) <$> QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
               candidateStageFares <- case serviceTier of
                 Just serviceTier' -> do
                   vehicleServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier' merchantOperatingCityId integratedBPPConfig.id >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> show serviceTier')
@@ -622,34 +742,47 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
                   else pure Nothing
               let fares = selectStageFaresForRoute mbRouteTag candidateStageFares
               logStageFareRouteTagFallbacks vehicleType merchantOperatingCityId (max 0 adjustedStage) routeCode mbRouteTag candidateStageFares fares
-              forM fares $ \fare -> do
-                vehicleServiceTier <- QFRFSVehicleServiceTier.findById fare.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fare.vehicleServiceTierId.getId)
-                let price = Price {amountInt = roundToIntegral (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}
-                return $
-                  FRFSFare
-                    { farePolicyId = Nothing,
-                      categories =
-                        [ FRFSTicketCategory
-                            { category = ADULT,
-                              price = price,
-                              offeredPrice = price,
-                              bppItemId = getProviderName integratedBPPConfig,
-                              eligibility = True
-                            }
-                        ],
-                      fareDetails = Nothing,
-                      vehicleServiceTier =
-                        FRFSVehicleServiceTier
-                          { serviceTierType = vehicleServiceTier._type,
-                            serviceTierProviderCode = vehicleServiceTier.providerCode,
-                            serviceTierShortName = vehicleServiceTier.shortName,
-                            serviceTierDescription = vehicleServiceTier.description,
-                            serviceTierLongName = vehicleServiceTier.longName,
-                            isAirConditioned = vehicleServiceTier.isAirConditioned
-                          },
-                      fareQuoteId = Nothing,
-                      fareQuoteType = Nothing
-                    }
+              faresWithTiers <-
+                forM fares $ \baseFare -> do
+                  vehicleServiceTier <- QFRFSVehicleServiceTier.findById baseFare.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> baseFare.vehicleServiceTierId.getId)
+                  pure (baseFare, vehicleServiceTier)
+              topFareClasses <- maybe (topFareClassByTier integratedBPPConfig merchantOperatingCityId (map snd faresWithTiers) routeCode mbFareContext) pure (mbFareContext >>= (.topFareClassPerTier))
+              fmap catMaybes . forM faresWithTiers $ \(baseFare, vehicleServiceTier) -> do
+                mbPricedFare <- case M.lookup vehicleServiceTier.id topFareClasses of
+                  Nothing -> pure $ Just (Nothing, baseFare)
+                  Just fareClass -> case find (\stageFare -> stageFare.vehicleServiceTierId == vehicleServiceTier.id && stageFare.fareClassId == Just fareClass.id) classStageFares of
+                    Just classStageFare -> pure $ Just (Just fareClass.id, classStageFare)
+                    Nothing -> do
+                      logError $ "FRFS fare class " <> fareClass.classCode <> " (" <> fareClass.id.getId <> ") has no stage fare for stage " <> show (max 0 adjustedStage) <> " on tier " <> vehicleServiceTier.id.getId <> ", route " <> routeCode <> "; no fare returned for this tier"
+                      pure Nothing
+                forM mbPricedFare $ \(mbFareClassId, fare) -> do
+                  let price = Price {amountInt = roundToIntegral (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}
+                  return $
+                    FRFSFare
+                      { farePolicyId = Nothing,
+                        fareClassId = mbFareClassId,
+                        categories =
+                          [ FRFSTicketCategory
+                              { category = ADULT,
+                                price = price,
+                                offeredPrice = price,
+                                bppItemId = getProviderName integratedBPPConfig,
+                                eligibility = True
+                              }
+                          ],
+                        fareDetails = Nothing,
+                        vehicleServiceTier =
+                          FRFSVehicleServiceTier
+                            { serviceTierType = vehicleServiceTier._type,
+                              serviceTierProviderCode = vehicleServiceTier.providerCode,
+                              serviceTierShortName = vehicleServiceTier.shortName,
+                              serviceTierDescription = vehicleServiceTier.description,
+                              serviceTierLongName = vehicleServiceTier.longName,
+                              isAirConditioned = vehicleServiceTier.isAirConditioned
+                            },
+                        fareQuoteId = Nothing,
+                        fareQuoteType = Nothing
+                      }
             _ -> return [] -- No stage information available
         _ -> return [] -- Start or end stop not found in trip
     Nothing -> return [] -- Trip details not found
@@ -756,7 +889,7 @@ stageFareRoutes integratedBPPConfig vehicleType serviceTier merchantOperatingCit
         Nothing -> pure Nothing
         Just vehicleServiceTier -> do
           stageFares <- QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType stage merchantOperatingCityId
-          let tierFares = filter ((== vehicleServiceTier.id) . (.vehicleServiceTierId)) stageFares
+          let tierFares = filter (\fare -> fare.vehicleServiceTierId == vehicleServiceTier.id && isNothing fare.fareClassId) stageFares
               stageRoutes = routesAtStage stage routeSpans
               farePrice fare =
                 let amount = fare.amount + fromMaybe 0 fare.cessCharge
@@ -797,9 +930,9 @@ stopPairRouteCodes integratedBPPConfig vehicleType mbServiceTier merchantOperati
     Nothing -> pure Nothing
   pure $ maybe stageRoutes (sort . snd) mbFareRoutes
 
-getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
-getFares riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
-  faresResult <- withTryCatch "getFareThroughGTFS:getFares" (getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
+getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> Maybe FareContext -> m [FRFSFare]
+getFares riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode mbFareContext = do
+  faresResult <- withTryCatch "getFareThroughGTFS:getFares" (getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode mbFareContext)
   fares <- case faresResult of
     Left err -> do
       logError $ "Error in getFareThroughGTFS (GraphQL/GTFS): " <> show err
@@ -1998,6 +2131,13 @@ getRouteStationsInfo routeStations =
       routes = map (\r -> SOfferSegment.RouteInfo {routeCode = r.code, routeShortName = r.shortName}) routeStations
     }
 
+data ScheduledTrip = ScheduledTrip
+  { scheduledVehicle :: Maybe (Text, Spec.ServiceTierType),
+    exactBoardingTime :: Maybe UTCTime,
+    windowStartTime :: Maybe UTCTime,
+    alightingTime :: Maybe UTCTime
+  }
+
 -- | Both bounds of a trip from one schedule fetch, instead of one call per bound.
 getScheduledTripWindow ::
   (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
@@ -2007,18 +2147,32 @@ getScheduledTripWindow ::
   Text -> -- alighting stop code
   DIBC.IntegratedBPPConfig ->
   m (Maybe UTCTime, Maybe UTCTime)
-getScheduledTripWindow tripId routeCode boardingStopCode alightingStopCode integratedBPPConfig = do
+getScheduledTripWindow tripId routeCode boardingStopCode alightingStopCode integratedBPPConfig =
+  (\scheduledTrip -> (scheduledTrip.windowStartTime, scheduledTrip.alightingTime)) <$> getScheduledTrip tripId routeCode boardingStopCode alightingStopCode integratedBPPConfig
+
+getScheduledTrip ::
+  (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  DIBC.IntegratedBPPConfig ->
+  m ScheduledTrip
+getScheduledTrip tripId routeCode boardingStopCode alightingStopCode integratedBPPConfig = do
   let (waybillNo, tripNo) = case T.splitOn "-" tripId of
         [w, n] -> (w, fromMaybe 0 (readMaybe (T.unpack n)))
         _ -> (tripId, 0 :: Int)
+      matchedVehicle schedule =
+        (\detail -> (detail.vehicle_no, detail.service_tier)) <$> find (\detail -> detail.waybill_no == Just waybillNo && detail.trip_number == Just tripNo) schedule
+      noTrip = ScheduledTrip {scheduledVehicle = Nothing, exactBoardingTime = Nothing, windowStartTime = Nothing, alightingTime = Nothing}
   withTryCatch "getScheduledTripWindow:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig) >>= \case
     Left err -> do
       logWarning $ "getScheduledTripWindow: no schedule for tripId=" <> tripId <> ": " <> show err
-      pure (Nothing, Nothing)
+      pure noTrip
     Right schedule -> case concatMap (.eta) schedule of
       [] -> do
         logWarning $ "getScheduledTripWindow: empty schedule for tripId=" <> tripId
-        pure (Nothing, Nothing)
+        pure noTrip {scheduledVehicle = matchedVehicle schedule}
       allEtas -> do
         -- The schedule is keyed by the platform the bus calls at, so a station bound is matched
         -- through the platform codes under it. Resolved once per bound, outside the lookup.
@@ -2036,8 +2190,75 @@ getScheduledTripWindow tripId routeCode boardingStopCode alightingStopCode integ
                   logWarning $ "getScheduledTripWindow: " <> name <> " stop " <> stopCode <> " not in schedule for tripId=" <> tripId <> ", no bound"
                   pure Nothing
             earliestEta = minimumBy (comparing (.arrivalTimeUnix)) allEtas
-        (,) <$> bound "boarding" (Just earliestEta) boardingStopCode boardingStopCodes
-          <*> bound "alighting" Nothing alightingStopCode alightingStopCodes
+        tripWindowStartTime <- bound "boarding" (Just earliestEta) boardingStopCode boardingStopCodes
+        tripAlightingTime <- bound "alighting" Nothing alightingStopCode alightingStopCodes
+        pure
+          ScheduledTrip
+            { scheduledVehicle = matchedVehicle schedule,
+              exactBoardingTime = unixToUTC . (.arrivalTimeUnix) <$> atStop boardingStopCodes,
+              windowStartTime = tripWindowStartTime,
+              alightingTime = tripAlightingTime
+            }
+
+verifyTripMatchesQuote ::
+  (MonadFlow m) =>
+  Quote.FRFSQuote ->
+  Spec.ServiceTierType ->
+  Text ->
+  Maybe ScheduledTrip ->
+  Maybe Text ->
+  m ()
+verifyTripMatchesQuote quote quotedServiceTierType tripId mbScheduledTrip mbSearchVehicleNumber =
+  whenJust (mbScheduledTrip >>= (.scheduledVehicle)) $ \(scheduledVehicleNumber, scheduledServiceTierType) -> do
+    unless (scheduledServiceTierType == quotedServiceTierType) $ do
+      logWarning $ "verifyTripMatchesQuote: quote " <> quote.id.getId <> " is for " <> show quotedServiceTierType <> " but trip " <> tripId <> " runs " <> show scheduledServiceTierType
+      throwError $ TripServiceTierMismatch quote.id.getId
+    let normalizeVehicleNumber = T.toUpper . T.filter (/= ' ')
+    unless ((normalizeVehicleNumber <$> mbSearchVehicleNumber) == Just (normalizeVehicleNumber scheduledVehicleNumber)) $ do
+      logWarning $ "verifyTripMatchesQuote: quote " <> quote.id.getId <> " searched with vehicle " <> show mbSearchVehicleNumber <> " but trip " <> tripId <> " runs " <> scheduledVehicleNumber
+      throwError $ TripDetailsMismatch quote.id.getId
+
+verifyFareClassAtConfirm ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  Quote.FRFSQuote ->
+  IntegratedBPPConfig ->
+  Spec.ServiceTierType ->
+  Text ->
+  Maybe Text ->
+  Maybe ScheduledTrip ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  UTCTime ->
+  m ()
+verifyFareClassAtConfirm quote integratedBPPConfig quotedServiceTierType routeCode mbTripId mbScheduledTrip mbSearchVehicleNumber mbSearchStartTime bookingStartTime = do
+  mbVehicleServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId quotedServiceTierType quote.merchantOperatingCityId integratedBPPConfig.id
+  case mbVehicleServiceTier of
+    Just vehicleServiceTier
+      | vehicleServiceTier.enableFareClass == Just True -> do
+        let topFareClassIdAt mbVehicleNumber time = do
+              topFareClasses <- topFareClassByTier integratedBPPConfig quote.merchantOperatingCityId [vehicleServiceTier] routeCode (Just FareContext {vehicleNumber = mbVehicleNumber, startTime = Just time, topFareClassPerTier = Nothing})
+              pure $ (.id) <$> M.lookup vehicleServiceTier.id topFareClasses
+            refuseChangedClass resolvedFareClassId time =
+              unless (resolvedFareClassId == quote.fareClassId) $ do
+                logWarning $ "verifyFareClassAtConfirm: quote " <> quote.id.getId <> " has class " <> show quote.fareClassId <> " but confirm resolves " <> show resolvedFareClassId <> " at " <> show time
+                throwError $ FareClassChanged quote.id.getId
+            logTripDetailsMismatch reason = logWarning $ "verifyFareClassAtConfirm: quote " <> quote.id.getId <> " tripId " <> show mbTripId <> ": " <> reason
+        case mbTripId of
+          Nothing -> do
+            resolvedFareClassId <- topFareClassIdAt mbSearchVehicleNumber bookingStartTime
+            refuseChangedClass resolvedFareClassId bookingStartTime
+          Just _ -> do
+            scheduledVehicleNumber <- case mbScheduledTrip >>= (.scheduledVehicle) of
+              Just (vehicleNumber, _) -> pure vehicleNumber
+              Nothing -> logTripDetailsMismatch "trip not found in the schedule" >> throwError (TripDetailsMismatch quote.id.getId)
+            scheduledBoardingTime <- case mbScheduledTrip >>= (.exactBoardingTime) of
+              Just boardingTime -> pure boardingTime
+              Nothing -> logTripDetailsMismatch "boarding stop not in the trip's schedule" >> throwError (TripDetailsMismatch quote.id.getId)
+            let searchedAtBoardingTime = maybe False (\searchStartTime -> abs (diffUTCTime searchStartTime scheduledBoardingTime) <= 60) mbSearchStartTime
+            unless searchedAtBoardingTime $ do
+              resolvedFareClassId <- topFareClassIdAt (Just scheduledVehicleNumber) scheduledBoardingTime
+              refuseChangedClass resolvedFareClassId scheduledBoardingTime
+    _ -> pure ()
 
 getServiceTierTypeFromRouteStationsJson :: Maybe Text -> Maybe Spec.ServiceTierType
 getServiceTierTypeFromRouteStationsJson mbJson = do

@@ -17,6 +17,7 @@ data FRFSGtfsStageFareT f = FRFSGtfsStageFareT
     cessCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     currency :: B.C f Kernel.Types.Common.Currency,
     discountIds :: B.C f [Kernel.Prelude.Text],
+    fareClassId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

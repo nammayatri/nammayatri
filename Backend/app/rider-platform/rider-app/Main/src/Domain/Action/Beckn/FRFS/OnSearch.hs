@@ -586,7 +586,8 @@ updateQuotes ((quotesFromCache, quotesFromCacheCategories), (quotesFromOnSearch,
       Quote.toStationName = quotesFromOnSearch.toStationName,
       Quote.toStationPoint = quotesFromOnSearch.toStationPoint,
       Quote.vehicleNumber = quotesFromOnSearch.vehicleNumber,
-      Quote.routeGroupKey = quotesFromOnSearch.routeGroupKey
+      Quote.routeGroupKey = quotesFromOnSearch.routeGroupKey,
+      Quote.fareClassId = quotesFromOnSearch.fareClassId
     }
   where
     toJsonText :: FRFSCachedQuote -> Text
@@ -756,6 +757,7 @@ createEntriesInFareTables merchantId merchantOperatingCityId routeCode startStop
                   cancellationWindowSeconds = Nothing,
                   cancellationDelayThresholdSeconds = Nothing,
                   useLiveForCancellationAndRescheduling = Nothing,
+                  enableFareClass = Nothing,
                   createdAt = now,
                   updatedAt = now
                 }

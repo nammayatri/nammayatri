@@ -534,6 +534,7 @@ mkBooking bookingId bookingSearchId merchant merchantOperatingCity integratedBPP
       isMockPayment = Nothing,
       isSingleMode = Nothing,
       isSpotBooking = Nothing,
+      fareClassId = Nothing,
       journeyOnInitDone = Nothing,
       merchantId = merchant.id,
       merchantOperatingCityId = merchantOperatingCity.id,

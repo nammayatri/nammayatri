@@ -12,6 +12,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   VehicleCategory: BecknV2.FRFS.Enums
   ServiceTierType: BecknV2.FRFS.Enums
+  BusVehicleVariant: BecknV2.FRFS.Enums
   FRFSSearch: Domain.Types.FRFSSearch
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
@@ -88,6 +89,7 @@ FRFSSearch:
     cloudType : Maybe CloudType
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version
+    startTime: Maybe UTCTime
 
   beamFields:
     fromStationCode:
@@ -197,6 +199,7 @@ FRFSQuote:
     vehicleNumber: Maybe Text
     offerSegment: Maybe Text
     routeGroupKey: Maybe Text # Same for every service tier quote of one journey (CRIS subway), so the client can pair them for tier switching
+    fareClassId: Maybe (Id FRFSFareClass) # The fare class this quote was priced with; Nothing = priced without a class
   beamFields:
     fromStationCode:
       fromStationId: Text
@@ -479,6 +482,7 @@ FRFSTicketBooking:
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version
     isSpotBooking: Maybe Bool
+    fareClassId: Maybe (Id FRFSFareClass) # Copied from the quote at confirm
 
   default:
     customerCancelled: "false"
@@ -1242,6 +1246,7 @@ FRFSGtfsStageFare:
     discountIds: "[Id FRFSTicketCategoryMetadataConfig]"
     # A null routeTag is the catch-all fare, charged for any route GIMS reports without a tag.
     routeTag: Maybe Text
+    fareClassId: Maybe (Id FRFSFareClass)
   constraints:
     id: PrimaryKey
   default:
@@ -1262,6 +1267,47 @@ FRFSGtfsStageFare:
       kvFunction: findAllWithKV
       where:
         and: [vehicleType, merchantOperatingCityId]
+    findAllByFareClassId:
+      kvFunction: findAllWithKV
+      where: fareClassId
+    findOneByFareClassIdAndStage:
+      kvFunction: findOneWithKV
+      where:
+        and: [fareClassId, stage]
+
+FRFSFareClass:
+  tableName: frfs_fare_class
+  fields:
+    id: Id FRFSFareClass
+    vehicleServiceTierId: Id FRFSVehicleServiceTier
+    routeTag: Maybe Text
+    vehicleTag: Maybe Text
+    vehicleVariant: Maybe BusVehicleVariant
+    classCode: Text
+    displayName: Text
+    timeBounds: TimeBound
+    enabled: Bool
+  constraints:
+    id: PrimaryKey
+  default:
+    timeBounds: "'Unbounded'"
+    enabled: "true"
+  queries:
+    findAllByVehicleServiceTierId:
+      kvFunction: findAllWithKV
+      where: vehicleServiceTierId
+    findAllByVehicleServiceTierIdAndEnabled:
+      kvFunction: findAllWithKV
+      where:
+        and: [vehicleServiceTierId, enabled]
+    updateEnabledById:
+      kvFunction: updateWithKV
+      params: [enabled]
+      where: id
+    updateDisplayNameAndTimeBoundsById:
+      kvFunction: updateWithKV
+      params: [displayName, timeBounds]
+      where: id
 
 FRFSRouteStopStageFare:
   tableName: frfs_route_stop_stage_fare
@@ -1333,6 +1379,7 @@ FRFSVehicleServiceTier:
     integratedBppConfigId: Id IntegratedBPPConfig
     merchantOperatingCityId: Id MerchantOperatingCity
     trainType: Maybe Text
+    enableFareClass: Maybe Bool
   constraints:
     id: PrimaryKey
   cachedQueries:

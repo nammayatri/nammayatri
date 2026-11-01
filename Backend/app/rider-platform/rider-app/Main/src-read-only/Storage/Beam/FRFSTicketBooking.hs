@@ -45,6 +45,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     driverName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     eventDiscountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     failureReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fareClassId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     finalBoardedDepotNo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     finalBoardedScheduleNo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     finalBoardedVehicleNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
