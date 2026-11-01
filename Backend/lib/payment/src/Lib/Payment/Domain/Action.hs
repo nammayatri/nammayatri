@@ -2068,13 +2068,13 @@ updateOrderTransaction merchantOpCityId order resp respDump = do
                         taxAmount = resp.taxAmount,
                         netAmount = resp.netAmount,
                         epgTxnId = resp.epgTxnId,
-                        rrn = resp.rrn <|> transaction.rrn,
                         cardBrand = resp.cardBrand <|> transaction.cardBrand,
                         cardIsin = resp.cardIsin <|> transaction.cardIsin,
                         cardLastFourDigits = resp.cardLastFourDigits <|> transaction.cardLastFourDigits,
                         cardIssuer = resp.cardIssuer <|> transaction.cardIssuer,
                         authorizationDateTime = resp.authorizationDateTime,
-                        captureDateTime = resp.captureDateTime
+                        captureDateTime = resp.captureDateTime,
+                        rrn = resp.rrn <|> transaction.rrn
                        }
 
       -- Avoid updating status if already in CHARGED state to handle race conditions

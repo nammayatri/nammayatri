@@ -1171,7 +1171,11 @@ getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbFrom m
             rrnNo = report.rrn,
             reconciliationStatus = show . (.reconStatus) <$> mbEntry,
             reconciliationDate = (.reconciliationDate) <$> mbEntry,
-            differenceAmount = (.variance) <$> mbEntry
+            differenceAmount = (.variance) <$> mbEntry,
+            bankId = report.bankId,
+            pgTxnId = report.pgTxnId,
+            mercId = report.vendorId,
+            cardType = report.cardType
           }
 
     mkFullName :: DP.Person -> Text
@@ -1181,18 +1185,20 @@ getFinanceManagementFinancePaymentGatewayTransactionList ::
   ShortId DM.Merchant ->
   Context.City ->
   Maybe UTCTime ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   Maybe API.PaymentModeFilter ->
   Maybe (ShortId Dashboard.Common.PaymentOrder) ->
   Maybe API.PaymentStatusFilter ->
   Maybe API.PgGateway ->
+  Maybe Text ->
   Maybe (Id Dashboard.Common.SubscriptionPurchase) ->
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Flow API.PaymentTransactionReportListRes
-getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity mbFrom mbLimit mbOffset mbPaymentMode mbPaymentOrderId mbPaymentStatus mbPgGateway mbSubscriptionId mbTo mbTxnAmountMax mbTxnAmountMin = do
+getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity mbFrom mbGatewayTransactionId mbLimit mbOffset mbPaymentMode mbPaymentOrderId mbPaymentStatus mbPgGateway mbRrn mbSubscriptionId mbTo mbTxnAmountMax mbTxnAmountMin = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
@@ -1200,7 +1206,7 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
       offset = mkPageOffset mbOffset
 
   -- Resolve subscription purchases based on filters
-  subscriptions <- resolveSubscriptions merchantOpCityId mbSubscriptionId mbPaymentOrderId mbFrom mbTo mbTxnAmountMin mbTxnAmountMax (Just limit) (Just offset)
+  subscriptions <- resolveSubscriptions merchantOpCityId mbSubscriptionId mbPaymentOrderId mbRrn mbGatewayTransactionId mbFrom mbTo mbTxnAmountMin mbTxnAmountMax (Just limit) (Just offset)
 
   -- For each subscription, look up PaymentOrder, then build ORDER + REFUND entries
   allEntries <- fmap concat $
@@ -1241,7 +1247,7 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
           pure $ orderEntries <> refundEntries
 
   -- Apply in-memory filters (only paymentMode, paymentStatus, pgGateway)
-  let filteredEntries = filter (matchesFilters mbPaymentMode mbPaymentStatus mbPgGateway) allEntries
+  let filteredEntries = filter (matchesFilters mbPaymentMode mbPaymentStatus mbPgGateway mbRrn mbGatewayTransactionId) allEntries
       totalItems = length filteredEntries
 
   pure $
@@ -1255,6 +1261,8 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
       Id DMOC.MerchantOperatingCity ->
       Maybe (Id Dashboard.Common.SubscriptionPurchase) ->
       Maybe (ShortId Dashboard.Common.PaymentOrder) ->
+      Maybe Text ->
+      Maybe Text ->
       Maybe UTCTime ->
       Maybe UTCTime ->
       Maybe HighPrecMoney ->
@@ -1262,7 +1270,7 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
       Maybe Int ->
       Maybe Int ->
       Flow [DSP.SubscriptionPurchase]
-    resolveSubscriptions merchantOpCityId mbSubId mbOrderId mbFromDate mbToDate mbAmountMin mbAmountMax dbLimit dbOffset =
+    resolveSubscriptions merchantOpCityId mbSubId mbOrderId mbRrnFilter mbGatewayTxnIdFilter mbFromDate mbToDate mbAmountMin mbAmountMax dbLimit dbOffset =
       case mbSubId of
         Just subscriptionId ->
           QSubscriptionPurchase.findByPrimaryKey (cast subscriptionId) >>= \case
@@ -1278,20 +1286,26 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
                     Just sub -> pure [sub]
                     Nothing -> pure []
                 Nothing -> pure []
-            Nothing -> do
-              -- from and to are mandatory when no specific ID filter is provided
-              fromDate <- mbFromDate & fromMaybeM (InvalidRequest "'from' date is required when subscriptionId or paymentOrderId is not provided")
-              toDate <- mbToDate & fromMaybeM (InvalidRequest "'to' date is required when subscriptionId or paymentOrderId is not provided")
-              QSubscriptionPurchase.findAllByMerchantOpCityIdWithFilters
-                merchantOpCityId
-                (Just DPlan.PREPAID_SUBSCRIPTION)
-                Nothing
-                (Just fromDate)
-                (Just toDate)
-                mbAmountMin
-                mbAmountMax
-                dbLimit
-                dbOffset
+            Nothing
+              | isJust mbRrnFilter || isJust mbGatewayTxnIdFilter -> do
+                txns <- HQPaymentTransaction.findByRrnOrEpgTxnId mbRrnFilter mbGatewayTxnIdFilter
+                let orderIds = nub $ map (\txn -> cast txn.orderId) txns
+                subs <- catMaybes <$> mapM QSubscriptionPurchase.findByPaymentOrderId orderIds
+                pure subs
+              | otherwise -> do
+                -- from and to are mandatory when no specific ID filter is provided
+                fromDate <- mbFromDate & fromMaybeM (InvalidRequest "'from' date is required when subscriptionId, paymentOrderId, rrn or gatewayTransactionId is not provided")
+                toDate <- mbToDate & fromMaybeM (InvalidRequest "'to' date is required when subscriptionId, paymentOrderId, rrn or gatewayTransactionId is not provided")
+                QSubscriptionPurchase.findAllByMerchantOpCityIdWithFilters
+                  merchantOpCityId
+                  (Just DPlan.PREPAID_SUBSCRIPTION)
+                  Nothing
+                  (Just fromDate)
+                  (Just toDate)
+                  mbAmountMin
+                  mbAmountMax
+                  dbLimit
+                  dbOffset
 
     buildOrderEntry ::
       PaymentOrder.PaymentOrder ->
@@ -1360,7 +1374,9 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
             refundStatus = Nothing,
             ipAddress = Nothing,
             pgName = txn.gatewayName,
-            pgMerchantId = order.paymentMerchantId
+            pgMerchantId = order.paymentMerchantId,
+            rrn = txn.rrn,
+            attemptTimestamp = txn.captureDateTime <|> Just txn.createdAt
           }
 
     buildRefundEntry ::
@@ -1431,7 +1447,9 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
             refundStatus = Just $ show refund.status,
             ipAddress = Nothing,
             pgName = mbTxn >>= (.gatewayName),
-            pgMerchantId = order.paymentMerchantId
+            pgMerchantId = order.paymentMerchantId,
+            rrn = mbTxn >>= (.rrn),
+            attemptTimestamp = (mbTxn >>= (.captureDateTime)) <|> (mbTxn <&> (.createdAt))
           }
 
     selectRelevantPaymentTransaction ::
@@ -1476,13 +1494,17 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
       Maybe API.PaymentModeFilter ->
       Maybe API.PaymentStatusFilter ->
       Maybe API.PgGateway ->
+      Maybe Text ->
+      Maybe Text ->
       API.PaymentTransactionReportItem ->
       Bool
-    matchesFilters mbModeFilter mbStatusFilter mbGwFilter item =
+    matchesFilters mbModeFilter mbStatusFilter mbGwFilter mbRrnFilter mbGatewayTxnIdFilter item =
       and
         [ matchesPaymentModeFilter mbModeFilter item.paymentMode,
           matchesPaymentStatusFilter mbStatusFilter item.transactionStatus,
-          matchesPgGatewayFilter mbGwFilter item.pgName
+          matchesPgGatewayFilter mbGwFilter item.pgName,
+          matchesRrnFilter mbRrnFilter item.rrn,
+          matchesGatewayTransactionIdFilter mbGatewayTxnIdFilter item.gatewayTransactionId
         ]
 
     matchesPaymentModeFilter :: Maybe API.PaymentModeFilter -> Maybe Text -> Bool
@@ -1513,6 +1535,14 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
             API.RazorPay -> "razorpay"
             API.CCAvenue -> "ccavenue"
        in maybe False ((== expectedValue) . canonicalizeText) mbActualValue
+
+    matchesRrnFilter :: Maybe Text -> Maybe Text -> Bool
+    matchesRrnFilter Nothing _ = True
+    matchesRrnFilter (Just rrnFilter) mbActualValue = mbActualValue == Just rrnFilter
+
+    matchesGatewayTransactionIdFilter :: Maybe Text -> Maybe Text -> Bool
+    matchesGatewayTransactionIdFilter Nothing _ = True
+    matchesGatewayTransactionIdFilter (Just gwTxnIdFilter) mbActualValue = mbActualValue == Just gwTxnIdFilter
 
     canonicalizeText :: Text -> Text
     canonicalizeText =

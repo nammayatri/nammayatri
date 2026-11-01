@@ -70,9 +70,9 @@ updateMultiple transaction = do
       Se.Set BeamPT.taxAmount transaction.taxAmount,
       Se.Set BeamPT.netAmount transaction.netAmount,
       Se.Set BeamPT.epgTxnId transaction.epgTxnId,
-      Se.Set BeamPT.rrn transaction.rrn,
       Se.Set BeamPT.authorizationDateTime transaction.authorizationDateTime,
       Se.Set BeamPT.captureDateTime transaction.captureDateTime,
+      Se.Set BeamPT.rrn transaction.rrn,
       Se.Set BeamPT.updatedAt now
     ]
     [Se.Is BeamPT.id $ Se.Eq $ getId transaction.id]
@@ -82,6 +82,16 @@ findByTxnUUID txnUUID = findOneWithKV [Se.Is BeamPT.txnUUID $ Se.Eq $ Just txnUU
 
 findByTxnId :: BeamFlow m r => Text -> m (Maybe PaymentTransaction)
 findByTxnId txnId = findOneWithKV [Se.Is BeamPT.txnId $ Se.Eq $ Just txnId]
+
+findByRrnOrEpgTxnId :: BeamFlow m r => Maybe Text -> Maybe Text -> m [PaymentTransaction]
+findByRrnOrEpgTxnId mbRrn mbEpgTxnId =
+  findAllWithKV
+    [ Se.Or $
+        catMaybes
+          [ (Se.Is BeamPT.rrn . Se.Eq . Just) <$> mbRrn,
+            (Se.Is BeamPT.epgTxnId . Se.Eq . Just) <$> mbEpgTxnId
+          ]
+    ]
 
 findById :: BeamFlow m r => Id PaymentTransaction -> m (Maybe PaymentTransaction)
 findById (Id id) = findOneWithKV [Se.Is BeamPT.id $ Se.Eq id]
