@@ -1,0 +1,31 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  SharedCabAllocationEntityData: Tools.Notifications
+
+module: SharedCabInternal
+
+# Called by rider-app and mounted under /internal by API.Internal. The token header is checked in the domain handlers.
+types:
+  SharedCabDriverCallNumberResp:
+    driverNumber: Text
+    derive: "Show"
+
+apis:
+  - POST:
+      endpoint: /sharedCabAllocationFCM
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabAllocationEntityData
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /sharedCab/driver/{driverId}/callNumber
+      auth: NoAuth
+      params:
+        driverId: Text
+      headers:
+        token: Text
+      response:
+        type: SharedCabDriverCallNumberResp

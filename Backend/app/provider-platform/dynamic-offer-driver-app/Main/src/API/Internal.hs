@@ -4,6 +4,7 @@ module API.Internal
   )
 where
 
+import qualified API.Action.UI.SharedCabInternal as SharedCabInternal
 import qualified API.Internal.Auth as Auth
 import qualified API.Internal.BetterDriverSearch as BetterDriverSearch
 import qualified API.Internal.BlackListedDrivers as BlackListedDrivers
@@ -46,8 +47,6 @@ import qualified API.Internal.RiderConsent as RiderConsent
 import qualified API.Internal.SearchTryPoolStats as SearchTryPoolStats
 import qualified API.Internal.SendEmailOTP as SendEmailOTP
 import qualified API.Internal.SendSMS as SendSMS
-import qualified API.Internal.SharedCabAllocation as SharedCabAllocation
-import qualified API.Internal.SharedCabCallNumber as SharedCabCallNumber
 import qualified API.Internal.SpecialLocationList as SpecialLocationList
 import qualified API.Internal.SpecialLocationUpsert as SpecialLocationUpsert
 import qualified API.Internal.StopDetection as StopDetection
@@ -118,8 +117,7 @@ type API =
            :<|> SearchTryPoolStats.API
            :<|> VehicleServiceTierList.API
            :<|> BetterDriverSearch.API
-           :<|> SharedCabAllocation.API
-           :<|> SharedCabCallNumber.API
+           :<|> SharedCabInternal.API
        )
 
 handler :: AppEnv -> FlowServer API
@@ -178,5 +176,4 @@ handler env =
     :<|> SearchTryPoolStats.handler
     :<|> VehicleServiceTierList.handler
     :<|> BetterDriverSearch.handler
-    :<|> SharedCabAllocation.handler
-    :<|> SharedCabCallNumber.handler
+    :<|> SharedCabInternal.handler

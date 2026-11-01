@@ -6,19 +6,19 @@ imports:
   VehicleTripEndReason: Domain.Types.VehicleTrip
   ServiceTierType: BecknV2.FRFS.Enums
   SelectRouteMode: SharedLogic.SharedCab.SessionState
-  SharedCabRoute: SharedLogic.SharedCab.SessionView
+  SharedCabRouteDataResp: SharedLogic.SharedCab.SessionView
+  SharedCabDemandResp: SharedLogic.SharedCab.SessionView
   SharedCabSession: SharedLogic.SharedCab.SessionView
-  EndRouteReq: SharedLogic.SharedCab.SessionView
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
   APISuccess: Kernel.Types.APISuccess
 
 module: SharedCabInternal
 
-# Responses are the driver-app /sharedCab/* contract verbatim; SharedCabSession and EndRouteReq live in
-# SharedLogic.SharedCab.SessionView because their `route` / `force` fields clash with Servant.route / EulerHS.Prelude.force.
+# SharedCabSession lives in SharedLogic.SharedCab.SessionView because its `route` field clashes with Servant.route.
 types:
-  SharedCabRoutesResp:
-    routes: "[SharedCabRoute]"
+  SharedCabDemandReq:
+    agencyId: Text
+    routeCodes: "[Text]"
 
   AffectedRider:
     bookingId: Text
@@ -29,27 +29,41 @@ types:
     session: Maybe SharedCabSession
     affectedRiders: Maybe [AffectedRider]
 
+  SharedCabRouteOperation:
+    enum: "SELECT_ROUTE,RETURN_TRIP,CHANGE_ROUTE,END_ROUTE"
+
   # agencyId is the shared-cab provider's business key across the two DBs: the GTFS agency gtfsId of the feed
   # (integrated_bpp_config.agency_key). The caller's own row id never leaves its database.
-  SelectRouteReq:
+  SharedCabRouteOperationReq:
+    operation: SharedCabRouteOperation
     driverId: Text
     vehicleNumber: Text
-    agencyId: Text
-    serviceTierType: ServiceTierType
+    agencyId: Maybe Text
+    serviceTierType: Maybe ServiceTierType
     capacity: Maybe Int
-    routeCode: Text
-    walkupCount: Int
+    routeCode: Maybe Text
+    walkupCount: Maybe Int
     mode: Maybe SelectRouteMode
     driverName: Maybe Text
     vehicleModel: Maybe Text
+    atLastStop: Maybe Bool
+    forceEnd: Maybe Bool
 
-  SeatsReq:
+  SharedCabSessionOperation:
+    enum: "SET_SEATS,RESUME,CAB_FULL"
+
+  SharedCabSessionOperationReq:
+    operation: SharedCabSessionOperation
     driverId: Text
     vehicleNumber: Text
-    walkupCount: Int
-    version: Int
+    version: Maybe Int
+    walkupCount: Maybe Int
 
-  SharedCabDriverReq:
+  SharedCabBookingOperation:
+    enum: "ACCEPT,DECLINE,CANCEL,BOARDED_WITHOUT_CODE,DROPPED"
+
+  SharedCabBookingOperationReq:
+    operation: SharedCabBookingOperation
     driverId: Text
     vehicleNumber: Text
     reason: Maybe Text
@@ -76,23 +90,30 @@ types:
 
 apis:
   - GET:
-      endpoint: /sharedCab/routes
+      endpoint: /sharedCab/routes/data
       auth: NoAuth
       headers:
         token: Text
       mandatoryQuery:
         agencyId: Text
-        lat: Double
-        lon: Double
       response:
-        type: SharedCabRoutesResp
+        type: SharedCabRouteDataResp
   - POST:
-      endpoint: /sharedCab/route/select
+      endpoint: /sharedCab/routes/demand
       auth: NoAuth
       headers:
         token: Text
       request:
-        type: SelectRouteReq
+        type: SharedCabDemandReq
+      response:
+        type: SharedCabDemandResp
+  - POST:
+      endpoint: /sharedCab/route/operations
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabRouteOperationReq
       response:
         type: SelectRouteResp
   - GET:
@@ -106,30 +127,12 @@ apis:
       response:
         type: SharedCabSession
   - POST:
-      endpoint: /sharedCab/seats
+      endpoint: /sharedCab/session/operations
       auth: NoAuth
       headers:
         token: Text
       request:
-        type: SeatsReq
-      response:
-        type: SharedCabSession
-  - POST:
-      endpoint: /sharedCab/route/end
-      auth: NoAuth
-      headers:
-        token: Text
-      request:
-        type: EndRouteReq
-      response:
-        type: "(Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionView.SharedCabSession)"
-  - POST:
-      endpoint: /sharedCab/resume
-      auth: NoAuth
-      headers:
-        token: Text
-      request:
-        type: SharedCabDriverReq
+        type: SharedCabSessionOperationReq
       response:
         type: SharedCabSession
   - GET:
@@ -143,58 +146,14 @@ apis:
       response:
         type: SharedCabTripsResp
   - POST:
-      endpoint: /sharedCab/booking/{bookingId}/cancel
+      endpoint: /sharedCab/booking/{bookingId}/operations
       auth: NoAuth
       headers:
         token: Text
       params:
         bookingId: Id FRFSTicketBooking
       request:
-        type: SharedCabDriverReq
-      response:
-        type: SharedCabSession
-  - POST:
-      endpoint: /sharedCab/booking/{bookingId}/boardedWithoutCode
-      auth: NoAuth
-      headers:
-        token: Text
-      params:
-        bookingId: Id FRFSTicketBooking
-      request:
-        type: SharedCabDriverReq
-      response:
-        type: SharedCabSession
-  - POST:
-      endpoint: /sharedCab/booking/{bookingId}/accept
-      auth: NoAuth
-      headers:
-        token: Text
-      params:
-        bookingId: Id FRFSTicketBooking
-      request:
-        type: SharedCabDriverReq
-      response:
-        type: SharedCabSession
-  - POST:
-      endpoint: /sharedCab/booking/{bookingId}/decline
-      auth: NoAuth
-      headers:
-        token: Text
-      params:
-        bookingId: Id FRFSTicketBooking
-      request:
-        type: SharedCabDriverReq
-      response:
-        type: SharedCabSession
-  - POST:
-      endpoint: /sharedCab/booking/{bookingId}/dropped
-      auth: NoAuth
-      headers:
-        token: Text
-      params:
-        bookingId: Id FRFSTicketBooking
-      request:
-        type: SharedCabDriverReq
+        type: SharedCabBookingOperationReq
       response:
         type: SharedCabSession
   - GET:
@@ -220,12 +179,3 @@ apis:
         type: SharedCabMessageReq
       response:
         type: APISuccess
-  - POST:
-      endpoint: /sharedCab/cabFull
-      auth: NoAuth
-      headers:
-        token: Text
-      request:
-        type: SharedCabDriverReq
-      response:
-        type: SharedCabSession

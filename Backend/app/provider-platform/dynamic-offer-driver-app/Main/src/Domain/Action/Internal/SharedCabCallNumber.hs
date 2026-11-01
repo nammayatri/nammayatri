@@ -2,7 +2,7 @@
 -- authenticates the caller with the driver's merchant key and hands the number over for that one call, and only for a shared-cab driver.
 module Domain.Action.Internal.SharedCabCallNumber where
 
-import Data.OpenApi (ToSchema)
+import API.Types.UI.SharedCabInternal (SharedCabDriverCallNumberResp (..))
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
@@ -14,9 +14,6 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
-
-newtype SharedCabDriverCallNumberResp = SharedCabDriverCallNumberResp {driverNumber :: Text}
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 sharedCabDriverCallNumber :: Text -> Maybe Text -> Flow SharedCabDriverCallNumberResp
 sharedCabDriverCallNumber driverId apiKey = do

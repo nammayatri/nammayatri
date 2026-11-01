@@ -707,7 +707,11 @@ data SharedCabAllocationEntityData = SharedCabAllocationEntityData
     offerExpiresAt :: Maybe UTCTime,
     fare :: Maybe HighPrecMoney,
     firstName :: Maybe Text,
-    dropStopCode :: Maybe Text
+    dropStopCode :: Maybe Text,
+    boardStop :: Maybe Text,
+    dropStop :: Maybe Text,
+    boardStopAddress :: Maybe Text,
+    dropStopAddress :: Maybe Text
   }
   deriving (Generic, ToJSON, Eq, FromJSON, ToSchema, Show)
 

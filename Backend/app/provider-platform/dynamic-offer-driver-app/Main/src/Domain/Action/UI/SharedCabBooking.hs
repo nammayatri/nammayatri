@@ -3,32 +3,41 @@
 module Domain.Action.UI.SharedCabBooking
   ( BookingAction (..),
     actionReason,
-    bookingAction,
-    cabFull,
+    bookingActionOf,
+    bookingOperation,
   )
 where
 
-import API.Types.UI.SharedCab (SharedCabSession)
-import Domain.Action.UI.SharedCab (DriverAuthInfo, bapInternal, validateSharedCabDriver)
+import API.Types.UI.SharedCab (SharedCabBookingOperation (..), SharedCabBookingOperationReq (..))
+import Domain.Action.UI.SharedCabExtra (DriverAuthInfo, bapInternal, validateSharedCabDriver)
 import qualified Domain.Types.Common as SRD
+import Domain.Types.SharedCabSession (SharedCabSession)
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Error (GenericError (InvalidRequest))
+import Kernel.Utils.Common (fromMaybeM)
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.SharedCab.RiderClient as CallBooking
 
 data BookingAction = Cancel Text | BoardedWithoutCode | Dropped | Accept | Decline
   deriving (Show, Eq)
 
-driverReq :: Maybe Text -> DriverAuthInfo -> Flow CallBooking.BAPDriverReq
-driverReq reason (personId, _merchantId, _merchantOpCityId) = do
-  vehicle <- validateSharedCabDriver personId
-  pure CallBooking.BAPDriverReq {driverId = personId.getId, vehicleNumber = vehicle.registrationNo, reason}
+bookingActionOf :: SharedCabBookingOperationReq -> Maybe BookingAction
+bookingActionOf req = case req.operation of
+  ACCEPT -> Just Accept
+  DECLINE -> Just Decline
+  DROPPED -> Just Dropped
+  BOARDED_WITHOUT_CODE -> Just BoardedWithoutCode
+  CANCEL -> Cancel <$> req.reason
 
-bookingAction :: BookingAction -> DriverAuthInfo -> Text -> Flow SharedCabSession
-bookingAction action auth@(personId, _merchantId, merchantOpCityId) bookingId = do
-  req <- driverReq (actionReason action) auth
+bookingOperation :: DriverAuthInfo -> Text -> SharedCabBookingOperationReq -> Flow SharedCabSession
+bookingOperation (personId, _merchantId, merchantOpCityId) bookingId req = do
+  action <- fromMaybeM (InvalidRequest "reason is required to cancel a booking") (bookingActionOf req)
+  vehicle <- validateSharedCabDriver personId
   bap <- bapInternal
-  session <- CallBooking.postBookingAction bap.apiKey bap.url (actionPath action) bookingId req
+  session <-
+    CallBooking.postBookingOperation bap.apiKey bap.url bookingId $
+      CallBooking.BAPBookingOperationReq {operation = req.operation, driverId = personId.getId, vehicleNumber = vehicle.registrationNo, reason = actionReason action}
   -- the offer's answer goes into the driver's quote-response counters, like a ride request's
   whenJust (offerResponse action) $ DP.recordQuoteResponseCounters merchantOpCityId personId
   pure session
@@ -39,21 +48,7 @@ offerResponse = \case
   Decline -> Just SRD.Reject
   _ -> Nothing
 
-cabFull :: DriverAuthInfo -> Flow SharedCabSession
-cabFull auth = do
-  req <- driverReq Nothing auth
-  bap <- bapInternal
-  CallBooking.postCabFull bap.apiKey bap.url req
-
 actionReason :: BookingAction -> Maybe Text
 actionReason = \case
   Cancel reason -> Just reason
   _ -> Nothing
-
-actionPath :: BookingAction -> Text
-actionPath = \case
-  Cancel _ -> "cancel"
-  BoardedWithoutCode -> "boardedWithoutCode"
-  Dropped -> "dropped"
-  Accept -> "accept"
-  Decline -> "decline"

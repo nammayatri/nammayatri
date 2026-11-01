@@ -2,14 +2,14 @@
 # and a cab with a single free seat is not allocated to a pair. Needs --variable token=<rider token>. Cab A (capacity 4)
 # on route_a; the pinger keeps its LTS fix fresh. The direct seller issues ONE group ticket for quantity 2.
 
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END", "force": true}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "operation": "END_ROUTE", "forceEnd": true}
 HTTP *
 
-POST {{base_url}}/internal/sharedCab/route/select
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
+{"operation": "SELECT_ROUTE", "driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
 HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
@@ -112,15 +112,15 @@ HTTP 200
 [Asserts]
 jsonpath "$.legs[0].routeWithLiveVehicles[0]..[?(@.number == '{{plate_code}}' || @.vehicleNumber == '{{plate_code}}')].availableSeats" == 4
 
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END", "force": true}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "operation": "END_ROUTE", "forceEnd": true}
 HTTP *
 
 # ---- 2. a cab with one free seat is not allocated to a pair ----
-POST {{base_url}}/internal/sharedCab/route/select
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 3, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
+{"operation": "SELECT_ROUTE", "driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 3, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
 HTTP 200
 
 POST {{base_url}}/v2/multimodalSearch
@@ -184,15 +184,15 @@ HTTP 200
 [Asserts]
 jsonpath "$.journeyStatus" == "CANCELLED"
 
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END", "force": true}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "operation": "END_ROUTE", "forceEnd": true}
 HTTP *
 
 # ---- 3. a skip of a pair frees both seats ----
-POST {{base_url}}/internal/sharedCab/route/select
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
+{"operation": "SELECT_ROUTE", "driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
 HTTP 200
 
 POST {{base_url}}/v2/multimodalSearch
@@ -276,7 +276,7 @@ HTTP 200
 [Asserts]
 jsonpath "$.journeyStatus" == "CANCELLED"
 
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END", "force": true}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "operation": "END_ROUTE", "forceEnd": true}
 HTTP *
