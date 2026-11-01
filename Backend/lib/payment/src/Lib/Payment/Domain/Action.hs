@@ -1851,6 +1851,7 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall = do
                 cardIssuer = Nothing,
                 authorizationDateTime = Nothing,
                 captureDateTime = Nothing,
+                rrn = Nothing,
                 paymentMethodId = Nothing,
                 vpa = payerVpa,
                 ..
@@ -1900,6 +1901,7 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall = do
                 taxAmount = (.taxAmount) =<< txnObj.txnDetail,
                 netAmount = (.netAmount) =<< txnObj.txnDetail,
                 epgTxnId = (.epgTxnId) =<< txnObj.paymentGatewayResponse,
+                rrn = (.rrn) =<< txnObj.paymentGatewayResponse,
                 cardBrand = (.cardBrand) =<< card,
                 cardIsin = (.cardIsin) =<< card,
                 cardLastFourDigits = (.lastFourDigits) =<< card,
@@ -1996,6 +1998,7 @@ data OrderTxn = OrderTxn
     cardIssuer :: Maybe Text,
     authorizationDateTime :: Maybe UTCTime,
     captureDateTime :: Maybe UTCTime,
+    rrn :: Maybe Text,
     vpa :: Maybe Text
   }
 
@@ -2068,7 +2071,8 @@ updateOrderTransaction merchantOpCityId order resp respDump = do
                         cardLastFourDigits = resp.cardLastFourDigits <|> transaction.cardLastFourDigits,
                         cardIssuer = resp.cardIssuer <|> transaction.cardIssuer,
                         authorizationDateTime = resp.authorizationDateTime,
-                        captureDateTime = resp.captureDateTime
+                        captureDateTime = resp.captureDateTime,
+                        rrn = resp.rrn <|> transaction.rrn
                        }
 
       -- Avoid updating status if already in CHARGED state to handle race conditions
@@ -2140,6 +2144,7 @@ juspayWebhookService merchantOpCityId resp respDump = do
                 cardIssuer = Nothing,
                 authorizationDateTime = Nothing,
                 captureDateTime = Nothing,
+                rrn = Nothing,
                 paymentMethodId = Nothing,
                 vpa = payerVpa,
                 ..
@@ -2182,6 +2187,7 @@ juspayWebhookService merchantOpCityId resp respDump = do
                 taxAmount = (.taxAmount) =<< txnObj.txnDetail,
                 netAmount = (.netAmount) =<< txnObj.txnDetail,
                 epgTxnId = (.epgTxnId) =<< txnObj.paymentGatewayResponse,
+                rrn = (.rrn) =<< txnObj.paymentGatewayResponse,
                 cardBrand = (.cardBrand) =<< card,
                 cardIsin = (.cardIsin) =<< card,
                 cardLastFourDigits = (.lastFourDigits) =<< card,
@@ -2402,6 +2408,7 @@ mkDefaultStripeOrderTxn transactionStatus amount currency =
       cardIssuer = Nothing,
       authorizationDateTime = Nothing,
       captureDateTime = Nothing,
+      rrn = Nothing,
       vpa = Nothing,
       ..
     }

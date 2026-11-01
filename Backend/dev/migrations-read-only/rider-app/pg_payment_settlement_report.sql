@@ -62,3 +62,8 @@ ALTER TABLE atlas_app.pg_payment_settlement_report ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN chargeback_date timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN pg_txn_id text ;

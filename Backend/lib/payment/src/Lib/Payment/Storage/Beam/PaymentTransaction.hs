@@ -62,6 +62,7 @@ data PaymentTransactionT f = PaymentTransactionT
     epgTxnId :: B.C f (Maybe Text),
     authorizationDateTime :: B.C f (Maybe UTCTime),
     captureDateTime :: B.C f (Maybe UTCTime),
+    rrn :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     merchantOperatingCityId :: B.C f (Maybe Text)

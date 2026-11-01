@@ -41,6 +41,7 @@ data PgPaymentSettlementReportT f = PgPaymentSettlementReportT
     pgApprovalCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     pgBaseFee :: B.C f Kernel.Types.Common.HighPrecMoney,
     pgTax :: B.C f Kernel.Types.Common.HighPrecMoney,
+    pgTxnId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rawData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     referenceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referenceType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
