@@ -8,6 +8,7 @@ module SharedLogic.SharedCab.Demand
     demandOnRoutes,
     candidateRiders,
     tallyAcrossStops,
+    routeCardCounts,
     demandAheadRows,
     searchingRiders,
     findingByRoute,
@@ -76,7 +77,17 @@ isRecentFinding findingTimeoutSec now createdAt = diffUTCTime now createdAt < fr
 -- it within the interest window (`interested`), one person counted once whichever way they are known.
 waitingRiders :: Int -> UTCTime -> [(UTCTime, Text)] -> [Text] -> Int
 waitingRiders findingTimeoutSec now bookings interested =
-  Set.size (Set.fromList ([rider | (createdAt, rider) <- bookings, isRecentFinding findingTimeoutSec now createdAt] <> interested))
+  Set.size (waitingSet findingTimeoutSec now bookings interested)
+
+waitingSet :: Int -> UTCTime -> [(UTCTime, Text)] -> [Text] -> Set.Set Text
+waitingSet findingTimeoutSec now bookings interested =
+  Set.fromList ([rider | (createdAt, rider) <- bookings, isRecentFinding findingTimeoutSec now createdAt] <> interested)
+
+-- | The driver's pre-start route card as (waiting, searching), each rider counted once: waiting wins over searching —
+-- a rider who opened the stand (or has a recent FINDING booking) and also searched counts only as waiting.
+routeCardCounts :: Int -> UTCTime -> [(UTCTime, Text)] -> [Text] -> [Set.Set Text] -> (Int, Int)
+routeCardCounts findingTimeoutSec now bookings interested searchedPerStop =
+  (waitingRiders findingTimeoutSec now bookings interested, searchingRiders searchedPerStop (waitingSet findingTimeoutSec now bookings interested))
 
 -- | The stops of the route that have anyone waiting or searching, in route order: the driver session's demandAhead.
 demandAheadRows :: [(Text, Text)] -> Map.Map Text StopDemand -> [SCS.DemandAtStop]
