@@ -17,7 +17,7 @@ module Domain.Action.Internal.PopulateTipAmount where
 import qualified Data.Aeson as Aeson
 import qualified Data.List as List
 import qualified Data.Text as T
-import Data.Time
+import Data.Time hiding (secondsToNominalDiffTime)
 import Domain.Types.Extra.MerchantPaymentMethod
 import Domain.Types.Ride
 import Environment
@@ -64,7 +64,7 @@ populateTipAmount rideId tipAmount apiKey = ActorInfo.withRequestIdActorInfo $ d
       tipAmountDelta = tipAmount - previousTipAmount
   QRide.updateTipAmountField (Just tipAmount) ride.id
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
-  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let localTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) (fromMaybe ride.createdAt ride.tripStartTime)
   mbDailyStats <- QDailyStats.findByDriverIdAndDate ride.driverId (utctDay localTime)
   case mbDailyStats of
     Just stats -> QDailyStats.updateTipAmountByDriverId (max 0 $ stats.tipAmount + tipAmountDelta) ride.driverId (utctDay localTime)
