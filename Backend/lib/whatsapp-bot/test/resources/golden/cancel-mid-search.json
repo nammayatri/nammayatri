@@ -150,7 +150,7 @@
       ]
     },
     {
-      "note": "pickup_confirm starts a search (gated). A Cancel tap lands mid-search; the search then aborts cleanly — no ride registered, no driver card. Outbound = [finding+Cancel, then cancelled+menu]; backend interleaves searchFlexi, getFlexiQuotes, getActiveBookings, cancelRide, confirmQuote.",
+      "note": "pickup_confirm starts a search (gated). A Cancel tap lands mid-search; the search then aborts cleanly — no ride registered, no driver card. Outbound = [finding+Cancel, then cancelled+menu]; backend interleaves searchFlexi, getFlexiQuotes, getActiveBookings, cancelRide, confirmQuote. [2026-10-29 message cuts: Language moved from the menu row to More]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -252,8 +252,7 @@
           "merchant": "FLEXI",
           "buttons": [
             "ride_type:flexi",
-            "more",
-            "choose_language"
+            "more"
           ]
         }
       ],

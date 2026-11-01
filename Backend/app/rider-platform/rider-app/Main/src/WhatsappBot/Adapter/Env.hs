@@ -64,10 +64,11 @@ parseRideType t = case T.toLower (T.strip t) of
 -- the single enablement + priority source: membership is "is it offered",
 -- position is display priority (see 'WhatsappBot.Flow.Booking.rideTypeButtons').
 -- Unrecognized entries are silently dropped, not an error.
-mkMerchantCtx :: DMWC.MetaBotCfg -> MerchantCtx
-mkMerchantCtx c =
+mkMerchantCtx :: Text -> DMWC.MetaBotCfg -> MerchantCtx
+mkMerchantCtx pnId c =
   MerchantCtx
     { merchantLabel = c.merchantLabel,
+      phoneNumberId = pnId,
       rideTypesOrder = mapMaybe parseRideType c.rideTypesOrder,
       maxDirectButtons = c.maxDirectButtons,
       flexiBaseFare = c.flexiBaseFare,
@@ -101,7 +102,7 @@ resolveMerchant :: DMWC.MetaWebhookConfig -> Flow (Id DM.Merchant, Id DMOC.Merch
 resolveMerchant cfg = do
   merchant <- QMerchant.findById cfg.merchantId >>= fromMaybeM (MerchantDoesNotExist cfg.merchantId.getId)
   moc <- CQMOC.findById cfg.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound cfg.merchantOperatingCityId.getId)
-  pure (merchant.id, moc.id, mkMerchantCtx cfg.botConfig)
+  pure (merchant.id, moc.id, mkMerchantCtx cfg.phoneNumberId cfg.botConfig)
 
 mkClock :: Clock Flow
 mkClock = Clock {now = getCurrentTime, sleepMs = \n -> threadDelay (n * 1000)}
@@ -160,16 +161,12 @@ dispatchInbound cfg ev = do
           void $ botEnv.sender.sendText ev.fromPhone msg
 
 -- | Per-merchant tracker deps: the registry's @listRides@ is scoped to THIS
--- merchant's rides by @merchantLabel@ (claim/remove stay global by bookingId), and
--- the sender/backend are this merchant's. Correct for the 1-merchant pilot.
--- MULTI-MERCHANT CAVEAT (L6, deferred): a ride is matched to its merchant by
--- @merchantLabel@ ONLY, so merchantLabels MUST be globally unique across all
--- enabled @meta_config@ rows (this constraint became MORE important,
--- not less, now that multiple Meta Apps/rows are the whole point — not
--- enforced anywhere yet) — a collision would let one merchant's tick push
--- another merchant's ride from the wrong WhatsApp number. The multi-tenant
--- hardening (persist phone_number_id on RegisteredRide + resolve the sender
--- per-ride, as TS does) is documented, not built.
+-- row's rides (claim/remove stay global by bookingId), and the sender/backend
+-- are this row's. A ride is matched by the @phone_number_id@ stored on it at
+-- registration, so two enabled rows sharing a @merchantLabel@ can no longer send
+-- each other's rides from the wrong WhatsApp number. Entries registered before
+-- that field existed carry @Nothing@ and still fall back to the old
+-- @merchantLabel@ match until they age out.
 buildTrackerDeps :: DMWC.MetaWebhookConfig -> Flow (TrackerDeps Flow)
 buildTrackerDeps cfg = do
   (merchantId, mocId, ctx) <- resolveMerchant cfg
@@ -178,7 +175,10 @@ buildTrackerDeps cfg = do
       trackMaxAge = cfg.botConfig.trackerMaxAgeSec
   translations <- getTranslationsMap mocId
   let fullRegistry = mkRideRegistry trackMaxAge
-      scopedRegistry = fullRegistry {listRides = filter (\r -> r.merchantLabel == ctx.merchantLabel) <$> fullRegistry.listRides}
+      belongsHere r = case r.phoneNumberId of
+        Just pid -> pid == cfg.phoneNumberId
+        Nothing -> r.merchantLabel == ctx.merchantLabel
+      scopedRegistry = fullRegistry {listRides = filter belongsHere <$> fullRegistry.listRides}
       backend = mkBackendHandle merchantId mocId ctx
   pure
     TrackerDeps
@@ -187,5 +187,6 @@ buildTrackerDeps cfg = do
         tdSender = mkWaSender metaCfg,
         tdSessions = mkSessionStore sessTtl,
         tdClock = mkClock,
-        tdTranslations = translations
+        tdTranslations = translations,
+        tdMerchant = ctx
       }

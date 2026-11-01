@@ -8,6 +8,8 @@
 module CodecSpec (codecSpec) where
 
 import Data.Aeson (eitherDecodeStrict', encode)
+import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -61,12 +63,35 @@ codecSpec =
               sessionUserId = "whatsapp:M:911111111111",
               toPhone = "911111111111",
               merchantLabel = "M",
+              phoneNumberId = Just "pn1",
               personId = "p1",
               rideType = Flexi,
               language = Just Kn,
               lastStage = Just "assigned",
               createdAt = posixSecondsToUTCTime 0
             },
+      -- Entries written before phoneNumberId existed have no such key; they must
+      -- still decode (as Nothing) or the delete-on-failure read drops a live ride.
+      testCase "RegisteredRide saved before phoneNumberId existed" $ do
+        let legacy =
+              RegisteredRide
+                { bookingId = "b1",
+                  userKey = "whatsapp:M:911111111111",
+                  sessionUserId = "whatsapp:M:911111111111",
+                  toPhone = "911111111111",
+                  merchantLabel = "M",
+                  phoneNumberId = Nothing,
+                  personId = "p1",
+                  rideType = Flexi,
+                  language = Just Kn,
+                  lastStage = Just "assigned",
+                  createdAt = posixSecondsToUTCTime 0
+                }
+        case A.toJSON legacy of
+          A.Object o -> case A.fromJSON (A.Object (KM.delete "phoneNumberId" o)) of
+            A.Success r -> assertEqual "legacy RegisteredRide" legacy r
+            A.Error err -> assertFailure ("legacy RegisteredRide: decode failed: " <> err)
+          _ -> assertFailure "legacy RegisteredRide: expected a JSON object",
       testCase "every SupportedLanguage round-trips" $
         forM_ [minBound .. maxBound :: SupportedLanguage] $ \l ->
           assertRoundTrips ("SupportedLanguage " <> show l) l,

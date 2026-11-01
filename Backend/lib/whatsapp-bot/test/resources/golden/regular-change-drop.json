@@ -76,7 +76,7 @@
       ]
     },
     {
-      "note": "pickup pin -> confirm",
+      "note": "pickup pin -> confirm [2026-10-29 message cuts: regular skips the pickup confirm and asks for the drop; the pickup_confirm step is removed]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -119,13 +119,9 @@
       },
       "expectOutbound": [
         {
-          "kind": "buttons",
+          "kind": "location_request",
           "to": "919812345678",
-          "merchant": "REG",
-          "buttons": [
-            "pickup_confirm",
-            "pickup_adjust"
-          ]
+          "merchant": "REG"
         }
       ],
       "expectBackend": [
@@ -144,60 +140,6 @@
           ]
         }
       ]
-    },
-    {
-      "note": "confirm pickup -> ask for drop",
-      "inbound": {
-        "object": "whatsapp_business_account",
-        "entry": [
-          {
-            "id": "entry-1",
-            "changes": [
-              {
-                "field": "messages",
-                "value": {
-                  "messaging_product": "whatsapp",
-                  "metadata": {
-                    "display_phone_number": "15550000000",
-                    "phone_number_id": "pn_reg"
-                  },
-                  "contacts": [
-                    {
-                      "profile": {
-                        "name": "919812345678"
-                      },
-                      "wa_id": "919812345678"
-                    }
-                  ],
-                  "messages": [
-                    {
-                      "from": "919812345678",
-                      "id": "wamid.rcd.3",
-                      "timestamp": "1783545600",
-                      "type": "interactive",
-                      "interactive": {
-                        "type": "button_reply",
-                        "button_reply": {
-                          "id": "pickup_confirm",
-                          "title": "Confirm pickup"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "expectOutbound": [
-        {
-          "kind": "location_request",
-          "to": "919812345678",
-          "merchant": "REG"
-        }
-      ],
-      "expectBackend": []
     },
     {
       "note": "typed drop -> place search -> disambiguation",
@@ -262,7 +204,7 @@
       ]
     },
     {
-      "note": "pick a drop -> estimate -> fare confirm",
+      "note": "pick a drop -> estimate -> fare confirm [2026-10-29 message cuts: no Getting-your-fare text; fare confirm adds Change pickup]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -308,17 +250,13 @@
       },
       "expectOutbound": [
         {
-          "kind": "text",
-          "to": "919812345678",
-          "merchant": "REG"
-        },
-        {
           "kind": "buttons",
           "to": "919812345678",
           "merchant": "REG",
           "buttons": [
             "regular_book",
-            "regular_change_drop"
+            "regular_change_drop",
+            "pickup_adjust"
           ]
         }
       ],
@@ -469,7 +407,7 @@
       ]
     },
     {
-      "note": "pick the new drop -> getPlaceDetails + searchRide + getEstimates -> fare confirm",
+      "note": "pick the new drop -> getPlaceDetails + searchRide + getEstimates -> fare confirm [2026-10-29 message cuts: no Getting-your-fare text; fare confirm adds Change pickup]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -515,17 +453,13 @@
       },
       "expectOutbound": [
         {
-          "kind": "text",
-          "to": "919812345678",
-          "merchant": "REG"
-        },
-        {
           "kind": "buttons",
           "to": "919812345678",
           "merchant": "REG",
           "buttons": [
             "regular_book",
-            "regular_change_drop"
+            "regular_change_drop",
+            "pickup_adjust"
           ]
         }
       ],
