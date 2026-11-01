@@ -1045,7 +1045,7 @@ TransporterConfig:
       erickshaw: Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     CallingOption:
-      enum: "AnonymousCall, DirectCall, DualCall"
+      enum: "AnonymousCall, DirectCall, DualCall, ForceDirectCall"
     AnalyticsConfig:
       weekStartMode: Int
       earningsWindowSize: Int
