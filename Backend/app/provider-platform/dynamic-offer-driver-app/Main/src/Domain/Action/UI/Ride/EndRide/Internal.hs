@@ -229,6 +229,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   -- driverRideCount is incremented here for stats persistence; RC-stats-reminders and
   -- fleet/operator-dashboard side-effects now run in kafka-consumers RIDE_EVENTS_CONSUMER.
   void $ QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+  when (isValidRide ride) $ QDriverStats.incrementTotalValidRides (cast ride.driverId)
   when (isJust safetyPlusCharges) $ QDriverStats.incSafetyPlusRiderCountAndEarnings (cast ride.driverId) (fromMaybe 0.0 $ safetyPlusCharges <&> (.charge))
   Hedis.del $ multipleRouteKey booking.transactionId
   Hedis.del $ searchRequestKey booking.transactionId

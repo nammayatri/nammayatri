@@ -53,6 +53,7 @@ createInitialDriverStats currency distanceUnit driverId = do
             totalPayoutEarnings = 0.0,
             totalPayoutAmountPaid = Nothing,
             totalValidActivatedRides = 0,
+            totalValidRides = 0,
             totalReferralCounts = 0,
             d2cReferralCount = 0,
             d2dReferralCount = 0,
@@ -103,6 +104,18 @@ incrementTotalRidesAndTotalDistAndIdleTime (Id driverId') rideDist = do
       Nothing -> Redis.setExp (mkCachedKeyTotalRidesByDriverId (Id driverId')) (rides + 1) 86400
       Just _ -> void $ Redis.incr (mkCachedKeyTotalRidesByDriverId (Id driverId'))
     pure (rides + 1)
+
+incrementTotalValidRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m ()
+incrementTotalValidRides (Id driverId') = do
+  now <- getCurrentTime
+  findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId')] >>= \case
+    Nothing -> pure ()
+    Just stats ->
+      updateOneWithKV
+        [ Se.Set BeamDS.totalValidRides (Just (stats.totalValidRides + 1)),
+          Se.Set BeamDS.updatedAt now
+        ]
+        [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
 findTotalRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Int, Meters)
 findTotalRides (Id driverId) = maybe (pure (0, 0)) (pure . (Domain.totalRides &&& Domain.totalDistance)) =<< findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]

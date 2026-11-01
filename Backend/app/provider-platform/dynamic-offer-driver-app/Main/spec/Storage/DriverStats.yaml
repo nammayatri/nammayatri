@@ -48,6 +48,7 @@ DriverStats:
     coinsConvertedToDirectPayoutCash: HighPrecMoney
     d2dReferralCount: Int
     d2cReferralCount: Int
+    totalValidRides: Int
 
   beamFields:
     totalEarnings:
@@ -85,6 +86,7 @@ DriverStats:
     coinsConvertedToDirectPayoutCash: Maybe HighPrecMoney
     d2dReferralCount: Maybe Int
     d2cReferralCount: Maybe Int
+    totalValidRides: Maybe Int
   fromTType:
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
     bonusEarned: Kernel.Types.Common.mkAmountWithDefault bonusEarnedAmount bonusEarned|E
@@ -108,6 +110,7 @@ DriverStats:
     coinsConvertedToDirectPayoutCash: Kernel.Prelude.fromMaybe 0|I
     d2dReferralCount: Kernel.Prelude.fromMaybe 0|I
     d2cReferralCount: Kernel.Prelude.fromMaybe 0|I
+    totalValidRides: Kernel.Prelude.fromMaybe 0|I
   toTType:
     totalDistance: getTotalDistance
     totalEarnings: Kernel.Prelude.roundToIntegral totalEarnings|E
@@ -134,6 +137,7 @@ DriverStats:
     coinsConvertedToDirectPayoutCash: Kernel.Prelude.Just|I
     d2dReferralCount: Kernel.Prelude.Just|I
     d2cReferralCount: Kernel.Prelude.Just|I
+    totalValidRides: Kernel.Prelude.Just|I
   constraints:
     driverId: PrimaryKey
 
