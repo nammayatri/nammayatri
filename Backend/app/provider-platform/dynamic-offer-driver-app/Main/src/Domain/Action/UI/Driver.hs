@@ -3548,7 +3548,7 @@ buildBookingAPIEntityFromBooking mbDriverLocation DRB.Booking {..} = do
       pure Nothing
     Just quote -> do
       let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem currency) estimatedDistance quote.fareParams.customerCancellationDues Nothing estimatedFare quote.fareParams.congestionChargeViaDp govtChargesRate (not $ null stops)) quote.farePolicy
-      return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, toLocation = USRD.withDropSpecialLocationArea specialLocationTag specialLocationName <$> toLocation, ..} (catMaybes farePolicyBreakups)
+      return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, ..} (catMaybes farePolicyBreakups)
 
 mkBreakupItem :: Currency -> Text -> Text -> Maybe DOVT.RateCardItem
 mkBreakupItem currency title valueInText = do

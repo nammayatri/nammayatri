@@ -42,7 +42,6 @@ import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime, diffUTCTime)
 import qualified Domain.Action.UI.Location as DLocUI
 import qualified Domain.Action.UI.RideEvidence as RideEvidence
-import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
@@ -595,11 +594,6 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       pure (mbGate, mbSL)
     Nothing -> pure (Nothing, Nothing)
 
-  let toLocation =
-        if booking.isPickupOrDestinationEdited == Just True
-          then booking.toLocation
-          else USRD.withDropSpecialLocationArea booking.specialLocationTag booking.specialLocationName <$> booking.toLocation
-
   -- See `amount*` semantics matrix (Cash / Online / booth EDC):
   --   amountToCollectInCash   : Cash            -> FinalFare - Offer (commission included)
   --                             Online          -> Nothing
@@ -667,7 +661,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         shortRideId = ride.shortId,
         status = ride.status,
         fromLocation = DLocUI.makeLocationAPIEntity booking.fromLocation,
-        toLocation = DLocUI.makeLocationAPIEntity <$> toLocation,
+        toLocation = DLocUI.makeLocationAPIEntity <$> booking.toLocation,
         stops = map (makeStop stopsInfo) rideStops,
         driverName = rideDetails.driverName,
         driverNumber,
