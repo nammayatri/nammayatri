@@ -60,11 +60,6 @@ data SharedCabRoute = SharedCabRoute
     direction :: Text,
     fromStop :: Text,
     toStop :: Text,
-    distanceKm :: Maybe Double,
-    -- | Riders with a booking still waiting for a cab on this route.
-    waitingCount :: Int,
-    -- | Riders who searched for a cab at one of the route's stops in the last 15 minutes without booking.
-    searchingCount :: Int,
     -- | The route's stops in order, and its encoded shape, for the pre-start map.
     stops :: [SessionStop],
     shapePolyline :: Maybe Text
@@ -161,5 +156,24 @@ data SharedCabSession = SharedCabSession
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
-data EndRouteNext = RETURN | CHANGE | END
+-- | Demand at one stop of the requested routes; a rider counts at one stop only.
+data StopDemandCount = StopDemandCount
+  { stopCode :: Text,
+    waiting :: Maybe Int,
+    searching :: Maybe Int
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | `publicTransportVersion` tells the driver app when its cached route data is stale.
+data SharedCabDemandResp = SharedCabDemandResp
+  { publicTransportVersion :: Maybe Text,
+    stops :: [StopDemandCount]
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | The feed's routes for the driver app's local cache; nothing here changes between feed versions.
+data SharedCabRouteDataResp = SharedCabRouteDataResp
+  { publicTransportVersion :: Maybe Text,
+    routes :: [SharedCabRoute]
+  }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)

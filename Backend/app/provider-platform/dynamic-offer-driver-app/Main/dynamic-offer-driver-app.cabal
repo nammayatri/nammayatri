@@ -360,6 +360,8 @@ library
       Domain.Action.Internal.SearchTryPoolStats
       Domain.Action.Internal.SendEmailOTP
       Domain.Action.Internal.SendSMS
+      Domain.Action.Internal.SharedCabAllocation
+      Domain.Action.Internal.SharedCabCallNumber
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.TollUpsert
@@ -483,6 +485,11 @@ library
       Domain.Action.UI.SearchRequestForDriver
       Domain.Action.UI.SearchRequestLocation
       Domain.Action.UI.SearchRoute
+      Domain.Action.UI.SharedCab
+      Domain.Action.UI.SharedCabBooking
+      Domain.Action.UI.SharedCabCall
+      Domain.Action.UI.SharedCabExtra
+      Domain.Action.UI.SharedCabInternal
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialLocation
@@ -537,6 +544,7 @@ library
       Domain.Types.Extra.MessageReport
       Domain.Types.Extra.Notification
       Domain.Types.Extra.Plan
+      Domain.Types.Extra.SharedCab
       Domain.Types.Extra.SurgeConfig
       Domain.Types.Extra.TransporterConfig
       Domain.Types.Extra.WalletTransaction
@@ -633,6 +641,7 @@ library
       SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch
       SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion
       SharedLogic.Allocator.Jobs.Settlement.SubscriptionTotals
+      SharedLogic.Allocator.Jobs.SharedCab.Reconciler
       SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival
       SharedLogic.Allocator.Jobs.SpecialZoneQueue.TriggerSpecialZoneNotify
       SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase
@@ -812,6 +821,9 @@ library
       SharedLogic.SearchRequestProcessing
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
+      SharedLogic.SharedCab.Flag
+      SharedLogic.SharedCab.ReconcilerSeed
+      SharedLogic.SharedCab.RiderClient
       SharedLogic.SocialLogin
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand
@@ -1351,6 +1363,8 @@ library
       API.Action.UI.ReferralPayout
       API.Action.UI.RideEvidence
       API.Action.UI.SearchRoute
+      API.Action.UI.SharedCab
+      API.Action.UI.SharedCabInternal
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.SpecialLocation
@@ -1550,6 +1564,8 @@ library
       API.Types.UI.ReferralPayout
       API.Types.UI.RideEvidence
       API.Types.UI.SearchRoute
+      API.Types.UI.SharedCab
+      API.Types.UI.SharedCabInternal
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.SpecialLocationWarrior
@@ -2601,3 +2617,150 @@ executable dynamic-offer-driver-app-exe
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
+
+test-suite driver-app-test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      SharedCabProxyTests
+      Paths_dynamic_offer_driver_app
+  hs-source-dirs:
+      test
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DerivingStrategies
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+      TemplateHaskell
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts -with-rtsopts=-N -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates
+  extra-libraries:
+      cac_client
+  build-depends:
+      JuicyPixels
+    , JuicyPixels-extra
+    , aeson
+    , base >=4.7 && <5
+    , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , beckn-services
+    , beckn-spec
+    , behavior-engine
+    , behavior-tracker
+    , bytestring
+    , casing
+    , cassava
+    , cereal
+    , communication-engine
+    , config-pilot
+    , consequence-engine
+    , containers
+    , cryptonite
+    , cryptostore >=0.2.3.0
+    , data-default-class
+    , directory
+    , dynamic-offer-driver-app
+    , either
+    , esqueleto
+    , euler-hs
+    , exceptions
+    , extra
+    , finance-kernel
+    , generic-lens
+    , geohash ==1.0.1
+    , hashable
+    , haskell-cac
+    , hedis
+    , hex-text
+    , hspec
+    , http-client
+    , http-client-tls
+    , http-conduit
+    , http-types
+    , incentive-journey
+    , json-logic-hs
+    , jwt >=0.11
+    , lens
+    , lens-aeson
+    , lib-dashboard
+    , memory
+    , mobility-core
+    , network-uri
+    , openapi3
+    , passetto-client
+    , passetto-lib
+    , persistent
+    , postgresql-simple
+    , prometheus-client
+    , pureMD5
+    , random
+    , record-dot-preprocessor
+    , record-hasfield
+    , regex-posix
+    , resource-pool
+    , scheduler
+    , scientific
+    , sequelize
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-multipart
+    , servant-openapi3
+    , servant-server
+    , servant-xml
+    , shared-services
+    , singletons
+    , singletons-th
+    , split
+    , stm
+    , string-conversions
+    , tasty
+    , tasty-hunit
+    , template-haskell
+    , temporary
+    , text
+    , text-conversions
+    , text-format
+    , time
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+    , wai-extra
+    , warp
+    , x509
+    , xml-conduit
+    , xmlbf
+    , yudhishthira
+  default-language: Haskell2010

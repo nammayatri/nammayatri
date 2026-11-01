@@ -356,6 +356,7 @@ let AllocatorJobType =
       | GenerateInvoicePdf
       | SendLegalPolicyNotification
       | CheckBetterDriverSearchProximity
+      | SharedCabReconciler
       >
 
 let jobRetryOnExceptionMapx =
@@ -363,7 +364,8 @@ let jobRetryOnExceptionMapx =
       ]
 
 let jobInfoMapx =
-      [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
+      [ { mapKey = AllocatorJobType.SharedCabReconciler, mapValue = False }
+      , { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
       , { mapKey = AllocatorJobType.SendScheduledSearchRequestToDriver
         , mapValue = True
         }

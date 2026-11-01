@@ -1808,11 +1808,15 @@ data SharedCabAllocationReq = SharedCabAllocationReq
     vehicleNumber :: Maybe Text,
     boardStopCode :: Maybe Text,
     etaSeconds :: Maybe Int,
-    -- the four below are set only for an offer the driver accepts or declines
+    -- the rest are set only for an offer the driver accepts or declines
     offerExpiresAt :: Maybe UTCTime,
     fare :: Maybe HighPrecMoney,
     firstName :: Maybe Text,
-    dropStopCode :: Maybe Text
+    dropStopCode :: Maybe Text,
+    boardStop :: Maybe Text,
+    dropStop :: Maybe Text,
+    boardStopAddress :: Maybe Text,
+    dropStopAddress :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
