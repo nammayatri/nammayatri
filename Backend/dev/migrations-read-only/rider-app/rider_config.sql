@@ -1013,4 +1013,26 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_driver_accept_enabled b
 
 ------- SQL updates -------
 
-: shared-cab 1/7 foundation (schema, enums, errors, kernel pin))
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_demand_stops_per_route integer ;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_max_demand_routes integer ;
+: shared-cab route cache, demand API and operations endpoints)

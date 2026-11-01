@@ -95,8 +95,6 @@ library
       API.Internal.SearchTryPoolStats
       API.Internal.SendEmailOTP
       API.Internal.SendSMS
-      API.Internal.SharedCabAllocation
-      API.Internal.SharedCabCallNumber
       API.Internal.SpecialLocationList
       API.Internal.SpecialLocationUpsert
       API.Internal.StopDetection
@@ -111,7 +109,6 @@ library
       API.OnixBppWebhook
       API.Types.Dashboard.AppManagement.OrphanInstances.DepotManager
       API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
-      API.Types.UI.SharedCab
       API.Types.UI.TicketKapture
       API.UI
       API.UI.Aarokya
@@ -145,8 +142,6 @@ library
       API.UI.RideRoute
       API.UI.RideSummary
       API.UI.Route
-      API.UI.SharedCab
-      API.UI.SharedCabBooking
       API.UI.Sos
       API.UI.Transporter
       API.UI.Whatsapp
@@ -490,6 +485,8 @@ library
       Domain.Action.UI.SharedCab
       Domain.Action.UI.SharedCabBooking
       Domain.Action.UI.SharedCabCall
+      Domain.Action.UI.SharedCabExtra
+      Domain.Action.UI.SharedCabInternal
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialLocation
@@ -544,6 +541,7 @@ library
       Domain.Types.Extra.MessageReport
       Domain.Types.Extra.Notification
       Domain.Types.Extra.Plan
+      Domain.Types.Extra.SharedCab
       Domain.Types.Extra.SurgeConfig
       Domain.Types.Extra.TransporterConfig
       Domain.Types.Extra.WalletTransaction
@@ -1353,6 +1351,8 @@ library
       API.Action.UI.ReferralPayout
       API.Action.UI.RideEvidence
       API.Action.UI.SearchRoute
+      API.Action.UI.SharedCab
+      API.Action.UI.SharedCabInternal
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.SpecialLocation
@@ -1550,6 +1550,8 @@ library
       API.Types.UI.ReferralPayout
       API.Types.UI.RideEvidence
       API.Types.UI.SearchRoute
+      API.Types.UI.SharedCab
+      API.Types.UI.SharedCabInternal
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.SpecialLocationWarrior

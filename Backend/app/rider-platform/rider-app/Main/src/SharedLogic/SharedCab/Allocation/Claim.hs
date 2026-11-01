@@ -12,7 +12,9 @@ module SharedLogic.SharedCab.Allocation.Claim
 where
 
 import Control.Monad.Extra (whenJustM)
+import Data.Either (fromRight)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Kernel.External.Types (ServiceFlow)
@@ -25,7 +27,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), LiveBooking (..), RankedCandidate (..), armedTimer, claimPush, claimable, skippedWhileFinding)
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (shared, stopAddresses, withBookingLock)
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
@@ -154,7 +156,10 @@ notifyDriverOfAllocation booking cand mbOfferDeadline =
     call = do
       let s = cand.rcSession
       merchant <- CQM.findById s.merchantId >>= fromMaybeM (MerchantNotFound s.merchantId.getId)
-      offerFare <- forM mbOfferDeadline $ \_ -> (>>= Just . (.totalPrice.amount)) <$> QFRFSTicketBooking.findById booking.bookingId
+      offerBooking <- join <$> forM mbOfferDeadline (\_ -> QFRFSTicketBooking.findById booking.bookingId)
+      -- the addresses only dress the card, so a failed lookup must not cost the driver the offer
+      offerAddresses <- forM mbOfferDeadline $ \_ ->
+        fromRight Map.empty <$> withTryCatch "sharedCabOfferAddresses" (stopAddresses s.merchantOperatingCityId [booking.boardStopCode, booking.dropStopCode])
       offerRider <- forM mbOfferDeadline $ \_ -> QPerson.findById booking.riderId
       void . CallBPPInternal.sharedCabAllocationFCM merchant.driverOfferApiKey merchant.driverOfferBaseUrl $
         CallBPPInternal.SharedCabAllocationReq
@@ -166,9 +171,13 @@ notifyDriverOfAllocation booking cand mbOfferDeadline =
             boardStopCode = Just booking.boardStopCode,
             etaSeconds = Just cand.rcEtaToBoardStopSec,
             offerExpiresAt = mbOfferDeadline,
-            fare = join offerFare,
+            fare = (.totalPrice.amount) <$> offerBooking,
             firstName = join offerRider >>= (.firstName) >>= listToMaybe . T.words,
-            dropStopCode = booking.dropStopCode <$ mbOfferDeadline
+            dropStopCode = booking.dropStopCode <$ mbOfferDeadline,
+            boardStop = offerBooking >>= (.fromStationName),
+            dropStop = offerBooking >>= (.toStationName),
+            boardStopAddress = offerAddresses >>= Map.lookup booking.boardStopCode,
+            dropStopAddress = offerAddresses >>= Map.lookup booking.dropStopCode
           }
 
 claimFirst ::

@@ -5,8 +5,9 @@ module SharedLogic.SharedCab.Demand
     StopDemand (..),
     demandByStop,
     waitingRiders,
-    routeCounts,
-    routeDemand,
+    demandOnRoutes,
+    candidateRiders,
+    tallyAcrossStops,
     demandAheadRows,
     searchingRiders,
     findingByRoute,
@@ -15,6 +16,7 @@ module SharedLogic.SharedCab.Demand
 where
 
 import qualified Data.Aeson as A
+import Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
@@ -31,9 +33,10 @@ import Kernel.Utils.Common
 import SharedLogic.SharedCab.Allocation.Select (groupByKey)
 import SharedLogic.SharedCab.Booking (findingOnRoute)
 import qualified SharedLogic.SharedCab.Config as Config
-import SharedLogic.SharedCab.Interest (bestEffort, interestedRiders)
+import SharedLogic.SharedCab.Interest (interestedOnRoutes)
 import SharedLogic.SharedCab.Keys (demandKey)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency)
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
 bucketSec, bucketCount, bucketTtlSec :: Int
 bucketSec = 300
@@ -75,21 +78,6 @@ waitingRiders :: Int -> UTCTime -> [(UTCTime, Text)] -> [Text] -> Int
 waitingRiders findingTimeoutSec now bookings interested =
   Set.size (Set.fromList ([rider | (createdAt, rider) <- bookings, isRecentFinding findingTimeoutSec now createdAt] <> interested))
 
--- | The driver's pre-start route card as (waiting, searching), each rider counted once: searching leaves out everyone already
--- waiting, whether known by a FINDING booking or by interest (a rider who opened the stand and searched used to count twice).
-routeCounts :: Int -> UTCTime -> [(UTCTime, Text)] -> [Text] -> [Set.Set Text] -> (Int, Int)
-routeCounts findingTimeoutSec now bookings interested searchedPerStop = (Set.size waiting, searchingRiders searchedPerStop waiting)
-  where
-    waiting = Set.fromList ([rider | (createdAt, rider) <- bookings, isRecentFinding findingTimeoutSec now createdAt] <> interested)
-
--- | 'routeCounts' for one route; its FINDING bookings come from 'findingByRoute', read once for the whole route list.
-routeDemand :: (CacheFlow m r, MonadFlow m, Redis.HedisFlow m r, MonadCatch m) => Config.SharedCabTunables -> Text -> [DFRFSTicketBooking.FRFSTicketBooking] -> Text -> [Text] -> m (Int, Int)
-routeDemand cfg cityId routeFinding routeCode stopCodes = do
-  now <- getCurrentTime
-  interested <- fromMaybe [] <$> bestEffort (logError . ("shared-cab interest read failed: " <>)) (interestedRiders cfg routeCode)
-  searched <- map snd <$> searchedAtStops cityId now stopCodes
-  pure (routeCounts cfg.findingTimeoutSec now [(b.createdAt, b.riderId.getId) | b <- routeFinding] interested searched)
-
 -- | The stops of the route that have anyone waiting or searching, in route order: the driver session's demandAhead.
 demandAheadRows :: [(Text, Text)] -> Map.Map Text StopDemand -> [SCS.DemandAtStop]
 demandAheadRows stops demand =
@@ -119,6 +107,36 @@ demandByStop cfg cityId routeCode stopCodes = IM.withInMemCache ["SharedCabDeman
   finding <- recentFinding cfg now cityId routeCode
   searched <- searchedAtStops cityId now stopCodes
   pure $ tallyDemand [(b.fromStationCode, b.riderId.getId) | b <- finding] searched
+
+-- | The stops the driver's route cards count, one rider at one stop. A FINDING rider counts at their board stop if it is a candidate of
+-- their route; an interested rider has no stop on record and counts at the route's stand. Kept 3 s in memory per city and route list.
+demandOnRoutes :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Redis.HedisFlow m r, CoreMetrics m) => Config.SharedCabTunables -> Text -> [(Text, [Text])] -> m [SCS.StopDemandCount]
+demandOnRoutes cfg cityId candidates = IM.withInMemCache ("SharedCabRoutesDemand" : cityId : map fst candidates) 3 $ do
+  now <- getCurrentTime
+  finding <- findingByRoute . filter (isRecentFinding cfg.findingTimeoutSec now . (.createdAt)) <$> QFRFSTicketBooking.findSharedCabFindingInCity (Id cityId)
+  interested <- interestedOnRoutes cfg (map fst candidates)
+  searched <- searchedAtStops cityId now (nub (concatMap snd candidates))
+  pure $ tallyAcrossStops (candidateRiders (Map.map (map (\b -> (b.fromStationCode, b.riderId.getId))) finding) (Map.fromList interested) candidates) searched
+
+-- | (stop, rider) for every waiting rider the candidate stops account for.
+candidateRiders :: Map.Map Text [(Text, Text)] -> Map.Map Text [Text] -> [(Text, [Text])] -> [(Text, Text)]
+candidateRiders finding interested = concatMap onRoute
+  where
+    onRoute (routeCode, stops) =
+      [entry | entry@(stopCode, _) <- Map.findWithDefault [] routeCode finding, stopCode `elem` stops]
+        <> [(stand, rider) | stand <- take 1 stops, rider <- Map.findWithDefault [] routeCode interested]
+
+-- | Each rider counts once across all the stops: waiting wins over searching, and the earlier stop wins over a later one.
+tallyAcrossStops :: [(Text, Text)] -> [(Text, Set.Set Text)] -> [SCS.StopDemandCount]
+tallyAcrossStops findingRiders searchedByStop =
+  [ SCS.StopDemandCount {SCS.stopCode = stopCode, SCS.waiting = Just (Set.size waiting), SCS.searching = Just (Set.size searching)}
+    | ((stopCode, waiting), searching) <- zip (zip (map fst searchedByStop) waitingPerStop) searchingPerStop
+  ]
+  where
+    waitingAt stopCode = Set.fromList [rider | (code, rider) <- findingRiders, code == stopCode]
+    distinct seen riders = let fresh = riders `Set.difference` seen in (seen <> fresh, fresh)
+    (allWaiting, waitingPerStop) = mapAccumL distinct Set.empty (map (waitingAt . fst) searchedByStop)
+    (_, searchingPerStop) = mapAccumL distinct allWaiting (map snd searchedByStop)
 
 -- | Every stop's search buckets in one pipelined round trip; a failed read counts no searches.
 searchedAtStops :: (CacheFlow m r, MonadFlow m) => Text -> UTCTime -> [Text] -> m [(Text, Set.Set Text)]
