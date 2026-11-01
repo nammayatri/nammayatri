@@ -520,7 +520,7 @@ settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amoun
       let mbDriverIdAndServiceName = listToMaybe driverIdsWithServiceName
       whenJust mbDriverIdAndServiceName $ \(driverId, serviceName) -> do
         when (dPayoutStatus == DDF.REFUNDED) $ do
-          dueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName driverId [DDF.PAYMENT_OVERDUE] Nothing serviceName
+          dueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName Nothing driverId [DDF.PAYMENT_OVERDUE] Nothing serviceName
           SLDriverFee.adjustDues dueDriverFees
     Just DPayment.DRIVER_WALLET_TRANSACTION -> do
       let driverId = Id payoutOrder.customerId

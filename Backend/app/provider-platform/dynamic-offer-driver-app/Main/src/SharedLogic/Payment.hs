@@ -134,7 +134,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
   now <- getCurrentTime
   let driverEmail = fromMaybe "test@juspay.in" driver.email
       (invoiceId, invoiceShortId) = fromMaybe (genInvoiceId, genShortInvoiceId.getShortId) existingInvoice
-      amount = sum $ (\pendingFees -> roundToHalf pendingFees.currency (pendingFees.govtCharges + pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst + fromMaybe 0 pendingFees.cancellationPenaltyAmount)) <$> driverFees
+      amount = sum $ driverFeeOrderAmount <$> driverFees
       invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) invoicePaymentMode <$> driverFees
   let driverFeeIds = map (.id) driverFees
   let currentVendorFees =
@@ -179,8 +179,16 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
   (createOrderCall, pseudoClientId) <- TPayment.createOrder merchantId opCity paymentServiceName (Just driver.id.getId) -- api call
+  -- Reusing an invoice whose payment order was created for a different amount would hand back the
+  -- old order (old amount) while the fees on this call differ; start a fresh invoice instead.
+  existingOrderAmountChanged <-
+    if isJust existingInvoice
+      then maybe False (\order -> order.amount /= amount) <$> QOrder.findById (cast invoiceId)
+      else pure False
+  when existingOrderAmountChanged $
+    logInfo $ "createOrder: payment order amount changed for invoice " <> invoiceId.getId <> ", creating a new invoice"
   mCreateOrderRes <-
-    if (isJust existingInvoice && amount < 1) -- In case driver fee was cleared with coins and remaining amount is less than 1 (Juspay create order fails)
+    if (isJust existingInvoice && amount < 1) || existingOrderAmountChanged -- In case driver fee was cleared with coins and remaining amount is less than 1 (Juspay create order fails)
       then pure Nothing
       else DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId Nothing mbEntityName DOrder.Normal False createOrderReq createOrderCall Nothing False Nothing False
   case mCreateOrderRes of
@@ -188,6 +196,11 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
     Nothing -> do
       QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
       createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing vendorFees mbDeepLinkData splitEnabled mbEntityName -- call same function with no existing order
+
+-- | Amount a driver fee contributes to a payment order. Single source for order creation
+-- (createOrder) and payment clearing (processPayment), so both compare the same numbers.
+driverFeeOrderAmount :: DriverFee -> HighPrecMoney
+driverFeeOrderAmount fee = roundToHalf fee.currency (fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst + fromMaybe 0 fee.cancellationPenaltyAmount)
 
 mkSplitSettlementDetails :: (MonadFlow m) => [VF.VendorFee] -> HighPrecMoney -> m (Maybe SplitSettlementDetails)
 mkSplitSettlementDetails vendorFees totalAmount = do

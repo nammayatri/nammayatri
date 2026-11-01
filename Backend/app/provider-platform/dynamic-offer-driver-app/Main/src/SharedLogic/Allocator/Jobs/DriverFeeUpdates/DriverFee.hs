@@ -1009,7 +1009,7 @@ processAndSendManualPaymentLink driverPlansToProccess subscriptionConfigs mercha
     let withinRateLimit = currentCount <= fromIntegral subscriptionConfigs.maxRetryCount
     unless withinRateLimit $ logError $ "Rate limit exceeded for driver: " <> driverId.getId <> " (count: " <> show currentCount <> "). Skipping payment link send."
     when withinRateLimit $ do
-      getPendingAndOverDueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName driverId [PAYMENT_OVERDUE, PAYMENT_PENDING] Nothing serviceName
+      getPendingAndOverDueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName (Just merchantId) driverId [PAYMENT_OVERDUE, PAYMENT_PENDING] Nothing serviceName
       updateStatusByIds PAYMENT_OVERDUE (map (.id) $ filter ((== PAYMENT_PENDING) . (.status)) getPendingAndOverDueDriverFees) now
       let allowDeepLink = subscriptionConfigs.sendDeepLink
       let mbDeepLinkData = if allowDeepLink then Just $ SPayment.DeepLinkData {sendDeepLink = Just True, expiryTimeInMinutes = mbDeepLinkExpiry} else Nothing --Nothing

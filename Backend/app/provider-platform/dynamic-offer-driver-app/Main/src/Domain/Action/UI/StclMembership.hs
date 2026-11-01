@@ -326,7 +326,13 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
 
     -- Resolve the requested amount up front so we can compare it against any in-flight order before deciding
     -- whether to resume that order or create a fresh one for the new intent.
-    let resolvedReqAmount = toHighPrecMoney $ fromMaybe (Money (req.numberOfShares * pricePerShare)) req.amount
+    -- Price is always derived from config: a client-supplied amount let shares be bought for Rs 1.
+    let resolvedReqAmount = toHighPrecMoney $ Money (req.numberOfShares * pricePerShare)
+    when (resolvedReqAmount <= 0) $
+      throwError $ InternalError "Invalid STCL config: top-up amount must be greater than 0"
+    whenJust req.amount $ \clientAmount ->
+      when (toHighPrecMoney clientAmount /= resolvedReqAmount) $
+        logWarning $ "STCL top-up for driver " <> driverId.getId <> ": ignoring client amount " <> show clientAmount <> ", charging " <> show resolvedReqAmount
 
     -- Decide whether a fresh PENDING is actually resumable. We only resume if the new request matches the
     -- in-flight order on both numberOfShares and amount — otherwise the driver's intent has changed
@@ -725,25 +731,37 @@ stclMemberShipOrderStatusHandler paymentStatusResp paymentOrderId = do
     Just membership -> do
       logInfo $ "Found membership: " <> show membership.id <> ", current status: " <> show membership.status
       -- Monotonic guard: once SUBMITTED, never regress regardless of replayed or out-of-order webhooks
-      if membership.status == Domain.SUBMITTED
-        then logInfo $ "Membership already SUBMITTED, skipping update (idempotent)"
-        else do
-          let newStatus = case paymentStatusResp of
-                LibPayment.PaymentStatus {status}
-                  | status == PaymentTypes.CHARGED -> Domain.SUBMITTED
-                  | otherwise -> Domain.PENDING
-                LibPayment.MandatePaymentStatus {status}
-                  | status == PaymentTypes.CHARGED -> Domain.SUBMITTED
-                  | otherwise -> Domain.PENDING
-                _ -> Domain.PENDING
-          logInfo $ "Updating membership to status: " <> show newStatus <> ", paymentStatus: " <> show paymentStatusText
-          -- When transitioning to SUBMITTED, update application count and share range FIRST (before status update)
-          -- so findLatestSubmittedMembership doesn't return the current record.
-          -- Guard against current status to ensure counts are only incremented once.
-          when (newStatus == Domain.SUBMITTED && membership.status /= Domain.SUBMITTED) $ do
-            QStclMembership.updateApplicationAndShareCounts membership.id membership.numberOfShares
-            logInfo $ "Updated application and share counts for SUBMITTED membership"
-          QStclMembership.updateStatusAndPaymentStatus newStatus paymentStatusText membership.id
-          logInfo $ "Successfully updated membership"
+      let isCharged = case paymentStatusResp of
+            LibPayment.PaymentStatus {status} -> status == PaymentTypes.CHARGED
+            LibPayment.MandatePaymentStatus {status} -> status == PaymentTypes.CHARGED
+            _ -> False
+      -- REJECTED means a later top-up request retired this one (stale, or changed intent), but its old
+      -- payment link can still be paid. If the newer request is also live, allocating shares here as well
+      -- would count them twice; if not, this is a genuine late payment and is honoured.
+      supersededByLiveMembership <-
+        if membership.status == Domain.REJECTED && isCharged
+          then any (\m -> m.id /= membership.id && m.createdAt > membership.createdAt && m.status `elem` [Domain.PENDING, Domain.SUBMITTED]) <$> QStclMembership.findByDriverId membership.driverId
+          else pure False
+      if
+          -- Monotonic guard: once SUBMITTED, never regress regardless of replayed or out-of-order webhooks
+          | membership.status == Domain.SUBMITTED -> logInfo "Membership already SUBMITTED, skipping update (idempotent)"
+          | membership.status == Domain.REJECTED && not isCharged -> logInfo $ "Membership " <> show membership.id <> " is REJECTED and payment is not charged, no update"
+          | supersededByLiveMembership ->
+            -- Polls and webhooks repeat for the same charge: raise the refund alert once, when the stored
+            -- payment status first changes to this one.
+            unless (membership.paymentStatus == paymentStatusText) $ do
+              logError $ "STCL charge on retired membership " <> show membership.id <> " (order " <> show paymentOrderId <> ") while a newer membership is live; shares not allocated, refund required"
+              QStclMembership.updateStatusAndPaymentStatus Domain.REJECTED paymentStatusText membership.id
+          | otherwise -> do
+            let newStatus = if isCharged then Domain.SUBMITTED else Domain.PENDING
+            logInfo $ "Updating membership to status: " <> show newStatus <> ", paymentStatus: " <> show paymentStatusText
+            -- When transitioning to SUBMITTED, update application count and share range FIRST (before status update)
+            -- so findLatestSubmittedMembership doesn't return the current record.
+            -- Guard against current status to ensure counts are only incremented once.
+            when (newStatus == Domain.SUBMITTED && membership.status /= Domain.SUBMITTED) $ do
+              QStclMembership.updateApplicationAndShareCounts membership.id membership.numberOfShares
+              logInfo "Updated application and share counts for SUBMITTED membership"
+            QStclMembership.updateStatusAndPaymentStatus newStatus paymentStatusText membership.id
+            logInfo "Successfully updated membership"
     Nothing -> do
       logError $ "Membership not found for payment order ID: " <> show paymentOrderId <> ", membership ID: " <> show membershipId

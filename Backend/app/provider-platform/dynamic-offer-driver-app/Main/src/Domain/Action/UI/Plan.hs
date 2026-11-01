@@ -908,7 +908,7 @@ planSwitchGeneric serviceName planId (driverId, _, merchantOpCityId) = do
   let isSubscriptionEnabledAtCategoryLevel = fromMaybe False (subscriptionConfig <&> (.enableCityBasedFeeSwitch))
   QDPlan.updatePlanIdByDriverIdAndServiceName driverId planId serviceName (Just plan.vehicleCategory) plan.merchantOpCityId
   when (serviceName == YATRI_SUBSCRIPTION) $ do
-    driverManualDuesFees <- QDF.findAllByStatusAndDriverIdWithServiceName driverId [DF.PAYMENT_OVERDUE] Nothing serviceName
+    driverManualDuesFees <- QDF.findAllByStatusAndDriverIdWithServiceName Nothing driverId [DF.PAYMENT_OVERDUE] Nothing serviceName
     let currentDues = calculateDues driverManualDuesFees
     when plan.subscribedFlagToggleAllowed $ DI.updateSubscription (currentDues < plan.maxCreditLimit) driverId
   (from, to) <- getStartTimeAndEndTimeRange merchantOpCityId driverId Nothing
@@ -1328,7 +1328,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
   let allowDueAddition = subscriptionConfig.allowDueAddition
   let paymentServiceName = subscriptionConfig.paymentServiceName
-  driverManualDuesFees <- if allowDueAddition then QDF.findAllByStatusAndDriverIdWithServiceName driverId [DF.PAYMENT_OVERDUE] Nothing serviceName else return []
+  driverManualDuesFees <- if allowDueAddition then QDF.findAllByStatusAndDriverIdWithServiceName (Just merchantId) driverId [DF.PAYMENT_OVERDUE] Nothing serviceName else return []
   let currentDues = calculateDues driverManualDuesFees
   now <- getCurrentTime
   (driverRegisterationFee, invoice) <- getLatestMandateRegistrationFeeAndCheckIfEligible driverId serviceName currentDues now
@@ -1382,7 +1382,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
           SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([driverFee], []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple [] mbDeepLinkData splitEnabled Nothing
     calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
     checkIfInvoiceIsReusable invoice newDriverFees = do
-      allDriverFeeClubedToInvoice <- QINV.findById invoice.id
+      allDriverFeeClubedToInvoice <- QINV.findAllRowsByInvoiceId invoice.id
       let oldLinkedDriverFeeIds = allDriverFeeClubedToInvoice <&> (.driverFeeId)
       let newDriverFeeIds = newDriverFees <&> (.id)
       let intersectionOfDriverFeeIds = oldLinkedDriverFeeIds `intersect` newDriverFeeIds
