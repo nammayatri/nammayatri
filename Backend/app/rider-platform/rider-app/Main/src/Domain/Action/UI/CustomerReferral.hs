@@ -3,6 +3,7 @@ module Domain.Action.UI.CustomerReferral where
 import API.Types.UI.CustomerReferral
 import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Action.Internal.Payout as DPayout
+import qualified Domain.Action.UI.Payout as UIPayout
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as MerchantOpCity
 import qualified Domain.Types.Person as Person
@@ -85,7 +86,7 @@ getReferralVerifyVpa (mbPersonId, _mbMerchantId) vpa = do
 getReferralPayoutHistory :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Int -> Maybe Int -> Flow PayoutHistory
 getReferralPayoutHistory (mbPersonId, _mbMerchantId) mbLimit mbOffset = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   payoutOrders <- QPayoutOrder.findAllByCustomerIdWithLimitOffset mbLimit mbOffset personId.getId
   history <- forM payoutOrders $ \payoutOrder -> do
     mbRequestStatus <- findPayoutRequestStatus payoutOrder
@@ -95,17 +96,11 @@ getReferralPayoutHistory (mbPersonId, _mbMerchantId) mbLimit mbOffset = do
       then pure $ getPayoutOrderDetails payoutOrder mbRequestStatus
       else do
         void $
-          withTryCatch ("getReferralPayoutHistory:refreshPayoutStatus:" <> payoutOrder.orderId) $ do
-            payoutConfig <-
-              getOneConfig
-                (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing})
-                Nothing
-                >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" person.merchantOperatingCityId.getId)
-            let payoutStatusServiceReq = DP.PayoutStatusServiceReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
-                payoutOrderStatusCall = TPayout.payoutOrderStatus person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just personId.getId)
-            DP.payoutStatusService (cast person.merchantId) (cast personId) payoutStatusServiceReq payoutOrderStatusCall
+          withTryCatch ("getReferralPayoutHistory:refreshPayoutStatus:" <> payoutOrder.orderId) $
+            UIPayout.payoutStatusHandler Nothing payoutOrder
         refreshedOrder <- QPayoutOrder.findByOrderId payoutOrder.orderId <&> fromMaybe payoutOrder
-        pure $ getPayoutOrderDetails refreshedOrder mbRequestStatus
+        refreshedRequestStatus <- findPayoutRequestStatus refreshedOrder
+        pure $ getPayoutOrderDetails refreshedOrder refreshedRequestStatus
   pure $ PayoutHistory {..}
   where
     -- the payout request id is the order's first entity id; orders without a request get Nothing
