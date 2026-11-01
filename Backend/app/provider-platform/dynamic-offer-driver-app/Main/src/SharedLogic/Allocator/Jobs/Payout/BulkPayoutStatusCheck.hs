@@ -19,15 +19,13 @@ module SharedLogic.Allocator.Jobs.Payout.BulkPayoutStatusCheck (runBulkPayoutSta
 import qualified Domain.Action.UI.Payout as UIPayout
 import Kernel.Prelude
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Payout.Bulk.StatusCheck as Bulk
 import Lib.Scheduler
 import SharedLogic.Allocator
+import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (findKernelSweepRuleAnyState)
 import SharedLogic.Payout.Bulk.Driver (driverBulkHandle)
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
-import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDimensions (..))
 
 runBulkPayoutStatusCheck ::
   ( UIPayout.PayoutSettlementFlow m r,
@@ -38,12 +36,17 @@ runBulkPayoutStatusCheck ::
 runBulkPayoutStatusCheck Job {id, jobInfo} =
   withLogTag ("JobId-" <> id.getId) $ do
     let cityId = jobInfo.jobData.merchantOperatingCityId.getId
-    -- Idle wait and batch limit come from the city's wallet payout config (the only bulk category).
-    -- A missing or bad config must not stop the job, so it falls back to 5 minutes and 50 batches.
-    mbConfig <-
-      withTryCatch "BulkPayoutStatusCheck:scheduledPayoutConfig" $
-        getOneConfig (ScheduledPayoutConfigDimensions {merchantOperatingCityId = cityId, isEnabled = Nothing, payoutCategory = Just DPayment.DRIVER_WALLET_TRANSACTION}) Nothing
-    let mbScheduledConfig = either (const Nothing) identity mbConfig
-        idleInterval = fromIntegral (60 * max 1 (fromMaybe 5 (mbScheduledConfig >>= (.bulkStatusCheckIntervalMinutes))))
-        batchLimit = max 1 (min 500 (fromMaybe 50 (mbScheduledConfig >>= (.bulkStatusCheckBatchLimit))))
+    -- Idle wait and batch limit come from the kernel sweep rule
+    -- (finance_scheduled_transfer_rule, resolved via the (Liability, DRIVER) class
+    -- config's autoTransferOut; seeded by migration 0016). A missing rule or a bad
+    -- read must not stop the job, so it falls back to the hard defaults: 5 minutes
+    -- and 50 batches.
+    mbRuleE <-
+      withTryCatch "BulkPayoutStatusCheck:kernelSweepRule" $
+        -- pacing is operational: a sweep-disabled city keeps its tuned cadence for
+        -- batches already in flight
+        findKernelSweepRuleAnyState jobInfo.jobData.merchantId jobInfo.jobData.merchantOperatingCityId
+    let mbRule = either (const Nothing) identity mbRuleE
+        idleInterval = fromIntegral (60 * max 1 (fromMaybe 5 (mbRule >>= (.bulkStatusCheckIntervalMinutes))))
+        batchLimit = max 1 (min 500 (fromMaybe 50 (mbRule >>= (.bulkStatusCheckBatchLimit))))
     Bulk.runCityStatusCheckJob driverBulkHandle cityId idleInterval batchLimit

@@ -56,29 +56,37 @@ import Lib.Finance
   ( Account,
     AccountRole (OwnerLiability, PlatformAsset),
     FinanceCtx (..),
+    FinanceError (TransferError),
     InvoiceConfig (..),
     InvoiceLineItem (..),
     ItemType (..),
     LedgerEntryMetadata (..),
     LineItemDescription (..),
+    ResolvedAccountConfig,
+    TransferErrorCode (TRANSFER_IN_DISABLED),
     getEntriesByReference,
     invoice,
     markEntriesAsClaimed,
     transfer,
   )
+import Lib.Finance.Account.Interface (AccountInput (..))
+import qualified Lib.Finance.Account.Service as FAccountService
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
+import qualified Lib.Finance.Domain.Types.Transfer as DTransfer
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
+import qualified Lib.Finance.Storage.Queries.TransferExtra as QTransferExtra
+import qualified Lib.Finance.Transfer.Inbound as Inbound
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPayoutRequestExtra
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid (counterpartyFleetOwner)
+import qualified SharedLogic.Finance.Rails as Rails
 import SharedLogic.Finance.Wallet
 import SharedLogic.Finance.WalletPayout (WalletPayoutParams (..), computePayoutFee, ensureInstantPayoutAllowed, ensurePayoutsEnabled, instantPayoutAllowedFor, loadPayoutContext)
-import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Payout.Bulk.Driver (runInstantPayout)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -141,15 +149,18 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
         case mbAssocFleetOwnerId of
           Just fleetOwnerId | walletView == DTConf.FLEET_ACCOUNT -> (counterpartyFleetOwner, fleetOwnerId, Just driverId.getId)
           _ -> ownAccount
-  let canWithdraw = instantPayoutAllowedFor transporterConfig.driverWalletConfig person.role
+  canWithdraw <- instantPayoutAllowedFor transporterConfig.merchantId mocId person.role
+  -- Policy of the account being VIEWED (fleet owner's when FLEET_ACCOUNT), from the kernel.
+  classCfg <- walletClassConfig transporterConfig.merchantId.getId mocId.getId counterparty
   now <- getCurrentTime
   if isJust mbAssocFleetOwnerId && walletView == DTConf.HIDDEN
-    then pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig canWithdraw transporterConfig.driverWalletConfig 0}
-    else walletTransactionsFor canWithdraw counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy
+    then pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig canWithdraw classCfg transporterConfig.driverWalletConfig 0}
+    else walletTransactionsFor canWithdraw classCfg counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy
 
 -- | The wallet read itself, once it has been decided whose account to read.
 walletTransactionsFor ::
   Bool -> -- whether the app may offer this person an instant payout
+  ResolvedAccountConfig -> -- kernel policy for the viewed account's class
   FAccount.CounterpartyType ->
   Text ->
   Kernel.Prelude.Maybe Text ->
@@ -159,16 +170,14 @@ walletTransactionsFor ::
   Kernel.Prelude.Maybe Data.Time.UTCTime ->
   Kernel.Prelude.Maybe DriverWallet.AggregationLevel ->
   Environment.Flow DriverWallet.WalletSummaryResponse
-walletTransactionsFor canWithdraw counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy = do
+walletTransactionsFor canWithdraw classCfg counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy = do
   let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
       fromDate = fromMaybe (Data.Time.UTCTime (Data.Time.utctDay now) 0) mbFromDate
       toDate = fromMaybe now mbToDate
       aggBy = fromMaybe DriverWallet.Day mbAggBy
-      cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
-      cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
   (mbWalletAcc, mbControlAcc) <- getWalletAndControlAccountsByOwner counterparty ownerId
   case (mbWalletAcc, mbControlAcc) of
-    (Nothing, Nothing) -> pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig canWithdraw transporterConfig.driverWalletConfig 0}
+    (Nothing, Nothing) -> pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig canWithdraw classCfg transporterConfig.driverWalletConfig 0}
     _ -> do
       currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ownerId
       let accountIds = catMaybes [(.id) <$> mbWalletAcc, (.id) <$> mbControlAcc]
@@ -179,10 +188,13 @@ walletTransactionsFor canWithdraw counterparty ownerId mbConcernedIndividualId t
           else fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate
       eligibility <- case mbWalletAcc of
         Nothing -> pure emptyWalletPayoutEligibility
-        Just walletAcc -> getPayoutEligibilityData counterparty ownerId walletAcc.id currentBalance cutoff now
+        Just walletAcc -> getPayoutEligibilityData ownerId walletAcc
       dbHoldBalance <- getWalletHoldBalanceByOwner counterparty ownerId
       offerHoldBalance <- getWalletOfferHoldTotal ownerId
       let holdBalance = dbHoldBalance + offerHoldBalance
+          -- Bucketing cutoff comes from the kernel's breakdown, never recomputed here;
+          -- no cutoff policy -> 'now' (everything counts as redeemable).
+          cutoff = fromMaybe now eligibility.cutoffAt
           (additions, deductions, netEarningsBalance) =
             aggregateWalletRows (isVatMerchant transporterConfig) accountIds cutoff rows
           -- PENDING ride holds are still inside the wallet balance; Redis offer holds are too.
@@ -196,7 +208,7 @@ walletTransactionsFor canWithdraw counterparty ownerId mbConcernedIndividualId t
             processingPayoutBalance = eligibility.processingPayoutBalance,
             holdBalance = Just holdBalance,
             netEarningsBalance,
-            payoutConfig = buildWalletPayoutConfig canWithdraw transporterConfig.driverWalletConfig redeemableBalance,
+            payoutConfig = buildWalletPayoutConfig canWithdraw classCfg transporterConfig.driverWalletConfig redeemableBalance,
             additions,
             deductions,
             agg
@@ -223,14 +235,15 @@ emptyWalletSummary =
       agg = []
     }
 
--- | @payoutEnabled@ drives the withdraw button, so it is off for roles 'postWalletPayout' would
---   refuse (@instantPayoutExcludedRoles@).
-buildWalletPayoutConfig :: Bool -> DTConf.DriverWalletConfig -> HighPrecMoney -> DriverWallet.WalletPayoutConfig
-buildWalletPayoutConfig canWithdraw walletConfig redeemableBalance =
+-- | @payoutEnabled@ drives the withdraw button, so it is off for roles 'postWalletPayout'
+--   would refuse (instantTransferOutEnabled on the role's class). Policy fields come from
+--   the kernel class config; only the fee (still domain-side) reads DriverWalletConfig.
+buildWalletPayoutConfig :: Bool -> ResolvedAccountConfig -> DTConf.DriverWalletConfig -> HighPrecMoney -> DriverWallet.WalletPayoutConfig
+buildWalletPayoutConfig canWithdraw classCfg walletConfig redeemableBalance =
   DriverWallet.WalletPayoutConfig
-    { payoutEnabled = walletConfig.enableWalletPayout && canWithdraw,
-      payoutCutOffDays = walletConfig.payoutCutOffDays,
-      minimumPayoutAmount = walletConfig.minimumWalletPayoutAmount,
+    { payoutEnabled = classCfg.transferOutEnabled && canWithdraw,
+      payoutCutOffDays = maybe 0 (.days) classCfg.redeemableCutoff,
+      minimumPayoutAmount = classCfg.minTransferOutAmount,
       payoutFee = computePayoutFee (mfilter (\cfg -> cfg.feeBearer == Just DTConf.DRIVER_BEARER) walletConfig.payoutFee) redeemableBalance
     }
 
@@ -505,8 +518,17 @@ getWalletTransactionHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate
     Just walletAcc -> do
       entries <- QLedgerEntry.findByAccountsWithOptions [walletAcc.id] [] mbFromDate mbToDate mbLimit mbOffset
       let topupOrderIds = [Id e.referenceId | e <- entries, e.referenceType == walletReferenceTopup]
+      -- Topup status comes from the kernel transfer row; wallet_transaction is a frozen
+      -- pre-migration read (no writes anymore). A row with neither exists only because
+      -- its credit ledger entry exists, i.e. the topup succeeded.
+      transfers <- QTransferExtra.findByDirectionRefTypeAndRefIds DTransfer.INBOUND walletReferenceTopup (map (.getId) topupOrderIds)
+      let transferStatusByOrderId =
+            Map.fromList [(t.referenceId, walletStatusFromTransfer t.status) | t <- transfers]
       walletTxns <- QWalletTransaction.findAllByPaymentOrderIds topupOrderIds
       let walletStatusByOrderId = Map.fromList [(wt.paymentOrderId.getId, wt.status) | wt <- walletTxns]
+          statusFor refId =
+            -- transfer row first, then the frozen wallet_transaction row, then SUCCESS
+            fromMaybe (fromMaybe DWT.SUCCESS (Map.lookup refId walletStatusByOrderId)) (Map.lookup refId transferStatusByOrderId)
       let mkItem e =
             let isTopup = e.referenceType == walletReferenceTopup
                 mbReason = e.metadataV2 >>= (.reason)
@@ -516,7 +538,7 @@ getWalletTransactionHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate
                       Just
                         DriverWallet.PaymentOrderInfo
                           { id = Id e.referenceId,
-                            walletStatus = fromMaybe DWT.SUCCESS (Map.lookup e.referenceId walletStatusByOrderId)
+                            walletStatus = statusFor e.referenceId
                           }
                     else Nothing
              in DriverWallet.WalletTransactionHistoryItem
@@ -534,6 +556,15 @@ getWalletTransactionHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate
     validateInput =
       unless ((isJust mbFromDate && isJust mbToDate) || (isJust mbLimit && isJust mbOffset)) $
         throwError $ InvalidRequest "Either fromDate+toDate or limit+offset must be provided"
+    -- Presentation mapping only; the canonical lifecycle lives on the transfer row.
+    walletStatusFromTransfer = \case
+      DTransfer.CREATED -> DWT.INITIATED
+      DTransfer.SUBMITTED -> DWT.INITIATED
+      DTransfer.IN_FLIGHT -> DWT.PROCESSING
+      DTransfer.NEEDS_REVIEW -> DWT.PROCESSING
+      DTransfer.SUCCEEDED -> DWT.SUCCESS
+      DTransfer.FAILED -> DWT.FAILED
+      DTransfer.REVERSED -> DWT.REFUNDED
 
 --------------------------------------------------------------------------------
 -- getWalletPayoutHistory
@@ -623,8 +654,7 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
   let params =
         WalletPayoutParams
           { payoutType = PR.INSTANT,
-            minimumPayoutAmount = ctx.transporterConfig.driverWalletConfig.minimumWalletPayoutAmount,
-            enforceDailyLimit = True,
+            mbMinimumPayoutOverride = Nothing, -- the class config's minTransferOutAmount applies
             throwOnBelowMinimum = True
           }
   runInstantPayout ctx params
@@ -651,47 +681,75 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
         when driverInfo.blocked $ throwError (DriverAccountBlocked (mkBlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag driverInfo.blockedReason))
         when (r.amount <= 0) $ throwError $ InvalidRequest "Top-up amount must be greater than zero"
         Redis.whenWithLockRedisAndReturnValue (makeWalletTopupLockKey driverId.getId) 10 $ do
-          mbExisting <- QWalletTransaction.findByDriverIdAndStatus driverId DWT.INITIATED
-          let mbReuseOrderId = case mbExisting of
-                Just e | e.amount == r.amount -> Just e.paymentOrderId
-                _ -> Nothing
-          (createOrderResp, returnedOrderId) <- SPayment.createWalletTopupOrder (driverId, mId, mocId0) r.amount mbReuseOrderId
-          handleWalletTransaction driverId mId mocId0 r.amount mbExisting returnedOrderId
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId0.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId0.getId)
+          walletAccount <-
+            FAccountService.getOrCreateAccount
+              AccountInput
+                { accountType = FAccount.Liability,
+                  counterpartyType = Just FAccount.DRIVER,
+                  counterpartyId = Just driverId.getId,
+                  subLedger = Nothing,
+                  currency = transporterConfig.currency,
+                  merchantId = mId.getId,
+                  merchantOperatingCityId = mocId0.getId
+                }
+              >>= fromEitherM (\e -> InternalError ("Failed to resolve wallet account for topup: " <> show e))
+          -- The whole recharge process (reuse/supersede of open intents, order creation,
+          -- the transfer row, the SDK payload) is the kernel's; PSP-speak lives in the
+          -- rail module. The typed order response is tapped at source (the kernel keeps
+          -- payloads opaque), so no JSON re-decode.
+          respRef <- newIORef Nothing
+          (topupTransfer, _payload) <-
+            Inbound.initiateTransferIn
+              (Rails.mkJuspayPgInboundRail driverId mId mocId0 (liftIO . writeIORef respRef . Just))
+              Inbound.InboundSpec
+                { amount = r.amount,
+                  referenceType = walletReferenceTopup,
+                  accountId = walletAccount.id,
+                  metadata = DTransfer.emptyTransferMetadata
+                }
+              >>= either
+                ( \case
+                    -- config gate, not a server fault: tell the app, not the pager
+                    TransferError TRANSFER_IN_DISABLED _ -> throwError $ InvalidRequest "Wallet top-up is not enabled for this city"
+                    e -> throwError $ InternalError ("Failed to initiate topup transfer: " <> show e)
+                )
+                pure
+          orderResp <- readIORef respRef >>= fromMaybeM (InternalError "Topup order response missing after collect")
+          -- TRANSITIONAL dual-write for the staggered release: old pods still read
+          -- wallet_transaction (reuse query, webhook update, UI). Dropped together with
+          -- the table once the post-release backfill (migration 0017) has run.
+          mirrorWalletTransaction driverId mId mocId0 r.amount (Id topupTransfer.referenceId)
           pure $
             PlanSubscribeRes
-              { orderId = returnedOrderId,
-                orderResp = createOrderResp
+              { orderId = Id topupTransfer.referenceId,
+                orderResp
               }
         >>= \case
           Right res -> pure res
           Left _ -> throwError WalletTopupLockFailed
 
-    handleWalletTransaction driverId mId mocId0 amount mbExisting returnedOrderId =
+    -- TRANSITIONAL (see above): mirror of the pre-kernel intent bookkeeping.
+    mirrorWalletTransaction driverId mId mocId0 amount orderId = do
+      mbExisting <- QWalletTransaction.findByDriverIdAndStatus driverId DWT.INITIATED
       case mbExisting of
-        Just existing
-          | existing.paymentOrderId == returnedOrderId ->
-            pure ()
-        Just existing -> do
-          QWalletTransaction.updateStatus DWT.EXPIRED existing.paymentOrderId
-          insertWalletTransaction driverId mId mocId0 returnedOrderId amount
-        Nothing ->
-          insertWalletTransaction driverId mId mocId0 returnedOrderId amount
-
-    insertWalletTransaction driverId mId mocId0 paymentOrderId amount = do
-      walletTxnId <- generateGUID
-      now <- getCurrentTime
-      QWalletTransaction.create $
-        DWT.WalletTransaction
-          { id = Id walletTxnId,
-            driverId = driverId,
-            paymentOrderId = paymentOrderId,
-            amount = amount,
-            status = DWT.INITIATED,
-            merchantId = Just mId,
-            merchantOperatingCityId = Just mocId0,
-            createdAt = now,
-            updatedAt = now
-          }
+        Just existing | existing.paymentOrderId == orderId -> pure ()
+        _ -> do
+          whenJust mbExisting $ \existing -> QWalletTransaction.updateStatus DWT.EXPIRED existing.paymentOrderId
+          walletTxnId <- generateGUID
+          now <- getCurrentTime
+          QWalletTransaction.create $
+            DWT.WalletTransaction
+              { id = Id walletTxnId,
+                driverId = driverId,
+                paymentOrderId = orderId,
+                amount = amount,
+                status = DWT.INITIATED,
+                merchantId = Just mId,
+                merchantOperatingCityId = Just mocId0,
+                createdAt = now,
+                updatedAt = now
+              }
 
     makeWalletTopupLockKey :: Text -> Text
     makeWalletTopupLockKey dId = "wallet-topup-lock:" <> dId

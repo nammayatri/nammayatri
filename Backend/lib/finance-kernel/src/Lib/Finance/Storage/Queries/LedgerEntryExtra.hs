@@ -1,12 +1,15 @@
 module Lib.Finance.Storage.Queries.LedgerEntryExtra where
 
+import Data.List (nub)
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 import qualified Kernel.Types.Id
 import qualified Lib.Finance.Domain.Types.Account
 import qualified Lib.Finance.Domain.Types.LedgerEntry as Domain
 import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as Beam
+import qualified Lib.Finance.Storage.Queries.Account as QAccount
 import Lib.Finance.Storage.Queries.LedgerEntry ()
 import qualified Sequelize as Se
 
@@ -17,6 +20,33 @@ findByIds ::
 findByIds [] = pure []
 findByIds entryIds =
   findAllWithKV [Se.Is Beam.id $ Se.In (map Kernel.Types.Id.getId entryIds)]
+
+-- | Live ledger holds against an account: PENDING entries debiting it, EXCLUDING legs
+--   whose counterpart is a GOVERNMENT account. A pending tax accrual (e.g. TDS on a
+--   not-yet-collected cancellation fee) deducts from a pending INFLOW by construction
+--   — never from the existing balance — so counting it as a hold double-penalizes.
+--   Real holds (statutory, booking-deposit, prepaid) all point at platform-side
+--   accounts and sum unchanged.
+sumPendingByFromAccount ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  m HighPrecMoney
+sumPendingByFromAccount accountId = do
+  entries <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.fromAccountId $ Se.Eq (Kernel.Types.Id.getId accountId),
+            Se.Is Beam.status $ Se.Eq Domain.PENDING
+          ]
+      ]
+  let toAccountIds = nub (map (.toAccountId) entries)
+  govIds <- flip filterM toAccountIds $ \toAccId -> do
+    mbTo <- QAccount.findById toAccId
+    pure $ case mbTo >>= (.counterpartyType) of
+      Just Lib.Finance.Domain.Types.Account.GOVERNMENT_DIRECT -> True
+      Just Lib.Finance.Domain.Types.Account.GOVERNMENT_INDIRECT -> True
+      _ -> False
+  pure $ sum [e.amount | e <- entries, e.toAccountId `notElem` govIds]
 
 -- | Find ledger entries by reference type (IN list) and reference ID
 findByReferenceIn ::

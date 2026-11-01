@@ -1,0 +1,84 @@
+# Finance Kernel - Scheduled transfer rules
+# Namma-DSL YAML specification
+#
+# One row per recurring-sweep rule over an account CLASS (city + accountType +
+# counterpartyType + subLedger). Replaces the shape of the driver app's
+# ScheduledPayoutConfig but keyed on the class, not a domain payoutCategory.
+# WHO is swept stays domain-side: runScheduledSweep takes an injected enumeration.
+# Design: docs/backend/design/finance-kernel-unification-plan.md §5.3.
+
+imports:
+  UTCTime: Kernel.Prelude
+  Seconds: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  AccountType: Lib.Finance.Domain.Types.Account
+  CounterpartyType: Lib.Finance.Domain.Types.Account
+  RailKey: Lib.Finance.Domain.Types.Transfer
+
+ScheduledTransferRule:
+  tableName: finance_scheduled_transfer_rule
+  derives: "Generic,Show,ToJSON,FromJSON" # JSON: embedded in scheduler job payloads
+
+  types:
+    ScheduledTransferFrequency:
+      enum: "DAILY,WEEKLY,MONTHLY,HOURLY,EVERY_N_DAYS"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id ScheduledTransferRule
+    name: Text # referenced by finance_account_config.autoTransferOut
+    merchantId: Text
+    merchantOperatingCityId: Text
+    accountType: AccountType
+    counterpartyType: Maybe CounterpartyType
+    subLedger: Maybe Text
+    isEnabled: Bool
+    frequency: ScheduledTransferFrequency
+    timeOfDay: Text # "HH:MM"
+    dayOfWeek: Maybe Int
+    dayOfMonth: Maybe Int
+    intervalDays: Maybe Int
+    intervalHours: Maybe Int
+    timeDiffFromUtc: Seconds
+    minimumAmount: HighPrecMoney
+    batchSize: Int
+    maxRetries: Int
+    rescheduleBufferMinutes: Maybe Int
+    defaultRailKey: Maybe RailKey # the rail the sweep submits on
+    # --- bulk-rail pacing + submission dressing (Nothing = caller's legacy config) ---
+    bulkStatusCheckIntervalMinutes: Maybe Int
+    bulkStatusCheckBatchLimit: Maybe Int
+    orderType: Maybe Text
+    remark: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    minimumAmount: numeric(30,2)
+
+  default:
+    isEnabled: "true"
+    minimumAmount: "0"
+    batchSize: "50"
+    maxRetries: "3"
+
+  constraints:
+    id: PrimaryKey
+    name: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByName:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, name]
+
+    findAllByCity:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

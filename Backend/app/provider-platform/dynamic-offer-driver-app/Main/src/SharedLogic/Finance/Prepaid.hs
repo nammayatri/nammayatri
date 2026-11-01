@@ -1,5 +1,22 @@
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
+-- | Prepaid (RideCredit) ledger flows.
+--
+-- Posting discipline: every full-amount leg goes through FinanceM verbs ('postLeg'),
+-- with two deliberate exceptions that stay on direct Ledger.Service calls:
+--
+--   1. Vehicle-category-SCOPED prepaid legs: the account carries a subLedger
+--      ('prepaidSubLedger'), which the PrepaidOwner role cannot express (roleToInput
+--      hardcodes subLedger = Nothing). Pooled legs use FinanceM; scoped legs stay direct
+--      until the kernel grows a sub-ledger-aware role.
+--   2. 'settlePrepaidHoldByReference': settles a PENDING hold at a DIFFERENT amount than
+--      it was created for (partial settle) — FinanceM has no partial-settle verb yet.
+--
+-- Every leg runs through the kernel's runFinance, not SharedLogic.Finance.PostActions:
+-- PostActions only acts on (Liability, DRIVER) accounts when ctx.enableWalletGatedTierCheck
+-- is set, and prepaid legs never touch such an account (mkPrepaidCtx passes False), so
+-- the dispatch would be a no-op. Importing it would also close an import cycle
+-- (PostActions -> VehicleServiceTier -> GetNearestDrivers -> Prepaid).
 module SharedLogic.Finance.Prepaid
   ( counterpartyDriver,
     counterpartyFleetOwner,
@@ -59,16 +76,17 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (HasRequestId, addUTCTime, diffUTCTime, fork, getCurrentTime, secondsToNominalDiffTime, withTryCatch)
 import Kernel.Utils.Logging (logError, logInfo, logWarning)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import Lib.Finance hiding (TransactionType (SubscriptionPurchase))
+import Lib.Finance hiding (TransactionType (SubscriptionPurchase), runFinance)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import qualified Lib.Finance.Domain.Types.LedgerEntry
+import qualified Lib.Finance.FinanceM as FinanceM
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Finance.EInvoice
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
-import SharedLogic.Finance.WalletAccount (computeTdsRateReason)
+import SharedLogic.Finance.WalletAccount (buildDriverChargeCtx, computeTdsRateReason)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Plan as QPlan
@@ -446,6 +464,31 @@ getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId = do
           }
   getOrCreateAccount input
 
+-- | Minimal FinanceCtx for prepaid FinanceM postings. Owner-attributed legs (credit /
+--   debit against the prepaid account) use this directly; platform-internal legs (GST,
+--   liability, revenue, TDS) strip attribution via 'withoutAttribution', matching the
+--   per-leg concernedIndividualId the direct path has always written.
+mkPrepaidCtx :: CounterpartyType -> Text -> Currency -> Text -> Text -> Text -> FinanceCtx
+mkPrepaidCtx counterpartyType ownerId currency merchantId merchantOperatingCityId referenceId =
+  buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId currency referenceId False
+
+withoutAttribution :: FinanceCtx -> FinanceCtx
+withoutAttribution ctx = (ctx :: FinanceCtx) {concernedIndividualId = Nothing}
+
+-- | Post one leg through FinanceM, preserving this module's historical semantics: a
+--   failed leg is logged and skipped (Nothing), never aborting the surrounding flow.
+postLeg ::
+  (MonadFlow m) =>
+  Text ->
+  m (Either FinanceError (Maybe (Id LedgerEntry), [Id LedgerEntry])) ->
+  m (Maybe (Id LedgerEntry))
+postLeg legName run =
+  run >>= \case
+    Left err -> do
+      logError $ "Prepaid ledger leg " <> legName <> " failed: " <> show err
+      pure Nothing
+    Right (mbId, _) -> pure mbId
+
 createPrepaidHold ::
   (BeamFlow m r, Finance.HasActorInfo m r) =>
   CounterpartyType ->
@@ -466,29 +509,65 @@ createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOp
       mbExistingHold <- findPendingPrepaidHoldByReference ownerAccount.id prepaidRideDebitReferenceType referenceId
       case mbExistingHold of
         Just _ -> pure $ Right ()
-        Nothing -> do
-          let entryInput =
-                LedgerEntryInput
-                  { fromAccountId = ownerAccount.id,
-                    toAccountId = sellerRideCredit.id,
-                    concernedIndividualId = if counterpartyType == counterpartyDriver then Just ownerId else Nothing,
-                    amount = amount,
-                    currency = currency,
-                    entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
-                    status = PENDING,
-                    referenceType = prepaidRideDebitReferenceType,
-                    referenceId = referenceId,
-                    entityReferenceId = Nothing,
-                    entityReferenceType = Nothing,
-                    metadata = metadata,
-                    merchantId = merchantId,
-                    merchantOperatingCityId = merchantOperatingCityId,
-                    settlementStatus = Nothing
-                  }
-          entryRes <- createEntry entryInput
-          case entryRes of
-            Left err -> pure $ Left err
-            Right _ -> pure $ Right ()
+        Nothing -> case prepaidSubLedger mbVehicleCategory of
+          Nothing
+            | amount > 0 -> do
+              let ctxOwner = mkPrepaidCtx counterpartyType ownerId currency merchantId merchantOperatingCityId referenceId
+              res <-
+                FinanceM.runFinance ctxOwner $
+                  transferPendingWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Revenue metadata PrepaidOwner SellerRideCredit amount prepaidRideDebitReferenceType
+              pure $ fmap (const ()) res
+            | otherwise -> do
+              -- ZERO-amount hold must still be written (FinanceM's pending verb skips
+              -- amount <= 0): a fully-discounted / zero-estimate booking relies on this
+              -- PENDING anchor so settlePrepaidHoldByReference can debit the FINAL fare
+              -- at ride end — without it the ride is never debited. Same literal as the
+              -- scoped branch below, just on the pooled accounts.
+              res <-
+                createEntry
+                  LedgerEntryInput
+                    { fromAccountId = ownerAccount.id,
+                      toAccountId = sellerRideCredit.id,
+                      concernedIndividualId = if counterpartyType == counterpartyDriver then Just ownerId else Nothing,
+                      amount = amount,
+                      currency = currency,
+                      entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
+                      status = PENDING,
+                      referenceType = prepaidRideDebitReferenceType,
+                      referenceId = referenceId,
+                      entityReferenceId = Nothing,
+                      entityReferenceType = Nothing,
+                      metadata = metadata,
+                      merchantId = merchantId,
+                      merchantOperatingCityId = merchantOperatingCityId,
+                      settlementStatus = Nothing
+                    }
+              pure $ fmap (const ()) res
+          Just _ -> do
+            -- Scoped prepaid account carries a subLedger PrepaidOwner can't express; see
+            -- the module header.
+            let entryInput =
+                  LedgerEntryInput
+                    { fromAccountId = ownerAccount.id,
+                      toAccountId = sellerRideCredit.id,
+                      concernedIndividualId = if counterpartyType == counterpartyDriver then Just ownerId else Nothing,
+                      amount = amount,
+                      currency = currency,
+                      entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
+                      status = PENDING,
+                      referenceType = prepaidRideDebitReferenceType,
+                      referenceId = referenceId,
+                      entityReferenceId = Nothing,
+                      entityReferenceType = Nothing,
+                      metadata = metadata,
+                      merchantId = merchantId,
+                      merchantOperatingCityId = merchantOperatingCityId,
+                      settlementStatus = Nothing
+                    }
+            entryRes <- createEntry entryInput
+            case entryRes of
+              Left err -> pure $ Left err
+              Right _ -> pure $ Right ()
     (Left err, _) -> pure $ Left err
     (_, Left err) -> pure $ Left err
 
@@ -565,6 +644,7 @@ creditPrepaidBalance ::
   ( BeamFlow m r,
     EncFlow m r,
     Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
     Metrics.CoreMetrics m,
     HasRequestId r,
     Finance.HasActorInfo m r
@@ -629,124 +709,67 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     && entry.status == SETTLED
               )
               existingTdsEntries
-      -- Create GST entry
+          ctxOwner = mkPrepaidCtx counterpartyType ownerId currency merchantId merchantOperatingCityId referenceId
+          ctxPlain = withoutAttribution ctxOwner
+      -- Create GST entry (platform-internal: no owner attribution)
       gstEntryId <-
-        if paidAmount > 0 && gstAmount' > 0
-          then do
-            if purchaseEntryExists sellerAsset.id governmentLiability.id gstAmount'
-              then pure Nothing
-              else do
-                let gstEntry =
-                      LedgerEntryInput
-                        { fromAccountId = sellerAsset.id,
-                          toAccountId = governmentLiability.id,
-                          concernedIndividualId = Nothing,
-                          amount = gstAmount',
-                          currency = currency,
-                          entryType = LiabilityCreated,
-                          status = SETTLED,
-                          referenceType = subscriptionPurchaseReferenceType,
-                          referenceId = referenceId,
-                          entityReferenceId = Nothing,
-                          entityReferenceType = Nothing,
-                          metadata = Nothing,
-                          merchantId = merchantId,
-                          merchantOperatingCityId = merchantOperatingCityId,
-                          settlementStatus = Nothing
-                        }
-                result <- createEntryWithBalanceUpdate gstEntry
-                pure $ either (const Nothing) (Just . (.id)) result
+        if paidAmount > 0 && gstAmount' > 0 && not (purchaseEntryExists sellerAsset.id governmentLiability.id gstAmount')
+          then
+            postLeg "subscriptionPurchaseGst" $
+              FinanceM.runFinance ctxPlain $
+                transferWithEntryType LiabilityCreated Nothing SellerAsset GovtIndirect gstAmount' subscriptionPurchaseReferenceType Nothing
           else pure Nothing
       -- Create liability entry
       liabilityEntryId <-
-        if paidAmount > 0
-          then do
-            if netAmount > 0
-              then do
-                if purchaseEntryExists sellerAsset.id sellerLiability.id netAmount
-                  then pure Nothing
-                  else do
-                    let liabilityEntry =
-                          LedgerEntryInput
-                            { fromAccountId = sellerAsset.id,
-                              toAccountId = sellerLiability.id,
-                              concernedIndividualId = Nothing,
-                              amount = netAmount,
-                              currency = currency,
-                              entryType = LiabilityCreated,
-                              status = SETTLED,
-                              referenceType = subscriptionPurchaseReferenceType,
-                              referenceId = referenceId,
-                              entityReferenceId = Nothing,
-                              entityReferenceType = Nothing,
-                              metadata = Nothing,
-                              merchantId = merchantId,
-                              merchantOperatingCityId = merchantOperatingCityId,
-                              settlementStatus = Nothing
-                            }
-                    result <- createEntryWithBalanceUpdate liabilityEntry
-                    pure $ either (const Nothing) (Just . (.id)) result
-              else pure Nothing
+        if paidAmount > 0 && netAmount > 0 && not (purchaseEntryExists sellerAsset.id sellerLiability.id netAmount)
+          then
+            postLeg "subscriptionPurchaseLiability" $
+              FinanceM.runFinance ctxPlain $
+                transferWithEntryType LiabilityCreated Nothing SellerAsset SellerLiability netAmount subscriptionPurchaseReferenceType Nothing
           else pure Nothing
       -- Create TDS reimbursement entry
       tdsEntryId <-
         case mbTdsRate of
           Just rate | rate > 0 && netAmount > 0 -> do
             let tdsAmount = netAmount * realToFrac rate
-            if tdsAmount > 0
+            if tdsAmount > 0 && not (tdsEntryExists govtDirectAsset.id govtDirectExpense.id tdsAmount)
               then
-                if tdsEntryExists govtDirectAsset.id govtDirectExpense.id tdsAmount
-                  then pure Nothing
-                  else do
-                    let tdsEntry =
-                          LedgerEntryInput
-                            { fromAccountId = govtDirectAsset.id,
-                              toAccountId = govtDirectExpense.id,
-                              concernedIndividualId = Nothing,
-                              amount = tdsAmount,
-                              currency = currency,
-                              entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
-                              status = SETTLED,
-                              referenceType = tdsReimbursementReferenceType,
-                              referenceId = referenceId,
-                              entityReferenceId = Nothing,
-                              entityReferenceType = Nothing,
-                              metadata = Nothing,
-                              merchantId = merchantId,
-                              merchantOperatingCityId = merchantOperatingCityId,
-                              settlementStatus = Nothing
-                            }
-                    result <- createEntryWithBalanceUpdate tdsEntry
-                    pure $ either (const Nothing) (Just . (.id)) result
+                postLeg "tdsReimbursement" $
+                  FinanceM.runFinance ctxPlain $
+                    transfer GovtDirectAsset GovtDirectExpense tdsAmount tdsReimbursementReferenceType Nothing
               else pure Nothing
           _ -> pure Nothing
-      -- Create credit entry
+      -- Create credit entry (owner-attributed)
       _ <-
-        if creditAmount > 0
-          then do
-            if creditEntryExists
-              then pure Nothing
-              else do
-                let creditEntry =
-                      LedgerEntryInput
-                        { fromAccountId = sellerRideCredit.id,
-                          toAccountId = ownerAccount.id,
-                          concernedIndividualId = if counterpartyType == counterpartyDriver then Just ownerId else Nothing,
-                          amount = creditAmount,
-                          currency = currency,
-                          entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
-                          status = SETTLED,
-                          referenceType = subscriptionCreditReferenceType,
-                          referenceId = referenceId,
-                          entityReferenceId = Nothing,
-                          entityReferenceType = Nothing,
-                          metadata = metadata,
-                          merchantId = merchantId,
-                          merchantOperatingCityId = merchantOperatingCityId,
-                          settlementStatus = Nothing
-                        }
-                result <- createEntryWithBalanceUpdate creditEntry
-                pure $ either (const Nothing) (Just . (.id)) result
+        if creditAmount > 0 && not creditEntryExists
+          then case prepaidSubLedger mbVehicleCategory of
+            Nothing ->
+              postLeg "subscriptionCredit" $
+                FinanceM.runFinance ctxOwner $
+                  transfer SellerRideCredit PrepaidOwner creditAmount subscriptionCreditReferenceType metadata
+            Just _ -> do
+              -- Scoped prepaid account carries a subLedger PrepaidOwner can't express;
+              -- see the module header.
+              let creditEntry =
+                    LedgerEntryInput
+                      { fromAccountId = sellerRideCredit.id,
+                        toAccountId = ownerAccount.id,
+                        concernedIndividualId = if counterpartyType == counterpartyDriver then Just ownerId else Nothing,
+                        amount = creditAmount,
+                        currency = currency,
+                        entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
+                        status = SETTLED,
+                        referenceType = subscriptionCreditReferenceType,
+                        referenceId = referenceId,
+                        entityReferenceId = Nothing,
+                        entityReferenceType = Nothing,
+                        metadata = metadata,
+                        merchantId = merchantId,
+                        merchantOperatingCityId = merchantOperatingCityId,
+                        settlementStatus = Nothing
+                      }
+              result <- createEntryWithBalanceUpdate creditEntry
+              pure $ either (const Nothing) (Just . (.id)) result
           else pure Nothing
       -- Collect all entry IDs
       let entryIds = catMaybes [gstEntryId, liabilityEntryId, tdsEntryId]
@@ -871,32 +894,17 @@ debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency me
   mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
   mbSellerRevenue <- getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId
   case (mbOwnerAccount, mbSellerLiability, mbSellerRevenue) of
-    (Right ownerAccount, Right sellerLiability, Right sellerRevenue) -> do
+    (Right ownerAccount, Right _sellerLiability, Right _sellerRevenue) -> do
       holdRes <- settlePrepaidHoldByReference counterpartyType ownerId referenceId finalFare mbVehicleCategory mbMetadata
       case holdRes of
         Left err -> pure $ Left err
         Right _ -> do
-          when (revenueAmount > 0) $ do
-            let revenueEntry =
-                  LedgerEntryInput
-                    { fromAccountId = sellerLiability.id,
-                      toAccountId = sellerRevenue.id,
-                      concernedIndividualId = Nothing,
-                      amount = revenueAmount,
-                      currency = currency,
-                      entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
-                      status = SETTLED,
-                      referenceType = subscriptionRideReferenceType,
-                      referenceId = referenceId,
-                      entityReferenceId = Nothing,
-                      entityReferenceType = Nothing,
-                      metadata = Nothing,
-                      merchantId = merchantId,
-                      merchantOperatingCityId = merchantOperatingCityId,
-                      settlementStatus = Nothing
-                    }
-            _ <- createEntryWithBalanceUpdate revenueEntry
-            pure ()
+          let ctxPlain = withoutAttribution $ mkPrepaidCtx counterpartyType ownerId currency merchantId merchantOperatingCityId referenceId
+          when (revenueAmount > 0) $
+            void $
+              postLeg "rideRevenueRecognition" $
+                FinanceM.runFinance ctxPlain $
+                  transferWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Revenue Nothing SellerLiability SellerRevenue revenueAmount subscriptionRideReferenceType Nothing
           mbBal <- getBalance ownerAccount.id
           pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
     (Left err, _, _) -> pure $ Left err
@@ -922,7 +930,7 @@ debitPrepaidBalanceDirect counterpartyType ownerId debitAmount revenueAmount cur
   mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
   mbSellerRevenue <- getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId
   case (mbOwnerAccount, mbSellerRideCredit, mbSellerLiability, mbSellerRevenue) of
-    (Right ownerAccount, Right sellerRideCredit, Right sellerLiability, Right sellerRevenue) -> do
+    (Right ownerAccount, Right sellerRideCredit, Right _sellerLiability, Right _sellerRevenue) -> do
       existing <- getEntriesByReference prepaidCancellationDebitReferenceType referenceId
       let alreadyDebited = any (\e -> e.fromAccountId == ownerAccount.id) existing
       if alreadyDebited
@@ -930,46 +938,41 @@ debitPrepaidBalanceDirect counterpartyType ownerId debitAmount revenueAmount cur
           mbBal <- getBalance ownerAccount.id
           pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
         else do
-          when (debitAmount > 0) $ do
-            let debitEntry =
-                  LedgerEntryInput
-                    { fromAccountId = ownerAccount.id,
-                      toAccountId = sellerRideCredit.id,
-                      concernedIndividualId = if counterpartyType == counterpartyDriver then Just ownerId else Nothing,
-                      amount = debitAmount,
-                      currency = currency,
-                      entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
-                      status = SETTLED,
-                      referenceType = prepaidCancellationDebitReferenceType,
-                      referenceId = referenceId,
-                      entityReferenceId = Nothing,
-                      entityReferenceType = Nothing,
-                      metadata = mbMetadata,
-                      merchantId = merchantId,
-                      merchantOperatingCityId = merchantOperatingCityId,
-                      settlementStatus = Nothing
-                    }
-            void $ createEntryWithBalanceUpdate debitEntry
-          when (revenueAmount > 0) $ do
-            let revenueEntry =
-                  LedgerEntryInput
-                    { fromAccountId = sellerLiability.id,
-                      toAccountId = sellerRevenue.id,
-                      concernedIndividualId = Nothing,
-                      amount = revenueAmount,
-                      currency = currency,
-                      entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
-                      status = SETTLED,
-                      referenceType = subscriptionRideReferenceType,
-                      referenceId = referenceId,
-                      entityReferenceId = Nothing,
-                      entityReferenceType = Nothing,
-                      metadata = Nothing,
-                      merchantId = merchantId,
-                      merchantOperatingCityId = merchantOperatingCityId,
-                      settlementStatus = Nothing
-                    }
-            void $ createEntryWithBalanceUpdate revenueEntry
+          let ctxOwner = mkPrepaidCtx counterpartyType ownerId currency merchantId merchantOperatingCityId referenceId
+          when (debitAmount > 0) $
+            case prepaidSubLedger mbVehicleCategory of
+              Nothing ->
+                void $
+                  postLeg "cancellationDebit" $
+                    FinanceM.runFinance ctxOwner $
+                      transferWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Revenue Nothing PrepaidOwner SellerRideCredit debitAmount prepaidCancellationDebitReferenceType mbMetadata
+              Just _ -> do
+                -- Scoped prepaid account carries a subLedger PrepaidOwner can't express;
+                -- see the module header.
+                let debitEntry =
+                      LedgerEntryInput
+                        { fromAccountId = ownerAccount.id,
+                          toAccountId = sellerRideCredit.id,
+                          concernedIndividualId = if counterpartyType == counterpartyDriver then Just ownerId else Nothing,
+                          amount = debitAmount,
+                          currency = currency,
+                          entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
+                          status = SETTLED,
+                          referenceType = prepaidCancellationDebitReferenceType,
+                          referenceId = referenceId,
+                          entityReferenceId = Nothing,
+                          entityReferenceType = Nothing,
+                          metadata = mbMetadata,
+                          merchantId = merchantId,
+                          merchantOperatingCityId = merchantOperatingCityId,
+                          settlementStatus = Nothing
+                        }
+                void $ createEntryWithBalanceUpdate debitEntry
+          when (revenueAmount > 0) $
+            void $
+              postLeg "rideRevenueRecognition" $
+                FinanceM.runFinance (withoutAttribution ctxOwner) $
+                  transferWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Revenue Nothing SellerLiability SellerRevenue revenueAmount subscriptionRideReferenceType Nothing
           mbBal <- getBalance ownerAccount.id
           pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
     (Left err, _, _, _) -> pure $ Left err
@@ -1190,51 +1193,44 @@ handleSubscriptionExpiry stalePurchase = do
       mbSellerRideCredit <- getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId
 
       case (mbOwnerAccount, mbSellerLiability, mbSellerRevenue, mbSellerRideCredit) of
-        (Right ownerAccount, Right sellerLiability, Right sellerRevenue, Right sellerRideCredit) -> do
+        (Right ownerAccount, Right _sellerLiability, Right _sellerRevenue, Right sellerRideCredit) -> do
+          let ctxOwner = mkPrepaidCtx counterpartyType ownerId currency merchantId merchantOperatingCityId referenceId
           -- 1. Revenue Recognition: Seller Liability -> Seller Revenue
-          when (revenueAmount > 0) $ do
-            let revenueEntry =
-                  LedgerEntryInput
-                    { fromAccountId = sellerLiability.id,
-                      toAccountId = sellerRevenue.id,
-                      concernedIndividualId = Nothing,
-                      amount = revenueAmount,
-                      currency = currency,
-                      entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
-                      status = SETTLED,
-                      referenceType = expiryRevenueRecognitionReferenceType,
-                      referenceId = referenceId,
-                      entityReferenceId = Nothing,
-                      entityReferenceType = Nothing,
-                      metadata = Nothing,
-                      merchantId = merchantId,
-                      merchantOperatingCityId = merchantOperatingCityId,
-                      settlementStatus = Nothing
-                    }
-            _ <- createEntryWithBalanceUpdate revenueEntry
-            pure ()
+          when (revenueAmount > 0) $
+            void $
+              postLeg "expiryRevenueRecognition" $
+                FinanceM.runFinance (withoutAttribution ctxOwner) $
+                  transferWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Revenue Nothing SellerLiability SellerRevenue revenueAmount expiryRevenueRecognitionReferenceType Nothing
 
           -- 2. Credit Transfer: Owner RideCredit -> Seller RideCredit
-          let creditTransferEntry =
-                LedgerEntryInput
-                  { fromAccountId = ownerAccount.id,
-                    toAccountId = sellerRideCredit.id,
-                    concernedIndividualId = if counterpartyType == counterpartyDriver then Just ownerId else Nothing,
-                    amount = expiredCredits,
-                    currency = currency,
-                    entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
-                    status = SETTLED,
-                    referenceType = expiryCreditTransferReferenceType,
-                    referenceId = referenceId,
-                    entityReferenceId = Nothing,
-                    entityReferenceType = Nothing,
-                    metadata = Nothing,
-                    merchantId = merchantId,
-                    merchantOperatingCityId = merchantOperatingCityId,
-                    settlementStatus = Nothing
-                  }
-          _ <- createEntryWithBalanceUpdate creditTransferEntry
-          pure ()
+          case prepaidSubLedger prepaidScope of
+            Nothing ->
+              void $
+                postLeg "expiryCreditTransfer" $
+                  FinanceM.runFinance ctxOwner $
+                    transfer PrepaidOwner SellerRideCredit expiredCredits expiryCreditTransferReferenceType Nothing
+            Just _ -> do
+              -- Scoped prepaid account carries a subLedger PrepaidOwner can't express;
+              -- see the module header.
+              let creditTransferEntry =
+                    LedgerEntryInput
+                      { fromAccountId = ownerAccount.id,
+                        toAccountId = sellerRideCredit.id,
+                        concernedIndividualId = if counterpartyType == counterpartyDriver then Just ownerId else Nothing,
+                        amount = expiredCredits,
+                        currency = currency,
+                        entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
+                        status = SETTLED,
+                        referenceType = expiryCreditTransferReferenceType,
+                        referenceId = referenceId,
+                        entityReferenceId = Nothing,
+                        entityReferenceType = Nothing,
+                        metadata = Nothing,
+                        merchantId = merchantId,
+                        merchantOperatingCityId = merchantOperatingCityId,
+                        settlementStatus = Nothing
+                      }
+              void $ createEntryWithBalanceUpdate creditTransferEntry
         _ -> do
           logInfo $ "Failed to get accounts for subscription expiry: " <> referenceId
           pure ()

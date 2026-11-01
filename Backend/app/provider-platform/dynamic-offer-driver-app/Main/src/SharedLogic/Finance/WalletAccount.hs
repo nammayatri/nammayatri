@@ -35,6 +35,7 @@ module SharedLogic.Finance.WalletAccount
     getWalletOfferHoldTotalExcluding,
     getPrepaidOfferHoldTotalExcluding,
     getWalletAvailableBalanceByOwner,
+    buildDriverChargeCtx,
   )
 where
 
@@ -230,3 +231,47 @@ getWalletAvailableBalanceByOwner counterpartyType ownerId = do
   mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
   pendingHold <- getWalletHoldBalanceByOwner counterpartyType ownerId
   pure $ (\balance -> balance - pendingHold) <$> mbBalance
+
+-- | Minimal FinanceCtx for posting a driver-side Stripe charge (payout / connect),
+--   where no booking/ride is in scope. Counterparty is the driver (or fleet owner),
+--   so OwnerLiability resolves to their wallet.
+buildDriverChargeCtx ::
+  CounterpartyType -> -- DRIVER or FLEET_OWNER
+  Text -> -- owner (driver / fleet owner) id
+  Text -> -- merchant id
+  Text -> -- merchant operating city id
+  Currency ->
+  Text -> -- reference id (e.g. payout order id / period key)
+  Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
+  FinanceCtx
+buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId currency referenceId walletGateEnabled =
+  FinanceCtx
+    { merchantId = merchantId,
+      merchantOpCityId = merchantOperatingCityId,
+      currency = currency,
+      isOnline = True,
+      counterpartyType = counterpartyType,
+      counterpartyId = ownerId,
+      concernedIndividualId = if counterpartyType == DRIVER then Just ownerId else Nothing,
+      referenceId = referenceId,
+      entityReferenceId = Nothing,
+      entityReferenceType = Nothing,
+      merchantName = Nothing,
+      merchantShortId = Nothing,
+      issuedByAddress = Nothing,
+      supplierName = Nothing,
+      supplierGSTIN = Nothing,
+      supplierVatNumber = Nothing,
+      supplierAddress = Nothing,
+      merchantGstin = Nothing,
+      merchantVatNumber = Nothing,
+      supplierId = Nothing,
+      panOfParty = Nothing,
+      panType = Nothing,
+      tdsRateReason = Nothing,
+      emitLedgerEntries = True,
+      fromLocationAddress = Nothing,
+      issuedToName = Nothing,
+      enableWalletGatedTierCheck = walletGateEnabled,
+      buyerCounterpartyId = Nothing
+    }

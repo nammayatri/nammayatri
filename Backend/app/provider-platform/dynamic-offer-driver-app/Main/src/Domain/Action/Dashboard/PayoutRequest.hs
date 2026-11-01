@@ -17,6 +17,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ScheduledPayoutConfig as DSPC
 import qualified Domain.Types.VehicleCategory as DV
@@ -33,7 +34,13 @@ import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import Lib.ConfigPilot.Interface.Types (ConfigDimensions (getConfig), getOneConfig)
+import qualified Lib.Finance.AccountConfig as FinanceAccountConfig
+import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
+import qualified Lib.Finance.Domain.Types.FinanceAccountConfig as DFAC
+import qualified Lib.Finance.Domain.Types.ScheduledTransferRule as STR
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.FinanceAccountConfig as QFAC
+import qualified Lib.Finance.Storage.Queries.ScheduledTransferRule as QSTR
 import Lib.Payment.API.Payout (VerifyVpaFlow (..))
 import qualified Lib.Payment.API.Payout.Types as PayoutTypes
 import qualified Lib.Payment.Domain.Action as Payout
@@ -203,6 +210,7 @@ upsertScheduledPayoutConfig merchantShortId opCity req = do
         retimeQueuedPayoutJob existing updated
       QSPC.updateByPrimaryKey updated
       clearScheduledPayoutConfigCache
+      mirrorKernelSweepRule merchant merchantOpCity updated
       logInfo $ "Updated ScheduledPayoutConfig for " <> show req.payoutCategory <> " in city " <> merchantOpCity.id.getId
     Nothing -> do
       now <- getCurrentTime
@@ -239,8 +247,92 @@ upsertScheduledPayoutConfig merchantShortId opCity req = do
         resumeScheduledBatchPayoutJob newConfig
       QSPC.create newConfig
       clearScheduledPayoutConfigCache
+      mirrorKernelSweepRule merchant merchantOpCity newConfig
       logInfo $ "Created ScheduledPayoutConfig for " <> show req.payoutCategory <> " in city " <> merchantOpCity.id.getId
   pure Success
+
+-- | The wallet sweep RUNTIME reads the kernel rule (finance_scheduled_transfer_rule);
+--   ScheduledPayoutConfig is the dashboard surface + carrier of bulk-only fields. Every
+--   dashboard edit must therefore land on the rule too, or it is inert. Wallet-only:
+--   other categories have no kernel rule.
+mirrorKernelSweepRule :: DM.Merchant -> DMOC.MerchantOperatingCity -> DSPC.ScheduledPayoutConfig -> Environment.Flow ()
+mirrorKernelSweepRule merchant merchantOpCity cfg =
+  when (cfg.payoutCategory == DPayment.DRIVER_WALLET_TRANSACTION) $ do
+    now <- getCurrentTime
+    let ruleName = "driver-wallet-sweep"
+        castFrequency = \case
+          DSPC.DAILY -> STR.DAILY
+          DSPC.WEEKLY -> STR.WEEKLY
+          DSPC.MONTHLY -> STR.MONTHLY
+          DSPC.HOURLY -> STR.HOURLY
+          DSPC.EVERY_N_DAYS -> STR.EVERY_N_DAYS
+        applyCfg rule =
+          rule
+            { STR.isEnabled = cfg.isEnabled,
+              STR.frequency = castFrequency cfg.frequency,
+              STR.timeOfDay = cfg.timeOfDay,
+              STR.dayOfWeek = cfg.dayOfWeek,
+              STR.dayOfMonth = cfg.dayOfMonth,
+              STR.intervalDays = cfg.intervalDays,
+              STR.intervalHours = cfg.intervalHours,
+              STR.timeDiffFromUtc = cfg.timeDiffFromUtc,
+              STR.minimumAmount = cfg.minimumPayoutAmount,
+              STR.batchSize = cfg.batchSize,
+              STR.maxRetries = cfg.maxRetriesPerDriver,
+              STR.rescheduleBufferMinutes = cfg.rescheduleBufferMinutes,
+              STR.bulkStatusCheckIntervalMinutes = cfg.bulkStatusCheckIntervalMinutes,
+              STR.bulkStatusCheckBatchLimit = cfg.bulkStatusCheckBatchLimit,
+              STR.orderType = Just cfg.orderType,
+              STR.remark = cfg.remark,
+              STR.updatedAt = now
+            }
+    QSTR.findByName merchantOpCity.id.getId ruleName >>= \case
+      Just rule -> QSTR.updateByPrimaryKey (applyCfg rule)
+      Nothing -> do
+        ruleId <- generateGUID
+        QSTR.create $
+          applyCfg
+            STR.ScheduledTransferRule
+              { STR.id = Id.Id ruleId,
+                STR.name = ruleName,
+                STR.merchantId = merchant.id.getId,
+                STR.merchantOperatingCityId = merchantOpCity.id.getId,
+                STR.accountType = FinanceAccount.Liability,
+                STR.counterpartyType = Just FinanceAccount.DRIVER,
+                STR.subLedger = Nothing,
+                STR.isEnabled = cfg.isEnabled,
+                STR.frequency = castFrequency cfg.frequency,
+                STR.timeOfDay = cfg.timeOfDay,
+                STR.dayOfWeek = cfg.dayOfWeek,
+                STR.dayOfMonth = cfg.dayOfMonth,
+                STR.intervalDays = cfg.intervalDays,
+                STR.intervalHours = cfg.intervalHours,
+                STR.timeDiffFromUtc = cfg.timeDiffFromUtc,
+                STR.minimumAmount = cfg.minimumPayoutAmount,
+                STR.batchSize = cfg.batchSize,
+                STR.maxRetries = cfg.maxRetriesPerDriver,
+                STR.rescheduleBufferMinutes = cfg.rescheduleBufferMinutes,
+                STR.defaultRailKey = Nothing,
+                STR.bulkStatusCheckIntervalMinutes = cfg.bulkStatusCheckIntervalMinutes,
+                STR.bulkStatusCheckBatchLimit = cfg.bulkStatusCheckBatchLimit,
+                STR.orderType = Just cfg.orderType,
+                STR.remark = cfg.remark,
+                STR.createdAt = now,
+                STR.updatedAt = now
+              }
+        -- Point the class config at the rule so the sweep job can resolve it. The
+        -- (Liability, DRIVER) row must exist (seed 0015); without it the sweep's
+        -- missing-rule gate keeps retrying and this error tells ops why.
+        rows <- QFAC.findAllByMerchantId merchant.id.getId
+        let mbClassRow =
+              listToMaybe
+                [ r | r <- rows, r.merchantOperatingCityId == merchantOpCity.id.getId, r.accountType == FinanceAccount.Liability, r.counterpartyType == Just FinanceAccount.DRIVER, isNothing r.subLedger
+                ]
+        case mbClassRow of
+          Nothing -> logError $ "mirrorKernelSweepRule: no (Liability, DRIVER) finance_account_config row for city " <> merchantOpCity.id.getId <> "; run seed 0015 — the sweep cannot resolve its rule until autoTransferOut is set"
+          Just classRow -> do
+            QFAC.updateByPrimaryKey classRow {DFAC.autoTransferOut = Just ruleName, DFAC.updatedAt = now}
+            FinanceAccountConfig.clearAccountConfigCache merchant.id.getId
 
 -- | Merge a dashboard request onto a stored config; absent fields keep the stored value.
 --   Shared by the commit and the VIEW_DIFF preview so both merge the same way.
