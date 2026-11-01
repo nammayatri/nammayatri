@@ -32,6 +32,11 @@ upsert cancellationReason = do
         [Se.Is BeamBCR.bookingId (Se.Eq $ getId cancellationReason.bookingId)]
     else createWithKV cancellationReason
 
+-- KV-aware, unlike countCancelledBookingsByBookingIds (replica): a reason written seconds ago is still seen.
+findAllByBookingIds :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Id Booking] -> m [BookingCancellationReason]
+findAllByBookingIds [] = pure []
+findAllByBookingIds bookingIds = findAllWithKV [Se.Is BeamBCR.bookingId $ Se.In (getId <$> bookingIds)]
+
 countCancelledBookingsByBookingIds :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Id Booking] -> CancellationSource -> m Int
 countCancelledBookingsByBookingIds bookingIds cancellationSource = do
   dbConf <- getReplicaBeamConfig
