@@ -98,9 +98,13 @@ selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle vehicleSe
     filterVehicleTier vehicleServiceTier = case mode of
       AutoSelectedVariants -> vehicle.variant `elem` vehicleServiceTier.autoSelectedVehicleVariant && isCohortEligible
       AllowedVariants -> vehicle.variant `elem` vehicleServiceTier.allowedVehicleVariant && isCohortEligible
-      SelectedServiceTiers -> vehicleServiceTier.serviceTierType `elem` vehicle.selectedServiceTiers
+      SelectedServiceTiers -> vehicleServiceTier.serviceTierType `elem` vehicle.selectedServiceTiers || isDefaultTier
       where
         isCohortEligible = isTierEligibleForDriver now driverTag tierConfigsMap vehicleServiceTier.serviceTierType
+        isDefaultTier =
+          vehicle.category /= Just VC.AMBULANCE
+            && vehicle.variant `elem` vehicleServiceTier.allowedVehicleVariant
+            && vehicle.variant `elem` vehicleServiceTier.defaultForVehicleVariant
 
     compareNumber :: Ord a => Maybe a -> Maybe a -> Bool
     compareNumber mbX mbY =
@@ -150,8 +154,8 @@ fetchVehicleTierForDriverWithUsageRestriction mode mbDriverInfo mbVehicle mbDriv
   vehicle <- maybe (QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)) pure mbVehicle
   driverStats <- maybe (QDriverStats.findById personId) (pure . Just) mbDriverStats
   cityServiceTiers <- maybe (CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing) pure mbCityServiceTiers
-  -- SelectedServiceTiers mode only re-filters tiers already in Vehicle.selectedServiceTiers and
-  -- never consults isTierEligibleForDriver (see filterVehicleTier above), so skip this fetch there
+  -- SelectedServiceTiers mode only re-filters tiers already in Vehicle.selectedServiceTiers (plus
+  -- default tiers) and never consults isTierEligibleForDriver (see filterVehicleTier above), so skip this fetch there
   -- entirely -- it would otherwise add an unconditional Person lookup to several automated,
   -- high-frequency recomputation call sites (rating changes, AC-score changes, etc.) that don't
   -- need it; the real dispatch-time hard gate is enforced independently regardless.
