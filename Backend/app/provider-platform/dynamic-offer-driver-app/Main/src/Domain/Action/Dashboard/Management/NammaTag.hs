@@ -255,6 +255,7 @@ $(YTH.generateGenericDefault ''DTANC.TagActionNotificationConfig)
 $(YTH.generateGenericDefault ''DFODVC.FleetOwnerDocumentVerificationConfig)
 $(YTH.generateGenericDefault ''DCC.CoinsConfig)
 $(YTH.generateGenericDefault ''DRFCfg.RideFeedbackConfig)
+$(YTH.generateGenericDefault ''DTTR.Translations)
 
 $(genToSchema ''DTP.PayoutConfig)
 $(genToSchema ''DTRN.RideRelatedNotificationConfig)
@@ -607,6 +608,21 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       logicData :: (LYT.Config DRFCfg.RideFeedbackConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       verified <- YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DRFCfg.RideFeedbackConfig)) req logicData
       pure (verified :: LYT.AppDynamicLogicResp) {LYT.errors = verified.errors <> map Text.unpack cityErrors}
+    LYT.DRIVER_CONFIG LYT.Overlay -> do
+      -- Overlay cannot use generateGenericDefault: its actions2 fields hold
+      -- FCMActions, which is recursive, so the TH's recursion will cause stk overflow.
+      mbRow <- Prelude.listToMaybe <$> SQOVL.findAllByMerchantOpCityId merchantOpCityId
+      let defaultVal = maybe (A.object []) (\row -> A.toJSON (LYT.Config row Nothing 1)) mbRow
+      logicData :: A.Value <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy A.Value) req logicData
+    LYT.DRIVER_CONFIG LYT.Translation -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "Translations config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTTR.Translations))
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DTTR.Translations) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DTTR.Translations)) req logicData
+    LYT.DRIVER_CONFIG LYT.MerchantServiceConfig -> do
+      logicData :: A.Value <- YudhishthiraFlow.createLogicData (A.object []) (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy A.Value) req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
   when resp.isRuleUpdated $ case req.domain of
