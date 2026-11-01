@@ -94,7 +94,8 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         updatedBy = Just actorInfo.actorType,
         updatedById = actorInfo.actorId,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        pgTxnId = report.pgTxnId
       }
 
 mapTxnType :: Ext.TxnType -> Dom.TxnType

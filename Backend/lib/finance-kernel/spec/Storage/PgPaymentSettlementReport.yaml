@@ -66,6 +66,7 @@ PgPaymentSettlementReport:
     rrn: Maybe Text                                # Bank Reference Number
     utr: Maybe Text                                # Unique Transaction Reference from bank
     bankId : Maybe Text                            # Bank ID
+    pgTxnId : Maybe Text
 
     # --- Transaction classification ---
     txnType: TxnType                               # ORDER | REFUND

@@ -62,3 +62,8 @@ ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD PRIMARY KEY 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN chargeback_date timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN pg_txn_id text ;

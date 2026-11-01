@@ -61,6 +61,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPayment
       Se.Set Beam.pgApprovalCode pgApprovalCode,
       Se.Set Beam.pgBaseFee pgBaseFee,
       Se.Set Beam.pgTax pgTax,
+      Se.Set Beam.pgTxnId pgTxnId,
       Se.Set Beam.rawData rawData,
       Se.Set Beam.referenceId referenceId,
       Se.Set Beam.referenceType referenceType,
