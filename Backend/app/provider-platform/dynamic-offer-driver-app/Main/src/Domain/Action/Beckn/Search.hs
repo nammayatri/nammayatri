@@ -369,6 +369,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   let spcllocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
       specialLocName = allFarePoliciesProduct.specialLocationName
       specialLocationSupportNumber = allFarePoliciesProduct.specialLocationSupportNumber
+      toLocation = withDropSpecialLocationArea spcllocationTag specialLocName <$> mbToLocation
   cityCurrency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   customerCancellationDue <-
     if transporterConfig.canAddCancellationFee && sReq.isMultimodalSearch == Just False
@@ -387,7 +388,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
             return 0
       else return 0
   let mbDriverInfo = driverIdForSearch
-  searchReq <- withTimeAPI "search" "buildSearchRequest" $ buildSearchRequest sReq bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId customerCancellationDue fromLocation mbToLocation mbDistance mbDuration mbStaticDuration spcllocationTag specialLocName allFarePoliciesProduct.area allFarePoliciesProduct.pickupArea allFarePoliciesProduct.dropArea mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
+  searchReq <- withTimeAPI "search" "buildSearchRequest" $ buildSearchRequest sReq bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId customerCancellationDue fromLocation toLocation mbDistance mbDuration mbStaticDuration spcllocationTag specialLocName allFarePoliciesProduct.area allFarePoliciesProduct.pickupArea allFarePoliciesProduct.dropArea mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   unless sReq.isShadowSearch $
     triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId'}
@@ -1370,6 +1371,16 @@ buildSearchReqLocation merchantId merchantOpCityId sessionToken address customer
         merchantOperatingCityId = Just merchantOpCityId,
         ..
       }
+
+dropAreaOverrideCategories :: [Text]
+dropAreaOverrideCategories = ["SureAirport", "SureMetro", "SureStation"]
+
+withDropSpecialLocationArea :: Maybe Text -> Maybe Text -> DLoc.Location -> DLoc.Location
+withDropSpecialLocationArea mbSpecialLocationTag mbSpecialLocationName location =
+  case (T.splitOn "_" <$> mbSpecialLocationTag, mbSpecialLocationName) of
+    (Just (_ : dropCategory : "PriorityDrop" : _), Just name)
+      | dropCategory `elem` dropAreaOverrideCategories -> location{address = location.address{area = Just name}}
+    _ -> location
 
 getAddressByGetPlaceName :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> LatLong -> m Address
 getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong = do
