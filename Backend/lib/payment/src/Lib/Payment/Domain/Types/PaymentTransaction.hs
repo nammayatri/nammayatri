@@ -65,6 +65,7 @@ data PaymentTransaction = PaymentTransaction
     epgTxnId :: Maybe Text,
     authorizationDateTime :: Maybe UTCTime,
     captureDateTime :: Maybe UTCTime,
+    rrn :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     merchantOperatingCityId :: Maybe (Id MerchantOperatingCity)
