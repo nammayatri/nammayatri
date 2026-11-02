@@ -334,7 +334,7 @@ postRewardsTriggerEval merchantShortId opCity personId = do
     throwError (PersonDoesNotExist personId.getId)
   now <- getCurrentTime
   fork "Trigger rewards eval" $
-    RewardsConsumer.evaluateRewardsIfEnabled (castId personId) merchantOpCity.id now Nothing
+    RewardsConsumer.evaluateRewardsIfEnabled (castId personId) merchantOpCity.id now DRewardContext.noRideInput
   pure Success
 
 -- | Validation tool for authoring/debugging cohort eligibility logic. Evaluates
@@ -390,7 +390,9 @@ castRewardContext c =
       ridesLast30d = c.ridesLast30d,
       ridesLast90d = c.ridesLast90d,
       hasTakenValidRide = c.hasTakenValidRide,
-      isValidRide = c.isValidRide
+      isValidRide = c.isValidRide,
+      rideVehicleVariant = c.rideVehicleVariant,
+      rideServiceTier = c.rideServiceTier
     }
 
 loadMerchantContext ::

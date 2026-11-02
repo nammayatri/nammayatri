@@ -150,6 +150,8 @@ types:
     - ridesLast90d: Maybe Int
     - hasTakenValidRide: Maybe Bool
     - isValidRide: Maybe Bool
+    - rideVehicleVariant: Maybe Text
+    - rideServiceTier: Maybe Text
 
   ValidateCohortEligibilityReq:
     - cohortId: Maybe (Id RewardCohort)

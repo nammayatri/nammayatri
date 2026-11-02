@@ -14,15 +14,20 @@
 
 module Domain.Types.RewardContext
   ( RewardContext (..),
+    RewardRideInput (..),
+    noRideInput,
     defaultRewardContext,
     rewardContextToLogicInput,
     rewardContextKeys,
+    rideScopedContextKeys,
   )
 where
 
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
+import qualified Domain.Types.ServiceTierType as DST
+import qualified Domain.Types.VehicleVariant as DVV
 import Kernel.Prelude
 
 -- | Type-safe rider context for reward-cohort eligibility JSON logic.
@@ -40,9 +45,28 @@ data RewardContext = RewardContext
     ridesLast30d :: Maybe Int,
     ridesLast90d :: Maybe Int,
     hasTakenValidRide :: Maybe Bool,
-    isValidRide :: Maybe Bool
+    isValidRide :: Maybe Bool,
+    -- | Vehicle variant of the ride that triggered the evaluation (e.g.
+    -- @"AUTO_RICKSHAW"@, @"SEDAN"@). Absent when there is no ride context.
+    rideVehicleVariant :: Maybe Text,
+    -- | Service tier of the ride that triggered the evaluation (e.g. @"COMFY"@,
+    -- @"ECO"@). Absent when there is no ride context.
+    rideServiceTier :: Maybe Text
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
+-- | Facts about the ride that triggered a reward evaluation. Every field is
+-- 'Nothing' when there is no ride (dashboard triggerEval, home-screen live card).
+data RewardRideInput = RewardRideInput
+  { isValid :: Maybe Bool,
+    vehicleVariant :: Maybe DVV.VehicleVariant,
+    serviceTier :: Maybe DST.ServiceTierType
+  }
+  deriving (Generic, Show, Eq)
+
+-- | No ride context: evaluation not triggered by a ride.
+noRideInput :: RewardRideInput
+noRideInput = RewardRideInput {isValid = Nothing, vehicleVariant = Nothing, serviceTier = Nothing}
 
 -- | Empty context: every field absent. Used when a request omits @context@.
 defaultRewardContext :: RewardContext
@@ -54,17 +78,18 @@ defaultRewardContext =
       ridesLast30d = Nothing,
       ridesLast90d = Nothing,
       hasTakenValidRide = Nothing,
-      isValidRide = Nothing
+      isValidRide = Nothing,
+      rideVehicleVariant = Nothing,
+      rideServiceTier = Nothing
     }
 
 -- | The single serializer feeding JSON logic (production AND dashboard tool).
 --
 -- Applies defaults for absent fields (windowed counts -> 0,
--- @hasTakenValidRide@ -> False). @isValidRide@ stays @null@ when absent,
--- matching the production "no ride context" semantics — do not default it to
--- False. On an all-@Just@ context this reproduces exactly the object that
--- @readRiderContext@ has always emitted, so existing cohort logics are
--- unaffected.
+-- @hasTakenValidRide@ -> False). The ride-scoped fields (@isValidRide@,
+-- @rideVehicleVariant@, @rideServiceTier@) stay @null@ when absent, matching the
+-- production "no ride context" semantics — do not default them. Existing keys
+-- serialize exactly as before, so existing cohort logics are unaffected.
 rewardContextToLogicInput :: RewardContext -> A.Value
 rewardContextToLogicInput RewardContext {..} =
   A.object
@@ -74,7 +99,9 @@ rewardContextToLogicInput RewardContext {..} =
       "ridesLast30d" A..= fromMaybe 0 ridesLast30d,
       "ridesLast90d" A..= fromMaybe 0 ridesLast90d,
       "hasTakenValidRide" A..= fromMaybe False hasTakenValidRide,
-      "isValidRide" A..= isValidRide
+      "isValidRide" A..= isValidRide,
+      "rideVehicleVariant" A..= rideVehicleVariant,
+      "rideServiceTier" A..= rideServiceTier
     ]
 
 -- | The context keys a cohort eligibility logic may reference. Derived from the
@@ -85,3 +112,9 @@ rewardContextKeys :: [Text]
 rewardContextKeys = case rewardContextToLogicInput defaultRewardContext of
   A.Object o -> AK.toText <$> AKM.keys o
   _ -> []
+
+-- | Context keys that describe the ride triggering an evaluation. They are
+-- always null where there is no ride (e.g. the home-screen live card), so logics
+-- evaluated there must not reference them.
+rideScopedContextKeys :: [Text]
+rideScopedContextKeys = ["isValidRide", "rideVehicleVariant", "rideServiceTier"]

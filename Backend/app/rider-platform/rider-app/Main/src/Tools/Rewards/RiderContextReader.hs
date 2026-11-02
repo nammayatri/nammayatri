@@ -20,7 +20,7 @@ where
 
 import qualified Data.Aeson as A
 import qualified Domain.Types.Person as DP
-import Domain.Types.RewardContext (RewardContext (..), rewardContextToLogicInput)
+import Domain.Types.RewardContext (RewardContext (..), RewardRideInput (..), rewardContextToLogicInput)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -29,17 +29,19 @@ import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CRW
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
--- | v1: windowed completed-ride counts plus hasTakenValidRide from Person, and
--- isValidRide for the ride that triggered this evaluation. isValidRide is Nothing
--- (JSON null) when there is no ride context (e.g. dashboard triggerEval) or the BPP
--- did not send the validity tag. Cohort eligibilityJsonLogic can reference
--- ridesLastNd, hasTakenValidRide and isValidRide.
+-- | Windowed completed-ride counts plus hasTakenValidRide from Person, and the
+-- ride-scoped facts (isValidRide, rideVehicleVariant, rideServiceTier) of the ride
+-- that triggered this evaluation. Ride-scoped fields are JSON null when there is no
+-- ride context (e.g. dashboard triggerEval); isValidRide is also null when the BPP
+-- did not send the validity tag. Variant / tier serialize as their constructor
+-- names (e.g. "AUTO_RICKSHAW", "COMFY"), so cohort eligibilityJsonLogic can do
+-- {"in": [{"var": "rideVehicleVariant"}, ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"]]}.
 readRiderContext ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
   Id DP.Person ->
-  Maybe Bool ->
+  RewardRideInput ->
   m A.Value
-readRiderContext personId mbIsValidRide = do
+readRiderContext personId rideInput = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   ridesLast1d <- CRWindow.getCompletedCount 1 personId
   ridesLast3d <- CRWindow.getCompletedCount 3 personId
@@ -58,5 +60,7 @@ readRiderContext personId mbIsValidRide = do
           ridesLast30d = Just (fromIntegral ridesLast30d),
           ridesLast90d = Just (fromIntegral ridesLast90d),
           hasTakenValidRide = Just person.hasTakenValidRide,
-          isValidRide = mbIsValidRide
+          isValidRide = rideInput.isValid,
+          rideVehicleVariant = show <$> rideInput.vehicleVariant,
+          rideServiceTier = show <$> rideInput.serviceTier
         }
