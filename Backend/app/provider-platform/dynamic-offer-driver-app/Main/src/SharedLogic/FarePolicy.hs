@@ -331,20 +331,21 @@ getAllFarePoliciesProduct mbPricingTime merchantId merchantOpCityId isDashboard 
 -- enabled, emit an additional policy identical to it except for its trip category. Nothing
 -- else differs -- same farePolicyId, same slabs, same charges -- so the spot fare IS the
 -- normal fare, by construction rather than by keeping two fare_product rows in sync.
+-- Applies in special zones too; if any tier already has a native OneWayRideOtp product
+-- there, no spot ride is derived for any tier.
 addSpotRidePolicies ::
   HM.HashMap ServiceTierType DVST.VehicleServiceTier ->
-  SL.Area ->
   Bool ->
   [FarePolicyD.FullFarePolicy] ->
   [FarePolicyD.FullFarePolicy]
-addSpotRidePolicies vehicleServiceTierMap area isScheduled farePolicies
-  | area /= SL.Default || isScheduled = farePolicies
+addSpotRidePolicies vehicleServiceTierMap isScheduled farePolicies
+  | isScheduled = farePolicies
+  | Kernel.Prelude.any (\p -> p.tripCategory == DTC.OneWay DTC.OneWayRideOtp) farePolicies = farePolicies
   | otherwise =
     let derived = flip mapMaybe farePolicies $ \fp ->
           case fp.tripCategory of
             DTC.OneWay mode
               | mode `elem` [DTC.OneWayOnDemandDynamicOffer, DTC.OneWayOnDemandStaticOffer],
-                not (Kernel.Prelude.any (\p -> p.tripCategory == DTC.OneWay DTC.OneWayRideOtp && p.vehicleServiceTier == fp.vehicleServiceTier) farePolicies),
                 (HM.lookup fp.vehicleServiceTier vehicleServiceTierMap >>= (.isSpotRideEnabled)) == Just True ->
                 Just fp {FarePolicyD.tripCategory = DTC.OneWay DTC.OneWayRideOtp}
             _ -> Nothing

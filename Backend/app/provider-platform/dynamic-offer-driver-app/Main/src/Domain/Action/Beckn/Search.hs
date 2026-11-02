@@ -362,7 +362,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   let resolvedArea = fromMaybe allFarePoliciesProduct.area allFarePoliciesProduct.mbPickupDropArea
   -- Spot ride: tiers with isSpotRideEnabled get an extra OneWayRideOtp quote, identical in
   -- fare to their normal one-way estimate -- see 'addSpotRidePolicies'.
-  let farePoliciesWithSpotRide = addSpotRidePolicies allFarePoliciesProduct.vehicleServiceTierMap resolvedArea possibleTripOption.isScheduled farePolicies
+  let farePoliciesWithSpotRide = addSpotRidePolicies allFarePoliciesProduct.vehicleServiceTierMap possibleTripOption.isScheduled farePolicies
   (canQueueUp, mbDefaultDriverExtra, mbPickupGateId) <- withTimeAPI "search" "getSpecialZoneQueueInfo" $ getSpecialZoneQueueInfo resolvedArea fromLocation
   let mbSpecialZoneGateId = if canQueueUp then mbPickupGateId else Nothing
   logDebug $ "Pickingup Gate info result : " <> show (mbPickupGateId, mbSpecialZoneGateId, mbDefaultDriverExtra)
@@ -886,7 +886,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
       estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
       isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
       navigationInstruction = resolveGateNavigationInstruction navGateMap fullFarePolicy.mbArea (show fullFarePolicy.tripCategory)
-      isSpotRideQuote = fullFarePolicy.tripCategory == OneWay OneWayRideOtp && fullFarePolicy.mbArea == Just SL.Default
+      isSpotRideQuote = fullFarePolicy.tripCategory == OneWay OneWayRideOtp
       -- Dashboard-configured spotServiceTierName wins when set; otherwise "Spot " <> the
       -- tier's normal name (e.g. "Spot Auto").
       vehicleServiceTierDisplayName =
