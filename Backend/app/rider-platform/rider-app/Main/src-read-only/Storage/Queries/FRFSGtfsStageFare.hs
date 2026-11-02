@@ -5,6 +5,7 @@
 module Storage.Queries.FRFSGtfsStageFare where
 
 import qualified BecknV2.FRFS.Enums
+import qualified Domain.Types.FRFSFareClass
 import qualified Domain.Types.FRFSGtfsStageFare
 import qualified Domain.Types.FRFSVehicleServiceTier
 import qualified Domain.Types.MerchantOperatingCity
@@ -23,6 +24,11 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare] -> m ())
 createMany = traverse_ create
+
+findAllByFareClassId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSFareClass.FRFSFareClass) -> m [Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare])
+findAllByFareClassId fareClassId = do findAllWithKV [Se.Is Beam.fareClassId $ Se.Eq (Kernel.Types.Id.getId <$> fareClassId)]
 
 findAllByVehicleServiceTierId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -52,6 +58,11 @@ findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType stage merchan
         ]
     ]
 
+findOneByFareClassIdAndStage ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSFareClass.FRFSFareClass) -> Kernel.Prelude.Int -> m (Maybe Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare))
+findOneByFareClassIdAndStage fareClassId stage = do findOneWithKV [Se.And [Se.Is Beam.fareClassId $ Se.Eq (Kernel.Types.Id.getId <$> fareClassId), Se.Is Beam.stage $ Se.Eq stage]]
+
 findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m (Maybe Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare))
@@ -76,6 +87,7 @@ updateByPrimaryKey (Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare {..}) = do
       Se.Set Beam.cessCharge cessCharge,
       Se.Set Beam.currency currency,
       Se.Set Beam.discountIds (Kernel.Types.Id.getId <$> discountIds),
+      Se.Set Beam.fareClassId (Kernel.Types.Id.getId <$> fareClassId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.routeTag routeTag,
@@ -95,6 +107,7 @@ instance FromTType' Beam.FRFSGtfsStageFare Domain.Types.FRFSGtfsStageFare.FRFSGt
             cessCharge = cessCharge,
             currency = currency,
             discountIds = Kernel.Types.Id.Id <$> discountIds,
+            fareClassId = Kernel.Types.Id.Id <$> fareClassId,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -113,6 +126,7 @@ instance ToTType' Beam.FRFSGtfsStageFare Domain.Types.FRFSGtfsStageFare.FRFSGtfs
         Beam.cessCharge = cessCharge,
         Beam.currency = currency,
         Beam.discountIds = Kernel.Types.Id.getId <$> discountIds,
+        Beam.fareClassId = Kernel.Types.Id.getId <$> fareClassId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,

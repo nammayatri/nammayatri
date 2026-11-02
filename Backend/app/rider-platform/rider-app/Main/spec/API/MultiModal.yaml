@@ -349,6 +349,10 @@ types:
     lat: Double
     lon: Double
 
+  FareClassInfo:
+    classCode: Text
+    displayName: Text
+
   ScheduledVehicleInfo:
     vehicleNumber: Text
     vehicleTagNumber: Maybe Text
@@ -363,6 +367,7 @@ types:
     serviceSubTypes: "Maybe [ServiceSubType]"
     availableSeats: Maybe Int
     seatSelectionType: Maybe SeatSelectionType
+    fareClass: Maybe FareClassInfo
 
   LiveVehicleInfo:
     number: Text
@@ -426,6 +431,7 @@ types:
     journeyId: Maybe Text
     latLong: Maybe LatLong
     timestamp: Maybe UTCTime
+    includeFareClass: Maybe Bool
     derive: "Show"
 
   AvailableRoute:

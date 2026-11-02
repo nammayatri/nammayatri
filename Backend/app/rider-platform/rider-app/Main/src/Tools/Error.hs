@@ -511,6 +511,9 @@ data RouteError
   | RouteFareNotFound Text Text Text
   | RouteMappingNotFound Text
   | RouteMappingDoesNotExist Text Text Text
+  | FareClassChanged Text
+  | TripServiceTierMismatch Text
+  | TripDetailsMismatch Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''RouteError
@@ -522,6 +525,9 @@ instance IsBaseError RouteError where
     RouteMappingNotFound msg -> Just $ "Route Mapping Not Found:-" <> msg
     RouteMappingDoesNotExist routeCode startStop integratedBppConfigId -> Just $ "Route Mapping Does Not Exist:-" <> routeCode <> ", " <> startStop <> ", " <> integratedBppConfigId
     RouteFareNotFound routeCode startStop endStop -> Just $ "Route Fare Not Found:-" <> routeCode <> ", " <> startStop <> ", " <> endStop
+    FareClassChanged quoteId -> Just $ "Fare has changed for this trip, please search again:-" <> quoteId
+    TripServiceTierMismatch quoteId -> Just $ "Selected trip is not available for this service:-" <> quoteId
+    TripDetailsMismatch quoteId -> Just $ "Trip details changed, please search again:-" <> quoteId
 
 instance IsHTTPError RouteError where
   toErrorCode = \case
@@ -530,6 +536,9 @@ instance IsHTTPError RouteError where
     RouteMappingNotFound _ -> "ROUTE_MAPPING_NOT_FOUND"
     RouteMappingDoesNotExist _ _ _ -> "ROUTE_MAPPING_DOES_NOT_EXIST"
     RouteFareNotFound _ _ _ -> "ROUTE_FARE_NOT_FOUND"
+    FareClassChanged _ -> "FARE_CLASS_CHANGED"
+    TripServiceTierMismatch _ -> "TRIP_SERVICE_TIER_MISMATCH"
+    TripDetailsMismatch _ -> "TRIP_DETAILS_MISMATCH"
 
   toHttpCode = \case
     RouteNotFound _ -> E404
@@ -537,6 +546,9 @@ instance IsHTTPError RouteError where
     RouteFareNotFound _ _ _ -> E500
     RouteMappingDoesNotExist _ _ _ -> E500
     RouteMappingNotFound _ -> E500
+    FareClassChanged _ -> E400
+    TripServiceTierMismatch _ -> E400
+    TripDetailsMismatch _ -> E400
 
 instance IsAPIError RouteError
 

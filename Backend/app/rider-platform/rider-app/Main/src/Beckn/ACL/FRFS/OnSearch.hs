@@ -186,7 +186,8 @@ parseFulfillments item fulfillments fulfillmentId = do
         fareDetails = Nothing,
         categories = categories,
         _type = quoteType,
-        routeGroupKey = Nothing
+        routeGroupKey = Nothing,
+        fareClassId = Nothing
       }
 
 mkDStation :: (MonadFlow m) => Spec.Stop -> Maybe Int -> m Domain.DStation

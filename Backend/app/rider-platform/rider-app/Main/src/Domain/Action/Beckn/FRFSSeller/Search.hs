@@ -205,6 +205,7 @@ journeyCatalog operator merchantId merchantOperatingCity integratedBPPConfig sta
           Nothing
           Nothing
           (Just journeyType.quoteType)
+          Nothing
   faresByJourneyType <-
     fmap catMaybes . forM Common.sellerJourneyTypes $ \journeyType ->
       withTryCatch ("frfsSeller:getFares:" <> show journeyType.code) (priceJourneyType journeyType) >>= \case

@@ -298,7 +298,7 @@ getFRFSTicketFrfsStageFareList merchantShortId opCity vehicleType = do
   merchantOperatingCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  stageFares <- QFRFSGtfsStageFare.findAllByVehicleTypeAndMerchantOperatingCityId vehicleType merchantOperatingCity.id
+  stageFares <- filter (isNothing . (.fareClassId)) <$> QFRFSGtfsStageFare.findAllByVehicleTypeAndMerchantOperatingCityId vehicleType merchantOperatingCity.id
   serviceTierByTierId <- buildServiceTierMap stageFares
   let apiStageFares = mapMaybe (toStageFareAPI serviceTierByTierId) stageFares
   when (length apiStageFares /= length stageFares) $
@@ -383,6 +383,7 @@ putFRFSTicketFrfsStageFareUpsert merchantShortId opCity integratedBPPConfigId ve
                   stageFares <- QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType stage merchantOperatingCity.id
                   let matchesRow stageFare =
                         stageFare.vehicleServiceTierId == vehicleServiceTier.id
+                          && isNothing stageFare.fareClassId
                           && FRFSUtils.normalizedRouteTagOf stageFare.routeTag == mbRouteTag
                   case find matchesRow stageFares of
                     Just stageFare ->
@@ -403,6 +404,7 @@ putFRFSTicketFrfsStageFareUpsert merchantShortId opCity integratedBPPConfigId ve
                             vehicleServiceTierId = vehicleServiceTier.id,
                             vehicleType = vehicleType,
                             routeTag = mbRouteTag,
+                            fareClassId = Nothing,
                             cessCharge = mbCessCharge,
                             discountIds = [],
                             merchantId = merchant.id,

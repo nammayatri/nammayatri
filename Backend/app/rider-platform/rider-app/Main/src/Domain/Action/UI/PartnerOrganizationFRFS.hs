@@ -578,6 +578,7 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
             cloudType = Nothing,
             clientSdkVersion = Nothing,
             clientBundleVersion = Nothing,
+            startTime = Nothing,
             ..
           }
 
@@ -712,7 +713,8 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.toStationPoint = Maps.LatLong <$> toStation'.lat <*> toStation'.lon,
                 DFRFSQuote.vehicleNumber = Nothing,
                 DFRFSQuote.offerSegment = Nothing,
-                DFRFSQuote.routeGroupKey = Nothing
+                DFRFSQuote.routeGroupKey = Nothing,
+                DFRFSQuote.fareClassId = Nothing
               }
       quoteCategoryId <- generateGUID
       ticketCategoryMetadataConfig' <- QFRFSTicketCategoryMetadataConfig.findByCategoryVehicleAndCity ADULT fromStation'.vehicleType fromStation.merchantOperatingCityId

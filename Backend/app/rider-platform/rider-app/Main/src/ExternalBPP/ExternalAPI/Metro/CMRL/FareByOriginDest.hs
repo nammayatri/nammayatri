@@ -94,6 +94,7 @@ getFareByOriginDest integrationBPPConfig config fareReq = do
                   ],
                 fareDetails = Nothing,
                 farePolicyId = Nothing,
+                fareClassId = Nothing,
                 vehicleServiceTier =
                   FRFSUtils.FRFSVehicleServiceTier
                     { serviceTierType = Spec.ORDINARY,

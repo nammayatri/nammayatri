@@ -6,6 +6,7 @@ module Domain.Types.FRFSTicketBooking where
 import qualified API.Types.UI.RiderLocation
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
+import qualified Domain.Types.FRFSFareClass
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBookingStatus
@@ -52,6 +53,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     failureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fareClassId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSFareClass.FRFSFareClass),
     finalBoardedDepotNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     finalBoardedScheduleNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     finalBoardedVehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

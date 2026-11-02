@@ -61,7 +61,7 @@ validateRescheduleEligibility ::
   DIBC.IntegratedBPPConfig ->
   -- | Live-trip eligibility, resolved by the handler. Nothing leaves the schedule-only checks in charge.
   Maybe FRFSLiveTrip.LiveTripDecision ->
-  m ()
+  m UTCTime
 validateRescheduleEligibility oldBooking newTripId newFromCode newToCode newRouteCode integratedBppConfig mbLiveDecision = do
   unless (oldBooking.status == DFRFSTicketBookingStatus.CONFIRMED) $
     throwError $ InvalidRequest "Booking is not confirmed, cannot be rescheduled"
@@ -114,6 +114,7 @@ validateRescheduleEligibility oldBooking newTripId newFromCode newToCode newRout
   when (newTripStart >= windowEndUtc) $
     throwError $ InvalidRequest "Selected trip is outside the allowed reschedule window"
   validatePassTermCoversTrip oldBooking (Time.utctDay (Time.addUTCTime tzDiff newTripStart))
+  pure newTripStart
 
 validatePassTermCoversTrip ::
   (ServiceFlow m r) =>
@@ -357,10 +358,11 @@ mkFreshSearchAndFreshQuote ::
   DFRFSTicketBooking.FRFSTicketBooking ->
   DFRFSQuote.FRFSQuote ->
   Text ->
+  UTCTime ->
   DIBC.IntegratedBPPConfig ->
   Maybe Int ->
   m (Id DFRFSSearch.FRFSSearch, DFRFSQuote.FRFSQuote, [DFRFSQuoteCategory.FRFSQuoteCategory])
-mkFreshSearchAndFreshQuote oldBooking oldQuote newTripId integratedBppConfig mbSearchTtlSec = do
+mkFreshSearchAndFreshQuote oldBooking oldQuote newTripId newTripStart integratedBppConfig mbSearchTtlSec = do
   now <- getCurrentTime
   freshSearchId <- generateGUID
   freshQuoteId <- generateGUID
@@ -378,6 +380,7 @@ mkFreshSearchAndFreshQuote oldBooking oldQuote newTripId integratedBppConfig mbS
         DFRFSSearch.FRFSSearch
           { busLocationData = [],
             clientBundleVersion = Nothing,
+            startTime = Just newTripStart,
             clientSdkVersion = Nothing,
             cloudType = oldBooking.cloudType,
             fromStationAddress = oldBooking.fromStationAddress,
@@ -443,13 +446,14 @@ mkFreshSearchForNewStops ::
   DFRFSTicketBooking.FRFSTicketBooking ->
   DFRFSQuote.FRFSQuote ->
   Text -> -- new trip id (for vehicle + validTill)
+  UTCTime ->
   Text -> -- new boarding stop code
   Text -> -- new destination stop code
   Text -> -- new route code
   DIBC.IntegratedBPPConfig ->
   Maybe Int ->
   m DFRFSSearch.FRFSSearch
-mkFreshSearchForNewStops oldBooking oldQuote newTripId newFromCode newToCode newRouteCode integratedBppConfig mbSearchTtlSec = do
+mkFreshSearchForNewStops oldBooking oldQuote newTripId newTripStart newFromCode newToCode newRouteCode integratedBppConfig mbSearchTtlSec = do
   now <- getCurrentTime
   freshSearchId <- generateGUID
   oldQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId oldQuote.id
@@ -468,6 +472,7 @@ mkFreshSearchForNewStops oldBooking oldQuote newTripId newFromCode newToCode new
         DFRFSSearch.FRFSSearch
           { busLocationData = [],
             clientBundleVersion = Nothing,
+            startTime = Just newTripStart,
             clientSdkVersion = Nothing,
             cloudType = oldBooking.cloudType,
             fromStationAddress = newFromStation.address,

@@ -181,3 +181,4 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN enforce_frfs_pass boolean ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.frfs_search ADD COLUMN start_time timestamp with time zone ;

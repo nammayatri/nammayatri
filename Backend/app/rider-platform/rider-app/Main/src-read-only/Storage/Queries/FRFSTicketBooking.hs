@@ -235,6 +235,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.driverName driverName,
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
       Se.Set Beam.failureReason failureReason,
+      Se.Set Beam.fareClassId (Kernel.Types.Id.getId <$> fareClassId),
       Se.Set Beam.finalBoardedDepotNo finalBoardedDepotNo,
       Se.Set Beam.finalBoardedScheduleNo finalBoardedScheduleNo,
       Se.Set Beam.finalBoardedVehicleNumber finalBoardedVehicleNumber,

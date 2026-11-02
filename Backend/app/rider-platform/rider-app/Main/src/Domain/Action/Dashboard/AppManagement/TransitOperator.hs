@@ -331,9 +331,9 @@ transitOperatorDeleteVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.M
 transitOperatorDeleteVehicle merchantShortId opCity vehicleCategory vehicleId =
   DTOp.transitOperatorDeleteVehicleUtil merchantShortId opCity vehicleCategory vehicleId
 
-transitOperatorQueryVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.Fleet])
-transitOperatorQueryVehicle merchantShortId opCity fleetNo tagNumber vehicleNo vehicleCategory =
-  DTOp.transitOperatorQueryVehicleUtil merchantShortId opCity vehicleCategory vehicleNo tagNumber fleetNo
+transitOperatorQueryVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.Fleet])
+transitOperatorQueryVehicle merchantShortId opCity fleetNo tagNumber vehicleNo vehicleTag vehicleCategory =
+  DTOp.transitOperatorQueryVehicleUtil merchantShortId opCity vehicleCategory vehicleNo tagNumber fleetNo vehicleTag
 
 transitOperatorGetDepotVehicles :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [Lib.GtfsDataServer.Types.DepotVehicleInfo])
 transitOperatorGetDepotVehicles merchantShortId opCity depotId vehicleCategory = do

@@ -23,6 +23,7 @@ data FRFSQuoteT f = FRFSQuoteT
     busLocationData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     discountedTickets :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     eventDiscountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    fareClassId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     appSession :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     providerRouteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

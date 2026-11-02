@@ -369,7 +369,14 @@ transitOperatorUpsertVehiclesUtil merchantShortId city vehicleCategory items = d
   unless (null dupes) $
     throwError $ InvalidRequest $ "upsertVehicles: duplicate vehicle_no in batch: " <> T.intercalate ", " dupes
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
-  NandiFlow.operatorUpsertVehicles baseUrl gtfsId normalized
+  fleets <- NandiFlow.operatorUpsertVehicles baseUrl gtfsId normalized
+  -- Metadata is cached under whichever number the caller looked the bus up by, so drop both.
+  let cachedNumbers =
+        Map.keys . Map.fromList . map (,()) $
+          concatMap (\req -> req.vehicle_no : maybeToList req.fleet_no) normalized
+            <> concatMap (\fleet -> catMaybes [fleet.vehicle_no, fleet.fleet_no]) fleets
+  forM_ cachedNumbers $ OTPRest.clearVehicleMetadataCache gtfsId
+  pure fleets
   where
     -- Strip once at the boundary so a padded write and a clean-string query land on the same natural key.
     normalizeItem req = do
@@ -393,12 +400,13 @@ transitOperatorDeleteVehicleUtil merchantShortId city vehicleCategory vehicleId 
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorDeleteVehicle baseUrl gtfsId vehicleId'
 
-transitOperatorQueryVehicleUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Text -> Maybe Text -> Maybe Text -> Flow [Fleet]
-transitOperatorQueryVehicleUtil merchantShortId city vehicleCategory vehicleNo tagNumber fleetNo = do
+transitOperatorQueryVehicleUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow [Fleet]
+transitOperatorQueryVehicleUtil merchantShortId city vehicleCategory vehicleNo tagNumber fleetNo vehicleTag = do
   let vehicleNo' = nonBlankText vehicleNo
       tagNumber' = nonBlankText tagNumber
       fleetNo' = nonBlankText fleetNo
-  when (isNothing vehicleNo' && isNothing tagNumber' && isNothing fleetNo') $
-    throwError $ InvalidRequest "queryVehicle: at least one of vehicleNo, tagNumber, fleetNo is required"
+      vehicleTag' = nonBlankText vehicleTag
+  when (isNothing vehicleNo' && isNothing tagNumber' && isNothing fleetNo' && isNothing vehicleTag') $
+    throwError $ InvalidRequest "queryVehicle: at least one of vehicleNo, tagNumber, fleetNo, vehicleTag is required"
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
-  NandiFlow.operatorQueryVehicle baseUrl gtfsId vehicleNo' tagNumber' fleetNo'
+  NandiFlow.operatorQueryVehicle baseUrl gtfsId vehicleNo' tagNumber' fleetNo' vehicleTag'

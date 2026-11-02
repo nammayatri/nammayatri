@@ -179,7 +179,7 @@ passReferenceFare person pass integratedBPPConfig serviceTier sourceStopCode des
             { segments = CallAPI.BasicRouteDetail {routeCode = "", startStopCode = sourceStopCode, endStopCode = destinationStopCode, color = Nothing} :| [],
               mbProviderRouteId = Nothing
             }
-    (_, fares) <- FlowFare.getFares person.id pass.merchantId pass.merchantOperatingCityId integratedBPPConfig fareRoute pass.vehicleType (Just serviceTier) Nothing [] [] False True
+    (_, fares) <- FlowFare.getFares person.id pass.merchantId pass.merchantOperatingCityId integratedBPPConfig fareRoute pass.vehicleType (Just serviceTier) Nothing Nothing [] [] False True
     let onTier = filter ((== serviceTier) . (.vehicleServiceTier.serviceTierType)) fares
         adultPrice fare = (.price.amount) <$> find ((== ADULT) . (.category)) fare.categories
     listToMaybe (mapMaybe adultPrice onTier) & fromMaybeM noFare

@@ -72,6 +72,7 @@ buildCrisViaRouteQuotes merchant merchantOperatingCity integratedBPPConfig searc
           searchReq.vehicleType
           Nothing
           searchReq.multimodalSearchRequestId
+          Nothing
           blacklistedServiceTiers
           blacklistedFareQuoteTypes
           True
@@ -221,7 +222,8 @@ mkRouteQuote integratedBPPConfig vehicleType providerRouteId routeGroupKey route
           stations = stations,
           fareDetails = fareDetails,
           categories = map mkDCategory categories,
-          routeGroupKey = Just routeGroupKey
+          routeGroupKey = Just routeGroupKey,
+          fareClassId = Nothing
         }
 
 mkDVehicleServiceTier :: FRFSVehicleServiceTier -> DVehicleServiceTier

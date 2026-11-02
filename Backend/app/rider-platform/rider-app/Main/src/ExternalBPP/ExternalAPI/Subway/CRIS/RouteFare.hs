@@ -174,6 +174,7 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
                     }
                 ],
               farePolicyId = Nothing,
+              fareClassId = Nothing,
               fareDetails =
                 Just
                   Quote.FRFSFareDetails
