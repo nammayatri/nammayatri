@@ -570,6 +570,19 @@ _:
             exec 9>&-
             echo "── Pre-flight: released devbox port lock ──"
 
+            # ── Control centre path prefix (read by its process and by caddy).
+            #    On a dev-box testers open it through hopper's gateway at
+            #    /api/<devbox>/<public port>/<workspace>/control-centre/; the
+            #    gateway and the front desk strip everything before
+            #    /control-centre, and Vite needs the full path back. A local
+            #    run has no prefix. ──
+            CC_PREFIX=""
+            if [[ "$DEVBOX_KEY" != local-* ]]; then
+              CC_PREFIX="/api/$(hostname)/''${FRONTDESK_PUBLIC_PORT:-8888}/$DEVBOX_KEY"
+            fi
+            mkdir -p "''${FLAKE_ROOT}/data"
+            printf '%s\n' "$CC_PREFIX" > "''${FLAKE_ROOT}/data/cc-prefix"
+
             # ── Generate the Caddyfile from our registry slice (single entry
             #    point). Service list is the source of truth in caddyfile.nix.
             #    The expression is single-quoted so the key never enters the Nix

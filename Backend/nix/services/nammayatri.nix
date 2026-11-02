@@ -405,6 +405,7 @@ in
           "victoria-metrics"
           "db-manager-backend"
           "db-manager-frontend"
+          "control-centre"
         ];
       # Force-disable a process: also clobber its command + depends_on with
       # mkForce. Clobbering the command matters because the original command
@@ -485,6 +486,7 @@ in
             "db-primary-replica".shutdown.signal = lib.mkForce 9;
             "db-manager-backend".shutdown.signal = 9;
             "db-manager-frontend".shutdown.signal = 9;
+            "control-centre".shutdown.signal = 9;
           })
           (lib.mkIf (cfg.profile == "backend" && cfg.useCaddy) (
             let excluded = [ "caddy-reverse-proxy" "nammayatri-init" "cabal-build" "cache-restore" "osrm-server" ];
@@ -1162,6 +1164,41 @@ in
               };
             };
 
+            # ── Control centre (nammayatri/control-center, frontend only) ─────
+            # Runs the Vite dev server when a control-center/ checkout sits at
+            # the repo root (the devbox workflow puts one there; most laptops
+            # have none, and then it just exits). Caddy serves it at
+            # /control-centre/; on a dev-box that is under hopper's gateway
+            # prefix (data/cc-prefix, written by the pre-flight), and Vite must
+            # be told the full path the browser uses (CC_BASE). Node comes from
+            # nixpkgs-unstable: the main pin is too old for the repo's Vite.
+            # Nothing depends on it, so the backend never waits for npm install.
+            control-centre = {
+              imports = [ common ];
+              namespace = lib.mkForce "test";
+              environment = {
+                VITE_BAP_URL = "http://localhost:${toString ports.rider-app}";
+                VITE_BPP_URL = "http://localhost:${toString ports.dynamic-offer-driver-app}";
+              };
+              command = pkgs.writeShellApplication {
+                name = "control-centre";
+                runtimeInputs = [ ny.inputs.nixpkgs-unstable.legacyPackages.${pkgs.system}.nodejs_22 pkgs.coreutils ];
+                text = ''
+                  ROOT="''${FLAKE_ROOT:-..}"
+                  if [ ! -d "$ROOT/control-center" ]; then
+                    echo "control-centre: no control-center/ checkout in $ROOT, not starting"
+                    exit 0
+                  fi
+                  CC_PREFIX="$(cat "$ROOT/data/cc-prefix" 2>/dev/null || true)"
+                  export CC_BASE="$CC_PREFIX/control-centre/"
+                  echo "control-centre: serving under $CC_BASE"
+                  cd "$ROOT/control-center"
+                  npm install --no-audit --no-fund
+                  exec npm run dev -- --host 127.0.0.1 --port ${toString ports.control-centre} --strictPort
+                '';
+              };
+            };
+
             kafka-consumers-exe = {
               environment = {
                 CONSUMER_TYPE = "LOCATION_UPDATE";
@@ -1669,6 +1706,9 @@ in
                     cp ${pkgs.writeText "Caddyfile-fixed-ports" (import ./caddyfile.nix { inherit ports; })} "$CADDYFILE"
                     chmod u+w "$CADDYFILE"
                   fi
+                  # The control centre's route puts this prefix back (see caddyfile.nix).
+                  CC_PREFIX="$(cat "''${FLAKE_ROOT:-..}/data/cc-prefix" 2>/dev/null || true)"
+                  export CC_PREFIX
                   echo "caddy-reverse-proxy: listening on :${toString ports.caddy-reverse-proxy}"
                   exec caddy run --config "$CADDYFILE" --adapter caddyfile
                 '';

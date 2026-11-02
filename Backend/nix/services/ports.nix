@@ -76,4 +76,5 @@
   victoria-metrics = 8428;
   db-manager-backend = 3010;
   db-manager-frontend = 5183;
+  control-centre = 5190;
 }

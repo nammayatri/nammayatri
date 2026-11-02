@@ -27,7 +27,7 @@ made by hand (no owner) is never taken over.
 | code | `sync [--dry-run]` |
 | stack | `stack-start`, `stack-status [--tail N]`, `stack-wait`, `stack-stop` |
 | data | `versions --from S`, `data --from S [--version vN] [--force]` |
-| control centre | `cc-start`, `cc-status`, `cc-stop` |
+| control centre | `cc-start` (checks it runs: the stack starts it), `cc-status`, `cc-stop` (old detached one only) |
 
 ## Output for the workflow
 
@@ -41,12 +41,16 @@ DEVBOX_RESULT {"devbox": …, "workspace": …, "backend_url": …, "office_url"
 gateway, so testers' phones open them on any network:
 
 ```
-https://service-discovery.devenv.movingtech.net/api/<devbox>/8889/<name>   + /rider-app/... or /dynamic-offer-driver-app/...
+https://service-discovery.devenv.movingtech.net/api/<devbox>/8888/<name>   + /rider-app/... or /dynamic-offer-driver-app/...
 ```
 
-The dev-box's front desk serves only those two apps on `:8889` and announces
-it to hopper (nix-the-builder `scripts/daemonset/worker/devbox/frontdesk`). A dev-box hopper does not
-list as public is never picked. `office_url` (`http://<office ip>:8888/<name>`,
+The dev-box announces its front desk (`:8888`) to hopper (nix-the-builder
+`scripts/daemonset/worker/devbox/frontdesk`, `FRONTDESK_PUBLISH_MAIN=1`), and
+hopper's nginx lets only the testers' apps through from the internet (hopper
+`deploy/sd-nginx/`); the database tools there answer `403`. A dev-box hopper does not
+list as public is never picked. `pick` chooses among the machines hopper's
+`/node/list` names with node type `dev-box` (hopper-agent installed with
+`--node-type dev-box`), so a dev-box without hopper-agent is never picked either. `office_url` (`http://<office ip>:8888/<name>`,
 every service) and `cc_url` only answer on the office network or the tailnet.
 
 Stages: `preparing`, `sync`, `build`, `start`, `data`, `cc`, `ready`.
@@ -57,8 +61,7 @@ States: `started`, `done`, `skipped`, `failed` (with `error`).
 | Variable | Used for |
 |---|---|
 | `DEVBOX_SSH_KEY_FILE` | private key for the dev-boxes (default: `~/.ssh/id_ed25519`, `id_rsa`, `id_ecdsa`) |
-| `BASE_API_HOST`, `BASE_API_PORT` | service discovery (default `service-discovery.devenv.movingtech.net:8787`) |
-| `HOPPER_GATEWAY_URL` | hopper's public gateway, for the public URLs and the "is it public" check (default `https://service-discovery.devenv.movingtech.net`) |
+| `HOPPER_GATEWAY_URL` | hopper's service discovery: the machine list (`/node/list`), the public URLs and the "is it public" check (default `https://service-discovery.devenv.movingtech.net`) |
 | `CONFIG_SYNC_CLOUDFRONT_URL` / `CONFIG_SYNC_PUBLIC_BUCKET_URL` | where published data versions live (read through the dev-box: the bucket only answers the office's whitelisted line) |
 
 ## On the dev-box
@@ -68,6 +71,6 @@ States: `started`, `done`, `skipped`, `failed` (with `error`).
 | `/tmp/devbox-registry.json` | every workspace: dir, ports, caddyPort, owner (lock: `/tmp/devbox-ports.lock`) |
 | `/tmp/<name>/nammayatri/` | the workspace (code, data, logs) |
 | `…/data/stack.log`, `stack.json` | stack output and process group |
-| `…/data/control-center.json`, `.log` | control centre pid/port and output |
+| `…/data/cc-prefix` | the control centre's gateway path prefix (pre-flight writes it; caddy and the control-centre process read it) |
 | `http://<devbox>:8888/<name>/…` | front desk route to the workspace |
-| `http://<devbox>:8889/<name>/{rider-app,dynamic-offer-driver-app}/…` | public front desk (tailnet only; reached through hopper's gateway) |
+| `http://<devbox>:8889/<name>/{rider-app,dynamic-offer-driver-app}/…` | old public-only site (tailnet only); unused once builds use `:8888` |

@@ -57,6 +57,20 @@ let
       builtins.trace "build-caddyfile: skipping ${svc} — not in ports file" "";
 
   routes = builtins.concatStringsSep "" (map routeBlock exposedServices);
+
+  # The control centre is a Vite dev server, which serves only the full path
+  # the browser uses (its CC_BASE). So unlike the routes above, nothing is
+  # stripped: on a dev-box the path is put back together with the prefix that
+  # hopper's gateway and the front desk took off (CC_PREFIX, the caddy
+  # process's env; empty locally). Vite answers only known hosts, hence
+  # Host: localhost.
+  controlCentreRoute =
+    if ports ? control-centre
+    then
+      "\thandle /control-centre {\n\t\tredir control-centre/ 308\n\t}\n"
+      + "\thandle /control-centre/* {\n\t\trewrite * {$CC_PREFIX}{uri}\n"
+      + "\t\treverse_proxy 127.0.0.1:${toString ports.control-centre} {\n\t\t\theader_up Host localhost\n\t\t}\n\t}\n"
+    else "";
 in
 ''
   {
@@ -71,7 +85,7 @@ in
   		respond "ok" 200
   	}
 
-  ${routes}
+  ${routes}${controlCentreRoute}
   	log {
   		output stderr
   		format console
