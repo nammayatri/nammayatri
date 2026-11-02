@@ -1201,8 +1201,7 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
             then [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer]
             else [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer]
         DRPO.Rental ->
-          [Rental OnDemandStaticOffer]
-            <> [Rental RideOtp | not isScheduled]
+          [Rental OnDemandStaticOffer, Rental RideOtp]
         DRPO.Ambulance ->
           [Ambulance OneWayOnDemandDynamicOffer | not isScheduled]
         DRPO.Delivery ->
@@ -1220,18 +1219,17 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
               Just _ -> case dsReq.riderPreferredOption of
                 DRPO.Rental
                   | isInterCity ->
-                    [IntercityRental OnDemandStaticOffer destinationTravelCityName]
-                      <> [IntercityRental RideOtp destinationTravelCityName | not isScheduled]
+                    [IntercityRental OnDemandStaticOffer destinationTravelCityName, IntercityRental RideOtp destinationTravelCityName]
                 _ ->
                   if isInterCity
                     then
                       if isCrossCity
                         then
-                          [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                            <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                          [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName, CrossCity OneWayRideOtp destinationTravelCityName]
+                            <> [CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName | not isScheduled]
                         else
-                          [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                            <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                          [InterCity OneWayOnDemandStaticOffer destinationTravelCityName, InterCity OneWayRideOtp destinationTravelCityName]
+                            <> [InterCity OneWayOnDemandDynamicOffer destinationTravelCityName | not isScheduled]
                     else localBundleForPreference
               -- FIX (per review): rerouting this whole branch through localBundleForPreference
               -- had a much bigger blast radius than intended — riderPreferredOption falls
@@ -1243,7 +1241,7 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
               -- exact previous hardcoded-to-Rental behavior for destination-less searches.
               Nothing -> case dsReq.riderPreferredOption of
                 DRPO.EasyBooking -> [EasyBooking OnDemandStaticOffer]
-                _ -> [Rental OnDemandStaticOffer] <> [Rental RideOtp | not isScheduled]
+                _ -> [Rental OnDemandStaticOffer, Rental RideOtp]
 
   TripOption {..}
   where
