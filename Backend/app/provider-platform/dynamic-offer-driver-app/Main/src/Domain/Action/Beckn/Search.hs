@@ -369,6 +369,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   let spcllocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
       specialLocName = allFarePoliciesProduct.specialLocationName
       specialLocationSupportNumber = allFarePoliciesProduct.specialLocationSupportNumber
+      toLocation = withDropSpecialLocationArea spcllocationTag specialLocName <$> mbToLocation
   cityCurrency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   customerCancellationDue <-
     if transporterConfig.canAddCancellationFee && sReq.isMultimodalSearch == Just False
@@ -387,7 +388,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
             return 0
       else return 0
   let mbDriverInfo = driverIdForSearch
-  searchReq <- withTimeAPI "search" "buildSearchRequest" $ buildSearchRequest sReq bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId customerCancellationDue fromLocation mbToLocation mbDistance mbDuration mbStaticDuration spcllocationTag specialLocName allFarePoliciesProduct.area allFarePoliciesProduct.pickupArea allFarePoliciesProduct.dropArea mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
+  searchReq <- withTimeAPI "search" "buildSearchRequest" $ buildSearchRequest sReq bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId customerCancellationDue fromLocation toLocation mbDistance mbDuration mbStaticDuration spcllocationTag specialLocName allFarePoliciesProduct.area allFarePoliciesProduct.pickupArea allFarePoliciesProduct.dropArea mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   unless sReq.isShadowSearch $
     triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId'}
@@ -1201,8 +1202,7 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
             then [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer]
             else [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer]
         DRPO.Rental ->
-          [Rental OnDemandStaticOffer]
-            <> [Rental RideOtp | not isScheduled]
+          [Rental OnDemandStaticOffer, Rental RideOtp]
         DRPO.Ambulance ->
           [Ambulance OneWayOnDemandDynamicOffer | not isScheduled]
         DRPO.Delivery ->
@@ -1220,18 +1220,17 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
               Just _ -> case dsReq.riderPreferredOption of
                 DRPO.Rental
                   | isInterCity ->
-                    [IntercityRental OnDemandStaticOffer destinationTravelCityName]
-                      <> [IntercityRental RideOtp destinationTravelCityName | not isScheduled]
+                    [IntercityRental OnDemandStaticOffer destinationTravelCityName, IntercityRental RideOtp destinationTravelCityName]
                 _ ->
                   if isInterCity
                     then
                       if isCrossCity
                         then
-                          [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                            <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                          [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName, CrossCity OneWayRideOtp destinationTravelCityName]
+                            <> [CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName | not isScheduled]
                         else
-                          [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                            <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                          [InterCity OneWayOnDemandStaticOffer destinationTravelCityName, InterCity OneWayRideOtp destinationTravelCityName]
+                            <> [InterCity OneWayOnDemandDynamicOffer destinationTravelCityName | not isScheduled]
                     else localBundleForPreference
               -- FIX (per review): rerouting this whole branch through localBundleForPreference
               -- had a much bigger blast radius than intended — riderPreferredOption falls
@@ -1243,7 +1242,7 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
               -- exact previous hardcoded-to-Rental behavior for destination-less searches.
               Nothing -> case dsReq.riderPreferredOption of
                 DRPO.EasyBooking -> [EasyBooking OnDemandStaticOffer]
-                _ -> [Rental OnDemandStaticOffer] <> [Rental RideOtp | not isScheduled]
+                _ -> [Rental OnDemandStaticOffer, Rental RideOtp]
 
   TripOption {..}
   where
@@ -1370,6 +1369,16 @@ buildSearchReqLocation merchantId merchantOpCityId sessionToken address customer
         merchantOperatingCityId = Just merchantOpCityId,
         ..
       }
+
+dropAreaOverrideCategories :: [Text]
+dropAreaOverrideCategories = ["SureAirport", "SureMetro", "SureStation"]
+
+withDropSpecialLocationArea :: Maybe Text -> Maybe Text -> DLoc.Location -> DLoc.Location
+withDropSpecialLocationArea mbSpecialLocationTag mbSpecialLocationName location =
+  case (T.splitOn "_" <$> mbSpecialLocationTag, mbSpecialLocationName) of
+    (Just (_ : dropCategory : "PriorityDrop" : _), Just name)
+      | dropCategory `elem` dropAreaOverrideCategories -> location{address = location.address{area = Just name}}
+    _ -> location
 
 getAddressByGetPlaceName :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> LatLong -> m Address
 getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong = do

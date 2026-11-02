@@ -43,6 +43,7 @@ data TransporterConfigT f = TransporterConfigT
     allowDuplicatePan :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowDuplicateUdyam :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowFarePolicyUpdateBelowMinBaseFare :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    allowFleetToLinkIndividualDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowGstReupload :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowInvalidRcDeletionOnReplacement :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowMultiFleetOperatorLink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

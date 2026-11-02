@@ -53,3 +53,59 @@ findByCodeAndMerchantOperatingCityId code merchantOperatingCityId =
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId)
         ]
     ]
+
+updateCatalogFields ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DPass.Pass ->
+  m ()
+updateCatalogFields DPass.Pass {..} = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.amount amount,
+      Se.Set Beam.applicableVehicleServiceTiers applicableVehicleServiceTiers,
+      Se.Set Beam.autoApply autoApply,
+      Se.Set Beam.benefit benefit,
+      Se.Set Beam.benefitDescription benefitDescription,
+      Se.Set Beam.code code,
+      Se.Set Beam.dayCountRecommendations dayCountRecommendations,
+      Se.Set Beam.description description,
+      Se.Set Beam.documentsRequired documentsRequired,
+      Se.Set Beam.dynamicDayCount dynamicDayCount,
+      Se.Set Beam.enable enable,
+      Se.Set Beam.formVerificationConfig formVerificationConfig,
+      Se.Set Beam.frfsCancelLimit frfsCancelLimit,
+      Se.Set Beam.frfsPriceOverrideApplicable frfsPriceOverrideApplicable,
+      Se.Set Beam.maxFare maxFare,
+      Se.Set Beam.maxValidDays maxValidDays,
+      Se.Set Beam.maxValidTrips maxValidTrips,
+      Se.Set Beam.merchantId (getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (getId merchantOperatingCityId),
+      Se.Set Beam.minDaysToSuggestRenewal minDaysToSuggestRenewal,
+      Se.Set Beam.minFare minFare,
+      Se.Set Beam.minTripsAllowingOverlap minTripsAllowingOverlap,
+      Se.Set Beam.name name,
+      Se.Set Beam.order order,
+      Se.Set Beam.maxSwitchCount ((.maxSwitchCount) <$> passConfig),
+      Se.Set Beam.passTypeId (getId passTypeId),
+      Se.Set Beam.pricingTiers pricingTiers,
+      Se.Set Beam.purchaseEligibilityJsonLogic purchaseEligibilityJsonLogic,
+      Se.Set Beam.redeemEligibilityJsonLogic redeemEligibilityJsonLogic,
+      Se.Set Beam.timeOverlappingFrfsBookingsLimit timeOverlappingFrfsBookingsLimit,
+      Se.Set Beam.vehicleType (Just vehicleType),
+      Se.Set Beam.verificationValidity (Just verificationValidity),
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.id $ Se.Eq (getId id)]
+
+updateEnable ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Bool ->
+  Id DPass.Pass ->
+  m ()
+updateEnable enable passId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.enable enable,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.id $ Se.Eq (getId passId)]

@@ -166,7 +166,7 @@ runInstantBulkPayout ctx params payoutServiceName = do
           plan.payoutableBalance
           params.payoutType
           Nothing
-          (Just plan.cutoff)
+          plan.cutoff
           plan.redeemableEntryIds
           plan.merchantTransferAmount
           (Just batch.id)

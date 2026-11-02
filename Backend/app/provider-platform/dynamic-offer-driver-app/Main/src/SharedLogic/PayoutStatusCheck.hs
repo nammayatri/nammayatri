@@ -15,6 +15,9 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.AccountConfig as FinanceConfig
+import qualified Lib.Finance.Domain.Types.Account as FAccount
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Lib.Payment.Payout.StatusCheck as PSC
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -40,7 +43,28 @@ getPayoutStatusCheckConfig order = do
     Nothing -> do
       person <- QP.findById (Id order.customerId) >>= fromMaybeM (PersonNotFound order.customerId)
       pure person.merchantOperatingCityId
-  getPayoutStatusCheckConfigForPerson (Id order.customerId) merchantOperatingCityId
+  -- Kernel-managed wallet transfers carry their own poll pacing on the class config
+  -- (both fields must be set); PayoutConfig stays the fallback and the source for
+  -- non-wallet payout orders. Pacing reads the DRIVER class even for fleet owners —
+  -- poll cadence is per rail behaviour, not per role.
+  mbKernelPacing <-
+    if order.entityName == Just DPayment.DRIVER_WALLET_TRANSACTION
+      then do
+        cfg <-
+          FinanceConfig.getAccountConfig
+            FinanceConfig.AccountClass
+              { merchantId = order.merchantId,
+                merchantOperatingCityId = merchantOperatingCityId.getId,
+                accountType = FAccount.Liability,
+                counterpartyType = Just FAccount.DRIVER,
+                subLedger = Nothing
+              }
+        pure $
+          PSC.PayoutStatusCheckConfig
+            <$> (secondsToNominalDiffTime . fromIntegral <$> cfg.statusCheckIntervalSec)
+            <*> cfg.statusCheckMaxAttempts
+      else pure Nothing
+  maybe (getPayoutStatusCheckConfigForPerson (Id order.customerId) merchantOperatingCityId) pure mbKernelPacing
 
 getPayoutStatusCheckConfigForPerson :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m PSC.PayoutStatusCheckConfig
 getPayoutStatusCheckConfigForPerson personId merchantOperatingCityId = do

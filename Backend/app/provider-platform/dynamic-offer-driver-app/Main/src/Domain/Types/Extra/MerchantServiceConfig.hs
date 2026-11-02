@@ -14,6 +14,8 @@ import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.ChallanSearch.Interface.Types as ChallanSearchInterface
 import qualified Kernel.External.ChallanSearch.Types as ChallanSearch
 import Kernel.External.Encryption
+import qualified Kernel.External.EventTracking as EventTracking
+import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingInterface
 import Kernel.External.FleetEngine.Config (FleetEngineCfg)
 import qualified Kernel.External.GSTEInvoice.Interface.Types as GSTEInvoice
 import qualified Kernel.External.GSTEInvoice.Types as GSTEInvoice
@@ -122,6 +124,7 @@ data ServiceName
   | ChallanSearchService ChallanSearch.ChallanSearchService
   | FleetEngineService FleetEngineProvider
   | BmsService BmsProvider
+  | EventTrackingService EventTracking.EventTrackingService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -161,6 +164,7 @@ instance Show ServiceName where
   show (ChallanSearchService s) = "ChallanSearch_" <> show s
   show (FleetEngineService s) = "FleetEngine_" <> show s
   show (BmsService s) = "Bms_" <> show s
+  show (EventTrackingService s) = "EventTracking_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -299,6 +303,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Bms_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (EventTrackingService v1, r2)
+                 | r1 <- stripPrefix "EventTracking_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -338,6 +346,7 @@ data ServiceConfigD (s :: UsageSafety)
   | ChallanSearchServiceConfig !ChallanSearchInterface.ChallanSearchServiceConfig
   | FleetEngineServiceConfig !FleetEngineCfg
   | BmsServiceConfig !BmsBackendConfig
+  | EventTrackingServiceConfig !EventTrackingInterface.EventTrackingServiceConfig
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe

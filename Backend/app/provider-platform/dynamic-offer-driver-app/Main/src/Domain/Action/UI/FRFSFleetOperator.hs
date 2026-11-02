@@ -781,6 +781,7 @@ fileIncident person messageId req merchantOpCityId mbPersonId = do
   busId <-
     (mbGimsVehicle <|> req.vehicleNumber)
       & fromMaybeM (InvalidRequest "Could not determine which bus this report is for")
+  let reporterName = T.unwords $ catMaybes [Just person.firstName, person.middleName, person.lastName]
   bmsCfg <- getBmsBackendConfig merchantOpCityId
   BmsFlow.reportEvent
     bmsCfg
@@ -790,7 +791,9 @@ fileIncident person messageId req merchantOpCityId mbPersonId = do
         busId = busId,
         -- GIMS exposes no depot for a driver, so bms falls back to its no-depot routing.
         depotId = Nothing,
-        description = mkBmsDescription req
+        description = mkBmsDescription req,
+        reportedByPersonId = Just person.id.getId,
+        reportedByName = Just reporterName
       }
   persistIncidentReport person messageId.getId req busId
   logInfo $ "FRFSFleetOperator: incident reported - " <> show req.incidentType <> " bus " <> busId

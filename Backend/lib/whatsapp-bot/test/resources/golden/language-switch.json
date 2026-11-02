@@ -132,7 +132,7 @@
       "expectBackend": []
     },
     {
-      "note": "lang:kn -> language persisted, state IDLE, localized menu row",
+      "note": "lang:kn -> language persisted, state IDLE, localized menu row [2026-10-29 message cuts: Language moved from the menu row to More]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -183,8 +183,7 @@
           "merchant": "FLEXI",
           "buttons": [
             "ride_type:flexi",
-            "more",
-            "choose_language"
+            "more"
           ]
         }
       ],

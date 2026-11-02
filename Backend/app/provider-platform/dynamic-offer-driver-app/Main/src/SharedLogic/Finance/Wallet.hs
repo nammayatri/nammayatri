@@ -129,7 +129,7 @@ module SharedLogic.Finance.Wallet
     getControlBalanceByOwner,
     createWalletEntryDelta,
     utcToLocalDay,
-    payoutCutoffTimeUTC,
+    walletClassConfig,
     todayRangeUTC,
     financeCtxFromRide,
     buildFinanceCtx,
@@ -172,11 +172,7 @@ module SharedLogic.Finance.Wallet
     walletReferenceCancellationOverdueBenefitRefundTax,
     splitGrossByVatPct,
     getRedeemableEntryIds,
-    releaseWalletEntriesReservation,
-    settleWalletEntries,
-    postOwnerPayoutLiability,
     walletPayoutLedgerRefs,
-    settleWalletPayoutLedger,
     WalletPayoutEligibility (..),
     emptyWalletPayoutEligibility,
     PayoutableBalance (..),
@@ -233,16 +229,16 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance hiding (PayoutEligibility (..), getPayoutEligibilityData, runFinance)
+import qualified Lib.Finance.Balance as FinanceBalance
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
-import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..), PayoutOutcome, settlePayoutLedger)
-import qualified Lib.Finance.Ledger.Service as LedgerService
+import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..))
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Finance.TempBalanceHold (addOfferHoldAtKey, getOfferHoldTotalAtKey, removeOfferHoldAtKey)
 import qualified SharedLogic.FareCalculator as Fare
-import SharedLogic.Finance.PostActions (runFinance, runPostActionsForAccount)
+import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid (tdsReimbursementReferenceType)
-import SharedLogic.Finance.WalletAccount (cashWalletCheckEnabled, computeTdsRateReason, estimateBufferedStatutoryDeductions, estimateOfferDeductions, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getPrepaidOfferHoldTotalExcluding, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletAvailableBalanceByOwner, getWalletBalanceByOwner, getWalletHoldBalanceByOwner, getWalletOfferHoldTotalExcluding, hasMinWalletBalance, makePrepaidOfferHoldsKey, makeWalletOfferHoldsKey, shouldCheckCashWallet, validateWalletDebitAmount, walletReferenceStatutoryHold)
+import SharedLogic.Finance.WalletAccount (buildDriverChargeCtx, cashWalletCheckEnabled, computeTdsRateReason, estimateBufferedStatutoryDeductions, estimateOfferDeductions, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getPrepaidOfferHoldTotalExcluding, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletAvailableBalanceByOwner, getWalletBalanceByOwner, getWalletHoldBalanceByOwner, getWalletOfferHoldTotalExcluding, hasMinWalletBalance, makePrepaidOfferHoldsKey, makeWalletOfferHoldsKey, shouldCheckCashWallet, validateWalletDebitAmount, walletReferenceStatutoryHold)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -536,13 +532,29 @@ splitGrossByVatPct mbPct gross = case mbPct of
 utcToLocalDay :: NominalDiffTime -> UTCTime -> Time.Day
 utcToLocalDay timeDiff utcTime = Time.utctDay (Time.addUTCTime timeDiff utcTime)
 
--- | Compute the payout cutoff time in UTC.
---   Entries after this time are considered non-redeemable (recent ride earnings).
-payoutCutoffTimeUTC :: NominalDiffTime -> Int -> UTCTime -> UTCTime
-payoutCutoffTimeUTC timeDiff cutOffDays now =
-  let localDay = utcToLocalDay timeDiff now
-      cutOffDay = Time.addDays (negate (fromIntegral cutOffDays)) localDay
-   in Time.addUTCTime (negate timeDiff) (Time.UTCTime cutOffDay 0)
+-- | The kernel class config for a wallet owner — the single policy source for payout
+--   enablement, instant eligibility, minimums, per-day cap and the redeemable cutoff.
+--   A wallet is the (Liability, counterparty) class; FLEET_BUSINESS folds into
+--   FLEET_OWNER via 'counterpartyFromRole' before this is called.
+walletClassConfig ::
+  (BeamFlow m r) =>
+  Text -> -- merchant id
+  Text -> -- merchant operating city id
+  CounterpartyType ->
+  m ResolvedAccountConfig
+walletClassConfig merchantId merchantOperatingCityId counterparty =
+  getAccountConfig
+    AccountClass
+      { merchantId,
+        merchantOperatingCityId,
+        accountType = Liability,
+        counterpartyType = Just counterparty,
+        subLedger = Nothing
+      }
+
+-- | The redeemable-cutoff instant per the class config. Nothing = no cutoff configured:
+--   everything is redeemable (callers that need a concrete bound use 'now', under which
+--   nothing is post-cutoff — the same answer).
 
 -- | Get the UTC time range for "today" given a timezone offset.
 --   Returns (startOfDayUTC, endOfDayUTC).
@@ -552,13 +564,6 @@ todayRangeUTC timeDiff now =
       start = Time.addUTCTime (negate timeDiff) (Time.UTCTime localDay 0)
       end = Time.addUTCTime (negate timeDiff) (Time.UTCTime localDay 86399)
    in (start, end)
-
--- | Balance of the owner's OwnerPayoutLiability account: money debited from the wallet at initiate
---   that the PG has not yet confirmed or failed. Informational only — the wallet balance already
---   excludes it, so it must not be subtracted again.
-getProcessingPayoutBalance :: (BeamFlow m r) => CounterpartyType -> Text -> m HighPrecMoney
-getProcessingPayoutBalance counterpartyType ownerId =
-  maybe 0 (.balance) <$> findAccountsByCounterparty (Just counterpartyType) (Just ownerId) PayoutLiability
 
 -- | Build a FinanceCtx from booking + ride data.
 --   Resolves merchant name, shortId, address, supplier info, and TDS rate reason from DB.
@@ -768,68 +773,24 @@ createWalletEntryDeltaWithEntryIds counterpartyType ownerId delta currency merch
       mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
       pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") (Right . (,[])) mbBalance
     else do
-      let walletInput =
-            AccountInput
-              { accountType = Liability,
-                counterpartyType = Just counterpartyType,
-                counterpartyId = Just ownerId,
-                subLedger = Nothing,
-                currency = currency,
-                merchantId = merchantId,
-                merchantOperatingCityId = merchantOperatingCityId
-              }
-          platformInput =
-            AccountInput
-              { accountType = Asset,
-                counterpartyType = Just SELLER,
-                counterpartyId = Just merchantId,
-                subLedger = Nothing,
-                currency = currency,
-                merchantId = merchantId,
-                merchantOperatingCityId = merchantOperatingCityId
-              }
-      mbOwnerAccount <- getOrCreateAccount walletInput
-      mbPlatformAccount <- getOrCreateAccount platformInput
-      case (mbOwnerAccount, mbPlatformAccount) of
-        (Right ownerAccount, Right platformAccount) -> do
-          let concernedIndividualId =
-                if counterpartyType == DRIVER
-                  then Just ownerId
-                  else Nothing
-          let (fromAcc, toAcc, amount, eType) =
-                if delta > 0
-                  then (platformAccount.id, ownerAccount.id, delta, Lib.Finance.Domain.Types.LedgerEntry.Expense)
-                  else (ownerAccount.id, platformAccount.id, abs delta, Lib.Finance.Domain.Types.LedgerEntry.Revenue)
-          let entryInput =
-                LedgerEntryInput
-                  { fromAccountId = fromAcc,
-                    toAccountId = toAcc,
-                    concernedIndividualId = concernedIndividualId,
-                    amount = amount,
-                    currency = currency,
-                    entryType = eType,
-                    status = SETTLED,
-                    referenceType = referenceType,
-                    referenceId = referenceId,
-                    entityReferenceId = Nothing,
-                    entityReferenceType = Nothing,
-                    metadata = metadata,
-                    merchantId = merchantId,
-                    merchantOperatingCityId = merchantOperatingCityId,
-                    settlementStatus = if delta > 0 && referenceType `elem` walletCreditRefs then Just UNSETTLED else Nothing
-                  }
-          entryRes <- createEntryWithBalanceUpdate entryInput
-          case entryRes of
-            Left err -> pure $ Left err
-            Right entry -> do
-              -- This function never goes through runFinance, so it can't ride the automatic
-              -- PostActions dispatch. Call it explicitly here, once, for both callers.
-              transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId)
-              runPostActionsForAccount (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck) (toAffectedAccount ownerAccount)
-              mbBal <- getBalance ownerAccount.id
-              pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") (Right . (,[entry.id])) mbBal
-        (Left err, _) -> pure $ Left err
-        (_, Left err) -> pure $ Left err
+      -- Config read happens BEFORE the posting (its only use is ctx.enableWalletGatedTierCheck,
+      -- which PostActions.runFinance dispatches on), so a missing config can no longer fail
+      -- the call after the ledger write the way the old explicit dispatch could.
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId)
+      let ctx = buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId currency referenceId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+          -- Direction + typing preserved from the historical direct posting: credit =
+          -- platform funds the wallet (Expense leg), debit = wallet pays the platform
+          -- (Revenue leg). Earning-ref credits stay UNSETTLED so a payout can claim them.
+          mbSettlement = if delta > 0 && referenceType `elem` walletCreditRefs then Just UNSETTLED else Nothing
+          post =
+            if delta > 0
+              then transferWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Expense mbSettlement PlatformAsset OwnerLiability delta referenceType metadata
+              else transferWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Revenue mbSettlement OwnerLiability PlatformAsset (abs delta) referenceType metadata
+      runFinance ctx (void post) >>= \case
+        Left err -> pure $ Left err
+        Right ((), entryIds) -> do
+          mbBal <- getWalletBalanceByOwner counterpartyType ownerId
+          pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") (Right . (,entryIds)) mbBal
 
 -- Stripe charge ledger (payment / payout / connect-account) --------------------
 
@@ -867,50 +828,6 @@ recordStripeChargeLedger ctx funder amount refType
         transfer_ SellerExpense SellerLiability amount refType
         void $ transfer OwnerLiability SellerRevenue amount refType Nothing
     pure (snd <$> result)
-
--- | Minimal FinanceCtx for posting a driver-side Stripe charge (payout / connect),
---   where no booking/ride is in scope. Counterparty is the driver (or fleet owner),
---   so OwnerLiability resolves to their wallet.
-buildDriverChargeCtx ::
-  CounterpartyType -> -- DRIVER or FLEET_OWNER
-  Text -> -- owner (driver / fleet owner) id
-  Text -> -- merchant id
-  Text -> -- merchant operating city id
-  Currency ->
-  Text -> -- reference id (e.g. payout order id / period key)
-  Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
-  FinanceCtx
-buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId currency referenceId walletGateEnabled =
-  FinanceCtx
-    { merchantId = merchantId,
-      merchantOpCityId = merchantOperatingCityId,
-      currency = currency,
-      isOnline = True,
-      counterpartyType = counterpartyType,
-      counterpartyId = ownerId,
-      concernedIndividualId = if counterpartyType == DRIVER then Just ownerId else Nothing,
-      referenceId = referenceId,
-      entityReferenceId = Nothing,
-      entityReferenceType = Nothing,
-      merchantName = Nothing,
-      merchantShortId = Nothing,
-      issuedByAddress = Nothing,
-      supplierName = Nothing,
-      supplierGSTIN = Nothing,
-      supplierVatNumber = Nothing,
-      supplierAddress = Nothing,
-      merchantGstin = Nothing,
-      merchantVatNumber = Nothing,
-      supplierId = Nothing,
-      panOfParty = Nothing,
-      panType = Nothing,
-      tdsRateReason = Nothing,
-      emitLedgerEntries = True,
-      fromLocationAddress = Nothing,
-      issuedToName = Nothing,
-      enableWalletGatedTierCheck = walletGateEnabled,
-      buyerCounterpartyId = Nothing
-    }
 
 -- | Stripe payout charge Q = fixedFee + percentageRate% * amount (new model),
 --   falling back to the legacy single-mode feeType/feeValue when the new fields
@@ -1128,44 +1045,49 @@ data WalletPayoutEligibility = WalletPayoutEligibility
     redeemableBalance :: HighPrecMoney,
     processingPayoutBalance :: HighPrecMoney,
     redeemableEntryIds :: [Id LedgerEntry],
-    merchantTransferAmount :: HighPrecMoney
+    merchantTransferAmount :: HighPrecMoney,
+    -- | the cutoff instant the kernel computed this under (Nothing = no cutoff policy)
+    cutoffAt :: Maybe UTCTime
   }
 
 emptyWalletPayoutEligibility :: WalletPayoutEligibility
-emptyWalletPayoutEligibility = WalletPayoutEligibility 0 0 0 [] 0
+emptyWalletPayoutEligibility = WalletPayoutEligibility 0 0 0 [] 0 Nothing
 
--- | Driver wallet view over the shared 'LedgerService.getPayoutEligibilityDataWith'
---   (see Note [Redeemable payout calculation] in finance-kernel), with 'alwaysRedeemableWalletRefs'
---   never held back by the cut-off, plus:
---   processing payout balance: amount parked in OwnerPayoutLiability for in-flight payouts (informational)
---   merchant transfer amount: sum of VAT input + discount credits among the redeemable entries
-getPayoutEligibilityData ::
-  (BeamFlow m r) =>
-  CounterpartyType ->
-  Text -> -- owner id
-  Id Account ->
-  HighPrecMoney -> -- current wallet balance
-  UTCTime -> -- payout cutoff time
-  UTCTime -> -- current time (upper bound)
-  m WalletPayoutEligibility
-getPayoutEligibilityData counterpartyType ownerId accountId walletBalance cutoff now = do
-  eligibility <- LedgerService.getPayoutEligibilityDataWith alwaysRedeemableWalletRefs accountId walletBalance cutoff now
-  processingPayoutBalance <- getProcessingPayoutBalance counterpartyType ownerId
-  let merchantTransferAmount =
+-- | Driver wallet view over the kernel's 'FinanceBalance.BalanceBreakdown': the kernel
+--   resolves policy, cutoff and eligibility; this only adds the driver-specific
+--   merchant-transfer classification over the redeemable entries.
+eligibilityFromBreakdown :: Id Account -> FinanceBalance.BalanceBreakdown -> WalletPayoutEligibility
+eligibilityFromBreakdown accountId breakdown =
+  WalletPayoutEligibility
+    { nonRedeemableBalance = breakdown.nonRedeemable,
+      redeemableBalance = breakdown.redeemable,
+      processingPayoutBalance = breakdown.processingOut,
+      redeemableEntryIds = map (.id) breakdown.redeemableEntries,
+      merchantTransferAmount =
         sum
           [ e.amount
-            | e <- eligibility.redeemableEntries,
+            | e <- breakdown.redeemableEntries,
               e.toAccountId == accountId,
               e.referenceType `elem` walletTransferFromMerchantRefs
-          ]
-  pure
-    WalletPayoutEligibility
-      { nonRedeemableBalance = eligibility.nonRedeemableBalance,
-        redeemableBalance = eligibility.redeemableBalance,
-        processingPayoutBalance,
-        redeemableEntryIds = map (.id) eligibility.redeemableEntries,
-        merchantTransferAmount
-      }
+          ],
+      cutoffAt = breakdown.cutoffAt
+    }
+
+-- | Eligibility for a wallet account. Callers pass WHOSE account; everything else —
+--   cutoff, policy, in-flight amounts — resolves inside the kernel. Nobody outside
+--   this module computes or passes cutoffs.
+--
+--   Balances only: 'redeemableEntryIds' stays empty and 'merchantTransferAmount' 0, which
+--   skips the read of the wallet's whole unsettled history. A payout, which has to name the
+--   entries it covers, goes through 'computePayoutableBalance' instead.
+getPayoutEligibilityData ::
+  (BeamFlow m r) =>
+  Text -> -- owner id (for the legacy offer-hold key)
+  Account ->
+  m WalletPayoutEligibility
+getPayoutEligibilityData ownerId walletAccount = do
+  breakdown <- FinanceBalance.getBalanceAmountsWith alwaysRedeemableWalletRefs walletAccount [makeWalletOfferHoldsKey ownerId]
+  pure $ eligibilityFromBreakdown walletAccount.id breakdown
 
 -- | What a wallet payout may pay right now, and how it was arrived at.
 data PayoutableBalance = PayoutableBalance
@@ -1174,61 +1096,54 @@ data PayoutableBalance = PayoutableBalance
     rideHoldBalance :: HighPrecMoney,
     offerHoldBalance :: HighPrecMoney,
     mbAccountId :: Maybe (Id Account),
-    eligibility :: WalletPayoutEligibility
+    eligibility :: WalletPayoutEligibility,
+    -- | the class policy this was computed under (defaults when no account exists yet)
+    classConfig :: ResolvedAccountConfig,
+    -- | redeemable-cutoff instant per the class config; Nothing = everything redeemable
+    resolvedCutoff :: Maybe UTCTime
   }
 
--- | Payable amount shared by instant, adhoc and bulk payouts so they cannot drift: redeemable
---   balance minus PENDING ride holds and offer holds, neither of which reduces the wallet balance.
+-- | Payable amount shared by instant, adhoc and bulk payouts so they cannot drift.
+--   The breakdown (redeemable cutoff, holds, minimum retained) comes from
+--   'FinanceBalance.getBalanceBreakdown' under the account's finance_account_config.
+--   A class with no redeemableCutoff row reports everything redeemable, which is safe:
+--   payout INITIATION in such a city is already blocked by transferOutEnabled = False
+--   (the kernel's default), so this value only ever reaches displays there.
 computePayoutableBalance ::
   (BeamFlow m r, CacheFlow m r) =>
   CounterpartyType ->
   Text -> -- owner id
-  UTCTime -> -- payout cutoff time
-  UTCTime -> -- current time
   m PayoutableBalance
-computePayoutableBalance counterparty ownerId cutoff now = do
+computePayoutableBalance counterparty ownerId = do
   mbAccount <- getWalletAccountByOwner counterparty ownerId
-  let mbAccountId = (.id) <$> mbAccount
-  walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ownerId
-  eligibility <- case mbAccountId of
-    Nothing -> pure emptyWalletPayoutEligibility
-    Just accountId -> getPayoutEligibilityData counterparty ownerId accountId walletBalance cutoff now
-  rideHoldBalance <- getWalletHoldBalanceByOwner counterparty ownerId
-  offerHoldBalance <- getWalletOfferHoldTotal ownerId
-  pure
-    PayoutableBalance
-      { payoutableBalance = max 0 (eligibility.redeemableBalance - rideHoldBalance - offerHoldBalance),
-        ..
-      }
-
--- | TODO: remove post release, kept only for backward compatibility with payouts initiated before OwnerPayoutLiability: legacy payouts reserved
---   wallet entries as PROCESSING, so a failed one must flip them back to UNSETTLED.
-releaseWalletEntriesReservation ::
-  (BeamFlow m r, Finance.HasActorInfo m r) =>
-  [Id LedgerEntry] ->
-  m ()
-releaseWalletEntriesReservation = markEntriesAsUnsettled
-
--- | Mark the redeemable wallet ledger entries covered by a payout as PAID_OUT under the
---   PayoutRequest id. Called by the payout webhook handler after successful disbursement.
-settleWalletEntries ::
-  (BeamFlow m r, Finance.HasActorInfo m r) =>
-  [Id LedgerEntry] -> -- entry IDs to settle
-  Text -> -- PayoutRequest ID
-  m ()
-settleWalletEntries = markEntriesAsPaidOut
-
--- | PayoutInitiated: move the disbursed amount out of the payee's wallet into their
---   OwnerPayoutLiability account, stamped PROCESSING until the PG confirms or fails it.
---   Keyed by ctx.referenceId (the PayoutRequest id), like every other leg of the payout.
-postOwnerPayoutLiability ::
-  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
-  FinanceCtx ->
-  HighPrecMoney ->
-  Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
-  m (Either FinanceError [Id LedgerEntry])
-postOwnerPayoutLiability ctx amount metadata =
-  fmap snd <$> runFinance ctx (void $ transferInProcessing OwnerLiability OwnerPayoutLiability amount walletReferencePayout metadata)
+  case mbAccount of
+    Nothing ->
+      pure
+        PayoutableBalance
+          { payoutableBalance = 0,
+            walletBalance = 0,
+            rideHoldBalance = 0,
+            offerHoldBalance = 0,
+            mbAccountId = Nothing,
+            eligibility = emptyWalletPayoutEligibility,
+            classConfig = defaultAccountConfig,
+            resolvedCutoff = Nothing
+          }
+    Just walletAccount -> do
+      breakdown <- FinanceBalance.getBalanceBreakdownWith alwaysRedeemableWalletRefs walletAccount [makeWalletOfferHoldsKey ownerId]
+      when (isNothing breakdown.config.redeemableCutoff) $
+        logWarning $ "finance_account_config has no redeemableCutoff for wallet account " <> walletAccount.id.getId <> " (owner " <> ownerId <> "); payouts stay gated by transferOutEnabled"
+      pure
+        PayoutableBalance
+          { payoutableBalance = breakdown.available,
+            walletBalance = breakdown.ledgerBalance,
+            rideHoldBalance = breakdown.pendingHolds,
+            offerHoldBalance = breakdown.offerHolds,
+            mbAccountId = Just walletAccount.id,
+            eligibility = eligibilityFromBreakdown walletAccount.id breakdown,
+            classConfig = breakdown.config,
+            resolvedCutoff = breakdown.cutoffAt
+          }
 
 walletPayoutLedgerRefs :: PayoutLedgerRefs
 walletPayoutLedgerRefs =
@@ -1237,16 +1152,6 @@ walletPayoutLedgerRefs =
       settlementReferenceType = walletReferencePayoutSettlement,
       settlementToRole = PlatformAsset
     }
-
--- | Apply a payout outcome to the driver wallet ledger; re-runnable, see 'settlePayoutLedger'.
-settleWalletPayoutLedger ::
-  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
-  FinanceCtx ->
-  HighPrecMoney ->
-  Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
-  PayoutOutcome ->
-  m (Either FinanceError [Id LedgerEntry])
-settleWalletPayoutLedger = settlePayoutLedger runFinance walletPayoutLedgerRefs
 
 -- | True when the merchant has enabled PAN-Aadhaar-link based TDS (the cohort
 -- model). Keyed off the cohort config being present (individualNotLinked).

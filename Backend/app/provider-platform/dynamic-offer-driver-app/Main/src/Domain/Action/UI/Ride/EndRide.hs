@@ -101,6 +101,7 @@ import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.ManualTollCharge as ManualTollCharge
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.ParkingFeeExemption as SPFE
+import SharedLogic.Ride (validateRideLocation)
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
@@ -344,6 +345,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
   case req of
     DriverReq driverReq -> do
       let requestor = driverReq.requestor
+      validateRideLocation driverReq.point
       when (DTC.isEndOtpRequired booking.tripCategory) $ do
         case driverReq.endRideOtp of
           Just endRideOtp -> do
@@ -358,6 +360,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         _ -> throwError AccessDenied
     DashboardReq dashboardReq -> do
       unless (booking.providerId == dashboardReq.merchantId && booking.merchantOperatingCityId == dashboardReq.merchantOperatingCityId) $ throwError (RideDoesNotExist rideOld.id.getId)
+      whenJust dashboardReq.point validateRideLocation
     CronJobReq cronJobReq -> do
       unless (booking.providerId == cronJobReq.merchantId) $ throwError (RideDoesNotExist rideOld.id.getId)
     CallBasedReq callBasedEndRideReq -> do
@@ -387,8 +390,8 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       case cronJobReq.point of
         Just point -> pure (point, Nothing, DRide.CronJob)
         Nothing -> do
-          toLocation <- booking.toLocation & fromMaybeM (InvalidRequest "Trip end location is required")
-          pure (getCoordinates toLocation, Nothing, DRide.CronJob)
+          endPoint <- (getCoordinates <$> booking.toLocation) <|> rideOld.tripStartPos & fromMaybeM (InvalidRequest "Trip end location is required")
+          pure (endPoint, Nothing, DRide.CronJob)
     CallBasedReq _ -> do
       toLocation <- booking.toLocation & fromMaybeM (InvalidRequest "Trip end location is required")
       pure (getCoordinates toLocation, Nothing, DRide.CallBased)

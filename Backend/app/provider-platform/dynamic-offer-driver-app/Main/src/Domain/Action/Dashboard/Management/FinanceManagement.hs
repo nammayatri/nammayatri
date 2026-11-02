@@ -63,6 +63,7 @@ import Kernel.Types.Id (Id (..), ShortId (..), cast)
 import Kernel.Utils.Common (logError, logWarning, secondsToNominalDiffTime)
 import Kernel.Utils.Error (fromMaybeM, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Balance as FinanceBalance
 import qualified Lib.Finance.Core.Types as FinanceCore
 import qualified Lib.Finance.Domain.Types.Account as Account
 import qualified Lib.Finance.Domain.Types.AuditEntry as AuditEntry
@@ -1620,8 +1621,7 @@ getFinanceManagementFinanceWalletLedgerImpl ::
   Flow API.WalletLedgerRes
 getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mbFleetOperatorId mbConcernedIndividualId mbFrom mbLimit mbOffset mbSourceType mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  void $ CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
@@ -1657,11 +1657,10 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
         Just account -> do
           let availableBalance = account.balance
 
-          now <- getCurrentTime
-          let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
-              cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
-              cutoff = WalletService.payoutCutoffTimeUTC timeDiff cutOffDays now
-          lockedBalance <- (.nonRedeemableBalance) <$> LedgerService.getPayoutEligibilityDataWith WalletService.alwaysRedeemableWalletRefs account.id availableBalance cutoff now
+          -- Locked (post-cutoff) balance straight from the kernel breakdown: policy,
+          -- cutoff and eligibility all resolve inside the kernel — this handler only
+          -- asks for the number (TDS reimbursements count as redeemable straight away).
+          lockedBalance <- (.nonRedeemable) <$> FinanceBalance.getBalanceAmountsWith WalletService.alwaysRedeemableWalletRefs account []
 
           -- Get last wallet update time from latest ledger entry
           mbLatestEntry <- LedgerService.getLatestEntryByAccount account.id

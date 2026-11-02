@@ -43,12 +43,48 @@ types:
     passEnum: Maybe PassEnum
     derive: "Show"
 
+  RoutePassConfigAPIEntity:
+    primaryServiceTier: ServiceTierType
+    maximumPurchaseableTripCount: Int
+    variableTripCount: Bool
+    tripCountRecommendations: "[Int]"
+    allowRoundTripPurchase: Bool
+    derive: "Show"
+
+  RoutePassAPIEntity:
+    sourceStopCode: Maybe Text
+    destinationStopCode: Maybe Text
+    sourceStopName: Maybe Text
+    destinationStopName: Maybe Text
+    derive: "Show"
+
+  PassCalculateFareReq:
+    sourceStopCode: Text
+    destinationStopCode: Text
+    tripCount: Maybe Int
+    validityDays: Maybe Int
+    roundTrip: Maybe Bool
+    derive: "Show"
+
+  PassCalculateFareResp:
+    amount: HighPrecMoney
+    perTripAmount: HighPrecMoney
+    referenceFare: HighPrecMoney
+    originalAmount: HighPrecMoney
+    tripCount: Int
+    validityDays: Maybe Int
+    serviceTier: ServiceTierType
+    derive: "Show"
+
   FrfsOverrideConfigAPIEntity:
     percentageApplicable: Maybe HighPrecMoney
     fixedApplicable: Maybe HighPrecMoney
     maximumTripCount: Maybe Int
     unlimitedTripCount: Bool
     maxTicketQuantityPerOverride: Maybe Int
+    enforceStopPair: Maybe Bool
+    allowRoundTrip: Maybe Bool
+    allowCheaperStopPairs: Maybe Bool
     derive: "Show"
 
   PassAPIEntity:
@@ -79,12 +115,16 @@ types:
     minTripsAllowingOverlap: Maybe Int
     minDaysToSuggestRenewal: Maybe Int
     timeOverlappingFrfsBookingsLimit: Maybe Int
+    dynamicDayCount: Maybe Bool
+    dayCountRecommendations: Maybe [Int]
+    routePassConfig: Maybe RoutePassConfigAPIEntity
     derive: "Show"
 
   PassInfoAPIEntity:
     passCategory: PassCategoryAPIEntity
     passTypes: "[PassTypeAPIEntity]"
     passes: "[PassAPIEntity]"
+    dynamicPasses: "[PassAPIEntity]"
     derive: "Show"
 
   PassVerifyReq:
@@ -104,6 +144,11 @@ types:
     imeiNumber: Text
     profilePicture: Maybe Text
     passPhotoMediaId: Maybe (Id MediaFile)
+    sourceStopCode: Maybe Text
+    destinationStopCode: Maybe Text
+    tripCount: Maybe Int
+    validityDays: Maybe Int
+    roundTrip: Maybe Bool
 
   PassSwitchDeviceIdReq:
     deviceId: Maybe Text
@@ -134,6 +179,7 @@ types:
     futureRenewals: [PurchasedPassTransactionAPIEntity]
     overlappingPasses: [PurchasedPassTransactionAPIEntity]
     isPreferredSourceAndDestinationSet: Bool
+    routePass: Maybe RoutePassAPIEntity
     derive: "Show"
 
   PassDetailsAPIEntity:
@@ -219,6 +265,16 @@ apis:
         isMockPayment: Bool
       response:
         type: PassSelectionAPIEntity
+
+  - POST:
+      endpoint: /multimodal/pass/{passId}/calculateFare
+      auth: TokenAuth
+      params:
+        passId: Id Pass
+      request:
+        type: PassCalculateFareReq
+      response:
+        type: PassCalculateFareResp
 
   - POST:
       endpoint: /multimodal/pass/v2/{passId}/select

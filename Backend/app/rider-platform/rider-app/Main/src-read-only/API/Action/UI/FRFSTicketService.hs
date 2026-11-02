@@ -160,6 +160,9 @@ type API =
            "city"
            Kernel.Types.Beckn.Context.City
       :> QueryParam
+           "enforceFRFSPass"
+           Kernel.Prelude.Bool
+      :> QueryParam
            "hasPasses"
            Kernel.Prelude.Bool
       :> QueryParam
@@ -236,6 +239,19 @@ type API =
       :> Post
            '[JSON]
            API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+      :<|> TokenAuth
+      :> "frfs"
+      :> "pass"
+      :> "instantBook"
+      :> QueryParam
+           "forceBook"
+           Kernel.Prelude.Bool
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSPassInstantBookReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSPassInstantBookResp
       :<|> TokenAuth
       :> "frfs"
       :> "quote"
@@ -458,7 +474,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> postFrfsBookingReschedule :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation
+handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsPassInstantBook :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> postFrfsBookingReschedule :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation
 
 getFrfsConfig ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -544,13 +560,14 @@ postFrfsSearch ::
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) ->
     Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     API.Types.UI.FRFSTicketService.FRFSSearchAPIReq ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
   )
-postFrfsSearch a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a7) $ Domain.Action.UI.FRFSTicketService.postFrfsSearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
+postFrfsSearch a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a8) $ Domain.Action.UI.FRFSTicketService.postFrfsSearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
 
 postFrfsDiscoverySearch ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -593,6 +610,16 @@ postFrfsQuoteV2Confirm ::
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
   )
 postFrfsQuoteV2Confirm a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteV2Confirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+
+postFrfsPassInstantBook ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    API.Types.UI.FRFSTicketService.FRFSPassInstantBookReq ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSPassInstantBookResp
+  )
+postFrfsPassInstantBook a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.FRFSTicketService.postFrfsPassInstantBook (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postFrfsQuotePaymentRetry ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

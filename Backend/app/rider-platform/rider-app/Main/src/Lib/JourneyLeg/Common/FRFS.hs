@@ -422,14 +422,14 @@ getInfo searchId journeyLeg journeyLegs mbPassCandidates = do
       legInfo <- JT.mkLegInfoFromFrfsSearchRequest searchReq journeyLeg journeyLegs mbPassCandidates
       return (Just legInfo)
 
-search :: (JT.SearchRequestFlow m r c, HasMasterCloudForwarder r) => Spec.VehicleCategory -> Id DPerson.Person -> Id DMerchant.Merchant -> Int -> Context.City -> DJourneyLeg.JourneyLeg -> Maybe (Id DRL.RecentLocation) -> Maybe Text -> Maybe Spec.ServiceTierType -> (Text -> m ()) -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Bool -> m JT.SearchResponse
-search vehicleCategory personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId mbServiceTier upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbHasPasses = do
+search :: (JT.SearchRequestFlow m r c, HasMasterCloudForwarder r) => Spec.VehicleCategory -> Id DPerson.Person -> Id DMerchant.Merchant -> Int -> Context.City -> DJourneyLeg.JourneyLeg -> Maybe (Id DRL.RecentLocation) -> Maybe Text -> Maybe Spec.ServiceTierType -> (Text -> m ()) -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Bool -> Maybe Bool -> m JT.SearchResponse
+search vehicleCategory personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId mbServiceTier upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbHasPasses mbEnforceFRFSPass = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency (journeyLeg.agency <&> (.name)) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
   frfsSearchReq <- buildFRFSSearchReq frfsRouteDetails
   let mbFare = journeyLeg.estimatedMinFare <|> journeyLeg.estimatedMaxFare
-  res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq [frfsRouteDetails] Nothing Nothing mbFare multimodalSearchRequestId upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode journeyLeg.providerRouteId mbHasPasses
+  res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq [frfsRouteDetails] Nothing Nothing mbFare multimodalSearchRequestId upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode journeyLeg.providerRouteId mbHasPasses mbEnforceFRFSPass
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
     buildFRFSSearchReq frfsRouteDetails = do
@@ -439,7 +439,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
           serviceTier = listToMaybe frfsRouteDetails >>= (.serviceTier)
           searchAsParentStops = Nothing
           busLocationData = Just journeyLeg.busLocationData
-      return $ API.FRFSSearchAPIReq {vehicleNumber = journeyLeg.finalBoardedBusNumber, platformType = Just DIBC.MULTIMODAL, tripTime = journeyLeg.fromDepartureTime, ..}
+      return $ API.FRFSSearchAPIReq {vehicleNumber = journeyLeg.finalBoardedBusNumber, platformType = Just DIBC.MULTIMODAL, tripTime = journeyLeg.fromDepartureTime, imeiNumber = Nothing, ..}
 
     getFrfsRouteDetails :: JT.SearchRequestFlow m r c => [RD.RouteDetails] -> m [FRFSRouteDetails]
     getFrfsRouteDetails routeDetails = do

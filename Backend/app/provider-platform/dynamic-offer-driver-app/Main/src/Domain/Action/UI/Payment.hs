@@ -39,7 +39,6 @@ import qualified Domain.Action.WebhookHandler as AWebhook
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverGstin as DDG
 import qualified Domain.Types.DriverInformation as DI
-import Domain.Types.Extra.WalletTransaction (mapWalletStatus)
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Invoice as INV
 import qualified "beckn-spec" Domain.Types.Invoice as BecknInvoice
@@ -54,6 +53,7 @@ import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
 import Domain.Types.SubscriptionPurchase
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import qualified Domain.Types.WalletTransaction as DWT
 import qualified Domain.Types.WebhookExtra as WT
 import Environment
 import Kernel.Beam.Functions (runInMasterDb)
@@ -90,8 +90,11 @@ import Lib.Finance
   )
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.Account ()
+import qualified Lib.Finance.Domain.Types.Transfer as DTransfer
 import Lib.Finance.Ledger.Service ()
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.Transfer as QTransfer
+import qualified Lib.Finance.Transfer.Inbound as Inbound
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -110,6 +113,7 @@ import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid
+import qualified SharedLogic.Finance.Rails as Rails
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
@@ -551,39 +555,90 @@ processWalletTopupWebhook ::
   DOrder.PaymentOrder ->
   Payment.TransactionStatus ->
   m ()
+
+-- | TRANSITIONAL: gateway status -> wallet_transaction status, kept only while the
+--   dual-write lives (see the note in the webhook body). The canonical lifecycle is
+--   the finance_transfer row.
+transitionalWalletStatus :: Payment.TransactionStatus -> DWT.WalletTransactionStatus
+transitionalWalletStatus = \case
+  Payment.CHARGED -> DWT.SUCCESS
+  Payment.AUTO_REFUNDED -> DWT.REFUNDED
+  Payment.CLIENT_AUTH_TOKEN_EXPIRED -> DWT.EXPIRED
+  Payment.AUTHENTICATION_FAILED -> DWT.FAILED
+  Payment.AUTHORIZATION_FAILED -> DWT.FAILED
+  Payment.JUSPAY_DECLINED -> DWT.FAILED
+  Payment.CANCELLED -> DWT.FAILED
+  Payment.NEW -> DWT.INITIATED
+  _ -> DWT.PROCESSING
+
 processWalletTopupWebhook driver order transactionStatus = do
-  QWalletTransaction.updateStatus (mapWalletStatus transactionStatus) order.id
-  when (transactionStatus == Payment.CHARGED) $ do
-    let lockKey = "wallet:topup:lock:" <> order.id.getId
-    Redis.withWaitAndLockRedis lockKey 60 50000 $ do
-      existing <- getEntriesByReference walletReferenceTopup (order.id.getId)
-      when (null existing) $ do
-        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
-        ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId) (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
-        let topupInvoiceConfig =
-              InvoiceConfig
-                { invoiceType = BecknInvoice.SubscriptionPurchase,
-                  issuedToType = BecknInvoice.DRIVER,
-                  issuedToId = order.personId.getId,
-                  issuedToName = Nothing,
-                  issuedToAddress = Nothing,
-                  referenceId = Nothing,
-                  lineItems = [InvoiceLineItem {description = "Wallet Top-up", descriptionType = Just WalletTopup, quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False, groupId = Just "g-topup", itemType = Just Fare}],
-                  gstBreakdown = Nothing,
-                  isVat = False,
-                  issuedToTaxNo = Nothing,
-                  issuedByTaxNo = Nothing,
-                  paymentMode = Just "ONLINE", -- wallet topup goes through Juspay; always online
-                  periodStart = Nothing,
-                  periodEnd = Nothing
+  -- One path: every topup settles through the kernel's INBOUND transfer, keyed
+  -- (WalletTopup, orderId); the credit (+ invoice) posts via the CreditRecipe,
+  -- idempotent by construction (anchor check on the credit leg covers orders whose
+  -- credit the pre-kernel code already posted).
+  -- TRANSITIONAL dual-write for the staggered release: old pods / the driver UI still
+  -- read wallet_transaction. Dropped with the table after migration 0017 backfills.
+  QWalletTransaction.updateStatus (transitionalWalletStatus transactionStatus) order.id
+  mbTransfer <- QTransfer.findByReference walletReferenceTopup order.id.getId
+  let lockKey = "wallet:topup:lock:" <> order.id.getId
+  Redis.withWaitAndLockRedis lockKey 60 50000 $ do
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+    ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId) (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+    -- creditedNow: the credit posted on THIS delivery. Webhooks are at-least-once, so
+    -- the success push is gated on it — a redelivery must not re-notify.
+    creditedNow <- case mbTransfer of
+      Just transfer' -> do
+        let recipe =
+              Inbound.CreditRecipe
+                { legs = Inbound.CreditLeg {fromRole = PlatformAsset, toRole = OwnerLiability, portion = Inbound.FullAmount, referenceType = walletReferenceTopup} :| [],
+                  invoiceConfig = Just (mkTopupInvoiceConfig order)
                 }
-        result <- runFinance ctx $ do
-          _ <- transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup Nothing
-          invoice topupInvoiceConfig
-        void $ fromEitherM (\e -> WalletBalanceUpdateFailed ("wallet topup: " <> show e)) result
-        let notificationTitle = "Wallet Top-up Successful"
-            notificationMessage = "Your wallet has been topped up with Rs." <> show order.amount
-        sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
+        updated <-
+          Inbound.applyInboundTransferOutcome runFinance ctx recipe transfer'.id (Just (show transactionStatus)) (Rails.classifyPaymentTransactionStatus transactionStatus)
+            >>= fromEitherM (\e -> WalletBalanceUpdateFailed ("wallet topup: " <> show e))
+        pure (transfer'.status /= DTransfer.SUCCEEDED && updated.status == DTransfer.SUCCEEDED)
+      Nothing ->
+        -- No transfer row: an order from before the kernel owned this flow, or minted
+        -- by an old pod during the staggered release. Settle the OLD way — the
+        -- idempotent direct credit — and let migration 0017 backfill the transfer row
+        -- from wallet_transaction/payment_order afterwards.
+        if transactionStatus == Payment.CHARGED
+          then do
+            alreadyPosted <- not . null <$> getEntriesByReference walletReferenceTopup order.id.getId
+            unless alreadyPosted $
+              void $
+                runFinance
+                  ctx
+                  ( do
+                      void $ transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup Nothing
+                      void $ invoice (mkTopupInvoiceConfig order)
+                  )
+                  >>= fromEitherM (\e -> WalletBalanceUpdateFailed ("wallet topup (pre-migration): " <> show e))
+            pure (not alreadyPosted)
+          else pure False
+    when creditedNow $ do
+      let notificationTitle = "Wallet Top-up Successful"
+          notificationMessage = "Your wallet has been topped up with Rs." <> show order.amount
+      sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
+
+mkTopupInvoiceConfig :: DOrder.PaymentOrder -> InvoiceConfig
+mkTopupInvoiceConfig order =
+  InvoiceConfig
+    { invoiceType = BecknInvoice.SubscriptionPurchase,
+      issuedToType = BecknInvoice.DRIVER,
+      issuedToId = order.personId.getId,
+      issuedToName = Nothing,
+      issuedToAddress = Nothing,
+      referenceId = Nothing,
+      lineItems = [InvoiceLineItem {description = "Wallet Top-up", descriptionType = Just WalletTopup, quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False, groupId = Just "g-topup", itemType = Just Fare}],
+      gstBreakdown = Nothing,
+      isVat = False,
+      issuedToTaxNo = Nothing,
+      issuedByTaxNo = Nothing,
+      paymentMode = Just "ONLINE", -- wallet topup goes through Juspay; always online
+      periodStart = Nothing,
+      periodEnd = Nothing
+    }
 
 processPayment ::
   ( BeamFlow m r,

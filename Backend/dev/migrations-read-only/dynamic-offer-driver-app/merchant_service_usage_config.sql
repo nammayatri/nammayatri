@@ -132,3 +132,9 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN imag
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_estimated_pickup_distances_fallback text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN event_tracking_providers text[] ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN event_tracking_overrides jsonb ;

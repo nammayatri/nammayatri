@@ -32,10 +32,13 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import Lib.Finance (Account, EntryType (Reversal), LedgerEntryMetadata (..), findByAccountWithFilters)
+import Lib.Finance (LedgerEntryMetadata (..))
+import Lib.Finance.Balance (TransferAmount (..))
 import qualified Lib.Finance.Core.Types as Finance
-import Lib.Finance.Ledger.PayoutSettlement (PayoutOutcome (..))
+import qualified Lib.Finance.Domain.Types.Transfer as DTransfer
+import Lib.Finance.Error.Types (AccountErrorCode (InsufficientBalance), FinanceError (..), TransferErrorCode (..))
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Transfer.Outbound as Outbound
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
@@ -45,7 +48,10 @@ import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
+import SharedLogic.Finance.PostActions (runFinance)
+import qualified SharedLogic.Finance.Rails as Rails
 import SharedLogic.Finance.Wallet
+import SharedLogic.Finance.WalletAccount (makeWalletOfferHoldsKey)
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -66,16 +72,20 @@ data PayoutContext = PayoutContext
     transporterConfig :: DTConf.TransporterConfig
   }
 
+-- | The per-day payout cap and the minimum both moved to the kernel
+--   (finance_account_config maxTransferOutPerDay / minTransferOutAmount).
+--   mbMinimumPayoutOverride exists for the scheduled sweep, whose rule may set a
+--   higher floor than the class minimum; Nothing = the class minimum applies.
 data WalletPayoutParams = WalletPayoutParams
   { payoutType :: PR.PayoutType,
-    minimumPayoutAmount :: HighPrecMoney,
-    enforceDailyLimit :: Bool,
+    mbMinimumPayoutOverride :: Maybe HighPrecMoney,
     throwOnBelowMinimum :: Bool
   }
 
 data WalletPayoutPlan = WalletPayoutPlan
   { payoutableBalance :: HighPrecMoney,
-    cutoff :: UTCTime,
+    -- | Nothing = no redeemable cutoff configured for the class
+    cutoff :: Maybe UTCTime,
     redeemableEntryIds :: [Text],
     merchantTransferAmount :: HighPrecMoney
   }
@@ -115,46 +125,28 @@ loadPayoutContext mbPersonId merchantId mocId = do
       pure (mbDriverInfo >>= (.payoutVpa))
   pure PayoutContext {..}
 
-ensurePayoutsEnabled :: (MonadFlow m) => PayoutContext -> m ()
-ensurePayoutsEnabled ctx =
-  unless ctx.transporterConfig.driverWalletConfig.enableWalletPayout $
+-- | Payout enablement is the kernel class config's transferOutEnabled — one switch per
+--   (Liability, counterparty) class per city.
+ensurePayoutsEnabled :: (BeamFlow m r, MonadFlow m) => PayoutContext -> m ()
+ensurePayoutsEnabled ctx = do
+  cfg <- walletClassConfig ctx.merchantId.getId ctx.mocId.getId (counterpartyFromRole ctx.person.role)
+  unless cfg.transferOutEnabled $
     throwError $ InvalidRequest "Payouts are disabled"
 
--- | Whether this role may take an instant payout in the city.
---   FLEET_BUSINESS counts as FLEET_OWNER, as everywhere else in the wallet.
-instantPayoutAllowedFor :: DTConf.DriverWalletConfig -> DP.Role -> Bool
-instantPayoutAllowedFor walletConfig role = asFleetOwner role `notElem` map asFleetOwner (fromMaybe [] walletConfig.instantPayoutExcludedRoles)
-  where
-    asFleetOwner DP.FLEET_BUSINESS = DP.FLEET_OWNER
-    asFleetOwner r = r
+-- | Whether this role may take an instant payout in the city: the class config's
+--   instantTransferOutEnabled. Roles map to classes via 'counterpartyFromRole'
+--   (FLEET_BUSINESS folds into FLEET_OWNER), so the old instantPayoutExcludedRoles
+--   list is now simply instantTransferOutEnabled = False on the FLEET_OWNER class row.
+instantPayoutAllowedFor :: (BeamFlow m r) => Id Domain.Types.Merchant.Merchant -> Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> DP.Role -> m Bool
+instantPayoutAllowedFor merchantId mocId role =
+  (.instantTransferOutEnabled) <$> walletClassConfig merchantId.getId mocId.getId (counterpartyFromRole role)
 
--- | Instant payouts only; scheduled and adhoc payouts skip it. Kept apart from 'enableWalletPayout'
---   so a city can leave payouts to admins and the sweep.
-ensureInstantPayoutAllowed :: (MonadFlow m) => PayoutContext -> m ()
-ensureInstantPayoutAllowed ctx =
-  unless (instantPayoutAllowedFor ctx.transporterConfig.driverWalletConfig ctx.person.role) $
-    throwError InstantPayoutNotAllowed
-
-ensurePayoutLimitNotReached ::
-  (BeamFlow m r) =>
-  PayoutContext ->
-  Maybe (Id Account) ->
-  UTCTime ->
-  m ()
-ensurePayoutLimitNotReached ctx mbAccountId now = do
-  let timeDiff = secondsToNominalDiffTime ctx.transporterConfig.timeDiffFromUtc
-      (utcStartOfDay, utcEndOfDay) = todayRangeUTC timeDiff now
-  whenJust ctx.transporterConfig.driverWalletConfig.maxWalletPayoutsPerDay $ \maxPayoutsPerDay -> do
-    payoutsToday <- case mbAccountId of
-      Nothing -> pure []
-      Just accountId -> do
-        entries <- findByAccountWithFilters accountId (Just utcStartOfDay) (Just utcEndOfDay) Nothing Nothing Nothing (Just [walletReferencePayout])
-        -- Payouts never sent (hold given back) do not use up the daily limit.
-        let wasNotSent e = maybe False (T.isPrefixOf payoutNotSentPrefix) (e.metadataV2 >>= (.reason))
-            notSentHoldIds = [holdId | e <- entries, e.entryType == Reversal, wasNotSent e, Just holdId <- [e.reversalOf]]
-        pure [e | e <- entries, e.entryType /= Reversal, e.id `notElem` notSentHoldIds]
-    when (length payoutsToday >= maxPayoutsPerDay) $
-      throwError $ InvalidRequest "Maximum payouts per day reached"
+-- | Instant payouts only; scheduled and adhoc payouts skip it. Kept apart from
+--   transferOutEnabled so a city can leave payouts to admins and the sweep.
+ensureInstantPayoutAllowed :: (BeamFlow m r, MonadFlow m) => PayoutContext -> m ()
+ensureInstantPayoutAllowed ctx = do
+  allowed <- instantPayoutAllowedFor ctx.merchantId ctx.mocId ctx.person.role
+  unless allowed $ throwError InstantPayoutNotAllowed
 
 -- | Reason prefix for held money given back because the payout was never sent.
 payoutNotSentPrefix :: Text
@@ -203,6 +195,9 @@ computePayoutFee (Just feeConfig) amount =
 
 -- | One wallet payout attempt for a payee under the wallet lock: the amount finder and the
 --   initiate (payout request + OwnerPayoutLiability hold) both run inside it.
+--   The kernel's initiateTransferOut additionally locks "Finance:BalanceLock:<accountId>"
+--   — a different key from this driverId-keyed one, so nesting cannot deadlock; this
+--   outer lock goes away once every wallet read/write is behind the kernel lock.
 runWalletPayout :: (WalletPayoutFlow m r) => PayoutContext -> WalletPayoutParams -> m ()
 runWalletPayout ctx params =
   PayoutRequest.runPayoutUnderLock (makeWalletRunningBalanceLockKey ctx.driverId.getId) 10 (findWalletPayoutAmount ctx params) (initiateWalletPayout ctx params.payoutType)
@@ -214,26 +209,25 @@ runWalletPayoutWith ctx params initiate =
 
 findWalletPayoutAmount :: (WalletPayoutFlow m r) => PayoutContext -> WalletPayoutParams -> m (Maybe WalletPayoutPlan)
 findWalletPayoutAmount ctx params = do
-  now <- getCurrentTime
   let counterparty = counterpartyFromRole ctx.person.role
-      timeDiff = secondsToNominalDiffTime ctx.transporterConfig.timeDiffFromUtc
-      cutOffDays = ctx.transporterConfig.driverWalletConfig.payoutCutOffDays
-      cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
-  pb <- computePayoutableBalance counterparty ctx.driverId.getId cutoff now
-  when params.enforceDailyLimit $ ensurePayoutLimitNotReached ctx pb.mbAccountId now
+  -- The per-day payout cap is enforced by the kernel (finance_account_config
+  -- maxTransferOutPerDay, instant transfers only) inside initiateTransferOut; the
+  -- cutoff and minimum come from the same class config via the breakdown.
+  pb <- computePayoutableBalance counterparty ctx.driverId.getId
   let eligibility = pb.eligibility
       payoutableBalance = pb.payoutableBalance
-  logInfo $ "Payout eligibility for " <> ctx.driverId.getId <> ": walletBalance=" <> show pb.walletBalance <> ", nonRedeemable=" <> show eligibility.nonRedeemableBalance <> ", processingPayout=" <> show eligibility.processingPayoutBalance <> ", rideHold=" <> show pb.rideHoldBalance <> ", offerHold=" <> show pb.offerHoldBalance <> ", payoutableBalance=" <> show payoutableBalance <> ", minimum=" <> show params.minimumPayoutAmount <> ", redeemableEntryIds=" <> show eligibility.redeemableEntryIds
-  if payoutableBalance < params.minimumPayoutAmount
+      minimumPayoutAmount = fromMaybe pb.classConfig.minTransferOutAmount params.mbMinimumPayoutOverride
+  logInfo $ "Payout eligibility for " <> ctx.driverId.getId <> ": walletBalance=" <> show pb.walletBalance <> ", nonRedeemable=" <> show eligibility.nonRedeemableBalance <> ", processingPayout=" <> show eligibility.processingPayoutBalance <> ", rideHold=" <> show pb.rideHoldBalance <> ", offerHold=" <> show pb.offerHoldBalance <> ", payoutableBalance=" <> show payoutableBalance <> ", minimum=" <> show minimumPayoutAmount <> ", redeemableEntryIds=" <> show eligibility.redeemableEntryIds
+  if payoutableBalance < minimumPayoutAmount
     then do
-      when params.throwOnBelowMinimum $ throwError $ InvalidRequest ("Minimum payout amount is " <> show params.minimumPayoutAmount)
+      when params.throwOnBelowMinimum $ throwError $ InvalidRequest ("Minimum payout amount is " <> show minimumPayoutAmount)
       pure Nothing
     else
       pure $
         Just
           WalletPayoutPlan
             { payoutableBalance,
-              cutoff,
+              cutoff = pb.resolvedCutoff,
               redeemableEntryIds = map (.getId) eligibility.redeemableEntryIds,
               merchantTransferAmount = eligibility.merchantTransferAmount
             }
@@ -242,7 +236,7 @@ findWalletPayoutAmount ctx params = do
 --   no batch, coverage up to the cutoff, and a per-order status check.
 initiateWalletPayout :: (WalletPayoutFlow m r) => PayoutContext -> PR.PayoutType -> WalletPayoutPlan -> m ()
 initiateWalletPayout ctx payoutType WalletPayoutPlan {..} =
-  void $ initiateWalletPayoutWith ctx payoutableBalance payoutType Nothing (Just cutoff) redeemableEntryIds merchantTransferAmount Nothing Nothing afterPayoutOrderCreated
+  void $ initiateWalletPayoutWith ctx payoutableBalance payoutType Nothing cutoff redeemableEntryIds merchantTransferAmount Nothing Nothing afterPayoutOrderCreated
 
 -- | Payout route and decrypted phone, resolved before the wallet lock so they are not fetched while holding it.
 data PayoutPrefetch = PayoutPrefetch
@@ -251,8 +245,8 @@ data PayoutPrefetch = PayoutPrefetch
   }
 
 -- | Create the request and order for one beneficiary and hold the amount, so a second payout cannot
---   see the same money. Juspay/Stripe call the partner and then hold; the bulk rail holds first and
---   gives the money back if the payout does not go ahead.
+--   see the same money. Every rail submits first and holds after; the bulk rail's submit only writes the
+--   order locally, so a failed hold fails that order again (see the FAILED branch below).
 initiateWalletPayoutWith ::
   ( EncFlow m r,
     CacheFlow m r,
@@ -332,7 +326,8 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
             payoutType = Just payoutType,
             coverageFrom = coverageFrom,
             coverageTo = coverageTo,
-            ledgerEntryIds = [],
+            -- persisted so a lost Redis stash can still resolve the covered entries
+            ledgerEntryIds = redeemableEntryIds,
             payoutServiceFlow
           }
       -- The bulk rail has no single-order API: the order is written locally and sent later in a batch file.
@@ -354,84 +349,88 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
           }
       initiatedPush = Notify.sendNotificationToDriver ctx.person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED "Payout Initiated" ("Your payout of " <> show netAmount <> " has been initiated." <> if fee > 0 then " (Fee: " <> show fee <> ")" else "") ctx.person ctx.person.deviceToken
 
-      -- Juspay/Stripe: create the request and order, call the partner, then hold.
-      sendThenHold = do
-        result <- PayoutRequest.submitPayoutRequest submission payoutCall onOrderCreated
-        case result of
-          PayoutRequest.PayoutInitiated pr order -> do
-            postOwnerPayoutLiability (ownerPayoutCtxFor pr) netAmount (Just metadata)
-              >>= either (\err -> logError $ "Failed to move payout amount to owner payout liability for payoutRequest " <> pr.id.getId <> ": " <> show err) (const (pure ()))
-            PayoutRequest.stashPayoutLedgerEntryIds pr.id.getId redeemableEntryIds
-            initiatedPush
-            pure (Just order)
-          PayoutRequest.PayoutProcessing pr status -> do
-            logInfo $ "Wallet payout already in flight for " <> ctx.driverId.getId <> " | payoutRequestId: " <> pr.id.getId <> " | status: " <> show status
-            pure Nothing
-          PayoutRequest.PayoutFailed _ err -> do
-            logError $ "Wallet payout failed for " <> ctx.driverId.getId <> ": " <> err
-            pure Nothing
-          -- Only the bulk rail returns this, and the bulk rail does not come here.
-          PayoutRequest.PayoutAmbiguous pr err -> do
-            logError $ "Wallet payout outcome unknown for " <> ctx.driverId.getId <> " | payoutRequestId: " <> pr.id.getId <> ": " <> err
-            pure Nothing
-
-      -- Bulk (HDFC CBX): request, then hold, then local order, so the money is held before any file goes out.
-      holdThenSend = do
-        pr <- PayoutRequest.buildPayoutRequest submission
-        PayoutRequest.createPayoutRequest pr
-        let ownerPayoutCtx = ownerPayoutCtxFor pr
-
-            -- Give the held money back to the wallet; True when it is back. Nothing held counts as back.
-            giveMoneyBack code = do
-              let giveBackFailed err = do
-                    logError $ "WALLET_PAYOUT_GIVE_BACK_FAILED for payoutRequest " <> pr.id.getId <> ": " <> err
-                    pure False
-              result <- try (settleWalletPayoutLedger ownerPayoutCtx netAmount (Just metadata) (PayoutFailed (payoutNotSentPrefix <> code)))
-              case result of
-                Right (Right _) -> pure True
-                Right (Left err) -> giveBackFailed (show err)
-                Left (err :: SomeException) -> giveBackFailed (show err)
-
-            -- Give the money back and fail the request and any order. A hold that could not be given
-            -- back gets the REVERSAL_PENDING reason for ops. Only the short code is stored; the raw
-            -- detail goes to the log.
-            stopNotSent code detail = do
-              logError $ "Wallet payout not sent for " <> ctx.driverId.getId <> " | payoutRequest " <> pr.id.getId <> " | " <> code <> ": " <> detail
-              reversed <- giveMoneyBack code
-              let reason = (if reversed then payoutNotSentPrefix else reversalPendingPrefix) <> code
-              failRequest pr.id reason
-              failBulkOrderIfAny mbBatchId pr.id reason
-              when reversed $ PayoutRequest.clearPayoutLedgerEntryIds pr.id.getId
-              pure Nothing
-
-        holdResult <- try (postOwnerPayoutLiability ownerPayoutCtx netAmount (Just metadata))
-        case holdResult of
-          Left (err :: SomeException) -> stopNotSent "HOLD_FAILED" (show err)
-          Right (Left err) -> stopNotSent "HOLD_FAILED" (show err)
-          Right (Right _) -> do
-            -- If this fails, give the money back rather than leave it held with no order.
-            stashResult <- try (PayoutRequest.stashPayoutLedgerEntryIds pr.id.getId redeemableEntryIds)
-            case stashResult of
-              Left (err :: SomeException) -> stopNotSent "HOLD_RECORD_FAILED" (show err)
-              Right () -> do
-                -- Nothing reaches HDFC here, so any failure is ours and the money can go back.
-                sendResult <- try (PayoutRequest.executePayoutRequestWithOutcome submission.transferAmount submission.currency payoutServiceFlow pr payoutCall onOrderCreated)
-                case sendResult of
-                  Right (PayoutRequest.Executed order) -> do
-                    -- Forked so the batch claim, under each wallet lock, does not wait on FCM.
-                    fork ("WalletPayoutInitiatedNotify:" <> pr.id.getId) initiatedPush
-                    pure (Just order)
-                  Right (PayoutRequest.ConfirmedFailure err) -> stopNotSent "SEND_FAILED" err
-                  Right (PayoutRequest.AmbiguousFailure err) -> stopNotSent "SEND_FAILED" err
-                  Right (PayoutRequest.NotExecutable status) -> stopNotSent ("REQUEST_" <> show status) ("request is " <> show status)
-                  Left (err :: SomeException) -> stopNotSent "SEND_FAILED" (show err)
-
   if netAmount <= 0.0
     then pure Nothing
-    else
-      if payoutServiceFlow == IPayout.BulkFlow
-        then holdThenSend
-        else sendThenHold
+    else do
+      -- The PayoutRequest is created first for every rail: its id anchors the kernel
+      -- transfer, every ledger leg, and the PayoutOrder. Hold/submit ordering, the
+      -- compensation ladder and the canonical status live in the kernel now; the rail
+      -- closure keeps writing PayoutRequest/PayoutOrder statuses as derived views.
+      pr <- PayoutRequest.buildPayoutRequest submission
+      PayoutRequest.createPayoutRequest pr
+      walletAccount <-
+        getWalletAccountByOwner counterparty ctx.driverId.getId
+          >>= fromMaybeM (InternalError $ "Wallet account missing for payout " <> pr.id.getId)
+      let rail =
+            Rails.mkWalletPayoutRail
+              payoutServiceFlow
+              pr
+              submission.transferAmount
+              ctx.transporterConfig.currency
+              payoutCall
+              onOrderCreated
+              (\reason -> failBulkOrderIfAny mbBatchId pr.id (payoutNotSentPrefix <> reason))
+          spec =
+            Outbound.OutboundSpec
+              { ctx = ownerPayoutCtxFor pr,
+                account = walletAccount,
+                -- netAmount, not payoutableBalance: the hold has always been the disbursed
+                -- amount; the payout fee posts its own legs at settlement.
+                amount = Exact netAmount,
+                referenceType = walletReferencePayout,
+                referenceId = pr.id.getId,
+                ledgerRefs = walletPayoutLedgerRefs,
+                instant = payoutType == PR.INSTANT,
+                legacyOfferHoldKeys = [makeWalletOfferHoldsKey ctx.driverId.getId],
+                alwaysRedeemableRefs = alwaysRedeemableWalletRefs,
+                coveredEntryIds = Just (map Id redeemableEntryIds),
+                holdLedgerMetadata = Just metadata,
+                metadata = DTransfer.emptyTransferMetadata
+              }
+      result <- Outbound.initiateTransferOut runFinance rail spec
+      case result of
+        Left err -> do
+          -- Pre-submit rejection: nothing was sent and nothing is held.
+          failRequest pr.id (payoutNotSentPrefix <> "KERNEL_REJECTED")
+          logError $ "Wallet payout rejected by finance kernel for payoutRequest " <> pr.id.getId <> ": " <> show err
+          case err of
+            -- The pre-check (ensurePayoutsEnabled, same kernel config) passed, so a refusal here means the
+            -- finance_account_config row is missing or wrong — be loud, not silent.
+            TransferError TRANSFER_OUT_DISABLED _ -> throwError $ InvalidRequest "Payouts are disabled for this wallet class (finance_account_config)"
+            TransferError INSTANT_TRANSFER_NOT_ALLOWED _ -> throwError InstantPayoutNotAllowed
+            -- Same client-visible error the driver always got for the per-day cap; the kernel
+            -- only gates instant payouts, so scheduled sweeps never reach this.
+            TransferError TRANSFER_DAILY_LIMIT_REACHED _ -> throwError $ InvalidRequest "Maximum payouts per day reached"
+            -- The balance moved between the domain's read and the kernel's locked
+            -- re-read (cash-ride commission, a fresh offer hold): surface it — a
+            -- silent Success with nothing paid is worse than asking to retry.
+            AccountError InsufficientBalance _ -> throwError $ InvalidRequest "Wallet balance changed; please retry the payout"
+            _ -> throwError $ InternalError ("Wallet payout rejected by finance kernel: " <> show err)
+        Right transfer -> case transfer.status of
+          DTransfer.FAILED -> do
+            -- Kernel already compensated: hold reversed, covered entries released.
+            -- A bulk order was only written locally; a failed hold must not leave it in the batch.
+            failBulkOrderIfAny mbBatchId pr.id (payoutNotSentPrefix <> fromMaybe "FAILED" transfer.lastError)
+            failRequest pr.id (payoutNotSentPrefix <> fromMaybe "FAILED" transfer.lastError)
+            logError $ "Wallet payout not sent for " <> ctx.driverId.getId <> " | payoutRequest " <> pr.id.getId <> ": " <> fromMaybe "FAILED" transfer.lastError
+            pure Nothing
+          DTransfer.NEEDS_REVIEW -> do
+            -- Money stays parked on OwnerPayoutLiability; ops resolve via the transfer row.
+            -- The request keeps whatever status the rail left (PROCESSING on ambiguous
+            -- sends — the money may be with the partner). ONE exception: a failed
+            -- give-back (reversal pending) must also land on the PayoutRequest, because
+            -- the ops hold-release tool and the batch-close guards read
+            -- pr.failureReason for the REVERSAL_PENDING prefix — exactly as before the
+            -- kernel owned compensation.
+            let reviewReason = fromMaybe "" transfer.lastError
+            when (reversalPendingPrefix `T.isPrefixOf` reviewReason) $
+              failRequest pr.id reviewReason
+            logError $ "Wallet payout needs review for " <> ctx.driverId.getId <> " | payoutRequest " <> pr.id.getId <> ": " <> reviewReason
+            pure Nothing
+          _ -> do
+            -- Forked so the batch claim, under each wallet lock, does not wait on FCM.
+            fork ("WalletPayoutInitiatedNotify:" <> pr.id.getId) initiatedPush
+            maybe (pure Nothing) QPayoutOrder.findByOrderId transfer.railOrderId
   where
     -- HDFC CBX gives no bank name: use the IFSC bank code and the account's last 4 digits.
     bankLabel :: IPayout.PayoutServiceFlow -> Maybe DDBA.DriverBankAccount -> (Maybe Text, Maybe Text)

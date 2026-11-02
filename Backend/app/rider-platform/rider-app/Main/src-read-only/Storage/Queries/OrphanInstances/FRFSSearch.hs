@@ -18,8 +18,8 @@ import qualified Storage.Beam.FRFSSearch as Beam
 
 instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
   fromTType' (Beam.FRFSSearchT {..}) = do
-    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
-    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     pure $
       Just
         Domain.Types.FRFSSearch.FRFSSearch
@@ -27,6 +27,7 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
             clientBundleVersion = clientBundleVersion',
             clientSdkVersion = clientSdkVersion',
             cloudType = cloudType,
+            enforceFRFSPass = enforceFRFSPass,
             fromStationAddress = fromStationAddress,
             fromStationCode = fromStationId,
             fromStationName = fromStationName,
@@ -65,6 +66,7 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.cloudType = cloudType,
+        Beam.enforceFRFSPass = enforceFRFSPass,
         Beam.fromStationAddress = fromStationAddress,
         Beam.fromStationId = fromStationCode,
         Beam.fromStationName = fromStationName,

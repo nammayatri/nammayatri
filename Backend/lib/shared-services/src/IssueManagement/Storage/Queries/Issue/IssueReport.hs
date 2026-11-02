@@ -40,7 +40,7 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbCategoryName mbAssig
               <> [ Is BeamIR.merchantOperatingCityId $ Eq (Just merchantOperatingCityId.getId),
                    -- Reports filed under a category name alone (pre-ticket bot) have no categoryId.
                    Or [Is BeamIR.categoryId $ Not $ Eq Nothing, Is BeamIR.categoryName $ Not $ Eq Nothing],
-                   Is BeamIR.scheduledBookingTransactionId $ Eq Nothing
+                   Is BeamIR.scheduledBookingTransactionId Null
                  ]
         ]
   issueReports <- findAllWithOptionsKV conditions (Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)

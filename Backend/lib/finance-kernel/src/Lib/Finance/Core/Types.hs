@@ -1,15 +1,11 @@
 {-
   Finance.Core.Types
 
-  Common types and FinanceEnv for domain configuration.
+  Common types shared across the kernel. Account-class configuration lives in
+  Lib.Finance.AccountConfig (finance_account_config), not here.
 -}
 module Lib.Finance.Core.Types
-  ( -- * FinanceEnv (domain provides config)
-    FinanceEnv (..),
-    ConfigKey (..),
-    ConfigValue (..),
-
-    -- * Common Types
+  ( -- * Common Types
     TimeRange (..),
     Image,
     -- Reexport (can be removed, and used directly from Kernel.Utils.Common)
@@ -22,24 +18,6 @@ where
 
 import Kernel.Prelude
 import Kernel.Utils.Common
-
--- ═══════════════════════════════════════════════════════════════════════════
--- Finance Environment (Domain provides config)
--- ═══════════════════════════════════════════════════════════════════════════
-
--- | Configuration key
-newtype ConfigKey = ConfigKey {unConfigKey :: Text}
-  deriving (Eq, Show, Generic, ToJSON, FromJSON)
-
--- | Configuration value (JSON)
-newtype ConfigValue = ConfigValue {unConfigValue :: Value}
-  deriving (Eq, Show, Generic, ToJSON, FromJSON)
-
--- | Finance environment - domain provides this when initializing
-data FinanceEnv domain m = FinanceEnv
-  { getConfig :: ConfigKey -> m (Maybe ConfigValue),
-    getDomainContext :: m domain
-  }
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Common Types

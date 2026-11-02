@@ -147,6 +147,7 @@ buildLanguageStringsM resolveField = do
   regularFareConfirmTmpl <- resolveField "wa_bot_regularFareConfirm"
   regularConfirmButton' <- resolveField "wa_bot_regularConfirmButton"
   regularChangeDropButton' <- resolveField "wa_bot_regularChangeDropButton"
+  regularChangePickupButton' <- resolveField "wa_bot_regularChangePickupButton"
   regularSearching' <- resolveField "wa_bot_regularSearching"
   regularBooking' <- resolveField "wa_bot_regularBooking"
   somethingWentWrong' <- resolveField "wa_bot_somethingWentWrong"
@@ -261,9 +262,10 @@ buildLanguageStringsM resolveField = do
         rideStartedSimple = rideStartedSimple',
         regularDropPrompt = regularDropPrompt',
         regularSelectDrop = regularSelectDrop',
-        regularFareConfirm = \fare area -> substitute regularFareConfirmTmpl [fare, area],
+        regularFareConfirm = \fare dropAddr pickupAddr -> substitute regularFareConfirmTmpl [fare, dropAddr, pickupAddr],
         regularConfirmButton = regularConfirmButton',
         regularChangeDropButton = regularChangeDropButton',
+        regularChangePickupButton = regularChangePickupButton',
         regularSearching = regularSearching',
         regularBooking = regularBooking',
         somethingWentWrong = somethingWentWrong',

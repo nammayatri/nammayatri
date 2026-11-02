@@ -45,7 +45,8 @@ data PayoutSnapshot = PayoutSnapshot
   { payoutableBalance :: HighPrecMoney,
     redeemableEntryIds :: [Text],
     merchantTransferAmount :: HighPrecMoney,
-    cutoff :: UTCTime,
+    -- | Nothing = no redeemable cutoff configured for the class
+    cutoff :: Maybe UTCTime,
     mbBankAccount :: Maybe DDBA.DriverBankAccount
   }
 
@@ -58,24 +59,21 @@ readPayoutSnapshot ::
   DTConf.TransporterConfig ->
   DP.Person ->
   m PayoutSnapshot
-readPayoutSnapshot transporterConfig person = do
-  now <- getCurrentTime
+readPayoutSnapshot _transporterConfig person = do
   let personId = person.id
       counterparty = counterpartyFromRole person.role
   mbBankAccount <- QDBA.findByPrimaryKey personId
-  let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
-      cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
-      cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
   -- Same amount instant payout uses. Held money has already left the wallet, so a second sweep cannot
-  -- pay it again; a payout still in flight does not block money earned since.
-  pb <- computePayoutableBalance counterparty personId.getId cutoff now
+  -- pay it again; a payout still in flight does not block money earned since. The redeemable cutoff
+  -- comes from the kernel class config via the breakdown.
+  pb <- computePayoutableBalance counterparty personId.getId
   let eligibility = pb.eligibility
   pure
     PayoutSnapshot
       { payoutableBalance = pb.payoutableBalance,
         redeemableEntryIds = map (.getId) eligibility.redeemableEntryIds,
         merchantTransferAmount = eligibility.merchantTransferAmount,
-        cutoff = cutoff,
+        cutoff = pb.resolvedCutoff,
         mbBankAccount = mbBankAccount
       }
 

@@ -452,6 +452,7 @@ library
       Domain.Types.Extra.FRFSCachedQuote
       Domain.Types.Extra.IntegratedBPPConfig
       Domain.Types.Extra.InterCityDetails
+      Domain.Types.Extra.LeanFlow
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
       Domain.Types.Extra.MerchantServiceConfig
@@ -475,6 +476,7 @@ library
       Domain.Types.HotSpot
       Domain.Types.LocationAddress
       Domain.Types.MerchantOnboarding.Handler
+      Domain.Types.PassOverrideConfig
       Domain.Types.RentalsIntercityCache
       Domain.Types.RewardContext
       Domain.Types.Route
@@ -604,6 +606,7 @@ library
       SharedLogic.FareBreakupInfo
       SharedLogic.FeedbackForm
       SharedLogic.Finance.CashbackPayout
+      SharedLogic.Finance.Rails
       SharedLogic.Finance.RidePayment
       SharedLogic.FRFSCancel
       SharedLogic.FRFSCancelJourney
@@ -611,6 +614,7 @@ library
       SharedLogic.FRFSFareCalculator
       SharedLogic.FRFSLiveTrip
       SharedLogic.FRFSPassConfirm
+      SharedLogic.FRFSPassInstantBook
       SharedLogic.FRFSPassOverride
       SharedLogic.FRFSPassTicketStatistics
       SharedLogic.FRFSReschedule
@@ -661,6 +665,7 @@ library
       SharedLogic.RideFeedback.Actions
       SharedLogic.RideFeedback.Types
       SharedLogic.RiderConsentPush
+      SharedLogic.RoutePassPricing
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.BookingDepositExpiry
       SharedLogic.Scheduler.Jobs.CallPoliceApi
@@ -774,6 +779,7 @@ library
       Storage.CachedQueries.Seat
       Storage.CachedQueries.Sos
       Storage.CachedQueries.StationsExtraInformation
+      Storage.CachedQueries.SystemConfigs.LeanFlow
       Storage.CachedQueries.Translations
       Storage.CachedQueries.UiRiderConfig
       Storage.CachedQueries.ValueAddNP

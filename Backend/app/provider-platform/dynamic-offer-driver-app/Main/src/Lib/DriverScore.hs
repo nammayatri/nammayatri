@@ -67,6 +67,7 @@ import qualified Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as RQ
 import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error
+import qualified Tools.EventTracking as ET
 import Tools.MarketingEvents as TM
 import Tools.Metrics (CoreMetrics)
 
@@ -194,6 +195,8 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
   mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId) -- always be just because stats will be created at OnNewRideAssigned
   -- mbDriverStats <- DSQ.findById (cast driverId) -- always be just because stats will be created at OnNewRideAssigned
   updateDailyStats driverId merchantOpCityId ride fareParameter
+  fork "track driver ride completed event" $
+    ET.trackEvent merchantOpCityId $ ET.DriverRideCompleted driverId.getId ride.id.getId (show . DVV.castVehicleVariantToVehicleCategory <$> ride.vehicleVariant)
   whenJust mbDriverStats $ \driverStats -> do
     logDebug $ "total rides is :" <> show driverStats.totalRides
     when (driverStats.totalRides == 1) $ do
@@ -203,6 +206,8 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
         whenJust vehicleVariants $ \vehicleVariant' -> do
           let vehicleCategory = DVV.castVehicleVariantToVehicleCategory vehicleVariant'
           TM.notifyMarketingEvents driverId driver'.deviceToken (TM.FIRST_RIDE_COMPLETED) (Just vehicleCategory) (MerchantOperatingCityId merchantOpCityId) [TM.FIREBASE]
+          fork "track driver first ride event" $
+            ET.trackEvent merchantOpCityId $ ET.DriverFirstRideCompleted driverId.getId (Just (show vehicleCategory))
     (incrementTotalEarningsBy, incrementBonusEarningsBy, incrementLateNightTripsCountBy, overallPickupCharges) <- do
       if isNotBackFilled driverStats
         then do

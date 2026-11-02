@@ -89,6 +89,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
+import Lib.Finance.Transfer.Rail (RailSubmitResult (..))
 import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as Payout
@@ -114,6 +115,7 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CancellationFee as CancellationFee
 import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
+import qualified SharedLogic.Finance.Rails as FinanceRails
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.Insurance as SI
@@ -2049,10 +2051,28 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
             logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
             let createPayoutOrderCall = TP.createPayoutOrder person.clientSdkVersion merchantId merchantOperatingCityId (Just person.id.getId)
 
-            mbPayoutOrderResp <- withTryCatch "createPayoutService:handlePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
-            case mbPayoutOrderResp of
-              Left err -> logError $ "Error in calling create payout rideId: " <> show ride.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
-              _ -> pure ()
+            -- Award accrues into the rider's ledger wallet and pays out through a kernel
+            -- transfer — the only money path. A not-submitted outcome just logs: the
+            -- PersonStats status stays Processing, same as a failed direct call before.
+            let submitViaKernel =
+                  Payout.createPayoutServiceWithStatusCheck (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated <&> \case
+                    (_, Just payoutOrder) -> RailAccepted {railOrderId = payoutOrder.orderId, railStatus = show payoutOrder.status}
+                    (Just _, Nothing) -> RailAmbiguous "payout order missing after create"
+                    (Nothing, Nothing) -> RailAmbiguous "no response from payout service"
+            FinanceRails.runAwardPayoutTransfer
+              merchantId.getId
+              merchantOperatingCityId.getId
+              currency
+              person.id.getId
+              uid
+              uid
+              amount
+              RidePaymentFinance.ridePaymentRefReferralAward
+              RidePaymentFinance.ridePaymentRefReferralAwardPayout
+              RidePaymentFinance.referralAwardPayoutLedgerRefs
+              submitViaKernel
+              (\reason -> logError $ "referral award payout not submitted, rideId: " <> show ride.id.getId <> " orderId: " <> show uid <> " reason: " <> reason)
+              (\reason -> logError $ "referral award payout parked for review, rideId: " <> show ride.id.getId <> " orderId: " <> show uid <> " reason: " <> reason)
         Nothing -> do
           when isReferredByPerson $ do
             setPayoutCountForReferree person.id.getId dailyPayoutCount

@@ -4,6 +4,7 @@
 module Storage.Queries.OrphanInstances.Pass where
 
 import qualified BecknV2.FRFS.Enums
+import qualified Data.Aeson
 import qualified Domain.Types.Pass
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -12,6 +13,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.Pass as Beam
 
 instance FromTType' Beam.Pass Domain.Types.Pass.Pass where
@@ -25,8 +27,10 @@ instance FromTType' Beam.Pass Domain.Types.Pass.Pass where
             benefit = benefit,
             benefitDescription = benefitDescription,
             code = code,
+            dayCountRecommendations = dayCountRecommendations,
             description = description,
             documentsRequired = documentsRequired,
+            dynamicDayCount = dynamicDayCount,
             enable = enable,
             formVerificationConfig = formVerificationConfig,
             frfsCancelLimit = frfsCancelLimit,
@@ -42,7 +46,7 @@ instance FromTType' Beam.Pass Domain.Types.Pass.Pass where
             minTripsAllowingOverlap = minTripsAllowingOverlap,
             name = name,
             order = order,
-            overrideBenefitConfigJson = overrideBenefitConfigJson,
+            overrideBenefitConfigJson = overrideBenefitConfigJson >>= Kernel.Utils.JSON.valueToMaybe,
             passConfig = Domain.Types.Pass.PassConfig <$> maxSwitchCount,
             passTypeId = Kernel.Types.Id.Id passTypeId,
             pricingTiers = pricingTiers,
@@ -64,8 +68,10 @@ instance ToTType' Beam.Pass Domain.Types.Pass.Pass where
         Beam.benefit = benefit,
         Beam.benefitDescription = benefitDescription,
         Beam.code = code,
+        Beam.dayCountRecommendations = dayCountRecommendations,
         Beam.description = description,
         Beam.documentsRequired = documentsRequired,
+        Beam.dynamicDayCount = dynamicDayCount,
         Beam.enable = enable,
         Beam.formVerificationConfig = formVerificationConfig,
         Beam.frfsCancelLimit = frfsCancelLimit,
@@ -81,7 +87,7 @@ instance ToTType' Beam.Pass Domain.Types.Pass.Pass where
         Beam.minTripsAllowingOverlap = minTripsAllowingOverlap,
         Beam.name = name,
         Beam.order = order,
-        Beam.overrideBenefitConfigJson = overrideBenefitConfigJson,
+        Beam.overrideBenefitConfigJson = Data.Aeson.toJSON <$> overrideBenefitConfigJson,
         Beam.maxSwitchCount = (.maxSwitchCount) <$> passConfig,
         Beam.passTypeId = Kernel.Types.Id.getId passTypeId,
         Beam.pricingTiers = pricingTiers,

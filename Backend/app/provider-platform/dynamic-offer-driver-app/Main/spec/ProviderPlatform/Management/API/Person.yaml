@@ -1,0 +1,52 @@
+imports:
+  Person: Dashboard.Common
+  Merchant: Dashboard.Common
+  Summary: Dashboard.Common
+  City: Kernel.Types.Beckn.Context
+  Language: Kernel.External.Types
+  RoleAPIEntity: API.Types.ProviderPlatform.Management.Account
+
+module: Person
+
+apis:
+  # Merchant-scoped dashboard-person search. Served directly by the app server
+  # under /direct-dashboard/{merchantId}/{city}/..., so the merchant short-id and
+  # operating city come from the path; the handler resolves the requested merchant
+  # and its logical pair (NAMMA_YATRI + NAMMA_YATRI_PARTNER) and lists the persons
+  # holding merchant_access to either merchant in that city. appServerHandler is
+  # custom because the data lives in the dashboard DB (atlas_dashboard), reached
+  # through lib-dashboard rather than a proxied driver-app handler.
+  - GET:
+      endpoint: /list
+      appServerHandler: custom
+      auth: ApiAuthV2
+      query:
+        - searchString: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: ListPersonRes
+      migrate:
+        capability: admin.user.read
+
+types:
+  ListPersonRes:
+    - list: [PersonAPIEntity]
+    - summary: Summary
+  PersonAPIEntity:
+    - id: Id Person
+    - firstName: Text
+    - lastName: Text
+    - role: RoleAPIEntity
+    - email: Maybe Text
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+    - availableMerchants: [ShortId Merchant]
+    - availableCitiesForMerchant: Maybe [AvailableCitiesForMerchant]
+    - registeredAt: UTCTime
+    - verified: Maybe Bool
+    - receiveNotification: Maybe Bool
+    - language: Maybe Language
+  AvailableCitiesForMerchant:
+    - merchantShortId: ShortId Merchant
+    - operatingCity: [City]

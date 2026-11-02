@@ -2,7 +2,6 @@ module Domain.Action.UI.CustomerReferral where
 
 import API.Types.UI.CustomerReferral
 import qualified Domain.Action.Beckn.Common as Common
-import qualified Domain.Action.Internal.Payout as DPayout
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as MerchantOpCity
 import qualified Domain.Types.Person as Person
@@ -13,7 +12,6 @@ import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as KT
 import qualified Kernel.External.Payout.Interface as Payout
-import qualified Kernel.External.Payout.Juspay.Types.Payout as JuspayPayout
 import Kernel.External.Types (SchedulerFlow)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -24,12 +22,16 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Storage.Queries.Transfer as QTransfer
+import Lib.Finance.Transfer.Rail (RailSubmitResult (..))
 import qualified Lib.Payment.Domain.Action as DP
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
+import qualified SharedLogic.Finance.Rails as FinanceRails
+import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import qualified SharedLogic.Referral as Referral
 import Storage.Beam.Payment ()
@@ -88,11 +90,27 @@ getReferralPayoutHistory (mbPersonId, _mbMerchantId) mbLimit mbOffset = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   payoutOrders <- QPayoutOrder.findAllByCustomerIdWithLimitOffset mbLimit mbOffset personId.getId
   history <- forM payoutOrders $ \payoutOrder -> do
-    mbRequestStatus <- findPayoutRequestStatus payoutOrder
-    -- a paid request needs no refresh; a failed one still does, since a failed create call
-    -- does not prove Juspay never got the order
-    if isFinalOrderStatus payoutOrder.status || (mbRequestStatus >>= requestPayoutStatus) == Just PS.Success
-      then pure $ getPayoutOrderDetails payoutOrder mbRequestStatus
+    -- the kernel transfer is the status authority; rows from before the migration have
+    -- no transfer and fall back to the order status through the ONE classify mapping
+    mbTransfer <- findTransferForOrder payoutOrder
+    -- Pre-migration rows have no transfer; main also honored a TERMINAL PayoutRequest
+    -- when the order was stuck non-terminal — without this, a CREDITED pre-migration
+    -- payout shows Processing and re-polls the gateway on every history load, forever.
+    mbRequestOverride <- case mbTransfer of
+      Just _ -> pure Nothing
+      Nothing ->
+        maybe
+          (pure Nothing)
+          (fmap (>>= terminalRequestStatus) . QPR.findById . Id)
+          (Kernel.Prelude.listToMaybe =<< payoutOrder.entityIds)
+    let derivedStatus order =
+          maybe
+            (fromMaybe (FinanceRails.payoutOrderFallbackStatus order.status) mbRequestOverride)
+            (FinanceRails.transferStatusToPayoutStatus . (.status))
+            mbTransfer
+        status0 = derivedStatus payoutOrder
+    if status0 `elem` [PS.Success, PS.Failed]
+      then pure $ mkPayoutItem payoutOrder status0
       else do
         void $
           withTryCatch ("getReferralPayoutHistory:refreshPayoutStatus:" <> payoutOrder.orderId) $ do
@@ -105,48 +123,35 @@ getReferralPayoutHistory (mbPersonId, _mbMerchantId) mbLimit mbOffset = do
                 payoutOrderStatusCall = TPayout.payoutOrderStatus person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just personId.getId)
             DP.payoutStatusService (cast person.merchantId) (cast personId) payoutStatusServiceReq payoutOrderStatusCall
         refreshedOrder <- QPayoutOrder.findByOrderId payoutOrder.orderId <&> fromMaybe payoutOrder
-        pure $ getPayoutOrderDetails refreshedOrder mbRequestStatus
+        pure $ mkPayoutItem refreshedOrder (derivedStatus refreshedOrder)
   pure $ PayoutHistory {..}
   where
-    -- the payout request id is the order's first entity id; orders without a request get Nothing
-    findPayoutRequestStatus payoutOrder =
-      case Kernel.Prelude.listToMaybe =<< payoutOrder.entityIds of
-        Just payoutRequestId -> fmap (.status) <$> QPR.findById (Id payoutRequestId)
-        Nothing -> pure Nothing
-
-    requestPayoutStatus = \case
+    terminalRequestStatus pr = case pr.status of
       DPR.CREDITED -> Just PS.Success
       DPR.CASH_PAID -> Just PS.Success
-      DPR.AUTO_PAY_FAILED -> Just PS.Failed
       DPR.FAILED -> Just PS.Failed
+      DPR.AUTO_PAY_FAILED -> Just PS.Failed
       DPR.CANCELLED -> Just PS.Failed
       _ -> Nothing
 
-    isFinalOrderStatus orderStatus = orderPayoutStatus orderStatus `elem` [PS.Success, PS.Failed]
+    -- award transfers are keyed by the payout order id; ride-offer cashback by its
+    -- payout-request id (the order's first entity id). Whichever exists wins.
+    findTransferForOrder payoutOrder = do
+      let candidates =
+            [ (RidePaymentFinance.ridePaymentRefReferralAwardPayout, payoutOrder.orderId),
+              (RidePaymentFinance.ridePaymentRefMetroCashbackPayout, payoutOrder.orderId)
+            ]
+              <> maybe [] (\prId -> [(RidePaymentFinance.ridePaymentRefCashbackPayoutTransfer, prId)]) (Kernel.Prelude.listToMaybe =<< payoutOrder.entityIds)
+      foldM (\acc (refType, refId) -> maybe (QTransfer.findByReference refType refId) (pure . Just) acc) Nothing candidates
 
-    orderPayoutStatus = \case
-      JuspayPayout.DISCARDED -> PS.Failed
-      JuspayPayout.INVALID -> PS.Failed
-      JuspayPayout.REVERSED -> PS.Failed
-      JuspayPayout.CONFLICTED -> PS.ManualReview
-      JuspayPayout.MANUAL_REVIEW -> PS.ManualReview
-      orderStatus -> DPayout.castOrderStatus orderStatus
-
-    -- success on the order or the request wins, then a final order status, then a failed request
-    getPayoutOrderDetails payoutOrder mbRequestStatus =
-      let orderStatus = orderPayoutStatus payoutOrder.status
-          requestStatus = mbRequestStatus >>= requestPayoutStatus
-       in PayoutItem
-            { amount = payoutOrder.amount.amount,
-              vpa = payoutOrder.vpa,
-              payoutAt = payoutOrder.createdAt,
-              payoutStatus =
-                if
-                    | orderStatus == PS.Success || requestStatus == Just PS.Success -> PS.Success
-                    | orderStatus == PS.Failed -> PS.Failed
-                    | otherwise -> fromMaybe orderStatus requestStatus,
-              orderId = payoutOrder.orderId
-            }
+    mkPayoutItem payoutOrder payoutStatus =
+      PayoutItem
+        { amount = payoutOrder.amount.amount,
+          vpa = payoutOrder.vpa,
+          payoutAt = payoutOrder.createdAt,
+          payoutStatus,
+          orderId = payoutOrder.orderId
+        }
 
 postPayoutVpaUpsert :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> UpdatePayoutVpaReq -> Flow APISuccess
 postPayoutVpaUpsert (mbPersonId, _mbMerchantId) req = do
@@ -199,10 +204,28 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
           logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
           let createPayoutOrderCall = TPayout.createPayoutOrder person.clientSdkVersion person.merchantId merchantOpCityId (Just person.id.getId)
           merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-          mbPayoutOrderResp <- withTryCatch "createPayoutService:processBacklogReferralPayout" $ Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
-          case mbPayoutOrderResp of
-            Left err -> logError $ "Error in calling create order for backlog payout for riderId: " <> show person.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
-            _ -> pure ()
+          -- Backlog award accrues into the rider's ledger wallet and pays out through a
+          -- kernel transfer — the only money path. Not-submitted just logs: PersonStats
+          -- stays Processing, same as a failed direct call before.
+          let submitViaKernel =
+                Payout.createPayoutServiceWithStatusCheck (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated <&> \case
+                  (_, Just payoutOrder) -> RailAccepted {railOrderId = payoutOrder.orderId, railStatus = show payoutOrder.status}
+                  (Just _, Nothing) -> RailAmbiguous "payout order missing after create"
+                  (Nothing, Nothing) -> RailAmbiguous "no response from payout service"
+          FinanceRails.runAwardPayoutTransfer
+            person.merchantId.getId
+            merchantOpCityId.getId
+            payoutConfig.currency
+            person.id.getId
+            uid
+            uid
+            amount
+            RidePaymentFinance.ridePaymentRefReferralAward
+            RidePaymentFinance.ridePaymentRefReferralAwardPayout
+            RidePaymentFinance.referralAwardPayoutLedgerRefs
+            submitViaKernel
+            (\reason -> logError $ "backlog award payout not submitted, riderId: " <> show person.id.getId <> " orderId: " <> show uid <> " reason: " <> reason)
+            (\reason -> logError $ "backlog award payout parked for review, riderId: " <> show person.id.getId <> " orderId: " <> show uid <> " reason: " <> reason)
         Nothing -> logTagError "Payout Config Error" $ "PayoutConfig Not Found During Backlog Payout for cityId: " <> merchantOpCityId.getId
 
     getEntityName toPayReferredByReward toPayBacklogAmount = case (toPayReferredByReward, toPayBacklogAmount) of
