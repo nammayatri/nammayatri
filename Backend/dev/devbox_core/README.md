@@ -27,7 +27,7 @@ made by hand (no owner) is never taken over.
 | code | `sync [--dry-run]` |
 | stack | `stack-start`, `stack-status [--tail N]`, `stack-wait`, `stack-stop` |
 | data | `versions --from S`, `data --from S [--version vN] [--force]` |
-| control centre | `cc-start`, `cc-status`, `cc-stop` |
+| control centre | `cc-start` (checks it runs: the stack starts it), `cc-status`, `cc-stop` (old detached one only) |
 
 ## Output for the workflow
 
@@ -68,6 +68,6 @@ States: `started`, `done`, `skipped`, `failed` (with `error`).
 | `/tmp/devbox-registry.json` | every workspace: dir, ports, caddyPort, owner (lock: `/tmp/devbox-ports.lock`) |
 | `/tmp/<name>/nammayatri/` | the workspace (code, data, logs) |
 | `…/data/stack.log`, `stack.json` | stack output and process group |
-| `…/data/control-center.json`, `.log` | control centre pid/port and output |
+| `…/data/cc-prefix` | the control centre's gateway path prefix (pre-flight writes it; caddy and the control-centre process read it) |
 | `http://<devbox>:8888/<name>/…` | front desk route to the workspace |
 | `http://<devbox>:8889/<name>/{rider-app,dynamic-offer-driver-app}/…` | public front desk (tailnet only; reached through hopper's gateway) |

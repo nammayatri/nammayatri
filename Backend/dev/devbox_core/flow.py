@@ -66,7 +66,7 @@ def pick_target(user: str | None, host: str | None,
 
 def _cc_url(c: dict, url_host: str, public: str) -> str:
     """Through hopper's gateway when the control centre runs under its public
-    path (cc.py CC_BASE); else its office address, as before."""
+    path (a dev-box workspace, data/cc-prefix); else its direct address."""
     if c.get("state") != "running" or not c.get("port"):
         return ""
     if c.get("base"):
