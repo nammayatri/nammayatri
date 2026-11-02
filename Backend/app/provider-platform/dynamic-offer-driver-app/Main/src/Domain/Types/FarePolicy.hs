@@ -210,6 +210,20 @@ data FareChargeComponent
   | BoothChargeComponent
   | RideExtraTimeFareComponent
   | SchedulingChargeComponent
+  | -- Remaining fare-sum fields, so every amount a customer pays has a component
+    -- (driver earnings fare breakup). GovtChargesComponent is the whole of
+    -- govtCharges, which on VAT-type rides already includes RideVatComponent.
+    GovtChargesComponent
+  | SgstComponent
+  | CgstComponent
+  | ParkingTaxComponent
+  | CardChargeOnFareComponent
+  | CardChargeFixedComponent
+  | ConditionalChargesComponent
+  | CustomerGateFeeComponent
+  | DriverSelectedFareComponent
+  | NegotiatedFareDeltaComponent
+  | NegativeFareAdjustmentComponent
   deriving stock (Show, Read, Eq, Ord, Enum, Bounded, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
