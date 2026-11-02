@@ -184,6 +184,7 @@ RiderConfig:
     driverReferredSearchReqExpiry: Maybe Seconds
     dynamicLogicUpdatePassword: Text
     feedbackAlertRatingThreshold: Int
+    autoFavouriteDriverOnFiveStarRating: Bool
     postRideSafetyNotificationDelay: NominalDiffTime
     useUserSettingsForSafetyIVR: Bool
     payoutReferralProgram: Bool
@@ -380,6 +381,7 @@ RiderConfig:
     maxAlternateRouteVehicles: Maybe Int
     dynamicLogicUpdatePassword: Maybe Text
     feedbackAlertRatingThreshold: Maybe Int
+    autoFavouriteDriverOnFiveStarRating: Maybe Bool
     postRideSafetyNotificationDelay: Maybe Seconds
     useUserSettingsForSafetyIVR: Maybe Bool
     payoutReferralProgram: Maybe Bool
@@ -452,6 +454,7 @@ RiderConfig:
     maxAlternateRouteVehicles: fromMaybe 7 maxAlternateRouteVehicles|E
     dynamicLogicUpdatePassword: fromMaybe "dummy-password" dynamicLogicUpdatePassword|E
     feedbackAlertRatingThreshold: fromMaybe 3 feedbackAlertRatingThreshold|E
+    autoFavouriteDriverOnFiveStarRating: fromMaybe False autoFavouriteDriverOnFiveStarRating|E
     postRideSafetyNotificationDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> postRideSafetyNotificationDelay)|E
     useUserSettingsForSafetyIVR: fromMaybe False useUserSettingsForSafetyIVR|E
     payoutReferralProgram: fromMaybe False payoutReferralProgram|E
@@ -516,6 +519,7 @@ RiderConfig:
     maxAlternateRouteVehicles: Just maxAlternateRouteVehicles|E
     dynamicLogicUpdatePassword: Just dynamicLogicUpdatePassword|E
     feedbackAlertRatingThreshold: Just feedbackAlertRatingThreshold|E
+    autoFavouriteDriverOnFiveStarRating: Just autoFavouriteDriverOnFiveStarRating|E
     postRideSafetyNotificationDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     useUserSettingsForSafetyIVR: Just useUserSettingsForSafetyIVR|E
     payoutReferralProgram: Just payoutReferralProgram|E
@@ -616,6 +620,7 @@ RiderConfig:
     enableShareNumberWithDriver: "false"
     pushConsentToBpp: "false"
     kafkaTopicName: "'gps-data'"
+    autoFavouriteDriverOnFiveStarRating: "false"
   queries:
     findByMerchantOperatingCityId:
       kvFunction: findOneWithKV
