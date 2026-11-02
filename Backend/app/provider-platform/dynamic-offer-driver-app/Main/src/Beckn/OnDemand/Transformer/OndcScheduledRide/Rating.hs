@@ -43,6 +43,7 @@ buildRatingReq subscriber req = do
         ratingValue = ratingValue,
         feedbackDetails = getFeedbackDetails feedbacks driverRating,
         shouldFavDriver = getShouldFavouriteDriver driverRating,
+        shouldBlacklistDriver = getShouldBlacklistDriver driverRating,
         riderPhoneNum = getRiderPhoneNumber driverRating,
         filePath = getFilePath driverRating,
         riderName = getRiderName driverRating

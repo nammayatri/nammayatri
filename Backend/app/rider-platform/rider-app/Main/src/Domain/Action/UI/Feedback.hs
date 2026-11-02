@@ -83,6 +83,7 @@ data FeedbackReq = FeedbackReq
     feedbackDetails :: Maybe Text,
     wasRideSafe :: Maybe Bool,
     shouldFavDriver :: Maybe Bool,
+    shouldBlacklistDriver :: Maybe Bool,
     wasOfferedAssistance :: Maybe Bool,
     mbAudio :: Maybe Text,
     feedbackAnswers :: Maybe [FeedbackAnswer] -- Question-based feedback with badge keys
@@ -103,6 +104,7 @@ data FeedbackRes = FeedbackRes
     vehicleVariant :: DVeh.VehicleVariant,
     vehicleServiceTierType :: DVST.ServiceTierType,
     shouldFavDriver :: Maybe Bool,
+    shouldBlacklistDriver :: Maybe Bool,
     riderPhoneNum :: Maybe Text,
     isValueAddNP :: Bool,
     filePath :: Maybe Text,
@@ -176,6 +178,7 @@ feedback request personId = do
         vehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTierType,
         vehicleServiceTierType = booking.vehicleServiceTierType,
         shouldFavDriver = request.shouldFavDriver,
+        shouldBlacklistDriver = request.shouldBlacklistDriver,
         riderPhoneNum = unencryptedMobileNumber,
         riderName = fromMaybe "User" person.firstName,
         badgeMetadata = badgeMetadata,
