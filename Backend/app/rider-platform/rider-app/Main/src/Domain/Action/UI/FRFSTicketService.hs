@@ -2460,7 +2460,8 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
                 recentLocationId = Nothing,
                 busLocationData = Nothing,
                 vehicleNumber = req.vehicleNumber,
-                tripTime = Nothing
+                tripTime = Nothing,
+                imeiNumber = Nothing
               }
       searchRes <- postFrfsSearch (Just personId, merchantId) (Just city) (Just True) (Just True) (Just integratedBPPConfig.id) (pure <$> mbServiceTier) vehicleType searchReq
       setInProgress (Just searchRes.searchId) attemptStartedAt
