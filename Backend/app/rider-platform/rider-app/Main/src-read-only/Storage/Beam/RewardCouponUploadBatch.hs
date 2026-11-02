@@ -11,16 +11,18 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RewardCouponUploadBatchT f = RewardCouponUploadBatchT
-  { campaignId :: B.C f Kernel.Prelude.Text,
-    cohortId :: B.C f Kernel.Prelude.Text,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    id :: B.C f Kernel.Prelude.Text,
-    s3Key :: B.C f Kernel.Prelude.Text,
-    totalCodesUploaded :: B.C f Kernel.Prelude.Int,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    uploadBatchId :: B.C f Kernel.Prelude.Text,
-    uploadedAt :: B.C f Kernel.Prelude.UTCTime,
-    uploadedBy :: B.C f Kernel.Prelude.Text
+  { campaignId :: (B.C f Kernel.Prelude.Text),
+    cohortId :: (B.C f Kernel.Prelude.Text),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    id :: (B.C f Kernel.Prelude.Text),
+    s3Key :: (B.C f Kernel.Prelude.Text),
+    totalCodesUploaded :: (B.C f Kernel.Prelude.Int),
+    uploadBatchId :: (B.C f Kernel.Prelude.Text),
+    uploadedAt :: (B.C f Kernel.Prelude.UTCTime),
+    uploadedBy :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -30,6 +32,6 @@ instance B.Table RewardCouponUploadBatchT where
 
 type RewardCouponUploadBatch = RewardCouponUploadBatchT Identity
 
-$(enableKVPG ''RewardCouponUploadBatchT ['id] [['campaignId], ['cohortId]])
+$(enableKVPG (''RewardCouponUploadBatchT) [('id)] [[('campaignId)], [('cohortId)]])
 
-$(mkTableInstances ''RewardCouponUploadBatchT "reward_coupon_upload_batch")
+$(mkTableInstances (''RewardCouponUploadBatchT) "reward_coupon_upload_batch")

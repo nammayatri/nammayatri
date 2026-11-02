@@ -21,7 +21,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RewardCouponUploadBatch.RewardCouponUploadBatch] -> m ())
 createMany = traverse_ create
 
-findByCampaign :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RewardCampaign.RewardCampaign -> m [Domain.Types.RewardCouponUploadBatch.RewardCouponUploadBatch])
+findByCampaign :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RewardCampaign.RewardCampaign -> m ([Domain.Types.RewardCouponUploadBatch.RewardCouponUploadBatch]))
 findByCampaign campaignId = do findAllWithKV [Se.Is Beam.campaignId $ Se.Eq (Kernel.Types.Id.getId campaignId)]
 
 findByPrimaryKey ::
@@ -37,10 +37,12 @@ updateByPrimaryKey (Domain.Types.RewardCouponUploadBatch.RewardCouponUploadBatch
       Se.Set Beam.cohortId (Kernel.Types.Id.getId cohortId),
       Se.Set Beam.s3Key s3Key,
       Se.Set Beam.totalCodesUploaded totalCodesUploaded,
-      Se.Set Beam.updatedAt _now,
       Se.Set Beam.uploadBatchId uploadBatchId,
       Se.Set Beam.uploadedAt uploadedAt,
-      Se.Set Beam.uploadedBy uploadedBy
+      Se.Set Beam.uploadedBy uploadedBy,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -55,10 +57,12 @@ instance FromTType' Beam.RewardCouponUploadBatch Domain.Types.RewardCouponUpload
             id = Kernel.Types.Id.Id id,
             s3Key = s3Key,
             totalCodesUploaded = totalCodesUploaded,
-            updatedAt = updatedAt,
             uploadBatchId = uploadBatchId,
             uploadedAt = uploadedAt,
-            uploadedBy = uploadedBy
+            uploadedBy = uploadedBy,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.RewardCouponUploadBatch Domain.Types.RewardCouponUploadBatch.RewardCouponUploadBatch where
@@ -70,8 +74,10 @@ instance ToTType' Beam.RewardCouponUploadBatch Domain.Types.RewardCouponUploadBa
         Beam.id = Kernel.Types.Id.getId id,
         Beam.s3Key = s3Key,
         Beam.totalCodesUploaded = totalCodesUploaded,
-        Beam.updatedAt = updatedAt,
         Beam.uploadBatchId = uploadBatchId,
         Beam.uploadedAt = uploadedAt,
-        Beam.uploadedBy = uploadedBy
+        Beam.uploadedBy = uploadedBy,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
+        Beam.updatedAt = updatedAt
       }

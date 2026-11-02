@@ -11,13 +11,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data GeohashAreaT f = GeohashAreaT
-  { areaName :: B.C f Kernel.Prelude.Text,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    geohash :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
+  { areaName :: (B.C f Kernel.Prelude.Text),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    geohash :: (B.C f Kernel.Prelude.Text),
+    id :: (B.C f Kernel.Prelude.Text),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
   }
   deriving (Generic, B.Beamable)
 
@@ -27,6 +27,6 @@ instance B.Table GeohashAreaT where
 
 type GeohashArea = GeohashAreaT Identity
 
-$(enableKVPG ''GeohashAreaT ['id] [])
+$(enableKVPG (''GeohashAreaT) [('id)] [])
 
-$(mkTableInstances ''GeohashAreaT "geohash_area")
+$(mkTableInstances (''GeohashAreaT) "geohash_area")

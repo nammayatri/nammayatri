@@ -1,6 +1,7 @@
-module Domain.Action.Dashboard.Fleet.LiveMap (getLiveMapDrivers, getDemandHotspots) where
+module Domain.Action.Dashboard.Fleet.LiveMap (getLiveMapDrivers, getDemandHotspots, getLiveMapDemandHotspots) where
 
 import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as ATD
+import qualified API.Types.ProviderPlatform.Fleet.LiveMap
 import qualified API.Types.ProviderPlatform.Fleet.LiveMap as Common
 import qualified API.Types.UI.DemandHotspots as UIHotspots
 import qualified Domain.Action.Dashboard.Common as DCommon
@@ -26,6 +27,7 @@ import Kernel.Types.Error
     PersonError (PersonNotFound),
     RideError (RideNotFound),
   )
+import qualified Kernel.Types.Id
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Common (withTryCatch)
 import Kernel.Utils.Error.Throwing (fromEitherM, fromMaybeM, throwError)

@@ -4,6 +4,8 @@
 module Domain.Types.RewardCouponUploadBatch where
 
 import Data.Aeson
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RewardCampaign
 import qualified Domain.Types.RewardCohort
 import Kernel.Prelude
@@ -17,9 +19,11 @@ data RewardCouponUploadBatch = RewardCouponUploadBatch
     id :: Kernel.Types.Id.Id Domain.Types.RewardCouponUploadBatch.RewardCouponUploadBatch,
     s3Key :: Kernel.Prelude.Text,
     totalCodesUploaded :: Kernel.Prelude.Int,
-    updatedAt :: Kernel.Prelude.UTCTime,
     uploadBatchId :: Kernel.Prelude.Text,
     uploadedAt :: Kernel.Prelude.UTCTime,
-    uploadedBy :: Kernel.Prelude.Text
+    uploadedBy :: Kernel.Prelude.Text,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, (Show), (Eq))

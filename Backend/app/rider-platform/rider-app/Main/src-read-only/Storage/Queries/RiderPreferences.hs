@@ -27,12 +27,12 @@ createMany = traverse_ create
 deleteByRiderIdAndId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.RiderPreferences.RiderPreferences -> m ())
 deleteByRiderIdAndId riderId id = do deleteWithKV [Se.And [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId), Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-findAllByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.RiderPreferences.RiderPreferences])
+findAllByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.RiderPreferences.RiderPreferences]))
 findAllByRiderId riderId = do findAllWithKV [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId)]
 
 findByRiderIdAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Extra.RiderPreferences.PreferenceType -> m [Domain.Types.RiderPreferences.RiderPreferences])
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Extra.RiderPreferences.PreferenceType -> m ([Domain.Types.RiderPreferences.RiderPreferences]))
 findByRiderIdAndType riderId preferenceType = do findAllWithKV [Se.And [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId), Se.Is Beam.preferenceType $ Se.Eq preferenceType]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RiderPreferences.RiderPreferences -> m (Maybe Domain.Types.RiderPreferences.RiderPreferences))
