@@ -682,3 +682,18 @@ findMostRecentRideForRider (Id personId) = do
           mbRide <- fromTType' ride'
           pure $ (,) <$> mbRide <*> mbBooking
     Left _ -> pure Nothing
+
+updateDriverNumberFromPlaintext :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> EncryptedHashed Text -> m ()
+updateDriverNumberFromPlaintext rideId driverNumber =
+  updateOneWithKV
+    [ Se.Set BeamR.driverNumberEncrypted $ Just (unEncrypted driverNumber.encrypted),
+      Se.Set BeamR.driverNumberHash $ Just driverNumber.hash,
+      Se.Set BeamR.driverMobileNumber Nothing
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+clearPlaintextDriverNumber :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> m ()
+clearPlaintextDriverNumber rideId =
+  updateOneWithKV
+    [Se.Set BeamR.driverMobileNumber Nothing]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
