@@ -182,7 +182,9 @@ data RewardContext = RewardContext
     ridesLast30d :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     ridesLast90d :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     hasTakenValidRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    isValidRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    isValidRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    rideVehicleVariant :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rideServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

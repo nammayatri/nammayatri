@@ -39,7 +39,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.Rewards.Evaluator as Eval
 import qualified Domain.Types.RewardCampaign as DRCmp
 import qualified Domain.Types.RewardCohort as DRC
-import Domain.Types.RewardContext (rewardContextKeys)
+import Domain.Types.RewardContext (rewardContextKeys, rideScopedContextKeys)
 import qualified Domain.Types.RewardUnlock as DRU
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -61,8 +61,8 @@ data LiveRewardCandidate = LiveRewardCandidate
 
 -- | Read @presentation.homeCard@: the card (the extra @targetingJsonLogic@ key
 -- is ignored by its decoder) and the optional audience rule. The rule may only
--- reference rider-context fields known at home-screen time; @isValidRide@
--- describes a just-finished ride, so it is rejected here.
+-- reference rider-context fields known at home-screen time; ride-scoped fields
+-- ('rideScopedContextKeys') describe a just-finished ride, so they are rejected here.
 parseHomeCard :: A.Value -> Either Text (API.LiveRewardCard, Maybe A.Value)
 parseHomeCard v = do
   parsedCard <- case A.fromJSON v of
@@ -76,7 +76,7 @@ parseHomeCard v = do
     _ -> Right Nothing
   pure (parsedCard, audience)
   where
-    allowedFields = filter (/= "isValidRide") rewardContextKeys
+    allowedFields = filter (`notElem` rideScopedContextKeys) rewardContextKeys
     validateTarget logic =
       let referenced = filter (not . T.null) (Eval.collectVarNames logic)
           unknown = filter (\f -> T.takeWhile (/= '.') f `notElem` allowedFields) referenced
