@@ -65,8 +65,8 @@ export interface DevboxAssignment {
   /** http://<host>:8888/<id> — this workspace through the dev-box front desk;
    *  stays the same when the workspace's own ports change. */
   workspaceUrl?: string;
-  /** <hopper gateway>/api/<dev-box>/8889/<id> — the same workspace from any
-   *  network, rider-app and driver-app only. */
+  /** <hopper gateway>/api/<dev-box>/8888/<id> — the same workspace from any
+   *  network, the testers' apps only (hopper's nginx gate). */
   publicUrl?: string;
   /** Whether the dev-box front desk answered its health check. */
   frontdeskOk?: boolean;
