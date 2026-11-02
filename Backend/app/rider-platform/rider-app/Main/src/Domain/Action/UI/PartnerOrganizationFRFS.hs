@@ -86,6 +86,7 @@ import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import SharedLogic.FRFSConfirm
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
+import qualified SharedLogic.FRFSStatus as SFRFSStatus
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -104,6 +105,7 @@ import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicket as QFT
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFTBP
+import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
 import qualified Storage.Queries.FRFSTicketCategoryMetadataConfig as QFRFSTicketCategoryMetadataConfig
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonStats as QPStats
@@ -208,7 +210,10 @@ data ShareTicketInfoResp = ShareTicketInfoResp
     partnerOrgTransactionId :: Maybe (Id PartnerOrgTransaction),
     googleWalletJWTUrl :: Maybe Text,
     providerId :: Maybe Text,
-    bppOrderId :: Maybe Text
+    bppOrderId :: Maybe Text,
+    createdAt :: UTCTime,
+    selectedQuoteCategories :: [FRFSTypes.FRFSQuoteCategoryAPIEntity],
+    txnId :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -460,6 +465,9 @@ shareTicketInfo ticketBookingId = do
 
   void $ bppStatusSync fromStation'.merchantId pOrgId city ticketBooking
 
+  mbRrn <- Utils.getChargedPaymentRrn paymentBooking.paymentOrderId
+  selectedPaymentCategories <- filter (\category -> category.selectedQuantity > 0) <$> QFRFSTicketBookingPaymentCategory.findAllByPaymentId paymentBooking.id
+
   let providerId = case integratedBPPConfig.providerConfig of
         DIBC.ONDC DIBC.ONDCBecknConfig {providerInfo} -> providerInfo <&> (.providerId)
         _ -> Nothing
@@ -473,6 +481,9 @@ shareTicketInfo ticketBookingId = do
         city = city.city,
         googleWalletJWTUrl = ticketBooking.googleWalletJWTUrl,
         bppOrderId = ticketBooking.bppOrderId,
+        createdAt = ticketBooking.createdAt,
+        selectedQuoteCategories = map (SFRFSStatus.mkFRFSQuoteCategoryAPIEntity . SFRFSStatus.paymentCategoryToQuoteCategory) selectedPaymentCategories,
+        txnId = mbRrn,
         ..
       }
   where
@@ -776,6 +787,8 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
             vehicleType = booking.vehicleType,
             integratedBppConfigId = booking.integratedBppConfigId,
             bppOrderId = booking.bppOrderId,
+            txnId = Nothing,
+            selectedQuoteCategories = [],
             isSpotBooking = booking.isSpotBooking
           }
   (regToken, _) <- getRegToken booking.riderId partnerOrg.orgId regPOCfg booking.merchantId True

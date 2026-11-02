@@ -463,10 +463,12 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     quantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
     quoteCategories :: [FRFSQuoteCategoryAPIEntity],
     routeStations :: Data.Maybe.Maybe [FRFSRouteStationsAPI],
+    selectedQuoteCategories :: [FRFSQuoteCategoryAPIEntity],
     startTime :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
     stations :: [FRFSStationAPI],
     status :: Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus,
     tickets :: [FRFSTicketAPI],
+    txnId :: Data.Maybe.Maybe Data.Text.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
