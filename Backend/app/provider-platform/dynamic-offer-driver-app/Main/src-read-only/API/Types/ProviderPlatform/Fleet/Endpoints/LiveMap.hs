@@ -30,7 +30,8 @@ data DemandHotspotsResp = DemandHotspotsResp {createdAt :: Kernel.Prelude.UTCTim
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MapDriverInfoRes = MapDriverInfoRes
-  { driverName :: Kernel.Prelude.Text,
+  { driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
+    driverName :: Kernel.Prelude.Text,
     driverStatus :: Kernel.Prelude.Maybe Status,
     vehicleNumber :: Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant,
@@ -40,6 +41,7 @@ data MapDriverInfoRes = MapDriverInfoRes
     vehicleIconURL :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     profilePhotoImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     position :: Kernel.External.Maps.Types.LatLong,
+    lastUpdatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     mobileCountryCode :: Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Text,
     rideRelatedInfo :: RideRelatedInfo
@@ -75,7 +77,12 @@ type GetLiveMapDrivers =
            "driverIdForRadius"
            (Kernel.Types.Id.Id Dashboard.Common.Driver)
       :> QueryParam "point" Kernel.External.Maps.Types.LatLong
-      :> Get '[JSON] [MapDriverInfoRes]
+      :> QueryParam
+           "driverIds"
+           [Kernel.Types.Id.Id Dashboard.Common.Driver]
+      :> Get
+           '[JSON]
+           [MapDriverInfoRes]
   )
 
 type GetLiveMapDriversHelper =
@@ -87,6 +94,13 @@ type GetLiveMapDriversHelper =
       :> QueryParam
            "point"
            Kernel.External.Maps.Types.LatLong
+      :> QueryParam
+           "driverIds"
+           ( Kernel.Prelude.Maybe
+               [ Kernel.Types.Id.Id
+                   Dashboard.Common.Driver
+               ]
+           )
       :> Get
            '[JSON]
            [MapDriverInfoRes]
@@ -95,7 +109,7 @@ type GetLiveMapDriversHelper =
 type GetLiveMapDemandHotspots = ("demandHotspots" :> Get '[JSON] DemandHotspotsResp)
 
 data LiveMapAPIs = LiveMapAPIs
-  { getLiveMapDrivers :: Kernel.Types.Common.Meters -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> EulerHS.Types.EulerClient [MapDriverInfoRes],
+  { getLiveMapDrivers :: Kernel.Types.Common.Meters -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Kernel.Prelude.Maybe (Kernel.Prelude.Maybe [Kernel.Types.Id.Id Dashboard.Common.Driver]) -> EulerHS.Types.EulerClient [MapDriverInfoRes],
     getLiveMapDemandHotspots :: EulerHS.Types.EulerClient DemandHotspotsResp
   }
 

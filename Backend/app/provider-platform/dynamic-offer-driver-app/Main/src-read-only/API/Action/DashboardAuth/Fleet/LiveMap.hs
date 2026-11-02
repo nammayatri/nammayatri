@@ -41,12 +41,12 @@ type GetLiveMapDemandHotspots =
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = getLiveMapDrivers merchantId city :<|> getLiveMapDemandHotspots merchantId city
 
-getLiveMapDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Environment.FlowHandler [API.Types.ProviderPlatform.Fleet.LiveMap.MapDriverInfoRes])
-getLiveMapDrivers a7 a6 a5 a4 a3 a2 a1 =
+getLiveMapDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Kernel.Prelude.Maybe [Kernel.Types.Id.Id Dashboard.Common.Driver] -> Environment.FlowHandler [API.Types.ProviderPlatform.Fleet.LiveMap.MapDriverInfoRes])
+getLiveMapDrivers a8 a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
-        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a5 a7 a6
-        Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.DashboardAuth.Fleet.LiveMap.getLiveMapDrivers a7 a6 a5 a4 a3 a2 a1
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a6 a8 a7
+        Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.DashboardAuth.Fleet.LiveMap.getLiveMapDrivers a8 a7 a6 a5 a4 a3 a2 a1
     )
 
 getLiveMapDemandHotspots :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.LiveMap.DemandHotspotsResp)
