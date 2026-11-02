@@ -1263,7 +1263,7 @@ getTripCategories tConf dsReq isScheduled isInterCity isCrossCity destinationTra
                 DRPO.EasyBooking -> [EasyBooking OnDemandStaticOffer]
                 _ -> [Rental OnDemandStaticOffer, Rental RideOtp]
 
-  TripOption {..}
+  tripCategories
   where
     checkIfMeterRideSearch isMeterRideSearch = case isMeterRideSearch of
       Just isMeterRide -> isMeterRide
