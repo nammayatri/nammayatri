@@ -23,6 +23,7 @@
     shared-kernel = {
       url = "github:nammayatri/shared-kernel";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.amazonka-git.follows = "amazonka-git";
     };
 
     namma-dsl = {
