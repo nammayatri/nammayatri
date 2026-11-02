@@ -23,6 +23,7 @@ import Kernel.External.Encryption (DbHash, getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
+import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -110,18 +111,73 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
                   ..
                 }
         createWithKV newAssociation
-        (mbFleetBa :: Maybe DDBA.DriverBankAccount) <- findOneWithKV [Se.Is BeamDBA.driverId $ Se.Eq fleetOwnerId.getId]
-        mbFleetOwnerInfo <- FOI.findByPrimaryKey fleetOwnerId
         let mbDriverCashRide = if isActive then Nothing else mbDriverInfo >>= (.enableCashRide)
-        let cashRideEffective = effectiveEnableCashRide now mbDriverCashRide (Just newAssociation) (mbFleetOwnerInfo >>= (.enableCashRide))
-        LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-          LTSSync.emptyUpdate
-            { LTSSync.fleetOwnerId = LTSSync.Set (Just fleetOwnerId.getId),
-              LTSSync.chargesEnabled = LTSSync.Set (maybe False (.chargesEnabled) mbFleetBa),
-              LTSSync.bankAccountPaymentMode = LTSSync.Set ((.paymentMode) =<< mbFleetBa),
-              LTSSync.enableCashRide = LTSSync.Set (Just cashRideEffective)
-            }
+        syncFleetLinkToLTS now driverId fleetOwnerId mbDriverCashRide (Just newAssociation)
         onCreated
+
+-- | Links a driver to a fleet as active and pushes the fleet fields to the driver pool.
+-- A plain 'create' would leave the pool data with the fleetOwnerId an earlier unlink
+-- cleared, dropping the re-linked driver from pooling.
+createFleetDriverAssociationWithLTSSync ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Id Person ->
+  Id Person ->
+  Maybe (Id Person) ->
+  Maybe (Id Merchant) ->
+  Maybe (Id MerchantOperatingCity) ->
+  m ()
+createFleetDriverAssociationWithLTSSync driverId fleetOwnerId onboardedOperatorId merchantId merchantOperatingCityId = do
+  now <- getCurrentTime
+  Redis.withWaitAndLockRedisWithTimeout (driverFleetLockKey driverId.getId fleetOwnerId.getId) 10 10 50000 $ do
+    -- Callers check on a replica before taking the lock, so two near-simultaneous links can both pass.
+    mbExisting <- findByDriverIdAndFleetOwnerId driverId fleetOwnerId.getId True
+    whenJust mbExisting $ \_ -> throwError (InvalidRequest "Driver already associated with fleet")
+    id <- generateGUID
+    -- Linking writes no onboarding flag, so the new row copies the driver's docsVerificationStatusUpdatedAt.
+    mbDriverInfo <- QDIE.findById driverId
+    let association =
+          FleetDriverAssociation
+            { id,
+              driverId,
+              isActive = True,
+              fleetOwnerId = fleetOwnerId.getId,
+              associatedOn = Just now,
+              associatedTill = defaultAssociationEnd,
+              onboardingVehicleCategory = Nothing,
+              onboardedOperatorId,
+              requestReason = Nothing,
+              responseReason = Nothing,
+              enableCashRide = Nothing,
+              docsVerificationStatusUpdatedAt = mbDriverInfo >>= (.docsVerificationStatusUpdatedAt),
+              merchantId,
+              merchantOperatingCityId,
+              createdAt = now,
+              updatedAt = now
+            }
+    createWithKV association
+    syncFleetLinkToLTS now driverId fleetOwnerId Nothing (Just association)
+
+-- | Pushes a driver's fleet link to the driver pool: the fleet owner, the fleet owner's bank
+-- account (used for online-payment rides) and the effective cash-ride flag.
+syncFleetLinkToLTS ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
+  UTCTime ->
+  Id Person ->
+  Id Person ->
+  Maybe Bool ->
+  Maybe FleetDriverAssociation ->
+  m ()
+syncFleetLinkToLTS now driverId fleetOwnerId mbDriverCashRide mbAssociation = do
+  (mbFleetBa :: Maybe DDBA.DriverBankAccount) <- findOneWithKV [Se.Is BeamDBA.driverId $ Se.Eq fleetOwnerId.getId]
+  mbFleetOwnerInfo <- FOI.findByPrimaryKey fleetOwnerId
+  let cashRideEffective = effectiveEnableCashRide now mbDriverCashRide mbAssociation (mbFleetOwnerInfo >>= (.enableCashRide))
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate
+      { LTSSync.fleetOwnerId = LTSSync.Set (Just fleetOwnerId.getId),
+        LTSSync.chargesEnabled = LTSSync.Set (maybe False (.chargesEnabled) mbFleetBa),
+        LTSSync.bankAccountPaymentMode = LTSSync.Set ((.paymentMode) =<< mbFleetBa),
+        LTSSync.enableCashRide = LTSSync.Set (Just cashRideEffective)
+      }
 
 findAllActiveByFleetOwnerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [FleetDriverAssociation]
 findAllActiveByFleetOwnerIds [] = pure []
@@ -962,17 +1018,8 @@ approveFleetDriverAssociation driverId fleetOwnerId responseReason = do
         Se.Set BeamFDVA.updatedAt now
       ]
       [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
-    (mbFleetBa :: Maybe DDBA.DriverBankAccount) <- findOneWithKV [Se.Is BeamDBA.driverId $ Se.Eq fleetOwnerId.getId]
-    mbFleetOwnerInfo <- FOI.findByPrimaryKey fleetOwnerId
     mbAssociation <- findByDriverIdAndFleetOwnerIdWithStatus driverId fleetOwnerId.getId
-    let cashRideEffective = effectiveEnableCashRide now Nothing mbAssociation (mbFleetOwnerInfo >>= (.enableCashRide))
-    LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-      LTSSync.emptyUpdate
-        { LTSSync.fleetOwnerId = LTSSync.Set (Just fleetOwnerId.getId),
-          LTSSync.chargesEnabled = LTSSync.Set (maybe False (.chargesEnabled) mbFleetBa),
-          LTSSync.bankAccountPaymentMode = LTSSync.Set ((.paymentMode) =<< mbFleetBa),
-          LTSSync.enableCashRide = LTSSync.Set (Just cashRideEffective)
-        }
+    syncFleetLinkToLTS now driverId fleetOwnerId Nothing mbAssociation
 
 rejectFleetDriverAssociation ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
