@@ -960,8 +960,6 @@ REMOTE_BUFFER_BYTES = 256 * 1024  # last ~256 KB per session for re-attach
 # ── SSH key + ServiceDiscovery helpers ──
 
 _SSH_KEY_CANDIDATES = [os.path.expanduser(k) for k in _dc_ssh.KEY_CANDIDATES]
-BASE_API_HOST = os.environ.get("BASE_API_HOST", "service-discovery.devenv.movingtech.net")
-BASE_API_PORT = os.environ.get("BASE_API_PORT", "8787")
 # Devbox front desk (nix-the-builder scripts/daemonset/worker/devbox/frontdesk): one Caddy per dev-box that
 # routes /<workspace-id>/* to that workspace's own Caddy, so the URL survives port changes.
 FRONTDESK_PORT = os.environ.get("FRONTDESK_PORT", "8888")
@@ -1037,21 +1035,14 @@ def _reach_cache_clear() -> None:
 
 
 def _fetch_machines() -> dict:
-    """Fetch ServiceDiscovery from the base station HTTP API and return
-    a list of MachineInfo dicts the frontend can render in a dropdown.
-
-    Calls  GET http://<BASE_API_HOST>:<BASE_API_PORT>/api/status
-    which returns:
-      { "base": {localIp, awsIp, name, username, resources, usage},
-        "workers": [{localIp, awsIp, name, username, type, resources, usage}, …] }
-
-    Transforms that into:
+    """The machines hopper's service discovery lists (GET <gateway>/node/list),
+    as MachineInfo dicts the frontend can render in a dropdown:
       { "machines": [MachineInfo, …], "myIps": [...] }
-    where MachineInfo = {name, role, localIp, awsIp, bestIp, user, type, resources}
+    where MachineInfo = {name, role, localIp, overlayIp, bestIp, user, type, usage}
 
     The logic lives in devbox_core.fleet; this passes the cached reachability probe.
     """
-    return _dc_fleet.fetch_machines(BASE_API_HOST, BASE_API_PORT, _reachable_cached)
+    return _dc_fleet.fetch_machines(reachable=_reachable_cached)
 
 
 # ── Devbox auto-assignment ────────────────────────────────────────────────────

@@ -1,5 +1,10 @@
 """Fleet helpers: list the machines service discovery knows, and pick a devbox.
 
+The machines come from hopper's service discovery (GET <gateway>/node/list):
+every node whose hopper-agent reported in the last 30s. A dev-box shows up
+only when its hopper-agent was installed with node type "dev-box"
+(HOPPER_NODE_TYPE in /etc/hopper-agent.env).
+
 Moved from test-tool/local-api/server.py so the devbox workflow can choose a
 devbox the same way the 7070 dashboard does.
 """
@@ -7,7 +12,6 @@ from __future__ import annotations
 
 import ipaddress
 import json
-import os
 import re
 import subprocess
 import sys
@@ -15,16 +19,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
-from . import ssh
-
-DEFAULT_BASE_API_HOST = "service-discovery.devenv.movingtech.net"
-DEFAULT_BASE_API_PORT = "8787"
-
-
-def base_api() -> tuple[str, str]:
-    """(host, port) of the service discovery API, from env or the defaults."""
-    return (os.environ.get("BASE_API_HOST", DEFAULT_BASE_API_HOST),
-            os.environ.get("BASE_API_PORT", DEFAULT_BASE_API_PORT))
+from . import ssh, stack
 
 
 def _port_open(ip: str, port: int = 22) -> bool:
@@ -64,51 +59,37 @@ def _my_networks() -> list:
     return my_networks
 
 
-def _tailnet_ips() -> dict:
-    """{hostname (lower case): overlay IPv4} for the tailnet peers this machine
-    sees, from its own tailscale. Service discovery reports only office and AWS
-    addresses; the overlay one is the one that survives a power cut (the office
-    router hands out new IPs) and works from home. {} without tailscale."""
+def _pct(value) -> str:
+    """hopper's 14.2 -> "(14%)", the form ram_pct() and the dashboard read. "" when unknown."""
     try:
-        out = subprocess.check_output(["tailscale", "status", "--json"], text=True,
-                                      timeout=5, stderr=subprocess.DEVNULL)
-        st = json.loads(out)
-    except Exception:
-        return {}
-    ips: dict = {}
-    for peer in (st.get("Peer") or {}).values():
-        v4 = next((ip for ip in peer.get("TailscaleIPs") or [] if ":" not in ip), "")
-        if v4 and peer.get("HostName"):
-            ips[peer["HostName"].lower()] = v4
-    return ips
+        return f"({float(value):.0f}%)"
+    except (TypeError, ValueError):
+        return ""
 
 
-def fetch_machines(base_host: str, base_port: str,
+def fetch_machines(gateway: str = stack.GATEWAY_URL,
                    reachable: Callable[[str], bool] = _port_open) -> dict:
-    """Fetch ServiceDiscovery from the base station HTTP API and return
-    a list of MachineInfo dicts.
+    """The machines hopper's service discovery knows, as MachineInfo dicts.
 
-    Calls  GET http://<base_host>:<base_port>/api/status
-    which returns:
-      { "base": {localIp, awsIp, name, username, resources, usage},
-        "workers": [{localIp, awsIp, name, username, type, resources, usage}, …] }
+    Calls  GET <gateway>/node/list
+    which returns the nodes whose hopper-agent reported in the last 30s:
+      [{magic_dns_name, node_type, username, local_ip, overlay_ip,
+        cpu_usage, mem_usage, disk_usage, updated_at}, …]
 
     Transforms that into:
       { "machines": [MachineInfo, …], "myIps": [...], "myNetworks": [...] }
-    where MachineInfo = {name, role, localIp, awsIp, overlayIp, bestIp, user, type, resources}
+    where MachineInfo = {name, role, localIp, overlayIp, bestIp, user, type, usage, …}
 
     `reachable(ip)` decides whether an address answers; callers that poll pass
     a cached version."""
-    if not base_host:
-        return {"machines": [], "myIps": [],
-                "error": "BASE_API_HOST not set — cannot reach base station API"}
-
-    url = f"http://{base_host}:{base_port}/api/status"
+    url = f"{gateway.rstrip('/')}/node/list"
     try:
-        with urllib.request.urlopen(url, timeout=5) as r:
-            data = json.loads(r.read().decode())
+        with urllib.request.urlopen(url, timeout=10) as r:
+            nodes = json.loads(r.read().decode())
+        if not isinstance(nodes, list):
+            raise ValueError("not a list")
     except Exception as e:
-        return {"machines": [], "myIps": [], "error": f"base station API unreachable at {url}: {e}"}
+        return {"machines": [], "myIps": [], "error": f"service discovery unreachable at {url}: {e}"}
 
     # Collect this machine's IPs + networks so we can pick the best route.
     my_networks = _my_networks()
@@ -116,7 +97,6 @@ def fetch_machines(base_host: str, base_port: str,
     # Our own interfaces as CIDRs — the left-hand side of every same-subnet
     # comparison below, published so the mask a verdict used is on record.
     my_networks_cidr = [f"{ip}/{net.prefixlen}" for ip, net in my_networks]
-    tailnet = _tailnet_ips()
 
     def _shared_subnet(ip: str) -> str:
         """CIDR of one of our own interfaces that contains ip, else "".
@@ -137,57 +117,53 @@ def fetch_machines(base_host: str, base_port: str,
                 return str(net)
         return ""
 
-    def _shape_machine(m: dict, role: str, default_name: str) -> dict:
-        local_ip = m.get("localIp", "")
-        aws_ip = m.get("awsIp", "")
-        overlay_ip = tailnet.get(m.get("name", default_name).lower(), "")
+    def _shape_machine(n: dict) -> dict:
+        local_ip = n.get("local_ip") or ""
+        overlay_ip = n.get("overlay_ip") or ""
         lan_subnet = _shared_subnet(local_ip)
-        vpn_subnet = _shared_subnet(aws_ip)
         overlay_ok = bool(overlay_ip) and reachable(overlay_ip)
-        lan_ok = bool(local_ip) and reachable(local_ip)
-        # Skip the VPN probe when the local address already answered — same box.
-        vpn_ok = bool(aws_ip) and (False if lan_ok else reachable(aws_ip))
+        # Skip the office probe when the overlay address already answered — same box.
+        lan_ok = bool(local_ip) and (False if overlay_ok else reachable(local_ip))
         # The overlay address wins when it answers: it does not change when the
         # office IPs do, and dev-box keys may accept the runner only on it. Then
-        # the local address (no tunnel hop). None → no route from here; the
-        # addresses are still reported (for display) but bestIp/route stay
-        # empty so callers can refuse to assign it.
+        # the local address. None → no route from here; the addresses are still
+        # reported (for display) but bestIp/route stay empty so callers can
+        # refuse to assign it.
         if overlay_ok:
             best, route = overlay_ip, "overlay"
         elif lan_ok:
             best, route = local_ip, "local"
-        elif vpn_ok:
-            best, route = aws_ip, "vpn"
         else:
             best, route = "", ""
         return {
-            "name":        m.get("name", default_name),
-            "role":        role,
+            "name":        n.get("magic_dns_name") or "",
+            # Service discovery lists only agents, never the base station.
+            "role":        "worker",
             "localIp":     local_ip,
-            "awsIp":       aws_ip,
+            "awsIp":       "",
             "overlayIp":   overlay_ip,
             "bestIp":      best,
             "localSubnet": lan_subnet,
-            "vpnSubnet":   vpn_subnet,
+            "vpnSubnet":   "",
             "route":       route,
             "overlayReachable": overlay_ok,
             "localReachable": lan_ok,
-            "vpnReachable": vpn_ok,
-            "user":        m.get("username", "ubuntu"),
-            "type":        m.get("type", ""),
-            "resources":   m.get("resources", {}),
-            "usage":       m.get("usage", {}),
+            "vpnReachable": False,
+            "user":        n.get("username") or "ubuntu",
+            "type":        n.get("node_type") or "",
+            "resources":   {},
+            "usage":       {"cpu": _pct(n.get("cpu_usage")), "ram": _pct(n.get("mem_usage")),
+                            "storage": _pct(n.get("disk_usage"))},
         }
 
     machines: list = []
-    raw_machines = [(data.get("base") or {}, "base", "base")] if data.get("base") else []
-    raw_machines += [(w, "worker", "") for w in data.get("workers", [])]
+    raw_nodes = [n for n in nodes if isinstance(n, dict) and n.get("magic_dns_name")]
 
     # Probe the fleet concurrently: serially this would be
     # (machines × addresses × timeout) of dead air on every poll.
-    if raw_machines:
-        with ThreadPoolExecutor(max_workers=min(8, len(raw_machines) * 2)) as pool:
-            machines = list(pool.map(lambda a: _shape_machine(*a), raw_machines))
+    if raw_nodes:
+        with ThreadPoolExecutor(max_workers=min(8, len(raw_nodes) * 2)) as pool:
+            machines = list(pool.map(_shape_machine, raw_nodes))
 
     return {"machines": machines, "myIps": my_ips,
             "myNetworks": my_networks_cidr}
