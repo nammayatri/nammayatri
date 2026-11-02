@@ -95,3 +95,6 @@ ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN collected_at_vendor_id 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN special_zone_ride_charges json ;
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN per_ride_base_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN daily_base_count integer  default 0;
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN daily_base_amount double precision ;

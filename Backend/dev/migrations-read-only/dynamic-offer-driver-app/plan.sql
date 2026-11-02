@@ -123,3 +123,9 @@ ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN airport_ride_subscription_by_
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN waives_special_ride_charges boolean  default false;
