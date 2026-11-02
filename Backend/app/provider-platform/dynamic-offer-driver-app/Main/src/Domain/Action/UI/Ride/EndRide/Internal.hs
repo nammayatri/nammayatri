@@ -123,6 +123,7 @@ import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.MetricsLabels as SML
+import SharedLogic.Person (applyPendingOnRideBlock)
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.RideEvents.Publisher as RideEventsPublisher
 import Storage.Beam.Toll ()
@@ -212,6 +213,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     whenJust ride.distanceToPickup $ \pickupDistanceVal ->
       Metrics.observePickupDistanceMeters merchantLabel cityLabel vstLabel distBucketLabel "completed" (realToFrac pickupDistanceVal)
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
+  applyPendingOnRideBlock ride.driverId
   oldDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let newFlowStatus = DDriverMode.getDriverFlowStatus oldDriverInfo.mode oldDriverInfo.active
   DDriverMode.updateDriverModeAndFlowStatus driverId thresholdConfig oldDriverInfo.active Nothing newFlowStatus oldDriverInfo (Just False) Nothing

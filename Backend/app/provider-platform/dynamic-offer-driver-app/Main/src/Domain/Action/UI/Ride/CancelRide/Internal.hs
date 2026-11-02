@@ -68,6 +68,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
 import qualified "location-updates" Lib.LocationUpdates as LocUpd
 import Lib.Scheduler (SchedulerType)
+import Lib.Scheduler.Environment (JobCreator)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator (AllocatorJobType (..), GenerateInvoicePdfJobData (..))
@@ -91,6 +92,7 @@ import SharedLogic.Finance.Wallet
 import qualified SharedLogic.FleetEngine as FleetEngine
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
+import SharedLogic.Person (applyPendingOnRideBlock)
 import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
@@ -263,7 +265,8 @@ cancelRideTransaction ::
     EncFlow m r,
     Redis.HedisLTSFlowEnv r,
     Metrics.HasBPPMetrics m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    JobCreator r m
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -279,6 +282,7 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy transport
   releaseLien booking ride
   void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
   updateOnRideStatusWithAdvancedRideCheck driverId (Just ride)
+  applyPendingOnRideBlock driverId
   when booking.isScheduled $
     -- recompute the gate under the per-driver hold lock to avoid racing an accept/release
     CS.withDriverScheduledHoldLock driverId $ do
