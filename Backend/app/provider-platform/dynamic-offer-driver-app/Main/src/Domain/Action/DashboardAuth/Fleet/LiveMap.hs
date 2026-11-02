@@ -33,10 +33,10 @@ import qualified SharedLogic.Fleet
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-getLiveMapDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.External.Maps.Types.LatLong) -> Environment.Flow [API.Types.ProviderPlatform.Fleet.LiveMap.MapDriverInfoRes])
-getLiveMapDrivers a7 a6 a5 a4 a3 a2 a1 = do
-  (mbFleetOwnerId, requestorId) <- SharedLogic.Fleet.getMbFleetOwnerAndRequestorIdMerchantBased (Tools.Auth.DashboardUserAuth.requestorHasFleetMemberHierarchy a5) (Tools.Auth.DashboardUserAuth.requestorIsFleetOwner a5) (Tools.Auth.DashboardUserAuth.dashboardRequestorId a5) a3
-  Domain.Action.Dashboard.Fleet.LiveMap.getLiveMapDrivers a7 a6 a4 requestorId mbFleetOwnerId a2 a1
+getLiveMapDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.External.Maps.Types.LatLong) -> Kernel.Prelude.Maybe [Kernel.Types.Id.Id Dashboard.Common.Driver] -> Environment.Flow [API.Types.ProviderPlatform.Fleet.LiveMap.MapDriverInfoRes])
+getLiveMapDrivers a8 a7 a6 a5 a4 a3 a2 a1 = do
+  (mbFleetOwnerId, requestorId) <- SharedLogic.Fleet.getMbFleetOwnerAndRequestorIdMerchantBased (Tools.Auth.DashboardUserAuth.requestorHasFleetMemberHierarchy a6) (Tools.Auth.DashboardUserAuth.requestorIsFleetOwner a6) (Tools.Auth.DashboardUserAuth.dashboardRequestorId a6) a4
+  Domain.Action.Dashboard.Fleet.LiveMap.getLiveMapDrivers a8 a7 a5 requestorId mbFleetOwnerId a3 a2 a1
 
 getDemandHotspots :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.Flow API.Types.ProviderPlatform.Fleet.LiveMap.DemandHotspotsResp)
 getDemandHotspots merchantShortId opCity _dashboardUser =
