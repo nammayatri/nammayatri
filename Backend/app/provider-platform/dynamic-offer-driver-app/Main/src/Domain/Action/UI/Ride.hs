@@ -382,7 +382,7 @@ otpRideCreate driver otpCode booking clientId = do
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   vehicleServiceTierItem <- getBookingVehicleServiceTierItem booking.vehicleServiceTier
-  let isSpotRide = isRideOtpTrip booking.tripCategory && booking.area == Just SL.Default
+  let isSpotRide = isRideOtpTrip booking.tripCategory
   if isSpotRide
     then do
       let isVehicleVariantNotAllowedForSpotRide = case vehicleServiceTierItem.spotRideAllowedVariants of

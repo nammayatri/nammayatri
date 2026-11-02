@@ -1165,7 +1165,7 @@ convertQuoteToPricing specialLocationName specialLocationSupportNumber fareSettl
       -- persisted quote that predates that field being populated.
       serviceTierName = fromMaybe serviceTier.name vehicleServiceTierName,
       serviceTierDescription =
-        if tripCategory == DT.OneWay DT.OneWayRideOtp && isNothing area
+        if tripCategory == DT.OneWay DT.OneWayRideOtp
           then serviceTier.spotServiceTierShortDesc <|> serviceTier.shortDescription
           else serviceTier.shortDescription,
       vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
