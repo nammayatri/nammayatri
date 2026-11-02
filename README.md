@@ -19,7 +19,7 @@ Here is a [video from our founder](https://www.youtube.com/watch?v=NnyoxiiZLZg) 
 
 [![Namma Yatri Vision](https://img.youtube.com/vi/NnyoxiiZLZg/0.jpg)](https://www.youtube.com/watch?v=NnyoxiiZLZg)
 
-## 🌱 Core Values
+## 🌱 Core Values:
 
 ### 👥 Community-first
 Mobility must be owned by the community of citizens and drivers who collaborate to create a thriving, equitable, and sustainable environment. Participatory development from the community helps build products to solve large-scale problems like mobility.
