@@ -1,15 +1,17 @@
-"""Control centre on the devbox, next to a workspace's stack.
+"""Control centre on the devbox, as part of a workspace's stack.
 
 The workspace's control-center/ (rsynced with the backend: it sits inside the
-repo dir, gitignored) runs as a Vite dev server: its /api/bap|bpp proxy reaches
-the workspace's rider-app / driver-app as localhost. It is served under the
-workspace's public path (CC_BASE), so testers open it through hopper's gateway
-on any network; the office network can also use http://<devbox>:<port><base>.
-Started detached (setsid) so it does
-not die with the SSH session; its pid/port live in <workspace>/data/, which
-rsync never touches.
+repo dir, gitignored) runs as the stack's control-centre process
+(Backend/nix/services/nammayatri.nix): a Vite dev server on the workspace's
+resolved control-centre port, whose /api/bap|bpp proxy reaches the workspace's
+rider-app / driver-app as localhost. The workspace's caddy serves it at
+/control-centre/, so testers open it through hopper's gateway on any network:
+<gateway>/api/<devbox>/<PUBLIC_PORT>/<workspace>/control-centre/. It starts and
+stops with the stack, so there is nothing to start or stop here; this module
+only reports on it.
 
-Moved from test-tool/local-api/server.py so the devbox workflow can start it.
+Workspaces started before that ran it detached next to the stack, with its
+pid/port in <workspace>/data/control-center.json; stop() still cleans one up.
 """
 from __future__ import annotations
 
@@ -18,50 +20,43 @@ import shlex
 import time
 
 from . import ssh
-from .stack import PUBLIC_PORT
-from .workspace import REGISTRY_FILE as REGISTRY
 
-PORTS = range(5300, 5320)   # clear of the stack's own resolved 5xxx ports
-STATE = "data/control-center.json"
-LOG = "data/control-center.log"
+STATE = "data/control-center.json"   # the old detached control centre only
 
-# Runs on the devbox: prints this workspace's control-center state as JSON.
+# Runs on the devbox: prints this workspace's control-centre state as JSON.
 STATUS_PY = r'''
 import json, os, sys, urllib.request, urllib.error
 d = sys.argv[1]
 out = {"state": "stopped", "checkoutPresent": os.path.isdir(os.path.join(d, "control-center"))}
 try:
-    s = json.load(open(os.path.join(d, "data/control-center.json")))
+    port = (json.load(open(os.path.join(d, "data/ports.json"))).get("ports") or {}).get("control-centre")
 except Exception:
-    s = None
-if s:
-    out.update(s)
-    try:
-        os.kill(int(s["pid"]), 0)
-        alive = True
-    except Exception:
-        alive = False
-    ready = False
-    if alive:
-        try:
-            urllib.request.urlopen("http://127.0.0.1:%s/" % s["port"], timeout=2)
-            ready = True
-        except urllib.error.HTTPError:
-            ready = True          # vite answered, just not 200
-        except Exception:
-            pass
-    out["state"] = "running" if ready else ("starting" if alive else "exited")
+    port = None
 try:
-    with open(os.path.join(d, "data/control-center.log"), errors="replace") as f:
-        out["log"] = f.read().splitlines()[-40:]
+    prefix = open(os.path.join(d, "data/cc-prefix")).read().strip()
 except Exception:
-    out["log"] = []
+    prefix = ""
+if port and out["checkoutPresent"]:
+    out["port"] = int(port)
+    out["base"] = prefix + "/control-centre/" if prefix else ""
+    ready = False
+    try:
+        urllib.request.urlopen("http://127.0.0.1:%s%s/control-centre/" % (port, prefix), timeout=2)
+        ready = True
+    except urllib.error.HTTPError:
+        ready = True              # vite answered, just not 200
+    except Exception:
+        pass
+    out["state"] = "running" if ready else "starting"
 print(json.dumps(out))
 '''
 
 
 def status(t: ssh.Target, wdir: str) -> dict:
-    """{"state": stopped|starting|running|exited|unknown, "port", "url", "log", …}."""
+    """{"state": stopped|starting|running|unknown, "port", "base", "url", …}.
+
+    starting = the stack has a control-centre port but Vite does not answer
+    yet (npm install on a fresh workspace takes a while)."""
     try:
         r = ssh.run(t, f"python3 -c {shlex.quote(STATUS_PY)} {shlex.quote(wdir)}", timeout=15)
         st = json.loads(r.stdout) if r.returncode == 0 and r.stdout.strip() else \
@@ -73,81 +68,42 @@ def status(t: ssh.Target, wdir: str) -> dict:
     return st
 
 
-def start(t: ssh.Target, wdir: str, rider_port: int, driver_port: int,
-          info: dict | None = None) -> dict:
-    """Start control-center on a free port in PORTS, pointed at this workspace's
-    rider-app / driver-app. `info` (branch, commit, dirty, deployHash) is saved
-    with the pid/port so status can show what is running.
-
-    Returns the status (unchanged when already starting/running), or {"error"}."""
-    current = status(t, wdir)
-    if current.get("state") in ("starting", "running"):
-        return current
-    if not current.get("checkoutPresent"):
+def start(t: ssh.Target, wdir: str, rider_port: int | None = None,
+          driver_port: int | None = None, info: dict | None = None) -> dict:
+    """The stack starts the control centre itself; this only checks that it
+    will. Returns the status, or {"error"} when there is no control-center/
+    checkout or the running stack predates the control-centre process.
+    (The ports and info arguments are kept for older callers.)"""
+    st = status(t, wdir)
+    if st.get("error"):
+        return st
+    if not st.get("checkoutPresent"):
         return {"error": "no control-center/ in the workspace"}
-    info = info or {}
-    d = shlex.quote(wdir)
-    script = f"""
-set -e
-cd {d}
-mkdir -p data
-PORT=""
-for p in {' '.join(str(p) for p in PORTS)}; do
-  ss -ltn | grep -q ":$p " || {{ PORT=$p; break; }}
-done
-[ -n "$PORT" ] || {{ echo "no free port in {PORTS.start}-{PORTS.stop - 1}" >&2; exit 4; }}
-cd control-center
-# Serve under the workspace's public path, so hopper's gateway can forward it
-# like rider-app: /api/<devbox>/{PUBLIC_PORT}/<workspace>/control-centre/. Only
-# when this checkout understands CC_BASE and the workspace is in the registry;
-# otherwise it is served at / as before (office network only).
-CC_BASE=""
-if grep -q CC_BASE vite.config.ts 2>/dev/null; then
-  NAME=$(python3 -c 'import json, sys
-u = json.load(open(sys.argv[1])).get("users") or {{}}
-print(next((k for k, v in u.items() if isinstance(v, dict) and v.get("dir") == sys.argv[2]), ""))' \\
-    {REGISTRY} {d} 2>/dev/null || true)
-  [ -n "$NAME" ] && CC_BASE="/api/$(hostname)/{PUBLIC_PORT}/$NAME/control-centre/"
-fi
-export CC_BASE
-VITE_BAP_URL=http://localhost:{int(rider_port)} VITE_BPP_URL=http://localhost:{int(driver_port)} CC_PORT=$PORT \\
-  setsid nohup nix shell --inputs-from {d} nixpkgs-unstable#nodejs_22 --command bash -c \\
-    'npm install --no-audit --no-fund && exec npm run dev -- --host 0.0.0.0 --port "$CC_PORT" --strictPort' \\
-  > ../{LOG} 2>&1 < /dev/null &
-PID=$!
-cd ..
-printf '{{"pid": %s, "port": %s, "base": "%s", "startedAt": %s, "riderPort": {int(rider_port)}, "driverPort": {int(driver_port)}, "branch": %s, "commit": %s, "dirty": {json.dumps(bool(info.get('dirty')))}, "deployHash": %s}}\\n' \\
-  "$PID" "$PORT" "$CC_BASE" "$(date +%s)" {shlex.quote(json.dumps(info.get('branch') or ''))} \\
-  {shlex.quote(json.dumps(info.get('commit') or ''))} \\
-  {shlex.quote(json.dumps(info.get('deployHash') or ''))} > {STATE}
-echo "$PORT"
-"""
-    try:
-        r = ssh.run(t, script, timeout=30)
-    except Exception as e:  # noqa: BLE001
-        return {"error": f"could not start control-center on the dev-box: {e}"}
-    if r.returncode != 0:
-        return {"error": (r.stderr or r.stdout or "").strip() or f"start exited {r.returncode}"}
-    return status(t, wdir)
+    if not st.get("port"):
+        return {"error": "this workspace's stack has no control-centre process "
+                         "(started before it was added) - restart the stack"}
+    return st
 
 
 def wait_running(t: ssh.Target, wdir: str, timeout: int = 900, interval: int = 10) -> dict:
     """Wait until the control centre answers (npm install on a fresh workspace
-    can take a while). Returns its status; raises RuntimeError with the last
-    log lines when it exits or the timeout passes."""
+    can take a while). Returns its status; raises RuntimeError when it is not
+    part of the stack or the timeout passes."""
     deadline = time.time() + timeout
     r = status(t, wdir)
     while r.get("state") != "running":
-        if r.get("state") in ("exited", "stopped") or time.time() > deadline:
-            tail = "\n".join((r.get("log") or [])[-15:])
-            raise RuntimeError(f"control centre {r.get('state')}\n{tail}")
+        if r.get("state") == "stopped" or time.time() > deadline:
+            raise RuntimeError(f"control centre {r.get('state')} - see the control-centre "
+                               f"process in the stack log")
         time.sleep(interval)
         r = status(t, wdir)
     return r
 
 
 def stop(t: ssh.Target, wdir: str) -> dict:
-    """Stop exactly the process group started above, so nothing is left behind.
+    """Stop a control centre left by the old detached start (its process group
+    from data/control-center.json), so nothing is left behind. The stack's own
+    control-centre process stops with the stack.
 
     Returns the status afterwards, or {"error"}."""
     d = shlex.quote(wdir)

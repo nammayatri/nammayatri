@@ -332,9 +332,9 @@ def main(argv: list | None = None) -> int:
     dt.set_defaults(func=cmd_data)
 
     for name, help_, func in (
-        ("cc-start", "start the control centre next to the workspace (port 5300-5319)", cmd_cc_start),
-        ("cc-status", "control centre state + URL (+ last log lines unless running)", cmd_cc_status),
-        ("cc-stop", "stop the control centre", cmd_cc_stop),
+        ("cc-start", "check the stack runs the control centre (it starts with the stack)", cmd_cc_start),
+        ("cc-status", "control centre state + URL", cmd_cc_status),
+        ("cc-stop", "stop a control centre left by the old detached start", cmd_cc_stop),
     ):
         c = sub.add_parser(name, help=help_)
         _add_target_args(c)
