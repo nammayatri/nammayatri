@@ -572,7 +572,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         vehicleRating = Nothing,
         vehicleRatingRemark = Nothing,
         failedRules = failedRules,
-        docsVerificationStatusUpdatedAt = Nothing,
+        docsVerificationStatusUpdatedAt = Just now,
         dateOfRegistration = input.dateOfRegistration,
         vehicleModelYear = input.vehicleModelYear,
         rejectReason = mbRejectReason,

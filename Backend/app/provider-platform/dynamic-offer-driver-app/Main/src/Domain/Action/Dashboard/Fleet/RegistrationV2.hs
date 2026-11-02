@@ -430,7 +430,7 @@ createFleetOwnerInfo personId merchantId enabled merchantOperatingCityId mbTdsRa
             tollRouteBlockedTill = Nothing,
             weeklyCancellationRateBlockingCooldown = Nothing,
             payoutRegistrationOrderId = Nothing,
-            docsVerificationStatusUpdatedAt = Nothing,
+            docsVerificationStatusUpdatedAt = Just now,
             address = Nothing,
             addressState = Nothing,
             addressDocumentType = Nothing,
