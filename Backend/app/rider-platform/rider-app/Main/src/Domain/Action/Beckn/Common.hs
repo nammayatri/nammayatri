@@ -54,6 +54,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
 import qualified Domain.Types.RecentLocation as DTRL
+import qualified Domain.Types.RewardContext as DRewardCtx
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RideStatus as DRide
@@ -1253,7 +1254,11 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       booking.riderId
       booking.merchantOperatingCityId
       (fromMaybe now rideEndTime)
-      isValidRide
+      DRewardCtx.RewardRideInput
+        { isValid = isValidRide,
+          vehicleVariant = Just updRide.vehicleVariant,
+          serviceTier = Just booking.vehicleServiceTierType
+        }
   fork "Evaluate rider incentive journey" $ do
     let validRideTaken = fromMaybe True isValidRide
     when validRideTaken $ do

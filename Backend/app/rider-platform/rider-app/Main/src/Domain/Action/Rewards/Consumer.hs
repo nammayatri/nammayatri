@@ -25,6 +25,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RewardCampaign as DRCmp
 import qualified Domain.Types.RewardCohort as DRC
+import qualified Domain.Types.RewardContext as DRCtx
 import qualified Domain.Types.RewardUnlock as DRU
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -61,21 +62,21 @@ evaluateRewardsIfEnabled ::
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   UTCTime ->
-  Maybe Bool ->
+  DRCtx.RewardRideInput ->
   m ()
-evaluateRewardsIfEnabled riderId moCityId completedAt mbIsValidRide = do
+evaluateRewardsIfEnabled riderId moCityId completedAt rideInput = do
   enabled <- maybe False (.enableRewardsManagement) <$> getConfig (RiderConfigDimensions {merchantOperatingCityId = moCityId.getId}) Nothing
-  when enabled $ evaluateRewardsForRider riderId moCityId completedAt mbIsValidRide
+  when enabled $ evaluateRewardsForRider riderId moCityId completedAt rideInput
 
 evaluateRewardsForRider ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisFlow m r, ServiceFlow m r, EncFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   UTCTime ->
-  Maybe Bool ->
+  DRCtx.RewardRideInput ->
   m ()
-evaluateRewardsForRider riderId moCityId completedAt mbIsValidRide = do
-  context <- Ctx.readRiderContext riderId mbIsValidRide
+evaluateRewardsForRider riderId moCityId completedAt rideInput = do
+  context <- Ctx.readRiderContext riderId rideInput
   activeCampaigns <- QRCmpE.findAllActiveInCityAtTime moCityId completedAt
   logInfo $
     "rewards.eval.start riderId="

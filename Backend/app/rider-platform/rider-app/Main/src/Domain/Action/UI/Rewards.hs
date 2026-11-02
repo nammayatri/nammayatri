@@ -14,6 +14,7 @@ import qualified Domain.Action.Rewards.LiveReward as LiveReward
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RewardCampaign as DRCmp
+import qualified Domain.Types.RewardContext as DRewardCtx
 import qualified Domain.Types.RewardUnlock as DRU
 import Environment
 import Kernel.Prelude
@@ -140,7 +141,7 @@ getLiveReward (mbPersonId, _merchantId) = do
           -- The rider context costs a few Redis reads; only audience rules need it.
           riderContext <-
             if any (isJust . (.targetingJsonLogic)) candidates
-              then Ctx.readRiderContext personId Nothing
+              then Ctx.readRiderContext personId DRewardCtx.noRideInput
               else pure A.Null
           API.LiveRewardCardResp . fmap (.card) <$> firstWithCoupons (LiveReward.eligibleLiveRewards riderContext unlocks candidates)
 
