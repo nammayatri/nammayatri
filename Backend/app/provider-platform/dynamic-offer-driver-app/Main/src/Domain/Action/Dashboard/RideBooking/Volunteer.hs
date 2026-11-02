@@ -139,6 +139,7 @@ getVolunteerBooking merchantShortId opCity otpCode = do
 
 postVolunteerAssignStartOtpRide :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Common.AssignCreateAndStartOtpRideAPIReq -> Flow APISuccess
 postVolunteerAssignStartOtpRide _ _ _mbRequestorId Common.AssignCreateAndStartOtpRideAPIReq {..} = do
+  SRide.validateRideLocation point
   requestor <- findPerson (cast driverId)
   driverInfo <- QDI.findById (cast requestor.id) >>= fromMaybeM (PersonNotFound requestor.id.getId)
   when driverInfo.onRide $ do
