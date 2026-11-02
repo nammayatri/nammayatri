@@ -24,10 +24,12 @@ from typing import Callable
 from . import ssh
 
 FRONTDESK_PORT = 8888
-# The front desk's public-only site (rider + driver APIs), which the devbox
-# announces to hopper; testers reach it on any network through hopper's gateway:
+# The port app builds use through hopper's gateway; testers reach it on any network:
 #   <GATEWAY_URL>/api/<devbox>/<PUBLIC_PORT>/<workspace>/rider-app/...
-PUBLIC_PORT = 8889
+# The front desk itself: the devbox announces it to hopper (nix-the-builder
+# FRONTDESK_PUBLISH_MAIN=1) and hopper's nginx lets only the testers' apps
+# through (hopper deploy/sd-nginx/devbox-8888-gate.conf).
+PUBLIC_PORT = FRONTDESK_PORT
 GATEWAY_URL = os.environ.get("HOPPER_GATEWAY_URL",
                              "https://service-discovery.devenv.movingtech.net").rstrip("/")
 STACK_COMMAND = ("cd Backend && nix develop .#backend -c "
