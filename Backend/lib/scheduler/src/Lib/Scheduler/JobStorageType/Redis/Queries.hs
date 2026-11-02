@@ -220,7 +220,7 @@ updateFailureCount :: (JobExecutor r m) => Id AnyJob -> Int -> m ()
 updateFailureCount _ _ = pure ()
 
 reScheduleOnError :: forall t m r. (JobCreator r m, HasField "schedulerSetName" r Text, JobProcessor t, ToJSON t) => AnyJob t -> Int -> UTCTime -> m ()
-reScheduleOnError j _ = reSchedule j
+reScheduleOnError (AnyJob job) newErrorsCount = reSchedule (AnyJob job {currErrors = newErrorsCount})
 
 -- | XGROUP DELCONSUMER — remove a dead consumer from the stream consumer group. Not provided by the
 -- shared-kernel Hedis layer, so wrapped here over the raw hedis primitive. Its pending entries must
