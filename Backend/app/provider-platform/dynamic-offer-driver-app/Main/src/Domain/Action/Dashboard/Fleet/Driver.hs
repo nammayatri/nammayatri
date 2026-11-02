@@ -134,7 +134,6 @@ import qualified Domain.Action.UI.Driver as UIDriver
 import Domain.Action.UI.DriverOnboarding.Image (createBulkRcPlaceholderImage)
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
-import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.FleetOwnerList as FleetOwnerList
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
@@ -2988,8 +2987,7 @@ linkExistingDriverToFleet merchant merchantOpCityId transporterConfig requestorA
     SA.endDriverAssociations merchantOpCityId transporterConfig person
     when (merchant.overwriteAssociation == Just True) $
       DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
-    assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing DomainRC.defaultAssociationEnd (Just person.merchantId) (Just person.merchantOperatingCityId)
-    QFDV.create assoc
+    QFDV.createFleetDriverAssociationWithLTSSync person.id (Id fleetOwnerId) Nothing (Just person.merchantId) (Just person.merchantOperatingCityId)
     fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver person.id merchantOpCityId
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById person.id
     Analytics.handleDriverAnalyticsAndFlowStatus
