@@ -90,6 +90,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import Lib.Payment.Storage.Beam.BeamFlow
+import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -190,6 +191,21 @@ getQREncoding integratedBPPConfig = case integratedBPPConfig.providerConfig of
 
 mkTicketAPI :: Maybe DIBC.QREncoding -> DT.FRFSTicket -> APITypes.FRFSTicketAPI
 mkTicketAPI qrEncoding DT.FRFSTicket {..} = APITypes.FRFSTicketAPI {..}
+
+getChargedPaymentRrn :: BeamFlow m r => Id DOrder.PaymentOrder -> m (Maybe Text)
+getChargedPaymentRrn paymentOrderId = do
+  transactions <- HQPaymentTransaction.findAllByOrderId paymentOrderId
+  pure $ find (\txn -> txn.status == Payment.CHARGED) transactions >>= (.rrn)
+
+getBookingTxnIdAndPaymentCategories :: BeamFlow m r => DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe Text, [DTBPC.FRFSTicketBookingPaymentCategory])
+getBookingTxnIdAndPaymentCategories booking = do
+  mbPaymentBooking <- QFRFSTicketBookingPayment.findTicketBookingPayment booking
+  case mbPaymentBooking of
+    Nothing -> pure (Nothing, [])
+    Just paymentBooking -> do
+      mbTxnId <- getChargedPaymentRrn paymentBooking.paymentOrderId
+      paymentCategories <- QFRFSTicketBookingPaymentCategory.findAllByPaymentId paymentBooking.id
+      pure (mbTxnId, paymentCategories)
 
 mkPOrgStationAPIRes :: (CacheFlow m r, EsqDBFlow m r) => Station.Station -> Maybe (Id DPO.PartnerOrganization) -> m APITypes.FRFSStationAPI
 mkPOrgStationAPIRes Station.Station {..} mbPOrgId = do

@@ -63,6 +63,7 @@ data PaymentTransaction = PaymentTransaction
     taxAmount :: Maybe HighPrecMoney,
     netAmount :: Maybe HighPrecMoney,
     epgTxnId :: Maybe Text,
+    rrn :: Maybe Text,
     authorizationDateTime :: Maybe UTCTime,
     captureDateTime :: Maybe UTCTime,
     createdAt :: UTCTime,
