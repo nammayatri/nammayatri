@@ -44,6 +44,7 @@ data DriverStats = DriverStats
     totalRides :: Kernel.Prelude.Int,
     totalRidesAssigned :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalValidActivatedRides :: Kernel.Prelude.Int,
+    totalValidRides :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
     validCancellationTagsStatsStartDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     validCustomerCancellationTagCount :: Kernel.Prelude.Int,

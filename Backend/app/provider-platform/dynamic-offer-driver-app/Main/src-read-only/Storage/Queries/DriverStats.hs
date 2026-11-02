@@ -148,6 +148,7 @@ updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
       Se.Set Beam.totalRides totalRides,
       Se.Set Beam.totalRidesAssigned totalRidesAssigned,
       Se.Set Beam.totalValidActivatedRides (Kernel.Prelude.Just totalValidActivatedRides),
+      Se.Set Beam.totalValidRides (Kernel.Prelude.Just totalValidRides),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validCancellationTagsStatsStartDate validCancellationTagsStatsStartDate,
       Se.Set Beam.validCustomerCancellationTagCount (Kernel.Prelude.Just validCustomerCancellationTagCount),
