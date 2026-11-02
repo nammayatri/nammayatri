@@ -1383,7 +1383,7 @@ postFrfsBookingReschedule (mbPersonId, merchantId) oldBookingId req = do
         FRFSUtils.getServiceTierTypeFromRouteStationsJson oldBooking.routeStationsJson
           & fromMaybeM (InvalidRequest "Cannot determine service tier for this booking, reschedule not supported")
       mbVehicleServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType oldBooking.merchantOperatingCityId integratedBppConfig.id
-      let needsFreshSearch = stopsChanged || routeChanged || (mbVehicleServiceTier >>= (.enableFareClass)) == Just True
+      let needsFreshSearch = stopsChanged || routeChanged || (FRFSUtils.fareClassesApply integratedBppConfig && (mbVehicleServiceTier >>= (.enableFareClass)) == Just True)
       mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision oldBooking
       newTripStart <- FRFSReschedule.validateRescheduleEligibility oldBooking req.tripId newFromCode newToCode newRouteCode integratedBppConfig mbLiveDecision
       bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = oldBooking.merchantOperatingCityId.getId, merchantId = oldBooking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory oldBooking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback oldBooking.merchantOperatingCityId oldBooking.merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory oldBooking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")

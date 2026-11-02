@@ -152,7 +152,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
             }
   where
     getBusScheduleInfo busScheduleDetails' integratedBPPConfig' routeId' fromStopCode' toStopCode' frfsTierMap' seatLayoutMappingByVehicleNo' mbRouteTag' fareClassLookup' = do
-      now <- getCurrentTime
+      boardingStopCodes <- OTPRest.getEquivalentStopCodes fromStopCode' integratedBPPConfig'
       -- Batch-fetch all live info in one Redis HMGET instead of N individual calls
       let vehicleNos = map (.vehicle_no) busScheduleDetails'
       liveInfoResults <-
@@ -209,8 +209,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                   if not isAvailable
                     then return Nothing
                     else do
-                      let boardingTime = maybe now (FRFSUtils.unixToUTC . (.arrivalTimeUnix)) (find (\stopEta -> stopEta.stopCode == fromStopCode') detail.eta)
-                          fareClass = fareClassInfoFor fareClassLookup' frfsServiceTier mbRouteTag' (snd <$> mbVehicleMetadata) boardingTime
+                      let mbBoardingTime = FRFSUtils.unixToUTC . (.arrivalTimeUnix) <$> find (\stopEta -> stopEta.stopCode `elem` boardingStopCodes) detail.eta
+                          fareClass = mbBoardingTime >>= fareClassInfoFor fareClassLookup' frfsServiceTier mbRouteTag' (snd <$> mbVehicleMetadata)
                       logDebug $ "getBusScheduleInfo: vehicle=" <> detail.vehicle_no <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", hasLiveInfo=" <> show (isJust busLiveInfo) <> ", eta=" <> show detail.eta <> ", position=" <> show ((\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo) <> ", timestamp=" <> show ((.timestamp) <$> busLiveInfo)
                       return . Just $
                         API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo

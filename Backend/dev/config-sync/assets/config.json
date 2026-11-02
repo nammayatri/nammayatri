@@ -161,6 +161,9 @@
     "frfs_gtfs_stage_fare": {
       "dim": []
     },
+    "frfs_fare_class": {
+      "dim": []
+    },
     "frfs_ticket_category_metadata_config": {
       "dim": []
     },

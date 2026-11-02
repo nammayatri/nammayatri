@@ -2221,7 +2221,6 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
       mbSeatLayoutMapping <-
         CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vno ctx.integratedBPPConfig.feedKey
       let seatSelType = mbSeatLayoutMapping >>= (.seatSelectionType)
-      now <- getCurrentTime
       let buildScheduleInfo detail =
             let thisTripId = do
                   waybill <- detail.waybill_no
@@ -2241,7 +2240,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
                     vehicleVariant = mbVehicleVariant,
                     availableSeats = Nothing,
                     seatSelectionType = seatSelType,
-                    fareClass = fareClassAt (maybe now (FRFSUtils.unixToUTC . (.arrivalTimeUnix)) (listToMaybe detail.eta))
+                    fareClass = listToMaybe detail.eta >>= fareClassAt . FRFSUtils.unixToUTC . (.arrivalTimeUnix)
                   }
       let allSchedules = map buildScheduleInfo busScheduleDetails
       -- Build live vehicle info if live data exists

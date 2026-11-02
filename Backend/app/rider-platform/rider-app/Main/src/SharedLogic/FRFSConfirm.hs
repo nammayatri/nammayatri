@@ -175,11 +175,9 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
           else return quoteCategories
       let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories)
       -- The hold is taken above but only tracked against a booking below, so a throw in between leaves
-      -- those seats held until their TTL, and repeated attempts block the trip.
-      -- Scoped to requests that supplied a pass, because that is the throw this PR adds:
-      -- resolvePassOverride rejects an inapplicable pass with InvalidRequest, after the hold exists.
-      -- A non-pass booking keeps main's behaviour exactly -- the hold still leaks on an unrelated
-      -- throw, which is pre-existing and filed separately rather than fixed inside a pass PR.
+      -- those seats held until their TTL, and repeated attempts block the trip. Any failed confirm
+      -- releases the hold (nothing tracks it yet); restoring quote categories stays scoped to the pass,
+      -- reschedule and trip-check refusals that change them.
       confirmResult <- try @_ @SomeException $ confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll mbTripId seatSelectionType isSpotBooking
       (rider, dConfirmRes) <- case confirmResult of
         Right res -> pure res
@@ -189,16 +187,16 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 Just (TripServiceTierMismatch _) -> True
                 Just (TripDetailsMismatch _) -> True
                 _ -> False
-          when (isJust mbPurchasedPassPaymentId || isJust mbRescheduleCtx || isTripCheckRefusal) $ do
+          when (isJust mbPurchasedPassPaymentId || isJust mbRescheduleCtx || isTripCheckRefusal) $
             void $
               withTryCatch "FRFSConfirm:restoreQuoteCategoriesOnFailure" $
                 FRFSUtils.updateQuoteCategoriesWithSelections
                   Nothing
                   (quoteCategories <&> (\qc -> FRFSUtils.QuoteCategorySelection qc.id qc.selectedQuantity qc.seatIds qc.seatLabels))
                   updatedQuoteCategories
-            whenJust ((,) <$> mbTripId <*> mbHoldId) $ \(tripId, holdId) -> do
-              logWarning $ "FRFSConfirm:confirmAndUpsertBooking releasing hold after a confirm failure holdId=" <> holdId <> " tripId=" <> tripId <> " err=" <> show err
-              void $ withTryCatch "FRFSConfirm:releaseHoldOnFailure" (SeatBooking.releaseHold tripId holdId)
+          whenJust ((,) <$> mbTripId <*> mbHoldId) $ \(tripId, holdId) -> do
+            logWarning $ "FRFSConfirm:confirmAndUpsertBooking releasing hold after a confirm failure holdId=" <> holdId <> " tripId=" <> tripId <> " err=" <> show err
+            void $ withTryCatch "FRFSConfirm:releaseHoldOnFailure" (SeatBooking.releaseHold tripId holdId)
           throwM err
       whenJust mbHoldCtxForAll $ \(holdId, _, _) -> do
         logInfo $ "FRFSConfirm:confirmAndUpsertBooking tracking hold bookingId=" <> dConfirmRes.id.getId <> " holdId=" <> holdId
@@ -484,7 +482,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
 
       case (mbServiceTierType, mbRouteCode, mbRescheduleCtx) of
         (Just quotedServiceTierType, Just routeCode, Nothing) ->
-          FRFSUtils.verifyFareClassAtConfirm quote' integratedBppConfig quotedServiceTierType routeCode firstTripId mbScheduledTrip (mbSearch >>= (.vehicleNumber)) (mbSearch >>= (.startTime)) bookingStartTime
+          FRFSUtils.verifyFareClassAtConfirm quote' integratedBppConfig quotedServiceTierType routeCode firstTripId mbScheduledTrip (mbSearch >>= (.vehicleNumber)) bookingStartTime
         _ -> pure ()
 
       mbResolved <- resolvePassForFare rider quote'.vehicleType bookingStartTime mbServiceTierType fareParameters mbPurchasedPassPaymentId' quote'

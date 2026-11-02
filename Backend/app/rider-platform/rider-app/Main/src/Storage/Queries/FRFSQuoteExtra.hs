@@ -43,6 +43,7 @@ updateCachedQuoteByPrimaryKey FRFSQuote {..} = do
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
       Se.Set Beam.discountedTickets discountedTickets,
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
+      Se.Set Beam.fareClassId (Kernel.Types.Id.getId <$> fareClassId),
       Se.Set Beam.oldCacheDump oldCacheDump,
       Se.Set Beam.providerDescription providerDescription,
       Se.Set Beam.providerId providerId,
