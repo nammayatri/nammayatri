@@ -5,6 +5,7 @@ module Beckn.OnDemand.Transformer.OndcScheduledRide.Init
   )
 where
 
+import qualified Beckn.OnDemand.Utils.OndcScheduledRide.Common as OSRCommon
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.Beckn.Init as DInit
 import Kernel.Prelude
@@ -27,13 +28,4 @@ correctFulfillmentId transactionId fulfillmentId = do
 buildOndcScheduledRideInitReq :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> Spec.InitReq -> DInit.InitReq -> m DInit.InitReq
 buildOndcScheduledRideInitReq transactionId req dInitReq = do
   correctedFulfillmentId <- correctFulfillmentId transactionId dInitReq.fulfillmentId
-  pure dInitReq {DInit.fulfillmentId = correctedFulfillmentId, DInit.addOns = extractAddOns req}
-
--- | The add-ons echoed on the wire item (item.add_ons) -- a BAP can select more than one add-on on the same item.
-extractAddOns :: Spec.InitReq -> [Spec.AddOn]
-extractAddOns req = fromMaybe [] $ do
-  items <- req.initReqMessage.confirmReqMessageOrder.orderItems
-  item <- case items of
-    [i] -> Just i
-    _ -> Nothing
-  item.itemAddOns
+  pure dInitReq {DInit.fulfillmentId = correctedFulfillmentId, DInit.addOns = OSRCommon.extractAddOns req.initReqMessage.confirmReqMessageOrder.orderItems}

@@ -60,6 +60,7 @@ data SearchRequestT f = SearchRequestT
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     messageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     numberOfLuggages :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    offeredAddOns :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType),
     paymentMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode),

@@ -24,23 +24,30 @@ import Domain.Types.Common (ServiceTierType)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import EulerHS.Prelude
-import qualified Kernel.Types.Beckn.Domain as Domain
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM)
 import qualified SharedLogic.AddOn as SAddOn
-import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.Queries.AddOnConfig as QAddOnConfig
+import qualified Storage.Queries.SearchRequest as QSR
 
 -- | Single entry point for API.Beckn.Search.search: fetches beckn_config,
 -- the BAP's BapMetadata, and the add-ons on offer in this city, then applies
 -- every ONDC-scheduled-ride patch to the already-built on_search reply, in order.
-ondcScheduledRideOnSearchMessageBuild :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> DSearch.DSearchRes -> Spec.OnSearchReq -> m Spec.OnSearchReq
-ondcScheduledRideOnSearchMessageBuild merchantId merchantOpCityId bapId dSearchRes onSearchReq = do
+--
+-- The add-ons it advertises are also snapshotted onto the search request
+-- (`SearchRequest.offeredAddOns`, as `AddOnData` with nothing selected yet
+-- and the max quantity and price frozen) before the reply goes out, so
+-- /select validates and prices the BAP's selection against exactly what this
+-- on_search showed, not whatever the catalogue says later.
+ondcScheduledRideOnSearchMessageBuild :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DBapMetadata.BapMetadata -> DSearch.DSearchRes -> Spec.OnSearchReq -> m Spec.OnSearchReq
+ondcScheduledRideOnSearchMessageBuild merchantId merchantOpCityId mbBapMetadata dSearchRes onSearchReq = do
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchantId "MOBILITY" Enums.CAB >>= fromMaybeM (InternalError "Beckn Config not found")
-  mbBapMetadata <- CQBapMetaData.findBySubscriberIdAndDomain (Id bapId) Domain.MOBILITY
-  addOnMap <- SAddOn.getAddOn merchantOpCityId True
+  offeredAddOns <- QAddOnConfig.findAllByMerchantOpCityIdAndEnabled merchantOpCityId True
+  unless (null offeredAddOns) $ QSR.updateOfferedAddOns (map SAddOn.mkOfferedAddOnData offeredAddOns) dSearchRes.searchRequestId
+  let addOnMap = SAddOn.groupAddOnsByTier offeredAddOns
   pure $
     ( ondcScheduledRidePatchAddOns addOnMap dSearchRes
         . ondcScheduledRidePatchCatalogCompliance

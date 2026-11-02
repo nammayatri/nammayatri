@@ -34,10 +34,9 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.Queries.Booking as QRB
 import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
@@ -87,8 +86,8 @@ getBookingAndOndcScheduledRideFlag message = do
   case mbBooking of
     Nothing -> pure (Nothing, False)
     Just booking -> do
-      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-      pure (Just booking, fromMaybe False (mbTransporterConfig >>= (.enableOndcScheduledRideSupport)))
+      mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainAndCity (Id booking.bapId) Domain.MOBILITY booking.merchantOperatingCityId
+      pure (Just booking, CQBapMetaData.isOndcScheduledRideSupportEnabled mbBapMetadata)
 
 ratingLockKey :: Text -> Text
 ratingLockKey id = "Driver:Rating:BookingId-" <> id
