@@ -578,7 +578,7 @@ _:
             #    run has no prefix. ──
             CC_PREFIX=""
             if [[ "$DEVBOX_KEY" != local-* ]]; then
-              CC_PREFIX="/api/$(hostname)/''${FRONTDESK_PUBLIC_PORT:-8889}/$DEVBOX_KEY"
+              CC_PREFIX="/api/$(hostname)/''${FRONTDESK_PUBLIC_PORT:-8888}/$DEVBOX_KEY"
             fi
             mkdir -p "''${FLAKE_ROOT}/data"
             printf '%s\n' "$CC_PREFIX" > "''${FLAKE_ROOT}/data/cc-prefix"

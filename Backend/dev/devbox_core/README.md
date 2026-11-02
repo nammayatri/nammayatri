@@ -41,11 +41,13 @@ DEVBOX_RESULT {"devbox": …, "workspace": …, "backend_url": …, "office_url"
 gateway, so testers' phones open them on any network:
 
 ```
-https://service-discovery.devenv.movingtech.net/api/<devbox>/8889/<name>   + /rider-app/... or /dynamic-offer-driver-app/...
+https://service-discovery.devenv.movingtech.net/api/<devbox>/8888/<name>   + /rider-app/... or /dynamic-offer-driver-app/...
 ```
 
-The dev-box's front desk serves only those two apps on `:8889` and announces
-it to hopper (nix-the-builder `scripts/daemonset/worker/devbox/frontdesk`). A dev-box hopper does not
+The dev-box announces its front desk (`:8888`) to hopper (nix-the-builder
+`scripts/daemonset/worker/devbox/frontdesk`, `FRONTDESK_PUBLISH_MAIN=1`), and
+hopper's nginx lets only the testers' apps through from the internet (hopper
+`deploy/sd-nginx/`); the database tools there answer `403`. A dev-box hopper does not
 list as public is never picked. `pick` chooses among the machines hopper's
 `/node/list` names with node type `dev-box` (hopper-agent installed with
 `--node-type dev-box`), so a dev-box without hopper-agent is never picked either. `office_url` (`http://<office ip>:8888/<name>`,
@@ -71,4 +73,4 @@ States: `started`, `done`, `skipped`, `failed` (with `error`).
 | `…/data/stack.log`, `stack.json` | stack output and process group |
 | `…/data/cc-prefix` | the control centre's gateway path prefix (pre-flight writes it; caddy and the control-centre process read it) |
 | `http://<devbox>:8888/<name>/…` | front desk route to the workspace |
-| `http://<devbox>:8889/<name>/{rider-app,dynamic-offer-driver-app}/…` | public front desk (tailnet only; reached through hopper's gateway) |
+| `http://<devbox>:8889/<name>/{rider-app,dynamic-offer-driver-app}/…` | old public-only site (tailnet only); unused once builds use `:8888` |
