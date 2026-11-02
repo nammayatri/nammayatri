@@ -13,14 +13,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RiderPreferencesT f = RiderPreferencesT
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
-    id :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    preferenceData :: B.C f Data.Aeson.Value,
-    preferenceType :: B.C f Domain.Types.Extra.RiderPreferences.PreferenceType,
-    riderId :: B.C f Kernel.Prelude.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    id :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    preferenceData :: (B.C f Data.Aeson.Value),
+    preferenceType :: (B.C f Domain.Types.Extra.RiderPreferences.PreferenceType),
+    riderId :: (B.C f Kernel.Prelude.Text),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -30,6 +30,6 @@ instance B.Table RiderPreferencesT where
 
 type RiderPreferences = RiderPreferencesT Identity
 
-$(enableKVPG ''RiderPreferencesT ['id] [['riderId]])
+$(enableKVPG (''RiderPreferencesT) [('id)] [[('riderId)]])
 
-$(mkTableInstances ''RiderPreferencesT "rider_preferences")
+$(mkTableInstances (''RiderPreferencesT) "rider_preferences")
