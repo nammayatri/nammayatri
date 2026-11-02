@@ -18,7 +18,7 @@ data CRISRouteSortingCriteria = FARE | DISTANCE
 data MergeQuoteCriteria = FULFILLMENT | QUOTE_TYPE
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq)
 
-data QREncoding = LATIN1
+data QREncoding = LATIN1 | BASE64
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, ToSchema)
 
 data EBIXConfig = EBIXConfig
