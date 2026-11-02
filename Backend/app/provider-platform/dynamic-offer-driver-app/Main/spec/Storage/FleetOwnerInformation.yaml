@@ -60,7 +60,7 @@ FleetOwnerInformation:
     tollRouteBlockedTill: Maybe UTCTime
     isBlockedForReferralPayout: Maybe Bool
     payoutRegistrationOrderId: Maybe Text
-    docsVerificationStatusUpdatedAt: Maybe UTCTime # Stamped by every unified-flow write of verified / approved / enabled / blocked / disabled reason; the onboarding lists sort by it.
+    docsVerificationStatusUpdatedAt: Maybe UTCTime # Stamped at creation and by every unified-flow write of verified / approved / enabled / blocked / disabled reason; the onboarding lists sort by it.
     address: Maybe Text
     addressState: Maybe IndianState
     addressDocumentType: Maybe AddressDocumentType

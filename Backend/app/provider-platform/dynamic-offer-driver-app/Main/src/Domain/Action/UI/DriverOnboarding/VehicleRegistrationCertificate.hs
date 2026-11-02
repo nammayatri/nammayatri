@@ -636,7 +636,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             vehicleRating = Nothing,
             vehicleRatingRemark = Nothing,
             failedRules = failedRules,
-            docsVerificationStatusUpdatedAt = Nothing,
+            docsVerificationStatusUpdatedAt = Just now,
             dateOfRegistration = input.dateOfRegistration,
             vehicleModelYear = input.vehicleModelYear,
             vehicleDoors = mbVehicleDoors,
