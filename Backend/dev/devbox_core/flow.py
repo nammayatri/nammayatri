@@ -32,10 +32,11 @@ def _hopper_name(t: ssh.Target) -> str:
     return ssh.run(t, "hostname").stdout.strip()
 
 
-def pick_target(user: str | None, host: str | None,
-                key: str | None) -> tuple[ssh.Target, str, str]:
+def pick_target(user: str | None, host: str | None, key: str | None,
+                gateway: str = stack.GATEWAY_URL) -> tuple[ssh.Target, str, str]:
     """The devbox to use: the given host, else the least-loaded reachable one
-    that has a front desk and is published to hopper. Returns (target, devbox
+    of the machines hopper's service discovery (at `gateway`) lists that has a
+    front desk and is published to hopper. Returns (target, devbox
     name, url host): the target is how we reach it (the overlay address when it
     answers), the devbox name is the one hopper's gateway URLs use, the url host
     is its office address, for the office-only URLs."""
@@ -48,8 +49,7 @@ def pick_target(user: str | None, host: str | None,
         if not stack.is_public(devbox):
             raise RuntimeError(_not_public(devbox))
         return t, devbox, host
-    base_host, base_port = fleet.base_api()
-    res = fleet.fetch_machines(base_host, base_port)
+    res = fleet.fetch_machines(gateway)
     if res.get("error"):
         raise RuntimeError(res["error"])
     boxes = [m for m in fleet.devboxes(res.get("machines", []))
