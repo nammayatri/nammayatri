@@ -148,7 +148,7 @@ mkTicket person phoneNumber mediaLinks mbInfo flow disposition queue = do
       SafetyDSos.CustomerCare -> "Customer care called."
       _ -> "SOS activated"
 
-buildRideInfo :: EncFlow m r => DRide.Ride -> DP.Person -> Maybe Text -> m Ticket.RideInfo
+buildRideInfo :: (EncFlow m r, EsqDBFlow m r, MonadFlow m) => DRide.Ride -> DP.Person -> Maybe Text -> m Ticket.RideInfo
 buildRideInfo ride person phoneNumber = do
   driverPhoneNo <- getDriverMobileNumber ride
   pure

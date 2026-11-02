@@ -432,7 +432,7 @@ getPersonPhone Person {..} = do
   phonenum & fromMaybeM (InternalError "Customer has no phone number.")
 
 -- | Returns phones pair
-getCustomerAndDriverPhones :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => SRide.Ride -> BT.Booking -> m (Text, Text)
+getCustomerAndDriverPhones :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, MonadFlow m) => SRide.Ride -> BT.Booking -> m (Text, Text)
 getCustomerAndDriverPhones ride booking = do
   person <- getPerson booking
   customerPhone <- getPersonPhone person
