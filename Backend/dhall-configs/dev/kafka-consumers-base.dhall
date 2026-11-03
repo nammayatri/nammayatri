@@ -182,6 +182,7 @@ in  { hedisCfg
     , serviceClickhouseCfg
     , kafkaProducerCfg
     , driverPoolStateTopic = Some "driver-pool-state"
+    , driverAnalyticsEventsTopic = Some "driver-analytics-events"
     , secondaryKafkaProducerCfg
     , kafkaReadBatchDelay = +10
     , kafkaReadBatchSize = +10

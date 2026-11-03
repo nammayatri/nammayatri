@@ -41,7 +41,6 @@ import Lib.Scheduler.InMemManagement (inMemManagementApp)
 import Network.Wai.Handler.Warp
 import qualified Processor.BroadcastMessage.Processor as BMProcessor
 import qualified Processor.FleetAnalytics.Realtime as FleetAnalyticsProcessor
-import qualified Processor.DriverPerformance.Processor as DriverPerformanceProcessor
 import qualified Processor.DriverPoolState.Processor as DPSProcessor
 import qualified Processor.FleetCommunication.Processor as FCProcessor
 import qualified Processor.LocationUpdate.Processor as LCProcessor
@@ -134,8 +133,6 @@ startKafkaTransport flowRt appEnv = do
       KafkaCommitting.runOrderedCommitting flowRt appEnv kc (\ev -> ev.ts) DPSProcessor.processDriverPoolState DPSProcessor.publishWriterWatermark
     SESSIONIZER ->
       SessionizerProcessor.runSessionizer flowRt appEnv kc
-    DRIVER_PERFORMANCE ->
-      DriverPerformanceProcessor.runDriverPerformance flowRt appEnv kc
     LOCATION_UPDATE -> do
       kc <- KafkaFlow.newKafkaConsumer appEnv
       let enabledCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
@@ -165,8 +162,6 @@ startRedisStreamTransport flowRt appEnv = do
       error "DRIVER_POOL_STATE runs on the Kafka transport only"
     SESSIONIZER ->
       error "SESSIONIZER runs on the Kafka transport only"
-    DRIVER_PERFORMANCE ->
-      error "DRIVER_PERFORMANCE runs on the Kafka transport only"
     LOCATION_UPDATE -> do
       let enabledCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
       RSFlow.runBatch flowRt appEnv cfg instanceName $ \(entries :: [LU.LocationEntry]) ->

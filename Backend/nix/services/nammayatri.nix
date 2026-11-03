@@ -387,7 +387,6 @@ in
           "kafka-driver-pool-state-writer-exe"
           "kafka-sessionizer-exe"
           "kafka-fleet-analytics-consumer-exe"
-          "kafka-driver-performance-exe"
           "ride-events-stream-groups"
           "nammayatri-init"
           "dashboard-migrations"
@@ -1201,11 +1200,6 @@ in
                 '';
               };
             };
-            # The driver drainer publishes each drained KV row (create + full
-            # updated row) to adob-sessionizer-<lowercased model>, which
-            # kafka-driver-performance-exe consumes. readMaybe @Bool: must be
-            # "True" ("true" parses as False).
-            dynamic-offer-driver-drainer-exe.environment.PUSH_TO_KAFKA = "True";
 
             kafka-consumers-exe = {
               environment = {
@@ -1268,9 +1262,10 @@ in
             };
 
             # Driver sessionizer: same binary as kafka-consumers-exe with
-            # CONSUMER_TYPE = SESSIONIZER. Reads LTS pings + driver-app analytics
-            # events, tags pings with the state writer's state (Redis DB 2
-            # locally) and flushes 5-minute rows to ClickHouse atlas_kafka.
+            # CONSUMER_TYPE = SESSIONIZER. Reads LTS pings, driver analytics
+            # events and driver-pool-state, keeps driver state in memory
+            # (loaded from the state writer's Redis, DB 2 locally, on first
+            # sight) and flushes 5-minute rows to ClickHouse atlas_kafka.
             kafka-sessionizer-exe = {
               imports = [
                 common
@@ -1286,29 +1281,6 @@ in
                 "nammayatri-init".condition = "process_completed_successfully";
                 "kafka".condition = "process_healthy";
                 "kafka-driver-pool-state-writer-exe".condition = "process_started";
-              };
-              shutdown.signal = 9;
-            };
-
-            # Driver performance: same binary as kafka-consumers-exe with
-            # CONSUMER_TYPE = DRIVER_PERFORMANCE. Reads the driver drainer's CDC
-            # topics (adob-sessionizer-*), keeps per-entity state in Redis DB 2
-            # (key prefix perf:) and flushes performance_analytics metrics into
-            # ClickHouse atlas_kafka.driver_analytics_5m.
-            kafka-driver-performance-exe = {
-              imports = [
-                common
-                (haskellProcessFor "kafka-consumers-exe")
-              ];
-              environment = {
-                CONSUMER_TYPE = "DRIVER_PERFORMANCE";
-                METRICS_PORT = toString ports.kafka-driver-performance-metrics;
-                # See kafka-consumers-exe above.
-                GET_MY_SCHEMA = "atlas_driver_offer_bpp";
-              };
-              depends_on = {
-                "nammayatri-init".condition = "process_completed_successfully";
-                "kafka".condition = "process_healthy";
               };
               shutdown.signal = 9;
             };

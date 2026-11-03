@@ -85,6 +85,8 @@ dependencies:
   - template-haskell
   - sessionizer-metrics
   - unordered-containers
+  - scientific
+  - prometheus-client
   - cereal
   - beam-core
   - beam-mysql

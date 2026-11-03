@@ -34,9 +34,6 @@ library
       Processor.BroadcastMessage.Processor
       Processor.FleetAnalytics.Realtime
       Processor.ClickhouseText
-      Processor.DriverPerformance.Contribution
-      Processor.DriverPerformance.Processor
-      Processor.DriverPerformance.Types
       Processor.DriverPoolState.Processor
       Processor.DriverPoolState.Types
       Processor.FleetCommunication.Processor
@@ -126,10 +123,12 @@ library
     , persistent
     , persistent-postgresql
     , postgresql-simple
+    , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
     , scheduler
+    , scientific
     , sequelize
     , servant-openapi3
     , servant-server
@@ -226,9 +225,11 @@ executable kafka-consumers-exe
     , persistent
     , persistent-postgresql
     , postgresql-simple
+    , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
     , scheduler
+    , scientific
     , sequelize
     , servant-openapi3
     , servant-server
