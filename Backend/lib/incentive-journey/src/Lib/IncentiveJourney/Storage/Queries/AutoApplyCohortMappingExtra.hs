@@ -125,7 +125,9 @@ findByMerchantAndCity mbLimit mbOffset merchantId merchantOperatingCityId mbVehi
                 <> enabledClause
             )
         ]
-  findAllWithOptionsKV whereClause (Se.Desc Beam.createdAt) mbLimit mbOffset
+  -- Dashboard list filters by merchant/city (not a KV secondary key — only id /
+  -- cohortJourneyMappingId are). Use DB so a just-rolled clone is visible immediately.
+  findAllWithOptionsDb whereClause (Se.Desc Beam.createdAt) mbLimit mbOffset
 
 vehicleCategoryClause ::
   Maybe VehicleCategory ->

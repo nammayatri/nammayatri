@@ -42,6 +42,7 @@ toEvalMilestone milestone =
       conditionType = toLibConditionType milestone.conditionType,
       conditionOperator = toLibConditionOperator milestone.conditionOperator,
       conditionValue = milestone.conditionValue,
+      evaluation = milestone.evaluation,
       areaType = toLibAreaType <$> milestone.areaType,
       specialLocationIds = milestone.specialLocationIds,
       vehicleCategory = show <$> milestone.vehicleCategory,
@@ -77,6 +78,10 @@ toLibConditionType = \case
   DIJM.Distance -> IJ.Distance
   DIJM.RideDuration -> IJ.RideDuration
   DIJM.BookingTicket -> IJ.BookingTicket
+  DIJM.CancellationRate -> IJ.CancellationRate
+  DIJM.AcceptanceRate -> IJ.AcceptanceRate
+  DIJM.OnlineMinutes -> IJ.OnlineMinutes
+  DIJM.JSONLogic -> IJ.JSONLogic
 
 toLibConditionOperator :: DIJM.MilestoneConditionOperator -> IJ.ConditionOperator
 toLibConditionOperator = \case
@@ -102,6 +107,7 @@ toLibRewardKind = \case
   Common.SubscriptionWaiveOff -> IJ.SubscriptionWaiveOff
   Common.PoolingPriority -> IJ.PoolingPriority
   Common.NoReward -> IJ.NoReward
+  Common.NetOffEarnings -> IJ.NetOffEarnings
 
 toLibStatus :: DIJS.JourneyMilestoneStatus -> IJ.MilestoneStatus
 toLibStatus = \case
@@ -111,3 +117,4 @@ toLibStatus = \case
   DIJS.Rewarded -> IJ.Rewarded
   DIJS.WaivedOff -> IJ.WaivedOff
   DIJS.RewardPending -> IJ.RewardPending
+  DIJS.Disqualified -> IJ.Disqualified

@@ -170,6 +170,8 @@ cancel req merchant booking mbActiveSearchTry = do
         else forM mbRideAndDriver $ \(ride, driver) -> do
           decision <- Orchestrator.decideCancellationConsequences booking ride transporterConfig bookingCR.source bookingCR.reasonCode disToPickup
           let consequenceCtx = Orchestrator.ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, driver = driver, source = bookingCR.source, decision = decision}
+          -- Campaign dxCancel/dafCancel bumps live in applyImmediateConsequences
+          -- (cancellation behaviour framework) — do not re-publish here.
           Orchestrator.applyImmediateConsequences consequenceCtx Nothing
           pure consequenceCtx
 

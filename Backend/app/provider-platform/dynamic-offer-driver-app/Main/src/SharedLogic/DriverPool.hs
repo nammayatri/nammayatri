@@ -134,6 +134,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Lib.BehaviorTracker.Accumulator as BTAcc
+import qualified Lib.BehaviorTracker.ActionTypes as BTAction
 import qualified Lib.BehaviorTracker.EventsWindowSettings as EWS
 import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
@@ -179,15 +180,17 @@ mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-Time:DriverId-"
 -- RIDE_CANCELLATION series (ACTION = cancels, ELIGIBLE = rides assigned).
 -- The fixed 7-day window lets both "today" (last 1 day-bucket) and "weekly" (last 7 day-buckets)
 -- be derived from the same series via getCurrentWindowValuesUptoLast.
+-- Shared action-type strings are BF-owned ('Lib.BehaviorTracker.ActionTypes') — campaign
+-- ticks reuse them; do not derive these from CampaignQuote/Cancel (silent bt: key remount).
 quoteResponseAcceptActionType, quoteResponseRejectActionType, quoteResponsePullActionType, quoteResponseEligibleActionType :: Text
-quoteResponseAcceptActionType = "QUOTE_RESPONSE_ACCEPT"
+quoteResponseAcceptActionType = BTAction.quoteResponseAcceptActionType
 quoteResponseRejectActionType = "QUOTE_RESPONSE_REJECT"
 quoteResponsePullActionType = "QUOTE_RESPONSE_PULL"
-quoteResponseEligibleActionType = "QUOTE_RESPONSE"
+quoteResponseEligibleActionType = BTAction.quoteResponseActionType
 
 -- bt: series written on valid driver cancellation (Lib.DriverScore, OnDriverCancellation)
 rideCancellationActionType :: Text
-rideCancellationActionType = "RIDE_CANCELLATION"
+rideCancellationActionType = BTAction.rideCancellationActionType
 
 -- Cooldown tags exposed in the quote-response snapshot (e.g. {"var": "cooldowns.QuoteResponseNudge"})
 -- for the future quote-response behavior rulebook, so a nudge/block consequence can be
@@ -208,7 +211,9 @@ quoteResponseActionType = \case
   SRD.Pulled -> quoteResponsePullActionType
 
 -- | Record the outcome of one quote response as a bt: ACTION_COUNT under the
--- outcome's action type. Called at the respond site (Domain.Action.UI.Driver).
+-- outcome's action type. City behaviour-tracker only (no IJ campaign bump).
+-- Ride Accept + campaign rrAccepted: SharedLogic.IncentiveJourney.recordQuoteResponseAndCampaignMetrics
+-- (keeps DriverPool free of IncentiveJourney — avoids Coins→Wallet→DriverPool→IJ cycle).
 recordQuoteResponseCounters ::
   (EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
   Id DMOC.MerchantOperatingCity ->

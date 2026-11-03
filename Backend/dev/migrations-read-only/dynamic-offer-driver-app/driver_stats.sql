@@ -128,3 +128,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN d2c_referral_count in
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_incentive_journey_earnings double precision  default 0;

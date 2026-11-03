@@ -37,6 +37,8 @@ data IncentiveWindowKey
 data RideIncentiveDeltas = RideIncentiveDeltas
   { ridesDelta :: Int,
     earningsDelta :: Int,
+    -- | fare - toll - parking (rupees). MG stats only; 0 when N/A.
+    netEarningsDelta :: Int,
     distanceMetersDelta :: Int,
     rideTimeSecondsDelta :: Int
   }

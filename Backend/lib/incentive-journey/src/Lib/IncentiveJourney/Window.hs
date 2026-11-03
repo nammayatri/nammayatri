@@ -10,11 +10,13 @@ module Lib.IncentiveJourney.Window
     mkPeakWindowKey,
     isJourneyWindowActive,
     isWithinTimeBound,
+    onlineMinuteCreditSegments,
   )
 where
 
+import Data.List (sortOn)
 import qualified Data.Text as T
-import Data.Time (DiffTime, TimeOfDay (..), timeOfDayToTime, utctDay, utctDayTime)
+import Data.Time (Day, DiffTime, TimeOfDay (..), UTCTime (UTCTime), addDays, addUTCTime, diffUTCTime, timeOfDayToTime, utctDay, utctDayTime)
 import Data.Time.Calendar.WeekDate (toWeekDate)
 import Kernel.Prelude
 import qualified Kernel.Types.TimeBound as TB
@@ -47,6 +49,71 @@ isWithinTimeBound localTime (Just tb) =
   case mkPeakWindowKey localTime tb of
     TimeBoundWindow _ -> True
     DayWindow -> False
+
+-- | Split a closed online session [startLocal, endLocal] into (sampleLocalTime, minutes) credits.
+-- Unbounded / missing bounds: one segment per local calendar day (fixes midnight attribution).
+-- Bounded peaks: peak overlaps (InsideTimebound sample) + gaps outside peaks (OutsideTimebound sample).
+-- sampleLocalTime is the segment midpoint so isWithinTimeBound / periodKey match the credited slice.
+onlineMinuteCreditSegments :: Maybe TB.TimeBound -> UTCTime -> UTCTime -> [(UTCTime, Int)]
+onlineMinuteCreditSegments mbTb startLocal endLocal
+  | endLocal <= startLocal = []
+  | otherwise =
+    let days = [utctDay startLocal .. utctDay endLocal]
+     in concatMap
+          (filter (\(_, mins) -> mins > 0) . segmentsForLocalDay mbTb startLocal endLocal)
+          days
+
+segmentsForLocalDay :: Maybe TB.TimeBound -> UTCTime -> UTCTime -> Day -> [(UTCTime, Int)]
+segmentsForLocalDay mbTb startLocal endLocal day =
+  let dayStart = UTCTime day 0
+      dayEnd = UTCTime (addDays 1 day) 0
+      overlapStart = max startLocal dayStart
+      overlapEnd = min endLocal dayEnd
+   in if overlapStart >= overlapEnd
+        then []
+        else case mbTb of
+          Nothing -> [mkSegment overlapStart overlapEnd]
+          Just TB.Unbounded -> [mkSegment overlapStart overlapEnd]
+          Just tb ->
+            let peakIntervals =
+                  sortOn fst $
+                    mapMaybe
+                      ( \(startTod, endTod) ->
+                          let winStart = UTCTime day (timeOfDayToTime startTod)
+                              winEnd = UTCTime day (timeOfDayToTime endTod)
+                              s = max overlapStart winStart
+                              e = min overlapEnd winEnd
+                           in if s < e then Just (s, e) else Nothing
+                      )
+                      (peaksOnLocalDay tb day)
+                insideSegs = map (uncurry mkSegment) peakIntervals
+                outsideSegs = map (uncurry mkSegment) (gapsOutsidePeaks overlapStart overlapEnd peakIntervals)
+             in insideSegs <> outsideSegs
+
+-- | Complement of sorted, non-overlapping [peakStart, peakEnd) within [overlapStart, overlapEnd).
+gapsOutsidePeaks :: UTCTime -> UTCTime -> [(UTCTime, UTCTime)] -> [(UTCTime, UTCTime)]
+gapsOutsidePeaks overlapStart overlapEnd peaks =
+  let go cursor []
+        | cursor < overlapEnd = [(cursor, overlapEnd)]
+        | otherwise = []
+      go cursor ((s, e) : rest) =
+        [(cursor, s) | cursor < s] <> go (max cursor e) rest
+   in go overlapStart peaks
+
+mkSegment :: UTCTime -> UTCTime -> (UTCTime, Int)
+mkSegment s e =
+  let mins = max 0 (floor (diffUTCTime e s / 60) :: Int)
+      -- Midpoint stays strictly inside exclusive peak bounds used by isWithinTimeBound.
+      sample = addUTCTime (diffUTCTime e s / 2) s
+   in (sample, mins)
+
+peaksOnLocalDay :: TB.TimeBound -> Day -> [(TimeOfDay, TimeOfDay)]
+peaksOnLocalDay TB.Unbounded _ = []
+peaksOnLocalDay (TB.BoundedByWeekday peaks) day =
+  let (_, _, dow) = toWeekDate day
+   in handleTwentyFourHourClockCycle (getPeaksForCurrentDay dow peaks)
+peaksOnLocalDay (TB.BoundedByDay days) day =
+  maybe [] (handleTwentyFourHourClockCycle . snd) (find (\(d, _) -> d == day) days)
 
 peakWindowSuffix :: UTCTime -> TimeOfDay -> TimeOfDay -> Text
 peakWindowSuffix localTime startTod endTod =

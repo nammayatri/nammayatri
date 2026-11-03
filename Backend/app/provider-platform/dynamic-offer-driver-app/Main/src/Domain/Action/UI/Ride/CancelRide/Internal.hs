@@ -51,6 +51,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleVariant as Veh
+import qualified Environment
 import EulerHS.Prelude hiding (whenJust)
 import Kernel.External.Maps
 import Kernel.External.Types (ServiceFlow)
@@ -74,6 +75,7 @@ import qualified Lib.Finance.Domain.Types.LedgerEntry as Fields
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import qualified "location-updates" Lib.LocationUpdates as LocUpd
 import Lib.Scheduler (SchedulerType)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -105,6 +107,7 @@ import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -170,10 +173,12 @@ cancelRideImpl ::
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     Redis.HedisLTSFlowEnv r,
     ClickhouseFlow m r,
     Finance.HasActorInfo m r,
     BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
     CoreMetrics m,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasFlowEnv m r '["version" ::: DeploymentVersion],
@@ -228,6 +233,8 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             -- Matrix-row-driven consequences (SharedLogic.CancellationOrchestrator):
             -- blacklist, driver overlay, coin event, driver money, rate counting — then
             -- the customer-side charge (dues + counters + ledger entries).
+            -- Campaign dxCancel/dafCancel bumps live in applyImmediateConsequences
+            -- (cancellation behaviour framework) — do not re-publish here.
             applyImmediateConsequences consequenceCtx doCancellationRateBasedBlocking
             chargesOutcome <- applyTerminalConsequences consequenceCtx (\base feeTax mbCreditDebit -> createCancellationLedgerEntries booking ride base feeTax transporterConfig mbCreditDebit)
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
@@ -321,8 +328,9 @@ createCancellationLedgerEntries ::
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
+    IJBeamFlow.BeamFlow m r,
+    CoreMetrics m,
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
@@ -575,7 +583,10 @@ settleCancellationLedger ::
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    PostActionsEnv r
+    PostActionsEnv r,
+    BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
+    CoreMetrics m
   ) =>
   SRB.Booking ->
   DRide.Ride ->

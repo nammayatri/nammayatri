@@ -26,6 +26,9 @@ data MilestoneRewardType
   | SubscriptionWaiveOff
   | PoolingPriority
   | NoReward
+  | -- | Cash-like: payout = max(0, (rewardValue - earningInsideTimebound) * slabPercent / 100).
+    -- rewardValue = guarantee amount (₹). slabPercent from rewardMetadata percentSlabs.
+    NetOffEarnings
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(mkBeamInstancesForEnumAndList ''MilestoneRewardType)

@@ -300,6 +300,9 @@
     "scheduled_payout_config": {
       "dim": []
     },
+    "finance_account_config": {
+      "dim": []
+    },
     "go_home_config": {
       "dim": []
     },

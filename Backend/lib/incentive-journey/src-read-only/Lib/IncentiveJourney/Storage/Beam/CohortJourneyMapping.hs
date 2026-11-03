@@ -9,10 +9,13 @@ import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
 import qualified Lib.IncentiveJourney.Domain.Types.Common
 
 data CohortJourneyMappingT f = CohortJourneyMappingT
-  { cohortId :: B.C f Kernel.Prelude.Text,
+  { campaignUserLinkType :: B.C f (Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CampaignUserLinkType),
+    cohortId :: B.C f Kernel.Prelude.Text,
+    controlFeatures :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     enabled :: B.C f Kernel.Prelude.Bool,
     id :: B.C f Kernel.Prelude.Text,
@@ -20,6 +23,7 @@ data CohortJourneyMappingT f = CohortJourneyMappingT
     maxWaiveOffCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    parentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startDate :: B.C f Kernel.Prelude.UTCTime,
     streakEndRewardExpirationAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     streakEndRewardMetadata :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

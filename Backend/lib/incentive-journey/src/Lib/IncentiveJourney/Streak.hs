@@ -7,20 +7,21 @@
 
 module Lib.IncentiveJourney.Streak
   ( computeStreakEndDate,
+    displayStreakEndDate,
     listPeriodKeysInStreak,
-    validateMappingStartDate,
   )
 where
 
-import Data.Time (UTCTime (UTCTime), addDays, addGregorianMonthsClip, toGregorian, utctDay, utctDayTime)
-import Data.Time.Calendar.WeekDate (toWeekDate)
+import Data.Time (UTCTime (UTCTime), addDays, addGregorianMonthsClip, utctDay, utctDayTime)
 import Kernel.Prelude
+import qualified Lib.IncentiveJourney.Convert as Convert
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Period as Period
 
 -- | Exclusive end of the streak window: startDate + streakRange units.
 -- Active while startDate <= localTime < endDate.
--- Example monthly start Jan 1, streakRange=2 -> endDate = Mar 1 (window through last Feb day).
+-- Example weekly start Wed Oct 22, streakRange=2 -> exclusive end Wed Nov 5
+-- (last eligible calendar day is Tue Nov 4 — use 'displayStreakEndDate' for UI).
 computeStreakEndDate :: UTCTime -> Int -> DIJ.IncentiveJourneyType -> UTCTime
 computeStreakEndDate startDate streakRange journeyType =
   let startDay = utctDay startDate
@@ -31,37 +32,36 @@ computeStreakEndDate startDate streakRange journeyType =
           DIJ.Monthly -> addGregorianMonthsClip (fromIntegral streakRange) startDay
    in UTCTime endDay (utctDayTime startDate)
 
+-- | Inclusive last day/time for dashboard + app UI (one calendar day before exclusive end).
+-- Backend window checks must keep using 'computeStreakEndDate'.
+displayStreakEndDate :: UTCTime -> Int -> DIJ.IncentiveJourneyType -> UTCTime
+displayStreakEndDate startDate streakRange journeyType =
+  let exclusive = computeStreakEndDate startDate streakRange journeyType
+   in UTCTime (addDays (-1) (utctDay exclusive)) (utctDayTime exclusive)
+
 -- | Exactly streakRange period keys, stepping one period at a time from startDate.
--- Daily streakRange=2  -> [Day:start, Day:start+1]
--- Weekly streakRange=2 -> [Week:start, Week:start+7d]
--- Monthly streakRange=2 -> [Month:start, Month:start+1m]
+-- Weekly/monthly always use startDate-anchored keys (Monday/1st and mid starts alike).
 listPeriodKeysInStreak :: DIJ.IncentiveJourneyType -> UTCTime -> Int -> [Text]
 listPeriodKeysInStreak journeyType startDate streakRange
   | streakRange <= 0 = []
   | otherwise =
     let startDay = utctDay startDate
         offsets = [0 .. streakRange - 1]
+        periodType = Convert.toLibPeriodType journeyType
      in case journeyType of
           DIJ.Daily ->
             map (\i -> Period.mkDailyPeriodKey (UTCTime (addDays (fromIntegral i) startDay) 0)) offsets
           DIJ.Weekly ->
-            map (\i -> Period.mkWeeklyPeriodKey (UTCTime (addDays (fromIntegral (i * 7)) startDay) 0)) offsets
+            map
+              ( \i ->
+                  let bucketStart = UTCTime (addDays (fromIntegral (i * 7)) startDay) 0
+                   in Period.mkJourneyPeriodKeyWithStart bucketStart periodType startDate
+              )
+              offsets
           DIJ.Monthly ->
-            map (\i -> Period.mkMonthlyPeriodKey (UTCTime (addGregorianMonthsClip (fromIntegral i) startDay) 0)) offsets
-
--- | Weekly start must be Monday; monthly start must be the 1st. Daily has no restriction.
-validateMappingStartDate :: DIJ.IncentiveJourneyType -> UTCTime -> Either Text ()
-validateMappingStartDate journeyType startDate =
-  let day = utctDay startDate
-   in case journeyType of
-        DIJ.Daily -> Right ()
-        DIJ.Weekly ->
-          let (_, _, dayOfWeek) = toWeekDate day
-           in if dayOfWeek == 1
-                then Right ()
-                else Left "Weekly journey startDate must be a Monday"
-        DIJ.Monthly ->
-          let (_, _, dayOfMonth) = toGregorian day
-           in if dayOfMonth == 1
-                then Right ()
-                else Left "Monthly journey startDate must be the 1st of the month"
+            map
+              ( \i ->
+                  let bucketStart = UTCTime (addGregorianMonthsClip (fromIntegral i) startDay) 0
+                   in Period.mkJourneyPeriodKeyWithStart bucketStart periodType startDate
+              )
+              offsets

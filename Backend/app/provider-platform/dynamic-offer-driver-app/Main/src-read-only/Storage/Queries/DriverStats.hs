@@ -19,16 +19,16 @@ import qualified Storage.Beam.DriverStats as Beam
 import Storage.Queries.DriverStatsExtra as ReExport
 import Storage.Queries.Transformers.DriverStats
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverStats.DriverStats -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DriverStats.DriverStats -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverStats.DriverStats] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.DriverStats.DriverStats] -> m ()
 createMany = traverse_ create
 
-deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ()
 deleteById driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateD2cReferralCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateD2cReferralCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Int -> (Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ()))
 updateD2cReferralCount d2cReferralCount totalReferralCounts driverId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -38,7 +38,7 @@ updateD2cReferralCount d2cReferralCount totalReferralCounts driverId = do
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateD2dReferralCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateD2dReferralCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Int -> (Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ()))
 updateD2dReferralCount d2dReferralCount totalReferralCounts driverId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -48,39 +48,49 @@ updateD2dReferralCount d2dReferralCount totalReferralCounts driverId = do
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateNumDriversOnboarded :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateNumDriversOnboarded :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 updateNumDriversOnboarded numDriversOnboarded driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.numDriversOnboarded (Kernel.Prelude.Just numDriversOnboarded), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateNumFleetsOnboarded :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateNumFleetsOnboarded :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 updateNumFleetsOnboarded numFleetsOnboarded driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.numFleetsOnboarded (Kernel.Prelude.Just numFleetsOnboarded), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateOnlineDuration :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.Seconds -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateOnlineDuration :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Common.Seconds -> (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 updateOnlineDuration onlineDuration driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.onlineDuration (Kernel.Prelude.Just onlineDuration), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updatePayoutEarningsByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updatePayoutEarningsByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Common.HighPrecMoney -> (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 updatePayoutEarningsByDriverId totalPayoutEarnings driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.totalPayoutEarnings (Kernel.Prelude.Just totalPayoutEarnings), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateTotalPayoutAmountPaid :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateTotalIncentiveJourneyEarnings :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Common.HighPrecMoney -> (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateTotalIncentiveJourneyEarnings totalIncentiveJourneyEarnings driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.totalIncentiveJourneyEarnings (Kernel.Prelude.Just totalIncentiveJourneyEarnings),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateTotalPayoutAmountPaid :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 updateTotalPayoutAmountPaid totalPayoutAmountPaid driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.totalPayoutAmountPaid totalPayoutAmountPaid, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateTotalReferralCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateTotalReferralCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 updateTotalReferralCount totalReferralCounts driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.totalReferralCounts (Kernel.Prelude.Just totalReferralCounts), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateTotalValidRidesAndPayoutEarnings ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Int -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+  Kernel.Prelude.Int ->
+  (Kernel.Types.Common.HighPrecMoney -> (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ()))
 updateTotalValidRidesAndPayoutEarnings totalValidActivatedRides totalPayoutEarnings driverId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -90,7 +100,7 @@ updateTotalValidRidesAndPayoutEarnings totalValidActivatedRides totalPayoutEarni
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateValidCustomerCancellationTagCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateValidCustomerCancellationTagCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 updateValidCustomerCancellationTagCount validCustomerCancellationTagCount driverId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -99,7 +109,7 @@ updateValidCustomerCancellationTagCount validCustomerCancellationTagCount driver
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateValidDriverCancellationTagCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateValidDriverCancellationTagCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 updateValidDriverCancellationTagCount validDriverCancellationTagCount driverId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -108,10 +118,10 @@ updateValidDriverCancellationTagCount validDriverCancellationTagCount driverId =
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m (Maybe Domain.Types.DriverStats.DriverStats))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Driver -> m (Maybe Domain.Types.DriverStats.DriverStats)
 findByPrimaryKey driverId = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverStats.DriverStats -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DriverStats.DriverStats -> m ()
 updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -140,6 +150,7 @@ updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
       Se.Set Beam.totalDistance (getTotalDistance totalDistance),
       Se.Set Beam.totalEarnings (Kernel.Prelude.roundToIntegral totalEarnings),
       Se.Set Beam.totalEarningsAmount (Kernel.Prelude.Just totalEarnings),
+      Se.Set Beam.totalIncentiveJourneyEarnings (Kernel.Prelude.Just totalIncentiveJourneyEarnings),
       Se.Set Beam.totalPayoutAmountPaid totalPayoutAmountPaid,
       Se.Set Beam.totalPayoutEarnings (Kernel.Prelude.Just totalPayoutEarnings),
       Se.Set Beam.totalRatingScore totalRatingScore,

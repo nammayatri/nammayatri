@@ -22,7 +22,8 @@
 --      row, resolved ONCE (Redis-cached per ride) into a 'CancellationDecision'.
 --   2. 'applyImmediateConsequences'     — driver-side consequences: driver→rider
 --      blacklist, driver overlay notification, the coin event, the driver money
---      penalty/credit, and driver cancellation-rate counting.
+--      penalty/credit, driver cancellation-rate counting, and IJ campaign
+--      cancel behaviour metrics (dxCancel / dafCancel via Lib.BehaviorTracker.CampaignCancel).
 --   3. 'applyTerminalConsequences'      — the customer-side money consequences.
 --
 -- BOTH run on every cancellation with an assigned ride, regardless of whether the
@@ -43,6 +44,7 @@ module SharedLogic.CancellationOrchestrator
     -- * Consequence executors
     applyImmediateConsequences,
     applyTerminalConsequences,
+    driverCancelMetricsWouldBump,
 
     -- * Charge computation (also used by soft-cancel + penalty previews)
     CancellationChargesOutcome (..),
@@ -74,6 +76,7 @@ import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Environment
 import EulerHS.Prelude hiding (whenJust)
 import Kernel.External.Maps
 import Kernel.Prelude hiding (any, elem, map, mapM_, notElem)
@@ -86,12 +89,14 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerToo
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
+import qualified Lib.BehaviorTracker.CampaignCancel as BTCancel
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.Analytics as Analytics
@@ -109,7 +114,10 @@ import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
+import SharedLogic.Finance.PostActions (PostActionsEnv)
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified SharedLogic.IncentiveJourney as SLJourney
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.CancellationConsequenceMatrix as CQCCM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
@@ -159,6 +167,20 @@ data ConsequenceCtx = ConsequenceCtx
   }
   deriving (Generic)
 
+-- | Same flags as 'applyDriverCancellationRateCount': True when this cancel bumps the
+-- driver's sliding-window cancel rate and/or bt: RIDE_CANCELLATION ACTION_COUNT.
+-- Callers (IJ behavior tick) should publish only when this is True.
+driverCancelMetricsWouldBump :: ConsequenceCtx -> Bool
+driverCancelMetricsWouldBump ctx =
+  let row = ctx.decision.consequenceRow
+      countsTowardRate = maybe False (.countsTowardDriverCancellationRate) row
+      countsTowardCount =
+        maybe
+          (ctx.source == SBCR.ByDriver)
+          ((== CancellationFault.DriverAtFault) . (.atFault))
+          ctx.decision.faultVerdict
+   in countsTowardRate || countsTowardCount
+
 -- | Map the persisted cancellation source to the type the verdict rules / matrix / coin
 -- engine consume. This is the ONLY place this mapping lives — flows must never hardcode
 -- CancellationByDriver/CancellationByCustomer (ops/merchant cancels used to be
@@ -201,7 +223,8 @@ decideCancellationConsequences booking ride transporterConfig source reasonCode 
 
 -- | Consequences that apply to EVERY cancellation with an assigned ride, regardless of
 -- whether the booking subsequently reallocates: a customer forced to cancel because the
--- driver never moved must still produce the driver-side consequences.
+-- driver never moved must still produce the driver-side consequences (including IJ
+-- campaign dxCancel/dafCancel behaviour bumps).
 applyImmediateConsequences ::
   ( EncFlow m r,
     EsqDBReplicaFlow m r,
@@ -233,14 +256,16 @@ applyImmediateConsequences ::
     EventStreamFlow m r,
     Metrics.HasCoreMetrics r,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
     ClickhouseFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    IJBeamFlow.BeamFlow m r,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    Metrics.CoreMetrics m
   ) =>
   ConsequenceCtx ->
   Maybe Bool ->
@@ -255,6 +280,7 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     applyCancellationTrackingEvent
     applyDriverMoneyConsequence ctx.driver
     applyDriverCancellationRateCount ctx.driver
+    applyCampaignCancelBehaviorMetrics
     applyAutoAcceptCancellationBehaviour
     applyAvailableForRidesRevocation
   case resultE of
@@ -322,7 +348,11 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     -- (no verdict) it counts driver-initiated cancels.
     applyDriverCancellationRateCount driver = do
       let countsTowardRate = maybe False (.countsTowardDriverCancellationRate) row
-          countsTowardCount = maybe (ctx.source == SBCR.ByDriver) ((== CancellationFault.DriverAtFault) . (.atFault)) ctx.decision.faultVerdict
+          countsTowardCount =
+            maybe
+              (ctx.source == SBCR.ByDriver)
+              ((== CancellationFault.DriverAtFault) . (.atFault))
+              ctx.decision.faultVerdict
       -- Gate on the fault verdict, not on who pressed cancel. A driver who stalls until the
       -- rider cancels is at fault just the same; those cancels already bumped the counters but
       -- never triggered an evaluation, so the driver was judged only on their next self-cancel.
@@ -338,6 +368,28 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
       when (ctx.booking.isAutoAccepted == Just True) $
         fork "autoAcceptCancellationBehaviour" $
           AutoAcceptCancellation.recordAutoAcceptCancellation ctx.transporterConfig ctx.ride.driverId ctx.ride.merchantOperatingCityId ctx.ride.id ctx.booking.vehicleServiceTier (CancellationFault.mkFaultVerdictData ctx.decision.signals ctx.decision.cancelledBy ctx.decision.reasonCode) ctx.decision.faultVerdict
+
+    -- Campaign cancellationRate = (dxCancel + dafCancel) / rrAccepted — one bump per event.
+    -- Attribution (which metric/action) lives in Lib.BehaviorTracker.CampaignCancel.
+    -- wouldBump (fault / cancel-rate matrix) gates ALL sources — including ByUser:
+    --   rider cancel + customer-at-fault → no dafCancel; rider cancel + driver-at-fault → dafCancel.
+    -- bumpCampaignBehaviorMetric publishes BehaviourMetricTick; do not also publish a bare
+    -- RIDE_CANCELLATION tick (would double-count / mis-attribute ByUser cancels).
+    applyCampaignCancelBehaviorMetrics = do
+      let wouldBump = driverCancelMetricsWouldBump ctx
+          cancelSource = case ctx.source of
+            SBCR.ByDriver -> BTCancel.CancelByDriver
+            SBCR.ByUser -> BTCancel.CancelByCustomer
+            _ -> BTCancel.CancelByOther
+      whenJust (BTCancel.resolveCampaignCancelBump cancelSource wouldBump) $ \bump ->
+        SLJourney.bumpCampaignBehaviorMetric
+          ctx.ride.driverId
+          ctx.merchant.id
+          ctx.booking.merchantOperatingCityId
+          ctx.transporterConfig.timeDiffFromUtc
+          bump.metric
+          1
+          bump.actionType
 
 -- | Customer-side money consequences, applied on every cancelled ride — including when
 -- the booking reallocates (the row decides whether the customer pays; on a reallocated
