@@ -1,288 +1,200 @@
-# Driver analytics tests: sessionizer and driver performance
+# Driver analytics tests: sessionizer
 
 `atlas_kafka.driver_analytics_5m` has one row per 5-minute bucket × city ×
-driver × distinct driver state (SummingMergeTree). Two consumers write it:
+driver × distinct driver state (SummingMergeTree, keyed by `state_id`). The
+SESSIONIZER (kafka-consumers, `CONSUMER_TYPE = SESSIONIZER`) writes every
+column, through the `driver-analytics-5m` topic and a ClickHouse Kafka engine
+table:
 
-- **SESSIONIZER** writes the online-time columns (`online_ms`,
-  `online_on_ride_ms`, `pings`, `pings_unknown_state`), from LTS pings and the
-  DRIVER_POOL_STATE writer's state. Tested by `test_sessionizer.py`.
-- **DRIVER_PERFORMANCE** writes the performance_analytics columns (pop-ups,
-  rides, cancellations, gross earnings, driver addition, tip, ratings), from
-  the CDC topics the driver drainer publishes. Tested by
-  `test_driver_performance.py`.
+- **presence** from LTS pings (`location-updates`): every ping whose mode is
+  not OFFLINE adds to `pings` and sets `online = 1` on the row of its bucket
+  and of the state in force at its `st`. Online time is not a column: it is
+  the number of distinct online buckets × 5 minutes,
+  `uniqExactIf(bucket, online = 1) * 5` minutes per driver. Count buckets,
+  never rows: a bucket with a state change has a row per state.
+- **events** from `driver-analytics-events`: the driver app publishes one per
+  pop-up sent / answered / pulled, ride assigned / started / completed /
+  cancelled and rating (`SharedLogic/DriverPool/DriverAnalyticsEvent.hs`),
+  keyed by driver id. Each adds its counts (`popups_sent`, `popups_accepted`,
+  `popups_rejected`, `popups_pulled`, `response_secs_sum`,
+  `auto_accept_search_requests`, `total_bookings`, `rides_started`,
+  `finished_rides`, `cancelled_rides`, `rides_cancelled_by_driver` / `_by_user`,
+  the `auto_accept_*` ride columns, `rides_with_rating`, `rating_sum`,
+  `driver_addition`, `customer_tip`, `gross_earnings`) to the row of its own
+  time and the state in force then. A row can have events and `online = 0`.
 
-Idle, unavailable and no-state time are not columns: split `online_ms` by the
-state columns (`sumIf(online_ms, NOT onRide AND enabled AND NOT blocked)`,
-`sumIf(online_ms, state_known = 0)`). Average response time is
-`response_secs_sum / (popups_accepted + popups_rejected)`.
+Every count is at its event's time, so a ride's booking, start, end and
+cancellation can sit in different buckets. An accepted pop-up's time is just
+before the accept runs, so it counts in the state the driver accepted from, not
+the `onRide` state the accept can put them in. The views `driver_performance_5m`
+and `driver_performance_hourly` present the rows under performance_analytics
+names: pop-ups sent = `popups_sent - popups_pulled`, neglected = sent −
+accepted − rejected (exact over a day, approximate per bucket), average
+response time = `response_secs_sum / (popups_accepted + popups_rejected)`.
 
-The views `driver_performance_5m` and `driver_performance_hourly` present them
-under the performance_analytics column names, one row per driver and bucket /
-IST hour.
+`location-updates` and `driver-analytics-events` must have the same partition
+count and the same key hash (both keyed by driver id): the sessionizer's
+group uses the range assignor, so one pod gets the same partition number of
+both and holds all of a driver's records.
 
 ## State columns: one row per distinct state
 
-The driver's DriverPoolData state is part of the row key: one plain column per
-key of the DRIVER_POOL_STATE writer's hash, named exactly like the key (`mode`,
+The driver's DriverPoolData state is part of the row: one plain column per key
+of the DRIVER_POOL_STATE writer's hash, named exactly like the key (`mode`,
 `active`, `onRide`, `enabled`, `blocked`, `selectedServiceTiers`, `variant`,
-`vehicleRating`, `lastUpdatedAt`, ... 39 in all, listed in
-`Processor/StateColumns.hs`; `deviceToken`, `registrationNo`, the row-key
-fields and the keys not wanted (`driverTripEndLocation`, `clientDevice`,
-`schemaVersion`, the client versions, `enableCashRide`, `safetyPlusEnabled`,
-`bankAccountPaymentMode`, `language`, `gender`, `totalRides`,
-`acRestrictionLiftCount`, `luggageCapacity`, `lastRideEndedAt`,
-`mYManufacturing`) are left out). A bucket gets one row per distinct state the driver was
-in, each with its own online time, pings and counts:
-
-- SESSIONIZER: each piece of online time goes to the row of the state in force
-  during it (a state change inside a gap splits the gap across two rows), each
-  ping to the row of the state at its `st`.
-- DRIVER_PERFORMANCE: each pop-up and ride goes to the row of the driver's
-  state at the event's own time (SRD / ride `created_at`), looked up once on
-  first sight and reused for every later version, so an answer or a
-  retraction lands in the same row even if the state has changed since.
-  Ratings and other joined facts go with their ride.
+`vehicleRating`, `registrationNo`, `lastUpdatedAt`, ..., listed in
+`Processor/StateColumns.hs`), and `state_id`, a hash of them, in the key.
+`registrationNo` is the vehicle linked to the driver at that time;
+`registrationNoChangedAt` is when it last changed (the writer and the
+sessionizer stamp it with the event time whenever the vehicle number changes
+from a known one; `""` and null both mean no vehicle).
 
 `state_known` is 0 when the writer had no state for that time (all state
-columns NULL / `[]`); `state_at` is the epoch ms the row's state took effect
-(the writer's history entry time), 0 when unknown. Types: bools
-`Nullable(Bool)`, text `LowCardinality(Nullable(String))`, lists
-`Array(LowCardinality(String))`, numbers `Nullable(Int64)` / `Nullable(Float64)`,
-times `Nullable(DateTime64(3, 'UTC'))`.
-`ORDER BY` holds all of them; `PRIMARY KEY` stays (city, bucket, driver).
+columns NULL / `[]`); `state_at` is when the row's state took effect (the
+writer's history entry time), `1970-01-01 00:00:00` when unknown.
 
-Always `sum()` the measures. Group by the state columns to split by state, or
-leave them out for per-driver totals:
+The SESSIONIZER reads every partition of `driver-pool-state` itself, on a
+second consumer that commits nothing, so every pod sees every state event. It
+keeps each driver's state in memory for good (history trimmed at each flush)
+and reads Redis only for a driver not in memory, once the writer has applied
+that driver's events. A record waits, with no timeout, until every state event
+published up to 30 s after its time has been read; waiting never blocks
+polling. An event older than the history kept in memory takes its state from
+the writer's Redis history (`sessionizer_history_fallbacks`).
+
+Always `sum()` the measures, and group by the state columns to split by state:
 
 ```sql
 SELECT driver_id, mode, onRide,
-       sum(online_ms) / 60000 AS online_min,
-       sum(pings)             AS pings
+       uniqExactIf(bucket, online = 1) * 5 AS online_min,
+       sum(pings)                          AS pings,
+       sum(finished_rides)                 AS finished
 FROM atlas_kafka.driver_analytics_5m
 WHERE state_known = 1
 GROUP BY driver_id, mode, onRide
 ```
 
-The views sum over the states and expose each state column as the latest
-state in the bucket / hour (`argMax` by `state_at`), plus `state_at`
-(DateTime64, NULL when no state is known) and `states_in_bucket` /
-`states_in_hour` (distinct state rows). Example queries 13 to 15 in
-`dev/clickhouse/driver-analytics-queries.sql` use the state columns.
-
-Adding a state field later: add it to `StateColumns.hs`, then
-
 ```sql
-ALTER TABLE atlas_kafka.driver_analytics_5m
-    ADD COLUMN newField Nullable(String),
-    MODIFY ORDER BY (merchant_operating_city_id, bucket, driver_id, state_known,
-                     <the current 39 state columns>, newField);
+-- Which vehicle each driver had, and when it was linked.
+SELECT driver_id, registrationNo, min(registrationNoChangedAt) AS linked_at
+FROM atlas_kafka.driver_analytics_5m
+WHERE state_known = 1
+GROUP BY driver_id, registrationNo
+ORDER BY driver_id, linked_at
 ```
 
-ClickHouse appends a column added in the same `ALTER` to the sorting key
-without rewriting data; old rows read it as NULL. Then add its `argMax` line to
-both views. Removing a field: drop it from `StateColumns.hs` only; the column
-stays and new rows write its default (NULL / `[]`).
+## Running
 
 ```bash
 # from Backend/dev/integration-tests, with the stack running
-uv run sessionizer/test_sessionizer.py                  # ~11 min: ~5.5 min timeline + flush wait
+uv run sessionizer/test_sessionizer.py                  # ~11 min: ~6 min timeline + flush wait
 uv run sessionizer/test_sessionizer.py --e2e            # right after a ride run (see below)
-uv run sessionizer/test_driver_performance.py           # ~5 min: four phases, a flush after each
-uv run sessionizer/test_driver_performance.py --fast    # no flush between phases (~1.5 min)
-uv run sessionizer/test_driver_performance.py --e2e     # right after a ride run
-uv run sessionizer/test_driver_performance.py --selfcheck   # reference model only, no stack needed
-uv run sessionizer/test_metrics_reconciliation.py       # ~15 min: both legs + column audit
-uv run sessionizer/test_metrics_reconciliation.py --fast  # shorter perf leg (no mid-run flushes)
+uv run sessionizer/load_test.py                         # 4000 drivers x 10 min, pings + state + events
+uv run sessionizer/load_test.py --drivers 1000 --minutes 5
 ```
 
-# `test_metrics_reconciliation.py`
+Don't run them straight after `run-tests.sh`: that script flushes every Redis
+DB, including the writer's.
 
-Runs a compact sessionizer timeline and a compact driver-performance timeline in
-one go, then prints an input ledger (Kafka message counts), per-column totals
-(model vs ClickHouse), and per-(bucket, city, driver, state) row checks for
-both activity and performance measures. Use it when you want one pass that
-touches every `driver_analytics_5m` metric column without running the full
-~11 min + ~5 min scenario suites.
+# `compare_flows.sh`
+
+Runs the same ride suites on the `origin/main` merge-base (a worktree at
+`../nammayatri-base`) and on this tree, one suite at a time. `diff.txt` shows what
+each suite wrote on each side (Postgres rows, Redis keys, Kafka messages), with the
+differences the branch means to make listed apart from the rest. `truth-<suite>.txt`
+compares this tree's `driver_analytics_5m` with Postgres and `location-updates`, per
+driver. Results go to `dev/integration-tests/data/compare/`.
+
+```bash
+dev/integration-tests/sessionizer/compare_flows.sh                  # from Backend/, no stack running
+NAMES="01-AutoRideFlow" dev/integration-tests/sessionizer/compare_flows.sh
+SKIP_BASE=1 dev/integration-tests/sessionizer/compare_flows.sh      # reuse the base snapshots
+```
+
+The first run does a full build of the worktree. A database with no merchants gets
+the config bundle this tree last synced from, and `prepare` adds registry rows for
+each local merchant's key (without them every Beckn search fails with
+`SIGNATURE_VERIFICATION_FAILURE`). Check a single stack with
+`compare_flows.py mark`, one `run-tests.sh` suite, then `compare_flows.py truth`: one
+suite per mark, because `run-tests.sh` flushes Redis before each suite and that drops
+writes the drainer hasn't reached yet.
 
 # `test_sessionizer.py`
 
 It tests the DRIVER_POOL_STATE writer and the SESSIONIZER together. It plays
-scripted timelines onto their two input topics (`driver-pool-state`,
-`location-updates`) in real time, waits for the sessionizer's flush, then
-checks the activity columns of `driver_analytics_5m` and the writer's Redis.
+scripted timelines onto `driver-pool-state`, `location-updates` and
+`driver-analytics-events` in real time, waits for the sessionizer's flush, then
+checks `driver_analytics_5m` and the writer's Redis. Each run uses new driver
+ids and its own city id, so runs don't collide.
 
-Each run uses new driver ids and its own city id, so runs don't collide and
-don't need a clean database. Don't run it straight after `run-tests.sh`: that
-script flushes every Redis DB, including the writer's.
-
-## What it checks
-
-Every activity scenario is checked twice: against hand-written totals, and
-against a reference model of the rules (in the script) bucket by bucket
-(summed over the driver's states).
+Every scenario is checked twice: against hand-written totals, and against a
+reference model of the rules (in the script), per bucket and city and per
+state row.
 
 | Scenario | Proves |
 |---|---|
-| `idle_steady` | Gaps between ONLINE pings count as online, in the idle state's row. Malformed input aimed at this driver is skipped: a ping without a Kafka key, plus invalid JSON on both topics. |
-| `gap_300s_counted` / `gap_301s_dropped` | The 300 s gap limit is inclusive. |
-| `bucket_edge_split` | An interval crossing a 5-minute boundary is split between the two buckets. |
-| `offline_ping` | The gap after an OFFLINE ping isn't online. The OFFLINE ping is still counted. |
-| `silent_mode` | SILENT counts as online. |
-| `on_ride`, `disabled`, `blocked` | On-ride time counts in `online_on_ride_ms`; a disabled or blocked driver's time is online, in an `enabled = false` / `blocked = true` state row. |
-| `unknown_state` | A driver with no state published: online time and unknown pings in the `state_known = 0` row. |
-| `change_inside_gap` | A ride assigned inside a gap splits it into an idle row and an on-ride row. |
-| `many_changes_inside_gap` | Three state changes inside one gap: four pieces, in three state rows (the idle state before and after the ride is one state). |
-| `out_of_order_ping` | A late, older ping counts as a ping but adds no time. |
-| `duplicate_ping` | A ping delivered twice counts twice as a ping, but adds no time. |
-| `city_change` | Time goes to the city of the earlier ping. |
-| `ping_mode_decides_online` | The ping's mode decides "online", not the state's mode or active flag. |
-| `state_columns_stamped` | A change to a state column outside the seven the sessionizer tags with (`vehicleRating`) adds a history entry and splits the gap into a 4.5 row and a 4.8 row. |
+| `idle_steady` | ONLINE pings mark the idle state's row online. Malformed input is skipped: a ping without a Kafka key, invalid JSON on all three topics. |
+| `two_buckets`, `bucket_edge`, `edge_ping_on_bucket_edge` | A ping marks its own bucket; a ping exactly on an edge belongs to the later bucket. |
+| `offline_ping`, `only_offline`, `edge_rapid_toggles` | OFFLINE pings count nowhere (no ping, no row). |
+| `silent_mode`, `edge_null_mode` | SILENT and a null mode count as online. |
+| `on_ride`, `disabled`, `blocked` | The ping lands in an `onRide` / `enabled = false` / `blocked = true` row. |
+| `unknown_state`, `edge_first_state_after_ping` | No state yet: the `state_known = 0` row. |
+| `state_change`, `many_changes`, `edge_change_at_ping_time`, `edge_fifty_changes` | Each ping takes the state in force at its `st` (a change stamped at the ping's time applies to it). |
+| `out_of_order_ping`, `duplicate_ping` | Late and duplicate pings each count. |
+| `city_change` | Each ping goes to its own city's row. |
+| `ping_mode_decides_online` | The ping's mode decides "online", not the state's. |
+| `state_columns_stamped` | A `vehicleRating` change adds a history entry and a row. |
+| `vehicle_change` | A row per vehicle; `registrationNoChangedAt` = the change time, none for the first vehicle. |
+| `events_stamped` | Events count at their own time in the row of the state then: pop-ups in the idle row, booking and finished ride in the onRide row. |
+| `event_without_ping` | An event while not pinging makes a row with `online = 0`. |
+| `event_unknown_state` | An event with no state: the `state_known = 0` row. |
+| `event_unknown_column` | A key that isn't a table column is ignored. |
+| `event_rating_changed` | A changed rating adds only its difference. |
+| `event_old_state` | An event an hour old takes the state in force an hour ago. |
+| `edge_st_missing_uses_ts`, `edge_future_*`, `edge_ancient_pings_skipped` | No `st` falls back to `ts`; implausible times are skipped without blocking. |
+| `edge_burst_200_pings`, `edge_weird_ids` | 200 pings; quotes, unicode and 300-char ids. |
 
-State rows: grouped by bucket, city, driver, `state_known`, `mode`, `active`,
-`onRide`, `enabled`, `blocked`, `subscribed`, `selectedServiceTiers` and
-`vehicleRating`, every row matches the reference model (online pieces by the
-state in force, pings by the state at their `st`, `state_at` = the history
-entry time). Explicitly: `change_inside_gap` splits into an idle row (55 s) and
-an onRide row (60 s, `state_at` t+60 s); `many_changes_inside_gap` has three
-states (idle 75 s, on ride 40 s, blocked 60 s); `state_columns_stamped` has a
-4.5 and a 4.8 row of 10 s each; `edge_first_state_inside_gap` has an unknown
-and an idle row; `unknown_state` rows have `state_known = 0`; a column never
-published (`vehicleRating` of `idle_steady`) is NULL.
-
-Writer checks:
-- history has an entry only when a state column changes, `lastUpdatedAt` aside (`non_state_field_change`, `same_state_again`), and each entry holds its state columns;
-- the current-state hash holds every merged field;
-- both keys expire in 30 days;
-- history is trimmed back to the state in force at the sessionizer's watermark (`trim_target`).
+Writer checks: history has an entry only when a state column changes
+(`lastUpdatedAt` aside), each entry holds its state columns, the current hash
+holds every merged field and `registrationNoChangedAt`, keys expire in 30 days,
+history is capped at the newest 100 entries (`trim_target`).
 
 ## `--e2e`
 
 Run it after `uv run driver-pool-state/check_stream.py -- ./run-tests.sh auto NY_Bangalore 01-AutoRideFlow`.
-It checks the newest real driver in the writer's Redis:
-- seeded from the DB;
-- history goes online → on ride → off ride;
-- no unknown-state time (`online_ms` with `state_known = 0`, unknown pings);
-- on ride ≤ online.
+It checks the newest real driver in the writer's Redis: seeded from the DB;
+history goes online → on ride → off ride; no unknown-state rows; online
+buckets on a ride ≤ online buckets; the ride's events arrived (pop-up sent,
+booking, start, end or cancel).
 
 ## Behaviour these tests pin down (decide if any should change)
 
-- **Duplicate pings count twice** in `pings`. LTS redelivery would inflate ping counts, but not time.
-- **The ping's mode decides "online".** A driver whose state is OFFLINE but whose pings say ONLINE is counted as online.
-- **Not covered automatically: restarts.** After a sessionizer restart, each driver's first gap is lost, because the last ping per driver is kept in memory only. A crash between the ClickHouse insert and the offset commit is safe: the replay sends the same dedup token. To check both by hand, stop `kafka-sessionizer-exe` mid-run, restart it, and compare.
+- **Duplicate pings and events count twice.** The sessionizer skips Kafka
+  records it already flushed (`sessionizer:flushed:<topic>:<partition>`), but
+  an event the app publishes twice counts twice.
+- **The ping's mode decides "online".** A driver whose state is OFFLINE but
+  whose pings say ONLINE is counted as online.
+- **A session's first and last bucket count in full** (5 minutes each).
+- **Restarts.** Records up to the last flushed offset are skipped on replay. A
+  crash between the deliveries and the Redis write of the flushed offsets
+  counts that window again. To check by hand, stop `kafka-sessionizer-exe`
+  mid-run, restart it, and compare.
+
+## Alerts (metrics on the sessionizer's metrics port)
+
+| Metric | Alert when |
+|---|---|
+| `sessionizer_state_read_lag_ms` | above a few minutes: the state consumer is behind, records are held |
+| `sessionizer_oldest_held_age_ms` | above a few minutes: records wait (state topic or writer behind) |
+| `sessionizer_writer_lag_ms` | above a few minutes: the DRIVER_POOL_STATE writer is behind |
+| `rate(sessionizer_history_fallbacks[10m])` | rises: many late events (taking their state from Redis) |
+| `rate(sessionizer_flush_failures[10m])` | above 0: producing to `driver-analytics-5m` fails |
+| Kafka engine lag | consumer group `ch-atlas_kafka-driver_analytics_5m` on `driver-analytics-5m` lags (`system.kafka_consumers` in ClickHouse, or the Kafka exporter) |
 
 ## Comparing with cosmos.performance_analytics (once both run in prod)
 
-```sql
--- Hourly IST online / on-ride hours per driver: sessionizer vs performance_analytics.
-WITH s AS (
-    SELECT driver_id,
-           formatDateTime(toStartOfHour(toTimeZone(bucket, 'Asia/Kolkata')), '%Y-%m-%d %H:00:00') AS local_time,
-           sum(online_ms) / 3.6e6 AS s_online_h,
-           sum(online_on_ride_ms) / 3.6e6 AS s_on_ride_h
-    FROM atlas_kafka.driver_analytics_5m
-    WHERE bucket >= toDateTime('2026-10-19 18:30:00') AND bucket < toDateTime('2026-10-20 18:30:00')
-    GROUP BY driver_id, local_time
-)
-SELECT count() AS driver_hours,
-       sum(p.online_time) AS pa_online_h, sum(s.s_online_h) AS s_online_h,
-       sum(p.driver_on_ride_time) AS pa_on_ride_h, sum(s.s_on_ride_h) AS s_on_ride_h
-FROM cosmos.performance_analytics AS p
-INNER JOIN s ON s.driver_id = p.driver_id AND s.local_time = p.local_time
-WHERE p.local_time LIKE '2026-10-20%'
-```
-
-Expect the sessionizer's online time to be **lower**, for three reasons:
-- `driver_supply_snapshot` gives a full 5 minutes to every driver seen in the last 300 s, whatever their mode, including OFFLINE pings.
-- The sessionizer counts only the actual time between ONLINE or SILENT pings.
-- `performance_analytics` takes on-ride from the ping's `on_ride` flag, while the sessionizer takes it from the writer's state.
-
-# `test_driver_performance.py`
-
-It produces synthetic CDC rows onto the six topics DRIVER_PERFORMANCE
-consumes (group `driver-performance`), in the drainer's exact format:
-
-- one flat JSON object per message: the full row, snake_case columns, every column present (null when empty), top-level keys sorted;
-- timestamps as integer epoch seconds; bools as `"True"`/`"False"`; enums as bare constructor names;
-- Money as integers; HighPrecMoney as aeson prints it (`0.0001` is `1.0e-4`);
-- drainer Kafka keys (`driver-db-sync-stream{shard-N}`; SRD uses the app's `searchRequestForDriver_id_<id>{shard-N}` key).
-
-The SRD rows copy a real message from the local app. The other tables carry
-every column of their Beam definition.
-
-Each run uses fresh ids and its own city (`perf-test-<run>`), so runs don't
-collide. All timestamps sit inside the last hour, so no state TTL interferes.
-Messages go out in four phases. By default the script waits for a consumer
-flush after each phase (the consumer sets the Redis key `perf:watermark`, in
-DB 2, to the flush time in ms). So a fact that arrives "before" or "after" its
-ride really is joined through the consumer's Redis state, not inside one poll
-batch.
-
-Before sending, the script checks that the `driver-performance` group has all
-six topics assigned. It creates missing topics, then waits up to 330 s. A
-running consumer only sees a new topic at its next metadata refresh, and would
-start it at the latest offset. If the wait times out, restart
-`kafka-driver-performance-exe`. Once all six are assigned, it waits 5 s more:
-a partition the group never committed gets its latest offset only after the
-assignment, and messages sent before that are skipped.
-
-Every scenario is checked twice: against hand-written totals, and against a
-reference model of the metric rules (in the script), row by row. The model
-applies the definitions to the final state of every entity: the last version
-per id, and for rides the last version of the highest status rank. It was
-written from the spec, not from the Haskell code. `--selfcheck` runs only the
-model and proves it agrees with the hand-written totals at many alignments
-against the 5-minute edge. It also checks the message format and that the
-result doesn't depend on how the topics interleave.
-
-| Scenario | Proves |
-|---|---|
-| `malformed` | `{}`, invalid JSON, `[]`, `null` and partial rows on all six topics are skipped without stalling (every later scenario still lands). |
-| `srd_accept` / `srd_reject` / `srd_neglected` | Pop-up counts and response time (responded − rendered). An Active create counted as neglected is replaced by its Accept. |
-| `srd_pulled_retraction` | Pulled counts nothing. Pop-ups already flushed as neglected or rejected, with response time, are retracted when they become Pulled. |
-| `srd_auto_accept` | `auto_accept_search_requests` needs Accept and `is_auto_accepted = "True"`. |
-| `srd_response_time_rules` | Response time only when rendered and responded are both set and responded > rendered. |
-| `srd_sentinel_skip` | `drivers-not-found` marker rows are skipped. |
-| `srd_duplicates` | One message delivered 3× and replayed after two flushes counts once. |
-| `srd_bucket_edge` | `created_at` on a 5-minute edge goes in the new bucket; 1 s before goes in the old one. |
-| `srd_no_city` | A null city lands under city `''`. |
-| `ride_lifecycle` | NEW → INPROGRESS → COMPLETED across a flush: 1 total, 1 finished, 0 in progress. The driver booking arrives a flush before the ride. |
-| `ride_inprogress` | INPROGRESS counted. |
-| `cancel_by_driver_bcr_before` / `_after` | The ByDriver cancellation reason joins whether it arrives before the ride or two flushes after it. |
-| `cancel_by_user_auto` | ByUser reason with a null `ride_id`, a flush after the ride, joins by booking id; auto-accept booking counts. |
-| `cancel_by_user_bcr_before` | ByUser reason with a null `ride_id`, a flush before the ride, joins by booking id. |
-| `cancel_by_application` | Other sources count as cancelled only. |
-| `auto_accept_completed` | The booking's auto-accept flag arriving after the ride. |
-| `auto_accept_cancel_by_driver` | The auto-accept cancelled-by-driver columns. |
-| `ride_versions` | Lower-rank versions after COMPLETED are ignored, in the same batch and after a flush. A later COMPLETED replaces the fare. Duplicates count once. |
-| `toll_and_parking_ignored` | The ride's toll and its own fare params' parking (a flush before the ride) change nothing: gross = fare. |
-| `driver_addition_tip` | Addition and tip come from the booking's (quote's) fare params, before or after the ride, whatever the ride status. |
-| `quote_fare_params_updated` | Quote fare params joined from pending, then updated a flush later, keep the update when the booking's next version arrives (phase 3); the old pending copy is not attached again. |
-| `ratings` | A rating before the ride, one after it, and one updated 5 → 3. |
-| `ride_row_key_change` | A same-rank version that changes the driver retracts the old driver's row. |
-| `driver_state_stamped` | Two `driver-pool-state` events before the pop-up (the newer: on a ride, two tiers), a flush before it. The pop-up arrives Active (neglected), then the driver goes OFFLINE (after `created_at`, same bucket), then the answer arrives. One state row: the state at `created_at` (`mode`, `onRide`, `selectedServiceTiers`), `state_at` = that entry's time, accepted 1, neglected 0; nothing in an OFFLINE row. Needs the DRIVER_POOL_STATE writer running. |
-
-Plus: every (bucket, city, driver, state) row matches the reference model
-(each pop-up and ride keyed by the state at its event time), no rows for
-other drivers in the test city, rows of drivers without writer history have
-`state_known = 0`, and every `perf:*` state key has a TTL of at most 8 days.
-
-## `--e2e`
-
-Run it after a real ride run (`./run-tests.sh auto NY_Bangalore 01-AutoRideFlow`),
-with `PUSH_TO_KAFKA=True` on the driver drainer. It takes the driver of the newest
-ride in local Postgres (or `--driver`) and everything of theirs from the start
-of the 5-minute bucket `--hours` (default 2) before that ride. Both sides use
-that same bucket bound. It computes the metrics from Postgres with the same
-reference model: SRDs, rides, bookings, cancellation reasons, the bookings'
-fare params and ratings (Postgres `localhost:5434`, db `atlas_dev`, user
-`atlas_driver_offer_bpp_user`). It then waits for a consumer flush and
-compares them with the totals in `driver_performance_5m`. Response-time sums
-and rating sums come from `driver_analytics_5m`. Money is
-compared to 0.001. The window must lie inside the time the consumer has been
-running.
-
-## Behaviour these tests pin down
-
-- **Facts are joined, not dated.** Addition, tip and rating all land in the ride's bucket (ride `created_at`), whenever they arrive. Ratings later than the ride state's TTL (8 days) are dropped.
-- **Fare params wait for their ride only when they matter.** A fare_parameters row that arrives before its ride is stored only if it carries a non-zero driver_selected_fare or customer_extra_fee, or if it replaces such a stored row. A later all-zero version therefore zeroes the earlier values. Any other all-zero row is dropped until its ride is known. A version that arrives once its ride is known also replaces a stored row, so later booking versions don't bring back the old values (`quote_fare_params_updated`).
-- **Not covered automatically: crashes.** A crash between the ClickHouse insert and the Redis state write replays with the same dedup token. To check it by hand, stop `kafka-driver-performance-exe` mid-run, restart it, and rerun the comparison.
+Example query 12 in `dev/clickhouse/driver-analytics-queries.sql`. Expected
+gaps: online time (the stream counts every 5-minute bucket with an online
+ping in full, so about +5 min per session), events bucketed at their own time
+(performance_analytics buckets rides by search time), and the batch's known
+tip bug (00:00–05:30 IST).
