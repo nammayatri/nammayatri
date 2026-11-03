@@ -3,8 +3,7 @@
 --
 --   * driver_state:current:<id>  hash of DriverPoolData fields, merged event by event
 --   * driver_state:history:<id>  sorted set of DriverStateSnapshot, one entry per
---                                change to the fields the sessionizer uses or to
---                                a state column (lastUpdatedAt aside)
+--                                change to a state column (lastUpdatedAt aside)
 --
 -- A driver seen for the first time is seeded from the DB, so the first change
 -- lands on a complete record.
@@ -28,12 +27,12 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Processor.DriverPoolState.Types
-import Processor.StateColumns (stateColumnKeys)
+import Processor.StateColumns (stampVehicleChange, stateColumnKeys)
 import qualified "dynamic-offer-driver-app" SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 
--- | History kept per driver until the sessionizer or DRIVER_PERFORMANCE publishes its mark.
-historyCapWithoutSessionizer :: Int
-historyCapWithoutSessionizer = 100
+-- | History entries kept per driver (the newest).
+historyCap :: Int
+historyCap = 100
 
 processDriverPoolState :: DriverPoolStateEvent -> Flow ()
 processDriverPoolState ev = do
@@ -55,18 +54,21 @@ processDriverPoolState ev = do
         Hedis.hSetExp ck seededField True stateExpiry
       _ -> logDebug $ "driver-pool-state: driver " <> ev.driverId <> " not seedable yet (no vehicle); will retry"
   inStateRedis $ do
-    writeFields ck ev.changes
+    -- One extra read, only on events carrying the vehicle number.
+    oldVehicle :: Maybe A.Value <-
+      if AKM.member "registrationNo" ev.changes then Hedis.hGet ck "registrationNo" else pure Nothing
+    writeFields ck (stampVehicleChange ev.ts (maybe AKM.empty (AKM.singleton "registrationNo") oldVehicle) ev.changes)
     current :: [(Text, A.Value)] <- Hedis.hGetAll ck
     let snapshot = snapshotFromFields stateColumnKeys (HM.fromList current)
     latest <- Hedis.zRange hk (-1) (-1)
     unless ((snd <$> (listToMaybe latest >>= decodeMember)) == Just snapshot) $ do
       Hedis.zAdd hk [(fromIntegral ev.ts, encodeMember ev.ts snapshot)]
       Hedis.expire hk stateExpiry
-    trimHistory hk
+      trimHistory hk
 
 -- | Record how far the writer has applied events on the partitions this
 -- replica owns (partition -> epoch ms), and the topic's partition count, for
--- the sessionizer and DRIVER_PERFORMANCE to wait on.
+-- the sessionizer to wait on.
 publishWriterWatermark :: Int -> M.Map Int Integer -> Flow ()
 publishWriterWatermark partitionCount marks = do
   stateEnv <- asks (.driverStateHedisEnv) >>= fromMaybeM (InternalError "driverStateRedisCfg is not set; DRIVER_POOL_STATE needs it")
@@ -78,30 +80,15 @@ publishWriterWatermark partitionCount marks = do
     Left err -> throwError (InternalError ("writer watermark write failed: " <> show err))
     Right _ -> pure ()
 
--- | Keep the newest entry at or before T plus every entry after T, where T is
--- the earlier of the sessionizer's watermark and DRIVER_PERFORMANCE's state
--- horizon (whichever exist). Before either exists, keep the newest
--- 'historyCapWithoutSessionizer' entries.
+-- | Run when an entry is added: drop the oldest entries past 'historyCap'.
 trimHistory :: Text -> Flow ()
 trimHistory hk = do
-  mbSessionizerT :: Maybe Integer <- Hedis.get sessionizerWatermarkKey
-  mbHorizon :: Maybe Integer <- Hedis.get stateHorizonKey
-  case catMaybes [mbSessionizerT, mbHorizon] of
-    marks@(_ : _) -> do
-      atOrBefore <- Hedis.zRangeByScore hk negInf (fromIntegral (minimum marks))
-      whenJust (lastMaybe atOrBefore >>= decodeMember) $ \(keepFrom, _) ->
-        void $ Hedis.zRemRangeByScore hk negInf (fromIntegral keepFrom - 0.5)
-    [] -> do
-      older <- Hedis.zRangeWithScores hk 0 (negate (fromIntegral historyCapWithoutSessionizer) - 1)
-      whenJust (lastMaybe older) $ \(_, score) ->
-        void $ Hedis.zRemRangeByScore hk negInf score
+  older <- Hedis.zRangeWithScores hk 0 (negate (fromIntegral historyCap) - 1)
+  whenJust (lastMaybe older) $ \(_, score) ->
+    void $ Hedis.zRemRangeByScore hk negInf score
   where
     negInf = -1 / 0
     lastMaybe xs = if null xs then Nothing else Just (last xs)
-
--- | Marker in the current-state hash: set once the driver has been seeded from the DB.
-seededField :: Text
-seededField = "_seededFromDb"
 
 inStateRedis :: Flow a -> Flow a
 inStateRedis action = do

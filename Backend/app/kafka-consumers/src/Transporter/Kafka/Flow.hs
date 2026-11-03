@@ -106,15 +106,19 @@ newKafkaConsumer :: AppEnv -> IO Consumer.KafkaConsumer
 newKafkaConsumer appEnv =
   either (error . ("Unable to open a kafka consumer: " <>) . show) id
     <$> Consumer.newConsumer
-      (appEnv.kafkaConsumerCfg.consumerProperties <> waitsOnStateWriter)
+      (appEnv.kafkaConsumerCfg.consumerProperties <> sessionizerProps)
       (Consumer.topics appEnv.kafkaConsumerCfg.topicNames)
   where
-    -- SESSIONIZER and DRIVER_PERFORMANCE block a batch, without a timeout,
-    -- until the state writer catches up. Past librdkafka's default 5-minute
+    -- SESSIONIZER: its loop can still stall on a Redis or Kafka outage (it
+    -- retries without a timeout); past librdkafka's default 5-minute
     -- max.poll.interval.ms the consumer would leave the group mid-window, so
     -- allow the broker's maximum (24 h); heartbeats run on their own thread.
-    waitsOnStateWriter
-      | appEnv.consumerType `elem` [SESSIONIZER, DRIVER_PERFORMANCE] = Consumer.extraProp "max.poll.interval.ms" "86400000"
+    -- It reads location-updates and driver-analytics-events, both keyed by
+    -- driver id with the same partition count: the range assignor gives one
+    -- member the same partition number of both topics, so all of a driver's
+    -- records reach the same pod.
+    sessionizerProps
+      | appEnv.consumerType == SESSIONIZER = Consumer.extraProp "max.poll.interval.ms" "86400000" <> Consumer.extraProp "partition.assignment.strategy" "range"
       | otherwise = mempty
 
 ------------------------------------------------------------
@@ -129,4 +133,3 @@ getConfigNameFromConsumertype = \case
   RIDE_EVENTS_CONSUMER -> pure "ride-events-consumer"
   DRIVER_POOL_STATE -> pure "driver-pool-state-writer"
   SESSIONIZER -> pure "sessionizer"
-  DRIVER_PERFORMANCE -> pure "driver-performance"

@@ -1,15 +1,15 @@
 -- | The driver_analytics_5m state columns: one per DriverPoolData key (named
--- exactly like it), all part of the row key, so a bucket holds one row per
--- distinct state the driver was in. Shared by the DRIVER_POOL_STATE writer
--- (which keys it copies into a snapshot) and by the SESSIONIZER and
--- DRIVER_PERFORMANCE (which key their rows by the state at a point in time).
+-- exactly like it). The row key carries 'stateIdOf' the state instead of the
+-- columns, so a bucket holds one row per distinct state the driver was in. Shared by the DRIVER_POOL_STATE writer
+-- (which keys it copies into a snapshot) and by the SESSIONIZER (which keys
+-- its rows by the state at a point in time).
 module Processor.StateColumns
-  ( StateKind (..),
-    stateColumns,
-    stateColumnKeys,
+  ( stateColumnKeys,
     renderStateValues,
     stateTag,
     stateOfTag,
+    stateIdOf,
+    stampVehicleChange,
     statesAt,
   )
 where
@@ -17,13 +17,17 @@ where
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
+import Data.Bits (xor)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Word (Word64)
 import qualified Database.Redis as R
 import Kernel.Prelude
+import Processor.ClickhouseText (epochMsText)
 import Processor.DriverPoolState.Types
 
 -- | How a column's JSON value from the current-state hash is rendered.
@@ -40,9 +44,11 @@ data StateKind
     KindFloat
   | -- | Nullable(DateTime64(3, 'UTC')), sent as text (date_time_input_format = 'best_effort')
     KindTime
+  | -- | Nullable(DateTime64(3, 'UTC')) from an epoch-ms number
+    KindEpochMs
 
--- | Every DriverPoolData key except deviceToken (credential), registrationNo
--- (PII), driverId and merchantOperatingCityId (the row key), and the keys not
+-- | Every DriverPoolData key except deviceToken (credential), driverId and
+-- merchantOperatingCityId (the row key), and the keys not
 -- wanted: driverTripEndLocation, clientDevice, schemaVersion, clientSdkVersion,
 -- clientBundleVersion, clientConfigVersion, enableCashRide, safetyPlusEnabled,
 -- bankAccountPaymentMode, language, gender, totalRides, acRestrictionLiftCount,
@@ -50,9 +56,10 @@ data StateKind
 stateColumns :: [(Text, StateKind)]
 stateColumns =
   map (,KindBool) ["active", "onRide", "enabled", "blocked", "subscribed", "canSwitchToRental", "canSwitchToInterCity", "canSwitchToIntraCity", "forwardBatchingEnabled", "isSpecialLocWarrior", "isPetModeEnabled", "chargesEnabled", "hasAdvanceBooking", "isDisabledReasonFlag", "hasRideStarted", "airConditioned"]
-    <> map (,KindText) ["mode", "onRideTripCategory", "goHomeStatus", "variant", "rideBillingModel", "enableForAirport", "acUsageRestrictionType", "fleetOwnerId", "cloudType", "latestScheduledPickup"]
+    <> map (,KindText) ["mode", "onRideTripCategory", "goHomeStatus", "variant", "rideBillingModel", "enableForAirport", "acUsageRestrictionType", "fleetOwnerId", "cloudType", "registrationNo", "latestScheduledPickup"]
     <> map (,KindList) ["selectedServiceTiers", "selectedAutoAcceptTiers", "softBlockStiers", "vehicleTags", "driverTag"]
-    <> map (,KindInt) ["tripDistanceMinThreshold", "tripDistanceMaxThreshold", "maxPickupRadius", "lastUpdatedAt"]
+    <> map (,KindInt) ["tripDistanceMinThreshold", "tripDistanceMaxThreshold", "maxPickupRadius"]
+    <> map (,KindEpochMs) ["lastUpdatedAt", "registrationNoChangedAt"]
     <> map (,KindFloat) ["airConditionScore", "vehicleRating"]
     <> map (,KindTime) ["latestScheduledBooking", "tollRouteBlockedTill"]
 
@@ -79,6 +86,24 @@ stateTag fields =
 stateOfTag :: Text -> A.Object
 stateOfTag tagText = fromMaybe AKM.empty (A.decodeStrict (TE.encodeUtf8 tagText))
 
+-- | driver_analytics_5m.state_id: FNV-1a 64 of the 'stateTag', the same in
+-- every process for the same state. 0 is the unknown state.
+stateIdOf :: Text -> Word64
+stateIdOf = BS.foldl' (\h b -> (h `xor` fromIntegral b) * 1099511628211) 14695981039346656037 . TE.encodeUtf8
+
+-- | registrationNoChangedAt is the one column not copied from DriverPoolData:
+-- the writer and the sessionizer set it to the event's ts when the event
+-- changes the vehicle number from a known one ("" and null both mean no
+-- vehicle), so every later state carries when the vehicle last changed.
+stampVehicleChange :: Integer -> A.Object -> A.Object -> A.Object
+stampVehicleChange ts current changes = case (AKM.lookup "registrationNo" current, AKM.lookup "registrationNo" changes) of
+  (Just old, Just new) | vehicleOf old /= vehicleOf new -> AKM.insert "registrationNoChangedAt" (A.toJSON ts) changes
+  _ -> changes
+  where
+    vehicleOf = \case
+      A.String "" -> A.Null
+      v -> v
+
 encodeText :: A.Value -> Text
 encodeText = TE.decodeUtf8 . LBS.toStrict . A.encode
 
@@ -97,6 +122,10 @@ renderValue kind mbValue = case (kind, mbValue) of
     A.Error _ -> A.Null
   (KindFloat, Just v@(A.Number _)) -> v
   (KindTime, Just v@(A.String _)) -> v
+  (KindEpochMs, Just v@(A.Number _)) -> case A.fromJSON v :: A.Result Integer of
+    A.Success ms -> A.String (epochMsText ms)
+    A.Error _ -> A.Null
+  (KindEpochMs, Just v@(A.String _)) -> v
   _ -> A.Null
   where
     asText = \case
@@ -108,13 +137,10 @@ renderValue kind mbValue = case (kind, mbValue) of
 -- undecodable entries are absent; a failed read fails the whole lookup.
 statesAt :: R.Connection -> [(Text, Integer)] -> IO (Either Text (M.Map (Text, Integer) (Integer, DriverStateSnapshot)))
 statesAt conn wanted = do
-  let lookups = filter (\(did, _) -> did `notElem` ["", "drivers-not-found"]) (S.toList (S.fromList wanted))
-  found <- forM (inChunks lookups) $ \chunk -> do
-    replies <-
-      (Right <$> R.runRedis conn (forM chunk (\(did, atMs) -> R.zrevrangebyscoreLimit (TE.encodeUtf8 (historyKey did)) (fromIntegral atMs) (-1 / 0) 0 1)))
-        `catchAny` (pure . Left . show)
+  found <- forM (inChunks (S.toList (S.fromList wanted))) $ \chunk -> do
+    replies <- R.runRedis conn (forM chunk (\(did, atMs) -> R.zrevrangebyscoreLimit (TE.encodeUtf8 (historyKey did)) (fromIntegral atMs) (-1 / 0) 0 1))
     pure $ do
-      memberLists <- replies >>= either (Left . show) Right . sequence
+      memberLists <- either (Left . show) Right (sequence replies)
       pure [(lookupKey, entry) | (lookupKey, members) <- zip chunk memberLists, Just entry <- [listToMaybe members >>= decodeMember]]
   pure (M.fromList . concat <$> sequence found)
   where
