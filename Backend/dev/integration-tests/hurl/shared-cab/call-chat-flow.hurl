@@ -121,8 +121,8 @@ driverId: {{driver}}
 vehicleNumber: {{plate}}
 HTTP 200
 [Asserts]
-jsonpath "$.ridersByStop[*].boarding[?(@.bookingId == '{{bookingId}}')].chatChannelId" == "{{bookingId}}"
-jsonpath "$.ridersByStop[*].boarding[?(@.bookingId == '{{bookingId}}')].callable" == true
+jsonpath "$.riders[?(@.bookingId == '{{bookingId}}')].chatChannelId" == "{{bookingId}}"
+jsonpath "$.riders[?(@.bookingId == '{{bookingId}}')].callable" == true
 
 # ---- 3. rider-app hands the rider's number to this booking's driver only ----
 GET {{base_url}}/internal/sharedCab/booking/{{bookingId}}/callNumber

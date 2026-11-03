@@ -31,8 +31,8 @@ driverId: {{driver}}
 vehicleNumber: {{plate}}
 HTTP 200
 [Asserts]
-jsonpath "$.ridersByStop[*].alighting[?(@.bookingId == '{{bookingId}}')].callable" == false
-jsonpath "$.ridersByStop[*].alighting[?(@.bookingId == '{{bookingId}}')].chatChannelId" == null
+jsonpath "$.riders[?(@.bookingId == '{{bookingId}}')].callable" == false
+jsonpath "$.riders[?(@.bookingId == '{{bookingId}}')].chatChannelId" == null
 
 GET {{base_url}}/v2/exotel/call/driver/number
 [QueryStringParams]

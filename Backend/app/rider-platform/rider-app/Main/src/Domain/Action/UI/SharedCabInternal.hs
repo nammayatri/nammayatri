@@ -367,7 +367,7 @@ mkSessionRespFrom cabReads s = do
       mbTrack <- Lts.readRoutePosition s.routeCode s.vehicleNumber
       (mbTrack,) <$> Seats.freeAhead s ((.vehicleInfo) <$> mbTrack)
   let vehicle = (\v -> LatLong v.vehicleInfo.latitude v.vehicleInfo.longitude) <$> mbTrack
-  riders <- liveRiderRows cfg s.vehicleTripId.getId [(stop.stopCode, stop.stopPoint) | stop <- stops] polyline addresses s.vehicleNumber
+  riderRows <- liveRiderRows cfg s.vehicleTripId.getId [(stop.stopCode, stop.stopPoint) | stop <- stops] polyline addresses s.vehicleNumber
   pure
     View.SharedCabSession
       { route,
@@ -379,8 +379,8 @@ mkSessionRespFrom cabReads s = do
         walkupCount = s.walkupCount,
         available,
         version = s.version,
-        ridersByStop = View.groupRidersByStop [(st.stopCode, st.stopName) | st <- stops] riders,
-        pendingOffers = View.pendingOffersOf [(st.stopCode, st.stopName) | st <- stops] riders,
+        riders = View.ridersOf [(st.stopCode, st.stopName) | st <- stops] riderRows,
+        pendingOffers = View.pendingOffersOf [(st.stopCode, st.stopName) | st <- stops] riderRows,
         stops = [View.sessionStopOf st.stopCode st.stopName st.stopPoint | st <- stops],
         shapePolyline,
         vehicle,

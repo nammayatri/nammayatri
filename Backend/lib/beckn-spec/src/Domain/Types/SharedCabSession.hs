@@ -91,10 +91,12 @@ data SessionRoute = SessionRoute
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
-data BoardingRider = BoardingRider
+-- | A rider holding seats on the cab, from the driver's accept until the drop; `riderStatus` says whether they are aboard yet.
+data SharedCabRider = SharedCabRider
   { bookingId :: Text,
     firstName :: Text,
     seats :: Int,
+    boardStop :: Text,
     dropStop :: Text,
     fare :: HighPrecMoney,
     riderStatus :: RiderStatus,
@@ -108,22 +110,6 @@ data BoardingRider = BoardingRider
     dropStopAddress :: Maybe Text,
     -- | Metres along the route from the board stop to the drop stop; none when it cannot be worked out.
     distanceMeters :: Maybe Int
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-data AlightingRider = AlightingRider
-  { bookingId :: Text,
-    firstName :: Text,
-    seats :: Int,
-    chatChannelId :: Maybe Text,
-    callable :: Bool
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-data RidersAtStop = RidersAtStop
-  { stopName :: Text,
-    boarding :: [BoardingRider],
-    alighting :: [AlightingRider]
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -146,7 +132,7 @@ data SharedCabSession = SharedCabSession
     walkupCount :: Int,
     available :: Int,
     version :: Int,
-    ridersByStop :: [RidersAtStop],
+    riders :: [SharedCabRider],
     pendingOffers :: [PendingOffer],
     -- | The route's stops in order, its encoded shape and the cab's latest position, for the driver's map.
     stops :: [SessionStop],

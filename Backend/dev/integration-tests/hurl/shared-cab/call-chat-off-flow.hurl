@@ -70,8 +70,8 @@ driverId: {{driver}}
 vehicleNumber: {{plate}}
 HTTP 200
 [Asserts]
-jsonpath "$.ridersByStop[*].boarding[?(@.bookingId == '{{bookingId}}')].callable" == false
-jsonpath "$.ridersByStop[*].boarding[?(@.bookingId == '{{bookingId}}')].chatChannelId" == null
+jsonpath "$.riders[?(@.bookingId == '{{bookingId}}')].callable" == false
+jsonpath "$.riders[?(@.bookingId == '{{bookingId}}')].chatChannelId" == null
 
 GET {{base_url}}/internal/sharedCab/booking/{{bookingId}}/callNumber
 token: {{internal_key}}
