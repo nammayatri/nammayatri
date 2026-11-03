@@ -1029,7 +1029,8 @@ postFrfsQuoteV2ConfirmWithTimeAPI (mbPersonId, merchantId) quoteId mbIsMockPayme
             quoteCategories
 
   quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
-  whenJust req.cabId $ SharedCab.stagePickedCab quote.searchId.getId
+  -- the confirm's own owner check runs later; until then nothing is staged on another rider's search
+  when (personId == quote.riderId) $ whenJust req.cabId $ SharedCab.stagePickedCab quote.searchId.getId
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
 
   -- Apply rate limit only when seats will actually be held (manual selection or auto-assign)
