@@ -9,6 +9,14 @@ import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
+data SharedCabRouteCabs = SharedCabRouteCabs {cabsRunning :: Kernel.Prelude.Int, routeCode :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedCabRouteCabsResp = SharedCabRouteCabsResp {routes :: [SharedCabRouteCabs]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data SharedCabRouteInfo = SharedCabRouteInfo {cabsRunning :: Kernel.Prelude.Int, name :: Kernel.Prelude.Text, polyline :: Kernel.Prelude.Maybe Kernel.Prelude.Text, routeCode :: Kernel.Prelude.Text, stops :: [SharedCabStop]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

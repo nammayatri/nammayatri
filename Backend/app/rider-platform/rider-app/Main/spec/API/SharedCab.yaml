@@ -23,6 +23,14 @@ types:
   SharedCabRouteListResp:
     routes: "[SharedCabRouteInfo]"
 
+  # What the home card polls: only the live cab count per route; names and stops come once from /sharedCab/routes.
+  SharedCabRouteCabs:
+    routeCode: Text
+    cabsRunning: Int
+
+  SharedCabRouteCabsResp:
+    routes: "[SharedCabRouteCabs]"
+
   # FULL = no seat for me (nobody's fault), OTHER = I don't want this cab (counts as my miss)
   SharedCabSkipReason:
     enum: "FULL,OTHER"
@@ -36,6 +44,11 @@ apis:
       auth: TokenAuth
       response:
         type: SharedCabRouteListResp
+  - GET:
+      endpoint: /sharedCab/routes/cabs
+      auth: TokenAuth
+      response:
+        type: SharedCabRouteCabsResp
   - POST:
       endpoint: /sharedCab/booking/{bookingId}/skip
       auth: TokenAuth

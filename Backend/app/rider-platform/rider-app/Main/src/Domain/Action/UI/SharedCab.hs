@@ -1,5 +1,6 @@
 module Domain.Action.UI.SharedCab
   ( getSharedCabRoutes,
+    getSharedCabRoutesCabs,
     postSharedCabBookingSkip,
     skipReason,
   )
@@ -16,6 +17,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Route as DRoute
 import qualified Environment
 import Kernel.Prelude
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -54,6 +56,22 @@ getSharedCabRoutes (mbPersonId, _) = do
       Nothing -> pure []
       Just integratedBppConfig -> OTPRest.getRoutesByGtfsIdWithPolyline integratedBppConfig >>= mapM (mkRouteInfo integratedBppConfig)
   pure API.SharedCabRouteListResp {routes}
+
+-- What the home card polls. Every rider of a city in the same 30 s window shares one count, so Redis sees one read per pod per
+-- window, not one per rider.
+getSharedCabRoutesCabs :: (Maybe (Id DP.Person), Id DM.Merchant) -> Environment.Flow API.SharedCabRouteCabsResp
+getSharedCabRoutesCabs (mbPersonId, _) = do
+  routes <-
+    findSharedCabConfig mbPersonId >>= \case
+      Nothing -> pure []
+      Just integratedBppConfig ->
+        IM.withInMemCache ["SharedCabCabsRunning", integratedBppConfig.id.getId] 30 $
+          OTPRest.getRoutesByGtfsIdWithPolyline integratedBppConfig >>= mapM routeCabs
+  pure API.SharedCabRouteCabsResp {routes}
+  where
+    routeCabs route = do
+      cabsRunning <- length <$> Session.activeSessionsOnRoute route.code
+      pure API.SharedCabRouteCabs {routeCode = route.code, cabsRunning}
 
 skipReason :: API.SharedCabSkipReason -> SkipReason
 skipReason = \case
