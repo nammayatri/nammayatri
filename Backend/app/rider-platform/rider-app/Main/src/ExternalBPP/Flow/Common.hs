@@ -360,7 +360,7 @@ buildInterchangeJourney searchReq integratedBPPConfig transitRoute legsRouteDeta
                 endLocation = LatLngV2 toLat toLon,
                 distance = Just transitRoute.distance,
                 duration = Just transitRoute.duration,
-                agency = Just $ MultiModalTypes.MultiModalAgency {name = integratedBPPConfig.agencyKey, gtfsId = Just integratedBPPConfig.feedKey},
+                agency = Just $ MultiModalTypes.MultiModalAgency {name = integratedBPPConfig.agencyKey, gtfsId = Just integratedBPPConfig.agencyKey},
                 fromArrivalTime = firstSubLeg.fromArrivalTime,
                 fromDepartureTime = firstSubLeg.fromDepartureTime,
                 toArrivalTime = lastSubLeg.toArrivalTime,
