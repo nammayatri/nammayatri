@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS atlas_app.idx_booking_payment_booking_id_payment_service_type_created_at;
