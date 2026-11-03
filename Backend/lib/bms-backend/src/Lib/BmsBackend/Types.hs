@@ -14,7 +14,12 @@ data ReportEventReq = ReportEventReq
     depotId :: Maybe Text,
     description :: Maybe Text,
     reportedByEmployeeToken :: Maybe Text,
-    reportedByName :: Maybe Text
+    reportedByName :: Maybe Text,
+    -- | Which city/feed this bus belongs to (bms-backend TelemetryEvent/Incident gtfs_id).
+    -- Resolved by the caller from IntegratedBPPConfig.feedKey.
+    gtfsId :: Maybe Text,
+    -- | The bus's current route, if known, from the caller's GIMS current-trip lookup.
+    routeId :: Maybe Text
   }
   deriving (Generic, Show)
 
@@ -27,7 +32,9 @@ instance ToJSON ReportEventReq where
         "depot_id" .= depotId,
         "description" .= description,
         "reported_by_employee_token" .= reportedByEmployeeToken,
-        "reported_by_name" .= reportedByName
+        "reported_by_name" .= reportedByName,
+        "gtfs_id" .= gtfsId,
+        "route_id" .= routeId
       ]
 
 instance FromJSON ReportEventReq where
@@ -40,3 +47,5 @@ instance FromJSON ReportEventReq where
       <*> o .:? "description"
       <*> o .:? "reported_by_employee_token"
       <*> o .:? "reported_by_name"
+      <*> o .:? "gtfs_id"
+      <*> o .:? "route_id"
