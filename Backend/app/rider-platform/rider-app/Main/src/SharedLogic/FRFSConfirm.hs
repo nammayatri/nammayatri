@@ -552,7 +552,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 holdId = mbHoldCtxForAll <&> (\(h, _, _) -> h),
                 tripId = firstTripId,
                 isSpotBooking = isSpotBooking',
-                vehicleNumber = FRFSUtils.birthVehicleNumber mbServiceTierType isSpotBookingPath (quote'.vehicleNumber <|> mbVehicleNumber),
+                vehicleNumber = FRFSUtils.vehicleNumberForServiceTier mbServiceTierType isSpotBookingPath (quote'.vehicleNumber <|> mbVehicleNumber),
                 vehicleTripId = Nothing,
                 sharedCabNoShows = 0,
                 waybillNo = firstTripId <&> (fst . JourneyUtils.getWaybillNoAndTripNoFromTripId),

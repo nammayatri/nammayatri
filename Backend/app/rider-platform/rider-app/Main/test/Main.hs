@@ -19,6 +19,7 @@ import Kernel.Utils.FlowLogging
 import qualified SharedCabAllocationTests
 import qualified SharedCabBoardingTests
 import qualified SharedCabCancelRefusalTests
+import qualified SharedCabCheckedInStatusTests
 import qualified SharedCabConfigTests
 import qualified SharedCabDegradedSweepTests
 import qualified SharedCabDegradedTests
@@ -34,7 +35,6 @@ import qualified SharedCabRefundRetryTests
 import qualified SharedCabSeatTests
 import qualified SharedCabSessionTests
 import qualified SharedCabStopProgressTests
-import qualified SharedCabTicketBirthTests
 import qualified SharedCabWalkUpTests
 import System.Environment (lookupEnv)
 import System.Environment as Env (setEnv)
@@ -56,4 +56,4 @@ main = do
 
   -- -- Let the Logs be flushed
   -- threadDelaySec (Seconds 10)
-  defaultMain $ testGroup "rider-app" [SharedCabSessionTests.tests, SharedCabLegStateTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests, SharedCabConfigTests.tests, SharedCabAllocationTests.tests, SharedCabDriverActionTests.tests, SharedCabExpiryTests.tests, SharedCabStopProgressTests.tests, SharedCabBoardingTests.tests, SharedCabDegradedTests.tests, SharedCabNoShowTests.tests, SharedCabDegradedSweepTests.tests, SharedCabRefundPolicyTests.tests, SharedCabTicketBirthTests.tests, SharedCabRefundRetryTests.tests, SharedCabCancelRefusalTests.tests, SharedCabSeatTests.tests, SharedCabLockTests.tests, SharedCabWalkUpTests.tests]
+  defaultMain $ testGroup "rider-app" [SharedCabSessionTests.tests, SharedCabLegStateTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests, SharedCabConfigTests.tests, SharedCabAllocationTests.tests, SharedCabDriverActionTests.tests, SharedCabExpiryTests.tests, SharedCabStopProgressTests.tests, SharedCabBoardingTests.tests, SharedCabDegradedTests.tests, SharedCabNoShowTests.tests, SharedCabDegradedSweepTests.tests, SharedCabRefundPolicyTests.tests, SharedCabCheckedInStatusTests.tests, SharedCabRefundRetryTests.tests, SharedCabCancelRefusalTests.tests, SharedCabSeatTests.tests, SharedCabLockTests.tests, SharedCabWalkUpTests.tests]
