@@ -685,21 +685,20 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
   case mbAuthId of
     Just authId -> do
       smsCfg <- asks (.smsCfg)
-      SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
-        SA.endAssociationsForOperatorLink merchantOpCityId transporterConfig person
-
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
       let regId = Id authId :: Id SR.RegistrationToken
-      _ <-
-        DReg.verify
-          regId
-          DReg.AuthVerifyReq
-            { otp = req.otp,
-              deviceToken = deviceToken,
-              whatsappNotificationEnroll = Nothing,
-              socialLinkToken = Nothing
-            }
-          Nothing
+      SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
+        _ <-
+          DReg.verify
+            regId
+            DReg.AuthVerifyReq
+              { otp = req.otp,
+                deviceToken = deviceToken,
+                whatsappNotificationEnroll = Nothing,
+                socialLinkToken = Nothing
+              }
+            Nothing
+        SA.endAssociationsForOperatorLink merchantOpCityId transporterConfig person operator.id
 
       verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
 
@@ -721,7 +720,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       when (otp /= req.otp) $ throwError InvalidOtp
 
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
-        SA.endAssociationsForOperatorLink merchantOpCityId transporterConfig person
+        SA.endAssociationsForOperatorLink merchantOpCityId transporterConfig person operator.id
         verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
 
   pure Success
