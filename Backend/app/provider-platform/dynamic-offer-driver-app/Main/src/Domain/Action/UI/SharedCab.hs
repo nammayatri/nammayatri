@@ -287,9 +287,10 @@ callRider (personId, merchantId, merchantOpCityId) bookingId = do
   rider <- SharedCabBAP.getRiderCallNumber bap.apiKey bap.url bookingId personId.getId vehicle.registrationNo
   driverPhone <- getDriverPhone personId
   callStatusId <- generateGUID
-  exotelResponse <- TCall.initiateCall merchantId merchantOpCityId (DCall.driverCallReq driverPhone rider.riderNumber callStatusId bookingId)
+  let entityId = DCall.sharedCabCallEntity bookingId
+  exotelResponse <- TCall.initiateCall merchantId merchantOpCityId (DCall.driverCallReq driverPhone rider.riderNumber callStatusId entityId)
   logTagInfo ("BookingId: " <> bookingId) "Call initiated from shared-cab driver to rider."
-  QCallStatus.create =<< DCall.buildDriverCallStatus callStatusId bookingId merchantId merchantOpCityId exotelResponse
+  QCallStatus.create =<< DCall.buildDriverCallStatus callStatusId entityId merchantId merchantOpCityId exotelResponse
   pure $ DCall.CallRes callStatusId
 
 getDriverPhone :: Id SP.Person -> Flow Text

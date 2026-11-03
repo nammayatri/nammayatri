@@ -25,6 +25,7 @@ module Domain.Action.UI.Call
     initiateCallToCustomer,
     driverCallReq,
     buildDriverCallStatus,
+    sharedCabCallEntity,
     callStatusCallback,
     getCallStatus,
     directCallStatusCallback,
@@ -201,7 +202,7 @@ initiateCallToCustomer rideId merchantOpCityId = do
   _ <- QCallStatus.create callStatus
   return $ CallRes callStatusId
 
--- | A driver -> rider call keyed by `entityId` (a ride id, or a shared-cab booking id), which the status callback carries back.
+-- | A driver -> rider call keyed by `entityId` (a ride id, or 'sharedCabCallEntity' of a booking), which the status callback carries back.
 driverCallReq :: Text -> Text -> Id SCS.CallStatus -> Text -> InitiateCallReq CallAttachments
 driverCallReq fromPhone toPhone callStatusId entityId =
   InitiateCallReq
@@ -210,6 +211,17 @@ driverCallReq fromPhone toPhone callStatusId entityId =
       attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = entityId},
       appletId = Nothing
     }
+
+-- | The call entity of a shared-cab driver's call to a rider: the rider-app booking id, marked so the failed-call path can tell it from a
+-- ride id (every other entity keeps main's ride lookup).
+sharedCabCallEntity :: Text -> Text
+sharedCabCallEntity bookingId = sharedCabCallPrefix <> bookingId
+
+isSharedCabCallEntity :: Text -> Bool
+isSharedCabCallEntity = T.isPrefixOf sharedCabCallPrefix
+
+sharedCabCallPrefix :: Text
+sharedCabCallPrefix = "sharedcab:"
 
 buildDriverCallStatus :: MonadTime m => Id SCS.CallStatus -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CallTypes.InitiateCallResp -> m SCS.CallStatus
 buildDriverCallStatus callStatusId entityId merchantId merchantOpCityId exotelResponse = do
@@ -461,28 +473,23 @@ sendFCMToBAPOnFailedCallStatus ::
   Either (Id Person.Person) (Maybe Text) ->
   m Bool
 sendFCMToBAPOnFailedCallStatus callStatus idInfo = do
-  if isFailureStatus callStatus
+  -- a shared-cab driver's call is keyed by the rider-app booking, not a ride: there is no ride to nudge the BAP about
+  if isFailureStatus callStatus && not (either (const False) (maybe False isSharedCabCallEntity) idInfo)
     then do
       deploymentVersion <- asks (.version)
-      mbRideAndBooking <- case idInfo of
+      (ride, booking) <- case idInfo of
         Left driverId -> do
           ride <- runInReplica $ QRide.getLatestActiveByDriverId driverId >>= fromMaybeM (RideForDriverNotFound $ getId driverId)
           booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-          return (Just (ride, booking))
+          return (ride, booking)
         Right maybeEntityId -> do
           rideId <- fromMaybeM (CallStatusFieldNotPresent "rideId") maybeEntityId
-          runInReplica (QRide.findById (Id rideId)) >>= \case
-            -- the entity is not a ride (a shared-cab booking, a vehicle certificate): there is no ride to nudge the BAP about
-            Nothing -> return Nothing
-            Just ride -> do
-              booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-              return (Just (ride, booking))
-      case mbRideAndBooking of
-        Nothing -> return False
-        Just (ride, booking) -> do
-          fork "updating in prometheus" $ incrementCounter (getId booking.merchantOperatingCityId) "call_attempt" deploymentVersion.getDeploymentVersion
-          void $ CallBAP.sendPhoneCallRequestUpdateToBAP booking ride
-          return True
+          ride <- runInReplica $ QRide.findById (Id rideId) >>= fromMaybeM (RideNotFound rideId)
+          booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+          return (ride, booking)
+      fork "updating in prometheus" $ incrementCounter (getId booking.merchantOperatingCityId) "call_attempt" deploymentVersion.getDeploymentVersion
+      void $ CallBAP.sendPhoneCallRequestUpdateToBAP booking ride
+      return True
     else return False
   where
     isFailureStatus :: CallTypes.CallStatus -> Bool
