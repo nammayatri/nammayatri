@@ -329,6 +329,7 @@ types:
     - operatingCity: Text
     - driverDateOfBirth: Maybe UTCTime
     - classOfVehicles: [Text]
+    - vehicleCategory: Maybe Text
     - imageId1: Text
     - imageId2: Maybe (Text)
     - dateOfIssue: Maybe UTCTime
