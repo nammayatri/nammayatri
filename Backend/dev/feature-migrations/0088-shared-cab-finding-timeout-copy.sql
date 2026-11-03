@@ -1,5 +1,5 @@
--- A rider's last allowed no-show cancels the booking and pushes SHARED_CAB_BOOKING_CANCELLED with {#missedCabs#}.
--- ENGLISH only, like 0070. Same city scope and guards as 0070. Idempotent.
+-- A FINDING booking older than findingTimeoutSec is cancelled by the system with a full refund and pushes
+-- SHARED_CAB_FINDING_TIMEOUT. ENGLISH only, like 0083. Same city scope and guards as 0083. Idempotent.
 
 INSERT INTO atlas_app.merchant_push_notification (
     fcm_notification_type,
@@ -26,7 +26,7 @@ SELECT
     CURRENT_TIMESTAMP
 FROM atlas_app.merchant_operating_city moc
 CROSS JOIN (VALUES
-    ('SHARED_CAB_BOOKING_CANCELLED', 'Your booking was cancelled', 'Your booking was cancelled after {#missedCabs#} missed cabs.')
+    ('SHARED_CAB_FINDING_TIMEOUT', 'No cab found', 'We could not find a shared cab for your booking, so it was cancelled. Your fare will be refunded in full.')
 ) AS copy (key, title, body)
 WHERE EXISTS (
     SELECT 1

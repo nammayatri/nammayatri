@@ -194,7 +194,7 @@ findAllConfirmedByWaybillNo waybillNo = do
         ]
     ]
 
--- | A route's FINDING shared-cab bookings in a city: CONFIRMED with no cab yet. The predicates are ddl 1582's partial index's.
+-- | A route's FINDING shared-cab bookings in a city: CONFIRMED with no cab yet. The predicates are ddl 1587's partial index's.
 findSharedCabFindingOnRoute ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id MerchantOperatingCity ->
@@ -211,7 +211,7 @@ findSharedCabFindingOnRoute merchantOperatingCityId routeCode =
         ]
     ]
 
--- | A city's FINDING shared-cab bookings: CONFIRMED with no cab yet, on ddl 1582's partial index. No time bound: a booking still
+-- | A city's FINDING shared-cab bookings: CONFIRMED with no cab yet, on ddl 1587's partial index. No time bound: a booking still
 -- waiting is exactly what it returns.
 findSharedCabFindingInCity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
