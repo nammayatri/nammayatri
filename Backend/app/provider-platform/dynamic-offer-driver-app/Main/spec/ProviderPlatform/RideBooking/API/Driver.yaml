@@ -137,6 +137,7 @@ apis:
         - email: Text
         - personId: Id Driver
         - walletId: Text
+        - operatorBadgeToken: Text
       response:
         type: DriverInfoRes
       helperApi:
@@ -152,6 +153,7 @@ apis:
               - email: Text
               - personId: Id Driver
               - walletId: Text
+              - operatorBadgeToken: Text
             params:
               fleetOwnerId: Text
               mbFleet: Bool
