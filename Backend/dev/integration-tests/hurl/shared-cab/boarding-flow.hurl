@@ -3,21 +3,21 @@
 # No LTS pings here, so the proximity anchor is the board stop: the rider posts a location at from_lat/from_lon.
 
 # Clean start: no cab on the route
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END", "force": true}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "operation": "END_ROUTE", "forceEnd": true}
 HTTP *
 
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "next": "END", "force": true}
+{"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "operation": "END_ROUTE", "forceEnd": true}
 HTTP *
 
 # ---- 1. allocate -> code -> drop ----
 
-POST {{base_url}}/internal/sharedCab/route/select
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
+{"operation": "SELECT_ROUTE", "driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
 HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
@@ -125,9 +125,9 @@ HTTP 409
 [Asserts]
 jsonpath "$.errorCode" == "SHARED_CAB_RIDE_STARTED"
 
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END"}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "operation": "END_ROUTE"}
 HTTP 409
 [Asserts]
 jsonpath "$.errorCode" == "SHARED_CAB_RIDERS_ON_BOARD"
@@ -202,9 +202,9 @@ HTTP 200
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "ALLOCATED"
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{plate}}"
 
-POST {{base_url}}/internal/sharedCab/route/select
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "{{driver_b_name}}", "vehicleModel": "{{vehicle_b_model}}"}
+{"operation": "SELECT_ROUTE", "driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "{{driver_b_name}}", "vehicleModel": "{{vehicle_b_model}}"}
 HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
@@ -254,9 +254,9 @@ HTTP 200
 [Asserts]
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "DROPPED"
 
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "next": "END"}
+{"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "operation": "END_ROUTE"}
 HTTP 200
 
 # ---- 3. walk-up: book then code ----
@@ -351,7 +351,7 @@ HTTP 200
 [Asserts]
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "DROPPED"
 
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END"}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "operation": "END_ROUTE"}
 HTTP 200

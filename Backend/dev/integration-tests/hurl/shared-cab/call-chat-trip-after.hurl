@@ -31,8 +31,8 @@ driverId: {{driver}}
 vehicleNumber: {{plate}}
 HTTP 200
 [Asserts]
-jsonpath "$.ridersByStop[*].alighting[?(@.bookingId == '{{bookingId}}')].callable" == false
-jsonpath "$.ridersByStop[*].alighting[?(@.bookingId == '{{bookingId}}')].chatChannelId" == null
+jsonpath "$.riders[?(@.bookingId == '{{bookingId}}')].callable" == false
+jsonpath "$.riders[?(@.bookingId == '{{bookingId}}')].chatChannelId" == null
 
 GET {{base_url}}/v2/exotel/call/driver/number
 [QueryStringParams]
@@ -45,7 +45,7 @@ HTTP *
 [Asserts]
 jsonpath "$.errorCode" exists
 
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END", "force": true}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "operation": "END_ROUTE", "forceEnd": true}
 HTTP *

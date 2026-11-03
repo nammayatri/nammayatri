@@ -4,6 +4,7 @@ module API.Internal
   )
 where
 
+import qualified API.Action.UI.SharedCabInternal as SharedCabInternal
 import qualified API.Internal.Auth as Auth
 import qualified API.Internal.BetterDriverSearch as BetterDriverSearch
 import qualified API.Internal.BlackListedDrivers as BlackListedDrivers
@@ -116,6 +117,7 @@ type API =
            :<|> SearchTryPoolStats.API
            :<|> VehicleServiceTierList.API
            :<|> BetterDriverSearch.API
+           :<|> SharedCabInternal.API
        )
 
 handler :: AppEnv -> FlowServer API
@@ -174,3 +176,4 @@ handler env =
     :<|> SearchTryPoolStats.handler
     :<|> VehicleServiceTierList.handler
     :<|> BetterDriverSearch.handler
+    :<|> SharedCabInternal.handler

@@ -269,6 +269,9 @@ buildDriverResult NearestDriversReq {..} isPrepaidEnabled poolDataMap cityServic
   -- active-association check.
   guard $ dpd.subscribed || isExemptFromPostpaidDuesFlag isPrepaidEnabled dpd.fleetOwnerId dpd.rideBillingModel
   guard $ isDriverModeEligibleHelper dpd.mode dpd.active
+  -- Shared-cab taxi-pool exclusion. Fail-closed: a driver with no pool-data entry never reaches this point, and the writer
+  -- sets the flag True before the session starts, so ambiguity can never resolve to dispatch.
+  guard $ not dpd.sharedCabSessionActive
   guard $ isTripTypeEligibleHelper isRental isInterCity dpd
   when isAirportRequest $ guard $ dpd.enableForAirport == Just DI.ENABLED
   guard $ not (shouldCheckCashWallet paymentInstrument) || fromMaybe True dpd.enableCashRide

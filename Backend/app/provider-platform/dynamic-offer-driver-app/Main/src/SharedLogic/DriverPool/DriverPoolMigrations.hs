@@ -71,7 +71,8 @@ migrations =
     MigrationEntry 5 backfillEnableCashRide,
     MigrationEntry 6 backfillMerchantOperatingCityId,
     MigrationEntry 7 backfillRideBillingModel,
-    MigrationEntry 8 backfillFleetOwnerId
+    MigrationEntry 8 backfillFleetOwnerId,
+    MigrationEntry 9 backfillSharedCabSessionActive
   ]
 
 -- | The "head" version, derived from the registry. Equals the largest
@@ -243,6 +244,18 @@ backfillMerchantOperatingCityId entries = do
   pure $
     map
       (\e -> e {merchantOperatingCityId = HashMap.lookupDefault e.merchantOperatingCityId (cast e.driverId :: Id Person.Person) cityMap})
+      entries
+
+backfillSharedCabSessionActive ::
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Migrator m
+backfillSharedCabSessionActive entries = do
+  let driverIdTexts = map (getId . (.driverId)) entries
+  dis <- QDI.findAllByDriverIds driverIdTexts
+  let flagMap = HashMap.fromList $ map (\di -> (cast di.driverId :: Id Person.Person, di.sharedCabSessionActive)) dis
+  pure $
+    map
+      (\e -> e {sharedCabSessionActive = HashMap.lookupDefault e.sharedCabSessionActive (cast e.driverId :: Id Person.Person) flagMap})
       entries
 
 -- | Walk the registry in ascending version order (sorted defensively in case

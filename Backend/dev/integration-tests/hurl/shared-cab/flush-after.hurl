@@ -32,9 +32,9 @@ jsonpath "$.trips[-1:].status" == "ACTIVE"
 jsonpath "$.trips[-1:].endedAt" == null
 
 # The restored session takes writes with its new version
-POST {{base_url}}/internal/sharedCab/seats
+POST {{base_url}}/internal/sharedCab/session/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "walkupCount": 0, "version": {{v_restored}}}
+{"operation": "SET_SEATS", "driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "walkupCount": 0, "version": {{v_restored}}}
 HTTP 200
 [Asserts]
 jsonpath "$.status" == "ACTIVE"
@@ -42,12 +42,12 @@ jsonpath "$.walkupCount" == 0
 jsonpath "$.available" == 4
 jsonpath "$.version" > {{v_restored}}
 
-POST {{base_url}}/internal/sharedCab/route/end
+POST {{base_url}}/internal/sharedCab/route/operations
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END"}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "operation": "END_ROUTE"}
 HTTP 200
 [Asserts]
-body == "null"
+jsonpath "$.session" == null
 
 # Ended for real: the trip row is closed, so nothing is left to restore
 GET {{base_url}}/internal/sharedCab/session?driverId={{driver}}&vehicleNumber={{plate}}

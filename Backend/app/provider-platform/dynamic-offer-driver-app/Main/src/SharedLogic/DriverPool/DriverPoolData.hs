@@ -46,6 +46,10 @@ data DriverPoolData = DriverPoolData
     active :: Bool,
     mode :: Maybe DriverMode,
     onRide :: Bool,
+    -- | Shared-cab taxi-pool session exclusion flag, mirrored from driver_information.shared_cab_session_active. True means "do
+    -- not dispatch plain taxi search requests to this driver", checked fail-closed in GetNearestDrivers.buildDriverResult and
+    -- the direct-assign recheck; the DB is authoritative at accept time.
+    sharedCabSessionActive :: Bool,
     onRideTripCategory :: Maybe Text,
     hasAdvanceBooking :: Maybe Bool,
     latestScheduledBooking :: Maybe UTCTime,
@@ -194,6 +198,7 @@ defaultDriverPoolData dId =
       active = False,
       mode = Nothing,
       onRide = False,
+      sharedCabSessionActive = False,
       onRideTripCategory = Nothing,
       hasAdvanceBooking = Nothing,
       latestScheduledBooking = Nothing,

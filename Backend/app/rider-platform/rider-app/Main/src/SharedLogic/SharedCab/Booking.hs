@@ -22,6 +22,7 @@ module SharedLogic.SharedCab.Booking
     boardedTouchDue,
     readRiderFixes,
     alignByKey,
+    stopAddresses,
   )
 where
 
@@ -40,9 +41,15 @@ import SharedLogic.SharedCab.LegState (CancelReason, seatsHeld)
 import SharedLogic.SharedCab.Lock (shared, tryWithOwnedLock, withOwnedLock)
 import SharedLogic.SharedCab.RefundDecision (isSharedCabBooking)
 import SharedLogic.SharedCab.SessionState (sessionTtlSec)
+import qualified Storage.CachedQueries.StationsExtraInformation as CQStationsExtraInformation
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+
+-- | The stops' addresses from the city's station information (cached); a stop without one is left out.
+stopAddresses :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> [Text] -> m (Map.Map Text Text)
+stopAddresses cityId codes =
+  Map.fromList . mapMaybe (\info -> (,) info.stationId <$> info.address) <$> CQStationsExtraInformation.getBystationIdsAndCity codes cityId
 
 -- | A shared-cab booking stays CONFIRMED after its ride, so a scan of "live" bookings is bounded by when they were last written.
 -- City-wide scans: no city cab ride lasts 6 h, and stop progress touches a boarded booking hourly ('boardedTouchDue').
