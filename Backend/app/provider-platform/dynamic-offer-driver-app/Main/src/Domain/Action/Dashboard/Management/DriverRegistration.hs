@@ -973,10 +973,10 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   isFleetOwner <- QFOI.findByPrimaryKey (cast driverId_)
-  let (vehicleDetailsToPass, vehicleCategoryToPass, vehicleClassToPass) =
+  let (vehicleDetailsToPass, vehicleClassToPass) =
         if transporterConfig.allowDashboardToPassVehicleDetails == Just True
-          then (castVehicleDetails <$> req.vehicleDetails, req.vehicleCategory, req.vehicleClass)
-          else (Nothing, Nothing, Nothing)
+          then (castVehicleDetails <$> req.vehicleDetails, req.vehicleClass)
+          else (Nothing, Nothing)
   verifyRC
     True
     False
@@ -986,7 +986,7 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
         { imageId = cast imageId,
           imageId2 = cast <$> imageId2,
           udinNumber = udinNumber,
-          vehicleCategory = vehicleCategoryToPass,
+          vehicleCategory = req.vehicleCategory,
           vehicleClass = vehicleClassToPass,
           vehicleDetails = vehicleDetailsToPass,
           isRCImageValidated = Nothing,
@@ -1074,10 +1074,11 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       isFleetOwner <- QFOI.findByPrimaryKey (cast driverId_)
       let isDashboard = defaultVerifyBy /= DPan.FRONTEND_SDK
-          (vehicleDetailsToPass, vehicleCategoryToPass, vehicleClassToPass) =
+          -- The category is the user's pick, not a vehicle fact: it passes like on every other RC path.
+          (vehicleDetailsToPass, vehicleClassToPass) =
             if transporterConfig.allowDashboardToPassVehicleDetails == Just True
-              then (castVehicleDetails <$> req.vehicleDetails, req.vehicleCategory, req.vehicleClass)
-              else (Nothing, Nothing, Nothing)
+              then (castVehicleDetails <$> req.vehicleDetails, req.vehicleClass)
+              else (Nothing, Nothing)
       verifyRC
         isDashboard
         autoApprove
@@ -1087,7 +1088,7 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
             { imageId = cast imageId,
               imageId2 = cast <$> imageId2,
               udinNumber = udinNumber,
-              vehicleCategory = vehicleCategoryToPass,
+              vehicleCategory = req.vehicleCategory,
               vehicleClass = vehicleClassToPass,
               vehicleDetails = vehicleDetailsToPass,
               isRCImageValidated = Nothing,
