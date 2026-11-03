@@ -30,6 +30,7 @@ import Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding (id, view, (^?))
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common
+import Kernel.Utils.Common (secondsToMinutes)
 
 mkProviderLocations :: [Maybe NearestDriverInfo] -> [Spec.Location]
 mkProviderLocations driverLocationsInfo =
@@ -91,9 +92,10 @@ mkPayment merchant bppConfig mbPaymentId mPaymentInstrument = do
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
   List.singleton $ OUP.mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
 
-mkItemTags :: CUtils.Pricing -> Bool -> Maybe Bool -> Bool -> Maybe [Spec.TagGroup]
-mkItemTags pricing isValueAddNP fareParametersInRateCard hasStops = do
-  let rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance (pricing.fareParams >>= (.customerCancellationDues)) (pricing.fareParams >>= (.tollCharges)) pricing.pricingMaxFare (pricing.fareParams >>= (.congestionChargeViaDp)) pricing.farePolicy fareParametersInRateCard ((isValueAddNP,) <$> pricing.fareParams) Nothing hasStops
+mkItemTags :: CUtils.Pricing -> Bool -> Maybe Bool -> Bool -> Maybe Seconds -> Maybe [Spec.TagGroup]
+mkItemTags pricing isValueAddNP fareParametersInRateCard hasStops reservedTime = do
+  let tripDurationItem = CUtils.mkRateCardBreakupItem (show Tags.PLANNED_TRIP_DURATION_IN_MINS) . show . (.getMinutes) . secondsToMinutes <$> reservedTime
+      rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance (pricing.fareParams >>= (.customerCancellationDues)) (pricing.fareParams >>= (.tollCharges)) pricing.pricingMaxFare (pricing.fareParams >>= (.congestionChargeViaDp)) pricing.farePolicy fareParametersInRateCard ((isValueAddNP,) <$> pricing.fareParams) tripDurationItem Nothing hasStops
   let vehicleIconTag = CUtils.mkVehicleIconTag pricing.vehicleIconUrl
   let featureListTag = mkFeatureListTags pricing.isAirConditioned
   vehicleIconTag <> rateCardTag <> CUtils.mkGeneralInfoTagGroup pricing isValueAddNP <> featureListTag

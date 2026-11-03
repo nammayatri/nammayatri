@@ -776,6 +776,9 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
           perExtraMinRateCaption = show Tags.PER_MINUTE_CHARGE
           perExtraMinRateItem = mkBreakupItem perExtraMinRateCaption . mkValue $ show det.perExtraMinRate
 
+          perExtraHourRateCaption = show Tags.UNPLANNED_PER_HOUR_CHARGE
+          perExtraHourRateItem = mkBreakupItem perExtraHourRateCaption . mkValue $ show (det.perExtraMinRate * 60)
+
           perExtraKmRateCaption = show Tags.UNPLANNED_PER_KM_CHARGE
           perExtraKmRateItem = mkBreakupItem perExtraKmRateCaption . mkValue $ show det.perExtraKmRate
 
@@ -797,8 +800,11 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
           pickupChargeCaption = show Tags.DEAD_KILOMETER_FARE
           pickupChargeBreakup = mkBreakupItem pickupChargeCaption (mkValue $ show det.deadKmFare)
 
-      [minFareItem, pickupChargeBreakup, perHourChargeItem, perExtraMinRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem, plannedPerKmRateRoundItem, perDayMaxHourAllowanceItem]
-        <> catMaybes [perDayMaxAllowanceInMinutesItem]
+          stateEntryPermitChargesCaption = show Tags.STATE_ENTRY_PERMIT_CHARGES
+          stateEntryPermitChargesItem = mkBreakupItem stateEntryPermitChargesCaption . (mkValue . highPrecMoneyToText) <$> det.stateEntryPermitCharges
+
+      [minFareItem, pickupChargeBreakup, perHourChargeItem, perExtraMinRateItem, perExtraHourRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem, plannedPerKmRateRoundItem, perDayMaxHourAllowanceItem]
+        <> catMaybes [perDayMaxAllowanceInMinutesItem, stateEntryPermitChargesItem]
         <> (oldNightShiftChargeBreakups det.nightShiftCharge)
         <> (newNightShiftChargeBreakups det.nightShiftCharge)
 
