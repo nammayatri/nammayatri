@@ -792,7 +792,7 @@ fileIncident person messageId req merchantOpCityId mbPersonId = do
         -- GIMS exposes no depot for a driver, so bms falls back to its no-depot routing.
         depotId = Nothing,
         description = mkBmsDescription req,
-        reportedByPersonId = Just person.id.getId,
+        reportedByEmployeeToken = person.operatorBadgeToken,
         reportedByName = Just reporterName
       }
   persistIncidentReport person messageId.getId req busId
