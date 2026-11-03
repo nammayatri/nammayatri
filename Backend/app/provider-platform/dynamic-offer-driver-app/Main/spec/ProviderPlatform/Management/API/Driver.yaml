@@ -618,6 +618,22 @@ apis:
       migrate:
         capability: city-operations.driver_block.write
 
+  - POST: # BulkAirportBlockAPI
+      endpoint: /bulkAirportBlock
+      auditRequestBody: false
+      auth: ApiAuthV2
+      multipart:
+        type: BulkAirportBlockReq
+      response:
+        type: BulkBlockRes
+      migrate:
+        capability: city-operations.driver_block.write
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
+        actorInfo: requestorId
+
   - GET: # DriverSearchRequestStatsAPI
       endpoint: /{driverId}/searchRequestStats
       auth: ApiAuthV2
@@ -1047,6 +1063,10 @@ types:
     - blockExpiryTime: Maybe UTCTime
     - specialZoneId: Maybe Text
     - requestorId: Maybe Text
+    - derive: "'HideSecrets"
+  BulkAirportBlockReq:
+    - file: FilePath
+    - specialZoneId: Maybe Text
     - derive: "'HideSecrets"
   SearchRequestForDriverResponse:
     - enum: "Accept, Reject, Pulled"
