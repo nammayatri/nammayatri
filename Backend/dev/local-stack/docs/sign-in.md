@@ -41,6 +41,20 @@ it under its own registered sender, and checks it. `sms` is written and tested
 and one environment variable away — it sends our own French wording under
 "Movin", and is what to switch to the day compliance clears.
 
+### 2026-11-03: Verify answers 403 COMPLIANCE_REQUIRED too
+
+Found by the API health check: every `POST /api/verify/send` since the guard
+started on 25 Oct was refused with **403 `COMPLIANCE_REQUIRED`** -- 14
+refusals, none accepted (first 27 Oct 17:39, last 30 Oct 20:14). The code that
+was measured on `/api/sms` on 6 Sep is now on `/api/verify/send` as well, so
+the account's clearance, not the product, is the problem. **A person in
+Mauritania who taps « SMS » receives nothing**; WhatsApp is the other button
+there, works (`whatsapp.ready`, signature checked) and is why nobody noticed.
+The guard's `/healthz` carried the error all along: `gateway.lastError`.
+It is Moorsyl's to clear: ask them what compliance step the account needs, then
+test with one real `+222` number. `launch-gate.sh` now fails while `lastError`
+is set and no code was delivered.
+
 ### Things that will bite
 
 - **Codes are SIX characters in both modes.** Verify's check takes exactly six
