@@ -1079,30 +1079,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
     (Just payment, Just benefit) -> FRFSPassOverride.remainingTrips payment benefit
     _ -> pure Nothing
   let unlimitedTripCount = maybe False FRFSPassOverride.isUnlimitedBenefit mbBenefit
-  mbRoutePass <- case mbPayment of
-    Just payment
-      | isJust payment.sourceStopCode || isJust payment.destinationStopCode -> do
-        mbIntegratedBPPConfig <-
-          maybe
-            (pure Nothing)
-            (\overridePass -> SIBC.findMaybeIntegratedBPPConfig Nothing overridePass.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory overridePass.vehicleType) DIBC.MULTIMODAL)
-            mbOverridePass
-        let stopName stopCode = case mbIntegratedBPPConfig of
-              Nothing -> pure Nothing
-              Just integratedBPPConfig ->
-                either (const Nothing) (fmap (.name))
-                  <$> withTryCatch "buildPurchasedPassAPIEntity:stopName" (OTPRest.getStationByGtfsIdAndStopCode stopCode integratedBPPConfig)
-        sourceStopName <- maybe (pure Nothing) stopName payment.sourceStopCode
-        destinationStopName <- maybe (pure Nothing) stopName payment.destinationStopCode
-        pure $
-          Just
-            PassAPI.RoutePassAPIEntity
-              { sourceStopCode = payment.sourceStopCode,
-                destinationStopCode = payment.destinationStopCode,
-                sourceStopName,
-                destinationStopName
-              }
-    _ -> pure Nothing
+  mbRoutePass <- maybe (pure Nothing) (buildRoutePassAPIEntity mbOverridePass) mbPayment
 
   passAPIEntity <- buildPassAPIEntityFromPurchasedPass mbLanguage person.id purchasedPass mbPayment
   let passDetailsEntity =
@@ -1906,25 +1883,46 @@ getMultimodalPassFrfsStatistics (mbCallerPersonId, merchantId) purchasedPassPaym
       }
 
 buildPurchasedPassPaymentAPIEntities ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c) =>
   [DPurchasedPassPayment.PurchasedPassPayment] ->
   m [PassAPI.PurchasedPassTransactionAPIEntity]
 buildPurchasedPassPaymentAPIEntities payments = do
   refundMap <- fetchRefundsForPayments payments
   forM payments $ \payment -> do
-    availableTripCount <- availableTripCountForPayment payment
-    return $ mkPurchasedPassPaymentAPIEntity refundMap availableTripCount payment
+    mbPass <- maybe (pure Nothing) CQPass.findById payment.passId
+    mbBenefit <- maybe (pure Nothing) (FRFSPassOverride.benefitForPayment payment) mbPass
+    availableTripCount <- maybe (pure Nothing) (FRFSPassOverride.remainingTrips payment) mbBenefit
+    routePass <- buildRoutePassAPIEntity mbPass payment
+    return $ mkPurchasedPassPaymentAPIEntity refundMap availableTripCount mbPass mbBenefit routePass payment
 
--- Trips left on this payment's own override benefit. Nothing when the pass carries
--- no override config or grants unlimited trips -- same rule as the parent pass entity.
-availableTripCountForPayment ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+buildRoutePassAPIEntity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c) =>
+  Maybe DPass.Pass ->
   DPurchasedPassPayment.PurchasedPassPayment ->
-  m (Maybe Int)
-availableTripCountForPayment payment = do
-  mbPass <- maybe (pure Nothing) CQPass.findById payment.passId
-  mbBenefit <- maybe (pure Nothing) (FRFSPassOverride.benefitForPayment payment) mbPass
-  maybe (pure Nothing) (FRFSPassOverride.remainingTrips payment) mbBenefit
+  m (Maybe PassAPI.RoutePassAPIEntity)
+buildRoutePassAPIEntity mbPass payment
+  | isNothing payment.sourceStopCode && isNothing payment.destinationStopCode = pure Nothing
+  | otherwise = do
+    mbIntegratedBPPConfig <-
+      maybe
+        (pure Nothing)
+        (\pass -> SIBC.findMaybeIntegratedBPPConfig Nothing pass.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory pass.vehicleType) DIBC.MULTIMODAL)
+        mbPass
+    let stopName stopCode = case mbIntegratedBPPConfig of
+          Nothing -> pure Nothing
+          Just integratedBPPConfig ->
+            either (const Nothing) (fmap (.name))
+              <$> withTryCatch "buildRoutePassAPIEntity:stopName" (OTPRest.getStationByGtfsIdAndStopCode stopCode integratedBPPConfig)
+    sourceStopName <- maybe (pure Nothing) stopName payment.sourceStopCode
+    destinationStopName <- maybe (pure Nothing) stopName payment.destinationStopCode
+    pure $
+      Just
+        PassAPI.RoutePassAPIEntity
+          { sourceStopCode = payment.sourceStopCode,
+            destinationStopCode = payment.destinationStopCode,
+            sourceStopName,
+            destinationStopName
+          }
 
 -- A live overlapping payment stops blocking a fresh purchase once its remaining trips fall to
 -- the pass's `minTripsAllowingOverlap` threshold (absent = 0, i.e. only a fully spent term lets
@@ -1955,9 +1953,12 @@ allowsOverlappingPurchase payment =
 mkPurchasedPassPaymentAPIEntity ::
   Map.Map (Id.Id DOrder.PaymentOrder) [PassAPI.RefundAPIEntity] ->
   Maybe Int ->
+  Maybe DPass.Pass ->
+  Maybe FRFSPassOverride.OverrideBenefit ->
+  Maybe PassAPI.RoutePassAPIEntity ->
   DPurchasedPassPayment.PurchasedPassPayment ->
   PassAPI.PurchasedPassTransactionAPIEntity
-mkPurchasedPassPaymentAPIEntity refundMap availableTripCount purchasedPassPayment =
+mkPurchasedPassPaymentAPIEntity refundMap availableTripCount mbPass mbBenefit routePass purchasedPassPayment =
   let refunds = Map.findWithDefault [] purchasedPassPayment.orderId refundMap
       computedStatus = computePassStatusFromRefunds purchasedPassPayment.status refunds
    in PassAPI.PurchasedPassTransactionAPIEntity
@@ -1972,7 +1973,13 @@ mkPurchasedPassPaymentAPIEntity refundMap availableTripCount purchasedPassPaymen
           passCode = purchasedPassPayment.passCode,
           passType = purchasedPassPayment.passEnum,
           createdAt = purchasedPassPayment.createdAt,
-          refunds = refunds
+          refunds = refunds,
+          passId = purchasedPassPayment.passId,
+          unlimitedTripCount = maybe False FRFSPassOverride.isUnlimitedBenefit mbBenefit,
+          frfsOverrideConfig = mkFrfsOverrideConfig <$> mbBenefit,
+          routePass = routePass,
+          validityDays = purchasedPassPayment.validityDays,
+          applicableVehicleServiceTiers = maybe [] (.applicableVehicleServiceTiers) mbPass
         }
 
 -- Derives status from the most-recently-updated refund row. Retries land as
