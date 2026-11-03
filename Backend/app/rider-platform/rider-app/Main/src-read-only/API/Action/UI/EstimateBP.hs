@@ -10,6 +10,7 @@ where
 import qualified API.Types.UI.EstimateBP
 import qualified Control.Lens
 import qualified Domain.Action.UI.EstimateBP
+import qualified Domain.Types.Booking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
@@ -23,10 +24,24 @@ import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo
 import Tools.Auth
 
-type API = (TokenAuth :> "ride" :> Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> "estimateBreakup" :> Get '[JSON] API.Types.UI.EstimateBP.EstimateDetailsRes)
+type API =
+  ( TokenAuth :> "ride" :> Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> "estimateBreakup"
+      :> Get
+           ('[JSON])
+           API.Types.UI.EstimateBP.EstimateDetailsRes
+      :<|> TokenAuth
+      :> "rideBooking"
+      :> Capture
+           "bookingId"
+           (Kernel.Types.Id.Id Domain.Types.Booking.Booking)
+      :> "estimateBreakup"
+      :> Get
+           ('[JSON])
+           API.Types.UI.EstimateBP.EstimateDetailsRes
+  )
 
 handler :: Environment.FlowServer API
-handler = getRideEstimateBreakup
+handler = getRideEstimateBreakup :<|> getRideBookingEstimateBreakup
 
 getRideEstimateBreakup ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -36,3 +51,12 @@ getRideEstimateBreakup ::
     Environment.FlowHandler API.Types.UI.EstimateBP.EstimateDetailsRes
   )
 getRideEstimateBreakup a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.EstimateBP.getRideEstimateBreakup (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getRideBookingEstimateBreakup ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Booking.Booking ->
+    Environment.FlowHandler API.Types.UI.EstimateBP.EstimateDetailsRes
+  )
+getRideBookingEstimateBreakup a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.EstimateBP.getRideBookingEstimateBreakup (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
