@@ -864,12 +864,11 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
         | isFeedbackFlow = ["FEEDBACK_TICKET"]
         | shouldCreateTicket = ["CREATE_TICKET", "AUTO_CREATE_TICKET"]
         | otherwise = []
-  submitMessages <-
-    if null submitLabels
-      then pure []
-      else case optionId of
-        Just justOptionId -> map (\(m, _, _) -> m) <$> CQIM.findAllActiveByOptionIdAndLanguage justOptionId language identifier
-        Nothing -> maybe (pure []) (\catId -> map (\(m, _, _) -> m) <$> CQIM.findAllActiveByCategoryIdAndLanguage catId language identifier) categoryId
+  -- fetched on every submit, not just ticket ones, so a no-ticket submit (END_FLOW, say) still
+  -- records the label of the message it came from
+  submitMessages <- case optionId of
+    Just justOptionId -> map (\(m, _, _) -> m) <$> CQIM.findAllActiveByOptionIdAndLanguage justOptionId language identifier
+    Nothing -> maybe (pure []) (\catId -> map (\(m, _, _) -> m) <$> CQIM.findAllActiveByCategoryIdAndLanguage catId language identifier) categoryId
   let shownIds = [c.chatId | c <- fromMaybe [] chats, c.chatType == IssueMessage]
       labelled = [m | m <- submitMessages, m.label `elem` map Just submitLabels, Just ids <- [m.onSubmitReplyMsgs], not (null ids)]
       -- prefer the labelled message the customer was actually shown (present in chats)
