@@ -22,6 +22,7 @@ data IncentiveJourneyMilestone = IncentiveJourneyMilestone
     conditionValue :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    evaluation :: Kernel.Prelude.Maybe Data.Aeson.Value,
     id :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.IncentiveJourneyMilestone,
     journeyId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourney.IncentiveJourney,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -50,6 +51,10 @@ data MilestoneConditionType
   | Distance
   | RideDuration
   | BookingTicket
+  | CancellationRate
+  | AcceptanceRate
+  | OnlineMinutes
+  | JSONLogic
   deriving (Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''MilestoneConditionType)

@@ -1,3 +1,18 @@
+# hpack defaults
+# Ref: https://github.com/sol/hpack#defaults
+
+# Workaround for segfault on macOS
+# https://github.com/NixOS/nixpkgs/issues/149692#issuecomment-1587564664
+# hpack defaults
+# Ref: https://github.com/sol/hpack#defaults
+
+# Workaround for segfault on macOS
+# https://github.com/NixOS/nixpkgs/issues/149692#issuecomment-1587564664
+# hpack defaults
+# Ref: https://github.com/sol/hpack#defaults
+
+# Workaround for segfault on macOS
+# https://github.com/NixOS/nixpkgs/issues/149692#issuecomment-1587564664
 name: behavior-tracker
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
@@ -12,7 +27,7 @@ flags:
     manual: true
     default: false
 
-description: Behavior tracking library - records entity actions and builds behavior snapshots using sliding window counters
+description: Behavior tracking library — city bt: SWC counters/snapshots plus campaign-scoped ij:bm: counters (Incentive Journey)
 
 default-extensions:
   - ConstraintKinds

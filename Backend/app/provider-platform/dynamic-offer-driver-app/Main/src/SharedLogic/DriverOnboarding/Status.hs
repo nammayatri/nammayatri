@@ -111,6 +111,7 @@ import SharedLogic.DriverOnboarding.DocumentProtection (dropProcessingAccess, dr
 import SharedLogic.DriverOnboarding.OnboardingFlags.Flow
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboarding.VehicleDocs
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC

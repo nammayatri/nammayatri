@@ -29,6 +29,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Network.HTTP.Types.URI as URI
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
+import Storage.Beam.IncentiveJourney ()
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DigilockerVerification as QDV

@@ -2,6 +2,7 @@
 
 module Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyStatsExtra where
 
+import Control.Applicative ((<|>))
 import Data.Time (Day, UTCTime (UTCTime), addDays, addUTCTime)
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -47,6 +48,11 @@ upsertJourneyStats stats = do
                 DIJS.conditionOperator = stats.conditionOperator,
                 DIJS.conditionValue = stats.conditionValue,
                 DIJS.rewardType = stats.rewardType,
+                DIJS.campaignUserLinkType = case stats.campaignUserLinkType of
+                  Just ct -> Just ct
+                  Nothing -> existing.campaignUserLinkType,
+                -- Prefer incoming currentMetrics when set (accumulate / eval); else keep existing.
+                DIJS.currentMetrics = stats.currentMetrics <|> existing.currentMetrics,
                 DIJS.updatedAt = now
               }
       updateWithKV
@@ -57,6 +63,8 @@ upsertJourneyStats stats = do
           Se.Set Beam.conditionOperator updated.conditionOperator,
           Se.Set Beam.conditionValue updated.conditionValue,
           Se.Set Beam.rewardType updated.rewardType,
+          Se.Set Beam.campaignUserLinkType updated.campaignUserLinkType,
+          Se.Set Beam.currentMetrics updated.currentMetrics,
           Se.Set Beam.updatedAt now
         ]
         [Se.Is Beam.id $ Se.Eq (getId existing.id)]

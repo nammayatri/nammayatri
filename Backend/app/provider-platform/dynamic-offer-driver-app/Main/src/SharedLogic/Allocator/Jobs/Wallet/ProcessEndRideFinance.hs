@@ -27,19 +27,22 @@ import Domain.Action.UI.Ride.EndRide.Internal (processEndRideFinance)
 import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
-import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import SharedLogic.Allocator
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Finance.PostActions (PostActionsEnv)
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
@@ -62,14 +65,15 @@ processEndRideFinanceJob ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     HasField "blackListedJobs" r [Text],
     HasField "activeDriversListKeyShards" r Int,
     HasField "enableDriverFeeShardedFanOut" r Bool,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    BeamFlow m r
+    BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
+    CoreMetrics m
   ) =>
   Job 'ProcessEndRideFinance ->
   m ExecutionResult

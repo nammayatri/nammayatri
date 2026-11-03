@@ -88,6 +88,18 @@ apis:
       migrate:
         capability: system-config.coins.write
 
+  # Inspect (trigger=false) or catch-up (trigger=true) streak-end / periodDays-slice reward.
+  # Loads only the period keys the award path checks — not full stats history.
+  - POST:
+      endpoint: /streakEnd/inspect
+      auth: ApiAuthV2
+      request:
+        type: InspectStreakEndRewardReq
+      response:
+        type: InspectStreakEndRewardRes
+      migrate:
+        capability: system-config.coins.write
+
   - GET:
       endpoint: /driver/{driverId}/assignments
       auth: ApiAuthV2
@@ -141,6 +153,17 @@ apis:
       migrate:
         capability: system-config.coins.write
 
+  # Next campaign window for the same city/cohort/journey: new CJM row, parentId = previous.
+  - POST:
+      endpoint: /cohortJourney/roll
+      auth: ApiAuthV2
+      request:
+        type: RollCohortJourneyMappingReq
+      response:
+        type: RollCohortJourneyMappingRes
+      migrate:
+        capability: system-config.coins.write
+
   - GET:
       endpoint: /cohortJourney/list
       auth: ApiAuthV2
@@ -162,6 +185,17 @@ apis:
       auth: ApiAuthV2
       request:
         type: AssignUserToIncentiveJourneyReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.coins.write
+
+  # OptIn cohorts only. Requires an invite UCM row; sets optedInAt / validTill.
+  - POST:
+      endpoint: /optIn
+      auth: ApiAuthV2
+      request:
+        type: OptInIncentiveJourneyReq
       response:
         type: APISuccess
       migrate:
@@ -234,7 +268,7 @@ apis:
 
 types:
   MilestoneConditionType:
-    - enum: "RideCompleted, Earnings, Distance, RideDuration, BookingTicket"
+    - enum: "RideCompleted, Earnings, Distance, RideDuration, BookingTicket, CancellationRate, AcceptanceRate, OnlineMinutes, JSONLogic"
 
   MilestoneAreaType:
     - enum: "Default, Pickup, Drop, PickupDrop"
@@ -243,7 +277,7 @@ types:
     - enum: "GTE, GT, EQ, LTE, LT"
 
   MilestoneRewardType:
-    - enum: "Coins, Cash, Coupons, WalletMoney, SubscriptionWaiveOff, PoolingPriority, NoReward"
+    - enum: "Coins, Cash, Coupons, WalletMoney, SubscriptionWaiveOff, PoolingPriority, NoReward, NetOffEarnings"
 
   SubscriptionWaiveOffConfig:
     - percentage: Int
@@ -255,8 +289,23 @@ types:
     - enum: "Daily, Weekly, Monthly"
     - derive: "HttpInstance"
 
+  CampaignUserLinkType:
+    - enum: "Assigned, OptIn"
+    - derive: "HttpInstance"
+
+  # Dashboard assignment membership. Distinct constructors from CampaignUserLinkType.
+  # NotRequired = Assigned link (no opt-in); Pending / OptedIn = OptIn invite state.
+  OptInStatus:
+    - enum: "NotRequired, Pending, OptedIn"
+    - derive: "HttpInstance"
+
+  # Distinct constructors — same module also defines IncentiveJourneyType Daily/Weekly.
+  OptInPeriod:
+    - enum: "OptInDaily, OptInWeekly"
+    - derive: "HttpInstance"
+
   JourneyMilestoneStatus:
-    - enum: "NotStarted, InProgress, Completed, Rewarded, WaivedOff, RewardPending"
+    - enum: "NotStarted, InProgress, Completed, Rewarded, WaivedOff, RewardPending, Disqualified"
 
   CreateIncentiveJourneyReq:
     - name: Text
@@ -284,8 +333,11 @@ types:
     - name: Maybe Text
     - description: Maybe Text
     - conditionType: MilestoneConditionType
+    # Ignored when conditionType=JSONLogic (still required by schema; use EQ / 0).
     - conditionOperator: MilestoneConditionOperator
     - conditionValue: Int
+    # Condition JsonLogic: { "logic": … }. Required when conditionType=JSONLogic. Slabs → rewardMetadata.
+    - evaluation: Maybe Value
     - areaType: Maybe MilestoneAreaType
     - specialLocationIds: Maybe [Text]
     - vehicleCategory: Maybe VehicleCategory
@@ -294,6 +346,8 @@ types:
     - rewardValue: Maybe Int
     - rewardExpirationAt: Maybe Int
     - subscriptionWaiveOff: Maybe SubscriptionWaiveOffConfig
+    # NetOff: includeEarningsAllDay, mgAmountSlabs, percentSlabs, violationPercentSlabs.
+    - rewardMetadata: Maybe Value
     - timeBounds: Maybe TimeBound
     - derive: "'HideSecrets"
 
@@ -309,6 +363,7 @@ types:
     - conditionType: MilestoneConditionType
     - conditionOperator: MilestoneConditionOperator
     - conditionValue: Int
+    - evaluation: Maybe Value
     - areaType: Maybe MilestoneAreaType
     - specialLocationIds: Maybe [Text]
     - vehicleCategory: Maybe VehicleCategory
@@ -317,6 +372,7 @@ types:
     - rewardValue: Maybe Int
     - rewardExpirationAt: Maybe Int
     - subscriptionWaiveOff: Maybe SubscriptionWaiveOffConfig
+    - rewardMetadata: Maybe Value
     - timeBounds: Maybe TimeBound
     - createdAt: UTCTime
     - updatedAt: UTCTime
@@ -330,12 +386,14 @@ types:
     - journeyId: Id IncentiveJourney
     - journeyName: Text
     - cohortJourneyMappingId: Maybe (Id CohortJourneyMapping)
+    - campaignUserLinkType: CampaignUserLinkType
     - milestoneId: Id IncentiveJourneyMilestone
     - milestoneName: Maybe Text
     - periodKey: Text
     - conditionType: MilestoneConditionType
     - conditionValue: Int
     - currentValue: Int
+    - currentMetrics: Maybe Value
     - status: JourneyMilestoneStatus
     - rewardType: MilestoneRewardType
     - rewardValue: Maybe Int
@@ -353,8 +411,12 @@ types:
     - journeyId: Id IncentiveJourney
     - journeyName: Text
     - journeyType: IncentiveJourneyType
+    - controlFeatures: Maybe Value
     - enabled: Bool
     - userEnabled: Bool
+    - campaignUserLinkType: CampaignUserLinkType
+    - optInStatus: OptInStatus
+    - optedInAt: Maybe UTCTime
     - startDate: UTCTime
     - endDate: UTCTime
     - streakRange: Int
@@ -370,6 +432,44 @@ types:
     - milestoneId: Id IncentiveJourneyMilestone
     - periodKey: Text
     - derive: "'HideSecrets"
+
+  InspectStreakEndRewardReq:
+    - driverId: Id Driver
+    - cohortJourneyMappingId: Id CohortJourneyMapping
+    # Trigger day: slice last day (periodDays) or last period of streak (classic).
+    - periodKey: Text
+    # false = diagnose only; true = dispatch if ReadyToAward (idempotent).
+    - trigger: Bool
+    - derive: "'HideSecrets"
+
+  StreakEndInspectMode:
+    - enum: "ClassicFullStreak, PeriodizedSlice"
+
+  StreakEndInspectVerdict:
+    - enum: "ReadyToAward, NotConfigured, NotSliceEndDay, SliceIncomplete, SliceNotClosed, NotLastPeriodOfStreak, LastMilestoneIncomplete, PriorPeriodsIncomplete, NetOffPayoutZero, AwardDispatched, AwardSkippedByDispatcher"
+
+  StreakEndMilestonePeriodStatus:
+    - milestoneId: Text
+    - milestoneOrder: Int
+    - periodKey: Text
+    - status: Maybe Text
+
+  InspectStreakEndRewardRes:
+    - mode: StreakEndInspectMode
+    - campaignKey: Text
+    - periodKey: Text
+    - periodDays: Maybe Int
+    - sliceStart: Maybe Day
+    - sliceEndExclusive: Maybe Day
+    - periodKeysChecked: "[Text]"
+    - streakEndRewardType: Maybe Text
+    - streakEndRewardValue: Maybe Int
+    - expectedPayout: Maybe Int
+    - milestonePeriodStatuses: "[StreakEndMilestonePeriodStatus]"
+    - eligible: Bool
+    - verdict: StreakEndInspectVerdict
+    - triggered: Bool
+    - awardedAmount: Maybe Int
 
   CreateCohortDetailsReq:
     - name: Text
@@ -404,6 +504,13 @@ types:
     - streakEndRewardValue: Maybe Int
     - streakEndRewardExpirationAt: Maybe Int
     - streakEndSubscriptionWaiveOff: Maybe SubscriptionWaiveOffConfig
+    # NetOff streak slabs + periodDays (also accepted as top-level periodDays below).
+    - streakEndRewardMetadata: Maybe Value
+    # Assigned (default) = legacy bulk/auto-apply. OptIn = driver must opt in per period.
+    - campaignUserLinkType: Maybe CampaignUserLinkType
+    # Campaign control features JSON array (see CohortJourneyMapping.controlFeatures).
+    - controlFeatures: Maybe Value
+    - periodDays: Maybe Int
     - derive: "'HideSecrets"
 
   CreateCohortJourneyMappingRes:
@@ -419,7 +526,20 @@ types:
     - streakEndRewardValue: Maybe Int
     - streakEndRewardExpirationAt: Maybe Int
     - streakEndSubscriptionWaiveOff: Maybe SubscriptionWaiveOffConfig
+    - streakEndRewardMetadata: Maybe Value
+    - campaignUserLinkType: Maybe CampaignUserLinkType
+    - controlFeatures: Maybe Value
+    - periodDays: Maybe Int
     - derive: "'HideSecrets"
+
+  # Only startDate changes; cohort/journey/streak/rewards are copied from the previous mapping.
+  RollCohortJourneyMappingReq:
+    - cohortJourneyMappingId: Id CohortJourneyMapping
+    - startDate: UTCTime
+    - derive: "'HideSecrets"
+
+  RollCohortJourneyMappingRes:
+    - cohortJourneyMappingId: Id CohortJourneyMapping
 
   CohortJourneyMappingListItem:
     - cohortJourneyMappingId: Id CohortJourneyMapping
@@ -433,10 +553,14 @@ types:
     - journeyName: Text
     - isActive: Bool
     - journeyType: IncentiveJourneyType
+    - campaignUserLinkType: CampaignUserLinkType
+    - controlFeatures: Maybe Value
+    - periodDays: Maybe Int
     - maxWaiveOffCount: Maybe Int
     - startDate: UTCTime
     - endDate: UTCTime
     - streakRange: Int
+    - parentId: Maybe (Id CohortJourneyMapping)
     - streakEndRewardType: Maybe MilestoneRewardType
     - streakEndRewardValue: Maybe Int
     - streakEndRewardExpirationAt: Maybe Int
@@ -453,6 +577,15 @@ types:
     - cohortJourneyMappingId: Id CohortJourneyMapping
     - enabled: Bool
     - validTill: UTCTime
+    - derive: "'HideSecrets"
+
+  # Invite must already exist (assign/bulk). Sets optedInAt for OptIn cohorts.
+  OptInIncentiveJourneyReq:
+    - driverId: Id Driver
+    - cohortJourneyMappingId: Id CohortJourneyMapping
+    - validTill: UTCTime
+    - optInPeriod: Maybe OptInPeriod
+    - optedInBy: Maybe Text
     - derive: "'HideSecrets"
 
   UnassignUserFromIncentiveJourneyReq:

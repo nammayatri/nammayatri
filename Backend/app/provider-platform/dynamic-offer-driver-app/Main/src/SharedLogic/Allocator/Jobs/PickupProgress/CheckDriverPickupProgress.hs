@@ -34,6 +34,7 @@ import qualified Domain.Types.DriverLocation as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Trip as DTrip
+import qualified Environment
 import qualified Domain.Types.Vehicle as Fields
 import Kernel.External.Maps.Interface.Types
 import Kernel.External.Maps.Types (LatLong (..))
@@ -111,6 +112,7 @@ checkDriverPickupProgress ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     Redis.HedisLTSFlowEnv r,
     CH.ClickhouseFlow m r,
     Finance.HasActorInfo m r,
