@@ -16,13 +16,10 @@
 
 module Storage.Cac.FarePolicy where
 
-import qualified Client.Main as CM
 import qualified Data.Aeson as DA
-import qualified Domain.Types.Cac as DTC
 import Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions (FromCacType (..))
 import Kernel.Prelude
-import Kernel.Storage.Hedis
 import Kernel.Types.Cac
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -42,35 +39,26 @@ import Utils.Common.CacUtils as CCU
 fromCacTypeCustom :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ([(CacContext, Value)], String, Id FarePolicy, Int) -> BeamFP.FarePolicy -> m (Maybe FarePolicy)
 fromCacTypeCustom (context, tenant, id', toss) fp = fromCacType (fp, context, tenant, id', toss)
 
-getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
-getConfigFromInMemory id = do
-  isExp <- DTC.updateConfig DTC.LastUpdatedFarePolicy
-  getConfigFromMemoryCommon (DTC.FarePolicy id.getId) isExp CM.isExperimentsRunning
-
-setConfigInMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Maybe FarePolicy -> m (Maybe FarePolicy)
-setConfigInMemory id config = do
-  isExp <- DTC.inMemConfigUpdateTime DTC.LastUpdatedFarePolicy
-  CCU.setConfigInMemoryCommon (DTC.FarePolicy id.getId) isExp config
-
+-- No CAC-style in-memory copy here: SCQF.findFarePolicyFromDB keeps its own per-policy in-mem cache.
 findById :: (CacheFlow m r, EsqDBFlow m r) => Maybe CacKey -> Id FarePolicy -> m (Maybe FarePolicy)
 findById stickeyKey id = do
   let context = [(FarePolicyId, DA.toJSON id.getId)]
-  inMemConfig <- getConfigFromInMemory id
   tenant <- asks (.cacConfig.tenant)
-  toss <- getToss (getKeyValue <$> stickeyKey)
-  config <-
-    getConfigFromCacOrDB inMemConfig context stickeyKey (fromCacTypeCustom (context, tenant, id, toss)) CCU.FarePolicy
-      |<|>| ( do
-                logDebug $ "FarePolicy not found in memory, fetching from DB for context: " <> show context
-                SCQF.findFarePolicyFromDB id
-            )
-  setConfigInMemory id config
+  -- The toss costs a Redis call, so only fetch it when CAC actually returned a fare policy.
+  let fromCac fp = do
+        toss <- getToss (getKeyValue <$> stickeyKey)
+        fromCacTypeCustom (context, tenant, id, toss) fp
+  getConfigFromCacOrDB Nothing context stickeyKey fromCac CCU.FarePolicy
+    |<|>| ( do
+              logDebug $ "FarePolicy not found in CAC, fetching from DB for context: " <> show context
+              SCQF.findFarePolicyFromDB id
+          )
 
 -- Call it after any update
-clearCache :: HedisFlow m r => FarePolicy -> m ()
+clearCache :: (CacheFlow m r, MonadFlow m) => FarePolicy -> m ()
 clearCache = SCQF.clearCache
 
-clearCacheById :: HedisFlow m r => Id FarePolicy -> m ()
+clearCacheById :: (CacheFlow m r, MonadFlow m) => Id FarePolicy -> m ()
 clearCacheById = SCQF.clearCacheById
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()

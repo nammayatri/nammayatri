@@ -64,6 +64,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
+import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.CallBAPInternal
 import SharedLogic.DriverOnboarding (isFleetRole)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -136,7 +137,8 @@ cancelRideHandle ::
     ServiceFlow m r,
     HasField "quoteRespondCoolDown" r Int,
     HasField "driverUnlockDelay" r Seconds,
-    C.MonadCatch m
+    C.MonadCatch m,
+    Analytics.PublishesFleetAnalytics m
   ) =>
   ServiceHandle m
 cancelRideHandle =

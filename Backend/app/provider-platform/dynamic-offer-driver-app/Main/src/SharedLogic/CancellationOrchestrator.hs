@@ -90,7 +90,6 @@ import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.AutoAcceptCancellation as AutoAcceptCancellation
-import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
 import SharedLogic.CallBAPInternal
@@ -112,6 +111,7 @@ import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import Tools.Error
+import qualified Tools.EventTracking as ET
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
@@ -244,6 +244,7 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     applyDriverOverlayNotification
     applyDriverCoinEvent
     applyCancellationAnalytics
+    applyCancellationTrackingEvent
     applyDriverMoneyConsequence ctx.driver
     applyDriverCancellationRateCount ctx.driver
     applyAutoAcceptCancellationBehaviour
@@ -273,10 +274,15 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
         fork "cancellationConsequenceCoinEvent" $
           DC.driverCoinsEvent ctx.ride.driverId Nothing ctx.merchant.id ctx.booking.merchantOperatingCityId (DCT.Cancellation ctx.ride.createdAt ctx.booking.distanceToPickup ctx.decision.disToPickup ctx.decision.cancelledBy (fromMaybe (DTCR.CancellationReasonCode "OTHER") ctx.decision.reasonCode) (CancellationConsequence.driverCoinDeduction =<< row) ((.id.getId) <$> row)) (Just ctx.ride.id.getId) ctx.ride.vehicleVariant (Just ctx.booking.vehicleServiceTier) (Just ctx.booking.configInExperimentVersions) Nothing
 
+    -- external analytics (Breeze etc.): one event per cancelled ride, whoever cancelled
+    applyCancellationTrackingEvent =
+      fork "track driver ride cancelled event" $
+        ET.trackEvent ctx.ride.merchantOperatingCityId $ ET.DriverRideCancelled ctx.ride.driverId.getId ctx.ride.id.getId (show ctx.source)
+
     -- source-based cancellation analytics + operator dashboard counters (moved from the
     -- retired RideCancel tag computation — the fault verdict is the judgment now)
     applyCancellationAnalytics =
-      Analytics.updateCancellationAnalyticsAndDriverStats ctx.transporterConfig ctx.ride ctx.source
+      Analytics.updateCancellationAnalyticsAndDriverStats ctx.transporterConfig ctx.ride ctx.source ((.atFault) <$> ctx.decision.faultVerdict)
 
     -- column: driverDeduction (MoneyDeduction charges the driver via DriverFee/wallet;
     -- MoneyAddition credits them, wallet only — the adapter in CancellationConsequence
@@ -309,13 +315,16 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     applyDriverCancellationRateCount driver = do
       let countsTowardRate = maybe False (.countsTowardDriverCancellationRate) row
           countsTowardCount = maybe (ctx.source == SBCR.ByDriver) ((== CancellationFault.DriverAtFault) . (.atFault)) ctx.decision.faultVerdict
-      when (ctx.source == SBCR.ByDriver) $
-        DS.driverScoreEventHandler ctx.ride.merchantOperatingCityId DST.OnDriverCancellation {countsTowardCancellationRate = countsTowardRate, countsTowardCancellationCount = countsTowardCount, merchantId = ctx.merchant.id, driver = driver, rideFare = Just ctx.booking.estimatedFare, currency = ctx.booking.currency, distanceUnit = ctx.booking.distanceUnit, doCancellationRateBasedBlocking = doCancellationRateBasedBlocking}
-      when (ctx.source == SBCR.ByUser && countsTowardRate) $ do
-        let windowSize = toInteger $ fromMaybe 7 ctx.transporterConfig.cancellationRateWindow
-        void $ SCR.incrementCancelledCount ctx.ride.driverId windowSize
-      when (ctx.source == SBCR.ByUser && countsTowardCount) $
-        DP.incrementCancellationCount ctx.ride.merchantOperatingCityId ctx.ride.driverId
+      -- Gate on the fault verdict, not on who pressed cancel. A driver who stalls until the
+      -- rider cancels is at fault just the same; those cancels already bumped the counters but
+      -- never triggered an evaluation, so the driver was judged only on their next self-cancel.
+      -- The handler owns both counter increments now, and keeps its driver-cancel-only side
+      -- effects behind cancelledByDriver. Ops cancels (ByApplication / ByMerchant) still never
+      -- reach the ladder.
+      let cancelledByDriver = ctx.source == SBCR.ByDriver
+          riderPressedButDriverAtFault = ctx.source == SBCR.ByUser && (countsTowardCount || countsTowardRate)
+      when (cancelledByDriver || riderPressedButDriverAtFault) $
+        DS.driverScoreEventHandler ctx.ride.merchantOperatingCityId DST.OnDriverCancellation {countsTowardCancellationRate = countsTowardRate, countsTowardCancellationCount = countsTowardCount, merchantId = ctx.merchant.id, driver = driver, rideFare = Just ctx.booking.estimatedFare, currency = ctx.booking.currency, distanceUnit = ctx.booking.distanceUnit, doCancellationRateBasedBlocking = doCancellationRateBasedBlocking, cancelledByDriver = cancelledByDriver}
 
     applyAutoAcceptCancellationBehaviour =
       when (ctx.booking.isAutoAccepted == Just True) $
@@ -354,6 +363,7 @@ applyTerminalConsequences ctx createLedgerEntries = do
       ride = ctx.ride
       transporterConfig = ctx.transporterConfig
       decision = ctx.decision
+      isWalletEnabled = fromMaybe False ctx.merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet
       depositOutcome =
         depositForfeitFee booking decision.faultVerdict <&> \d ->
           CancellationChargesOutcome
@@ -418,10 +428,13 @@ applyTerminalConsequences ctx createLedgerEntries = do
                 }
             when (ctx.source == SBCR.ByUser && totalCharges > 0 && carriesForwardDues) $
               QRiderDetails.updateCancellationDueRidesCount riderId.getId
-            let isWalletEnabled = fromMaybe False ctx.merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet
             let driverCancellationEarnings = baseFee + (if fromMaybe False booking.fareParams.isVatTaxType then gst else 0)
             when (isWalletEnabled && totalCharges > 0) $
               createLedgerEntries baseFee gst ((\r -> CancellationConsequence.driverRideCreditDeduction r driverCancellationEarnings) =<< decision.consequenceRow)
+        let mbTotalCharges = mbOutcome >>= \o -> (\fee -> fee + fromMaybe 0 o.tax) <$> o.fee
+            isFreeCancellation = maybe True (== 0) mbTotalCharges
+        when (ctx.source == SBCR.ByUser && isWalletEnabled && isFreeCancellation && not (hasPositiveDeposit booking)) $
+          createLedgerEntries 0 0 Nothing
         pure mbOutcome
       case chargesE of
         Left err -> do

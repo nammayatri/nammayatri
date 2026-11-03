@@ -39,8 +39,10 @@ data StclMembershipE e = StclMembership
     id :: Kernel.Types.Id.Id Domain.Types.StclMembership.StclMembership,
     ifscCode :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     isAdditionalSharePurchase :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isApprovedFeeOverride :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     lastName :: Kernel.Prelude.Text,
     memberCategory :: Kernel.Prelude.Text,
+    membershipFee :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     mobileNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
@@ -48,6 +50,7 @@ data StclMembershipE e = StclMembership
     numberOfShares :: Kernel.Prelude.Int,
     panNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     paymentStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pricePerShare :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     shareEndCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     shareStartCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     shortId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -58,9 +61,9 @@ data StclMembershipE e = StclMembership
   }
   deriving (Generic)
 
-type StclMembership = StclMembershipE ('AsEncrypted)
+type StclMembership = StclMembershipE 'AsEncrypted
 
-type DecryptedStclMembership = StclMembershipE ('AsUnencrypted)
+type DecryptedStclMembership = StclMembershipE 'AsUnencrypted
 
 instance EncryptedItem StclMembership where
   type Unencrypted StclMembership = (DecryptedStclMembership, HashSalt)
@@ -96,8 +99,10 @@ instance EncryptedItem StclMembership where
           id = id entity,
           ifscCode = ifscCode_,
           isAdditionalSharePurchase = isAdditionalSharePurchase entity,
+          isApprovedFeeOverride = isApprovedFeeOverride entity,
           lastName = lastName entity,
           memberCategory = memberCategory entity,
+          membershipFee = membershipFee entity,
           merchantId = merchantId entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
           mobileNumber = mobileNumber_,
@@ -105,6 +110,7 @@ instance EncryptedItem StclMembership where
           numberOfShares = numberOfShares entity,
           panNumber = panNumber_,
           paymentStatus = paymentStatus entity,
+          pricePerShare = pricePerShare entity,
           shareEndCount = shareEndCount entity,
           shareStartCount = shareStartCount entity,
           shortId = shortId entity,
@@ -145,8 +151,10 @@ instance EncryptedItem StclMembership where
             id = id entity,
             ifscCode = ifscCode_,
             isAdditionalSharePurchase = isAdditionalSharePurchase entity,
+            isApprovedFeeOverride = isApprovedFeeOverride entity,
             lastName = lastName entity,
             memberCategory = memberCategory entity,
+            membershipFee = membershipFee entity,
             merchantId = merchantId entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
             mobileNumber = mobileNumber_,
@@ -154,6 +162,7 @@ instance EncryptedItem StclMembership where
             numberOfShares = numberOfShares entity,
             panNumber = panNumber_,
             paymentStatus = paymentStatus entity,
+            pricePerShare = pricePerShare entity,
             shareEndCount = shareEndCount entity,
             shareStartCount = shareStartCount entity,
             shortId = shortId entity,
@@ -172,4 +181,4 @@ instance EncryptedItem' StclMembership where
 
 data ApplicationStatus = SUBMITTED | PENDING | APPROVED | REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ApplicationStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ApplicationStatus)

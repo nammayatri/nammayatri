@@ -277,6 +277,7 @@ import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardingFlags
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
@@ -298,6 +299,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.OneShotAssign as OneShot
 import qualified SharedLogic.Payment as SPayment
+import SharedLogic.Payout.Bulk.Eligibility (mkBankVerificationStatus)
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import SharedLogic.Ride
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
@@ -363,6 +365,7 @@ import qualified Storage.Queries.VendorFee as QVF
 import qualified Tools.Auth as Auth
 import qualified Tools.DynamicLogic as TDL
 import Tools.Error
+import qualified Tools.Maps as TMaps
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as Payout
@@ -538,7 +541,8 @@ data DriverInformationRes = DriverInformationRes
     operatorBadgeToken :: Maybe Text,
     nomineeDob :: Maybe Day,
     approved :: Maybe Bool,
-    preferredMapProvider :: Maybe DriverInfo.MapProvider
+    preferredMapProvider :: Maybe DriverInfo.MapProvider,
+    mobileNumberRequired :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -628,7 +632,8 @@ data DriverEntityRes = DriverEntityRes
     subscriptionCreditBalance :: Maybe HighPrecMoney,
     role :: SP.Role,
     operatorBadgeToken :: Maybe Text,
-    nomineeDob :: Maybe Day
+    nomineeDob :: Maybe Day,
+    mobileNumberRequired :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -1157,7 +1162,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
             mbAnyFleetAssociation <- QFDA.findOneByDriverIdWithStatus driverId
             when (isNothing mbAnyFleetAssociation) $
               fork "setActivity:resetOnboardingAs" $
-                SOnboardingComms.setOnboardingAs transporterConfig person DriverInfo.INDIVIDUAL
+                SOnboardingComms.setOnboardingAs transporterConfig SGuard.None person DriverInfo.INDIVIDUAL
         when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
           let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
           -- Track offline timestamp when driver goes offline
@@ -1436,6 +1441,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId, identit
   return $
     DriverEntityRes
       { id = person.id,
+        mobileNumberRequired = isNothing person.mobileNumber && person.identifierType `elem` [SP.MOBILENUMBER, SP.EMAIL],
         firstName = person.firstName,
         middleName = person.middleName,
         lastName = person.lastName,
@@ -1664,7 +1670,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   let nomineeOrAddressChanged = isJust req.nomineeName || isJust req.nomineeRelationship || isJust req.nomineeDob || isJust req.address || isJust req.addressDocumentType || isJust req.addressState
   mbIdentityInfo <-
     if nomineeOrAddressChanged
-      then Redis.withLockRedisAndReturnValue (DIInfo.driverIdentityInfoLockKey personId) 10 $ do
+      then Redis.withWaitAndLockRedis (DIInfo.driverIdentityInfoLockKey personId) 10 50000 $ do
         mbExisting <- QDII.findByDriverId personId
         Just <$> DIInfo.upsertDriverIdentityInfo mbExisting personId person.merchantId merchantOpCityId driverInfo req.nomineeName req.nomineeRelationship req.nomineeDob req.address req.addressDocumentType req.addressState
       else QDII.findByDriverId personId
@@ -1678,7 +1684,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
 
   whenJust req.onboardingAs $ \reqOnboardingAs -> do
     transporterConfigForOnboardingAs <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    SOnboardingComms.setOnboardingAs transporterConfigForOnboardingAs person reqOnboardingAs
+    SOnboardingComms.setOnboardingAs transporterConfigForOnboardingAs SGuard.None person reqOnboardingAs
 
   let petTag = Yudhishthira.TagNameValue "PetDriver#\"true\""
   when (isPetModeEnabled && maybe False (Yudhishthira.elemTagNameValue petTag) person.driverTag) $
@@ -1888,7 +1894,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
         let gstinApplicableFlag'' = (== Documents.VALID) . (.verificationStatus) <$> mbGstin
         let bankAccountNumber'' = mbDriverBankAccountForRes <&> (.accountId)
         let bankIfsc'' = mbDriverBankAccountForRes >>= (.ifscCode)
-        let bankVerificationStatus'' = mbDriverBankAccountForRes <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
+        let bankVerificationStatus'' = mbDriverBankAccountForRes <&> mkBankVerificationStatus
         return ((.balance) <$> mbRideCreditAccount, panDec', panAadhaarLinkedFlag'', gstinApplicableFlag'', mbWalletAccount', bankAccountNumber'', bankIfsc'', bankVerificationStatus'')
       else return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
   let driverReferralApplied = isJust driverInfo.referredByDriverId
@@ -2098,7 +2104,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               -- Static-offer: the booking already exists (created at confirm) and the ride is
               -- initialized inside the accept, so it returns the assigned-ride payload too.
               DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig Nothing Nothing
-            when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
+            Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.OfferAccepted driverId searchTry.id.getId)
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
             when (sReqFD.hasAvailableForRidesTag == Just True) $ AvailableForRides.resetRejectionStreak driverId
             cityLabel <- SML.getCityLabel merchantOpCityId
@@ -2115,7 +2121,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                 void $ Redis.unlockRedis (editDestinationLockKey driverId)
                 pure Nothing
     Reject -> do
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False True False
+      Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.OfferRejected driverId searchTry.id.getId)
       QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       when (sReqFD.hasAvailableForRidesTag == Just True) $
         whenJust ((,) <$> transporterConfig.availableForRidesTagValidityMinutes <*> mfilter (> 0) transporterConfig.availableForRidesMaxConsecutiveRejections) $ \(validity, maxRejections) ->
@@ -2160,7 +2166,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       unlockRedisQuoteKeys
       pure Nothing
     Pulled -> do
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
+      Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.OfferPulled driverId searchTry.id.getId)
       QSRD.updateDriverResponse (Just Pulled) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
       Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (SML.driverSearchReqFunnelLabels metricsDistanceBucketEdges sReqFD)
@@ -2959,7 +2965,8 @@ clearDriverDues ::
   Maybe ClearManualSelectedDues ->
   Maybe SPayment.DeepLinkData ->
   m ClearDuesRes
-clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq mbDeepLinkData = do
+-- Locked per driver so a concurrent call cannot read a half-written invoice and order only part of its fees.
+clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq mbDeepLinkData = Redis.withWaitAndLockRedis (DDF.clearDuesLockKey personId.getId) 60 100000 $ do
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
@@ -3035,7 +3042,7 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
           QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE invoice.id
           return (Nothing, driverFeeIds, [])
         else
-          if length currentDueDriverFee <= length invoices
+          if length currentDueDriverFee == length invoices
             then do
               return (Just (invoice.id, invoice.invoiceShortId), currentDueDriverFee, (driverFees <&> getId . (.id)) \\ (invoices <&> getId . (.driverFeeId)))
             else do
@@ -3576,7 +3583,7 @@ filterBookingsByVisibilityStages driver transporterConfig now activeTagTexts boa
     Just configuredStages@(_ : _) -> do
       let rulesForBooking booking
             | DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime now = Nothing
-            | otherwise = (.rules) <$> resolveVisibilityStage configuredStages (diffUTCTime booking.startTime now)
+            | otherwise = (.rules) <$> resolveVisibilityStage booking.vehicleServiceTier configuredStages (diffUTCTime booking.startTime now)
           bookingsWithRules = [(booking, rulesForBooking booking) | booking <- bookings]
           needsDriverStatsForBoard = any (needsDriverStats . factsNeededBy) (mapMaybe snd bookingsWithRules)
       mbDriverStats <- if needsDriverStatsForBoard then QDriverStats.findById (cast driver.id) else pure Nothing
@@ -3692,6 +3699,23 @@ acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver c
     creditsValid <- hasPrepaidCreditsValidAt ownerId ownerType mbVehicleCategory booking.startTime
     unless creditsValid $
       throwError (InvalidRequest "Your ride credits expire before this booking's pickup time. Recharge to accept it.")
+  when (booking.isScheduled && isNothing mbForcedAcceptanceMode) $ do
+    now <- getCurrentTime
+    driverLocations <- LTF.driversLocationByCloudType [driver.id] driver.cloudType
+    driverLocation <- listToMaybe driverLocations & fromMaybeM (InvalidRequest "Current driver location is unavailable. Please update your location and try again.")
+    let pickupLocation = LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+        currentDriverLocation = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
+    distanceResponse <-
+      TMaps.getDistanceForScheduledRides booking.providerId booking.merchantOperatingCityId (Just booking.id.getId) $
+        Maps.GetDistanceReq
+          { origin = currentDriverLocation,
+            destination = pickupLocation,
+            travelMode = Just Maps.CAR,
+            distanceUnit = booking.distanceUnit,
+            sourceDestinationMapping = Nothing
+          }
+    when (addUTCTime (secondsToNominalDiffTime distanceResponse.duration) now > booking.startTime) $
+      throwError (InvalidRequest "You cannot reach the pickup location before the scheduled pickup time.")
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
   void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId transporterConfig mbBooking mbForcedAcceptanceMode
   pure Success

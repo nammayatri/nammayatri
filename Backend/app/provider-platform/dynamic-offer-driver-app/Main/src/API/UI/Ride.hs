@@ -57,8 +57,10 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
+import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import SharedLogic.Person (findPerson)
+import SharedLogic.Ride (validateRideLocation)
 import Storage.Beam.SystemConfigs ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
@@ -96,7 +98,7 @@ type API =
                     :> Capture "rideId" (Id Ride.Ride)
                     :> "arrived"
                     :> "pickup"
-                    :> ReqBody '[JSON] LatLong
+                    :> ReqBody '[JSON] DRide.ArrivedAtPickupReq
                     :> Post '[JSON] APISuccess
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
@@ -248,6 +250,7 @@ startRide' (requestorId, merchantId, merchantOpCityId) rideId StartRideReq {..} 
 
 otpRideCreateAndStart :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> DRide.OTPRideReq -> FlowHandler RideCommon.DriverRideRes
 otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide.OTPRideReq {..} = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo requestorId $ do
+  validateRideLocation point
   requestor <- findPerson requestorId
   now <- getCurrentTime
   driverInfo <- QDI.findById (cast requestor.id) >>= fromMaybeM (PersonNotFound requestor.id.getId)
@@ -260,8 +263,14 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
   booking <-
     runInReplica $
       QBooking.findBookingBySpecialZoneOTPAndCity merchantOpCityId.getId rideOtp now transporterConfig.specialZoneBookingOtpExpiry
+        |<|>| SBooking.findScheduledBookingBySpecialZoneOtp merchantOpCityId rideOtp
         |<|>| QBooking.findBookingBySpecialZoneOTP merchantId.getId rideOtp now transporterConfig.specialZoneBookingOtpExpiry -- TODO :: Fix properly, when driver goes from one city to another, he should see the booking.
         >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
+  -- A scheduled booking starts no earlier than an assigned scheduled ride may be activated.
+  when booking.isScheduled $
+    whenJust transporterConfig.scheduledRideConfig.driverActivationWindow $ \activationWindow -> do
+      let earliestStartTime = addUTCTime (negate $ secondsToNominalDiffTime activationWindow) booking.startTime
+      when (now < earliestStartTime) $ throwError $ ScheduledRideActivationTooEarly earliestStartTime
   void $ validateOtpRideStartRestriction driverInfo transporterConfig.otpRideStartRestrictionRadius booking.fromLocation
   isLocked <- Redis.tryLockRedis (mkOtpRideLockKey booking.id) 30
   if isLocked
@@ -340,7 +349,7 @@ getDriverRideById ::
   FlowHandler RideCommon.DriverRideRes
 getDriverRideById (driverId, _, mocId) rideId mbFinanceData = withFlowHandlerAPI $ DRide.getDriverRideById driverId (Just mocId) rideId mbFinanceData
 
-arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
+arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> DRide.ArrivedAtPickupReq -> FlowHandler APISuccess
 arrivedAtPickup (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req
 
 arrivedAtStop :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess

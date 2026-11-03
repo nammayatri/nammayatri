@@ -18,10 +18,13 @@ module Domain.Action.Dashboard.Management.Payout
     getPayoutExcluded,
     postPayoutPayoutReleaseHold,
     postPayoutBatchRecheck,
+    getPayoutTransferNeedsReview,
+    postPayoutTransferResolve,
   )
 where
 
 import qualified API.Types.ProviderPlatform.Management.Payout as ApiPayout
+import Control.Applicative ((<|>))
 import qualified "lib-dashboard" Dashboard.Common as DC
 import qualified Data.Text as T
 import Data.Time (Day, minutesToTimeZone, utcToLocalTime)
@@ -43,7 +46,9 @@ import qualified Environment
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.Payout.Interface as IPayout
+import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
@@ -51,14 +56,20 @@ import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Domain.Types.Transfer as DT
+import qualified Lib.Finance.Storage.Queries.Transfer as QTransfer
 import qualified Lib.Payment.API.Payout as PayoutAPI
 import qualified Lib.Payment.API.Payout.Types as PayoutTypes
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PayoutRequest
+import qualified Lib.Payment.Payout.HoldRelease as TransferReview
+import Lib.Payment.Payout.StatusCheck (isPayoutOrderSuccess)
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPayoutRequest
 import Servant (ServerT, (:<|>) (..))
+import qualified SharedLogic.Finance.Wallet as WalletFinance
 import qualified SharedLogic.Payout.RetimeScheduledBatchPayout as Retime
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -612,3 +623,114 @@ postPayoutBatchRecheck ::
   ApiPayout.PayoutBatchRecheckReq ->
   Environment.Flow APISuccess
 postPayoutBatchRecheck = PayoutHoldRelease.recheckBatch
+
+-- | Transfers the finance kernel parked as NEEDS_REVIEW in this city, most recently touched first.
+getPayoutTransferNeedsReview ::
+  Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Environment.Flow ApiPayout.TransferReviewListRes
+getPayoutTransferNeedsReview merchantShortId opCity mbLimit mbOffset _mbRequestorId = do
+  (merchant, merchantOpCity, _) <- resolveMerchantOpCityAndTz merchantShortId opCity
+  let limit = max 0 (min 100 (fromMaybe 20 mbLimit))
+      offset = max 0 (fromMaybe 0 mbOffset)
+  parked <- TransferReview.listParkedTransfers merchant.id.getId merchantOpCity.id.getId limit offset
+  pure ApiPayout.TransferReviewListRes {items = map toReviewItem parked}
+  where
+    toReviewItem p =
+      let t = p.transfer
+       in ApiPayout.TransferReviewItem
+            { transferId = t.id.getId,
+              direction = show t.direction,
+              railKey = show <$> t.railKey,
+              referenceType = t.referenceType,
+              referenceId = t.referenceId,
+              railOrderId = t.railOrderId,
+              railStatus = t.railStatus,
+              amount = t.amount,
+              feeAmount = t.feeAmount,
+              currency = t.currency,
+              ownerType = p.ownerType,
+              ownerId = p.ownerId,
+              lastError = t.lastError,
+              attemptCount = t.attemptCount,
+              holdEntryId = (.getId) <$> t.holdEntryId,
+              entryIds = fromMaybe [] t.entryIds,
+              coveredEntryIds = fromMaybe [] t.coveredEntryIds,
+              canResolve = isResolvableTransfer t,
+              createdAt = t.createdAt,
+              updatedAt = t.updatedAt
+            }
+
+-- | Only driver wallet payouts can be settled by hand here; inbound topups and refunds are listed for
+--   visibility but settle through their own flows, and HDFC bulk payouts end only through their batch.
+isResolvableTransfer :: DT.Transfer -> Bool
+isResolvableTransfer t = t.direction == DT.OUTBOUND && t.referenceType == WalletFinance.walletReferencePayout && t.railKey /= Just DT.HDFC_BULK
+
+-- | Act on a parked wallet payout: ask the partner again, or record ops' decision that it was paid or not.
+--   A decision closes the payout order (who and why) and runs the same settlement as a partner status.
+postPayoutTransferResolve ::
+  Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Text ->
+  Maybe Text ->
+  ApiPayout.TransferResolveReq ->
+  Environment.Flow ApiPayout.TransferResolveRes
+postPayoutTransferResolve merchantShortId opCity transferId mbRequestorId req = do
+  (merchant, merchantOpCity, _) <- resolveMerchantOpCityAndTz merchantShortId opCity
+  let reason = T.strip req.reason
+      actor = fromMaybe "unknown" mbRequestorId
+  when (req.action /= ApiPayout.RECHECK && T.null reason) $
+    throwError (InvalidRequest "reason is required: say why this transfer is being resolved")
+  -- One decision at a time per transfer: a double click must not settle twice.
+  Redis.withWaitAndLockRedisWithTimeout ("PayoutTransferResolve:" <> transferId) 60 10 50000 $ do
+    transfer <- TransferReview.loadParkedTransfer merchant.id.getId merchantOpCity.id.getId transferId
+    unless (isResolvableTransfer transfer) $
+      throwError (InvalidRequest "Only driver wallet payouts can be resolved here")
+    order <- payoutOrderOf transfer
+    -- HDFC bulk orders belong to their batch: only the batch check and the hold release can end them.
+    when (isJust order.batchId) $
+      throwError (InvalidRequest "This payout is part of a bulk batch: use the batch re-check or the release-hold action instead")
+    logInfo $ "Parked transfer " <> transferId <> " " <> show req.action <> " by " <> actor <> ": " <> reason
+    case req.action of
+      ApiPayout.RECHECK -> void $ UIPayout.refreshPayoutOrderWithSettlement order
+      ApiPayout.MARK_SUCCEEDED -> decide merchant merchantOpCity order TransferReview.ManualSucceeded actor reason
+      ApiPayout.MARK_FAILED -> decide merchant merchantOpCity order TransferReview.ManualFailed actor reason
+  after <- QTransfer.findById (Id.Id transferId)
+  let status = maybe "UNKNOWN" (show . (.status)) after
+  pure
+    ApiPayout.TransferResolveRes
+      { transferId,
+        status,
+        message =
+          if fmap (.status) after == Just DT.NEEDS_REVIEW
+            then
+              if req.action == ApiPayout.RECHECK
+                then "Still awaiting review: the partner has not given a final answer yet. Decide by hand or re-check later."
+                else "Still awaiting review: the order was updated but the ledger step did not finish. Check the logs and retry the same action."
+            else "Transfer is now " <> status
+      }
+  where
+    decide merchant merchantOpCity order decision actor reason
+      -- The partner already said paid (a later failure or reversal parked the transfer): accepting it as paid
+      -- tells the ledger directly; marking it failed is refused by 'closeOrderByDecision'.
+      | isPayoutOrderSuccess order.status = do
+        void $ TransferReview.closeOrderByDecision order decision actor reason
+        UIPayout.settleWalletPayoutAcceptedAsPaid merchantOpCity.id order
+      | otherwise = do
+        let payoutStatus = case decision of
+              TransferReview.ManualSucceeded -> Payout.SUCCESS
+              TransferReview.ManualFailed -> Payout.FAILURE
+        -- The order is closed inside the settlement, under the wallet lock and after its own "already
+        -- paid" check, so a partner webhook that lands first wins and this decision is refused.
+        UIPayout.payoutSettlementAction merchant.id merchantOpCity.id payoutStatus order.amount.amount order.orderId $
+          \orderId _ _ -> (,orderId) <$> TransferReview.closeOrderByDecision order decision actor reason
+    payoutOrderOf transfer = do
+      mbRequest <- QPayoutRequest.findById (Id.Id transfer.referenceId)
+      mbByRail <- maybe (pure Nothing) QPayoutOrder.findByOrderId transfer.railOrderId
+      mbByRequest <- case mbRequest >>= (.payoutTransactionId) of
+        Just orderDbId -> QPayoutOrder.findById (Id.Id orderDbId)
+        Nothing -> pure Nothing
+      fromMaybeM (InvalidRequest "No payout order exists for this transfer, so there is nothing to settle against") (mbByRail <|> mbByRequest)

@@ -612,6 +612,8 @@ updatePersonDetails person = do
       Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
       Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
       Se.Set BeamP.email $ person.email,
+      Se.Set BeamP.emailVerified $ person.emailVerified,
+      Se.Set BeamP.emailSource $ person.emailSource,
       Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
       Se.Set BeamP.updatedAt now
     ]
@@ -628,6 +630,8 @@ updateFleetOwnerDetails (Id personId) req = do
         <> [Se.Set BeamP.mobileNumberEncrypted $ req.mobileNumber <&> unEncrypted . (.encrypted) | isJust req.mobileNumber]
         <> [Se.Set BeamP.mobileNumberHash (req.mobileNumber <&> (.hash)) | isJust req.mobileNumber]
         <> [Se.Set BeamP.email req.email | isJust req.email]
+        <> [Se.Set BeamP.emailVerified req.emailVerified | isJust req.email]
+        <> [Se.Set BeamP.emailSource req.emailSource | isJust req.email]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
@@ -659,7 +663,31 @@ updateEmailByPersonId (Id personId) email = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamP.updatedAt now,
-      Se.Set BeamP.email (Just email)
+      Se.Set BeamP.email (Just email),
+      Se.Set BeamP.emailVerified (Just False),
+      Se.Set BeamP.emailSource Nothing
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateVerifiedEmail :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Text -> EmailSource -> m ()
+updateVerifiedEmail (Id personId) email emailSource = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.email (Just email),
+      Se.Set BeamP.emailVerified (Just True),
+      Se.Set BeamP.emailSource (Just emailSource)
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+clearEmail :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> m ()
+clearEmail (Id personId) = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.email Nothing,
+      Se.Set BeamP.emailVerified Nothing,
+      Se.Set BeamP.emailSource Nothing
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 

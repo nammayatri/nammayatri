@@ -45,6 +45,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
+import qualified SharedLogic.Finance.Rails as FinanceRails
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
@@ -125,7 +126,7 @@ getOrCreatePaymentCustomer person = withDynamicLogLevel "payment-mode" $ do
   logInfo $ "getOrCreatePaymentCustomer: " <> person.id.getId <> " " <> show person.paymentMode
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
       lockKey = "PaymentCustomer:Create:" <> person.id.getId <> ":" <> show paymentMode
-  Redis.withLockRedisAndReturnValue lockKey 60 $ do
+  Redis.withWaitAndLockRedis lockKey 60 50000 $ do
     -- Re-check inside the lock: another concurrent request may have already created it
     mbCustomer <- QPaymentCustomer.findByPersonIdAndPaymentMode (Just person.id) (Just paymentMode)
     case mbCustomer of
@@ -276,7 +277,7 @@ postPaymentAddTip ::
     Environment.Flow APISuccess
   )
 postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
-  Redis.withWaitOnLockRedisWithExpiry (SPayment.paymentJobExecLockKey rideId.getId) 10 20 $ do
+  Redis.withWaitAndLockRedisWithTimeout (SPayment.paymentJobExecLockKey rideId.getId) 10 20 50000 $ do
     personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
@@ -552,7 +553,7 @@ uploadRefundEvidence mbEvidence mbFileType mbContentType ctx rideId =
     imageExtension <- validateContentType mbFileType mbContentType
     path <- createPath ctx.booking.merchantId ctx.booking.riderId rideId ctx.refundPurpose imageExtension
     fork "S3 Put Image" do
-      Redis.withLockRedis (imageS3Lock path) 5 $
+      Redis.withWaitAndLockRedis (imageS3Lock path) 5 50000 $
         S3.put (Text.unpack path) evidence
     pure path
 
@@ -803,7 +804,7 @@ fetchPaymentRefundRequestInfo h refreshRefunds refundRequest = do
         case mbResult of
           Nothing -> pure $ h.mkRefundRequestInfoResp refundRequest evidence Nothing Nothing
           Just result -> do
-            let updStatus = castRefundRequestStatus result.status
+            let updStatus = SPayment.refundStatusToRequestStatus result.status
                 refundId = Kernel.Types.Id.Id result.refundId
             processRefundResult refundRequest updStatus (Just refundId)
             let updRefundRequest = refundRequest{refundsId = Just refundId, status = updStatus}
@@ -928,15 +929,6 @@ validateRefundComponents rideId booking comps = do
       Domain.Types.FareBreakup.CANCELLATION_FEE -> li.cancellationCharge + li.cancellationTax
       Domain.Types.FareBreakup.PAYMENT_CHARGE -> li.paymentCharge + li.paymentChargeVat
 
-castRefundRequestStatus :: TPayment.RefundStatus -> DRefundRequest.RefundRequestStatus
-castRefundRequestStatus = \case
-  TPayment.REFUND_PENDING -> DRefundRequest.APPROVED -- did not changed
-  TPayment.REFUND_FAILURE -> DRefundRequest.FAILED
-  TPayment.REFUND_SUCCESS -> DRefundRequest.REFUNDED
-  TPayment.MANUAL_REVIEW -> DRefundRequest.APPROVED -- did not changed
-  TPayment.REFUND_CANCELED -> DRefundRequest.FAILED
-  TPayment.REFUND_REQUIRES_ACTION -> DRefundRequest.APPROVED -- did not changed
-
 -- | Side-effects for the OPEN→APPROVED transition. Called from Dashboard /respond
 --   and /initiate after the row's status flip.
 processRefundRaised :: DRefundRequest.RefundRequest -> Environment.Flow ()
@@ -1053,6 +1045,10 @@ processRefundResult refundRequest updStatus mbRefundsId =
       QRide.updateRefundRequestStatus (Just updStatus) rideId
       let updRefundRequest = refundRequest{status = updStatus, refundsId = mbRefundsId <|> refundRequest.refundsId}
       Notify.notifyRefunds updRefundRequest
+      -- Canonical money status on the kernel transfer row (keyed by the Refunds attempt
+      -- id); the refund ledger legs below are unchanged. Missing row = pre-migration.
+      whenJust ((,) <$> updRefundRequest.refundsId <*> FinanceRails.refundRequestStatusToTransferStatus updStatus) $ \(rid, transferStatus) ->
+        FinanceRails.updateRideRefundTransferStatus rid.getId Nothing transferStatus
       when (updStatus == DRefundRequest.REFUNDED) $ processRefundSucceeded updRefundRequest
       when (updStatus == DRefundRequest.FAILED) $ processRefundFailed updRefundRequest
     else logInfo $ "processRefundResult: no-op for refundRequest " <> refundRequest.id.getId <> " — status already " <> show updStatus <> "; side-effects (BAP settle/invoice, BPP call) not re-fired"
@@ -1120,7 +1116,7 @@ postPaymentRideCapture ::
 postPaymentRideCapture (mbPersonId, _merchantId) rideId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Redis.withWaitOnLockRedisWithExpiry (SPayment.paymentJobExecLockKey rideId.getId) 10 20 $ do
+  Redis.withWaitAndLockRedisWithTimeout (SPayment.paymentJobExecLockKey rideId.getId) 10 20 50000 $ do
     pendingEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId.getId
     when (null pendingEntries) $
       throwError $ InvalidRequest "No pending payment found for this ride"

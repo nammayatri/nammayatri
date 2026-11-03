@@ -11,14 +11,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SeatLayoutT f = SeatLayoutT
-  { columns :: (B.C f Kernel.Prelude.Int),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    name :: (B.C f Kernel.Prelude.Text),
-    rows :: (B.C f Kernel.Prelude.Int),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { columns :: B.C f Kernel.Prelude.Int,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    name :: B.C f Kernel.Prelude.Text,
+    rows :: B.C f Kernel.Prelude.Int,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +28,6 @@ instance B.Table SeatLayoutT where
 
 type SeatLayout = SeatLayoutT Identity
 
-$(enableKVPG (''SeatLayoutT) [('id)] [])
+$(enableKVPG ''SeatLayoutT ['id] [])
 
-$(mkTableInstances (''SeatLayoutT) "seat_layout")
+$(mkTableInstances ''SeatLayoutT "seat_layout")

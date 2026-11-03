@@ -245,6 +245,7 @@ data DSearchRes = DSearchRes
     stops :: [LatLong],
     now :: UTCTime,
     startTime :: UTCTime, -- scheduled pickup time (= now for immediate rides)
+    reservedTime :: Maybe Seconds, -- trip time the fare covers, see 'interCityReservedTime'
     quotes :: [(DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl)],
     estimates :: [(DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl)],
     transporterConfig :: DTMT.TransporterConfig,
@@ -362,13 +363,14 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   let resolvedArea = fromMaybe allFarePoliciesProduct.area allFarePoliciesProduct.mbPickupDropArea
   -- Spot ride: tiers with isSpotRideEnabled get an extra OneWayRideOtp quote, identical in
   -- fare to their normal one-way estimate -- see 'addSpotRidePolicies'.
-  let farePoliciesWithSpotRide = addSpotRidePolicies allFarePoliciesProduct.vehicleServiceTierMap resolvedArea possibleTripOption.isScheduled farePolicies
+  let farePoliciesWithSpotRide = addSpotRidePolicies allFarePoliciesProduct.vehicleServiceTierMap possibleTripOption.isScheduled farePolicies
   (canQueueUp, mbDefaultDriverExtra, mbPickupGateId) <- withTimeAPI "search" "getSpecialZoneQueueInfo" $ getSpecialZoneQueueInfo resolvedArea fromLocation
   let mbSpecialZoneGateId = if canQueueUp then mbPickupGateId else Nothing
   logDebug $ "Pickingup Gate info result : " <> show (mbPickupGateId, mbSpecialZoneGateId, mbDefaultDriverExtra)
   let spcllocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
       specialLocName = allFarePoliciesProduct.specialLocationName
       specialLocationSupportNumber = allFarePoliciesProduct.specialLocationSupportNumber
+      toLocation = withDropSpecialLocationArea spcllocationTag specialLocName <$> mbToLocation
   cityCurrency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   customerCancellationDue <-
     if transporterConfig.canAddCancellationFee && sReq.isMultimodalSearch == Just False
@@ -387,7 +389,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
             return 0
       else return 0
   let mbDriverInfo = driverIdForSearch
-  searchReq <- withTimeAPI "search" "buildSearchRequest" $ buildSearchRequest sReq bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId customerCancellationDue fromLocation mbToLocation mbDistance mbDuration mbStaticDuration spcllocationTag specialLocName allFarePoliciesProduct.area allFarePoliciesProduct.pickupArea allFarePoliciesProduct.dropArea mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
+  searchReq <- withTimeAPI "search" "buildSearchRequest" $ buildSearchRequest sReq bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId customerCancellationDue fromLocation toLocation mbDistance mbDuration mbStaticDuration spcllocationTag specialLocName allFarePoliciesProduct.area allFarePoliciesProduct.pickupArea allFarePoliciesProduct.dropArea mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   unless sReq.isShadowSearch $
     triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId'}
@@ -455,7 +457,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
 
   driverInfoQuotes <- withTimeAPI "search" "addNearestDriverInfoQuotes" $ addNearestDriverInfo merchantOpCityId driverPool quotes configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
   driverInfoEstimates <- withTimeAPI "search" "addNearestDriverInfoEstimates" $ addNearestDriverInfo merchantOpCityId driverPool estimates configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
-  buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber allFarePoliciesProduct.fareSettlementType now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch
+  buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber allFarePoliciesProduct.fareSettlementType now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch mbDuration
   where
     stopsLatLong = map (.gps)
     --   Check if the pickup gate supports queueing and get default driver extra.
@@ -529,13 +531,14 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
           logError $ "Vehicle service tier not found for " <> show fp'.vehicleServiceTier
           pure (estimates, quotes)
 
-    buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName specialLocationSupportNumber fareSettlementType now startTime fareParametersInRateCard isMultimodalSearch = do
+    buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName specialLocationSupportNumber fareSettlementType now startTime fareParametersInRateCard isMultimodalSearch mbEstimatedDuration = do
       merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       return $
         DSearchRes
           { provider = merchant,
             bapId = sReq.bapId,
+            reservedTime = interCityReservedTime startTime sReq.returnTime <$> mbEstimatedDuration,
             ..
           }
 
@@ -885,7 +888,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
       estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
       isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
       navigationInstruction = resolveGateNavigationInstruction navGateMap fullFarePolicy.mbArea (show fullFarePolicy.tripCategory)
-      isSpotRideQuote = fullFarePolicy.tripCategory == OneWay OneWayRideOtp && fullFarePolicy.mbArea == Just SL.Default
+      isSpotRideQuote = fullFarePolicy.tripCategory == OneWay OneWayRideOtp
       -- Dashboard-configured spotServiceTierName wins when set; otherwise "Spot " <> the
       -- tier's normal name (e.g. "Spot Auto").
       vehicleServiceTierDisplayName =
@@ -1193,16 +1196,34 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
         if isScheduledForSearch tConf now dsReq
           then (dsReq.pickupTime, True)
           else (now, False)
+      tripCategories = getTripCategories tConf dsReq isScheduled isInterCity isCrossCity destinationTravelCityName
+  TripOption {..}
+
+getTripCategories :: DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Bool -> Maybe Text -> [TripCategory]
+getTripCategories tConf dsReq isScheduled isInterCity isCrossCity destinationTravelCityName = do
+  let mbMinInterCityDistance = tConf.tripConfig >>= (.interCity) >>= (.minDistance)
+      belowInterCityDistanceThreshold = case (mbMinInterCityDistance, dsReq.routeDistance) of
+        (Just minDistance, Just routeDistance) -> routeDistance < minDistance
+        _ -> False
+      shouldFallbackToOneWay =
+        isInterCity
+          && not isCrossCity
+          && dsReq.riderPreferredOption == DRPO.InterCity
+          && belowInterCityDistanceThreshold
+          && not dsReq.roundTrip
+      -- Cross-city trips, rentals and round trips retain their dedicated products.
+      shouldUseInterCity = isInterCity && not shouldFallbackToOneWay
+      oneWayBundle =
+        if isScheduled
+          then [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer]
+          else [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer]
       -- Local (non-intercity) bundle, scoped to what the rider actually asked for.
       -- Cuts wasted DB/ML work for categories the rider didn't pick.
       localBundleForPreference = case dsReq.riderPreferredOption of
-        DRPO.OneWay ->
-          if isScheduled
-            then [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer]
-            else [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer]
+        DRPO.OneWay -> oneWayBundle
+        DRPO.InterCity | shouldFallbackToOneWay -> oneWayBundle
         DRPO.Rental ->
-          [Rental OnDemandStaticOffer]
-            <> [Rental RideOtp | not isScheduled]
+          [Rental OnDemandStaticOffer, Rental RideOtp]
         DRPO.Ambulance ->
           [Ambulance OneWayOnDemandDynamicOffer | not isScheduled]
         DRPO.Delivery ->
@@ -1219,19 +1240,18 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
             case dsReq.dropLocation of
               Just _ -> case dsReq.riderPreferredOption of
                 DRPO.Rental
-                  | isInterCity ->
-                    [IntercityRental OnDemandStaticOffer destinationTravelCityName]
-                      <> [IntercityRental RideOtp destinationTravelCityName | not isScheduled]
+                  | shouldUseInterCity ->
+                    [IntercityRental OnDemandStaticOffer destinationTravelCityName, IntercityRental RideOtp destinationTravelCityName]
                 _ ->
-                  if isInterCity
+                  if shouldUseInterCity
                     then
                       if isCrossCity
                         then
-                          [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                            <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                          [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName, CrossCity OneWayRideOtp destinationTravelCityName]
+                            <> [CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName | not isScheduled]
                         else
-                          [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                            <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                          [InterCity OneWayOnDemandStaticOffer destinationTravelCityName, InterCity OneWayRideOtp destinationTravelCityName]
+                            <> [InterCity OneWayOnDemandDynamicOffer destinationTravelCityName | not isScheduled]
                     else localBundleForPreference
               -- FIX (per review): rerouting this whole branch through localBundleForPreference
               -- had a much bigger blast radius than intended — riderPreferredOption falls
@@ -1243,9 +1263,9 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
               -- exact previous hardcoded-to-Rental behavior for destination-less searches.
               Nothing -> case dsReq.riderPreferredOption of
                 DRPO.EasyBooking -> [EasyBooking OnDemandStaticOffer]
-                _ -> [Rental OnDemandStaticOffer] <> [Rental RideOtp | not isScheduled]
+                _ -> [Rental OnDemandStaticOffer, Rental RideOtp]
 
-  TripOption {..}
+  tripCategories
   where
     checkIfMeterRideSearch isMeterRideSearch = case isMeterRideSearch of
       Just isMeterRide -> isMeterRide
@@ -1370,6 +1390,16 @@ buildSearchReqLocation merchantId merchantOpCityId sessionToken address customer
         merchantOperatingCityId = Just merchantOpCityId,
         ..
       }
+
+dropAreaOverrideCategories :: [Text]
+dropAreaOverrideCategories = ["SureAirport", "SureMetro", "SureStation"]
+
+withDropSpecialLocationArea :: Maybe Text -> Maybe Text -> DLoc.Location -> DLoc.Location
+withDropSpecialLocationArea mbSpecialLocationTag mbSpecialLocationName location =
+  case (T.splitOn "_" <$> mbSpecialLocationTag, mbSpecialLocationName) of
+    (Just (_ : dropCategory : "PriorityDrop" : _), Just name)
+      | dropCategory `elem` dropAreaOverrideCategories -> location{address = location.address{area = Just name}}
+    _ -> location
 
 getAddressByGetPlaceName :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> LatLong -> m Address
 getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong = do

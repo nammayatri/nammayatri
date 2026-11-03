@@ -26,6 +26,10 @@ module Domain.Action.UI.DriverOnboarding.Image
     throwValidationError,
     convertHVStatusToValidationStatus,
     convertValidationStatusToVerificationStatus,
+    -- For uploads stored without document verification (ledger adjustment proofs).
+    createPath,
+    mkImage,
+    validateUploadedFileType,
     -- Exported for unit tests: pure classification helpers with no Flow dependency.
     UploadedFileType (..),
     detectUploadedFileType,
@@ -456,7 +460,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
       imagePath <- createPath personId.getId merchantId.getId imageType (resolveStoredExtension enforceFileTypeCheck mbUploadedFileType fileExtension)
       s3Result <-
         withTryCatch "S3:put:uploadImage" $
-          Redis.withLockRedis (imageS3Lock imagePath) 5 $
+          Redis.withWaitAndLockRedis (imageS3Lock imagePath) 5 50000 $
             S3.put (T.unpack imagePath) image
       case s3Result of
         Left err -> do

@@ -59,6 +59,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Safety.Domain.Types.Sos as SafetySos
 import qualified Sequelize as Se
+import SharedLogic.Finance.RideInvoice (rideFinanceInvoiceId)
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
@@ -972,7 +973,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
               vehicleManufacturer = mbVrc >>= (.vehicleManufacturer),
               vehicleModel = mbVrc >>= (.vehicleModel),
               rideTags = ride.rideTags,
-              financeInvoiceId = booking.financeInvoiceId,
+              financeInvoiceId = rideFinanceInvoiceId ride booking,
               rideBookingId = Just ride.bookingId,
               rideDriverId = Just ride.driverId,
               rideSosId = ride.sosId,

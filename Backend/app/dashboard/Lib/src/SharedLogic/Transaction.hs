@@ -83,11 +83,14 @@ buildTransaction endpoint serverName apiTokenInfo commonDriverId commonRideId re
         ..
       }
 
+-- | @merchantId@ is optional: one token per person means an operator has no
+-- single session merchant, so login/logout/admin audits attribute to the
+-- actor's home merchant when it is set and to no merchant otherwise.
 buildDashboardAuthTransaction ::
   MonadFlow m =>
   DT.Endpoint uat ->
   Id DP.Person ->
-  Id DM.Merchant ->
+  Maybe (Id DM.Merchant) ->
   m (DT.Transaction uat)
 buildDashboardAuthTransaction endpoint requestorId merchantId = do
   uid <- generateGUID
@@ -96,7 +99,7 @@ buildDashboardAuthTransaction endpoint requestorId merchantId = do
     DT.Transaction
       { id = uid,
         requestorId = Just requestorId,
-        merchantId = Just merchantId,
+        merchantId = merchantId,
         request = Nothing,
         response = Nothing,
         responseError = Nothing,
@@ -176,7 +179,9 @@ buildTransactionForSafetyDashboard endpoint apiTokenInfo request = do
     DT.Transaction
       { id = uid,
         requestorId = apiTokenInfo <&> (.personId),
-        merchantId = apiTokenInfo <&> (.merchantId),
+        -- Identity token: the session carries no merchant. This safety-dashboard
+        -- transaction records the requestor only.
+        merchantId = Nothing,
         request = Just request, -- here i will send encoded request
         response = Nothing,
         responseError = Nothing,

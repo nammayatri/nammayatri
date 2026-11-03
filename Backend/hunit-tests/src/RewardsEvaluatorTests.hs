@@ -66,7 +66,9 @@ tests =
                   ridesLast30d = Just 4,
                   ridesLast90d = Just 5,
                   hasTakenValidRide = Just True,
-                  isValidRide = Just False
+                  isValidRide = Just False,
+                  rideVehicleVariant = Just "AUTO_RICKSHAW",
+                  rideServiceTier = Just "AUTO_RICKSHAW"
                 }
             expected =
               A.object
@@ -76,11 +78,13 @@ tests =
                   "ridesLast30d" A..= (4 :: Int),
                   "ridesLast90d" A..= (5 :: Int),
                   "hasTakenValidRide" A..= True,
-                  "isValidRide" A..= Just False
+                  "isValidRide" A..= Just False,
+                  "rideVehicleVariant" A..= ("AUTO_RICKSHAW" :: Text),
+                  "rideServiceTier" A..= ("AUTO_RICKSHAW" :: Text)
                 ]
         rewardContextToLogicInput ctx @?= expected,
       -- rewardContextToLogicInput: absent fields default so a logic still runs
-      testCase "rewardContextToLogicInput: empty context defaults counts to 0, isValidRide null" $ do
+      testCase "rewardContextToLogicInput: empty context defaults counts to 0, ride-scoped fields null" $ do
         let expected =
               A.object
                 [ "ridesLast1d" A..= (0 :: Int),
@@ -89,9 +93,25 @@ tests =
                   "ridesLast30d" A..= (0 :: Int),
                   "ridesLast90d" A..= (0 :: Int),
                   "hasTakenValidRide" A..= False,
-                  "isValidRide" A..= (Nothing :: Maybe Bool)
+                  "isValidRide" A..= (Nothing :: Maybe Bool),
+                  "rideVehicleVariant" A..= (Nothing :: Maybe Text),
+                  "rideServiceTier" A..= (Nothing :: Maybe Text)
                 ]
         rewardContextToLogicInput defaultRewardContext @?= expected,
+      -- variant-scoped cohorts: match on the vehicle variant of the triggering ride
+      testCase "evalCohortLogic: variant rule matches a listed vehicle variant" $ do
+        let ctx = rewardContextToLogicInput defaultRewardContext {rideVehicleVariant = Just "AUTO_RICKSHAW"}
+        Eval.evalCohortLogic (variantInRule ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"]) ctx @?= Right (A.Bool True, True),
+      testCase "evalCohortLogic: variant rule rejects an unlisted vehicle variant" $ do
+        let ctx = rewardContextToLogicInput defaultRewardContext {rideVehicleVariant = Just "SEDAN"}
+        snd <$> Eval.evalCohortLogic (variantInRule ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"]) ctx @?= Right False,
+      testCase "evalCohortLogic: variant rule is not eligible without ride context" $
+        snd <$> Eval.evalCohortLogic (variantInRule ["AUTO_RICKSHAW"]) (rewardContextToLogicInput defaultRewardContext) @?= Right False,
+      testCase "evalCohortLogic: variant + valid-ride + service tier combined" $ do
+        let logic = andRule [eqRule "isValidRide" True, variantInRule ["SEDAN"], eqTextRule "rideServiceTier" "COMFY"]
+            ctxWith tier = rewardContextToLogicInput defaultRewardContext {isValidRide = Just True, rideVehicleVariant = Just "SEDAN", rideServiceTier = Just tier}
+        snd <$> Eval.evalCohortLogic logic (ctxWith "COMFY") @?= Right True
+        snd <$> Eval.evalCohortLogic logic (ctxWith "ECO") @?= Right False,
       -- collectVarNames: extract every {"var": ...} the logic references
       testCase "collectVarNames: simple var reference" $
         Eval.collectVarNames (gteRule "ridesLast7d" 5) @?= ["ridesLast7d"],
@@ -107,6 +127,8 @@ tests =
         ("ridesLast7d" `elem` rewardContextKeys) @?= True
         ("hasTakenValidRide" `elem` rewardContextKeys) @?= True
         ("isValidRide" `elem` rewardContextKeys) @?= True
+        ("rideVehicleVariant" `elem` rewardContextKeys) @?= True
+        ("rideServiceTier" `elem` rewardContextKeys) @?= True
         ("ridesLast7days" `elem` rewardContextKeys) @?= False,
       testCase "unknown-var detection flags a typo'd field (mirrors handler check)" $ do
         let logic = gteRule "ridesLast7days" 5
@@ -194,6 +216,8 @@ tests =
         let parsed logic = LiveReward.parseHomeCard (cardWithAudience "T" logic)
         isRight' (parsed (eqRule "hasTakenValidRide" False)) @?= True
         isRight' (parsed (eqRule "isValidRide" True)) @?= False
+        isRight' (parsed (variantInRule ["AUTO_RICKSHAW"])) @?= False
+        isRight' (parsed (eqTextRule "rideServiceTier" "COMFY")) @?= False
         isRight' (parsed (gteRule "ridesLast7days" 3)) @?= False
         isRight' (LiveReward.parseHomeCard (A.object ["header" A..= ("no title" :: Text)])) @?= False,
       testCase "live reward: live only inside the campaign window" $ do
@@ -396,3 +420,9 @@ mkCampaignWith campaignIdText order created campaignStatus campaignEndsAt =
       createdAt = created,
       updatedAt = created
     }
+
+eqTextRule :: Text -> Text -> A.Value
+eqTextRule field v = A.object ["==" A..= [varRule field, A.String v]]
+
+variantInRule :: [Text] -> A.Value
+variantInRule variants = A.object ["in" A..= [varRule "rideVehicleVariant", A.toJSON variants]]

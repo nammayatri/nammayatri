@@ -71,6 +71,7 @@ import Lib.Scheduler (SchedulerType)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator (AllocatorJobType (..), GenerateInvoicePdfJobData (..))
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
@@ -170,7 +171,8 @@ cancelRideImpl ::
     ServiceFlow m r,
     HasField "quoteRespondCoolDown" r Int,
     HasField "driverUnlockDelay" r Seconds,
-    C.MonadCatch m
+    C.MonadCatch m,
+    Analytics.PublishesFleetAnalytics m
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->
@@ -393,7 +395,7 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
               Just paymentMethod -> case paymentMethod.paymentInstrument of
                 DMPM.Cash -> pure False
                 _ -> pure True
-      ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
+      ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True Nothing
       rideGstBreakdown <-
         computeGstBreakdownForRideOwner
           rideGst
@@ -426,13 +428,13 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
                  in if clubVatInclusive
                       then
                         catMaybes
-                          [ if inclusiveCancellation > 0
+                          [ if inclusiveCancellation >= 0
                               then Just InvoiceLineItem {description = "Cancellation Fee (Incl. VAT)", descriptionType = Just CancellationFeeInclVat, quantity = 1, unitPrice = inclusiveCancellation, lineTotal = inclusiveCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Just Fare}
                               else Nothing
                           ]
                       else
                         catMaybes
-                          [ if baseCancellation > 0
+                          [ if baseCancellation > 0 || inclusiveCancellation == 0
                               then Just InvoiceLineItem {description = "Customer Cancellation Fee", descriptionType = Just CustomerCancellationFee, quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Just Fare}
                               else Nothing,
                             if gstOnCancellation > 0
@@ -491,7 +493,7 @@ buildCancellationFinanceCtx booking ride transporterConfig = do
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   mbPanCard <- QPanCard.findByDriverId ride.driverId
   mbDriverInfo <- QDI.findById (cast ride.driverId)
-  buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
+  buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True Nothing
 
 cancellationLedgerRefs :: [Text]
 cancellationLedgerRefs =

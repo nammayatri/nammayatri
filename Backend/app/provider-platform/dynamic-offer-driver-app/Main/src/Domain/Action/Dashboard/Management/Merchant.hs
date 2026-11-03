@@ -1301,6 +1301,7 @@ castDDocumentType = \case
   DVC.LegalEntityTAXDetails -> Common.LegalEntityTAXDetails
   DVC.LegalEntityCompanyDetails -> Common.LegalEntityCompanyDetails
   DVC.TermsAndConditions -> Common.TermsAndConditions
+  DVC.LedgerAdjustmentProof -> Common.LedgerAdjustmentProof
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1421,6 +1422,7 @@ castDocumentType = \case
   Common.LegalEntityTAXDetails -> DVC.LegalEntityTAXDetails
   Common.LegalEntityCompanyDetails -> DVC.LegalEntityCompanyDetails
   Common.TermsAndConditions -> DVC.TermsAndConditions
+  Common.LedgerAdjustmentProof -> DVC.LedgerAdjustmentProof
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::
@@ -1588,7 +1590,8 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId opCity req = do
                                    snapToRoad = fromMaybe merchantServiceUsageConfig.snapToRoad req.snapToRoad,
                                    getPlaceName = fromMaybe merchantServiceUsageConfig.getPlaceName req.getPlaceName,
                                    getPlaceDetails = fromMaybe merchantServiceUsageConfig.getPlaceDetails req.getPlaceDetails,
-                                   autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete
+                                   autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete,
+                                   getEstimatedPickupDistancesFallback = fromMaybe merchantServiceUsageConfig.getEstimatedPickupDistancesFallback (Just <$> req.getEstimatedPickupDistancesFallback)
                                   }
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchantOpCityId
@@ -3024,7 +3027,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
       let pricingSlabIssues =
             [ (lookupKey (head fpGroup), reason)
-              | fpGroup <- groups,
+              | fpGroup@((_, _, _, _, _, _, _, True, _) : _) <- groups,
                 Just reason <- [validateGroupPricingSlabs fpGroup]
             ]
       unless (null pricingSlabIssues) $
@@ -3033,7 +3036,9 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             "Invalid pricing slabs, rides on such a fare policy could not be ended: "
               <> show pricingSlabIssues
       let boundedAlreadyDeletedMap = Map.empty :: Map.Map Text Bool
-      (farePolicyErrors, _) <- foldlM (processFarePolicyGroup merchantOpCity allCityFareProducts) ([], boundedAlreadyDeletedMap) groups
+      (farePolicyErrors, _) <-
+        foldlM (processFarePolicyGroup merchantOpCity allCityFareProducts) ([], boundedAlreadyDeletedMap) groups
+          `finally` CQFProduct.clearCacheById merchantOpCity.id
       return $
         Common.UpsertFarePolicyResp
           { unprocessedFarePolicies = farePolicyErrors,
@@ -3225,7 +3230,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                 fromMaybe [] (find (not . null) (map (\(_, _, _, _, _, _, _, _, fp) -> fp.conditionalCharges) (x : xs)))
               case finalFarePolicy.farePolicyDetails of
                 FarePolicy.AmbulanceDetails details ->
-                  Hedis.withLockRedis (ambulanceSlabsCreateLockKey merchantOpCity.id.getId) 60 $ do
+                  Hedis.withWaitAndLockRedis (ambulanceSlabsCreateLockKey merchantOpCity.id.getId) 60 50000 $ do
                     QueriesFPAD.delete finalFarePolicy.id
                     forM_ (NE.toList details.slabs) $ \slab ->
                       QueriesFPAD.create (finalFarePolicy.id, slab)
@@ -3275,21 +3280,14 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               -- cities / merchants) still references each one.  A per-city in-memory count
               -- would undercount policies shared across cities (e.g. cloned via
               -- postMerchantConfigOperatingCityCreate), silently orphaning them.
-              -- NOTE: Cache clearing is deferred until AFTER the new FareProduct is created
-              -- in the DB, to minimise the window where concurrent search requests could
-              -- query an empty DB state and cache empty results.
+              -- NOTE: the FareProduct cache is invalidated once for the whole upload, by the
+              -- caller after all groups ran (see postMerchantConfigFarePolicyUpsert).
               forM_ oldFareProducts $ \fp -> CQFProduct.delete fp.id
 
               id <- generateGUID
               let farePolicyId = finalFarePolicy.id
               let fareProduct = DFareProduct.FareProduct {enabled = enabled', merchantId = merchantOpCity.merchantId, merchantOperatingCityId = merchantOpCity.id, ..}
               CQFProduct.create fareProduct
-
-              -- Clear cache AFTER the new FareProduct exists in DB.  Any concurrent
-              -- request that re-populates the cache after this point will find the
-              -- new record instead of caching an empty result.
-              forM_ oldFareProducts CQFProduct.clearCache
-              CQFProduct.clearCache fareProduct
 
               scheduleDeleteUnreferencedFarePolicies merchantOpCity.merchantId merchantOpCity.id (map (.farePolicyId) oldFareProducts)
 
@@ -5387,6 +5385,7 @@ applyVehicleServiceTierUpdate existing req =
       DVST.cancellationRateConfig = req.cancellationRateConfig <|> existing.cancellationRateConfig,
       DVST.availabilityCheckConfig = req.availabilityCheckConfig <|> existing.availabilityCheckConfig,
       DVST.autoAcceptanceConfig = req.autoAcceptanceConfig <|> existing.autoAcceptanceConfig,
+      DVST.regionCondition = req.regionCondition <|> existing.regionCondition,
       DVST.vehicleAgeThreshold = req.vehicleAgeThreshold <|> existing.vehicleAgeThreshold,
       DVST.allowNullVehicleRating = req.allowNullVehicleRating <|> existing.allowNullVehicleRating
     }
@@ -5499,6 +5498,7 @@ buildVehicleServiceTierFromRequest merchantId merchantOpCityId serviceTierType r
         specialZoneQueueCalloutVariants = req.specialZoneQueueCalloutVariants,
         availabilityCheckConfig = req.availabilityCheckConfig,
         autoAcceptanceConfig = req.autoAcceptanceConfig,
+        regionCondition = req.regionCondition,
         createdAt = now,
         updatedAt = now
       }

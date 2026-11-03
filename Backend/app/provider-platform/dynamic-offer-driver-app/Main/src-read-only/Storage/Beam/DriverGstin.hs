@@ -49,6 +49,6 @@ instance B.Table DriverGstinT where
 
 type DriverGstin = DriverGstinT Identity
 
-$(enableKVPG ''DriverGstinT ['id] [['driverId]])
+$(enableKVPG ''DriverGstinT ['id] [['documentImageId1], ['driverId]])
 
 $(mkTableInstances ''DriverGstinT "driver_gstin")

@@ -1,0 +1,21 @@
+CREATE TABLE atlas_driver_offer_bpp.email_delivery ();
+
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN bounce_sub_type character varying(50) ;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN bounce_type character varying(50) ;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN delivered_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN failure_reason text ;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN last_event_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN owner_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN owner_type character varying(30) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN provider character varying(20) ;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN provider_message_id character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN sent_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN status character varying(20) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN to_address character varying(255) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN triggered_by character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.email_delivery ADD PRIMARY KEY ( id);

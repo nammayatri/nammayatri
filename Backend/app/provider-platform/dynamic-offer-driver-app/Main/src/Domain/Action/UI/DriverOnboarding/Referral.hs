@@ -22,6 +22,7 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Types.DailyStats as DDS
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverOperatorAssociation as DDOA
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.Merchant as DM
@@ -43,6 +44,7 @@ import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
+import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DailyStats as QDailyStats
@@ -147,6 +149,7 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
               Nothing -> do
                 driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId DomainRC.defaultAssociationEnd True
                 void $ QDOA.create driverOperatorAssData
+            SOnboardingComms.setOnboardingAsWithoutLock transporterConfig person DI.INDIVIDUAL
           Analytics.handleDriverAnalyticsAndFlowStatus
             transporterConfig
             personId
@@ -194,10 +197,34 @@ makeDriverReferredByOperator ::
   m ()
 makeDriverReferredByOperator merchantOpCityId driverId referredOperatorId = do
   di <- B.runInReplica (DriverInformation.findById driverId) >>= fromMaybeM DriverInfoNotFound
-  unless (isJust di.referralCode || isJust di.referredByDriverId || isJust di.referredByOperatorId) $ do
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    DriverInformation.updateReferredByOperatorId (Just referredOperatorId.getId) driverId
-    incrementOnboardedCount DriverReferral referredOperatorId transporterConfig
+  unless (isJust di.referralCode || isJust di.referredByDriverId || isJust di.referredByOperatorId) $
+    recordOperatorReferral merchantOpCityId driverId referredOperatorId
+
+-- | A driver moved to another operator is referred by that operator from now on, so the profile shows
+--   the operator they are with. A driver-to-driver referral is kept. The old operator's onboarded count stays.
+reassignDriverReferredByOperator ::
+  forall m r.
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person.Person ->
+  Id Person.Person ->
+  m ()
+reassignDriverReferredByOperator merchantOpCityId driverId newOperatorId = do
+  di <- DriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  unless (isJust di.referralCode || isJust di.referredByDriverId || di.referredByOperatorId == Just newOperatorId.getId) $
+    recordOperatorReferral merchantOpCityId driverId newOperatorId
+
+recordOperatorReferral ::
+  forall m r.
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person.Person ->
+  Id Person.Person ->
+  m ()
+recordOperatorReferral merchantOpCityId driverId operatorId = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  DriverInformation.updateReferredByOperatorId (Just operatorId.getId) driverId
+  incrementOnboardedCount DriverReferral operatorId transporterConfig
 
 incrementOnboardedCount :: forall m r. (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ReferralType -> Id Person.Person -> TransporterConfig -> m ()
 incrementOnboardedCount refType referredEntityId transporterConfig = do

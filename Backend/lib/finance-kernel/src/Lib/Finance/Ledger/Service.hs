@@ -53,16 +53,19 @@ module Lib.Finance.Ledger.Service
     findUnsettledByAccountAfterTime,
     findUnsettledByAccountBeforeTime,
     findBySettlementId,
+    findBySettlementIdWithOptions,
 
     -- * Payout eligibility (shared by driver wallet and rider cashback payouts)
     PayoutEligibility (..),
     getPayoutEligibilityData,
     getPayoutEligibilityDataWith,
+    getPayoutEligibilityAmountsWith,
     entryNetForAccount,
 
     -- * Settlement reservation (Option A — DB-level in-flight guard)
     markEntriesAsProcessing,
     markEntriesAsUnsettled,
+    releaseExternalPendingByReferenceIds,
 
     -- * Input types (re-export from Interface)
     module Lib.Finance.Ledger.Interface,
@@ -78,6 +81,7 @@ import Kernel.Prelude
 import Kernel.Types.Common ()
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import qualified Lib.Finance.AccountConfig as AccountConfig
 import Lib.Finance.Audit.Interface (AuditInput (..))
 import qualified Lib.Finance.Audit.Service as Audit
 import Lib.Finance.Core.Types (TimeRange (..))
@@ -242,6 +246,24 @@ createEntry input = do
 
 -- | Create a ledger entry AND update account balances atomically
 -- LAW 1: Credits = Debits (fromAccount debited, toAccount credited)
+-- | Negative-balance posting gate: a violation exists only when this posting would
+--   DECREASE the account's balance below zero and the account's class config forbids
+--   it. Restoring an already-negative balance toward zero is always allowed.
+balanceViolation ::
+  (BeamFlow.BeamFlow m r) =>
+  Account ->
+  HighPrecMoney ->
+  HighPrecMoney ->
+  m (Maybe FinanceError)
+balanceViolation account startBal endBal
+  | endBal >= 0 || endBal >= startBal = pure Nothing
+  | otherwise = do
+    cfg <- AccountConfig.getAccountConfigForAccount account
+    pure $
+      if cfg.allowNegativeBalance
+        then Nothing
+        else Just $ AccountError InsufficientBalance $ "account " <> show account.id <> " balance " <> show startBal <> " -> " <> show endBal
+
 createEntryWithBalanceUpdate ::
   (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   LedgerEntryInput ->
@@ -269,47 +291,75 @@ createEntryWithBalanceUpdate input = do
             if isAssetOrExpenseAccount toAccount
               then toStartBal - amount
               else toStartBal + amount
-      let entry =
-            LedgerEntry
-              { id = Id entryId,
-                fromAccountId = input.fromAccountId,
-                toAccountId = input.toAccountId,
-                concernedIndividualId = input.concernedIndividualId,
-                amount = amount,
-                currency = input.currency,
-                entryType = input.entryType,
-                status = input.status,
-                referenceType = input.referenceType,
-                referenceId = input.referenceId,
-                entityReferenceId = input.entityReferenceId,
-                entityReferenceType = input.entityReferenceType,
-                reversalOf = Nothing,
-                voidReason = Nothing,
-                settledAt = Nothing,
-                metadataV2 = input.metadata,
-                reconciliationStatus = Nothing,
-                fromStartingBalance = Just fromStartBal,
-                fromEndingBalance = Just fromEndBal,
-                toStartingBalance = Just toStartBal,
-                toEndingBalance = Just toEndBal,
-                settlementStatus = input.settlementStatus,
-                settlementId = Nothing,
-                settlementTimestamp = Nothing,
-                timestamp = now,
-                merchantId = input.merchantId,
-                merchantOperatingCityId = input.merchantOperatingCityId,
-                createdBy = Just actorInfo.actorType,
-                createdById = actorInfo.actorId,
-                updatedBy = Just actorInfo.actorType,
-                updatedById = actorInfo.actorId,
-                createdAt = now,
-                updatedAt = now
-              }
-      QLedger.create entry
-      _ <- QAccount.updateBalance fromEndBal input.fromAccountId
-      _ <- QAccount.updateBalance toEndBal input.toAccountId
-      auditLedgerCreate actorInfo entry
-      pure $ Right entry
+      -- Negative-balance posting gate (finance_account_config.allowNegativeBalance).
+      -- Reversals and adjustments are exempt: compensation of a failed transfer and
+      -- admin corrections must never be blocked, or money gets stuck in limbo.
+      mbViolation <-
+        if input.entryType `elem` [Reversal, Adjustment]
+          then pure Nothing
+          else
+            balanceViolation fromAccount fromStartBal fromEndBal >>= \case
+              Just err -> pure (Just err)
+              Nothing -> balanceViolation toAccount toStartBal toEndBal
+      case mbViolation of
+        Just err -> pure (Left err)
+        Nothing -> createEntryWithBalances actorInfo input entryId now fromStartBal fromEndBal toStartBal toEndBal
+
+-- | The write half of 'createEntryWithBalanceUpdate', after accounts are resolved and
+--   the negative-balance gate has passed.
+createEntryWithBalances ::
+  (BeamFlow.BeamFlow m r) =>
+  ActorInfo ->
+  LedgerEntryInput ->
+  Text ->
+  UTCTime ->
+  HighPrecMoney ->
+  HighPrecMoney ->
+  HighPrecMoney ->
+  HighPrecMoney ->
+  m (Either FinanceError LedgerEntry)
+createEntryWithBalances actorInfo input entryId now fromStartBal fromEndBal toStartBal toEndBal = do
+  let entry =
+        LedgerEntry
+          { id = Id entryId,
+            fromAccountId = input.fromAccountId,
+            toAccountId = input.toAccountId,
+            concernedIndividualId = input.concernedIndividualId,
+            amount = input.amount,
+            currency = input.currency,
+            entryType = input.entryType,
+            status = input.status,
+            referenceType = input.referenceType,
+            referenceId = input.referenceId,
+            entityReferenceId = input.entityReferenceId,
+            entityReferenceType = input.entityReferenceType,
+            reversalOf = Nothing,
+            voidReason = Nothing,
+            settledAt = Nothing,
+            metadataV2 = input.metadata,
+            reconciliationStatus = Nothing,
+            fromStartingBalance = Just fromStartBal,
+            fromEndingBalance = Just fromEndBal,
+            toStartingBalance = Just toStartBal,
+            toEndingBalance = Just toEndBal,
+            settlementStatus = input.settlementStatus,
+            settlementId = Nothing,
+            settlementTimestamp = Nothing,
+            timestamp = now,
+            merchantId = input.merchantId,
+            merchantOperatingCityId = input.merchantOperatingCityId,
+            createdBy = Just actorInfo.actorType,
+            createdById = actorInfo.actorId,
+            updatedBy = Just actorInfo.actorType,
+            updatedById = actorInfo.actorId,
+            createdAt = now,
+            updatedAt = now
+          }
+  QLedger.create entry
+  _ <- QAccount.updateBalance fromEndBal input.fromAccountId
+  _ <- QAccount.updateBalance toEndBal input.toAccountId
+  auditLedgerCreate actorInfo entry
+  pure $ Right entry
 
 -- | Create a reversal entry for an existing entry
 -- LAW 2: History is immutable - we create a new entry, not modify the old one
@@ -733,17 +783,23 @@ findCreditsByAccountAfterTime accountId from to =
     [ Se.And
         [ Se.Is BeamLE.toAccountId $ Se.Eq (getId accountId),
           Se.Is BeamLE.status $ Se.Eq SETTLED,
-          Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from,
-          Se.Is BeamLE.timestamp $ Se.LessThanOrEq to,
           Se.Or
-            [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
-              Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+            [ Se.And
+                [ Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from,
+                  Se.Is BeamLE.timestamp $ Se.LessThanOrEq to,
+                  Se.Or
+                    [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
+                      Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+                    ]
+                ],
+              Se.Is BeamLE.settlementStatus $ Se.Eq (Just EXTERNAL_PENDING)
             ]
         ]
     ]
 
--- | Find unsettled entries (both credits and debits) for an account after a given time.
---   Used for computing non-redeemable balance (recent net movement that can't be paid out yet).
+-- | Find held-back entries (both credits and debits) for an account: unsettled entries after
+--   the cut-off, plus EXTERNAL_PENDING entries of any age (awaiting external settlement).
+--   Used for computing non-redeemable balance (net movement that can't be paid out yet).
 findUnsettledByAccountAfterTime ::
   (BeamFlow.BeamFlow m r) =>
   Id Account ->
@@ -758,11 +814,16 @@ findUnsettledByAccountAfterTime accountId from to =
               Se.Is BeamLE.fromAccountId $ Se.Eq (getId accountId)
             ],
           Se.Is BeamLE.status $ Se.Eq SETTLED,
-          Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from,
-          Se.Is BeamLE.timestamp $ Se.LessThanOrEq to,
           Se.Or
-            [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
-              Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+            [ Se.And
+                [ Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from,
+                  Se.Is BeamLE.timestamp $ Se.LessThanOrEq to,
+                  Se.Or
+                    [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
+                      Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+                    ]
+                ],
+              Se.Is BeamLE.settlementStatus $ Se.Eq (Just EXTERNAL_PENDING)
             ]
         ]
     ]
@@ -799,6 +860,27 @@ findBySettlementId ::
 findBySettlementId settlementId =
   findAllWithKV [Se.Is BeamLE.settlementId $ Se.Eq (Just settlementId)]
 
+-- | One page of a settlement's entries for a reference type, newest first. Filter,
+--   sort and paging all at the DB — the per-settlement set is usually small, but
+--   history reads must never rely on that.
+findBySettlementIdWithOptions ::
+  (BeamFlow.BeamFlow m r) =>
+  Text -> -- reference type
+  Text -> -- settlement id
+  Maybe Int -> -- limit
+  Maybe Int -> -- offset
+  m [LedgerEntry]
+findBySettlementIdWithOptions referenceType settlementId limit offset =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamLE.settlementId $ Se.Eq (Just settlementId),
+          Se.Is BeamLE.referenceType $ Se.Eq referenceType
+        ]
+    ]
+    (Se.Desc BeamLE.timestamp)
+    limit
+    offset
+
 --------------------------------------------------------------------------------
 -- PAYOUT ELIGIBILITY
 --------------------------------------------------------------------------------
@@ -825,6 +907,10 @@ the cut-off must stay in the wallet to fund the next cycle, so we hold it back:
     nonRedeemable = max 0 (min walletBalance (creditsAboveCutOff - debitsAboveCutOff))
                   = max 0 (min walletBalance netAbove)
     payout        = max 0 (walletBalance - nonRedeemable)
+
+Entries stamped EXTERNAL_PENDING (e.g. ride earnings whose fare the BAP collected
+but has not yet settled to us) count as "above the cut-off" whatever their age,
+and are never redeemable, until they move to UNSETTLED.
 
 Each clamp matters: `max 0` so that post-cut-off deductions exceeding
 post-cut-off earnings never *add* to the payout (Scenario 2); `min walletBalance`
@@ -986,9 +1072,35 @@ getPayoutEligibilityDataWith ::
   UTCTime -> -- payout cutoff time
   UTCTime -> -- current time (upper bound)
   m PayoutEligibility
-getPayoutEligibilityDataWith alwaysRedeemableRefs accountId walletBalance cutoff now = do
+getPayoutEligibilityDataWith = payoutEligibility True
+
+-- | The amounts of 'getPayoutEligibilityDataWith' without the covered-entry list:
+--   'redeemableEntries' is always empty. The entries before the cut-off are the only
+--   unbounded read (a wallet that never pays out keeps them all), and they feed nothing
+--   but that list: 'nonRedeemableBalance' and 'redeemableBalance' come from the entries
+--   after the cut-off alone. Use this where only the numbers are needed.
+getPayoutEligibilityAmountsWith ::
+  (BeamFlow.BeamFlow m r) =>
+  [Text] ->
+  Id Account ->
+  HighPrecMoney ->
+  UTCTime ->
+  UTCTime ->
+  m PayoutEligibility
+getPayoutEligibilityAmountsWith = payoutEligibility False
+
+payoutEligibility ::
+  (BeamFlow.BeamFlow m r) =>
+  Bool -> -- also load the entries a payout would cover
+  [Text] ->
+  Id Account ->
+  HighPrecMoney ->
+  UTCTime ->
+  UTCTime ->
+  m PayoutEligibility
+payoutEligibility withEntries alwaysRedeemableRefs accountId walletBalance cutoff now = do
   unsettledAbove <- findUnsettledByAccountAfterTime accountId cutoff now
-  redeemableBelow <- findUnsettledByAccountBeforeTime accountId cutoff
+  redeemableBelow <- if withEntries then findUnsettledByAccountBeforeTime accountId cutoff else pure []
   let (redeemableAbove, heldAbove) = partition (\e -> e.referenceType `elem` alwaysRedeemableRefs) unsettledAbove
       netAbove = sum (map (entryNetForAccount accountId) heldAbove)
       nonRedeemableBalance = max 0 (min walletBalance netAbove)
@@ -997,7 +1109,7 @@ getPayoutEligibilityDataWith alwaysRedeemableRefs accountId walletBalance cutoff
       { walletBalance,
         nonRedeemableBalance,
         redeemableBalance = max 0 (walletBalance - nonRedeemableBalance),
-        redeemableEntries = redeemableBelow <> redeemableAbove
+        redeemableEntries = if withEntries then redeemableBelow <> redeemableAbove else []
       }
 
 --------------------------------------------------------------------------------
@@ -1109,3 +1221,35 @@ markEntriesAsUnsettled entryIds = do
         ]
     ]
   auditBatchSettlementUpdates actorInfo StatusChanged beforeEntries
+
+-- | Release entries held as EXTERNAL_PENDING once the counterparty has confirmed settlement
+--   (e.g. the RSF collector ACKed an order reported 01 Paid). First settles the PENDING legs held
+--   the same way (the BuyerAsset receivable: the counterparty has now paid), then flips the
+--   SETTLED entries of the given references to UNSETTLED, so they leave the non-redeemable
+--   hold-back and become redeemable by their timestamp, see Note [Redeemable payout calculation].
+releaseExternalPendingByReferenceIds ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  Text -> -- merchant id: only this merchant's entries are released
+  [Text] -> -- reference ids (booking ids)
+  m ()
+releaseExternalPendingByReferenceIds _ [] = pure ()
+releaseExternalPendingByReferenceIds merchantId referenceIds = do
+  actorInfo <- asks (.actorInfo)
+  heldEntries <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamLE.merchantId $ Se.Eq merchantId,
+            Se.Is BeamLE.referenceId $ Se.In referenceIds,
+            Se.Is BeamLE.status $ Se.In [PENDING, SETTLED],
+            Se.Is BeamLE.settlementStatus $ Se.Eq (Just EXTERNAL_PENDING)
+          ]
+      ]
+  unless (null heldEntries) $ do
+    forM_ (filter ((== PENDING) . (.status)) heldEntries) $ \leg -> settleEntry leg.id
+    now <- getCurrentTime
+    updateWithKV
+      [ Se.Set BeamLE.settlementStatus (Just UNSETTLED),
+        Se.Set BeamLE.updatedAt now
+      ]
+      [Se.Is BeamLE.id $ Se.In (map (.id.getId) heldEntries)]
+    auditBatchSettlementUpdates actorInfo StatusChanged heldEntries

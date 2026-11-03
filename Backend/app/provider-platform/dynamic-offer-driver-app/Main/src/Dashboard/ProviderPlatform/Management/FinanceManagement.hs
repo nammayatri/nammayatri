@@ -15,3 +15,7 @@ instance HideSecrets TdsReimbursementRequestSubmitReq where
 
 instance HideSecrets TdsReimbursementRejectReq where
   hideSecrets = Kernel.Prelude.identity
+
+instance HideSecrets SubmitLedgerAdjustmentReq where
+  type ReqWithoutSecrets SubmitLedgerAdjustmentReq = SubmitLedgerAdjustmentTReq
+  hideSecrets SubmitLedgerAdjustmentReq {..} = SubmitLedgerAdjustmentTReq {..}

@@ -1,0 +1,21 @@
+CREATE TABLE atlas_driver_offer_bpp.person_social_identity ();
+
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD COLUMN apple_refresh_token text ;
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD COLUMN client_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD COLUMN email text ;
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD COLUMN is_private_email boolean NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD COLUMN issuer text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD COLUMN last_login_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD COLUMN person_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD COLUMN provider text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD COLUMN provider_subject text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD COLUMN valid_till timestamp with time zone NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD PRIMARY KEY ( id);
+CREATE INDEX CONCURRENTLY person_social_identity_idx_person_id ON atlas_driver_offer_bpp.person_social_identity USING btree (person_id);
+CREATE INDEX CONCURRENTLY person_social_identity_idx_provider_subject ON atlas_driver_offer_bpp.person_social_identity USING btree (provider_subject);
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD CONSTRAINT person_social_identity_unique_idx_merchant_id_provider_provider_subject UNIQUE (merchant_id, provider, provider_subject);
+ALTER TABLE atlas_driver_offer_bpp.person_social_identity ADD CONSTRAINT person_social_identity_unique_idx_person_id_provider UNIQUE (person_id, provider);

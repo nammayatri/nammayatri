@@ -25,6 +25,7 @@ module Domain.Action.UI.Payout
     payoutSettlementActionWith,
     settleDriverWalletPayoutLedger,
     settleDriverWalletPayoutLedgerFor,
+    settleWalletPayoutAcceptedAsPaid,
     refreshPayoutOrderWithSettlement,
     stripePayoutWebhookHandler,
     stripeTestPayoutWebhookHandler,
@@ -73,10 +74,16 @@ import Kernel.Types.Servant (RawByteString (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
-import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
-import Lib.Finance.Ledger.PayoutSettlement (PayoutOutcome (..), postOnceByReference)
+import Lib.Finance.Domain.Types.Account (CounterpartyType)
+import qualified Lib.Finance.Domain.Types.Transfer as DTransfer
+import Lib.Finance.FinanceM (FinanceCtx)
+import Lib.Finance.Ledger.PayoutSettlement (findActivePayoutHold, postOnceByReference)
 import Lib.Finance.Ledger.Service (markEntriesAsClaimed)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
+import qualified Lib.Finance.Storage.Queries.Transfer as QTransfer
+import qualified Lib.Finance.Transfer.Backfill as Backfill
+import qualified Lib.Finance.Transfer.Outcome as TransferOutcome
+import qualified Lib.Finance.Transfer.Rail as Rail
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
@@ -90,6 +97,8 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding (isFleetRole)
+import SharedLogic.Finance.PostActions (runFinance)
+import qualified SharedLogic.Finance.Rails as Rails
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.IncentiveJourney as SLIJ
 import SharedLogic.Merchant
@@ -399,9 +408,70 @@ runPayoutSettlementWith hooks merchantId merchantOperatingCityId payoutStatus am
   case payoutOrder.entityName of
     Just DPayment.SPECIAL_ZONE_PAYOUT ->
       settleSpecialZonePayout merchantOperatingCityId payoutOrder callPayoutServiceAction
-    _ ->
-      unless (isPayoutOrderSuccess payoutOrder.status) $
+    _
+      | isPayoutOrderSuccess payoutOrder.status ->
+        -- This arm handles a case main silently 200-ed (contradiction after success);
+        -- it must never turn a previously-acknowledged webhook into a 5xx the provider
+        -- then retries forever — failures are logged for ops instead.
+        reportContradictionAfterSuccess merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction
+          `catchAny` \e -> logError $ "reportContradictionAfterSuccess failed for order " <> payoutOrder.orderId <> ": " <> show e
+      | otherwise ->
         settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction
+
+-- | The provider contradicts a wallet payout that already settled as paid (a failure or a
+--   reversal arriving after SUCCESS). Everything the legacy entities recorded stays as it
+--   is; only the kernel transfer is told, so a failure parks it in NEEDS_REVIEW and a reversal
+--   returns the money to the wallet. Acts on a transfer that is SUCCEEDED or already parked
+--   (a reversal can follow a failure); the kernel makes a repeated failure or reversal a no-op.
+reportContradictionAfterSuccess ::
+  (PayoutSettlementFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  IPayout.PayoutOrderStatus ->
+  HighPrecMoney ->
+  DPayoutOrder.PayoutOrder ->
+  CallPayoutServiceAction m ->
+  m ()
+reportContradictionAfterSuccess merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction =
+  when (payoutOrder.entityName == Just DPayment.DRIVER_WALLET_TRANSACTION && contradictsPaid payoutStatus) $
+    whenJust (listToMaybe (fromMaybe [] payoutOrder.entityIds)) $ \payoutRequestId -> do
+      let driverId = Id payoutOrder.customerId
+      QTransfer.findByReference walletReferencePayout payoutRequestId >>= \case
+        Just transfer
+          | transfer.status `elem` [DTransfer.SUCCEEDED, DTransfer.NEEDS_REVIEW] ->
+            Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey driverId.getId) 10 10 50000 $ do
+              payoutConfig <- getPayoutConfigForCustomer merchantOperatingCityId payoutOrder.customerId
+              -- the provider's current word, same as the normal settlement re-polls
+              (updPayoutStatus, _) <- callPayoutServiceAction payoutOrder.orderId driverId payoutConfig
+              when (contradictsPaid updPayoutStatus) $ do
+                logError $ "Provider contradicted a settled wallet payout " <> payoutRequestId <> ": " <> show updPayoutStatus
+                person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+                transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+                mbPayoutReq <- QPR.findById (Id payoutRequestId)
+                whenJust mbPayoutReq $ \payoutReq ->
+                  settleDriverWalletPayoutLedger merchantOperatingCityId payoutOrder person transporterConfig payoutReq amount updPayoutStatus
+        _ -> pure ()
+  where
+    contradictsPaid st = case Rails.classifyPayoutOrderStatus (show st) of
+      Rail.OutcomeFailed _ -> True
+      Rail.OutcomeReversed _ -> True
+      _ -> False
+
+-- | Ops accepted a wallet payout the partner had already reported as paid and a later contradiction parked.
+--   The order already says SUCCESS, so the normal settlement would treat this as a contradiction and do
+--   nothing; the ledger is told the payout succeeded directly, under the wallet lock.
+settleWalletPayoutAcceptedAsPaid ::
+  (PayoutSettlementFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  DPayoutOrder.PayoutOrder ->
+  m ()
+settleWalletPayoutAcceptedAsPaid merchantOperatingCityId payoutOrder = do
+  let driverId = Id payoutOrder.customerId
+  whenJust (listToMaybe (fromMaybe [] payoutOrder.entityIds)) $ \payoutRequestId ->
+    Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey driverId.getId) 10 10 50000 $ do
+      payoutReq <- QPR.findById (Id payoutRequestId) >>= fromMaybeM (InternalError ("PayoutRequest not found: " <> payoutRequestId))
+      person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+      settleDriverWalletPayoutLedger merchantOperatingCityId payoutOrder person transporterConfig payoutReq payoutOrder.amount.amount Payout.SUCCESS
 
 settleSpecialZonePayout ::
   (PayoutSettlementFlow m r) =>
@@ -461,7 +531,7 @@ settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amoun
     Just DPayment.DRIVER_DAILY_STATS -> do
       forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
         dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
-        Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
+        Redis.withWaitAndLockRedisWithTimeout (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 50000 $ do
           let dPayoutStatus = castPayoutOrderStatus payoutStatus
           when (dailyStats.payoutStatus /= DS.Success) $ do
             QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
@@ -494,7 +564,7 @@ settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amoun
     Just DPayment.DAILY_STATS_VIA_DASHBOARD -> do
       forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
         dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
-        Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
+        Redis.withWaitAndLockRedisWithTimeout (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 50000 $ do
           let dPayoutStatus = castPayoutOrderStatus payoutStatus
           when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
         fork "Update Payout Status For DailyStats Via Dashboard" $ do
@@ -504,7 +574,7 @@ settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amoun
       driverIdsWithServiceName <- do
         forM (fromMaybe [] payoutOrder.entityIds) $ \driverFeeId -> do
           driverFee <- QDF.findById (Id driverFeeId) >>= fromMaybeM (InternalError "DriverFee Not Found")
-          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey driverFee.driverId.getId) 3 3 $ do
+          Redis.withWaitAndLockRedisWithTimeout (payoutProcessingLockKey driverFee.driverId.getId) 3 3 50000 $ do
             let refundData =
                   DDF.RefundInfo
                     { status = Just dPayoutStatus,
@@ -529,7 +599,7 @@ settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amoun
         Nothing -> pure Nothing
         Just prId -> QPR.findById (Id prId)
 
-      Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
+      Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey driverId.getId) 10 10 50000 $ do
         (updPayoutStatus, _) <- callPayoutServiceAction payoutOrder.orderId driverId payoutConfig
         person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
@@ -557,9 +627,29 @@ settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amoun
     updateStatsWithLock payoutConfig dStatsId = do
       let dPayoutStatus = castPayoutOrderStatus payoutStatus
       dailyStats <- QDailyStats.findByPrimaryKey dStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
-      Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
+      Redis.withWaitAndLockRedisWithTimeout (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 50000 $ do
         when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dStatsId
       callPayoutServiceAction payoutOrder.orderId dailyStats.driverId payoutConfig
+
+-- | The Stripe payout charge (opt-in via payoutFee.feeBearer), shared by the kernel and
+--   legacy settlement paths. Q = fixed + rate% of the payout amount; posts
+--   SellerExpense -> SellerLiability, plus OwnerLiability -> SellerRevenue when the
+--   driver bears it.
+postWalletPayoutFeeLegs ::
+  (PayoutSettlementFlow m r) =>
+  FinanceCtx ->
+  DTC.TransporterConfig ->
+  HighPrecMoney ->
+  m ()
+postWalletPayoutFeeLegs walletCtx transporterConfig amount =
+  case transporterConfig.driverWalletConfig.payoutFee >>= \cfg -> (cfg,) <$> cfg.feeBearer of
+    Nothing -> pure ()
+    Just (payoutFeeCfg, payoutBearer) -> do
+      let payoutChargeAmount = computeStripePayoutFee payoutFeeCfg amount
+      chargeEntryIds <-
+        postOnceByReference walletReferencePGPayoutCharges walletCtx (recordStripeChargeLedger walletCtx (payoutBearerToFunder payoutBearer) payoutChargeAmount walletReferencePGPayoutCharges)
+          >>= fromEitherM (\e -> InternalError ("Failed to post PG payout charge: " <> show e))
+      markEntriesAsClaimed chargeEntryIds
 
 -- | Ledger step of a finished driver wallet payout: on success the hold is paid out, on failure it
 --   goes back to the wallet. Shared with the HDFC CBX bulk path; callers hold the running-balance lock.
@@ -577,6 +667,9 @@ settleDriverWalletPayoutLedger merchantOperatingCityId payoutOrder =
   settleDriverWalletPayoutLedgerFor merchantOperatingCityId payoutOrder.merchantId
 
 -- | 'settleDriverWalletPayoutLedger' for a payout known by its merchant rather than its order.
+--   One path: every payout settles through the kernel transfer verbs. A payout initiated
+--   before the kernel owned the flow has no Transfer row, so one is backfilled from the
+--   PayoutRequest (live hold + reserved entry ids) and settles down the same path.
 settleDriverWalletPayoutLedgerFor ::
   (PayoutSettlementFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
@@ -591,42 +684,56 @@ settleDriverWalletPayoutLedgerFor merchantOperatingCityId merchantId person tran
   let driverId = person.id
       counterparty = counterpartyFromRole person.role
   let walletCtx = buildDriverChargeCtx counterparty driverId.getId merchantId merchantOperatingCityId.getId transporterConfig.currency payoutReq.id.getId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
-      holdMetadata =
-        LedgerEntryMetadata
-          { driverPayable = Just (-1 * amount),
-            payoutOrderId = Nothing,
-            reason = Nothing,
-            subscriptionAllocations = Nothing,
-            d2cReferralEarnings = Nothing,
-            d2dReferralEarnings = Nothing,
-            dailyStatsId = Nothing
-          }
-  when (isPayoutOrderSuccess updPayoutStatus) $ do
-    payoutEntryIds <-
-      settleWalletPayoutLedger walletCtx amount (Just holdMetadata) PayoutSucceeded
-        >>= fromEitherM (\err -> InternalError ("Failed to settle wallet payout: " <> show err))
-    -- Stripe payout charge (opt-in via payoutFee.feeBearer). Q = fixed + rate% of the payout
-    -- amount; posts SellerExpense → SellerLiability, plus OwnerLiability → SellerRevenue when
-    -- the driver bears it. Uses a driver-counterparty ctx so the funding leg hits the driver wallet.
-    chargeEntryIds <- case transporterConfig.driverWalletConfig.payoutFee >>= \cfg -> (cfg,) <$> cfg.feeBearer of
-      Nothing -> pure []
-      Just (payoutFeeCfg, payoutBearer) -> do
-        let payoutChargeAmount = computeStripePayoutFee payoutFeeCfg amount
-        postOnceByReference walletReferencePGPayoutCharges walletCtx (recordStripeChargeLedger walletCtx (payoutBearerToFunder payoutBearer) payoutChargeAmount walletReferencePGPayoutCharges)
-          >>= fromEitherM (\e -> InternalError ("Failed to post PG payout charge: " <> show e))
-    markEntriesAsClaimed (payoutEntryIds <> chargeEntryIds)
-    entryIds <- map Id <$> PayoutRequest.getPayoutLedgerEntryIds payoutReq
-    settleWalletEntries entryIds payoutReq.id.getId
+  transfer <-
+    QTransfer.findByReference walletReferencePayout payoutReq.id.getId >>= \case
+      Just t -> pure t
+      Nothing -> backfillPreMigrationPayoutTransfer counterparty driverId.getId merchantOperatingCityId transporterConfig payoutReq amount
+  let rail = Rails.settlementRailByKey (fromMaybe DTransfer.JUSPAY_PAYOUT transfer.railKey)
+  void $
+    TransferOutcome.applyRailStatus runFinance rail walletPayoutLedgerRefs walletCtx transfer.id (show updPayoutStatus)
+      >>= fromEitherM (\err -> InternalError ("Failed to apply payout outcome for transfer " <> transfer.id.getId <> ": " <> show err))
+  when (isPayoutOrderSuccess updPayoutStatus) $
+    postWalletPayoutFeeLegs walletCtx transporterConfig amount
+  when (isPayoutOrderSuccess updPayoutStatus || isPayoutOrderFailed updPayoutStatus) $
     PayoutRequest.clearPayoutLedgerEntryIds payoutReq.id.getId
-  when (isPayoutOrderFailed updPayoutStatus) $ do
-    void $
-      settleWalletPayoutLedger walletCtx amount (Just holdMetadata) (PayoutFailed ("Payout failed: " <> show updPayoutStatus))
-        >>= fromEitherM (\err -> InternalError ("Failed to reverse wallet payout: " <> show err))
-    -- TODO: remove post release, kept only for backward compatibility with payouts initiated before OwnerPayoutLiability:
-    -- those reserved wallet entries as PROCESSING, so a failed one must flip them back to UNSETTLED.
-    entryIds <- map Id <$> PayoutRequest.getPayoutLedgerEntryIds payoutReq
-    releaseWalletEntriesReservation entryIds
-    PayoutRequest.clearPayoutLedgerEntryIds payoutReq.id.getId
+
+-- | Mint a Transfer row for a payout that predates the kernel owning the flow. The row
+--   carries the live hold (so the kernel settle claims it, not re-posts it) and the
+--   reserved earning entries from the PayoutRequest row, falling back to the Redis
+--   stash — the stash's only remaining reader.
+backfillPreMigrationPayoutTransfer ::
+  (PayoutSettlementFlow m r) =>
+  CounterpartyType ->
+  Text -> -- ownerId
+  Id DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  DPR.PayoutRequest ->
+  HighPrecMoney ->
+  m DTransfer.Transfer
+backfillPreMigrationPayoutTransfer counterparty ownerId merchantOperatingCityId transporterConfig payoutReq amount = do
+  account <-
+    getWalletAccountByOwner counterparty ownerId
+      >>= fromMaybeM (InternalError ("No wallet account for pre-migration payout " <> payoutReq.id.getId))
+  mbHold <- findActivePayoutHold walletReferencePayout payoutReq.id.getId
+  coveredIds <- case payoutReq.ledgerEntryIds of
+    Just ids | not (null ids) -> pure ids
+    _ -> PayoutRequest.getPayoutLedgerEntryIds payoutReq
+  Backfill.backfillTransfer
+    Backfill.BackfillSpec
+      { direction = DTransfer.OUTBOUND,
+        railKey = DTransfer.JUSPAY_PAYOUT, -- classification is rail-agnostic at settle time
+        railOrderId = payoutReq.payoutTransactionId,
+        accountId = account.id,
+        amount = amount,
+        feeAmount = 0,
+        currency = transporterConfig.currency,
+        referenceType = walletReferencePayout,
+        referenceId = payoutReq.id.getId,
+        knownEntryIds = maybe [] (\h -> [h.id]) mbHold,
+        coveredEntryIds = map Id coveredIds,
+        merchantId = account.merchantId,
+        merchantOperatingCityId = merchantOperatingCityId.getId
+      }
 
 -- | Adds a payout to driver_stats once per order, since a settle can run more than once for it. The
 --   key is in the master cloud's Redis so a webhook and a status check in different clouds agree.
@@ -665,8 +772,20 @@ refreshPayoutOrderWithSettlement payoutOrder =
             merchantId = Id payoutOrder.merchantId
         payoutConfig <- getPayoutConfigForCustomer merchantOpCityId payoutOrder.customerId
         let callAction = callPayoutServiceActionForRefresh merchantId merchantOpCityId payoutOrder.entityName
-        (updPayoutStatus, _) <- callAction payoutOrder.orderId (Id payoutOrder.customerId) payoutConfig
-        runPayoutSettlement merchantId merchantOpCityId updPayoutStatus payoutOrder.amount.amount payoutOrder callAction
+        -- The partner says it never received this order (only ever accepted for an order whose create call
+        -- threw): nothing was sent. The order is closed as failed and every status call that follows,
+        -- including the one inside the settlement, answers FAILURE so the usual failure settlement frees
+        -- the held money.
+        let callActionNeverReceived oid driverId' cfg =
+              withTryCatch "payoutOrderStatus" (callAction oid driverId' cfg) >>= \case
+                Right res -> pure res
+                Left err
+                  | PayoutRequest.isOrderNotFoundAtPartner err -> do
+                    closed <- PayoutRequest.markPayoutOrderNeverReceived payoutOrder
+                    if closed then pure (Payout.FAILURE, oid) else throwM err
+                  | otherwise -> throwM err
+        (updPayoutStatus, _) <- callActionNeverReceived payoutOrder.orderId (Id payoutOrder.customerId) payoutConfig
+        runPayoutSettlement merchantId merchantOpCityId updPayoutStatus payoutOrder.amount.amount payoutOrder callActionNeverReceived
         QPayoutOrder.findByOrderId payoutOrder.orderId >>= \case
           Nothing -> throwError $ PayoutOrderNotFound payoutOrder.orderId
           Just finalOrder -> pure finalOrder
@@ -728,7 +847,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
       case (payoutVpaValid, pendingAmount <= payoutConfig.thresholdPayoutAmountPerPerson) of
         (True, True) -> do
           uid <- generateGUID
-          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
+          Redis.withWaitAndLockRedisWithTimeout (payoutProcessingLockKey personId.getId) 3 3 50000 $ do
             mapM_ (QDailyStats.updatePayoutStatusById DS.Processing) statsIds
             mapM_ (QDailyStats.updatePayoutOrderId (Just uid)) statsIds
           phoneNo <- mapM decrypt person.mobileNumber
@@ -739,7 +858,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
           logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show pendingAmount <> " | orderId: " <> show uid
           void $ DPayment.createPayoutService (cast person.merchantId) (Just $ cast merchOpCity) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
         (_, False) -> do
-          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
+          Redis.withWaitAndLockRedisWithTimeout (payoutProcessingLockKey personId.getId) 3 3 50000 $ do
             mapM_ (QDailyStats.updatePayoutStatusById DS.ManualReview) statsIds -- don't pay if amount is greater than threshold amount
         _ -> pure ()
   where

@@ -10,6 +10,13 @@ module Domain.Action.Dashboard.AppManagement.TransitOperator
     transitOperatorGetServiceTypes,
     transitOperatorGetRoutes,
     transitOperatorGetDepots,
+    transitOperatorGetDepotsV2,
+    transitOperatorGetDepotVehicles,
+    transitOperatorGetFleetVehiclesV2,
+    transitOperatorGetDepotWaybills,
+    transitOperatorGetDepotOverview,
+    transitOperatorGetDepotRoutes,
+    transitOperatorGetDepotCrew,
     transitOperatorGetShiftTypes,
     transitOperatorGetScheduleNumbers,
     transitOperatorGetDayTypes,
@@ -52,6 +59,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv (FromNamedRecord (..), Header, decodeByName, (.:))
 import qualified Data.Map.Strict as Map
+import qualified Data.Time
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.TransitOperator as DTOp
 import qualified Domain.Types.DeviceVehicleMapping
@@ -64,6 +72,8 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.GtfsDataServer.Flow as GtfsFlow
+import qualified Lib.GtfsDataServer.Types
 import qualified "this" SharedLogic.External.Nandi.Types
 import qualified Storage.Queries.DeviceVehicleMapping as QDvm
 
@@ -324,3 +334,38 @@ transitOperatorDeleteVehicle merchantShortId opCity vehicleCategory vehicleId =
 transitOperatorQueryVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.Fleet])
 transitOperatorQueryVehicle merchantShortId opCity fleetNo tagNumber vehicleNo vehicleCategory =
   DTOp.transitOperatorQueryVehicleUtil merchantShortId opCity vehicleCategory vehicleNo tagNumber fleetNo
+
+transitOperatorGetDepotVehicles :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [Lib.GtfsDataServer.Types.DepotVehicleInfo])
+transitOperatorGetDepotVehicles merchantShortId opCity depotId vehicleCategory = do
+  (baseUrl, gtfsId) <- DTOp.resolveBaseUrlAndGtfsId merchantShortId opCity vehicleCategory
+  GtfsFlow.getDepotVehiclesV2 baseUrl gtfsId depotId Nothing
+
+transitOperatorGetFleetVehiclesV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [Lib.GtfsDataServer.Types.DepotVehicleInfo])
+transitOperatorGetFleetVehiclesV2 merchantShortId opCity vehicleCategory = do
+  (baseUrl, gtfsId) <- DTOp.resolveBaseUrlAndGtfsId merchantShortId opCity vehicleCategory
+  GtfsFlow.getFleetVehiclesV2 baseUrl gtfsId Nothing
+
+transitOperatorGetDepotWaybills :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Data.Time.Day -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow Lib.GtfsDataServer.Types.MonitoringAssignments)
+transitOperatorGetDepotWaybills merchantShortId opCity depotId page pageSize q serviceDate vehicleCategory = do
+  (baseUrl, gtfsId) <- DTOp.resolveBaseUrlAndGtfsId merchantShortId opCity vehicleCategory
+  GtfsFlow.getDepotWaybillsV2 baseUrl gtfsId depotId serviceDate page pageSize q
+
+transitOperatorGetDepotOverview :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Data.Time.Day -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow Lib.GtfsDataServer.Types.MonitoringOverview)
+transitOperatorGetDepotOverview merchantShortId opCity depotId serviceDate vehicleCategory = do
+  (baseUrl, gtfsId) <- DTOp.resolveBaseUrlAndGtfsId merchantShortId opCity vehicleCategory
+  GtfsFlow.getDepotOverviewV2 baseUrl gtfsId depotId serviceDate
+
+transitOperatorGetDepotRoutes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Data.Time.Day -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow Lib.GtfsDataServer.Types.MonitoringRoutes)
+transitOperatorGetDepotRoutes merchantShortId opCity depotId page pageSize q serviceDate vehicleCategory = do
+  (baseUrl, gtfsId) <- DTOp.resolveBaseUrlAndGtfsId merchantShortId opCity vehicleCategory
+  GtfsFlow.getDepotRoutesV2 baseUrl gtfsId depotId serviceDate page pageSize q
+
+transitOperatorGetDepotCrew :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Data.Time.Day -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow Lib.GtfsDataServer.Types.MonitoringCrewPage)
+transitOperatorGetDepotCrew merchantShortId opCity depotId page pageSize q serviceDate vehicleCategory = do
+  (baseUrl, gtfsId) <- DTOp.resolveBaseUrlAndGtfsId merchantShortId opCity vehicleCategory
+  GtfsFlow.getDepotCrewV2 baseUrl gtfsId depotId serviceDate page pageSize q
+
+transitOperatorGetDepotsV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [Lib.GtfsDataServer.Types.DepotInfo])
+transitOperatorGetDepotsV2 merchantShortId opCity vehicleCategory = do
+  (baseUrl, gtfsId) <- DTOp.resolveBaseUrlAndGtfsId merchantShortId opCity vehicleCategory
+  GtfsFlow.getDepotsV2 baseUrl gtfsId

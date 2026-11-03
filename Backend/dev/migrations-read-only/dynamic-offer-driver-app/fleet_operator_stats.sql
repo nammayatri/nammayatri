@@ -19,3 +19,6 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_operator_stats ADD COLUMN updated_at ti
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_stats ADD PRIMARY KEY ( fleet_operator_id);
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_stats ADD COLUMN distance_unit character varying(255) ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_stats ADD COLUMN currency character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_stats ADD COLUMN total_associated_driver integer ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_stats ADD COLUMN total_active_drivers integer ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_stats ADD COLUMN total_enabled_drivers integer ;

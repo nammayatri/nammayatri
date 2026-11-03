@@ -34,6 +34,7 @@ import qualified Tools.Beam.UtilsTH
 data Booking = Booking
   { backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    betterDriverAbortRadiusMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     billingCategory :: SharedLogic.Type.BillingCategory,
     bookingDepositAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     bookingDetails :: Domain.Types.Booking.BookingDetails,

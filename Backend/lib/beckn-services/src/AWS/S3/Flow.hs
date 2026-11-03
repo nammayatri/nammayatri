@@ -41,6 +41,7 @@ import AWS.S3.Utils
 import qualified Amazonka
 import qualified Amazonka.S3 as Amazonka
 import qualified Amazonka.S3.HeadObject as Amazonka
+import Control.Exception (throwIO, try)
 import Control.Lens.Getter ((^.))
 import qualified Crypto.Hash.MD5 as MD5
 import qualified Data.ByteString as BS
@@ -51,7 +52,7 @@ import Data.String.Conversions
 import qualified Data.Text as T
 import Data.Text.Encoding as T
 import qualified Data.Text.IO as T
-import EulerHS.Prelude hiding (decodeUtf8, get, put, show, (^.))
+import EulerHS.Prelude hiding (decodeUtf8, get, put, show, try, (^.))
 import qualified EulerHS.Types as ET
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
@@ -60,10 +61,12 @@ import Servant hiding (GET, PUT, throwError)
 import Servant.Client
 import System.Directory (removeFile)
 import qualified System.Directory as Dir
+import System.Exit (ExitCode (..))
 import System.FilePath.Posix as Path
+import System.IO.Error (userError)
 import qualified System.Posix.Files as Posix
 import qualified System.Posix.IO as Posix
-import System.Process
+import System.Process (callCommand, readProcessWithExitCode)
 
 type S3GetAPI = Get '[S3ImageData] Text
 
@@ -165,9 +168,8 @@ get'' ::
   String ->
   m Text
 get'' bucketName path = withLogTag "S3" $ do
-  let tmpPath = getTmpPath path
-  let cmd = "aws s3api get-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " " <> tmpPath
-  liftIO $ callCommand cmd
+  tmpPath <- uniqueGetTmpPath
+  runAwsS3GetObject bucketName path tmpPath
   result <- liftIO $ readFile tmpPath
   liftIO $ removeFile tmpPath
   return result
@@ -182,12 +184,36 @@ getRaw'' ::
   String ->
   m BS.ByteString
 getRaw'' bucketName path = withLogTag "S3" $ do
-  let tmpPath = getTmpPath path
-  let cmd = "aws s3api get-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " " <> tmpPath
-  liftIO $ callCommand cmd
+  tmpPath <- uniqueGetTmpPath
+  runAwsS3GetObject bucketName path tmpPath
   result <- liftIO $ BS.readFile tmpPath
   liftIO $ removeFile tmpPath
   return result
+
+-- | Shells out to aws CLI and surfaces stderr/stdout on failure (callCommand only
+-- reported exit 255 with no AWS error body).
+runAwsS3GetObject :: (MonadFlow m) => Text -> String -> String -> m ()
+runAwsS3GetObject bucketName path tmpPath = do
+  let args = ["s3api", "get-object", "--bucket", T.unpack bucketName, "--key", path, tmpPath]
+  (exitCode, cmdStdout, cmdStderr) <- liftIO $ readProcessWithExitCode "aws" args ""
+  case exitCode of
+    ExitSuccess -> pure ()
+    ExitFailure code -> do
+      void . liftIO $ try @SomeException $ removeFile tmpPath
+      let errMsg =
+            "aws s3api get-object failed (exit "
+              <> show code
+              <> ") bucket="
+              <> T.unpack bucketName
+              <> " key="
+              <> path
+              <> " stderr="
+              <> cmdStderr
+              <> " stdout="
+              <> cmdStdout
+      logError $ T.pack errMsg
+      -- throwIO so Control.Exception.try / app-level retry catchers see the full AWS stderr.
+      liftIO . throwIO $ userError errMsg
 
 put'' ::
   ( CoreMetrics m,
@@ -238,6 +264,13 @@ delete'' bucketName path = withLogTag "S3" $ do
 
 getTmpPath :: String -> String
 getTmpPath = (<>) "/tmp/" . T.unpack . DL.last . T.split (== '/') . T.pack
+
+-- | Unique temp path per download so a failed get's removeFile cannot delete
+-- another concurrent transfer that shares the same S3 key basename.
+uniqueGetTmpPath :: (MonadFlow m) => m String
+uniqueGetTmpPath = do
+  tmpId <- generateGUIDText
+  pure $ "/tmp/s3-get-" <> T.unpack tmpId
 
 mockPut ::
   (MonadIO m, Log m) =>

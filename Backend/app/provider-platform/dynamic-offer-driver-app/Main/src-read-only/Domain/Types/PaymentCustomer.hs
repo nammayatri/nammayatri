@@ -25,4 +25,4 @@ data PaymentCustomer = PaymentCustomer
     serviceName :: Domain.Types.Extra.Plan.ServiceNames,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show), (Eq), (ToJSON), (FromJSON))
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)

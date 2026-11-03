@@ -1293,6 +1293,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN peer_bap_mercha
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN show_route_per_request boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_email_count_window2 json ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_email_count_window1 json ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_email_count_threshold2 integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_email_count_threshold1 integer ;
 
 
 
@@ -1311,6 +1315,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN email_event_sns
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN shared_cab_reconciler_enabled boolean  default false;
 
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_fleet_to_link_individual_driver boolean ;
+
 
 
 ------- SQL updates -------
@@ -1321,3 +1329,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN shared_cab_reco
 ------- SQL updates -------
 
 : shared-cab 1/7 foundation (schema, enums, errors, kernel pin))
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_config json ;

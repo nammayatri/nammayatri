@@ -30,6 +30,7 @@ module SharedLogic.FareCalculator
     computeRideDiscount,
     computeTotalGstRate,
     countFullFareOfParamsDetails,
+    interCityReservedTime,
     calculateFareParameters,
     calculateCommission,
     calculateCancellationCommission,
@@ -816,9 +817,7 @@ calculateFareParametersHandler params = do
             Nothing -> 840
           allowanceMins' = maybe 0 (\rt -> (calculateAllowanceMins (fromMaybe 19800 params.timeDiffFromUtc) perDayMaxAllowanceInMins' params.rideTime rt) - estimatedDurationInMins) params.returnTime
           allowanceMins = if params.roundTrip then max defaultWaitTimeAtDestination.getMinutes allowanceMins' else 0
-          reservedTime = case params.returnTime of
-            Just rt -> max estimatedDuration (round $ diffUTCTime rt params.rideTime)
-            _ -> estimatedDuration
+          reservedTime = (interCityReservedTime params.rideTime params.returnTime (Seconds estimatedDuration)).getSeconds
           extraMins = max 0 (actualDuration - reservedTime) `div` 60
           extraTimeFare = HighPrecMoney $ toRational extraMins * perExtraMinRate.getHighPrecMoney
           fareByTime = HighPrecMoney $ (toRational (estimatedDurationInMins + allowanceMins) / 60) * perHourCharge.getHighPrecMoney
@@ -1171,6 +1170,10 @@ hoursInDay startUtc endUtc start end day
     endTod = localTimeOfDay end
     diffSeconds = nominalDiffTimeToSeconds $ diffUTCTime endUtc startUtc
     diffMins = diffSeconds.getSeconds `div` 60
+
+interCityReservedTime :: UTCTime -> Maybe UTCTime -> Seconds -> Seconds
+interCityReservedTime rideTime mbReturnTime estimatedDuration =
+  maybe estimatedDuration (\returnTime -> max estimatedDuration (nominalDiffTimeToSeconds $ diffUTCTime returnTime rideTime)) mbReturnTime
 
 -- Main function to calculate total hours with 14-hour daily cap
 calculateAllowanceMins :: Seconds -> Int -> UTCTime -> UTCTime -> Int

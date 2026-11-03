@@ -22,7 +22,7 @@ data FareBreakupInfo = FareBreakupInfo
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Show, (Generic), (ToJSON), (FromJSON), (ToSchema), (Eq))
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema, Eq)
 
 data FareBreakupInfoItem = FareBreakupInfoItem {amount :: Kernel.Types.Common.HighPrecMoney, currency :: Kernel.Types.Common.Currency, description :: Kernel.Prelude.Text}
-  deriving (Generic, (Show), (Eq), (FromJSON), (ToJSON), (ToSchema))
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

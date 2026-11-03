@@ -33,7 +33,7 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("financeManagement" :> (GetFinanceManagementSubscriptionPurchaseList :<|> GetFinanceManagementFinanceInvoicePdf :<|> GetFinanceManagementFinanceInvoicePdfUrl :<|> GetFinanceManagementFinanceInvoiceList :<|> GetFinanceManagementFinanceAuditList :<|> GetFinanceManagementFinanceReconciliation :<|> GetFinanceManagementFinancePaymentSettlementList :<|> GetFinanceManagementFinancePaymentGatewayTransactionList :<|> GetFinanceManagementFinanceWalletLedger :<|> PostFinanceManagementReconciliationTrigger :<|> PostFinanceManagementFinanceAdjustmentSubmit :<|> GetFinanceManagementFinanceAdjustmentList :<|> PostFinanceManagementFinanceAdjustmentApprove :<|> PostFinanceManagementFinanceAdjustmentReject :<|> GetFinanceManagementFinanceSapJournals :<|> GetFinanceManagementFinanceSapJournalsTransactions :<|> PostFinanceManagementTdsReimbursementRequestSubmit :<|> GetFinanceManagementTdsReimbursementStatus :<|> GetFinanceManagementTdsReimbursementHistory :<|> GetFinanceManagementTdsReimbursementList :<|> GetFinanceManagementTdsReimbursement :<|> PostFinanceManagementTdsReimbursementReject))
+type API = ("financeManagement" :> (GetFinanceManagementSubscriptionPurchaseList :<|> GetFinanceManagementFinanceInvoicePdf :<|> GetFinanceManagementFinanceInvoicePdfUrl :<|> GetFinanceManagementFinanceInvoiceList :<|> GetFinanceManagementFinanceAuditList :<|> GetFinanceManagementFinanceReconciliation :<|> GetFinanceManagementFinancePaymentSettlementList :<|> GetFinanceManagementFinancePaymentGatewayTransactionList :<|> GetFinanceManagementFinanceWalletLedger :<|> PostFinanceManagementReconciliationTrigger :<|> PostFinanceManagementFinanceAdjustmentSubmit :<|> GetFinanceManagementFinanceAdjustmentList :<|> PostFinanceManagementFinanceAdjustmentApprove :<|> PostFinanceManagementFinanceAdjustmentReject :<|> GetFinanceManagementFinanceSapJournals :<|> GetFinanceManagementFinanceSapJournalsTransactions :<|> PostFinanceManagementTdsReimbursementRequestSubmit :<|> PostFinanceManagementTdsReimbursementRequestPreview :<|> GetFinanceManagementTdsReimbursementStatus :<|> GetFinanceManagementTdsReimbursementHistory :<|> GetFinanceManagementTdsReimbursementList :<|> GetFinanceManagementTdsReimbursement :<|> PostFinanceManagementTdsReimbursementReject))
 
 type GetFinanceManagementSubscriptionPurchaseList =
   ( DashboardUserAuth
@@ -154,6 +154,13 @@ type PostFinanceManagementTdsReimbursementRequestSubmit =
       :> API.Types.ProviderPlatform.Management.FinanceManagement.PostFinanceManagementTdsReimbursementRequestSubmit
   )
 
+type PostFinanceManagementTdsReimbursementRequestPreview =
+  ( DashboardUserAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      "PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_REQUEST_PREVIEW"
+      :> API.Types.ProviderPlatform.Management.FinanceManagement.PostFinanceManagementTdsReimbursementRequestPreview
+  )
+
 type GetFinanceManagementTdsReimbursementStatus =
   ( DashboardUserAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
@@ -190,39 +197,85 @@ type PostFinanceManagementTdsReimbursementReject =
   )
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getFinanceManagementSubscriptionPurchaseList merchantId city :<|> getFinanceManagementFinanceInvoicePdf merchantId city :<|> getFinanceManagementFinanceInvoicePdfUrl merchantId city :<|> getFinanceManagementFinanceInvoiceList merchantId city :<|> getFinanceManagementFinanceAuditList merchantId city :<|> getFinanceManagementFinanceReconciliation merchantId city :<|> getFinanceManagementFinancePaymentSettlementList merchantId city :<|> getFinanceManagementFinancePaymentGatewayTransactionList merchantId city :<|> getFinanceManagementFinanceWalletLedger merchantId city :<|> postFinanceManagementReconciliationTrigger merchantId city :<|> postFinanceManagementFinanceAdjustmentSubmit merchantId city :<|> getFinanceManagementFinanceAdjustmentList merchantId city :<|> postFinanceManagementFinanceAdjustmentApprove merchantId city :<|> postFinanceManagementFinanceAdjustmentReject merchantId city :<|> getFinanceManagementFinanceSapJournals merchantId city :<|> getFinanceManagementFinanceSapJournalsTransactions merchantId city :<|> postFinanceManagementTdsReimbursementRequestSubmit merchantId city :<|> getFinanceManagementTdsReimbursementStatus merchantId city :<|> getFinanceManagementTdsReimbursementHistory merchantId city :<|> getFinanceManagementTdsReimbursementList merchantId city :<|> getFinanceManagementTdsReimbursement merchantId city :<|> postFinanceManagementTdsReimbursementReject merchantId city
+handler merchantId city = getFinanceManagementSubscriptionPurchaseList merchantId city :<|> getFinanceManagementFinanceInvoicePdf merchantId city :<|> getFinanceManagementFinanceInvoicePdfUrl merchantId city :<|> getFinanceManagementFinanceInvoiceList merchantId city :<|> getFinanceManagementFinanceAuditList merchantId city :<|> getFinanceManagementFinanceReconciliation merchantId city :<|> getFinanceManagementFinancePaymentSettlementList merchantId city :<|> getFinanceManagementFinancePaymentGatewayTransactionList merchantId city :<|> getFinanceManagementFinanceWalletLedger merchantId city :<|> postFinanceManagementReconciliationTrigger merchantId city :<|> postFinanceManagementFinanceAdjustmentSubmit merchantId city :<|> getFinanceManagementFinanceAdjustmentList merchantId city :<|> postFinanceManagementFinanceAdjustmentApprove merchantId city :<|> postFinanceManagementFinanceAdjustmentReject merchantId city :<|> getFinanceManagementFinanceSapJournals merchantId city :<|> getFinanceManagementFinanceSapJournalsTransactions merchantId city :<|> postFinanceManagementTdsReimbursementRequestSubmit merchantId city :<|> postFinanceManagementTdsReimbursementRequestPreview merchantId city :<|> getFinanceManagementTdsReimbursementStatus merchantId city :<|> getFinanceManagementTdsReimbursementHistory merchantId city :<|> getFinanceManagementTdsReimbursementList merchantId city :<|> getFinanceManagementTdsReimbursement merchantId city :<|> postFinanceManagementTdsReimbursementReject merchantId city
 
 getFinanceManagementSubscriptionPurchaseList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.SubscriptionPurchaseStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.SubscriptionPurchaseListRes)
-getFinanceManagementSubscriptionPurchaseList a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a12 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementSubscriptionPurchaseList a14 a13 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getFinanceManagementSubscriptionPurchaseList a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a12 a14 a13
+        Tools.ActorInfo.withDashboardUserActorInfo a12 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementSubscriptionPurchaseList a14 a13 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+    )
 
 getFinanceManagementFinanceInvoicePdf :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.Invoice.InvoiceType -> Kernel.Prelude.Maybe Domain.Types.Invoice.IssuedToType -> Kernel.Prelude.Maybe [Domain.Types.Invoice.IssuedToType] -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.FinanceInvoicePdfResp)
-getFinanceManagementFinanceInvoicePdf a16 a15 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a14 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceInvoicePdf a16 a15 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getFinanceManagementFinanceInvoicePdf a16 a15 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a14 a16 a15
+        Tools.ActorInfo.withDashboardUserActorInfo a14 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceInvoicePdf a16 a15 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+    )
 
 getFinanceManagementFinanceInvoicePdfUrl :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.FinanceInvoicePdfUrlResp)
-getFinanceManagementFinanceInvoicePdfUrl a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceInvoicePdfUrl a4 a3 a1
+getFinanceManagementFinanceInvoicePdfUrl a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceInvoicePdfUrl a4 a3 a1
+    )
 
 getFinanceManagementFinanceInvoiceList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.Invoice.InvoiceType -> Kernel.Prelude.Maybe Domain.Types.Invoice.IssuedToType -> Kernel.Prelude.Maybe [Domain.Types.Invoice.IssuedToType] -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.InvoiceListRes)
-getFinanceManagementFinanceInvoiceList a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a12 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceInvoiceList a14 a13 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getFinanceManagementFinanceInvoiceList a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a12 a14 a13
+        Tools.ActorInfo.withDashboardUserActorInfo a12 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceInvoiceList a14 a13 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+    )
 
 getFinanceManagementFinanceAuditList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.AuditEntry.AuditEntityType -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.AuditEntry.AuditAction -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.AuditListRes)
-getFinanceManagementFinanceAuditList a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a10 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceAuditList a12 a11 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getFinanceManagementFinanceAuditList a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a10 a12 a11
+        Tools.ActorInfo.withDashboardUserActorInfo a10 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceAuditList a12 a11 a9 a8 a7 a6 a5 a4 a3 a2 a1
+    )
 
 getFinanceManagementFinanceReconciliation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Lib.Finance.Reconciliation.Types.Domain -> Lib.Finance.Reconciliation.Types.DataSource -> Lib.Finance.Reconciliation.Types.DataSource -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.ReconciliationRes)
-getFinanceManagementFinanceReconciliation a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a8 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceReconciliation a10 a9 a7 a6 a5 a4 a3 a2 a1
+getFinanceManagementFinanceReconciliation a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a8 a10 a9
+        Tools.ActorInfo.withDashboardUserActorInfo a8 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceReconciliation a10 a9 a7 a6 a5 a4 a3 a2 a1
+    )
 
 getFinanceManagementFinancePaymentSettlementList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.PaymentOrder) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.PgGateway -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.PGPaymentSettlementReport) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.PaymentSettlementListRes)
-getFinanceManagementFinancePaymentSettlementList a17 a16 a15 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a15 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinancePaymentSettlementList a17 a16 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getFinanceManagementFinancePaymentSettlementList a17 a16 a15 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a15 a17 a16
+        Tools.ActorInfo.withDashboardUserActorInfo a15 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinancePaymentSettlementList a17 a16 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+    )
 
 getFinanceManagementFinancePaymentGatewayTransactionList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.PaymentModeFilter -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.PaymentOrder) -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.PaymentStatusFilter -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.PgGateway -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.PaymentTransactionReportListRes)
-getFinanceManagementFinancePaymentGatewayTransactionList a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a12 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinancePaymentGatewayTransactionList a14 a13 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getFinanceManagementFinancePaymentGatewayTransactionList a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a12 a14 a13
+        Tools.ActorInfo.withDashboardUserActorInfo a12 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinancePaymentGatewayTransactionList a14 a13 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+    )
 
 getFinanceManagementFinanceWalletLedger :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.WalletLedgerRes)
-getFinanceManagementFinanceWalletLedger a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a10 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceWalletLedger a12 a11 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getFinanceManagementFinanceWalletLedger a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a10 a12 a11
+        Tools.ActorInfo.withDashboardUserActorInfo a10 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceWalletLedger a12 a11 a9 a8 a7 a6 a5 a4 a3 a2 a1
+    )
 
 postFinanceManagementReconciliationTrigger :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.FinanceManagement.ReconciliationTriggerReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.ReconciliationTriggerRes)
 postFinanceManagementReconciliationTrigger a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_RECONCILIATION_TRIGGER" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.FinanceManagement.postFinanceManagementReconciliationTrigger a4 a3 a1
     )
@@ -231,59 +284,108 @@ postFinanceManagementFinanceAdjustmentSubmit :: (Kernel.Types.Id.ShortId Domain.
 postFinanceManagementFinanceAdjustmentSubmit a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_FINANCE_ADJUSTMENT_SUBMIT" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.FinanceManagement.postFinanceManagementFinanceAdjustmentSubmit a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) (Tools.Auth.DashboardUserAuth.dashboardRequestorName a2) a1
     )
 
 getFinanceManagementFinanceAdjustmentList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest) -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.AdjustmentRequestStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.AdjustmentCategory -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.AdjustmentDirection -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.LedgerAdjustmentListRes)
-getFinanceManagementFinanceAdjustmentList a17 a16 a15 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a15 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceAdjustmentList a17 a16 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a15)
+getFinanceManagementFinanceAdjustmentList a17 a16 a15 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a15 a17 a16
+        Tools.ActorInfo.withDashboardUserActorInfo a15 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceAdjustmentList a17 a16 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a15)
+    )
 
 postFinanceManagementFinanceAdjustmentApprove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postFinanceManagementFinanceAdjustmentApprove a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_FINANCE_ADJUSTMENT_APPROVE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.FinanceManagement.postFinanceManagementFinanceAdjustmentApprove a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) (Tools.Auth.DashboardUserAuth.dashboardRequestorName a2)
     )
 
-postFinanceManagementFinanceAdjustmentReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postFinanceManagementFinanceAdjustmentReject a4 a3 a2 a1 =
+postFinanceManagementFinanceAdjustmentReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest -> API.Types.ProviderPlatform.Management.FinanceManagement.LedgerAdjustmentRejectReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFinanceManagementFinanceAdjustmentReject a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
-        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_FINANCE_ADJUSTMENT_REJECT" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.FinanceManagement.postFinanceManagementFinanceAdjustmentReject a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) (Tools.Auth.DashboardUserAuth.dashboardRequestorName a2)
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_FINANCE_ADJUSTMENT_REJECT" a3 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.FinanceManagement.postFinanceManagementFinanceAdjustmentReject a5 a4 a2 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3) (Tools.Auth.DashboardUserAuth.dashboardRequestorName a3) a1
     )
 
 getFinanceManagementFinanceSapJournals :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.SapJournalEntry.JournalEntryStatus -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.SapJournalEntry.TransactionType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.SapJournalListRes)
-getFinanceManagementFinanceSapJournals a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a11 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceSapJournals a13 a12 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getFinanceManagementFinanceSapJournals a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a11 a13 a12
+        Tools.ActorInfo.withDashboardUserActorInfo a11 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceSapJournals a13 a12 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+    )
 
 getFinanceManagementFinanceSapJournalsTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Lib.Finance.Domain.Types.SapJournalEntry.TransactionType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.SapJournalTransactionsRes)
-getFinanceManagementFinanceSapJournalsTransactions a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceSapJournalsTransactions a9 a8 a6 a5 a4 a3 a2 a1
+getFinanceManagementFinanceSapJournalsTransactions a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a7 a9 a8
+        Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementFinanceSapJournalsTransactions a9 a8 a6 a5 a4 a3 a2 a1
+    )
 
 postFinanceManagementTdsReimbursementRequestSubmit :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementRequestSubmitReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementRequestSubmitRes)
 postFinanceManagementTdsReimbursementRequestSubmit a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_REQUEST_SUBMIT" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.FinanceManagement.postFinanceManagementTdsReimbursementRequestSubmit a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
     )
 
+postFinanceManagementTdsReimbursementRequestPreview :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementRequestSubmitReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementRequestPreviewRes)
+postFinanceManagementTdsReimbursementRequestPreview a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_REQUEST_PREVIEW" a2 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.FinanceManagement.postFinanceManagementTdsReimbursementRequestPreview a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
+    )
+
 getFinanceManagementTdsReimbursementStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementQuarter -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementStatusRes)
-getFinanceManagementTdsReimbursementStatus a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementTdsReimbursementStatus a5 a4 a2 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3)
+getFinanceManagementTdsReimbursementStatus a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementTdsReimbursementStatus a5 a4 a2 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3)
+    )
 
 getFinanceManagementTdsReimbursementHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementHistoryRes)
-getFinanceManagementTdsReimbursementHistory a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementTdsReimbursementHistory a3 a2 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a1)
+getFinanceManagementTdsReimbursementHistory a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a1 a3 a2
+        Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementTdsReimbursementHistory a3 a2 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a1)
+    )
 
 getFinanceManagementTdsReimbursementList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementQuarter -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementListRes)
-getFinanceManagementTdsReimbursementList a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a11 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementTdsReimbursementList a13 a12 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a11)
+getFinanceManagementTdsReimbursementList a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a11 a13 a12
+        Tools.ActorInfo.withDashboardUserActorInfo a11 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementTdsReimbursementList a13 a12 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a11)
+    )
 
 getFinanceManagementTdsReimbursement :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.FinanceTdsReimbursementRequest -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementDetailRes)
-getFinanceManagementTdsReimbursement a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementTdsReimbursement a4 a3 a1
+getFinanceManagementTdsReimbursement a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.FinanceManagement.getFinanceManagementTdsReimbursement a4 a3 a1
+    )
 
 postFinanceManagementTdsReimbursementReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.FinanceTdsReimbursementRequest -> API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementRejectReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postFinanceManagementTdsReimbursementReject a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_REJECT" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.FinanceManagement.postFinanceManagementTdsReimbursementReject a5 a4 a2 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3) (Tools.Auth.DashboardUserAuth.dashboardRequestorName a3) a1
     )

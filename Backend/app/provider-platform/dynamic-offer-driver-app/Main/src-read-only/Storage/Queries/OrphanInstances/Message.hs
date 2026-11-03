@@ -24,6 +24,7 @@ instance FromTType' Beam.Message Domain.Types.Message.Message where
         Domain.Types.Message.Message
           { _type = messageType,
             alwaysTriggerOnOnboarding = Kernel.Prelude.fromMaybe False alwaysTriggerOnOnboarding,
+            category = category,
             createdAt = Data.Time.localTimeToUTC Data.Time.utc createdAt,
             description = description,
             id = Kernel.Types.Id.Id id,
@@ -44,6 +45,7 @@ instance ToTType' Beam.Message Domain.Types.Message.Message where
     Beam.MessageT
       { Beam.messageType = _type,
         Beam.alwaysTriggerOnOnboarding = Kernel.Prelude.Just alwaysTriggerOnOnboarding,
+        Beam.category = category,
         Beam.createdAt = Data.Time.utcToLocalTime Data.Time.utc createdAt,
         Beam.description = description,
         Beam.id = Kernel.Types.Id.getId id,

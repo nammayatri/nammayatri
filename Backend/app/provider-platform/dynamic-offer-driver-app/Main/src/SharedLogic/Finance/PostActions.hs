@@ -57,8 +57,9 @@ runPostActions walletGateEnabled finalState =
     runPostActionsForAccount walletGateEnabled account `catchAny` \e ->
       logError ("PostActions: processing accountId=" <> account.id.getId <> " failed, skipping: " <> show e)
 
--- | Like 'runPostActions' but for a single, already-known account -- the entry point for
---   SharedLogic.Finance.Wallet.createWalletEntryDelta, which never goes through runFinance.
+-- | Like 'runPostActions' but for a single, already-known account. No callers remain
+--   outside this module (createWalletEntryDelta now goes through runFinance); kept as
+--   the single-account entry point for future direct dispatch needs.
 runPostActionsForAccount ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Bool ->

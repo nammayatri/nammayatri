@@ -27,6 +27,7 @@ import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
 import Storage.Beam.CommonDriverOnboardingDocuments
 import Storage.Beam.Communication
+import Storage.Beam.CommunicationDelivery
 import Storage.Beam.DepotManager (DepotManagerT, depotManagerTable)
 import Storage.Beam.DriverFee
 import Storage.Beam.DriverFyEarnings
@@ -66,6 +67,9 @@ import Storage.Beam.Ride
 import Storage.Beam.RideDetails
 import Storage.Beam.RiderDetails
 import Storage.Beam.Route
+import qualified Storage.Beam.RsfOrderState as BeamRsfOrderState
+import qualified Storage.Beam.RsfReconLedgerEntry as BeamRsfLedger
+import qualified Storage.Beam.RsfUtrState as BeamRsfUtrState
 import Storage.Beam.SubscriptionPurchase
 import Storage.Beam.TripTransaction
 import Storage.Beam.Vehicle
@@ -119,6 +123,7 @@ atlasDB =
         fleetBookingInformation = fleetBookingInformationTable,
         fleetRcDailyStats = fleetRcDailyStatsTable,
         communication = communicationTable,
+        communicationDelivery = communicationDeliveryTable,
         commonDriverOnboardingDocuments = commonDriverOnboardingDocumentsTable,
         subscriptionPurchase = subscriptionPurchaseTable,
         indirectTaxTransaction = BeamITT.indirectTaxTransactionTable,
@@ -127,7 +132,10 @@ atlasDB =
         financeLedgerEntry = BeamLE.ledgerEntryTable,
         pgPaymentSettlementReport = BeamPgReport.pgPaymentSettlementReportTable,
         sapJournalEntry = BeamSapJournal.sapJournalEntryTable,
-        depotManager = depotManagerTable
+        rsfReconLedgerEntry = BeamRsfLedger.rsfReconLedgerEntryTable,
+        depotManager = depotManagerTable,
+        rsfOrderState = BeamRsfOrderState.rsfOrderStateTable,
+        rsfUtrState = BeamRsfUtrState.rsfUtrStateTable
       }
 
 data AtlasDB f = AtlasDB
@@ -175,6 +183,7 @@ data AtlasDB f = AtlasDB
     fleetBookingInformation :: f (B.TableEntity FleetBookingInformationT),
     fleetRcDailyStats :: f (B.TableEntity FleetRcDailyStatsT),
     communication :: f (B.TableEntity CommunicationT),
+    communicationDelivery :: f (B.TableEntity CommunicationDeliveryT),
     commonDriverOnboardingDocuments :: f (B.TableEntity CommonDriverOnboardingDocumentsT),
     subscriptionPurchase :: f (B.TableEntity SubscriptionPurchaseT),
     indirectTaxTransaction :: f (B.TableEntity BeamITT.IndirectTaxTransactionT),
@@ -183,6 +192,9 @@ data AtlasDB f = AtlasDB
     financeLedgerEntry :: f (B.TableEntity BeamLE.LedgerEntryT),
     pgPaymentSettlementReport :: f (B.TableEntity BeamPgReport.PgPaymentSettlementReportT),
     sapJournalEntry :: f (B.TableEntity BeamSapJournal.SapJournalEntryT),
-    depotManager :: f (B.TableEntity DepotManagerT)
+    rsfReconLedgerEntry :: f (B.TableEntity BeamRsfLedger.RsfReconLedgerEntryT),
+    depotManager :: f (B.TableEntity DepotManagerT),
+    rsfOrderState :: f (B.TableEntity BeamRsfOrderState.RsfOrderStateT),
+    rsfUtrState :: f (B.TableEntity BeamRsfUtrState.RsfUtrStateT)
   }
   deriving (Generic, B.Database be)

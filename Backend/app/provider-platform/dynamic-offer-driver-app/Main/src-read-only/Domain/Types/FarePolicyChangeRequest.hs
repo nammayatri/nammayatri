@@ -32,6 +32,6 @@ data FarePolicyChangeAction = REMOVE_FARE_PRODUCT deriving (Eq, Ord, Show, Read,
 
 data FarePolicyChangeStatus = PENDING | APPROVED | REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FarePolicyChangeAction))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FarePolicyChangeAction)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FarePolicyChangeStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FarePolicyChangeStatus)

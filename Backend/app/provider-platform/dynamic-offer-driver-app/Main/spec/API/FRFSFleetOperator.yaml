@@ -6,6 +6,8 @@ imports:
   ServiceTierType: BecknV2.FRFS.Enums
   TimeBound: Kernel.Types.TimeBound
   FleetOperatorTripAction: Domain.Types.FleetOperatorTripAction
+  FleetOperatorIncidentType: Domain.Types.FleetOperatorIncidentType
+  APISuccess: Kernel.Types.APISuccess
 
 module: FRFSFleetOperator
 
@@ -70,6 +72,17 @@ types:
     gimsConductorId: Maybe Text
     gimsDriverId: Maybe Text
     vehicleNumber: Maybe Text
+    derive: "Show"
+
+  FleetOperatorIncidentReq:
+    incidentType: FleetOperatorIncidentType
+    description: Maybe Text
+    gimsConductorId: Maybe Text
+    gimsDriverId: Maybe Text
+    vehicleNumber: Maybe Text
+    location: Maybe LatLong
+    # Client-supplied so a retry folds in bms, whose /events does not fold on its own.
+    idempotencyKey: Maybe Text
     derive: "Show"
 
   FleetOperatorCurrentOperationResp:
@@ -188,6 +201,14 @@ apis:
         type: FRFSActiveManifestReq
       response:
         type: FRFSActiveManifestResp
+
+  - POST:
+      endpoint: /frfs/fleetOperator/reportIncident
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: FleetOperatorIncidentReq
+      response:
+        type: APISuccess
 
   - GET:
       endpoint: /v2/frfs/busTripSchedule/{routeId}

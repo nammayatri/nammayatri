@@ -13,6 +13,7 @@ import qualified Kernel.External.BackgroundVerification.Types
 import qualified Kernel.External.Call
 import qualified Kernel.External.ChallanSearch.Types
 import Kernel.External.Encryption
+import qualified Kernel.External.EventTracking
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.Types
 import qualified Kernel.External.Payment.Types
@@ -38,6 +39,8 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     dashboardPanVerificationService :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService)),
     dashboardUdyamVerificationService :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService)),
     driverBackgroundVerificationService :: (B.C f Kernel.External.Verification.Types.DriverBackgroundVerificationService),
+    eventTrackingOverrides :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    eventTrackingProviders :: (B.C f (Kernel.Prelude.Maybe [Kernel.External.EventTracking.EventTrackingService])),
     faceMatchService :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService)),
     faceVerificationService :: (B.C f Kernel.External.Verification.Types.VerificationService),
     getBankAccount :: (B.C f Kernel.External.Payment.Types.PaymentService),
@@ -45,6 +48,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getDistancesForCancelRide :: (B.C f Kernel.External.Maps.Types.MapsService),
     getDistancesForScheduledRides :: (B.C f Kernel.External.Maps.Types.MapsService),
     getEstimatedPickupDistances :: (B.C f Kernel.External.Maps.Types.MapsService),
+    getEstimatedPickupDistancesFallback :: (B.C f (Kernel.Prelude.Maybe [Kernel.External.Maps.Types.MapsService])),
     getExophone :: (B.C f Kernel.External.Call.CallService),
     getPickupRoutes :: (B.C f Kernel.External.Maps.Types.MapsService),
     getPlaceDetails :: (B.C f Kernel.External.Maps.Types.MapsService),

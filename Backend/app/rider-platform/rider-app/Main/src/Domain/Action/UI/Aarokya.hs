@@ -9,6 +9,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.DriverNumber (getDriverMobileNumber)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.PartnerSdk as TPartnerSdk
@@ -45,9 +46,10 @@ generateContributorToken (personId, _merchantId) req = do
   -- the issued JWT by Aarokya. Per aarokya PR #465: the channel is the enum value
   -- CUSTOMER_APP, and the ref is a tagged object identifying the contributor —
   -- here the customer, i.e. { "type": "CUSTOMER_ID", "value": <customerId> }.
+  driverMobileNumber <- getDriverMobileNumber ride >>= fromMaybeM (RideFieldNotPresent "driverMobileNumber")
   let sdkReq =
         PartnerSdk.GenerateContributorTokenReq
-          { beneficiaryIdentifier = ride.driverMobileNumber,
+          { beneficiaryIdentifier = driverMobileNumber,
             contributionChannel = Just "CUSTOMER_APP",
             contributorRef = Just (PartnerSdk.ContributorRef {refType = "CUSTOMER_ID", refValue = personId.getId})
           }

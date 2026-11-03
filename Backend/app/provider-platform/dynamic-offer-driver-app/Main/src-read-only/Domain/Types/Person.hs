@@ -36,6 +36,8 @@ data PersonE e = Person
     deviceToken :: Kernel.Prelude.Maybe Kernel.External.Notification.FCM.Types.FCMRecipientToken,
     driverTag :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValueExpiry],
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    emailSource :: Kernel.Prelude.Maybe Domain.Types.Person.EmailSource,
+    emailVerified :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     faceImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     firstName :: Kernel.Prelude.Text,
     gender :: Domain.Types.Person.Gender,
@@ -96,6 +98,8 @@ instance EncryptedItem Person where
           deviceToken = deviceToken entity,
           driverTag = driverTag entity,
           email = email entity,
+          emailSource = emailSource entity,
+          emailVerified = emailVerified entity,
           faceImageId = faceImageId entity,
           firstName = firstName entity,
           gender = gender entity,
@@ -148,6 +152,8 @@ instance EncryptedItem Person where
             deviceToken = deviceToken entity,
             driverTag = driverTag entity,
             email = email entity,
+            emailSource = emailSource entity,
+            emailVerified = emailVerified entity,
             faceImageId = faceImageId entity,
             firstName = firstName entity,
             gender = gender entity,
@@ -190,6 +196,8 @@ instance EncryptedItem' Person where
 
 type Driver = Person
 
+data EmailSource = SOCIAL_GOOGLE | SOCIAL_APPLE | SOCIAL_APPLE_PRIVATE_RELAY | OTP deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY | NON_BINARY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data IdentifierType
@@ -222,3 +230,5 @@ $(Kernel.Utils.TH.mkHttpInstancesForEnum ''IdentifierType)
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Gender)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''Gender)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''EmailSource)

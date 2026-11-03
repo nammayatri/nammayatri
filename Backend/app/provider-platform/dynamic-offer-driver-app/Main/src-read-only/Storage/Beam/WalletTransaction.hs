@@ -13,15 +13,15 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data WalletTransactionT f = WalletTransactionT
-  { amount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    driverId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    paymentOrderId :: (B.C f Kernel.Prelude.Text),
-    status :: (B.C f Domain.Types.WalletTransaction.WalletTransactionStatus),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    driverId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    paymentOrderId :: B.C f Kernel.Prelude.Text,
+    status :: B.C f Domain.Types.WalletTransaction.WalletTransactionStatus,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table WalletTransactionT where
 
 type WalletTransaction = WalletTransactionT Identity
 
-$(enableKVPG (''WalletTransactionT) [('id)] [[('driverId)], [('paymentOrderId)]])
+$(enableKVPG ''WalletTransactionT ['id] [['driverId], ['paymentOrderId]])
 
-$(mkTableInstances (''WalletTransactionT) "wallet_transaction")
+$(mkTableInstances ''WalletTransactionT "wallet_transaction")

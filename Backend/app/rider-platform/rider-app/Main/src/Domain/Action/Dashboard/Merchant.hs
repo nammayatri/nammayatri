@@ -334,6 +334,8 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId city req = do
   runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
   whenJust req.getEstimatedPickupDistances $ \_ ->
     throwError (InvalidRequest "getEstimatedPickupDistances is not allowed for bap")
+  whenJust req.getEstimatedPickupDistancesFallback $ \_ ->
+    throwError (InvalidRequest "getEstimatedPickupDistancesFallback is not allowed for bap")
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound ("merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city))
   forM_ Maps.availableMapsServices $ \service -> do
     when (Common.mapsServiceUsedInReq req service) $ do

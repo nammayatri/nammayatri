@@ -16,3 +16,9 @@ ALTER TABLE atlas_driver_offer_bpp.communication_delivery ADD COLUMN recipient_r
 ALTER TABLE atlas_driver_offer_bpp.communication_delivery ADD COLUMN status character varying (36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.communication_delivery ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.communication_delivery ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY communication_delivery_idx_recipient_id ON atlas_driver_offer_bpp.communication_delivery USING btree (recipient_id);

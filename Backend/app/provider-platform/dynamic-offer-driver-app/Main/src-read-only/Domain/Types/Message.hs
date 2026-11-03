@@ -11,11 +11,13 @@ import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data Message = Message
   { _type :: Domain.Types.Message.MessageType,
     alwaysTriggerOnOnboarding :: Kernel.Prelude.Bool,
+    category :: Kernel.Prelude.Maybe Domain.Types.Message.MessageCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     description :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Message.Message,
@@ -31,6 +33,8 @@ data Message = Message
     viewCount :: Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data MessageCategory = Broadcast | IncidentReport deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data MessageDict = MessageDict {defaultMessage :: Domain.Types.Message.RawMessage, translations :: Data.Map.Map Kernel.Prelude.Text Domain.Types.Message.RawMessage}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -50,6 +54,7 @@ data MessageType = Action Kernel.Prelude.Text | Read deriving (Eq, Ord, Show, Re
 data RawMessage = RawMessage
   { _type :: Domain.Types.Message.MessageType,
     alwaysTriggerOnOnboarding :: Kernel.Prelude.Bool,
+    category :: Kernel.Prelude.Maybe Domain.Types.Message.MessageCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     description :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Message.Message,
@@ -63,5 +68,9 @@ data RawMessage = RawMessage
     viewCount :: Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageCategory)
+
+$(mkHttpInstancesForEnum ''MessageCategory)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageType)

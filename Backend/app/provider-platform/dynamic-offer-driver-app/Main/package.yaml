@@ -194,6 +194,7 @@ library:
     - location-updates
     - special-zone-a
     - payment
+    - bms-backend
     - gtfs-data-server
     - sessionizer-metrics
     - webhook

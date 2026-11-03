@@ -44,6 +44,7 @@ import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
 import qualified Domain.Types.DocumentReminderHistory as DRH
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverGstin as DDGST
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DDPC
 import qualified Domain.Types.DriverSSN as DDSSN
@@ -80,6 +81,7 @@ import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VDocs
@@ -109,6 +111,7 @@ import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
 import qualified Storage.Queries.DriverSSN as QDSSN
 import qualified Storage.Queries.DriverUdyam as QUDYAM
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
+import qualified Storage.Queries.FleetOperatorStats as QFleetOps
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIExtra
 import qualified Storage.Queries.Image as IQuery
@@ -682,9 +685,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
     Just authId -> do
       smsCfg <- asks (.smsCfg)
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
-        SA.endDriverAssociations merchantOpCityId transporterConfig person
-        when (merchant.overwriteAssociation == Just True) $
-          DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
+        SA.endAssociationsForOperatorLink merchantOpCityId transporterConfig person
 
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
       let regId = Id authId :: Id SR.RegistrationToken
@@ -694,7 +695,8 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
           DReg.AuthVerifyReq
             { otp = req.otp,
               deviceToken = deviceToken,
-              whatsappNotificationEnroll = Nothing
+              whatsappNotificationEnroll = Nothing,
+              socialLinkToken = Nothing
             }
           Nothing
 
@@ -718,9 +720,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       when (otp /= req.otp) $ throwError InvalidOtp
 
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
-        SA.endDriverAssociations merchantOpCityId transporterConfig person
-        when (merchant.overwriteAssociation == Just True) $
-          DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
+        SA.endAssociationsForOperatorLink merchantOpCityId transporterConfig person
         verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
 
   pure Success
@@ -746,25 +746,35 @@ getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = 
   unless (operator.role == DP.OPERATOR) $
     throwError AccessDenied
 
-  -- Redis keys for fleet aggregates
+  -- Gauge keys stay out of allTimeMetrics so a missing gauge does not send the six
+  -- counters through ClickHouse. They are passed into convert below, which looks
+  -- them up the same way as the six.
   let allTimeKeysData = AnalyticsExtra.allTimeKeys operator.id.getId
+      gaugeMetrics = [AnalyticsExtra.TOTAL_ASSOCIATED_DRIVER, AnalyticsExtra.TOTAL_ACTIVE_DRIVERS, AnalyticsExtra.TOTAL_ENABLED_DRIVERS]
+      gaugeKeys = map (AnalyticsExtra.makeOperatorAnalyticsKey operator.id.getId) gaugeMetrics
   logTagInfo "allTimeKeysData" (show allTimeKeysData)
 
-  -- try redis first
   mbAllTimeKeysRes <- mapM (Redis.get @Int) allTimeKeysData
+  mbGaugeRes <- mapM (Redis.get @Int) gaugeKeys
   logTagInfo "mbAllTimeKeysRes" (show mbAllTimeKeysRes)
 
-  -- fallback to ClickHouse and populate cache when missing
-  (totalRides, ratingSum, ratingCount, cancelCount, acceptationCount, totalRequestCount, mbTotalAssociatedDriver, mbTotalActiveDrivers, mbTotalEnabledDrivers) <- do
+  res <-
     if all isJust mbAllTimeKeysRes
-      then do
-        let res = AnalyticsExtra.convertToAllTimeFallbackRes (zip AnalyticsExtra.allTimeMetrics (map (fromMaybe 0) mbAllTimeKeysRes))
-        logTagInfo "AllTimeFallbackRes" (show res)
-        Analytics.extractOperatorAnalyticsData res
-      else do
-        res <- AnalyticsExtra.handleCacheMissForAnalyticsAllTimeCommon transporterConfig DP.OPERATOR operator.id.getId allTimeKeysData
-        logTagInfo "AllTimeFallbackRes" (show res)
-        Analytics.extractOperatorAnalyticsData res
+      then
+        pure $
+          AnalyticsExtra.convertToAllTimeFallbackRes $
+            zip AnalyticsExtra.allTimeMetrics (map (fromMaybe 0) mbAllTimeKeysRes)
+              ++ AnalyticsExtra.zipJusts gaugeMetrics mbGaugeRes
+      else AnalyticsExtra.handleCacheMissForAnalyticsAllTimeCommon transporterConfig DP.OPERATOR operator.id.getId allTimeKeysData
+  logTagInfo "AllTimeFallbackRes" (show res)
+  (totalRides, ratingSum, ratingCount, cancelCount, acceptationCount, totalRequestCount, redisAssociated, redisActive, redisEnabled) <-
+    Analytics.extractOperatorAnalyticsData res
+  mbStats <- QFleetOps.findByPrimaryKey operator.id.getId
+  -- No stats row yet: keep the Redis gauges extract returned. A row uses its columns.
+  let (mbTotalAssociatedDriver, mbTotalActiveDrivers, mbTotalEnabledDrivers) =
+        case mbStats of
+          Nothing -> (redisAssociated, redisActive, redisEnabled)
+          Just stats -> (stats.totalAssociatedDriver, stats.totalActiveDrivers, stats.totalEnabledDrivers)
 
   logTagInfo "Total rides" (show totalRides)
   logTagInfo "Rating sum" (show ratingSum)
@@ -1016,15 +1026,15 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             if driverInfo.approved == Just True
               then do
                 -- Throws (naming the offending docs) if any BotApproval dependency doc isn't VALID.
-                SStatus.botApproveAndReconcile merchantOpCity person transporterConfig (SStatus.botEnableDriver transporterConfig person driverInfo)
+                SStatus.botApproveAndReconcile merchantOpCity person transporterConfig (SStatus.botEnableDriver transporterConfig person)
                 pure (DRR.COMPLETED, Nothing, Nothing)
               else do
-                SStatus.botApproveDriver transporterConfig person driverInfo
+                SStatus.botApproveDriver transporterConfig person
                 pure (DRR.IN_PROGRESS, Nothing, Nothing)
           else do
             SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Reject (SGuard.TargetDriver driverId) $ do
               applyDocRejections req.entityType reqId validatedDocs
-              SStatus.botRejectDriver transporterConfig person driverInfo
+              SStatus.botRejectDriver transporterConfig person
             pure (DRR.REJECTED, Nothing, Just person)
       API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
         let fleetOwnerId = Kernel.Types.Id.Id reqId
@@ -1035,12 +1045,12 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
           then do
             -- Sync dependency-docs check and approved + enabled write; the heavy fleet recompute is forked.
             SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Approve (SGuard.TargetFleetOwner fleetOwnerInfo.fleetOwnerPersonId) $
-              SStatus.botApproveAndReconcile merchantOpCity fleetPerson transporterConfig (SStatus.botApproveFleetOwner transporterConfig fleetPerson fleetOwnerInfo)
+              SStatus.botApproveAndReconcile merchantOpCity fleetPerson transporterConfig (SStatus.botApproveFleetOwner transporterConfig fleetPerson)
             pure (DRR.COMPLETED, Nothing, Nothing)
           else do
             SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Reject (SGuard.TargetFleetOwner fleetOwnerInfo.fleetOwnerPersonId) $ do
               applyDocRejections req.entityType reqId validatedDocs
-              SStatus.botRejectFleetOwner transporterConfig fleetPerson fleetOwnerInfo
+              SStatus.botRejectFleetOwner transporterConfig fleetPerson
             pure (DRR.REJECTED, Nothing, Just fleetPerson)
       API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> do
         let rcId = Kernel.Types.Id.Id reqId
@@ -1048,12 +1058,12 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         when (rcInfo.verified /= Just True) $ throwError (InvalidRequest "RC is not verified")
         if isDocReqEmpty
           then do
-            SStatus.botApproveVehicle transporterConfig rcInfo
+            SStatus.botApproveVehicle transporterConfig rcId
             void $ SStatus.runRefreshOnboardingFlagsVehicleWithBotApproval (Just transporterConfig) True False rcId
             pure (DRR.COMPLETED, rcInfo.unencryptedCertificateNumber, Nothing)
           else do
             applyDocRejections req.entityType reqId validatedDocs
-            SStatus.botRejectVehicle transporterConfig rcInfo
+            SStatus.botRejectVehicle transporterConfig rcId
             mbPersonId <- resolvePersonIdViaRc rcId
             mbPerson <- case mbPersonId of
               Just pId -> QPerson.findById pId
@@ -1377,6 +1387,7 @@ verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person t
 
   assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId DomainRC.defaultAssociationEnd True
   QDOA.create assoc
+  SOnboardingComms.setOnboardingAsWithoutLock transporterConfig person DI.INDIVIDUAL
   Analytics.handleDriverAnalyticsAndFlowStatus
     transporterConfig
     person.id

@@ -32,19 +32,24 @@ import Data.Text as Text
 import Domain.Types.Common
 import Domain.Types.FarePolicy
 import Kernel.Prelude
-import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.FarePolicy as Queries
 
+-- Short TTL: clearCache also drops this entry on every pod, the TTL only bounds staleness if that propagation is missed.
+inMemCacheTtl :: Seconds
+inMemCacheTtl = 30
+
 findFarePolicyFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
-findFarePolicyFromDB id = do
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
-    Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
-    Nothing -> do
-      flip whenJust cacheFarePolicy /=<< Queries.findById id
+findFarePolicyFromDB id =
+  IM.withInMemCache [makeIdKey id] inMemCacheTtl $
+    Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
+      Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
+      Nothing -> do
+        flip whenJust cacheFarePolicy /=<< Queries.findById id
 
 cacheFarePolicy :: (CacheFlow m r) => FarePolicy -> m ()
 cacheFarePolicy fp = do
@@ -57,18 +62,22 @@ makeIdKey :: Id FarePolicy -> Text
 makeIdKey id = "driver-offer:CachedQueries:FarePolicy:Id-" <> id.getId
 
 -- Call it after any update
-clearCache :: HedisFlow m r => FarePolicy -> m ()
-clearCache fp = Hedis.runInMultiCloudRedisWrite $
-  Hedis.withCrossAppRedis $ do
-    Hedis.del (makeIdKey fp.id)
+clearCache :: (CacheFlow m r, MonadFlow m) => FarePolicy -> m ()
+clearCache fp = clearCacheById fp.id
 
-clearCacheById :: HedisFlow m r => Id FarePolicy -> m ()
-clearCacheById fid = Hedis.runInMultiCloudRedisWrite $
-  Hedis.withCrossAppRedis $ do
-    Hedis.del (makeIdKey fid)
+clearCacheById :: (CacheFlow m r, MonadFlow m) => Id FarePolicy -> m ()
+clearCacheById fid = do
+  Hedis.runInMultiCloudRedisWrite $
+    Hedis.withCrossAppRedis $ do
+      Hedis.del (makeIdKey fid)
+  -- Also drop the in-mem entries on all pods, so an update isn't masked by a stale in-process copy.
+  IM.refreshInMem (makeIdKey fid)
 
+-- Clears the cache too: a policy can be deleted and re-created under the same id, and a lookup in between would have cached Nothing in memory.
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
-create = Queries.create
+create fp = do
+  Queries.create fp
+  clearCacheById fp.id
 
 delete :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m ()
 delete farePolicyId = do

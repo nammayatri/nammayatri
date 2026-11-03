@@ -26,3 +26,8 @@ ALTER TABLE atlas_driver_offer_bpp.integrated_bpp_config ADD COLUMN vehicle_cate
 ------- SQL updates -------
 
 CREATE INDEX CONCURRENTLY integrated_bpp_config_idx_city_domain_platform_type_vehicle_category ON atlas_driver_offer_bpp.integrated_bpp_config USING btree (city, domain, platform_type, vehicle_category);
+
+
+
+------- SQL updates -------
+

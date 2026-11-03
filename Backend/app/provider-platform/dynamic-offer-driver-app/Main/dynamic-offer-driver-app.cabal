@@ -68,6 +68,7 @@ library
       API.Internal.DriverReachedDestination
       API.Internal.DriverReferee
       API.Internal.DriverSourceDeparted
+      API.Internal.EmailEvents
       API.Internal.Estimate
       API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
@@ -107,6 +108,8 @@ library
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
       API.OnixBppWebhook
+      API.RSF
+      API.RSF.ReceiverRecon
       API.Types.Dashboard.AppManagement.OrphanInstances.DepotManager
       API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
       API.Types.UI.TicketKapture
@@ -158,6 +161,7 @@ library
       Beckn.ACL.OnCancel
       Beckn.ACL.OnConfirm
       Beckn.ACL.OnInit
+      Beckn.ACL.OnReceiverRecon
       Beckn.ACL.OnSearch
       Beckn.ACL.OnSelect
       Beckn.ACL.OnStatus
@@ -165,6 +169,7 @@ library
       Beckn.ACL.OnTrack
       Beckn.ACL.OnUpdate
       Beckn.ACL.Rating
+      Beckn.ACL.ReceiverRecon
       Beckn.ACL.Search
       Beckn.ACL.Select
       Beckn.ACL.Status
@@ -206,12 +211,14 @@ library
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
       Dashboard.ProviderPlatform.Management.Ride
+      Dashboard.ProviderPlatform.Management.RSFReconciliation
       Dashboard.ProviderPlatform.Operator.Driver
       Dashboard.ProviderPlatform.Operator.Registration
       Domain.Action.Beckn.Cancel
       Domain.Action.Beckn.Confirm
       Domain.Action.Beckn.Init
       Domain.Action.Beckn.Rating
+      Domain.Action.Beckn.ReceiverRecon
       Domain.Action.Beckn.Search
       Domain.Action.Beckn.Select
       Domain.Action.Beckn.Status
@@ -269,6 +276,7 @@ library
       Domain.Action.Dashboard.Management.NammaTag
       Domain.Action.Dashboard.Management.Notification
       Domain.Action.Dashboard.Management.Payout
+      Domain.Action.Dashboard.Management.Person
       Domain.Action.Dashboard.Management.PlanManagement
       Domain.Action.Dashboard.Management.PolicyDocument
       Domain.Action.Dashboard.Management.Pricing
@@ -277,11 +285,13 @@ library
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.RideFeedback
+      Domain.Action.Dashboard.Management.RSFReconciliation
       Domain.Action.Dashboard.Management.ScheduledBooking
       Domain.Action.Dashboard.Management.SearchTry
       Domain.Action.Dashboard.Management.SosMedia
       Domain.Action.Dashboard.Management.SpecialZoneQueue
       Domain.Action.Dashboard.Management.System
+      Domain.Action.Dashboard.Management.TdsDistribution
       Domain.Action.Dashboard.Management.Vehicle
       Domain.Action.Dashboard.Management.VehicleDetails
       Domain.Action.Dashboard.Management.VehicleInfo
@@ -302,6 +312,7 @@ library
       Domain.Action.Dashboard.RideBooking.Volunteer
       Domain.Action.Dashboard.RideEstimatedRoute
       Domain.Action.Dashboard.RideFlowDebug
+      Domain.Action.Dashboard.RideSnappedRoute
       Domain.Action.DashboardAuth.AppManagement.SubscriptionTransaction
       Domain.Action.DashboardAuth.Fleet.Driver
       Domain.Action.DashboardAuth.Fleet.LiveMap
@@ -315,6 +326,7 @@ library
       Domain.Action.DashboardAuth.Management.Merchant
       Domain.Action.DashboardAuth.Management.NammaTag
       Domain.Action.DashboardAuth.Management.Notification
+      Domain.Action.DashboardAuth.Management.Person
       Domain.Action.DashboardAuth.Management.RadarTickets
       Domain.Action.DashboardAuth.Operator.FleetManagement
       Domain.Action.DashboardAuth.Operator.Registration
@@ -336,6 +348,7 @@ library
       Domain.Action.Internal.DriverReachedDestination
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.DriverSourceDeparted
+      Domain.Action.Internal.EmailEvents
       Domain.Action.Internal.Estimate
       Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm
@@ -382,6 +395,7 @@ library
       Domain.Action.UI.DriverAcceptOffer
       Domain.Action.UI.DriverAreaPreference
       Domain.Action.UI.DriverCoin
+      Domain.Action.UI.DriverCommunication
       Domain.Action.UI.DriverDocument
       Domain.Action.UI.DriverFyEarnings
       Domain.Action.UI.DriverGoHomeRequest
@@ -533,6 +547,7 @@ library
       Domain.Types.Extra.DriverHomeLocation
       Domain.Types.Extra.DriverPlan
       Domain.Types.Extra.IdfyVerification
+      Domain.Types.Extra.LeanFlow
       Domain.Types.Extra.Location
       Domain.Types.Extra.MerchantClientConfig
       Domain.Types.Extra.MerchantMessage
@@ -544,7 +559,6 @@ library
       Domain.Types.Extra.SharedCab
       Domain.Types.Extra.SurgeConfig
       Domain.Types.Extra.TransporterConfig
-      Domain.Types.Extra.WalletTransaction
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
       Domain.Types.FarePolicy.Common
@@ -562,6 +576,7 @@ library
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.FinancialYear
+      Domain.Types.FleetOperatorIncidentType
       Domain.Types.FleetOperatorTripAction
       Domain.Types.FleetPoolingPriority
       Domain.Types.Geometry
@@ -598,6 +613,7 @@ library
       SharedLogic.Allocator.Jobs.FCM.RunScheduledFCMS
       SharedLogic.Allocator.Jobs.FCM.SoftBlockNotification
       SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert
+      SharedLogic.Allocator.Jobs.FleetAnalytics.RedisRecon
       SharedLogic.Allocator.Jobs.FleetEngine.Retry
       SharedLogic.Allocator.Jobs.IncentiveJourney.BulkUserCohortMappingUpload
       SharedLogic.Allocator.Jobs.Insurance.IffcoTokioInsurance
@@ -668,6 +684,7 @@ library
       SharedLogic.CallBAP
       SharedLogic.CallBAPInternal
       SharedLogic.CallIGMBAP
+      SharedLogic.CallRSF
       SharedLogic.Cancel
       SharedLogic.CancellationConsequence
       SharedLogic.CancellationDues
@@ -710,6 +727,8 @@ library
       SharedLogic.DriverSupplyMetrics
       SharedLogic.DummySignatureAuth
       SharedLogic.DynamicPricing
+      SharedLogic.EmailDelivery
+      SharedLogic.EmailDeliveryEvents
       SharedLogic.EventTracking
       SharedLogic.External.LocationTrackingService.API.DriverBlockTill
       SharedLogic.External.LocationTrackingService.API.DriverLocation
@@ -738,6 +757,7 @@ library
       SharedLogic.Finance.LedgerAdjustmentCast
       SharedLogic.Finance.PostActions
       SharedLogic.Finance.Prepaid
+      SharedLogic.Finance.Rails
       SharedLogic.Finance.Reconciliation.EntitySync
       SharedLogic.Finance.Reconciliation.Recipes.PostpaidDriverFeeVsPaymentOrder
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidDsrVsLedger
@@ -746,7 +766,10 @@ library
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPaymentVsSubscription
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPayoutVsPayoutRequest
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidSubscriptionPurchaseVsTransaction
+      SharedLogic.Finance.Reconciliation.Recipes.RsfBapClaimVsPlatformRide
+      SharedLogic.Finance.Reconciliation.Recipes.RsfUtrClaimVsBankReceipt
       SharedLogic.Finance.Reconciliation.SubscriptionMeta
+      SharedLogic.Finance.RideInvoice
       SharedLogic.Finance.SubscriptionConsumption
       SharedLogic.Finance.SubscriptionPurchase
       SharedLogic.Finance.TdsRate
@@ -755,6 +778,7 @@ library
       SharedLogic.Finance.WalletAccount
       SharedLogic.Finance.WalletPayout
       SharedLogic.Fleet
+      SharedLogic.FleetAnalytics.Realtime
       SharedLogic.FleetDriverSettings
       SharedLogic.FleetEngine
       SharedLogic.FleetOperatorStats
@@ -794,6 +818,7 @@ library
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.Pricing
       SharedLogic.QuickRetry
+      SharedLogic.RCTransferNotice
       SharedLogic.Reminder.Helper
       SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride
@@ -806,6 +831,7 @@ library
       SharedLogic.RideFeedback.Validation
       SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
+      SharedLogic.RSFLedger
       SharedLogic.RuleBasedTierUpgrade
       SharedLogic.ScheduledBooking.OverlapCheck
       SharedLogic.ScheduledBooking.WindowValidation
@@ -817,11 +843,14 @@ library
       SharedLogic.SharedCab.Flag
       SharedLogic.SharedCab.ReconcilerSeed
       SharedLogic.SharedCab.RiderClient
+      SharedLogic.SocialLogin
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand
       SharedLogic.Subscription.BillingModel
       SharedLogic.SurgeConfig
       SharedLogic.SyncRide
+      SharedLogic.TdsDistribution
+      SharedLogic.TdsDistribution.Delivery
       SharedLogic.TollDashboard
       SharedLogic.TollUpsert
       SharedLogic.Type
@@ -941,6 +970,7 @@ library
       Storage.CachedQueries.Route
       Storage.CachedQueries.SubscriptionConfig
       Storage.CachedQueries.SurgeConfig
+      Storage.CachedQueries.SystemConfigs.LeanFlow
       Storage.CachedQueries.UiDriverConfig
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleDetails
@@ -1071,6 +1101,7 @@ library
       Storage.Queries.FleetMemberAssociationExtra
       Storage.Queries.FleetOperatorAssociationExtra
       Storage.Queries.FleetOperatorDailyStatsExtra
+      Storage.Queries.FleetOperatorStatsExtra
       Storage.Queries.FleetOwnerInformationExtra
       Storage.Queries.FleetRCAssociationExtra
       Storage.Queries.FleetRcDailyStatsExtra
@@ -1121,6 +1152,10 @@ library
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
       Storage.Queries.RouteExtra
+      Storage.Queries.RsfLedgerAggregates
+      Storage.Queries.RsfOrderStateExtra
+      Storage.Queries.RsfReconLedgerEntryExtra
+      Storage.Queries.RsfUtrStateExtra
       Storage.Queries.SapJournalExtra
       Storage.Queries.ScheduledPayoutConfigExtra
       Storage.Queries.ScheduledPayoutExtra
@@ -1132,6 +1167,7 @@ library
       Storage.Queries.Status
       Storage.Queries.StclMembershipExtra
       Storage.Queries.SubscriptionPurchaseExtra
+      Storage.Queries.TDSDistributionBatchExtra
       Storage.Queries.TDSDistributionPdfFileExtra
       Storage.Queries.TDSDistributionRecordExtra
       Storage.Queries.Transformers.Booking
@@ -1207,6 +1243,7 @@ library
       Tools.Encryption
       Tools.Error
       Tools.Event
+      Tools.EventTracking
       Tools.FieldParse
       Tools.Maps
       Tools.MarketingEvents
@@ -1219,6 +1256,7 @@ library
       Tools.Metrics.SendSearchRequestToDriverMetrics
       Tools.Metrics.SendSearchRequestToDriverMetrics.Types
       Tools.Notifications
+      Tools.OcrProviderResponse
       Tools.OpenAPIInstances
       Tools.PartnerSdk
       Tools.Payment
@@ -1277,6 +1315,7 @@ library
       API.Action.DashboardAuth.Management.NammaTag
       API.Action.DashboardAuth.Management.Notification
       API.Action.DashboardAuth.Management.Payout
+      API.Action.DashboardAuth.Management.Person
       API.Action.DashboardAuth.Management.PlanManagement
       API.Action.DashboardAuth.Management.PolicyDocument
       API.Action.DashboardAuth.Management.Pricing
@@ -1285,11 +1324,13 @@ library
       API.Action.DashboardAuth.Management.Revenue
       API.Action.DashboardAuth.Management.Ride
       API.Action.DashboardAuth.Management.RideFeedback
+      API.Action.DashboardAuth.Management.RSFReconciliation
       API.Action.DashboardAuth.Management.ScheduledBooking
       API.Action.DashboardAuth.Management.SearchTry
       API.Action.DashboardAuth.Management.SosMedia
       API.Action.DashboardAuth.Management.SpecialZoneQueue
       API.Action.DashboardAuth.Management.System
+      API.Action.DashboardAuth.Management.TdsDistribution
       API.Action.DashboardAuth.Management.Vehicle
       API.Action.DashboardAuth.Management.VehicleDetails
       API.Action.DashboardAuth.Management.VehicleInfo
@@ -1313,6 +1354,7 @@ library
       API.Action.UI.DemandHotspots
       API.Action.UI.Dispatcher
       API.Action.UI.DriverAreaPreference
+      API.Action.UI.DriverCommunication
       API.Action.UI.DriverDocument
       API.Action.UI.DriverFyEarnings
       API.Action.UI.DriverIncentiveCoins
@@ -1456,6 +1498,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.NammaTag
       API.Types.ProviderPlatform.Management.Endpoints.Notification
       API.Types.ProviderPlatform.Management.Endpoints.Payout
+      API.Types.ProviderPlatform.Management.Endpoints.Person
       API.Types.ProviderPlatform.Management.Endpoints.PlanManagement
       API.Types.ProviderPlatform.Management.Endpoints.PolicyDocument
       API.Types.ProviderPlatform.Management.Endpoints.Pricing
@@ -1464,11 +1507,13 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
       API.Types.ProviderPlatform.Management.Endpoints.RideFeedback
+      API.Types.ProviderPlatform.Management.Endpoints.RSFReconciliation
       API.Types.ProviderPlatform.Management.Endpoints.ScheduledBooking
       API.Types.ProviderPlatform.Management.Endpoints.SearchTry
       API.Types.ProviderPlatform.Management.Endpoints.SosMedia
       API.Types.ProviderPlatform.Management.Endpoints.SpecialZoneQueue
       API.Types.ProviderPlatform.Management.Endpoints.System
+      API.Types.ProviderPlatform.Management.Endpoints.TdsDistribution
       API.Types.ProviderPlatform.Management.Endpoints.Vehicle
       API.Types.ProviderPlatform.Management.Endpoints.VehicleDetails
       API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
@@ -1486,6 +1531,7 @@ library
       API.Types.ProviderPlatform.Management.NammaTag
       API.Types.ProviderPlatform.Management.Notification
       API.Types.ProviderPlatform.Management.Payout
+      API.Types.ProviderPlatform.Management.Person
       API.Types.ProviderPlatform.Management.PlanManagement
       API.Types.ProviderPlatform.Management.PolicyDocument
       API.Types.ProviderPlatform.Management.Pricing
@@ -1494,11 +1540,13 @@ library
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.Management.RideFeedback
+      API.Types.ProviderPlatform.Management.RSFReconciliation
       API.Types.ProviderPlatform.Management.ScheduledBooking
       API.Types.ProviderPlatform.Management.SearchTry
       API.Types.ProviderPlatform.Management.SosMedia
       API.Types.ProviderPlatform.Management.SpecialZoneQueue
       API.Types.ProviderPlatform.Management.System
+      API.Types.ProviderPlatform.Management.TdsDistribution
       API.Types.ProviderPlatform.Management.Vehicle
       API.Types.ProviderPlatform.Management.VehicleDetails
       API.Types.ProviderPlatform.Management.VehicleInfo
@@ -1516,6 +1564,7 @@ library
       API.Types.UI.DemandHotspots
       API.Types.UI.Dispatcher
       API.Types.UI.DriverAreaPreference
+      API.Types.UI.DriverCommunication
       API.Types.UI.DriverFyEarnings
       API.Types.UI.DriverIncentiveCoins
       API.Types.UI.DriverOnboardingV2
@@ -1638,6 +1687,7 @@ library
       Domain.Types.DriverSSN
       Domain.Types.DriverStats
       Domain.Types.DriverUdyam
+      Domain.Types.EmailDelivery
       Domain.Types.EntityInfo
       Domain.Types.Estimate
       Domain.Types.Exophone
@@ -1714,6 +1764,7 @@ library
       Domain.Types.PayoutConfig
       Domain.Types.PayoutStatusHistory
       Domain.Types.Person
+      Domain.Types.PersonSocialIdentity
       Domain.Types.PlaceNameCache
       Domain.Types.Plan
       Domain.Types.PlanTranslation
@@ -1740,6 +1791,9 @@ library
       Domain.Types.RideRelatedNotificationConfig
       Domain.Types.Route
       Domain.Types.RouteTripStopMapping
+      Domain.Types.RsfOrderState
+      Domain.Types.RsfReconLedgerEntry
+      Domain.Types.RsfUtrState
       Domain.Types.ScheduledPayout
       Domain.Types.ScheduledPayoutConfig
       Domain.Types.SearchReqLocation
@@ -1754,6 +1808,7 @@ library
       Domain.Types.SubscriptionPurchase
       Domain.Types.SurgeConfig
       Domain.Types.SurgePricing
+      Domain.Types.TDSDistributionBatch
       Domain.Types.TDSDistributionPdfFile
       Domain.Types.TDSDistributionRecord
       Domain.Types.Translations
@@ -1841,6 +1896,7 @@ library
       Storage.Beam.DriverSSN
       Storage.Beam.DriverStats
       Storage.Beam.DriverUdyam
+      Storage.Beam.EmailDelivery
       Storage.Beam.EntityInfo
       Storage.Beam.Estimate
       Storage.Beam.Exophone
@@ -1917,6 +1973,7 @@ library
       Storage.Beam.PayoutConfig
       Storage.Beam.PayoutStatusHistory
       Storage.Beam.Person
+      Storage.Beam.PersonSocialIdentity
       Storage.Beam.PlaceNameCache
       Storage.Beam.Plan
       Storage.Beam.PlanTranslation
@@ -1943,6 +2000,9 @@ library
       Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.Route
       Storage.Beam.RouteTripStopMapping
+      Storage.Beam.RsfOrderState
+      Storage.Beam.RsfReconLedgerEntry
+      Storage.Beam.RsfUtrState
       Storage.Beam.ScheduledPayout
       Storage.Beam.ScheduledPayoutConfig
       Storage.Beam.SearchReqLocation
@@ -1957,6 +2017,7 @@ library
       Storage.Beam.SubscriptionPurchase
       Storage.Beam.SurgeConfig
       Storage.Beam.SurgePricing
+      Storage.Beam.TDSDistributionBatch
       Storage.Beam.TDSDistributionPdfFile
       Storage.Beam.TDSDistributionRecord
       Storage.Beam.Translations
@@ -2049,6 +2110,7 @@ library
       Storage.Queries.DriverSSN
       Storage.Queries.DriverStats
       Storage.Queries.DriverUdyam
+      Storage.Queries.EmailDelivery
       Storage.Queries.EntityInfo
       Storage.Queries.Estimate
       Storage.Queries.Exophone
@@ -2202,6 +2264,9 @@ library
       Storage.Queries.OrphanInstances.RiderDetails
       Storage.Queries.OrphanInstances.RiderDriverCorrelation
       Storage.Queries.OrphanInstances.Route
+      Storage.Queries.OrphanInstances.RsfOrderState
+      Storage.Queries.OrphanInstances.RsfReconLedgerEntry
+      Storage.Queries.OrphanInstances.RsfUtrState
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.SearchRequestForDriver
       Storage.Queries.OrphanInstances.SearchTry
@@ -2209,6 +2274,7 @@ library
       Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.StclMembership
       Storage.Queries.OrphanInstances.SubscriptionPurchase
+      Storage.Queries.OrphanInstances.TDSDistributionBatch
       Storage.Queries.OrphanInstances.TDSDistributionPdfFile
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.TransporterConfig
@@ -2229,6 +2295,7 @@ library
       Storage.Queries.PayoutConfig
       Storage.Queries.PayoutStatusHistory
       Storage.Queries.Person
+      Storage.Queries.PersonSocialIdentity
       Storage.Queries.PlaceNameCache
       Storage.Queries.Plan
       Storage.Queries.PlanTranslation
@@ -2255,6 +2322,9 @@ library
       Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.Route
       Storage.Queries.RouteTripStopMapping
+      Storage.Queries.RsfOrderState
+      Storage.Queries.RsfReconLedgerEntry
+      Storage.Queries.RsfUtrState
       Storage.Queries.ScheduledPayout
       Storage.Queries.ScheduledPayoutConfig
       Storage.Queries.SearchReqLocation
@@ -2269,6 +2339,7 @@ library
       Storage.Queries.SubscriptionPurchase
       Storage.Queries.SurgeConfig
       Storage.Queries.SurgePricing
+      Storage.Queries.TDSDistributionBatch
       Storage.Queries.TDSDistributionPdfFile
       Storage.Queries.TDSDistributionRecord
       Storage.Queries.Translations
@@ -2349,6 +2420,7 @@ library
     , beckn-spec
     , behavior-engine
     , behavior-tracker
+    , bms-backend
     , bytestring
     , casing
     , cassava

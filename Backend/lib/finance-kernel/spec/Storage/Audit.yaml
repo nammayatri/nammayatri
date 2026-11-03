@@ -12,10 +12,10 @@ AuditEntry:
 
   types:
     AuditAction:
-      enum: "Created,Updated,Reversed,StatusChanged"
+      enum: "Created,Updated,Reversed,StatusChanged,Approved,Rejected"
       derive: "HttpInstance"
     AuditEntityType:
-      enum: "LedgerEntry,Invoice,DirectTaxTransaction,IndirectTaxTransaction,PgPaymentSettlementReport,SapJournalEntry,SubscriptionPurchase"
+      enum: "LedgerEntry,Invoice,DirectTaxTransaction,IndirectTaxTransaction,PgPaymentSettlementReport,SapJournalEntry,SubscriptionPurchase,LedgerAdjustmentRequest"
       derive: "HttpInstance"
 
   fields:

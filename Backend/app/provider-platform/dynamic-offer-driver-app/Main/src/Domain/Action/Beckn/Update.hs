@@ -52,6 +52,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.LocationUpdates (editDestinationSnapEntityIdSuffix)
 import Lib.LocationUpdates.Internal
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.CallBAP
@@ -579,7 +580,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
           _ -> throwError (InvalidRequest "Invalid status for edit location request")
   where
     snapToRoad latlongs merchantId merchanOperatingCityId = do
-      res <- Maps.snapToRoadWithFallback Nothing merchantId merchanOperatingCityId True ((.getId) <$> rideId) Maps.SnapToRoadReq {points = latlongs, distanceUnit = Meter, calculateDistanceFrom = Nothing}
+      res <- Maps.snapToRoadWithFallback Nothing merchantId merchanOperatingCityId True ((<> editDestinationSnapEntityIdSuffix) . (.getId) <$> rideId) Maps.SnapToRoadReq {points = latlongs, distanceUnit = Meter, calculateDistanceFrom = Nothing}
       case res of
         (_, Left e) -> do
           logTagError "snapToRoadWithFallback failed in edit destination" $ "Error: " <> show e

@@ -33,8 +33,8 @@ updateByPrimaryKey (Domain.Types.DriverSSN.DriverSSN {..}) = do
   updateWithKV
     [ Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.rejectReason rejectReason,
-      Se.Set Beam.ssnEncrypted (((ssn & unEncrypted . encrypted))),
-      Se.Set Beam.ssnHash ((ssn & hash)),
+      Se.Set Beam.ssnEncrypted (ssn & unEncrypted . encrypted),
+      Se.Set Beam.ssnHash (ssn & hash),
       Se.Set Beam.verificationStatus verificationStatus
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

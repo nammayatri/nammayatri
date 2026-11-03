@@ -43,7 +43,7 @@ where
 import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import GHC.Generics (C, D, Generic (from), K1 (..), M1 (..), Rep, S, (:*:) (..))
-import Kernel.Beam.Functions (runInMasterDbAndRedis)
+import Kernel.Beam.Functions (runInMasterDbAndRedis, runWithLenientDecode)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (incrementConfigPilotFailureCounter, incrementConfigPilotSuccessCounter)
 import Kernel.Types.Error
@@ -216,7 +216,7 @@ class (Show a, ConfigTypeInfo (ConfigTypeOf a)) => ConfigDimensions a where
       Nothing -> throwError $ InvalidRequest $ "DB read not implemented for table: " <> show (getConfigType dims)
       Just fetch -> withLogTag "CONFIG_PILOT_DB:" $ do
         logDebug $ "getConfigFromDB:entry table=" <> show (getConfigType dims) <> " dims=" <> show dims
-        filterByDimensions dims <$> runInMasterDbAndRedis fetch
+        filterByDimensions dims <$> runInMasterDbAndRedis (runWithLenientDecode fetch)
 
   setConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> m (ConfigValueTypeOf a)
   setConfig _ = throwError $ InvalidRequest "setConfig not implemented for this dimension"

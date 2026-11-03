@@ -8,9 +8,11 @@ module API.Action.DashboardAuth.Management.DriverVehicleQuality
 where
 
 import qualified API.Types.ProviderPlatform.Management.DriverVehicleQuality
+import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.Management.DriverVehicleQuality
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -50,15 +52,26 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getDriverVehicleQualityList merchantId city :<|> getDriverVehicleQualitySearch merchantId city :<|> postDriverVehicleQualityUpdateVehicleRating merchantId city
 
 getDriverVehicleQualityList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe [Dashboard.Common.VehicleVariant] -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Prelude.Double -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverVehicleQuality.DriverVehicleQualityListRes)
-getDriverVehicleQualityList a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a9 $ Domain.Action.Dashboard.Management.DriverVehicleQuality.getDriverVehicleQualityList a11 a10 a8 a7 a6 a5 a4 a3 a2 a1
+getDriverVehicleQualityList a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a9 a11 a10
+        Tools.ActorInfo.withDashboardUserActorInfo a9 $ Domain.Action.Dashboard.Management.DriverVehicleQuality.getDriverVehicleQualityList a11 a10 a8 a7 a6 a5 a4 a3 a2 a1
+    )
 
 getDriverVehicleQualitySearch :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.DriverVehicleQuality.DriverVehicleQualityResp])
-getDriverVehicleQualitySearch a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.DriverVehicleQuality.getDriverVehicleQualitySearch a5 a4 a2 a1
+getDriverVehicleQualitySearch a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.DriverVehicleQuality.getDriverVehicleQualitySearch a5 a4 a2 a1
+    )
 
 postDriverVehicleQualityUpdateVehicleRating :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.DriverVehicleQuality.UpdateVehicleRatingReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverVehicleQualityUpdateVehicleRating a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_VEHICLE_QUALITY/POST_DRIVER_VEHICLE_QUALITY_UPDATE_VEHICLE_RATING" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.DriverVehicleQuality.postDriverVehicleQualityUpdateVehicleRating a4 a3 a1
     )

@@ -313,6 +313,20 @@ const SourceEditor: React.FC<{
   const [localPath, setLocalPath] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // Link (path) or unlink (null) destDir. The API reports refusals as { error },
+  // so surface them instead of treating every response as success.
+  const applyLocalPath = async (path: string | null) => {
+    setBusy(true);
+    try {
+      const res = await setSource(slug, { localPath: path });
+      if (res?.error) { alert(`${path ? 'Symlink' : 'Unlink'} failed: ${res.error}`); return; }
+      if (!path) setLocalPath('');
+      onChanged();
+    } catch (e) {
+      alert(`${path ? 'Symlink' : 'Unlink'} failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally { setBusy(false); }
+  };
+
   return (
     <div className="source-editor">
       <div className="source-line"><b>URL:</b> <code>{url || '—'}</code></div>
@@ -344,12 +358,12 @@ const SourceEditor: React.FC<{
         <button
           className="btn btn-sm"
           disabled={busy || !localPath.trim()}
-          onClick={async () => { setBusy(true); try { await setSource(slug, { localPath: localPath.trim() }); onChanged(); } finally { setBusy(false); } }}
+          onClick={() => applyLocalPath(localPath.trim())}
         >Symlink</button>
         <button
           className="btn btn-sm"
           disabled={busy}
-          onClick={async () => { setBusy(true); try { await setSource(slug, { localPath: null }); setLocalPath(''); onChanged(); } finally { setBusy(false); } }}
+          onClick={() => applyLocalPath(null)}
         >Unlink</button>
       </div>
     </div>

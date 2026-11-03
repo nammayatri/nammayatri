@@ -35,10 +35,10 @@ data RewardUnlock = RewardUnlock
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
-  deriving (Generic, (Show), (Eq))
+  deriving (Generic, Show, Eq)
 
-data UnlockStatus = Active | Redeemed | ExpiredUnredeemed | Reclaimed deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data UnlockStatus = Active | Redeemed | ExpiredUnredeemed | Reclaimed deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''UnlockStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''UnlockStatus)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''UnlockStatus))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''UnlockStatus)

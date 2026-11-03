@@ -408,6 +408,9 @@ whenConfig predicate guardFlow = ask >>= \ctx -> when (predicate ctx.gcConfig) g
 blocksDriverOwnRc :: DTC.TransporterConfig -> Bool
 blocksDriverOwnRc transporterConfig = transporterConfig.blockDriverOwnRCForFleetDrivers == Just True
 
+allowsFleetToLinkIndividual :: DTC.TransporterConfig -> Bool
+allowsFleetToLinkIndividual transporterConfig = transporterConfig.allowFleetToLinkIndividualDriver == Just True
+
 -------------------------------------------------------------------------------
 -- The flow: verb, actor, target, guard -- every matching line runs, in order.
 -------------------------------------------------------------------------------
@@ -431,6 +434,7 @@ onboardingFlow = do
   check [LinkToFleet, LinkToOperator] AnyActor DriverTarget ensureNoActiveFleetAssociation -- no live fleet or operator association
   check Delete AnyActor DriverTarget driverDeletable -- driver strands no association
   check Delete AnyActor FleetTarget fleetDeletable -- fleet strands no association
+  whenConfig (not . allowsFleetToLinkIndividual) $ check SetOnboardingAs FleetActor DriverTarget driverOnboardingSettableByFleet -- only an admin moves a self-employed driver
   whenConfig blocksDriverOwnRc $ do
     checkM LinkVehicle AnyActor RcTarget rcNotActiveWithAnotherDriver -- RC not driven by someone else
     checkM ActivateVehicle AnyActor RcTarget rcNotActiveWithAnotherDriver -- RC not driven by someone else
@@ -572,6 +576,9 @@ onboardingFlow = do
     driverOnboardingSettable _ driverCtx = do
       ensure (not driverCtx.dcInfo.blocked) "DI-9" "driver is blocked"
       ensure (isNothing driverCtx.dcInfo.disabledReasonFlag) "DI-10" "driver is disabled"
+    driverOnboardingSettableByFleet :: ActorFleetCtx -> DriverCtx -> Either GuardViolation ()
+    driverOnboardingSettableByFleet _ driverCtx =
+      ensure (driverCtx.dcInfo.onboardingAs /= Just DI.INDIVIDUAL) "OA-ADMIN" "driver is self-employed; only an admin can change the onboarding type"
     driverNotSelfEmployed :: () -> DriverCtx -> Either GuardViolation ()
     driverNotSelfEmployed _ driverCtx =
       ensure (driverCtx.dcInfo.onboardingAs /= Just DI.INDIVIDUAL) "FD-INDIVIDUAL" "driver is onboarded as self-employed; change the onboarding type before linking to a fleet"

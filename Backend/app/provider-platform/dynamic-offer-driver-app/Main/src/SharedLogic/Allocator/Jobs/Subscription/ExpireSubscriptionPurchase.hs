@@ -58,7 +58,7 @@ expireSubscriptionPurchase Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> j
           logInfo $ "Subscription expiry deferred for " <> purchase.id.getId <> " (ride in progress); rescheduling to " <> show retryAt
           pure $ ReSchedule retryAt
         else do
-          Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey purchase.ownerId) 10 10 $ do
+          Redis.withWaitAndLockRedisWithTimeout (makeSubscriptionRunningBalanceLockKey purchase.ownerId) 10 10 50000 $ do
             didExpire <- handleSubscriptionExpiry purchase
             when didExpire $ do
               prepaidScope <- resolvePrepaidScope purchase.merchantOperatingCityId purchase.vehicleCategory

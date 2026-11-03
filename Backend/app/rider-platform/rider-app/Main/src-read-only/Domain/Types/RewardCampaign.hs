@@ -35,34 +35,34 @@ data RewardCampaign = RewardCampaign
     status :: Domain.Types.RewardCampaign.CampaignStatus,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show), (Eq))
+  deriving (Generic, Show, Eq)
 
-data CampaignStatus = Draft | Active | Paused | Ended deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data CampaignStatus = Draft | Active | Paused | Ended deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data ClaimMode = AutoClaim | ManualClaim deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data ClaimMode = AutoClaim | ManualClaim deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data CouponSourceType = Pool | Templated deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data CouponSourceType = Pool | Templated deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data RedemptionTargetType = InApp | ExternalUrl | ExternalManual deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data RedemptionTargetType = InApp | ExternalUrl | ExternalManual deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SponsorType = Internal | External deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data SponsorType = Internal | External deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SponsorType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''SponsorType)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''SponsorType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''SponsorType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''CouponSourceType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''CouponSourceType)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''CouponSourceType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''CouponSourceType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''RedemptionTargetType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''RedemptionTargetType)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''RedemptionTargetType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''RedemptionTargetType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ClaimMode))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''ClaimMode)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''ClaimMode))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''ClaimMode)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''CampaignStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''CampaignStatus)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''CampaignStatus))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''CampaignStatus)

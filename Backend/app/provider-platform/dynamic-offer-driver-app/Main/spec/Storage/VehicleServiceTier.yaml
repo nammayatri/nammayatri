@@ -13,6 +13,7 @@ imports:
   CancellationRateConfig: Dashboard.Common
   AvailabilityCheckConfig: Dashboard.Common
   AutoAcceptanceConfig: Dashboard.Common
+  RegionCondition: Dashboard.Common
 
 VehicleServiceTier:
   tableName: vehicle_service_tier
@@ -60,6 +61,7 @@ VehicleServiceTier:
     cancellationRateConfig: Maybe CancellationRateConfig
     availabilityCheckConfig: Maybe AvailabilityCheckConfig
     autoAcceptanceConfig: Maybe AutoAcceptanceConfig
+    regionCondition: Maybe RegionCondition
   sqlType:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]
@@ -74,6 +76,7 @@ VehicleServiceTier:
     cancellationRateConfig: "json"
     availabilityCheckConfig: "json"
     autoAcceptanceConfig: "json"
+    regionCondition: "json"
   default:
     priority: '0'
     isEnabled: 'true'
@@ -87,6 +90,7 @@ VehicleServiceTier:
     cancellationRateConfig: Maybe Value
     availabilityCheckConfig: Maybe Value
     autoAcceptanceConfig: Maybe Value
+    regionCondition: Maybe Value
   fromTType:
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
     allowedAreas: (Kernel.Prelude.fmap (Kernel.Prelude.catMaybes . Kernel.Prelude.map Lib.Types.SpecialLocation.parsePickupDropFromText))|I
@@ -98,6 +102,8 @@ VehicleServiceTier:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< availabilityCheckConfig|E
     autoAcceptanceConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< autoAcceptanceConfig|E
+    regionCondition: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< regionCondition|E
   toTType:
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
     allowedAreas: (Kernel.Prelude.fmap (Kernel.Prelude.map Lib.Types.SpecialLocation.areaToText))|I
@@ -105,6 +111,7 @@ VehicleServiceTier:
     cancellationRateConfig: Kernel.Prelude.toJSON <$> cancellationRateConfig|E
     availabilityCheckConfig: Kernel.Prelude.toJSON <$> availabilityCheckConfig|E
     autoAcceptanceConfig: Kernel.Prelude.toJSON <$> autoAcceptanceConfig|E
+    regionCondition: Kernel.Prelude.toJSON <$> regionCondition|E
   constraints:
     id: PrimaryKey
   queries:

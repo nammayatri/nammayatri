@@ -44,6 +44,7 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             driverOfferApiKey = driverOfferApiKey,
             driverOfferBaseUrl = driverOfferBaseUrl',
             driverOfferMerchantId = driverOfferMerchantId,
+            driverOfferMerchantShortId = driverOfferMerchantShortId,
             driverOnTheWayNotifyExpiry = fromMaybe 3600 driverOnTheWayNotifyExpiry,
             editPickupDistanceThreshold = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit editPickupDistanceThresholdValue editPickupDistanceThreshold,
             fakeOtpEmails = fakeOtpEmails,
@@ -71,6 +72,7 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             signatureExpiry = signatureExpiry,
             signingPrivateKey = signingPrivateKey,
             signingPublicKey = signingPublicKey,
+            socialIdentityValidityInDays = socialIdentityValidityInDays,
             stuckRideAutoCancellationBuffer = stuckRideAutoCancellationBuffer,
             subscriberId = Kernel.Types.Id.ShortId subscriberId,
             updatedAt = updatedAt
@@ -98,6 +100,7 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.driverOfferApiKey = driverOfferApiKey,
         Beam.driverOfferBaseUrl = Kernel.Prelude.showBaseUrl driverOfferBaseUrl,
         Beam.driverOfferMerchantId = driverOfferMerchantId,
+        Beam.driverOfferMerchantShortId = driverOfferMerchantShortId,
         Beam.driverOnTheWayNotifyExpiry = Just driverOnTheWayNotifyExpiry,
         Beam.distanceUnit = Just $ (.unit) editPickupDistanceThreshold,
         Beam.editPickupDistanceThreshold = Kernel.Utils.Common.distanceToHighPrecMeters editPickupDistanceThreshold,
@@ -128,6 +131,7 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.signatureExpiry = signatureExpiry,
         Beam.signingPrivateKey = signingPrivateKey,
         Beam.signingPublicKey = signingPublicKey,
+        Beam.socialIdentityValidityInDays = socialIdentityValidityInDays,
         Beam.stuckRideAutoCancellationBuffer = stuckRideAutoCancellationBuffer,
         Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId,
         Beam.updatedAt = updatedAt

@@ -45,6 +45,8 @@ module Domain.Action.UI.Registration
     sendBusinessEmailVerification,
     verifyBusinessEmail,
     resendBusinessEmailVerification,
+    cleanCachedTokens,
+    extractClientIP,
   )
 where
 
@@ -114,6 +116,7 @@ import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.OTP as SOTP
 import qualified SharedLogic.PassRestore as PassRestore
 import qualified SharedLogic.Person as SLP
+import qualified SharedLogic.SocialLogin as SSL
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -260,7 +263,9 @@ data AuthVerifyReq = AuthVerifyReq
   { otp :: Text,
     deviceToken :: Text,
     whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods,
-    userPasswordString :: Maybe Text
+    userPasswordString :: Maybe Text,
+    commsConsent :: Maybe Bool,
+    socialLinkToken :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -396,6 +401,8 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
           whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
           SMC.updateCustomerAuthCountersByPhone phoneNumberHashText merchantConfigs
         _ -> pure ()
+  when (identifierType == SP.EMAIL && isNothing person.useFakeOtp) $
+    whenJust req.email $ SSL.enforceEmailOtpLimit merchantConfigs
   checkSlidingWindowLimit (authHitsCountKey person)
   smsCfg <- asks (.smsCfg)
   let entityId = getId $ person.id
@@ -793,6 +800,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         gender = fromMaybe SP.UNKNOWN req.gender,
         identifierType,
         email = encEmail,
+        emailVerified = Nothing,
+        emailSource = Nothing,
         passwordHash = Nothing,
         mobileNumber = encMobNum,
         mobileCountryCode = req.mobileCountryCode,
@@ -872,7 +881,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         cloudType = mbCloudType,
         operatorBadgeToken = mbOperatorBadgeToken,
         clientId = Nothing,
-        acceptedPolicies = Nothing
+        acceptedPolicies = Nothing,
+        commsConsent = Nothing
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -955,7 +965,8 @@ verify ::
     DB.EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    SSL.SocialLoginFlowM m r
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -969,7 +980,13 @@ verify tokenId req mbClientId mbXForwardedFor = do
   when verified $ throwError $ AuthBlocked "Already verified."
   checkForExpiry authExpiry updatedAt
   unless (authValueHash == req.otp) $ throwError InvalidAuthData
-  person <- checkPersonExists entityId
+  person <- case req.socialLinkToken of
+    Nothing -> checkPersonExists entityId
+    Just linkToken -> do
+      unlinkedPerson <- checkPersonExists entityId
+      SSL.linkPendingIdentity unlinkedPerson linkToken
+      checkPersonExists entityId
+  whenJust req.commsConsent $ \commsConsent -> PersonExtra.updateCommsConsent person.id commsConsent
   when (isNothing person.clientId && isJust mbClientId) $ Person.updateClientId mbClientId person.id
   let deviceToken = Just req.deviceToken
   personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken deviceToken)
@@ -1069,6 +1086,8 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
   addNammaTags person (Y.LoginTagData {id = person.id, gender = req.gender, clientSdkVersion = mbClientVersion, clientBundleVersion = mbBundleVersion, clientReactNativeVersion = mbRnVersion, clientConfigVersion = mbClientConfigVersion, clientDevice = mbDevice})
   fork "event_tracking: user_onboarded" $
     ET.trackEvent merchant.id merchantOperatingCityId (ET.UserOnboarded person.id.getId (show identifierType) (show currentCity))
+  fork "event_tracking: mark_onboarded_city_pending" $
+    ET.markOnboardedCityPending person.id (show identifierType)
   fork "update emergency contact id" $
     whenJust req.mobileNumber $ \mobileNumber -> updatePersonIdForEmergencyContacts person.id mobileNumber merchant.id
   pure person

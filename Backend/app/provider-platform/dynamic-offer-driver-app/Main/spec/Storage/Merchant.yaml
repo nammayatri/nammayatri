@@ -30,6 +30,7 @@ imports:
   NotificationService: Kernel.External.Notification.Types
   SmsService: Kernel.External.SMS.Types
   IssueTicketService: Kernel.External.Ticket.Types
+  EventTrackingService: Kernel.External.EventTracking
   DriverBackgroundVerificationService: Kernel.External.Verification.Types
   BackgroundVerificationService: Kernel.External.BackgroundVerification.Types
   VerificationService: Kernel.External.Verification.Types
@@ -119,6 +120,7 @@ Merchant:
     cipherText: Maybe Base64
     cloudType: Maybe CloudType
     cloudBaseUrl: Maybe BaseUrl
+    socialIdentityValidityInDays: Maybe Int
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -649,6 +651,7 @@ MerchantServiceUsageConfig:
     initiateCall: CallService
     getDistances: MapsService
     getEstimatedPickupDistances: MapsService
+    getEstimatedPickupDistancesFallback: "Maybe [MapsService]"
     getRoutes: MapsService
     getPickupRoutes: MapsService
     getTripRoutes: MapsService
@@ -691,6 +694,8 @@ MerchantServiceUsageConfig:
     totoVerificationPriorityList: "Maybe [VerificationService]"
     challanProvidersPriorityList: "Maybe [ChallanSearchService]"
     imageExtractionProvidersPriorityList: "Maybe [VerificationService]"
+    eventTrackingProviders: "[EventTrackingService]"
+    eventTrackingOverrides: "Maybe (Map Text [EventTrackingService])"
 
   beamType:
     llmChatCompletion: Maybe LLMChatCompletionService
@@ -698,6 +703,8 @@ MerchantServiceUsageConfig:
     createPayoutOrder: Maybe PayoutService
     payoutOrderStatus: Maybe PayoutService
     faceMatchService: Maybe VerificationService
+    eventTrackingProviders: Maybe [EventTrackingService]
+    eventTrackingOverrides: Maybe Value
 
   fromTType:
     llmChatCompletion: Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI|I
@@ -705,6 +712,8 @@ MerchantServiceUsageConfig:
     createPayoutOrder: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
     payoutOrderStatus: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
     faceMatchService: Kernel.Prelude.fromMaybe Kernel.External.Verification.Types.Idfy|I
+    eventTrackingProviders: fromMaybe [] eventTrackingProviders|E
+    eventTrackingOverrides: Kernel.Utils.JSON.valueToMaybe =<< eventTrackingOverrides|E
 
   toTType:
     llmChatCompletion: Kernel.Prelude.Just|I
@@ -712,6 +721,8 @@ MerchantServiceUsageConfig:
     createPayoutOrder: Kernel.Prelude.Just|I
     payoutOrderStatus: Kernel.Prelude.Just|I
     faceMatchService: Kernel.Prelude.Just|I
+    eventTrackingProviders: Kernel.Prelude.Just|I
+    eventTrackingOverrides: Data.Aeson.toJSON <$> eventTrackingOverrides|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -731,6 +742,7 @@ MerchantServiceUsageConfig:
     autoComplete: character varying(30)
     smsProvidersPriorityList: "text[]"
     getEstimatedPickupDistances: text
+    getEstimatedPickupDistancesFallback: "text[]"
     whatsappProvidersPriorityList: "text[]"
     getPickupRoutes: text
     getTripRoutes: text
@@ -759,6 +771,8 @@ MerchantServiceUsageConfig:
     llmChatCompletion: character varying(30)
     totoVerificationPriorityList: "text[]"
     challanProvidersPriorityList: "text[]"
+    eventTrackingProviders: "text[]"
+    eventTrackingOverrides: jsonb
   default:
     getPickupRoutes: "'Google'"
     getTripRoutes: "'Google'"
@@ -797,6 +811,7 @@ MerchantServiceUsageConfig:
       params:
         - getDistances
         - getEstimatedPickupDistances
+        - getEstimatedPickupDistancesFallback
         - getRoutes
         - snapToRoad
         - getPlaceName
@@ -1065,6 +1080,7 @@ TransporterConfig:
     ScheduledRideVisibilityStage:
       stage: Text
       untilRemainingMinutes: Int # the stage applies while the minutes left to pickup are above this value
+      vehicleServiceTiers: Maybe [ServiceTierType] # absent applies the stage to every service tier
       rules: ScheduledRideVisibilityRules
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     ScheduledRideConfig:
@@ -1084,7 +1100,7 @@ TransporterConfig:
       maxApprovalAttempts: Maybe Int # defaults to 3 when absent
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     RideEvidenceConfig:
-      enabled: Maybe Bool # on when absent
+      enabled: Maybe Bool # off when absent
       maxFilesPerRide: Maybe Int # defaults to 100 when absent
       completedRideWindowHours: Maybe Int # defaults to 72 when absent
       linkExpirySeconds: Maybe Int # defaults to 300 when absent
@@ -1118,6 +1134,16 @@ TransporterConfig:
       percentageRate: Maybe Double
       feeBearer: Maybe PayoutChargeBearer
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq
+    # Money-movement policy (payout enablement, instant eligibility, minimums, per-day
+    # cap, redeemable cutoff, topup enablement) lives in finance_account_config keyed on
+    # the account class — see docs/backend/design/finance-kernel-unification-plan.md §3.
+    # Only domain policy that is NOT about moving money stays here.
+    #
+    # DEPRECATED, UNUSED BY NEW CODE — kept for one release: driverWalletPayoutThreshold,
+    # gstPercentage, enableWalletPayout, enableWalletTopup, maxWalletPayoutsPerDay,
+    # minimumWalletPayoutAmount, payoutCutOffDays, instantPayoutExcludedRoles. Pods still on
+    # the previous release read them, and a config written without them makes those pods fall
+    # back to defaults (payouts disabled, no cap). Remove them in the next release.
     DriverWalletConfig:
       enableDriverWallet: Bool
       driverWalletPayoutThreshold: HighPrecMoney
@@ -1152,6 +1178,7 @@ TransporterConfig:
       connectAccountChargeTimeOfDay: Maybe Text
       connectAccountChargeDayOfWeek: Maybe Int
       connectAccountChargeDayOfMonth: Maybe Int
+      requireBapSettlementConfirmation: Maybe Bool
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney
@@ -1216,6 +1243,12 @@ TransporterConfig:
       smsBodyLimit: Maybe Int
       whatsappBodyLimit: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    InterCityConfig:
+      minDistance: Maybe Meters
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    TripConfig:
+      interCity: Maybe InterCityConfig
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     StclConfig:
       # Cap on total shares a single driver may hold across all SUBMITTED rows.
       maxSharesPerDriver: Maybe Int
@@ -1238,6 +1271,10 @@ TransporterConfig:
     authPhoneNumberCountWindow1: Maybe SlidingWindowOptions
     authPhoneNumberCountThreshold2: Maybe Int
     authPhoneNumberCountWindow2: Maybe SlidingWindowOptions
+    authEmailCountThreshold1: Maybe Int
+    authEmailCountWindow1: Maybe SlidingWindowOptions
+    authEmailCountThreshold2: Maybe Int
+    authEmailCountWindow2: Maybe SlidingWindowOptions
     fraudAuthCountThreshold: Maybe Int
     fraudAuthCountWindow: Maybe SlidingWindowOptions
     stripeStatusRefreshCountThreshold: Maybe Int
@@ -1248,6 +1285,7 @@ TransporterConfig:
     pickupLocThreshold: Meters
     dropLocThreshold: Meters
     interCityDropLocThreshold: Maybe Meters
+    tripConfig: Maybe TripConfig
     tripStartGeofenceRadius: Maybe Meters
     tripEndGeofenceRadius: Maybe Meters
     tripStartLeadTime: Maybe Minutes
@@ -1574,6 +1612,12 @@ TransporterConfig:
     rideEvidenceConfig: Maybe RideEvidenceConfig
     driverCoolOffPeriod: Maybe Seconds # Post-ride window excluding a driver from silent auto-assignment; broadcast unaffected.
     tdsFromEmail: Maybe Text
+    # SES configuration set for TDS certificate emails; its event destination publishes delivery events to emailEventSnsTopicArn
+    tdsEmailConfigurationSet: Maybe Text
+    # SNS topic whose email delivery events are accepted for this city (/internal/email/sesEvents)
+    emailEventSnsTopicArn: Maybe Text
+    # Token the SendGrid event webhook URL must carry for this city (/internal/email/sendgridEvents)
+    emailEventWebhookToken: Maybe Text
     sameRiderDriverRideCountLookbackDays: Int
     sameRiderDriverRideCountThreshold: Int
     favouriteDriverDailyCoinRideThreshold: Int
@@ -1592,6 +1636,7 @@ TransporterConfig:
     supportedMapProviders: "Maybe [MapProvider]" # Merchant-level allowlist constraining driver-selectable map providers; Nothing = allow all.
     blockDriverOwnRCForFleetDrivers: Maybe Bool # When True, fleet-linked drivers cannot onboard/activate their own (non-fleet) RC
     lookingForFleetSupported: Maybe Bool # When True, a fleet driver whose last fleet link ends stays a fleet driver (looking for a fleet); otherwise becomes self-employed
+    allowFleetToLinkIndividualDriver: Maybe Bool # When True, a fleet owner or operator can make an individual (self-employed) driver a fleet driver; otherwise only an admin can
     overrideOperatorDriverJoiningWithDeepLink: Maybe Bool
     mandateEmailVerification: Maybe Bool
     forceDirectCalling: Maybe Bool
@@ -1681,6 +1726,7 @@ TransporterConfig:
     sameRiderDriverRideCountThreshold: Maybe Int
     favouriteDriverDailyCoinRideThreshold: Maybe Int
     communicationChannelCharLimits: Maybe Value
+    tripConfig: Maybe Value
     stclConfig: Maybe Value
 
   beamFields:
@@ -1796,6 +1842,7 @@ TransporterConfig:
     sameRiderDriverRideCountThreshold: Just sameRiderDriverRideCountThreshold|E
     favouriteDriverDailyCoinRideThreshold: Just favouriteDriverDailyCoinRideThreshold|E
     communicationChannelCharLimits: Data.Aeson.toJSON <$> communicationChannelCharLimits|E
+    tripConfig: Data.Aeson.toJSON <$> tripConfig|E
     stclConfig: Data.Aeson.toJSON <$> stclConfig|E
 
   intermediateTransformers:
@@ -1938,6 +1985,8 @@ TransporterConfig:
     communicationChannelCharLimits: (\val -> case Data.Aeson.fromJSON val of
       Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<<
       communicationChannelCharLimits|E
+    tripConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< tripConfig|E
     stclConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< stclConfig|E
 
@@ -1948,6 +1997,8 @@ TransporterConfig:
     exotelAppIdMapping: json
     authPhoneNumberCountWindow1: json
     authPhoneNumberCountWindow2: json
+    authEmailCountWindow1: json
+    authEmailCountWindow2: json
     fraudAuthCountWindow: json
     stripeStatusRefreshCountWindow: json
     addDriverCountWindow: json
@@ -2025,6 +2076,7 @@ TransporterConfig:
     minBaseFare: double precision
     allowFarePolicyUpdateBelowMinBaseFare: boolean
     communicationChannelCharLimits: json
+    tripConfig: json
     allowedPaymentInstrumentForPayout: "text[]"
     stclConfig: json
     defaultOnboardingAs: character varying(255)
@@ -2558,6 +2610,18 @@ PayoutConfig:
 #       - vehicleCategory
 #       - isPayoutEnabled
 
+# KERNEL-SUPERSEDED (finance-kernel unification, 2026-10-24): for the
+# DRIVER_WALLET_TRANSACTION sweep, finance_scheduled_transfer_rule (seeded by migration
+# 0016, resolved via finance_account_config.autoTransferOut) is THE source — no runtime
+# fallback remains. RUNTIME-DEAD FOR WALLET SWEEPS since 2026-10-24:
+# frequency/timeOfDay/dayOfWeek/dayOfMonth/intervalDays/intervalHours/timeDiffFromUtc/
+# minimumPayoutAmount/batchSize/bulkStatusCheckIntervalMinutes/bulkStatusCheckBatchLimit
+# — kept only for the dashboard upsert/view surface, the 0016 seed source, and
+# computeNextRunTime's dashboard/retime callers. Still live at runtime: isEnabled +
+# payoutCategory (job trigger/dispatcher, Redis cursor-key identity) and the bulk-only
+# fields defaultPayoutRail/itemsPerBatchLimit/bufferCheckEnabled.
+# maxRetriesPerDriver/orderType/remark have no runtime readers (dashboard surface only).
+# Edit the kernel rule, not this table; drop the dead fields once dashboards move.
 ScheduledPayoutConfig:
   tableName: scheduled_payout_config
   derives: "Generic,Show,ToJSON,FromJSON,Eq"
@@ -2623,3 +2687,4 @@ ScheduledPayoutConfig:
 #     returnType: List
 #     queryModule: Storage.Queries.ScheduledPayoutConfig
 #     filterDimensions: [isEnabled, payoutCategory]
+

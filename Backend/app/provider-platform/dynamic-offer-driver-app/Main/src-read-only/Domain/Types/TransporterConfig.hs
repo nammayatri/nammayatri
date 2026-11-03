@@ -5,6 +5,7 @@
 module Domain.Types.TransporterConfig (module Domain.Types.TransporterConfig, module ReExport) where
 
 import Data.Aeson
+import qualified Domain.Types.Common
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.MerchantPaymentMethod
 import Domain.Types.Extra.TransporterConfig as ReExport
@@ -48,6 +49,7 @@ data TransporterConfig = TransporterConfig
     allowDuplicatePan :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicateUdyam :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowFarePolicyUpdateBelowMinBaseFare :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    allowFleetToLinkIndividualDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowGstReupload :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowInvalidRcDeletionOnReplacement :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowMultiFleetOperatorLink :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -63,6 +65,10 @@ data TransporterConfig = TransporterConfig
     arrivedPickupThreshold :: Kernel.Types.Common.HighPrecMeters,
     arrivedStopThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     arrivingPickupThreshold :: Kernel.Types.Common.HighPrecMeters,
+    authEmailCountThreshold1 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    authEmailCountThreshold2 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    authEmailCountWindow1 :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
+    authEmailCountWindow2 :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     authIpBlockedUntilInMins :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
     authPhoneNumberCountThreshold1 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     authPhoneNumberCountThreshold2 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -178,6 +184,8 @@ data TransporterConfig = TransporterConfig
     dynamicReferralCodeValidForMinutes :: Kernel.Prelude.Integer,
     editLocDriverPermissionNeeded :: Kernel.Prelude.Bool,
     editLocTimeThreshold :: Kernel.Types.Common.Seconds,
+    emailEventSnsTopicArn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    emailEventWebhookToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
     enableBotFlow :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableBppReallocation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -353,11 +361,13 @@ data TransporterConfig = TransporterConfig
     subscriptionStartTime :: Kernel.Prelude.UTCTime,
     supportedMapProviders :: Kernel.Prelude.Maybe [Domain.Types.DriverInformation.MapProvider],
     taxConfig :: Domain.Types.TransporterConfig.TaxConfig,
+    tdsEmailConfigurationSet :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tdsFromEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     thresholdCancellationPercentageToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     thresholdCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tripConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.TripConfig,
     tripEndGeofenceRadius :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     tripStartGeofenceRadius :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     tripStartLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
@@ -508,7 +518,8 @@ data DriverWalletConfig = DriverWalletConfig
     paymentChargeRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     paymentChargeVat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     payoutCutOffDays :: Kernel.Prelude.Int,
-    payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig
+    payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig,
+    requireBapSettlementConfirmation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
@@ -522,6 +533,9 @@ data GstBreakup = GstBreakup
     igstPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     sgstPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data InterCityConfig = InterCityConfig {minDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data InvoiceConfig = InvoiceConfig
@@ -656,7 +670,12 @@ data ScheduledRideVisibilityRules = ScheduledRideVisibilityRules
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data ScheduledRideVisibilityStage = ScheduledRideVisibilityStage {rules :: Domain.Types.TransporterConfig.ScheduledRideVisibilityRules, stage :: Kernel.Prelude.Text, untilRemainingMinutes :: Kernel.Prelude.Int}
+data ScheduledRideVisibilityStage = ScheduledRideVisibilityStage
+  { rules :: Domain.Types.TransporterConfig.ScheduledRideVisibilityRules,
+    stage :: Kernel.Prelude.Text,
+    untilRemainingMinutes :: Kernel.Prelude.Int,
+    vehicleServiceTiers :: Kernel.Prelude.Maybe [Domain.Types.Common.ServiceTierType]
+  }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
@@ -691,6 +710,9 @@ data TaxConfig = TaxConfig
     subscriptionGst :: Domain.Types.TransporterConfig.GstBreakup,
     subscriptionTdsRate :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig
   }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data TripConfig = TripConfig {interCity :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.InterCityConfig}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallingOption)

@@ -43,6 +43,20 @@ getDriverIdsByOperatorId operatorId =
         (\assoc -> assoc.operatorId CH.==. operatorId CH.&&. assoc.isActive CH.==. True)
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverOperatorAssociationTTable)
 
+getActiveDriverLinksByOperatorIds ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Text] ->
+  m [(Text, Id DP.Person)]
+getActiveDriverLinksByOperatorIds operatorIds =
+  if null operatorIds
+    then pure []
+    else
+      CH.findAll $
+        CH.select_ (\assoc -> CH.notGrouped (assoc.operatorId, assoc.driverId)) $
+          CH.filter_
+            (\assoc -> assoc.operatorId `CH.in_` operatorIds CH.&&. assoc.isActive CH.==. True)
+            (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverOperatorAssociationTTable)
+
 getTotalDriverCountByOperatorIdInDateRange ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Text ->

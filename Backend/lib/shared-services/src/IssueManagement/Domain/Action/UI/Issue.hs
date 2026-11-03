@@ -21,6 +21,7 @@ import qualified IssueManagement.Common.UI.Issue as Common
 import qualified IssueManagement.Domain.Types.Issue.ChatMessage as DCM
 import qualified IssueManagement.Domain.Types.Issue.IssueApiIntegration as DAI
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as D
+import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIC
 import qualified IssueManagement.Domain.Types.Issue.IssueConfig as D
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage as D
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as D
@@ -87,6 +88,7 @@ data ServiceHandle m = ServiceHandle
     -- for a merchant so InternalDriver lookups can call across; Nothing where
     -- unsupported (driver-app itself, or deployments without the config).
     mbCounterpartDashboardInfo :: Maybe (Id Merchant -> m (Maybe (BaseUrl, Text))),
+    selfLookupToken :: m (Maybe Text),
     mbReportACIssue :: Maybe (BaseUrl -> Text -> Text -> m APISuccess), -- Deprecated
     mbReportIssue :: Maybe (BaseUrl -> Text -> Text -> IssueReportType -> m APISuccess),
     mbFindLatestBookingByPersonId :: Maybe (Id Person -> m (Maybe Booking)),
@@ -117,6 +119,7 @@ data ServiceHandle m = ServiceHandle
     -- support S3 fetches (e.g. Beckn IGM flow) — the shared handler then
     -- falls back to @mediaFile.url@.
     mbFetchMediaBase64 :: Maybe (D.MediaFile -> m (Maybe Text)),
+    mbProbeSupportBot :: Maybe (Id Person -> Id Merchant -> Id MerchantOperatingCity -> Maybe Language -> m Bool),
     findIssueConfig :: Id MerchantOperatingCity -> Identifier -> m (Maybe D.IssueConfig),
     -- | Optional target-a-specific-service updateTicket. Used by the chat
     -- forwarding path so we can push the comment to XyneSpaces even when
@@ -168,11 +171,16 @@ getIssueCategory ::
   ) =>
   (Id Person, Id Merchant, Id MerchantOperatingCity) ->
   Maybe Language ->
+  Maybe Bool ->
   ServiceHandle m ->
   Identifier ->
   m Common.IssueCategoryListRes
-getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifier = do
+getIssueCategory (personId, merchantId, merchantOpCityId) mbLanguage mbEnableXyne issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
+  xyneEnabled <- case (mbEnableXyne, issueHandle.mbProbeSupportBot) of
+    (Just True, Just probe) -> Just <$> probe personId merchantId merchantOpCityId mbLanguage
+    (Just True, Nothing) -> pure (Just False)
+    _ -> pure Nothing
   issueCategoryTranslationList <- do
     categoriesWithTranslations <- CQIC.findAllActiveByMerchantOpCityIdAndLanguage merchantOpCityId language identifier
     case categoriesWithTranslations of
@@ -185,7 +193,10 @@ getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifi
           CUSTOMER -> pure $ filter (\(c, _) -> c.showInDefault == Just True) defaults
           _ -> pure defaults
       _ -> return categoriesWithTranslations
-  pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> issueCategoryTranslationList}
+  let visibleIssueCategories
+        | xyneEnabled == Just True = filter (\(c, _) -> c.categoryType == DIC.FAQ) issueCategoryTranslationList
+        | otherwise = issueCategoryTranslationList
+  pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> visibleIssueCategories, xyneEnabled}
   where
     mkIssueCategory :: (D.IssueCategory, Maybe D.IssueTranslation) -> Common.IssueCategoryRes
     mkIssueCategory (issueCategory, issueTranslation) =
@@ -211,8 +222,7 @@ getIssueOption ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CoreMetrics m,
-    HasField "selfBaseUrl" r BaseUrl,
-    HasField "dashboardToken" r Text
+    HasField "selfBaseUrl" r BaseUrl
   ) =>
   (Id Person, Id Merchant, Id MerchantOperatingCity) ->
   Id D.IssueCategory ->
@@ -1371,7 +1381,7 @@ updateIssueStatus ::
   Identifier ->
   m Common.IssueStatusUpdateRes
 updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLanguage Common.IssueStatusUpdateReq {..} issueHandle identifier = do
-  Redis.withLockRedisAndReturnValue (makeIssueReportKey issueReportId) 60 $ do
+  Redis.withWaitAndLockRedis (makeIssueReportKey issueReportId) 60 50000 $ do
     language <- getLanguage personId mbLanguage issueHandle
     issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
     mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId
@@ -1673,6 +1683,10 @@ getConfigValue language issueConfig mbRideInfoRes key = do
       boothCharges = maybe 0.0 (.amount.amount) (getFareFromArray "BOOTH_CHARGE" fareBreakup)
       returnCharges = maybe 0.0 (.amount.amount) (getFareFromArray "RETURN_FEE" fareBreakup)
       schedulingCharges = maybe 0.0 (.amount.amount) (getFareFromArray "SCHEDULING_CHARGE" fareBreakup)
+      waitingCharges = maybe 0.0 (.amount.amount) (getFareFromArray "WAITING_OR_PICKUP_CHARGES" fareBreakup)
+      estimateFareBreakup = maybe [] (.estimateFareBreakup) mbRideInfoRes
+      freeWaitingMinutes = maybe 0.0 (.amount) (getEstimateFromArray "FREE_WAITING_TIME_IN_MINUTES" estimateFareBreakup)
+      waitingChargeRatePerMin = maybe 0.0 (.amount) (getEstimateFromArray "WAITING_CHARGE_RATE_PER_MIN" estimateFareBreakup)
       vehicleNo = maybe "" (formatVehicleNo . (.vehicleNo)) mbRideInfoRes
       driverName = maybe "" (.driverName) mbRideInfoRes
       driverPhoneNo = fromMaybe "" $ (.driverPhoneNo) =<< mbRideInfoRes
@@ -1693,7 +1707,7 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "DISTANCE_DIFFERENCE" -> show distanceDifference
         "ESTIMATED_FARE" -> show estimatedFare
         "FINAL_FARE" -> show finalFare
-        "FARE_DIFFERENCE" -> show fareDifference
+        "FARE_DIFFERENCE" -> show (roundHighPrecMoney 2 fareDifference :: HighPrecMoney)
         "DRIVER_PICKUP_CHARGE" -> show driverPickupCharges
         "TOLL_CHARGES" -> show tollCharges
         "PET_CHARGES" -> show petCharges
@@ -1709,6 +1723,9 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "BOOTH_CHARGE" -> show boothCharges
         "RETURN_FEE" -> show returnCharges
         "SCHEDULING_CHARGE" -> show schedulingCharges
+        "WAITING_CHARGES" -> show waitingCharges
+        "FREE_WAITING_TIME_IN_MINUTES" -> show (round freeWaitingMinutes :: Int)
+        "WAITING_CHARGE_RATE_PER_MIN" -> show waitingChargeRatePerMin
         "HEADING" -> "{SUBPART}{HEADING}{!!!}"
         "BODY" -> "{SUBPART}{BODY}{!!!}"
         "VEHICLE_NUMBER" -> vehicleNo
@@ -1719,6 +1736,9 @@ getConfigValue language issueConfig mbRideInfoRes key = do
   where
     getFareFromArray :: Text -> [FareBreakup] -> Maybe FareBreakup
     getFareFromArray fareKey = find (\fareBreakup -> fareBreakup.description == fareKey)
+
+    getEstimateFromArray :: Text -> [EstimateFareBreakup] -> Maybe EstimateFareBreakup
+    getEstimateFromArray estimateKey = find (\estimate -> estimate.title == estimateKey)
 
     formatVehicleNo :: Text -> Text
     formatVehicleNo vehicleNo =
@@ -2151,8 +2171,7 @@ saveFlowContext personId categoryId ctx =
 -- to the action's onError/default branch - a lookup may fail, the chat may not.
 resolveApiCallSteps ::
   ( BeamFlow m r,
-    HasField "selfBaseUrl" r BaseUrl,
-    HasField "dashboardToken" r Text
+    HasField "selfBaseUrl" r BaseUrl
   ) =>
   Id Person ->
   Id D.IssueCategory ->
@@ -2232,14 +2251,17 @@ resolveApiCallSteps personId categoryId mbRideId mbMerchantOpCity language ident
             DAI.InternalRider -> case mbMerchantOpCity of
               Nothing -> pure (internalFailure "Internal lookup: merchant operating city could not be resolved")
               Just moCity -> do
-                selfBaseUrl <- asks (.selfBaseUrl)
-                dashboardToken <- asks (.dashboardToken)
-                let base = showBaseUrl selfBaseUrl
-                    basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
-                    url = basePadded <> "dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> integration.urlTemplate
-                    -- The engine's token must win: drop any author-supplied token header.
-                    internalHeaders = ("token", dashboardToken) : filter (\(k, _) -> T.toLower k /= "token") headers
-                Executor.executeIntegration (show integration.method) url internalHeaders integration.bodyTemplate integration.timeoutMs fields params
+                mbLookupToken <- issueHandle.selfLookupToken
+                case mbLookupToken of
+                  Nothing -> pure (internalFailure "Internal lookups are not configured on this deployment")
+                  Just lookupToken -> do
+                    selfBaseUrl <- asks (.selfBaseUrl)
+                    let base = showBaseUrl selfBaseUrl
+                        basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
+                        url = basePadded <> "direct-dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> integration.urlTemplate
+                        -- The engine's token must win: drop any author-supplied token header.
+                        internalHeaders = ("token", lookupToken) : filter (\(k, _) -> T.toLower k /= "token") headers
+                    Executor.executeIntegration (show integration.method) url internalHeaders integration.bodyTemplate integration.timeoutMs fields params
           case result.errorMessage of
             Nothing -> do
               let extracted = Map.mapMaybe identity result.extractedFields

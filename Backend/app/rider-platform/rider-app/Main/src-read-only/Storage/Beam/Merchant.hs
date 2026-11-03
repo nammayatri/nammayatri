@@ -35,6 +35,7 @@ data MerchantT f = MerchantT
     driverOfferApiKey :: B.C f Kernel.Prelude.Text,
     driverOfferBaseUrl :: B.C f Kernel.Prelude.Text,
     driverOfferMerchantId :: B.C f Kernel.Prelude.Text,
+    driverOfferMerchantShortId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverOnTheWayNotifyExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     editPickupDistanceThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
@@ -65,6 +66,7 @@ data MerchantT f = MerchantT
     signatureExpiry :: B.C f Kernel.Prelude.Int,
     signingPrivateKey :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),
     signingPublicKey :: B.C f Kernel.Types.Base64.Base64,
+    socialIdentityValidityInDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     stuckRideAutoCancellationBuffer :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     subscriberId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

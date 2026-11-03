@@ -32,4 +32,4 @@ data FareProduct = FareProduct
 
 data SearchSource = ALL | DASHBOARD | MOBILE_APP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SearchSource))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchSource)

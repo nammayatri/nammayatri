@@ -27,6 +27,7 @@ import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import Domain.Types.Common
 import qualified Domain.Types.ConditionalCharges as DAC
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DYNAMIC_PRICING))
 import qualified Domain.Types.FareParameters as DFareParameters
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DDriverExtraFeeBounds
@@ -34,7 +35,7 @@ import qualified Domain.Types.FareProduct as FareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Quote as DQuote
-import Domain.Types.TransporterConfig (TransporterConfig)
+import Domain.Types.TransporterConfig (TransporterConfig (isDynamicPricingQARCalEnabled, isMLBasedDynamicPricingEnabled))
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Utils (mapConcurrently)
@@ -70,6 +71,7 @@ import qualified Storage.Cac.FarePolicy as QFP
 import qualified Storage.CachedQueries.CancellationFarePolicy as QCCFP
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
 import qualified Storage.CachedQueries.SurgeConfig as CQSC
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.DynamicLogic
@@ -241,7 +243,12 @@ getFarePolicy mbPricingTime mbFromlocaton mbToLocation mbFromLocGeohash mbToLocG
             else return Nothing
         Nothing -> return Nothing
       logInfo $ "Dynamic Pricing debugging getFarePolicyWithArea txnId: " <> show txnId <> " and mbBaseVariantCarFareProduct : " <> show mbBaseVariantCarFareProduct
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      rawTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      dynamicPricingExcluded <- CQLF.isFeatureExcluded DYNAMIC_PRICING
+      let transporterConfig =
+            if dynamicPricingExcluded
+              then rawTransporterConfig {isDynamicPricingQARCalEnabled = Just False, isMLBasedDynamicPricingEnabled = False}
+              else rawTransporterConfig
       baseVariantFareAmountCar <- getBaseVariantFarePolicy transporterConfig mbFromlocaton mbFromlocaton merchantOpCityId mbBaseVariantCarFareProduct txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion configsInExperimentVersions mbSpecialLocName (SL.pickupSpecialZoneIdFromArea areaName) []
       logInfo $ "Dynamic Pricing debugging getFarePolicyWithArea txnId: " <> show txnId <> " and baseVariantFareAmountCar : " <> show baseVariantFareAmountCar
       fp <- getFullFarePolicy mbFromlocaton mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime baseVariantFareAmountCar mbAppDynamicLogicVersion mbSpecialLocName (SL.pickupSpecialZoneIdFromArea areaName) fareProduct configsInExperimentVersions [] (Just transporterConfig) (Just mbVehicleServiceTierItem) >>= fromMaybeM NoFarePolicy
@@ -262,7 +269,12 @@ getAllFarePoliciesProduct mbPricingTime merchantId merchantOpCityId isDashboard 
   (mbBaseVariantCarFareProduct :: Maybe FareProduct.FareProduct) <-
     return . getFareProduct allFareProducts
       =<< CQVST.findBaseServiceTierTypeByCategoryAndCityIdInRideFlow (Just DVC.CAR) merchantOpCityId mbResolvedSpecialZoneId
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  rawTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  dynamicPricingExcluded <- CQLF.isFeatureExcluded DYNAMIC_PRICING
+  let transporterConfig =
+        if dynamicPricingExcluded
+          then rawTransporterConfig {isDynamicPricingQARCalEnabled = Just False, isMLBasedDynamicPricingEnabled = False}
+          else rawTransporterConfig
   -- Resolve each fareProduct's vehicle-service-tier item once and reuse it for
   -- both the per-vehicleCategory dynamic-pricing inputs and inside
   -- 'getFullFarePolicy', so the (cached) lookup isn't repeated per service tier.
@@ -319,20 +331,21 @@ getAllFarePoliciesProduct mbPricingTime merchantId merchantOpCityId isDashboard 
 -- enabled, emit an additional policy identical to it except for its trip category. Nothing
 -- else differs -- same farePolicyId, same slabs, same charges -- so the spot fare IS the
 -- normal fare, by construction rather than by keeping two fare_product rows in sync.
+-- Applies in special zones too; if any tier already has a native OneWayRideOtp product
+-- there, no spot ride is derived for any tier.
 addSpotRidePolicies ::
   HM.HashMap ServiceTierType DVST.VehicleServiceTier ->
-  SL.Area ->
   Bool ->
   [FarePolicyD.FullFarePolicy] ->
   [FarePolicyD.FullFarePolicy]
-addSpotRidePolicies vehicleServiceTierMap area isScheduled farePolicies
-  | area /= SL.Default || isScheduled = farePolicies
+addSpotRidePolicies vehicleServiceTierMap isScheduled farePolicies
+  | isScheduled = farePolicies
+  | Kernel.Prelude.any (\p -> p.tripCategory == DTC.OneWay DTC.OneWayRideOtp) farePolicies = farePolicies
   | otherwise =
     let derived = flip mapMaybe farePolicies $ \fp ->
           case fp.tripCategory of
             DTC.OneWay mode
               | mode `elem` [DTC.OneWayOnDemandDynamicOffer, DTC.OneWayOnDemandStaticOffer],
-                not (Kernel.Prelude.any (\p -> p.tripCategory == DTC.OneWay DTC.OneWayRideOtp && p.vehicleServiceTier == fp.vehicleServiceTier) farePolicies),
                 (HM.lookup fp.vehicleServiceTier vehicleServiceTierMap >>= (.isSpotRideEnabled)) == Just True ->
                 Just fp {FarePolicyD.tripCategory = DTC.OneWay DTC.OneWayRideOtp}
             _ -> Nothing
@@ -370,7 +383,15 @@ getFareSettlementTypeForSpecialZone = fmap fst . getSpecialZoneFareFlags
 
 getFullFarePolicy :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe CacKey -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Text -> Maybe Text -> FareProduct.FareProduct -> [LYT.ConfigVersionMap] -> [(Maybe DVC.VehicleCategory, DynamicPricingInputs)] -> Maybe TransporterConfig -> Maybe (Maybe DVST.VehicleServiceTier) -> m (Maybe FarePolicyD.FullFarePolicy)
 getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime mbBaseVaraintCarPrice mbAppDynamicLogicVersion mbSpecialLocName mbSpecialZoneId fareProduct _configsInExperimentVersions dpInputsList mbTransporterConfig mbPreResolvedVSTItem = do
-  transporterConfig <- maybe (getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fareProduct.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound fareProduct.merchantOperatingCityId.getId)) pure mbTransporterConfig
+  transporterConfig <- case mbTransporterConfig of
+    Just alreadyResolved -> pure alreadyResolved
+    Nothing -> do
+      rawTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fareProduct.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound fareProduct.merchantOperatingCityId.getId)
+      dynamicPricingExcluded <- CQLF.isFeatureExcluded DYNAMIC_PRICING
+      pure $
+        if dynamicPricingExcluded
+          then rawTransporterConfig {isDynamicPricingQARCalEnabled = Just False, isMLBasedDynamicPricingEnabled = False}
+          else rawTransporterConfig
   mbVehicleServiceTierItem <-
     maybe (CQVST.findByServiceTierTypeAndCityIdInRideFlow fareProduct.vehicleServiceTier fareProduct.merchantOperatingCityId mbSpecialZoneId) pure mbPreResolvedVSTItem
   let whiteListedGeohashes = fromMaybe [] transporterConfig.dpWhiteListedGeohash
@@ -755,6 +776,9 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
           perExtraMinRateCaption = show Tags.PER_MINUTE_CHARGE
           perExtraMinRateItem = mkBreakupItem perExtraMinRateCaption . mkValue $ show det.perExtraMinRate
 
+          perExtraHourRateCaption = show Tags.UNPLANNED_PER_HOUR_CHARGE
+          perExtraHourRateItem = mkBreakupItem perExtraHourRateCaption . mkValue $ show (det.perExtraMinRate * 60)
+
           perExtraKmRateCaption = show Tags.UNPLANNED_PER_KM_CHARGE
           perExtraKmRateItem = mkBreakupItem perExtraKmRateCaption . mkValue $ show det.perExtraKmRate
 
@@ -776,8 +800,11 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
           pickupChargeCaption = show Tags.DEAD_KILOMETER_FARE
           pickupChargeBreakup = mkBreakupItem pickupChargeCaption (mkValue $ show det.deadKmFare)
 
-      [minFareItem, pickupChargeBreakup, perHourChargeItem, perExtraMinRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem, plannedPerKmRateRoundItem, perDayMaxHourAllowanceItem]
-        <> catMaybes [perDayMaxAllowanceInMinutesItem]
+          stateEntryPermitChargesCaption = show Tags.STATE_ENTRY_PERMIT_CHARGES
+          stateEntryPermitChargesItem = mkBreakupItem stateEntryPermitChargesCaption . (mkValue . highPrecMoneyToText) <$> det.stateEntryPermitCharges
+
+      [minFareItem, pickupChargeBreakup, perHourChargeItem, perExtraMinRateItem, perExtraHourRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem, plannedPerKmRateRoundItem, perDayMaxHourAllowanceItem]
+        <> catMaybes [perDayMaxAllowanceInMinutesItem, stateEntryPermitChargesItem]
         <> (oldNightShiftChargeBreakups det.nightShiftCharge)
         <> (newNightShiftChargeBreakups det.nightShiftCharge)
 

@@ -37,6 +37,7 @@ registry encryption/signatures). File paths inside the docs are relative to
 | `18-finance-module-guide.md` | Double-entry ledger, account types, driver wallet flow | Working on earnings, payouts, invoices, cancellation/refund accounting |
 | `20-onboarding-action-guard.md` | Actor/verb/target guard, admin-vs-fleet matrix, API map | Adding a guarded onboarding action, or debugging a `<Verb> not allowed` error |
 | `21-driver-pool-debugging.md` | Driver pool filter gates, table/column reference, ready-to-run SQL | Debugging why a specific driver never got a `NEW_RIDE_AVAILABLE` notification |
+| `22-incentive-journey.md` | Journey/milestone schemas, APIs, eval/streak/assignment, bulk S3 | Working on Incentive Journey, cohort assign, or ride-end journey rewards |
 
 ## Cross-Reference Guide
 
@@ -49,3 +50,4 @@ registry encryption/signatures). File paths inside the docs are relative to
 - **Driver earnings / wallet / ledger**: Read `18-finance-module-guide.md` → `06-ride-flow.md`
 - **Driver / vehicle / fleet onboarding permissions**: Read `20-onboarding-action-guard.md` → `09-dashboards.md`
 - **Driver not receiving ride requests**: Read `21-driver-pool-debugging.md` → `06-ride-flow.md`
+- **Incentive journey / milestones / cohort assign**: Read `22-incentive-journey.md` → `04-driver-app.md` → `06-ride-flow.md`

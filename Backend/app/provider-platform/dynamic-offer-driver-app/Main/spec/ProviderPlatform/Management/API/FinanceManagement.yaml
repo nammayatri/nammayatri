@@ -274,6 +274,8 @@ apis:
       auth: ApiAuthV2
       params:
         adjustmentRequestId: Id LedgerAdjustmentRequest
+      request:
+        type: LedgerAdjustmentRejectReq
       response:
         type: APISuccess
       migrate:
@@ -326,6 +328,19 @@ apis:
         type: TdsReimbursementRequestSubmitRes
       migrate:
         capability: finance.tds_reimbursement.write
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+
+  - POST: # TdsReimbursementRequestPreviewAPI
+      endpoint: /tdsReimbursement/request/preview
+      auth: ApiAuthV2
+      request:
+        type: TdsReimbursementRequestSubmitReq
+      response:
+        type: TdsReimbursementRequestPreviewRes
+      migrate:
+        capability: finance.tds_reimbursement.read
       helperApiExtra:
         mandatoryQuery:
           - requestorId: Text
@@ -688,6 +703,22 @@ types:
     - referenceType: Text
     - referenceId: Maybe Text
     - documentId: Maybe (Id Image)
+    # Maker's supporting document sent with the request (at most 2 MB); stored and used as documentId.
+    - documentBase64: Maybe Text
+    - documentFileExtension: Maybe Text
+  # SubmitLedgerAdjustmentReq without the document content, for the dashboard's transaction log.
+  SubmitLedgerAdjustmentTReq:
+    - personId: Id Person
+    - category: AdjustmentCategory
+    - direction: AdjustmentDirection
+    - amount: PriceAPIEntity
+    - description: Maybe Text
+    - referenceType: Text
+    - referenceId: Maybe Text
+    - documentId: Maybe (Id Image)
+    - documentFileExtension: Maybe Text
+  LedgerAdjustmentRejectReq:
+    - rejectionReason: Text
     - derive: "'HideSecrets"
   LedgerAdjustmentListRes:
     - summary: Summary
@@ -712,6 +743,8 @@ types:
     - createdAt: UTCTime
     - updatedAt: UTCTime
     - postedAt: Maybe UTCTime
+    - rejectionReason: Maybe Text
+    - rejectedAt: Maybe UTCTime
 
   # ----- Payout list -----
   PayoutListRes:
@@ -936,6 +969,10 @@ types:
     - requestId: Id FinanceTdsReimbursementRequest
     - status: TdsReimbursementStatus
 
+  TdsReimbursementRequestPreviewRes:
+    - recordType: NewType
+    - invoiceLines: [TdsReimbursementStatusInvoiceLine]
+
   TdsReimbursementRejectReq:
     recordType: NewType
     rejectionReason: Text
@@ -1026,3 +1063,6 @@ types:
 extraOperations:
   - EXTRA_API_TYPES_FILE
   - EXTRA_API_COMMON_TYPES_FILE
+
+
+

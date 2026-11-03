@@ -46,8 +46,8 @@ Invoice:
 
 
   constraints:
-    id: PrimaryKey
-    driverFeeId: SecondaryKey
+    id: PrimaryKey|!SecondaryKey
+    driverFeeId: PrimaryKey|!SecondaryKey
     driverId: "!SecondaryKey" # forcing to be a secondary key
     invoiceShortId: SecondaryKey
     invoiceStatus: "!SecondaryKeyPartial invoiceStatus:ACTIVE_INVOICE"

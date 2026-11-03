@@ -8,10 +8,12 @@ module API.Action.DashboardAuth.IssueManagement.Issue
 where
 
 import qualified API.Types.ProviderPlatform.IssueManagement.Issue
+import qualified Control.Lens
 import qualified Data.Aeson
 import qualified Domain.Action.Dashboard.IssueManagement.Issue
 import qualified Domain.Action.DashboardAuth.IssueManagement.Issue
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified IssueManagement.Common
@@ -245,21 +247,42 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getIssueCategoryList merchantId city :<|> getIssueList merchantId city :<|> getIssueInfo merchantId city :<|> getIssueInfoV2 merchantId city :<|> putIssueUpdate merchantId city :<|> postIssueChatUpload merchantId city :<|> postIssueComment merchantId city :<|> getIssueMedia merchantId city :<|> postIssueTicketStatusCallBack merchantId city :<|> postIssueCategoryCreate merchantId city :<|> postIssueCategoryUpdate merchantId city :<|> postIssueOptionCreate merchantId city :<|> postIssueOptionUpdate merchantId city :<|> postIssueMessageUpsert merchantId city :<|> getIssueCategoryDetail merchantId city :<|> getIssueOptionDetail merchantId city :<|> getIssueMessageDetail merchantId city :<|> getIssueMessageList merchantId city :<|> getIssueOptionList merchantId city :<|> deleteIssueCategory merchantId city :<|> deleteIssueOption merchantId city :<|> deleteIssueMessage merchantId city :<|> getIssueCategoryFlowPreview merchantId city :<|> getIssueTranslations merchantId city :<|> postIssueBulkUpsertTranslations merchantId city :<|> getIssueConfig merchantId city :<|> postIssueConfigUpdate merchantId city :<|> postIssueCategoryReorder merchantId city :<|> postIssueOptionReorder merchantId city :<|> postIssueMessageReorder merchantId city :<|> postIssueCategoryCopy merchantId city :<|> postIssueCategoryDefaultCopy merchantId city :<|> postIssueCategoryAllCopy merchantId city :<|> postIssueChatMessage merchantId city :<|> getIssueChatMessages merchantId city :<|> postIssueChatRead merchantId city
 
 getIssueCategoryList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueCategoryListRes)
-getIssueCategoryList a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueCategoryList a3 a2
+getIssueCategoryList a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a1 a3 a2
+        Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueCategoryList a3 a2
+    )
 
 getIssueList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe IssueManagement.Common.IssueStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueReportListResponse)
-getIssueList a15 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a13 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueList a15 a14 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getIssueList a15 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a13 a15 a14
+        Tools.ActorInfo.withDashboardUserActorInfo a13 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueList a15 a14 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+    )
 
 getIssueInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueInfoDRes)
-getIssueInfo a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueInfo a4 a3 a1
+getIssueInfo a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueInfo a4 a3 a1
+    )
 
 getIssueInfoV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueInfoDRes)
-getIssueInfoV2 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueInfoV2 a5 a4 a2 a1
+getIssueInfoV2 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueInfoV2 a5 a4 a2 a1
+    )
 
 putIssueUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.IssueUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 putIssueUpdate a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/PUT_ISSUE_UPDATE" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.IssueManagement.Issue.putIssueUpdate a5 a4 a3 a2 a1
     )
@@ -268,6 +291,7 @@ postIssueChatUpload :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -
 postIssueChatUpload a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CHAT_UPLOAD" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueChatUpload a4 a3 a1
     )
@@ -276,17 +300,24 @@ postIssueComment :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> K
 postIssueComment a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_COMMENT" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.IssueManagement.Issue.postIssueComment a5 a4 a3 a2 a1
     )
 
 getIssueMedia :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Prelude.Text)
-getIssueMedia a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueMedia a4 a3 a1
+getIssueMedia a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueMedia a4 a3 a1
+    )
 
 postIssueTicketStatusCallBack :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Data.Aeson.Value -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postIssueTicketStatusCallBack a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_TICKET_STATUS_CALL_BACK" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueTicketStatusCallBack a4 a3 a1
     )
@@ -295,6 +326,7 @@ postIssueCategoryCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mercha
 postIssueCategoryCreate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_CREATE" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueCategoryCreate a4 a3 a1
     )
@@ -303,6 +335,7 @@ postIssueCategoryUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mercha
 postIssueCategoryUpdate a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_UPDATE" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueCategoryUpdate a5 a4 a2 a1
     )
@@ -311,6 +344,7 @@ postIssueOptionCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant
 postIssueOptionCreate a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_OPTION_CREATE" a4 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueOptionCreate a6 a5 a3 a2 a1
     )
@@ -319,6 +353,7 @@ postIssueOptionUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant
 postIssueOptionUpdate a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_OPTION_UPDATE" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueOptionUpdate a5 a4 a2 a1
     )
@@ -327,29 +362,56 @@ postIssueMessageUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchan
 postIssueMessageUpsert a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_MESSAGE_UPSERT" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueMessageUpsert a4 a3 a1
     )
 
 getIssueCategoryDetail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueCategoryDetailRes)
-getIssueCategoryDetail a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueCategoryDetail a5 a4 a2 a1
+getIssueCategoryDetail a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueCategoryDetail a5 a4 a2 a1
+    )
 
 getIssueOptionDetail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueOptionDetailRes)
-getIssueOptionDetail a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueOptionDetail a5 a4 a2 a1
+getIssueOptionDetail a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueOptionDetail a5 a4 a2 a1
+    )
 
 getIssueMessageDetail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueMessageDetailRes)
-getIssueMessageDetail a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueMessageDetail a5 a4 a2 a1
+getIssueMessageDetail a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueMessageDetail a5 a4 a2 a1
+    )
 
 getIssueMessageList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueMessageListRes)
-getIssueMessageList a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueMessageList a7 a6 a4 a3 a2 a1
+getIssueMessageList a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a5 a7 a6
+        Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueMessageList a7 a6 a4 a3 a2 a1
+    )
 
 getIssueOptionList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueOptionListDRes)
-getIssueOptionList a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueOptionList a7 a6 a4 a3 a2 a1
+getIssueOptionList a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a5 a7 a6
+        Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueOptionList a7 a6 a4 a3 a2 a1
+    )
 
 deleteIssueCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 deleteIssueCategory a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/DELETE_ISSUE_CATEGORY" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.deleteIssueCategory a4 a3 a1
     )
@@ -358,6 +420,7 @@ deleteIssueOption :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> 
 deleteIssueOption a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/DELETE_ISSUE_OPTION" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.deleteIssueOption a4 a3 a1
     )
@@ -366,31 +429,49 @@ deleteIssueMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
 deleteIssueMessage a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/DELETE_ISSUE_MESSAGE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.deleteIssueMessage a4 a3 a1
     )
 
 getIssueCategoryFlowPreview :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueCategoryFlowPreviewRes)
-getIssueCategoryFlowPreview a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueCategoryFlowPreview a5 a4 a2 a1
+getIssueCategoryFlowPreview a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueCategoryFlowPreview a5 a4 a2 a1
+    )
 
 getIssueTranslations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueTranslationListRes)
-getIssueTranslations a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueTranslations a4 a3 a1
+getIssueTranslations a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueTranslations a4 a3 a1
+    )
 
 postIssueBulkUpsertTranslations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> IssueManagement.Common.Dashboard.Issue.BulkUpsertTranslationsReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postIssueBulkUpsertTranslations a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_BULK_UPSERT_TRANSLATIONS" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueBulkUpsertTranslations a4 a3 a1
     )
 
 getIssueConfig :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueConfigRes)
-getIssueConfig a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueConfig a3 a2
+getIssueConfig a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a1 a3 a2
+        Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueConfig a3 a2
+    )
 
 postIssueConfigUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> IssueManagement.Common.Dashboard.Issue.UpdateIssueConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postIssueConfigUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CONFIG_UPDATE" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueConfigUpdate a4 a3 a1
     )
@@ -399,6 +480,7 @@ postIssueCategoryReorder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merch
 postIssueCategoryReorder a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_REORDER" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueCategoryReorder a4 a3 a1
     )
@@ -407,6 +489,7 @@ postIssueOptionReorder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchan
 postIssueOptionReorder a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_OPTION_REORDER" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueOptionReorder a4 a3 a1
     )
@@ -415,6 +498,7 @@ postIssueMessageReorder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mercha
 postIssueMessageReorder a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_MESSAGE_REORDER" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueMessageReorder a4 a3 a1
     )
@@ -423,6 +507,7 @@ postIssueCategoryCopy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant
 postIssueCategoryCopy a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_COPY" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueCategoryCopy a4 a3 a1
     )
@@ -431,6 +516,7 @@ postIssueCategoryDefaultCopy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.M
 postIssueCategoryDefaultCopy a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a1 a3 a2
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_DEFAULT_COPY" a1 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueCategoryDefaultCopy a3 a2
     )
@@ -439,6 +525,7 @@ postIssueCategoryAllCopy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merch
 postIssueCategoryAllCopy a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_ALL_COPY" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueCategoryAllCopy a4 a3 a1
     )
@@ -447,17 +534,24 @@ postIssueChatMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant 
 postIssueChatMessage a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CHAT_MESSAGE" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.IssueManagement.Issue.postIssueChatMessage a5 a4 a3 a2 a1
     )
 
 getIssueChatMessages :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler [IssueManagement.Common.UI.Issue.ChatMessageItem])
-getIssueChatMessages a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueChatMessages a6 a5 a3 a2 a1
+getIssueChatMessages a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueChatMessages a6 a5 a3 a2 a1
+    )
 
 postIssueChatRead :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.MarkChatReadByUserReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postIssueChatRead a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CHAT_READ" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueChatRead a5 a4 a2 a1
     )

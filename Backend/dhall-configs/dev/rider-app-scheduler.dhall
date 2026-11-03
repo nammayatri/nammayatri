@@ -1,5 +1,7 @@
 let common = ../generic/common.dhall
 
+let devCommon = ./common.dhall
+
 let appCfg = ./rider-app.dhall
 
 let sec = ./secrets/rider-app.dhall
@@ -10,7 +12,8 @@ let schedulerConfig =
       { loggerConfig =
               common.loggerConfig
           //  { logRawSql = True
-              , logFilePath = "/tmp/rider-app-scheduler-internal.log"
+              , logFilePath =
+                  "${devCommon.logDir}/rider-app-scheduler-internal.log"
               , logToConsole = False
               , logToFile = True
               , prettyPrinting = True
@@ -58,7 +61,8 @@ in  { appCfg =
             appCfg
         //  { loggerConfig =
                     appCfg.loggerConfig
-                //  { logFilePath = "/tmp/rider-app-scheduler.log"
+                //  { logFilePath =
+                        "${devCommon.logDir}/rider-app-scheduler.log"
                     , logToFile = False
                     }
             }

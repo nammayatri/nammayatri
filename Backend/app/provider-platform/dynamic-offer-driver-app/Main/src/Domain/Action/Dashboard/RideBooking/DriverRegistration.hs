@@ -27,6 +27,7 @@ import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.DriverOnboarding.Common as SOnbCommon
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -84,7 +85,8 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
       DReg.AuthVerifyReq
         { otp = req.otp,
           deviceToken = req.deviceToken,
-          whatsappNotificationEnroll = Nothing
+          whatsappNotificationEnroll = Nothing,
+          socialLinkToken = Nothing
         }
       Nothing
   when (not mbFleet && req.isOnboardingFlow == Just True) $
@@ -101,7 +103,7 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
     assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId mbOperatorId DomainRC.defaultAssociationEnd (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId)
     QFDV.create assoc
     fleetLinkDriver <- QP.findById res.person.id >>= fromMaybeM (PersonNotFound res.person.id.getId)
-    SOnboardingComms.setOnboardingAs transporterConfig fleetLinkDriver DDI.FLEET_DRIVER
+    SOnboardingComms.setOnboardingAs transporterConfig SGuard.None fleetLinkDriver DDI.FLEET_DRIVER
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById res.person.id
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig

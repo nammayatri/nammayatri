@@ -54,6 +54,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
 import qualified Domain.Types.RecentLocation as DTRL
+import qualified Domain.Types.RewardContext as DRewardCtx
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RideStatus as DRide
@@ -89,6 +90,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
+import Lib.Finance.Transfer.Rail (RailSubmitResult (..))
 import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as Payout
@@ -112,8 +114,10 @@ import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CancellationFee as CancellationFee
+import SharedLogic.DriverNumber (getDriverMobileNumber)
 import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
+import qualified SharedLogic.Finance.Rails as FinanceRails
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.Insurance as SI
@@ -196,7 +200,8 @@ data BookingDetails = BookingDetails
     -- not "driver assigned". False on every other path.
     isBetterDriverSwap :: Bool,
     isTierUpgrade :: Bool,
-    assignedServiceTierName :: Maybe Text
+    assignedServiceTierName :: Maybe Text,
+    betterDriverAbortRadiusMeters :: Maybe Meters
   }
 
 data RideAssignedReq = RideAssignedReq
@@ -405,6 +410,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
   return
     DRide.Ride
       { id = guid,
+        driverMobileNumber = Nothing,
         bookingId = booking.id,
         shortId = ShortId $ DPayment.updateShortId Nothing isMetroTestTransaction shortId.getShortId,
         merchantId = Just booking.merchantId,
@@ -783,6 +789,7 @@ rideAssignedReqHandler req = do
                 draw <- randomRIO (0 :: Double, 1)
                 pure (draw < probability)
       QRBE.updateEligibleForBetterDriverSearch booking.id eligibleForBetterDriverSearch now
+      whenJust betterDriverAbortRadiusMeters $ \radius -> QRBE.updateBetterDriverAbortRadiusMeters booking.id radius.getMeters
       QRide.createRide ride
       QPFS.clearCache booking.riderId
       fork "Increment assigned count for customer cancellation rate" $ do
@@ -973,7 +980,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
             QRide.updateSosId (Just $ cast sos.id) ride.id
             when riderConfig.enableSupportForSafety $ do
               phoneNumber <- mapM decrypt person.mobileNumber
-              let rideInfo = SIVR.buildRideInfo ride person phoneNumber
+              rideInfo <- SIVR.buildRideInfo ride person phoneNumber
               case sos.ticketId of
                 Just existingTicketId ->
                   void $
@@ -1283,7 +1290,11 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       booking.riderId
       booking.merchantOperatingCityId
       (fromMaybe now rideEndTime)
-      isValidRide
+      DRewardCtx.RewardRideInput
+        { isValid = isValidRide,
+          vehicleVariant = Just updRide.vehicleVariant,
+          serviceTier = Just booking.vehicleServiceTierType
+        }
   fork "Evaluate rider incentive journey" $ do
     let validRideTaken = fromMaybe True isValidRide
     when validRideTaken $ do
@@ -2031,7 +2042,7 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
     handlePayout person amount payoutConfig isReferredByPerson referredByPersonStats entity dailyPayoutCount = do
       case person.payoutVpa of
         Just vpa -> do
-          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey person.id.getId) 5 5 $ do
+          Redis.withWaitAndLockRedisWithTimeout (payoutProcessingLockKey person.id.getId) 5 5 50000 $ do
             case isReferredByPerson of
               True -> do
                 QPersonStats.updateReferralEarningsAndValidActivations (referredByPersonStats.referralEarnings + payoutConfig.referralRewardAmountPerRide) (referredByPersonStats.validActivations + 1) person.id
@@ -2047,10 +2058,28 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
             logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
             let createPayoutOrderCall = TP.createPayoutOrder person.clientSdkVersion merchantId merchantOperatingCityId (Just person.id.getId)
 
-            mbPayoutOrderResp <- withTryCatch "createPayoutService:handlePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
-            case mbPayoutOrderResp of
-              Left err -> logError $ "Error in calling create payout rideId: " <> show ride.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
-              _ -> pure ()
+            -- Award accrues into the rider's ledger wallet and pays out through a kernel
+            -- transfer — the only money path. A not-submitted outcome just logs: the
+            -- PersonStats status stays Processing, same as a failed direct call before.
+            let submitViaKernel =
+                  Payout.createPayoutServiceWithStatusCheck (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated <&> \case
+                    (_, Just payoutOrder) -> RailAccepted {railOrderId = payoutOrder.orderId, railStatus = show payoutOrder.status}
+                    (Just _, Nothing) -> RailAmbiguous "payout order missing after create"
+                    (Nothing, Nothing) -> RailAmbiguous "no response from payout service"
+            FinanceRails.runAwardPayoutTransfer
+              merchantId.getId
+              merchantOperatingCityId.getId
+              currency
+              person.id.getId
+              uid
+              uid
+              amount
+              RidePaymentFinance.ridePaymentRefReferralAward
+              RidePaymentFinance.ridePaymentRefReferralAwardPayout
+              RidePaymentFinance.referralAwardPayoutLedgerRefs
+              submitViaKernel
+              (\reason -> logError $ "referral award payout not submitted, rideId: " <> show ride.id.getId <> " orderId: " <> show uid <> " reason: " <> reason)
+              (\reason -> logError $ "referral award payout parked for review, rideId: " <> show ride.id.getId <> " orderId: " <> show uid <> " reason: " <> reason)
         Nothing -> do
           when isReferredByPerson $ do
             setPayoutCountForReferree person.id.getId dailyPayoutCount
@@ -2150,7 +2179,8 @@ sendRideBookingDetailsViaWhatsapp personId ride booking riderConfig = do
       messageKey = bool DMM.WHATSAPP_CALL_BOOKING_FLOW_DETAILS_MESSAGE DMM.WHATSAPP_CALL_BOOKING_REALLOCATED_RIDE_DETAILS_MESSAGE (length bookings > 1)
   trackingUrl <- MessageBuilder.shortenTrackingUrl Nothing trackLink
   merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyInRideFlow person.merchantOperatingCityId messageKey booking.configInExperimentVersions >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
-  let driverNumber = (fromMaybe "+91" ride.driverMobileCountryCode) <> ride.driverMobileNumber
+  rideDriverMobileNumber <- getDriverMobileNumber ride >>= fromMaybeM (RideFieldNotPresent "driverMobileNumber")
+  let driverNumber = (fromMaybe "+91" ride.driverMobileCountryCode) <> rideDriverMobileNumber
       fare = show booking.estimatedTotalFare.amount
   result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [Just driverNumber, Just ride.vehicleNumber, Just fare, Just ride.otp, Just trackingUrl, Just riderConfig.appUrl] Nothing Nothing merchantMessage.mediaUrl) -- Accepts at most 7 variables using GupShup
   when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Ride Booking Details Whatsapp message")
@@ -2177,7 +2207,7 @@ sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
 
 updateAndNotifyDriverArrivalStatus :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => DRB.Booking -> DRide.Ride -> DRide.DriverArrivalStatus -> m ()
 updateAndNotifyDriverArrivalStatus booking ride newStatus =
-  Redis.withWaitOnLockRedisWithExpiry (driverArrivalStatusLockKey ride.id.getId) 5 30 $ do
+  Redis.withWaitAndLockRedisWithTimeout (driverArrivalStatusLockKey ride.id.getId) 5 30 50000 $ do
     freshRide <- QRideLite.findByIdLite ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
     let isHigherStatus = maybe True (newStatus >) freshRide.driverArrivalStatus
     when (freshRide.status /= DRide.INPROGRESS && isHigherStatus) $ do

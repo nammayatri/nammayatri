@@ -21,11 +21,12 @@ data IssueApiIntegration = IssueApiIntegration
     name :: Text,
     description :: Maybe Text,
     -- | External: urlTemplate is a full URL, author supplies headers.
-    -- InternalRider/InternalDriver: urlTemplate is only the endpoint tail after
-    -- /dashboard/{merchantShortId}/{city}/ on this app itself; the engine
-    -- builds the base from selfBaseUrl and attaches the config dashboardToken,
-    -- so internal lookups need no author-managed credentials and cannot point
-    -- outside the app.
+    -- InternalRider: urlTemplate is only the endpoint tail after
+    -- /direct-dashboard/{merchantShortId}/{city}/ on this app itself; the engine
+    -- builds the base from selfBaseUrl and attaches the service operator's
+    -- lookup token, so internal lookups need no author-managed credentials and
+    -- cannot point outside the app. InternalDriver does the same against the
+    -- counterpart app's /dashboard/ tree with its dashboard token.
     kind :: IntegrationKind,
     method :: ApiMethod,
     urlTemplate :: Text,

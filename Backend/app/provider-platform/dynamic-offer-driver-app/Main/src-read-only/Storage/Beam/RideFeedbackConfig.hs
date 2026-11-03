@@ -13,27 +13,27 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RideFeedbackConfigT f = RideFeedbackConfigT
-  { acknowledgement :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    actionRules :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    description :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    displayTrigger :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    enabled :: (B.C f Kernel.Prelude.Bool),
-    iconUrl :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    inputConfig :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    isFollowUpOnly :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    isSkippable :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    options :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    priority :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    questionKey :: (B.C f Kernel.Prelude.Text),
-    questionType :: (B.C f Domain.Types.RideFeedbackConfig.RideFeedbackQuestionType),
-    stages :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
-    title :: (B.C f Data.Aeson.Value),
-    uiConfig :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { acknowledgement :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    actionRules :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    description :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    displayTrigger :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    enabled :: B.C f Kernel.Prelude.Bool,
+    iconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    inputConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    isFollowUpOnly :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isSkippable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    options :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    priority :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    questionKey :: B.C f Kernel.Prelude.Text,
+    questionType :: B.C f Domain.Types.RideFeedbackConfig.RideFeedbackQuestionType,
+    stages :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    title :: B.C f Data.Aeson.Value,
+    uiConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -43,6 +43,6 @@ instance B.Table RideFeedbackConfigT where
 
 type RideFeedbackConfig = RideFeedbackConfigT Identity
 
-$(enableKVPG (''RideFeedbackConfigT) [('id)] [])
+$(enableKVPG ''RideFeedbackConfigT ['id] [])
 
-$(mkTableInstances (''RideFeedbackConfigT) "ride_feedback_config")
+$(mkTableInstances ''RideFeedbackConfigT "ride_feedback_config")

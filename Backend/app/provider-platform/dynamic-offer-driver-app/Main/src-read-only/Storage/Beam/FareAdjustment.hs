@@ -12,24 +12,24 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FareAdjustmentT f = FareAdjustmentT
-  { areas :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    baseFareScalePct :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    congestionScalePct :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    createdBy :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    mode :: (B.C f Domain.Types.FareAdjustment.FareAdjustmentMode),
-    perKmRateScalePct :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    perMinRateScalePct :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    reason :: (B.C f Kernel.Prelude.Text),
-    rolloutPercentage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    status :: (B.C f Domain.Types.FareAdjustment.FareAdjustmentStatus),
-    validFrom :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    validTill :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    vehicleServiceTiers :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { areas :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    baseFareScalePct :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    congestionScalePct :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    createdBy :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    mode :: B.C f Domain.Types.FareAdjustment.FareAdjustmentMode,
+    perKmRateScalePct :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    perMinRateScalePct :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    reason :: B.C f Kernel.Prelude.Text,
+    rolloutPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    status :: B.C f Domain.Types.FareAdjustment.FareAdjustmentStatus,
+    validFrom :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    validTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    vehicleServiceTiers :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -39,6 +39,6 @@ instance B.Table FareAdjustmentT where
 
 type FareAdjustment = FareAdjustmentT Identity
 
-$(enableKVPG (''FareAdjustmentT) [('id)] [])
+$(enableKVPG ''FareAdjustmentT ['id] [])
 
-$(mkTableInstances (''FareAdjustmentT) "fare_adjustment")
+$(mkTableInstances ''FareAdjustmentT "fare_adjustment")

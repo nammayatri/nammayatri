@@ -267,6 +267,7 @@ cancelSearch ::
     EsqDBFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Analytics.PublishesFleetAnalytics m,
     Redis.HedisLTSFlowEnv r,
     Esq.EsqDBReplicaFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
@@ -303,8 +304,7 @@ cancelSearch merchantId searchTry = do
       DP.removeSearchReqIdFromMap merchantId driverReq.driverId driverReq.requestId
       DP.decrementSrdSentCount driverReq.createdAt driverReq.driverId
       whenJust mbTransporterConfig $ \transporterConfig ->
-        when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
-          Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverReq.driverId transporterConfig False False False True
+        Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.OfferPulled driverReq.driverId searchTry.id.getId)
       driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
       Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId searchTry.tripCategory
   where

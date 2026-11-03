@@ -101,6 +101,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
               isSafetyPlus' = isJust $ BecknV2Utils.getTag Tag.IS_SAFETY_PLUS tagGroups
               isTierUpgrade = fromMaybe False (readMaybe . T.unpack =<< BecknV2Utils.getTag Tag.IS_TIER_UPGRADE tagGroupsFullfillment)
               assignedServiceTierName = BecknV2Utils.getTag Tag.ASSIGNED_SERVICE_TIER_NAME tagGroupsFullfillment
+              betterDriverAbortRadiusMeters = Meters <$> (readMaybe . T.unpack =<< BecknV2Utils.getTag Tag.BETTER_DRIVER_ABORT_RADIUS_METERS tagGroupsFullfillment)
           rideOtp <- maybe (Left "Missing rideOtp in on_confirm") Right mbRideOtp
           bppRideId <- fulf >>= (.fulfillmentId) & maybe (Left "Missing fulfillmentId") (Right . Id)
           driverName <- fulf >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personName) & maybe (Left "Missing fulfillment.agent.person.name in on_confirm") Right

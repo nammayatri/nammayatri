@@ -333,7 +333,7 @@ VehicleRegistrationCertificate:
     approved: Maybe Bool # Set by the BOT API on approval. (verified/enabled are statusHandler-computed; approved is the BOT gate.)
     verified: Maybe Bool # statusHandler-computed: true iff all isMandatory vehicle docs are VALID (InspectionHub is one of them). Bidirectional.
     isNew: Maybe Bool
-    docsVerificationStatusUpdatedAt: Maybe UTCTime # Stamped by every unified-flow write of verified / approved; the onboarding lists sort by it.
+    docsVerificationStatusUpdatedAt: Maybe UTCTime # Stamped at creation and by every unified-flow write of verified / approved; the onboarding lists sort by it.
     pendingChallan: Maybe PendingChallanResult
     vehicleImageId: Maybe (Id MediaFile)
     initiatedBy: Maybe Domain.Types.InitiatedBy.InitiatedBy
@@ -712,7 +712,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLinkage,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC,FleetRegistration,NationalID,WorkingHoursMeter,IndividualLegalEntityId,IndividualTAXDetails,IndividualCompanyDetails,LegalEntityLegalEntityId,LegalEntityTAXDetails,LegalEntityCompanyDetails,TermsAndConditions"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLinkage,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC,FleetRegistration,NationalID,WorkingHoursMeter,IndividualLegalEntityId,IndividualTAXDetails,IndividualCompanyDetails,LegalEntityLegalEntityId,LegalEntityTAXDetails,LegalEntityCompanyDetails,TermsAndConditions,LedgerAdjustmentProof"
       derive: "HttpInstance"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix,Exact"
@@ -1262,6 +1262,7 @@ DriverGstin:
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
+    documentImageId1: SecondaryKey
     gstin: "!SecondaryKey" # forcing to be a secondary key
   queries:
     findById:

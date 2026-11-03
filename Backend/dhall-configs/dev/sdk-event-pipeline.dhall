@@ -26,7 +26,9 @@ in  { kafkaProducerCfg
     , port = Natural/toInteger (env:SERVICE_PORT ? 8090)
     , loggerConfig =
             common.loggerConfig
-        //  { logRawSql = False, logFilePath = "/tmp/sdk-event-pipeline.log" }
+        //  { logRawSql = False
+            , logFilePath = "${common.logDir}/sdk-event-pipeline.log"
+            }
     , hedisClusterCfg
     , graceTerminationPeriod = +90
     , riderSDKEventsKafkaTopic = "rider-sdk-events"

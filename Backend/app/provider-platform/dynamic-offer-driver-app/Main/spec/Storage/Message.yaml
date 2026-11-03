@@ -25,9 +25,14 @@ Message:
     MessageType:
       enum: "Action Text, Read"
 
+    MessageCategory:
+      enum: "Broadcast, IncidentReport"
+      derive: "HttpInstance"
+
     RawMessage:
       id : Id Message
       _type : MessageType
+      category : Maybe MessageCategory
       title : Text
       description : Text
       shortDescription : Text
@@ -47,6 +52,7 @@ Message:
   fields:
     id : Id Message
     _type : MessageType
+    category : Maybe MessageCategory
     title : Text
     description : Text
     shortDescription : Text
@@ -99,12 +105,18 @@ Message:
     label: character varying (255)
     title: character varying (255)
     type: character (100)
+    category: character varying (36)
     mediaFiles: text[]
 
   queries:
     updateShareable:
       kvFunction: updateOneWithKV
       params: [shareable]
+      where: id
+
+    updateTitleAndDescription:
+      kvFunction: updateOneWithKV
+      params: [title, description, shortDescription]
       where: id
 
   default:

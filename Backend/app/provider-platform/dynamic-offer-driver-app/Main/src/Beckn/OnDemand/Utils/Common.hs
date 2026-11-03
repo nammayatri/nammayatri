@@ -1089,7 +1089,7 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           Spec.itemCategoryIds = Just [tripCategoryToCategoryCode booking.tripCategory],
           Spec.itemPaymentIds = tfPaymentId mbPaymentId,
           Spec.itemPrice = tfItemPrice booking.estimatedFare booking.currency,
-          Spec.itemTags = mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing Nothing (not $ null booking.stops)
+          Spec.itemTags = mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing Nothing Nothing (not $ null booking.stops)
         }
     ]
 
@@ -1104,7 +1104,7 @@ tfItemsSoftUpdate booking shortId estimatedDistance mbFarePolicy mbPaymentId upd
           Spec.itemCategoryIds = Just [tripCategoryToCategoryCode booking.tripCategory],
           Spec.itemPaymentIds = tfPaymentId mbPaymentId,
           Spec.itemPrice = tfItemPrice updatedBooking.estimatedFare booking.currency,
-          Spec.itemTags = mkRateCardTag estimatedDistance' booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing Nothing (not $ null booking.stops)
+          Spec.itemTags = mkRateCardTag estimatedDistance' booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing Nothing Nothing (not $ null booking.stops)
         }
     ]
 
@@ -1166,7 +1166,7 @@ convertQuoteToPricing specialLocationName specialLocationSupportNumber fareSettl
       -- persisted quote that predates that field being populated.
       serviceTierName = fromMaybe serviceTier.name vehicleServiceTierName,
       serviceTierDescription =
-        if tripCategory == DT.OneWay DT.OneWayRideOtp && isNothing area
+        if tripCategory == DT.OneWay DT.OneWayRideOtp
           then serviceTier.spotServiceTierShortDesc <|> serviceTier.shortDescription
           else serviceTier.shortDescription,
       vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
@@ -1253,8 +1253,8 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
             estimatedTimeTakenInSeconds :: Int = ceiling $ (distanceInMeters / avgSpeedInMetersPerSec)
         Just $ show estimatedTimeTakenInSeconds
 
-mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe Bool -> Maybe (IsValueAddNP, Params.FareParameters) -> Maybe Double -> Bool -> Maybe [Spec.TagGroup]
-mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp farePolicy fareParametersInRateCard mbFareParams mbGovtChargesRate hasStops = do
+mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe Bool -> Maybe (IsValueAddNP, Params.FareParameters) -> Maybe RateCardBreakupItem -> Maybe Double -> Bool -> Maybe [Spec.TagGroup]
+mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp farePolicy fareParametersInRateCard mbFareParams mbTripDurationItem mbGovtChargesRate hasStops = do
   let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp mbGovtChargesRate hasStops) farePolicy
       displayFareParamsBreakups =
         case (fareParametersInRateCard, mbFareParams) of
@@ -1262,7 +1262,8 @@ mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare c
           _ -> []
       filteredDisplayBreakups = filter (not . findDup farePolicyBreakups) displayFareParamsBreakups
       summaryBreakups = maybe [] (mkProjectFareParamsTagBreakupItems (\price -> show price) mkRateCardBreakupItem . snd) mbFareParams
-      combainedParams = farePolicyBreakups <> filteredDisplayBreakups <> summaryBreakups
+      plannedTripBreakups = maybe [] (mkPlannedTripBreakups estimatedDistance mbTripDurationItem . snd) mbFareParams
+      combainedParams = farePolicyBreakups <> filteredDisplayBreakups <> summaryBreakups <> plannedTripBreakups
       farePolicyBreakupsTags = buildRateCardTags <$> combainedParams
   Just [Tags.getFullTagGroup Tags.FARE_POLICY farePolicyBreakupsTags]
   where
@@ -1270,6 +1271,17 @@ mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare c
     findDup [] _ = False
     findDup (farePolicyCard : nextFarePolicy) fareParameter =
       if farePolicyCard.title == fareParameter.title then True else findDup nextFarePolicy fareParameter
+
+mkPlannedTripBreakups :: Maybe Meters -> Maybe RateCardBreakupItem -> Params.FareParameters -> [RateCardBreakupItem]
+mkPlannedTripBreakups mbDistance mbTripDurationItem fareParams = case fareParams.fareParametersDetails of
+  Params.InterCityDetails det -> do
+    let plannedTripFare = fareParams.baseFare + det.distanceFare + det.timeFare + det.extraDistanceFare + det.extraTimeFare + det.pickupCharge
+    catMaybes
+      [ Just $ mkRateCardBreakupItem (show Tags.PLANNED_TRIP_FARE) (show plannedTripFare),
+        mkRateCardBreakupItem (show Tags.PLANNED_TRIP_DISTANCE_KM) . show . (`div` 1000) . (.getMeters) <$> mbDistance,
+        mbTripDurationItem
+      ]
+  _ -> []
 
 mkVehicleIconTag :: Maybe BaseUrl -> Maybe [Spec.TagGroup]
 mkVehicleIconTag mbBaseUrl =
@@ -1511,6 +1523,13 @@ mkTierUpgradeTagGroupV2 isTierUpgrade mbAssignedTierType mbAssignedTierName
       [ Tags.IS_TIER_UPGRADE ~= show isTierUpgrade,
         Tags.ASSIGNED_SERVICE_TIER_TYPE ~=? mbAssignedTierType,
         Tags.ASSIGNED_SERVICE_TIER_NAME ~=? mbAssignedTierName
+      ]
+
+mkBetterDriverAbortRadiusTagGroupV2 :: Maybe Meters -> Maybe [Spec.TagGroup]
+mkBetterDriverAbortRadiusTagGroupV2 mbAbortRadius =
+  mbAbortRadius >>= \radius ->
+    Tags.buildTagGroups
+      [ Tags.BETTER_DRIVER_ABORT_RADIUS_METERS ~= show radius.getMeters
       ]
 
 mkForwardBatchTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]

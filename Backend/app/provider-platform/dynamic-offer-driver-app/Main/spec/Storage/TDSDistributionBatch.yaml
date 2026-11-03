@@ -1,0 +1,80 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+# One row per TDS certificate folder uploaded by an admin from the dashboard (one city, one FY quarter).
+# Files live in tds_distribution_pdf_file (batchId); recipients in tds_distribution_record.
+TDSDistributionBatch:
+  tableName: tds_distribution_batch
+
+  types:
+    TDSDistributionBatchStatus:
+      enum: "DRAFT, VALIDATED, SENDING, COMPLETED, CANCELLED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id TDSDistributionBatch
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    # Financial year, e.g. "2026-27"
+    financialYear: Text
+    # "Q1" .. "Q4"
+    quarter: Text
+    folderName: Maybe Text
+    status: TDSDistributionBatchStatus
+    totalFiles: Int
+    # Dashboard person who created the batch
+    uploadedById: Text
+    uploadedByName: Maybe Text
+    validatedAt: Maybe UTCTime
+    confirmedAt: Maybe UTCTime
+    # Dashboard person who pressed "Email N certificates"
+    confirmedById: Maybe Text
+    confirmedByName: Maybe Text
+    completedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  sqlType:
+    financialYear: character varying(10)
+    quarter: character varying(10)
+    folderName: character varying(255)
+    status: character varying(30)
+    uploadedById: character varying(36)
+    uploadedByName: character varying(255)
+    confirmedById: character varying(36)
+    confirmedByName: character varying(255)
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+
+    updateStatusAndValidatedAt:
+      kvFunction: updateOneWithKV
+      params: [status, validatedAt]
+      where: id
+
+    updateConfirmed:
+      kvFunction: updateOneWithKV
+      params: [status, confirmedAt, confirmedById, confirmedByName]
+      where: id
+
+    updateStatusAndCompletedAt:
+      kvFunction: updateOneWithKV
+      params: [status, completedAt]
+      where: id
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <TDSDistributionBatchStatus>
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

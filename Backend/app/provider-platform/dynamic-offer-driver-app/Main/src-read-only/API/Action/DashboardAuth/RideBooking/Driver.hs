@@ -9,11 +9,13 @@ where
 
 import qualified API.Types.Dashboard.RideBooking.Driver
 import qualified API.Types.ProviderPlatform.Fleet.Driver
+import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
 import qualified Domain.Action.Dashboard.RideBooking.Driver
 import qualified Domain.Action.DashboardAuth.RideBooking.Driver
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -72,12 +74,18 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getDriverPaymentDue merchantId city :<|> postDriverEnable merchantId city :<|> postDriverCollectCash merchantId city :<|> postDriverV2CollectCash merchantId city :<|> postDriverExemptCash merchantId city :<|> postDriverV2ExemptCash merchantId city :<|> getDriverInfo merchantId city :<|> getDriverFeedbackList merchantId city :<|> postDriverUnlinkVehicle merchantId city :<|> postDriverEndRCAssociation merchantId city :<|> postDriverDeleteAadhaar merchantId city :<|> postDriverDeletePanCard merchantId city :<|> postDriverAddVehicle merchantId city :<|> postDriverSetRCStatus merchantId city :<|> postDriverExemptDriverFee merchantId city
 
 getDriverPaymentDue :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.Dashboard.RideBooking.Driver.DriverOutstandingBalanceResp])
-getDriverPaymentDue a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Driver.getDriverPaymentDue a5 a4 a2 a1
+getDriverPaymentDue a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Driver.getDriverPaymentDue a5 a4 a2 a1
+    )
 
 postDriverEnable :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverEnable a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_ENABLE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.RideBooking.Driver.postDriverEnable a4 a3 a1
     )
@@ -86,6 +94,7 @@ postDriverCollectCash :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant
 postDriverCollectCash a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_COLLECT_CASH" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.RideBooking.Driver.postDriverCollectCash a5 a4 a3 a2 a1
     )
@@ -94,6 +103,7 @@ postDriverV2CollectCash :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mercha
 postDriverV2CollectCash a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_V2_COLLECT_CASH" a4 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.RideBooking.Driver.postDriverV2CollectCash a6 a5 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a4) a2 a1
     )
@@ -102,6 +112,7 @@ postDriverExemptCash :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant 
 postDriverExemptCash a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_EXEMPT_CASH" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.RideBooking.Driver.postDriverExemptCash a4 a3 a2 a1
     )
@@ -110,20 +121,32 @@ postDriverV2ExemptCash :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchan
 postDriverV2ExemptCash a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_V2_EXEMPT_CASH" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Driver.postDriverV2ExemptCash a5 a4 a2 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3) a1
     )
 
 getDriverInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.RideBooking.Driver.DriverInfoRes)
-getDriverInfo a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a9 $ Domain.Action.DashboardAuth.RideBooking.Driver.getDriverInfo a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getDriverInfo a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a9 a11 a10
+        Tools.ActorInfo.withDashboardUserActorInfo a9 $ Domain.Action.DashboardAuth.RideBooking.Driver.getDriverInfo a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+    )
 
 getDriverFeedbackList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.RideBooking.Driver.GetFeedbackListRes)
-getDriverFeedbackList a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.RideBooking.Driver.getDriverFeedbackList a6 a5 a3 a2 a1
+getDriverFeedbackList a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.RideBooking.Driver.getDriverFeedbackList a6 a5 a3 a2 a1
+    )
 
 postDriverUnlinkVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverUnlinkVehicle a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_UNLINK_VEHICLE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.RideBooking.Driver.postDriverUnlinkVehicle a4 a3 a1
     )
@@ -132,6 +155,7 @@ postDriverEndRCAssociation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mer
 postDriverEndRCAssociation a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_END_RC_ASSOCIATION" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.RideBooking.Driver.postDriverEndRCAssociation a4 a3 a1
     )
@@ -140,6 +164,7 @@ postDriverDeleteAadhaar :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mercha
 postDriverDeleteAadhaar a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_DELETE_AADHAAR" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.RideBooking.Driver.postDriverDeleteAadhaar a4 a3 a1
     )
@@ -148,6 +173,7 @@ postDriverDeletePanCard :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mercha
 postDriverDeletePanCard a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_DELETE_PAN_CARD" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.RideBooking.Driver.postDriverDeletePanCard a4 a3 a1
     )
@@ -156,6 +182,7 @@ postDriverAddVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant 
 postDriverAddVehicle a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_ADD_VEHICLE" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Driver.postDriverAddVehicle a5 a4 a2 a1
     )
@@ -164,6 +191,7 @@ postDriverSetRCStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant
 postDriverSetRCStatus a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_SET_RC_STATUS" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Driver.postDriverSetRCStatus a5 a4 a2 a1
     )
@@ -172,6 +200,7 @@ postDriverExemptDriverFee :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merc
 postDriverExemptDriverFee a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_EXEMPT_DRIVER_FEE" a4 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.RideBooking.Driver.postDriverExemptDriverFee a6 a5 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a4) a2 a1
     )

@@ -24,7 +24,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RideFeedbackResponse.RideFeedbackResponse] -> m ())
 createMany = traverse_ create
 
-findAllByTransactionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.RideFeedbackResponse.RideFeedbackResponse]))
+findAllByTransactionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RideFeedbackResponse.RideFeedbackResponse])
 findAllByTransactionId transactionId = do findAllWithKV [Se.Is Beam.transactionId $ Se.Eq transactionId]
 
 updateActionResults ::

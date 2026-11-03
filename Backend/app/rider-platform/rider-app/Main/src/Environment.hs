@@ -47,6 +47,7 @@ import Kernel.External.Encryption (EncTools)
 import Kernel.External.Infobip.Types (InfoBIPConfig)
 import qualified Kernel.External.MasterCloudForward as MCF
 import Kernel.External.Slack.Types (SlackConfig)
+import Kernel.External.SocialLogin.Types (SocialLoginConfig)
 import Kernel.Prelude
 import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
@@ -193,6 +194,7 @@ data AppCfg = AppCfg
     selfUIUrl :: BaseUrl,
     dashboardToken :: Text,
     driverDashboardToken :: Maybe Text,
+    issueLookupToken :: Maybe Text,
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
     cacheFeedbackFormConfig :: CacheFeedbackFormConfig,
@@ -218,6 +220,7 @@ data AppCfg = AppCfg
     superPositionConfig :: CF.SuperPositionConfig,
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
+    socialLoginConfig :: SocialLoginConfig,
     isMetroTestTransaction :: Bool,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
     maxNotificationShards :: Int,
@@ -354,6 +357,7 @@ data AppEnv = AppEnv
     kafkaEnvs :: BAPKafkaEnvs,
     dashboardToken :: Text,
     driverDashboardToken :: Maybe Text,
+    issueLookupToken :: Maybe Text,
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
     cacheFeedbackFormConfig :: CacheFeedbackFormConfig,
@@ -380,6 +384,7 @@ data AppEnv = AppEnv
     kafkaProducerForART :: Maybe KafkaProducerTools,
     ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
+    socialLoginConfig :: SocialLoginConfig,
     isMetroTestTransaction :: Bool,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
     maxNotificationShards :: Int,

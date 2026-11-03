@@ -149,10 +149,11 @@ getRideList ::
   Maybe Common.PaymentCollector ->
   Maybe Bool ->
   [Common.RideDetailGroup] ->
+  Maybe Text ->
   Text ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbReqRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount mbDriverId mbCustomerCountryCode mbDriverCountryCode mbPaymentCollectedBy mbHasSos detailGroups requestorId = do
-  getRideListUtil Nothing merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbPaymentMode mbPaymentCollectedBy mbHasSos detailGroups mbReqRideId mbReqShortRideId mbto Nothing mbFleetOwnerId mbDriverId mbFromAmount mbToAmount (Just requestorId)
+getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbReqRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount mbDriverId mbCustomerCountryCode mbDriverCountryCode mbPaymentCollectedBy mbHasSos detailGroups mbVehicleNo requestorId = do
+  getRideListUtil Nothing merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbPaymentMode mbPaymentCollectedBy mbHasSos detailGroups mbReqRideId mbReqShortRideId mbto mbVehicleNo mbFleetOwnerId mbDriverId mbFromAmount mbToAmount (Just requestorId)
 
 getRideAgentList ::
   ShortId DM.Merchant ->

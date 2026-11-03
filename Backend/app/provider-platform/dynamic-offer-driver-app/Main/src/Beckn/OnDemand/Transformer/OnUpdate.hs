@@ -99,6 +99,7 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
   OU.BookingCancelledBuildReq req -> Common.tfCancelReqToOrder req becknConfig
   OU.DriverArrivedBuildReq req -> Common.tfArrivedReqToOrder req mbFarePolicy becknConfig
   OU.DriverReachedDestinationBuildReq req -> Common.tfReachedDestinationReqToOrder req
+  OU.DriverNearPickupBuildReq req -> Common.tfNearPickupReqToOrder req
   OU.ReturnTripStartedBuildReq req -> Common.tfReturnTripStartedReqToOrder req
   OU.EstimateRepetitionBuildReq OU.DEstimateRepetitionReq {..} -> do
     let BookingDetails {..} = bookingDetails
@@ -121,7 +122,7 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
                   itemLocationIds = Nothing,
                   itemPaymentIds = Nothing,
                   itemPrice = Nothing,
-                  itemTags = Utils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing (not $ null booking.stops)
+                  itemTags = Utils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing Nothing (not $ null booking.stops)
                 },
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -346,7 +347,7 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
                   itemLocationIds = Nothing,
                   itemPaymentIds = Nothing,
                   itemPrice = Nothing,
-                  itemTags = Utils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing (not $ null booking.stops)
+                  itemTags = Utils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing Nothing (not $ null booking.stops)
                 },
           orderBilling = Nothing,
           orderCancellation = Nothing,

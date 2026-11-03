@@ -20,7 +20,7 @@ instance FromTType' Beam.FareBreakupInfo Domain.Types.FareBreakupInfo.FareBreaku
         Domain.Types.FareBreakupInfo.FareBreakupInfo
           { entityId = entityId,
             entityType = entityType,
-            fareBreakups = (fromMaybe [] (Kernel.Utils.Text.decodeFromText fareBreakups)),
+            fareBreakups = fromMaybe [] (Kernel.Utils.Text.decodeFromText fareBreakups),
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,

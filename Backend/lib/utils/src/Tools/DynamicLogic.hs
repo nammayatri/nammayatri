@@ -129,7 +129,7 @@ getConfigLogic ::
   LogicDomain ->
   m [A.Value]
 getConfigLogic merchantOpCityId mbVersion configDomain = do
-  mbBaseRollout <- DALR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) configDomain
+  mbBaseRollout <- DALR.findBaseRolloutByMerchantOpCityAndDomainWithFallback (cast merchantOpCityId) configDomain
   baseLogics <- maybe (return []) (\rollout -> DALE.findByDomainAndVersion configDomain rollout.version) mbBaseRollout
   when (null baseLogics) $ logWarning $ "Base logic not found for merchantOpCityId: " <> show merchantOpCityId <> " and configDomain: " <> show configDomain
   case (mbVersion, mbBaseRollout) of
@@ -168,11 +168,8 @@ selectVersionForConfigs ::
   m (Maybe Int)
 selectVersionForConfigs merchantOpCityId domain mbToss =
   selectWithTxnStickiness domain merchantOpCityId $ do
-    mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
-    -- Behaviour domains are opt-in per city: never inherit the "default"-city rollout
-    -- (its 0% row is only a canonical-version marker for the enablement APIs).
-    configs <- if null mbConfigs && not (isBehaviourDomain domain) then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
-    applicapleConfigs <- LYTB.filterByActiveTimeBound (cast merchantOpCityId) domain (filterActiveRollouts configs) -- Windows are looked up for mocid, so rollout falling back to "default" city can only match "Unbounded".
+    configs <- DALR.findByMerchantOpCityAndDomainWithFallback (cast merchantOpCityId) domain
+    applicapleConfigs <- LYTB.filterByActiveTimeBound (cast merchantOpCityId) domain (filterActiveRollouts configs) -- Windows are looked up for mocid, so rollouts falling back to the "default" or a sibling city can only match "Unbounded".
     mbSelectedConfig <- chooseLogicWithGroups (ungroupBaseRollouts applicapleConfigs) mbToss
     return $ mbSelectedConfig <&> (.version)
 
@@ -207,7 +204,7 @@ selectWithTxnStickiness domain merchantOpCityId selectFresh = do
 
 isExperimentRunning :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> m Bool
 isExperimentRunning merchantOpCityId domain = do
-  mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
+  mbConfigs <- DALR.findByMerchantOpCityAndDomainWithFallback (cast merchantOpCityId) domain
   let activeConfigs = filterActiveRollouts mbConfigs
   return $ any (\cfg -> cfg.percentageRollout /= 100 && cfg.percentageRollout /= 0) activeConfigs
 
@@ -220,10 +217,7 @@ selectAppDynamicLogicVersion ::
   m (Maybe Int)
 selectAppDynamicLogicVersion merchantOpCityId domain localTime mbToss =
   selectWithTxnStickiness domain merchantOpCityId $ do
-    mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
-    -- Behaviour domains are opt-in per city: never inherit the "default"-city rollout
-    -- (its 0% row is only a canonical-version marker for the enablement APIs).
-    configs <- if null mbConfigs && not (isBehaviourDomain domain) then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
+    configs <- DALR.findByMerchantOpCityAndDomainWithFallback (cast merchantOpCityId) domain
     let activeConfigs = filterActiveRollouts configs
     mbWindowName <- LYTB.activeTimeBoundName (cast merchantOpCityId) domain localTime
     let applicapleConfigs = LYTB.applicableForTimeBound mbWindowName activeConfigs
@@ -334,7 +328,7 @@ findOneUiConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDim
   mbVersion <-
     if isBaseLogic
       then do
-        mbBaseRollout <- DALR.findBaseRolloutByMerchantOpCityAndDomain merchantOpCityId cfgDomain >>= fromMaybeM (InvalidRequest "Base Rollout not found")
+        mbBaseRollout <- DALR.findBaseRolloutByMerchantOpCityAndDomainWithFallback merchantOpCityId cfgDomain >>= fromMaybeM (InvalidRequest "Base Rollout not found")
         return $ Just mbBaseRollout.version
       else getConfigVersion merchantOpCityId mbConfigInExperimentVersions cfgDomain
   cachedConfig :: Maybe a <- Hedis.withCrossAppRedis $ Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion)

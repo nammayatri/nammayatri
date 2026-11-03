@@ -27,9 +27,9 @@ data DocumentVersionMetadataE e = DocumentVersionMetadata
   }
   deriving (Generic)
 
-type DocumentVersionMetadata = DocumentVersionMetadataE ('AsEncrypted)
+type DocumentVersionMetadata = DocumentVersionMetadataE 'AsEncrypted
 
-type DecryptedDocumentVersionMetadata = DocumentVersionMetadataE ('AsUnencrypted)
+type DecryptedDocumentVersionMetadata = DocumentVersionMetadataE 'AsUnencrypted
 
 instance EncryptedItem DocumentVersionMetadata where
   type Unencrypted DocumentVersionMetadata = (DecryptedDocumentVersionMetadata, HashSalt)
@@ -70,7 +70,7 @@ instance EncryptedItem' DocumentVersionMetadata where
   fromUnencrypted = fst
 
 data DLVersionMetadata = DLVersionMetadata {dateOfExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime, driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime}
-  deriving (Generic, (FromJSON), (ToJSON), (Eq), (Show))
+  deriving (Generic, FromJSON, ToJSON, Eq, Show)
 
 data RCVersionMetadata = RCVersionMetadata
   { fitnessExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -80,9 +80,9 @@ data RCVersionMetadata = RCVersionMetadata
     vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant
   }
-  deriving (Generic, (FromJSON), (ToJSON), (Eq), (Show))
+  deriving (Generic, FromJSON, ToJSON, Eq, Show)
 
 data VersionMetadata
   = DLMetadata Domain.Types.DocumentVersionMetadata.DLVersionMetadata
   | RCMetadata Domain.Types.DocumentVersionMetadata.RCVersionMetadata
-  deriving (Generic, (FromJSON), (ToJSON), (Eq), (Show))
+  deriving (Generic, FromJSON, ToJSON, Eq, Show)

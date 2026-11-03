@@ -56,6 +56,7 @@ data Domain
   = PREPAID_SUBSCRIPTION
   | POSTPAID_SUBSCRIPTION
   | MEMBERSHIP
+  | ONDC_RSF
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 -- | A concrete data source that can appear on either side of a recon. Names
@@ -77,6 +78,9 @@ data DataSource
   | LEDGER
   | SUBSCRIPTION_PURCHASE
   | PAYOUT_REQUEST
+  | RSF_CLAIM
+  | RIDE
+  | BANK_DEPOSIT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Domain)

@@ -57,7 +57,8 @@ data DRideAssignedReq = DRideAssignedReq
     isSafetyPlus :: Bool,
     isTierUpgrade :: Bool,
     assignedServiceTierType :: Maybe Text,
-    assignedServiceTierName :: Maybe Text
+    assignedServiceTierName :: Maybe Text,
+    betterDriverAbortRadiusMeters :: Maybe Meters
   }
 
 data DRideStartedReq = DRideStartedReq

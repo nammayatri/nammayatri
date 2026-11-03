@@ -57,7 +57,7 @@ data RideE e = Ride
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverMobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    driverMobileNumber :: Kernel.Prelude.Text,
+    driverMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverName :: Kernel.Prelude.Text,
     driverPhoneNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
@@ -124,9 +124,9 @@ data RideE e = Ride
   }
   deriving (Generic)
 
-type Ride = RideE ('AsEncrypted)
+type Ride = RideE 'AsEncrypted
 
-type DecryptedRide = RideE ('AsUnencrypted)
+type DecryptedRide = RideE 'AsUnencrypted
 
 instance EncryptedItem Ride where
   type Unencrypted Ride = (DecryptedRide, HashSalt)
@@ -356,16 +356,16 @@ data SosJourneyStatus
 
 data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CancellationFeeStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationFeeStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverArrivalStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverArrivalStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SosJourneyStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''UnexpectedConditionStage))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UnexpectedConditionStage)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''PaymentStatus))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PaymentStatus)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''DriverArrivalStatus))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''DriverArrivalStatus)

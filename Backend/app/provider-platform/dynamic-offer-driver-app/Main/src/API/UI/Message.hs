@@ -32,6 +32,7 @@ type API =
   "message"
     :> ( "list"
            :> TokenAuth
+           :> QueryParam "category" Message.MessageCategory
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
            :> Get '[JSON] [DMessage.MessageAPIEntityResponse]
@@ -66,8 +67,8 @@ handler =
     :<|> fetchMedia
     :<|> getMessage
 
-messageList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> FlowHandler [DMessage.MessageAPIEntityResponse]
-messageList (driverId, merchantId, merchantOpCityId) mbLimit = withFlowHandlerAPI . DMessage.messageList (driverId, merchantId, merchantOpCityId) mbLimit
+messageList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Message.MessageCategory -> Maybe Int -> Maybe Int -> FlowHandler [DMessage.MessageAPIEntityResponse]
+messageList (driverId, merchantId, merchantOpCityId) mbCategory mbLimit = withFlowHandlerAPI . DMessage.messageList (driverId, merchantId, merchantOpCityId) mbCategory mbLimit
 
 getMessage :: Id Message.Message -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DMessage.MessageAPIEntityResponse
 getMessage msgId (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DMessage.getMessage (driverId, merchantId, merchantOpCityId) msgId

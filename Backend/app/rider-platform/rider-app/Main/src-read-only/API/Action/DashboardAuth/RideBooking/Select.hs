@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.RideBooking.Select
 where
 
 import qualified API.Types.Dashboard.RideBooking.Select
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.RideBooking.Select
 import qualified "this" Domain.Action.UI.Select
 import qualified "this" Domain.Types.Estimate
@@ -42,20 +43,32 @@ postSelectEstimate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
 postSelectEstimate a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND "RIDER_RIDE_BOOKING/SELECT/POST_SELECT_ESTIMATE" a4 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.RideBooking.Select.postSelectEstimate a6 a5 a3 a2 a1
     )
 
 getSelectQuotes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.FlowHandler Domain.Action.UI.Select.SelectListRes)
-getSelectQuotes a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Select.getSelectQuotes a5 a4 a2 a1
+getSelectQuotes a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Select.getSelectQuotes a5 a4 a2 a1
+    )
 
 getSelectResult :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.FlowHandler Domain.Action.UI.Select.QuotesResultResponse)
-getSelectResult a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Select.getSelectResult a5 a4 a2 a1
+getSelectResult a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Select.getSelectResult a5 a4 a2 a1
+    )
 
 postSelectCancelSearch :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.FlowHandler SharedLogic.Cancel.CancelAPIResponse)
 postSelectCancelSearch a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND "RIDER_RIDE_BOOKING/SELECT/POST_SELECT_CANCEL_SEARCH" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Select.postSelectCancelSearch a5 a4 a2 a1
     )

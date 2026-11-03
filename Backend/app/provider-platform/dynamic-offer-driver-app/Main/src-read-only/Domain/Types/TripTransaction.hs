@@ -69,23 +69,23 @@ data ActionSource
   | ForceDashboard
   | CronJob
   | AutoRecovery
-  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data EstimatedRouteDetails = EstimatedRouteDetails {distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters, duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds, polyline :: Kernel.Prelude.Maybe Data.Text.Text}
-  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data TripStatus = TRIP_ASSIGNED | CANCELLED | IN_PROGRESS | PAUSED | COMPLETED | UPCOMING deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data TripStatus = TRIP_ASSIGNED | CANCELLED | IN_PROGRESS | PAUSED | COMPLETED | UPCOMING deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data TripType = PILOT | WIMB deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data TripType = PILOT | WIMB deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TripStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TripStatus)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''TripStatus))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''TripStatus)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ActionSource))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''ActionSource)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''ActionSource))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''ActionSource)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TripType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TripType)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''TripType))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''TripType)

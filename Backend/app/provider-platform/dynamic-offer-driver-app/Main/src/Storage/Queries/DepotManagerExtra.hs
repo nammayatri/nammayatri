@@ -77,7 +77,7 @@ upsertDepotManagerDetail ::
   Maybe Bool ->
   m ()
 upsertDepotManagerDetail merchant merchantOperatingCity personId depotId mbIsAdmin mbEnabled mbIsBlockAllowed = do
-  Hedis.withLockRedis (mkUpsertLockKey personId depotId) upsertLockTtlSeconds $ do
+  Hedis.withWaitAndLockRedis (mkUpsertLockKey personId depotId) upsertLockTtlSeconds 50000 $ do
     mbExistingDepotManager <-
       findOneWithDb
         [ Se.And
@@ -200,7 +200,7 @@ deleteByPersonIdAndDepotCode ::
   Id DP.Person ->
   m ()
 deleteByPersonIdAndDepotCode depotId personId = do
-  Hedis.withLockRedis (mkUpsertLockKey personId depotId) upsertLockTtlSeconds $
+  Hedis.withWaitAndLockRedis (mkUpsertLockKey personId depotId) upsertLockTtlSeconds 50000 $
     deleteWithDb
       [ Se.And
           [ Se.Is Beam.depotCode $ Se.Eq depotId,

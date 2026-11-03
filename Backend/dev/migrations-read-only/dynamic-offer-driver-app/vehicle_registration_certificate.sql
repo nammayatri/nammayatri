@@ -164,3 +164,7 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN r
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN docs_verification_status_updated_at timestamp with time zone ;
+
+
+------- SQL updates -------
+

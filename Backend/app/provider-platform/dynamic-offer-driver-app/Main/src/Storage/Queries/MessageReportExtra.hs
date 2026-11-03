@@ -28,8 +28,8 @@ import qualified Storage.Queries.Person ()
 
 -- Extra code goes here --
 
-findByDriverIdAndLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
-findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
+findByDriverIdAndLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id P.Driver -> Language -> Maybe MessageCategory -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
+findByDriverIdAndLanguage driverId language mbCategory mbLimit mbOffset = do
   let limitVal = min (fromMaybe 10 mbLimit) 10
       offsetVal = fromMaybe 0 mbOffset
   dbConf <- getReplicaBeamConfig
@@ -40,7 +40,10 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
           B.offset_ (fromIntegral offsetVal) $
             B.orderBy_ (\(messageReport', _, _) -> B.desc_ (messageReport'.createdAt)) $
               B.filter_'
-                (\(messageReport', _, _) -> messageReport'.driverId B.==?. B.val_ (getId driverId))
+                ( \(messageReport', message', _) ->
+                    messageReport'.driverId B.==?. B.val_ (getId driverId)
+                      B.&&?. maybe (B.sqlBool_ (B.val_ True)) (matchesCategory message') mbCategory
+                )
                 do
                   messageReport <- B.all_ (BeamCommon.messageReport BeamCommon.atlasDB)
                   message <- B.join_' (BeamCommon.message BeamCommon.atlasDB) (\message' -> BeamMR.messageId messageReport B.==?. BeamM.id message')
@@ -58,6 +61,7 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
             RawMessage
               { id = id,
                 _type = _type,
+                category = category,
                 title = title,
                 description = description,
                 shortDescription = shortDescription,
@@ -73,6 +77,12 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
       pure $ zip3 p (rawMessageFromMessage <$> di) v
     Left _ -> pure []
   where
+    -- Rows predating the category column are broadcasts, so a Broadcast filter has to
+    -- include NULL or every message sent before this column existed disappears.
+    matchesCategory message' Broadcast =
+      BeamM.category message' B.==?. B.val_ (Just Broadcast)
+        B.||?. B.sqlBool_ (B.isNothing_ (BeamM.category message'))
+    matchesCategory message' category' = BeamM.category message' B.==?. B.val_ (Just category')
     fst' (x, _, _) = x
     snd' (_, y, _) = y
     thd' (_, _, z) = z

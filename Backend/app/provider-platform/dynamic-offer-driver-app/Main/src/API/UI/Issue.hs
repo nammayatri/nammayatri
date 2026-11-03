@@ -120,6 +120,7 @@ driverIssueHandle =
       findMerchantConfig = buildMerchantConfig,
       mbGetRideCardInfoByRideIds = Nothing,
       mbCounterpartDashboardInfo = Nothing,
+      selfLookupToken = pure Nothing,
       mbReportACIssue = Nothing,
       mbReportIssue = Nothing,
       mbFindLatestBookingByPersonId = Nothing,
@@ -133,6 +134,7 @@ driverIssueHandle =
       mbSendChatNotification = Just (\pid payload -> Notify.notifyOnIssueChatMessage (cast pid) payload),
       mbShouldForwardChatToTicketService = Just isXyneTicketService,
       mbFetchMediaBase64 = Just fetchMediaBase64FromS3,
+      mbProbeSupportBot = Nothing,
       findIssueConfig = \mocId issueIdentifier ->
         getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) Nothing,
       mbUpdateTicketOnService = Nothing,
@@ -287,6 +289,7 @@ castRideInfo merchantId merchantOpCityId rideId = do
           estimatedFare = toHighPrecMoney res.estimatedFare,
           computedPrice = toHighPrecMoney <$> res.actualFare,
           fareBreakup = [],
+          estimateFareBreakup = [],
           rideCreatedAt = res.rideCreatedAt,
           rideStartTime = res.rideStartTime,
           rideStatus = castRideStatus res.rideStatus,
@@ -391,8 +394,8 @@ updateIssueOption (driverId, merchantId, _) issueReportId req = withFlowHandlerA
 deleteIssue :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id Domain.IssueReport -> FlowHandler APISuccess
 deleteIssue (driverId, merchantId, _) issueReportId = withFlowHandlerAPI $ Common.deleteIssue issueReportId (cast driverId, cast merchantId) Common.DRIVER
 
-getIssueCategory :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> FlowHandler Common.IssueCategoryListRes
-getIssueCategory (driverId, merchantId, merchantOperatingCityId) language = withFlowHandlerAPI $ Common.getIssueCategory (cast driverId, cast merchantId, cast merchantOperatingCityId) language driverIssueHandle Common.DRIVER
+getIssueCategory :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> Maybe Bool -> FlowHandler Common.IssueCategoryListRes
+getIssueCategory (driverId, merchantId, merchantOperatingCityId) language _enableXyne = withFlowHandlerAPI $ Common.getIssueCategory (cast driverId, cast merchantId, cast merchantOperatingCityId) language Nothing driverIssueHandle Common.DRIVER
 
 getIssueOption :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id Domain.IssueCategory -> Maybe (Id Domain.IssueOption) -> Maybe (Id Domain.IssueReport) -> Maybe (Id Common.Ride) -> Maybe Language -> FlowHandler Common.IssueOptionListRes
 getIssueOption (driverId, merchantId, merchantOpCityId) issueCategoryId issueOptionId issueReportId mbRideId language = withFlowHandlerAPI $ Common.getIssueOption (cast driverId, cast merchantId, cast merchantOpCityId) issueCategoryId issueOptionId issueReportId mbRideId language driverIssueHandle Common.DRIVER

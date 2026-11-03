@@ -8,9 +8,11 @@ module API.Action.DashboardAuth.Management.PolicyDocument
 where
 
 import qualified API.Types.RiderPlatform.Management.PolicyDocument
+import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.PolicyDocument
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -53,6 +55,7 @@ postPolicyDocumentCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merch
 postPolicyDocumentCreate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/POLICY_DOCUMENT/POST_POLICY_DOCUMENT_CREATE" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.PolicyDocument.postPolicyDocumentCreate a4 a3 a1
     )
@@ -61,9 +64,15 @@ postPolicyDocumentUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merch
 postPolicyDocumentUpdate a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/POLICY_DOCUMENT/POST_POLICY_DOCUMENT_UPDATE" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.PolicyDocument.postPolicyDocumentUpdate a5 a4 a2 a1
     )
 
 getPolicyDocumentList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.RiderPlatform.Management.PolicyDocument.PolicyListMgmtResp)
-getPolicyDocumentList a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.PolicyDocument.getPolicyDocumentList a5 a4 a2 a1
+getPolicyDocumentList a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.PolicyDocument.getPolicyDocumentList a5 a4 a2 a1
+    )

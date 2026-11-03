@@ -5,7 +5,7 @@
 > commission/paymentCharge/paymentChargeBearer (set at BAP booking build); the BAP quote
 > is built with `selectedOfferId = Nothing` (offers are NOT applied on one-shot rides —
 > discount round-trip is a phase-2 item); the BAP endpoint uses a WAITING lock
-> (`withWaitOnLockRedisWithExpiry`, lock TTL 60s / wait 30s — a racing duplicate blocks
+> (`withWaitAndLockRedisWithTimeout`, lock TTL 60s / wait 30s — a racing duplicate blocks
 > until the first attempt finishes, then lands on the idempotency ladder; note the BPP's
 > `withShortRetry` only retries connection errors/503, never API errors), does all
 > ride-existence checks via `runInMasterDbAndRedis` (read-your-own-write), tolerates

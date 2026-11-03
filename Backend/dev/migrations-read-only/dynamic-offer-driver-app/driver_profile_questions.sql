@@ -37,3 +37,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_profile_questions ADD COLUMN image_ids
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_profile_questions ADD COLUMN self_declarations json ;
+
+
+------- SQL updates -------
+

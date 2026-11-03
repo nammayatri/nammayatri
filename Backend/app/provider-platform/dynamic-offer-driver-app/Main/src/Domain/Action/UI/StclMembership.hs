@@ -251,6 +251,9 @@ submitMembershipApplication driverId merchantId merchantOperatingCityId req mbAd
             Domain.status = Domain.PENDING,
             Domain.paymentStatus = Nothing,
             Domain.isAdditionalSharePurchase = Just False,
+            Domain.isApprovedFeeOverride = Just (isJust mbAdminOverrideMembershipFee),
+            Domain.membershipFee = Just subscriptionAmount,
+            Domain.pricePerShare = Just pricePerShare,
             Domain.applicationCount = Nothing,
             Domain.shareStartCount = Nothing,
             Domain.shareEndCount = Nothing,
@@ -293,7 +296,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
   -- check or both see "no PENDING" and create racing payment orders. The lock spans validation,
   -- resume-or-create decision, payment-order creation, and PENDING row insert so a second
   -- request enters with the new/resumed row already visible via findByDriverId.
-  Redis.withLockRedisAndReturnValue (QStclMembership.stclMembershipDriverLockKey driverId.getId) 60 $ do
+  Redis.withWaitAndLockRedis (QStclMembership.stclMembershipDriverLockKey driverId.getId) 60 50000 $ do
     existingApplications <- QStclMembership.findByDriverId driverId
     let submittedApps = filter (\a -> a.status == Domain.SUBMITTED) existingApplications
         pendingApps = filter (\a -> a.status == Domain.PENDING) existingApplications
@@ -326,7 +329,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
 
     -- Resolve the requested amount up front so we can compare it against any in-flight order before deciding
     -- whether to resume that order or create a fresh one for the new intent.
-    let resolvedReqAmount = toHighPrecMoney $ fromMaybe (Money (req.numberOfShares * pricePerShare)) req.amount
+    let resolvedReqAmount = toHighPrecMoney $ Money (req.numberOfShares * pricePerShare)
 
     -- Decide whether a fresh PENDING is actually resumable. We only resume if the new request matches the
     -- in-flight order on both numberOfShares and amount — otherwise the driver's intent has changed
@@ -449,6 +452,9 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   Domain.status = Domain.PENDING,
                   Domain.paymentStatus = Nothing,
                   Domain.isAdditionalSharePurchase = Just True,
+                  Domain.isApprovedFeeOverride = Just False,
+                  Domain.membershipFee = Nothing,
+                  Domain.pricePerShare = Just pricePerShare,
                   Domain.applicationCount = Nothing,
                   Domain.shareStartCount = Nothing,
                   Domain.shareEndCount = Nothing,

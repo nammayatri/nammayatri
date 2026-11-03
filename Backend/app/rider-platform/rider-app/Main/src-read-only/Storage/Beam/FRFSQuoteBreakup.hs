@@ -12,15 +12,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FRFSQuoteBreakupT f = FRFSQuoteBreakupT
-  { id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    quoteCategoryId :: (B.C f Kernel.Prelude.Text),
-    quoteId :: (B.C f Kernel.Prelude.Text),
-    tag :: (B.C f Domain.Types.FRFSQuoteCategorySpec.FRFSCategoryTag),
-    value :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    quoteCategoryId :: B.C f Kernel.Prelude.Text,
+    quoteId :: B.C f Kernel.Prelude.Text,
+    tag :: B.C f Domain.Types.FRFSQuoteCategorySpec.FRFSCategoryTag,
+    value :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -30,6 +30,6 @@ instance B.Table FRFSQuoteBreakupT where
 
 type FRFSQuoteBreakup = FRFSQuoteBreakupT Identity
 
-$(enableKVPG (''FRFSQuoteBreakupT) [('id)] [[('quoteCategoryId)], [('quoteId)]])
+$(enableKVPG ''FRFSQuoteBreakupT ['id] [['quoteCategoryId], ['quoteId]])
 
-$(mkTableInstances (''FRFSQuoteBreakupT) "frfs_quote_breakup")
+$(mkTableInstances ''FRFSQuoteBreakupT "frfs_quote_breakup")

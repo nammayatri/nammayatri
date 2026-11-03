@@ -18,16 +18,13 @@ import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
-import Kernel.Types.Beckn.City (City)
 import Kernel.Types.Common hiding (id)
 
 data RegistrationTokenT f = RegistrationTokenT
   { id :: B.C f Text,
     token :: B.C f RegToken,
     personId :: B.C f Text,
-    merchantId :: B.C f Text,
     createdAt :: B.C f Time.UTCTime,
-    operatingCity :: B.C f City,
     enabled :: B.C f Bool
   }
   deriving (Generic, B.Beamable)

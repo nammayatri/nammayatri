@@ -124,4 +124,5 @@ handler transporterId req = withDynamicLogLevel "bpp-status-domain" $ do
       let isTierUpgrade = False
           assignedServiceTierType = Nothing
           assignedServiceTierName = Nothing
+          betterDriverAbortRadiusMeters = Nothing
       pure $ RideAssignedReq DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}

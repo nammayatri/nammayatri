@@ -25,9 +25,9 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "ride" :> Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> "evidence" :> ReqBody ('[JSON]) API.Types.UI.RideEvidence.AddRideEvidenceReq
+  ( TokenAuth :> "ride" :> Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> "evidence" :> ReqBody '[JSON] API.Types.UI.RideEvidence.AddRideEvidenceReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RideEvidence.RideEvidenceItem
       :<|> TokenAuth
       :> "ride"
@@ -36,7 +36,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> "evidence"
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.RideEvidence.RideEvidenceItem]
   )
 

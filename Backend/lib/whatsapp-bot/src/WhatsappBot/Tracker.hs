@@ -49,7 +49,9 @@ data TrackerDeps m = TrackerDeps
     -- | Same per-language string tables as 'WhatsappBot.Env.BotConfig.translations'
     -- (see there); the tracker builds its own outbound copy independently of the
     -- in-handler engine, so it needs its own copy of the map.
-    tdTranslations :: Map.Map SupportedLanguage LanguageStrings
+    tdTranslations :: Map.Map SupportedLanguage LanguageStrings,
+    -- | Needed by 'buildDriverCard' to build the live tracking link.
+    tdMerchant :: MerchantCtx
   }
 
 -- | Progress rank for the non-terminal notify-once stages
@@ -117,19 +119,19 @@ progressive deps entry booking stage = do
     delivered <-
       if won
         then do
-          d <- sendMsg deps entry (buildFor deps.tdTranslations stage booking entry.language)
+          d <- sendMsg deps entry (buildFor deps.tdTranslations deps.tdMerchant stage booking entry.language)
           unless d $ deps.tdRegistry.releaseStage entry.bookingId reached
           pure d
         else pure True
     when delivered $ deps.tdRegistry.updateRide entry {lastStage = Just reached}
 
 -- | @ride-tracker.ts:156-163@.
-buildFor :: Map.Map SupportedLanguage LanguageStrings -> RideStage -> BotBookingDetails -> Maybe SupportedLanguage -> BuiltMessage
-buildFor translations stage booking lang = case stage of
-  StageAssigned -> buildDriverCard translations booking lang
+buildFor :: Map.Map SupportedLanguage LanguageStrings -> MerchantCtx -> RideStage -> BotBookingDetails -> Maybe SupportedLanguage -> BuiltMessage
+buildFor translations merchant stage booking lang = case stage of
+  StageAssigned -> buildDriverCard translations merchant booking lang
   StageArrived -> buildArrived translations booking lang
   StageStarted -> buildStarted translations booking lang
-  _ -> buildDriverCard translations booking lang
+  _ -> buildDriverCard translations merchant booking lang
 
 -- | Send via buttons when present, else text; returns whether WhatsApp accepted
 -- it so the caller can retry (@ride-tracker.ts:166-171@).

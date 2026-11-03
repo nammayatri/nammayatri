@@ -14,14 +14,14 @@ import qualified Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
 data MerchantClientConfigT f = MerchantClientConfigT
-  { clientOS :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType)),
-    configJSON :: (B.C f Data.Aeson.Value),
-    serviceName :: (B.C f Domain.Types.MerchantClientConfig.ClientService),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    packageId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { clientOS :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType),
+    configJSON :: B.C f Data.Aeson.Value,
+    serviceName :: B.C f Domain.Types.MerchantClientConfig.ClientService,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    packageId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table MerchantClientConfigT where
 
 type MerchantClientConfig = MerchantClientConfigT Identity
 
-$(enableKVPG (''MerchantClientConfigT) [('serviceName), ('packageId)] [])
+$(enableKVPG ''MerchantClientConfigT ['serviceName, 'packageId] [])
 
-$(mkTableInstances (''MerchantClientConfigT) "merchant_client_config")
+$(mkTableInstances ''MerchantClientConfigT "merchant_client_config")

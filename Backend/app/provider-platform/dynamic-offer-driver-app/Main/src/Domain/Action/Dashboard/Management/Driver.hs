@@ -77,6 +77,7 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverIdentityInfoUpdate,
     postDriverAssociationChange,
     postDriverBulkBlock,
+    postDriverBulkAirportBlock,
     postDriverMembershipFeeCreate,
     castToCommon,
     castFromCommon,
@@ -107,6 +108,7 @@ import qualified Domain.Action.Dashboard.Driver.Notification as DDN
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
+import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
@@ -2012,6 +2014,51 @@ postDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Id Common.
 postDriverAirportPreference merchantShortId opCity driverId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  setAirportPreference merchant merchantOpCityId driverId req
+  pure Success
+
+postDriverBulkAirportBlock :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Common.BulkAirportBlockReq -> Flow Common.BulkBlockRes
+postDriverBulkAirportBlock merchantShortId opCity requestorId _requestorName req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  csvData <- liftIO $ BS.readFile req.file
+  rows <- case decodeByName (LBS.fromStrict csvData) :: Either String (Header, V.Vector Common.BulkAirportBlockCsvRow) of
+    Left err -> throwError (InvalidRequest $ "Invalid CSV: " <> T.pack err)
+    Right (_, v) -> pure (V.toList v)
+  when (null rows) $ throwError (InvalidRequest "CSV has no driver rows")
+  when (length rows > maxBulkBlockDriverIds) $ throwError (InvalidRequest $ "driver ids limit exceeded, max allowed: " <> show maxBulkBlockDriverIds)
+  now <- getCurrentTime
+  results <- forM rows $ \row -> do
+    let reqDriverId = Id row.driverId
+    let isBlock = row.enableForAirport == Common.BLOCKED
+    let blockedDays = if isBlock then row.blockedDays else Nothing
+    let airportReq =
+          Common.AirportPreferenceReq
+            { enableForAirport = row.enableForAirport,
+              blockReason = if isBlock then row.blockReason else Nothing,
+              blockExpiryTime = blockedDays <&> \days -> addUTCTime (fromIntegral days * 24 * 3600) now,
+              specialZoneId = req.specialZoneId,
+              requestorId = Just requestorId
+            }
+    res <- withTryCatch "bulkAirportBlockDriver" $ do
+      when (maybe False (<= 0) blockedDays) $
+        throwError (InvalidRequest "blockedDays must be greater than 0, or blank for a permanent block")
+      setAirportPreference merchant merchantOpCityId reqDriverId airportReq
+    case res of
+      Left err -> do
+        logInfo $ "bulkAirportBlock: failed for driver " <> reqDriverId.getId <> ": " <> T.pack (show err)
+        pure $ Left Common.BulkBlockFailedItem {driverId = reqDriverId, errorMessage = T.pack (show err)}
+      Right _ -> pure $ Right ()
+  let failedItems = [failedItem | Left failedItem <- results]
+  pure $
+    Common.BulkBlockRes
+      { success = length results - length failedItems,
+        failed = length failedItems,
+        failedItems = failedItems
+      }
+
+setAirportPreference :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Common.Driver -> Common.AirportPreferenceReq -> Flow ()
+setAirportPreference merchant merchantOpCityId driverId req = do
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
@@ -2041,7 +2088,6 @@ postDriverAirportPreference merchantShortId opCity driverId req = do
   unless (Just (Yudhishthira.showRawTags updatedTags) == (Yudhishthira.showRawTags <$> driver.driverTag)) $
     QPerson.updateDriverTag (Just updatedTags) personId
   logTagInfo "dashboard -> updateAirportPreference : " (show personId)
-  pure Success
   where
     castAirportRestrictionToDomain :: Common.AirportRestrictionType -> DrInfo.AirportRestrictionType
     castAirportRestrictionToDomain Common.ENABLED = DrInfo.ENABLED
@@ -2128,7 +2174,7 @@ postDriverIdentityInfoUpdate merchantShortId opCity driverId requestorId req = d
     isValid <- isAssociationBetweenTwoPerson requestor driver
     unless isValid $ throwError AccessDenied
   driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-  Redis.withLockRedis (DIInfo.driverIdentityInfoLockKey personId) 10 $ do
+  Redis.withWaitAndLockRedis (DIInfo.driverIdentityInfoLockKey personId) 10 50000 $ do
     mbExisting <- QDII.findByDriverId personId
     void $
       DIInfo.upsertDriverIdentityInfo
@@ -2156,7 +2202,9 @@ postDriverAssociationChange merchantShortId opCity requestorId subjectId req = d
       let changeType = case req.changeType of
             Common.ChangeFleetOperator -> SA.ChangeFleetOperator
             _ -> SA.ChangeDriverOperator
-      SA.performAssociationChange merchant merchantOpCity requestorId subjectId operatorCode changeType
+      mbLinkedOperator <- SA.performAssociationChange merchant merchantOpCity requestorId subjectId operatorCode changeType
+      whenJust mbLinkedOperator $ \operator ->
+        DOR.reassignDriverReferredByOperator merchantOpCity.id (Id subjectId) operator.id
   pure Success
 
 postDriverMembershipFeeCreate :: ShortId DM.Merchant -> Context.City -> Common.MembershipFeeCreateReq -> Flow PaymentTypes.CreateOrderResp

@@ -26,6 +26,7 @@ module Beckn.ACL.Common.Order
     tfCancelReqToOrder,
     tfArrivedReqToOrder,
     tfReachedDestinationReqToOrder,
+    tfNearPickupReqToOrder,
     tfReturnTripStartedReqToOrder,
   )
 where
@@ -256,7 +257,8 @@ tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig fulfi
       vehicleAgeTagGroup = if isValueAddNP then Utils.mkVehicleAgeTagGroupV2 vehicleAge else Nothing
       isSafetyPlusTagGroup = if isValueAddNP then Utils.mkIsSafetyPlusTagGroupV2 isSafetyPlus else Nothing
       tierUpgradeTagGroup = if isValueAddNP then Utils.mkTierUpgradeTagGroupV2 isTierUpgrade assignedServiceTierType assignedServiceTierName else Nothing
-      tagGroups = currentRideDropLocation <> arrivalTimeTagGroup <> vehicleAgeTagGroup <> isSafetyPlusTagGroup <> tierUpgradeTagGroup
+      betterDriverAbortRadiusTagGroup = if isValueAddNP then Utils.mkBetterDriverAbortRadiusTagGroupV2 betterDriverAbortRadiusMeters else Nothing
+      tagGroups = currentRideDropLocation <> arrivalTimeTagGroup <> vehicleAgeTagGroup <> isSafetyPlusTagGroup <> tierUpgradeTagGroup <> betterDriverAbortRadiusTagGroup
       quote = Utils.tfQuotation isValueAddNP booking
       farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
       items = UtilsOU.tfItems ride booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId
@@ -428,6 +430,28 @@ tfReachedDestinationReqToOrder OU.DDriverReachedDestinationReq {..} = do
   let BookingDetails {..} = bookingDetails
       driverReachedDestinationTags = Utils.mkDriverReachedDestinationTagGroup isValueAddNP destinationArrivalTime ride.returnOtp
   fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing driverReachedDestinationTags Nothing False False Nothing (Just $ show EventEnum.DRIVER_REACHED_DESTINATION) isValueAddNP Nothing False 0
+  pure $
+    Spec.Order
+      { orderDocuments = Nothing,
+        orderId = Just $ booking.id.getId,
+        orderFulfillments = Just [fulfillment],
+        orderBilling = Nothing,
+        orderCancellation = Nothing,
+        orderCancellationTerms = Nothing,
+        orderItems = Nothing,
+        orderPayments = Nothing,
+        orderProvider = Nothing,
+        orderQuote = Nothing,
+        orderTags = Nothing,
+        orderStatus = Nothing,
+        orderCreatedAt = Just booking.createdAt,
+        orderUpdatedAt = Just booking.updatedAt
+      }
+
+tfNearPickupReqToOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => OU.DDriverNearPickupReq -> m Spec.Order
+tfNearPickupReqToOrder OU.DDriverNearPickupReq {..} = do
+  let BookingDetails {..} = bookingDetails
+  fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show EventEnum.DRIVER_NEAR_PICKUP) isValueAddNP Nothing False 0
   pure $
     Spec.Order
       { orderDocuments = Nothing,

@@ -34,8 +34,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DocumentVersionMetadata.DocumentVersionMetadata {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.documentNumberEncrypted (((documentNumber & unEncrypted . encrypted))),
-      Se.Set Beam.documentNumberHash ((documentNumber & hash)),
+    [ Se.Set Beam.documentNumberEncrypted (documentNumber & unEncrypted . encrypted),
+      Se.Set Beam.documentNumberHash (documentNumber & hash),
       Se.Set Beam.documentType documentType,
       Se.Set Beam.metadata (Data.Aeson.toJSON <$> metadata),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
@@ -64,8 +64,8 @@ instance FromTType' Beam.DocumentVersionMetadata Domain.Types.DocumentVersionMet
 instance ToTType' Beam.DocumentVersionMetadata Domain.Types.DocumentVersionMetadata.DocumentVersionMetadata where
   toTType' (Domain.Types.DocumentVersionMetadata.DocumentVersionMetadata {..}) = do
     Beam.DocumentVersionMetadataT
-      { Beam.documentNumberEncrypted = ((documentNumber & unEncrypted . encrypted)),
-        Beam.documentNumberHash = (documentNumber & hash),
+      { Beam.documentNumberEncrypted = documentNumber & unEncrypted . encrypted,
+        Beam.documentNumberHash = documentNumber & hash,
         Beam.documentType = documentType,
         Beam.documentVersionId = documentVersionId,
         Beam.metadata = Data.Aeson.toJSON <$> metadata,

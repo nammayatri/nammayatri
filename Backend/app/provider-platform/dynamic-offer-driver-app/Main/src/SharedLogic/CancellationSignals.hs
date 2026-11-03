@@ -13,10 +13,11 @@
 -}
 
 -- | Canonical per-ride cancellation signals, computed once and shared by every consumer
--- that reasons about a cancellation: the driver coin policy (CANCELLATION_COIN_POLICY)
--- and the customer dues policy (USER_CANCELLATION_DUES). The same physical event must
--- look identical to every rule set, so any change to a signal definition here changes
--- the inputs of all of them at once.
+-- that reasons about a cancellation: the CANCELLATION_FAULT_VERDICT rules and, via the
+-- verdict they return, the CancellationConsequenceMatrix lookup that settles fees,
+-- deductions, coin amounts and waive-offs. The same physical event must look identical to
+-- every rule set, so any change to a signal definition here changes the inputs of all of
+-- them at once.
 module SharedLogic.CancellationSignals where
 
 import qualified Domain.Types.Booking as SRB

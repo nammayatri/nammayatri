@@ -15,3 +15,8 @@ ALTER TABLE atlas_driver_offer_bpp.rider_driver_correlation ADD PRIMARY KEY ( dr
 
 ALTER TABLE atlas_driver_offer_bpp.rider_driver_correlation ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.rider_driver_correlation ADD COLUMN black_listed boolean NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rider_driver_correlation ALTER COLUMN black_listed TYPE boolean;

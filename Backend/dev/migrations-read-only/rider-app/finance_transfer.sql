@@ -1,0 +1,39 @@
+CREATE TABLE atlas_app.finance_transfer ();
+
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN account_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN amount numeric(30,2) NOT NULL;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN attempt_count integer NOT NULL default 0;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN counter_account_id character varying(36) ;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN covered_entry_ids text[] ;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN currency text NOT NULL;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN direction text NOT NULL;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN entry_ids text[] ;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN fee_amount numeric(30,2) NOT NULL default 0;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN hold_entry_id character varying(36) ;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN last_error text ;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN merchant_id text NOT NULL;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN merchant_operating_city_id text NOT NULL;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN metadata json ;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN rail_key text ;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN rail_order_id text ;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN rail_status text ;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN reference_id text NOT NULL;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN reference_type text NOT NULL;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN requested_amount numeric(30,2) ;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN scheduled_for timestamp with time zone ;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_app.finance_transfer ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.finance_transfer ADD PRIMARY KEY ( id);
+CREATE INDEX CONCURRENTLY finance_transfer_idx_account_id_created_at ON atlas_app.finance_transfer USING btree (account_id, created_at);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_transfer ADD CONSTRAINT finance_transfer_unique_idx_reference_id_reference_type UNIQUE (reference_id, reference_type);
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY finance_transfer_idx_merchant_id_status ON atlas_app.finance_transfer USING btree (merchant_id, status);

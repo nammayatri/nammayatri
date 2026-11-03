@@ -35,14 +35,14 @@ data KaalChakraJobRun = KaalChakraJobRun
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data KaalChakraJobRunPhase = FetchUserData | UpdateTags deriving (Generic, (Show), (Read), (Eq), (Ord), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data KaalChakraJobRunPhase = FetchUserData | UpdateTags deriving (Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data KaalChakraJobRunStatus = Running | Completed | Failed | Cancelled deriving (Generic, (Show), (Read), (Eq), (Ord), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data KaalChakraJobRunStatus = Running | Completed | Failed | Cancelled deriving (Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''KaalChakraJobRunPhase))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''KaalChakraJobRunPhase)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''KaalChakraJobRunPhase))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''KaalChakraJobRunPhase)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''KaalChakraJobRunStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''KaalChakraJobRunStatus)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''KaalChakraJobRunStatus))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''KaalChakraJobRunStatus)

@@ -429,10 +429,7 @@ shortenOnboardingLink category expiryHours longUrl = do
             shortCodeLength = Nothing,
             expiryInHours = Just $ min 255 expiryHours,
             urlCategory = Just category,
-            -- The SMS link's host (the brand's) also serves short links; the control-center host doesn't.
-            shortUrlHostFromBaseUrl = case category of
-              UrlShortner.DRIVER_ONBOARDING_LINK -> Just True
-              _ -> Nothing
+            shortUrlHostFromBaseUrl = Just True
           }
   result <- try @_ @SomeException $ UrlShortner.generateShortUrl shortUrlReq
   case result of

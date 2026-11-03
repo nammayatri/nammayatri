@@ -389,6 +389,7 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
 data FRFSSearchAPIReq = FRFSSearchAPIReq
   { busLocationData :: Data.Maybe.Maybe [API.Types.UI.RiderLocation.BusLocation],
     fromStationCode :: Data.Text.Text,
+    imeiNumber :: Data.Maybe.Maybe Data.Text.Text,
     platformType :: Data.Maybe.Maybe Domain.Types.IntegratedBPPConfig.PlatformType,
     quantity :: Kernel.Prelude.Int,
     recentLocationId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
@@ -463,10 +464,12 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     quantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
     quoteCategories :: [FRFSQuoteCategoryAPIEntity],
     routeStations :: Data.Maybe.Maybe [FRFSRouteStationsAPI],
+    selectedQuoteCategories :: [FRFSQuoteCategoryAPIEntity],
     startTime :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
     stations :: [FRFSStationAPI],
     status :: Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus,
     tickets :: [FRFSTicketAPI],
+    txnId :: Data.Maybe.Maybe Data.Text.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory

@@ -32,6 +32,7 @@ data LedgerAdjustmentRequestT f = LedgerAdjustmentRequestT
     postedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referenceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referenceType :: B.C f Kernel.Prelude.Text,
+    rejectionReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Domain.Types.LedgerAdjustmentRequest.AdjustmentRequestStatus,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

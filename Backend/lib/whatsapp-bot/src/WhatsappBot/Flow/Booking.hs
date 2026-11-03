@@ -235,7 +235,12 @@ continuePickup env ev ctx1 auth lat lon mName mAddr = do
         Left _ -> BotPlace {lat = lat, lon = lon, placeId = fmtNum lat <> "," <> fmtNum lon, address = emptyAddress}
       origin = applyNameOverride origin0 mName mAddr
       ctx2 = ctx1 {origin = Just origin}
-  sendPickupConfirm env ev ctx2 mName
+  -- Regular asks for the drop straight away: its fare confirmation shows the full
+  -- pickup address and has a Change pickup button, and nothing is booked before
+  -- Book auto. Flexi keeps the confirm step, because confirming pickup IS its booking.
+  case resolvedRideType env.cfg.merchant ctx2 of
+    Regular -> promptForRegularDrop env ev ctx2
+    Flexi -> sendPickupConfirm env ev ctx2 mName
 
 -- | Show the pickup confirmation (@engine.ts:1021-1038@). A named/saved place gets
 -- a distinct warning that it may not be the live spot.
@@ -263,13 +268,16 @@ sendPickupConfirm env ev ctx mNamedPlace = do
 -- regular asks for a drop. Default for a bare pin: regular-only → regular, else flexi.
 handlePickupConfirm :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> m ()
 handlePickupConfirm env ev ctx =
-  let merchant = env.cfg.merchant
-      rideT = case ctx.rideType of
-        Just r -> r
-        Nothing -> if regularOffered merchant && not (flexiOffered merchant) then Regular else Flexi
-   in case rideT of
-        Regular -> promptForRegularDrop env ev ctx
-        Flexi -> startFlexiSearch env ev ctx
+  case resolvedRideType env.cfg.merchant ctx of
+    Regular -> promptForRegularDrop env ev ctx
+    Flexi -> startFlexiSearch env ev ctx
+
+-- | The ride type a pickup is for: the rider's choice, else regular-only → regular,
+-- else flexi (a bare pin with no choice made yet).
+resolvedRideType :: MerchantCtx -> FlowContext -> RideType
+resolvedRideType merchant ctx = case ctx.rideType of
+  Just r -> r
+  Nothing -> if regularOffered merchant && not (flexiOffered merchant) then Regular else Flexi
 
 -- ---------------------------------------------------------------------------
 -- Flexi flow (engine.ts:1042-1186)
@@ -341,9 +349,15 @@ startFlexiSearch env ev ctx = do
                           PollFound b -> do
                             -- Claim 'assigned' so the tracker doesn't also send
                             -- this card (engine.ts:1153-1160).
+                            -- Bump only on a delivered card; a failed send releases the
+                            -- claim so the tracker retries it. Not bumping on a lost claim
+                            -- either: the tracker holding it advances the stage itself.
                             won <- env.registry.claimStage bookingId "assigned"
-                            when won $ sendFlexiDriverCard env ev b
-                            bumpStage env bookingId "assigned"
+                            when won $ do
+                              delivered <- sendFlexiDriverCard env ev b
+                              if delivered
+                                then bumpStage env bookingId "assigned"
+                                else env.registry.releaseStage bookingId "assigned"
     _ -> promptForPickup env ev ctx False
 
 -- | Poll @getFlexiQuotes@ up to @flexiQuotePollAttempts@ times (@engine.ts:1074-1078@).
@@ -377,7 +391,9 @@ pollFlexiDriver env ev auth bookingId lang attempt
               save env ev fresh {activeBookingId = Just b.bookingId}
               pure (PollFound b)
           _ -> do
-            when (attempt > 0 && attempt `mod` env.cfg.driverPollNotifyEvery == 0) $
+            -- Once per search, not every driverPollNotifyEvery attempts: one
+            -- reassurance is enough, the rest only add messages.
+            when (attempt == env.cfg.driverPollNotifyEvery) $
               reply env (ev.fromPhone) ((t env.cfg.translations lang).flexiStillFinding (fmtInt (((attempt + 1) * env.cfg.driverPollIntervalMs) `div` 1000)))
             env.clock.sleepMs env.cfg.driverPollIntervalMs
             pollFlexiDriver env ev auth bookingId lang (attempt + 1)
@@ -399,12 +415,14 @@ flexiNoAuto env ev ctx = do
 
 -- | Render the shared "auto found" driver card (@engine.ts:1166-1175@) via the
 -- shared 'buildDriverCard' — same card the background tracker sends on a restart.
-sendFlexiDriverCard :: Monad m => BotEnv m -> InboundEvent -> BotBookingDetails -> m ()
+-- Returns whether WhatsApp accepted it, so callers can release the stage claim
+-- on a failed send instead of losing the card.
+sendFlexiDriverCard :: Monad m => BotEnv m -> InboundEvent -> BotBookingDetails -> m Bool
 sendFlexiDriverCard env ev booking = do
   mctx <- getCtx env ev
   let lang = mctx >>= (\c -> c.language)
-      card = buildDriverCard env.cfg.translations booking lang
-  replyButtons env (ev.fromPhone) card.bmText card.bmButtons
+      card = buildDriverCard env.cfg.translations env.cfg.merchant booking lang
+  env.sender.sendButtons (ev.fromPhone) card.bmText card.bmButtons
 
 -- ---------------------------------------------------------------------------
 -- Regular one-way flow (engine.ts:735-919)
@@ -473,8 +491,9 @@ startRegularSearch env ev ctx = do
   case (ctx.personId, ctx.origin, ctx.destination) of
     (Just pid, Just origin, Just destination) -> do
       let auth = BotAuth pid
+      -- No "Getting your fare..." message: the fare confirmation follows within
+      -- seconds. A message sent while searching still gets that reply (stateSwitch).
       save env ev ctx {state = RegularSearching}
-      reply env to s.regularSearching
       esid <- env.backend.searchRide auth origin destination
       case esid of
         Left _ -> flexiNoAuto env ev ctx
@@ -509,12 +528,15 @@ sendRegularFareConfirm env ev ctx = do
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
   save env ev ctx {state = ConfirmingRegularFare}
-  let area = firstNonEmpty [ctx.destination >>= (\d -> d.address.area), formatAddress <$> ctx.destination] "your destination"
+  -- Full addresses (building, street, area) for both ends, not just the drop's area.
+  let dropAddr = maybe "your destination" formatAddress ctx.destination
+      pickupAddr = maybe "your pickup" formatAddress ctx.origin
   replyButtons
     env
     to
-    (s.regularFareConfirm (fmtNum (fromMaybe 0 ctx.regularFare)) area)
-    [btn s.regularConfirmButton "regular_book", btn s.regularChangeDropButton "regular_change_drop"]
+    (s.regularFareConfirm (fmtNum (fromMaybe 0 ctx.regularFare)) dropAddr pickupAddr)
+    -- Change pickup reuses pickup_adjust: re-ask the pickup, then the drop again.
+    [btn s.regularConfirmButton "regular_book", btn s.regularChangeDropButton "regular_change_drop", btn s.regularChangePickupButton "pickup_adjust"]
 
 -- | Book the one-way auto: select the estimate, poll for a driver, show the card,
 -- register with the tracker (@engine.ts:861-919@).
@@ -545,10 +567,14 @@ confirmRegularBooking env ev ctx = do
                 PollFound b -> do
                   registerRide' env ev b.bookingId ctx "confirmed"
                   let hasDriver = isJust b.driverName || isJust b.rideOtp
-                  when hasDriver $ do
-                    _ <- env.registry.claimStage b.bookingId "assigned"
-                    bumpStage env b.bookingId "assigned"
-                  sendFlexiDriverCard env ev b
+                  won <- if hasDriver then env.registry.claimStage b.bookingId "assigned" else pure False
+                  delivered <- sendFlexiDriverCard env ev b
+                  -- Same rule as the flexi path: advance only on a delivered card,
+                  -- otherwise release so the tracker retries.
+                  when won $
+                    if delivered
+                      then bumpStage env b.bookingId "assigned"
+                      else env.registry.releaseStage b.bookingId "assigned"
     _ -> reply env to s.sessionExpired
 
 -- | Poll @getActiveBookings(createdAfter)@ for the just-booked ride
@@ -571,7 +597,9 @@ pollRegularBooking env ev auth createdAfter lang attempt
             save env ev fresh {activeBookingId = Just b.bookingId}
             pure (PollFound b)
           [] -> do
-            when (attempt > 0 && attempt `mod` env.cfg.driverPollNotifyEvery == 0) $
+            -- Once per search, not every driverPollNotifyEvery attempts: one
+            -- reassurance is enough, the rest only add messages.
+            when (attempt == env.cfg.driverPollNotifyEvery) $
               reply env (ev.fromPhone) ((t env.cfg.translations lang).flexiStillFinding (fmtInt (((attempt + 1) * env.cfg.driverPollIntervalMs) `div` 1000)))
             env.clock.sleepMs env.cfg.driverPollIntervalMs
             pollRegularBooking env ev auth createdAfter lang (attempt + 1)
@@ -606,7 +634,10 @@ handleFlexiEndOtp env ev ctx bid = do
               let status = T.toUpper (fromMaybe b.bookingStatus b.rideStatus)
               if status == "COMPLETED" || status == "CANCELLED"
                 then reply env to s.flexiRideAlreadyEnded
-                else case b.endOtp of
+                else -- A ride type with no end OTP has no button to answer: one tapped from
+                -- before this check existed would only resend the copied start OTP,
+                -- so stay silent.
+                when b.endOtpRequired $ case b.endOtp of
                   Just eo -> replyButtons env to (s.flexiEndOtpShare eo) [btn s.flexiEndRideButton ("flexi_end_otp:" <> bid)]
                   Nothing -> reply env to s.flexiEndOtpNotReady
             _ -> replyButtons env to s.flexiEndOtpFetchError [btn s.flexiEndRideButton ("flexi_end_otp:" <> bid)]
@@ -616,19 +647,21 @@ handleFlexiEndOtp env ev ctx bid = do
 -- The menu row + merchant capabilities (engine.ts:1530-1546)
 -- ---------------------------------------------------------------------------
 
--- | The context-aware menu row (@engine.ts:1530-1546@): [Track?] · Book · More ·
--- Language (Track shown only when a ride is live). Kept to <=4 buttons.
+-- | The context-aware menu row (@engine.ts:1530-1546@, changed): [Track?] · the
+-- ride types shown directly · More (Track shown only when a ride is live). The
+-- ride types sit in the welcome itself so booking needs no extra "Book" tap;
+-- Language and any ride type that doesn't fit ('splitRideTypes') move under More.
+-- With Track that is up to 4 buttons, which the sender turns into a list.
 menuRow :: Monad m => BotEnv m -> InboundEvent -> LanguageStrings -> m [OutButton]
 menuRow env ev s = do
   let merchant = env.cfg.merchant
       uk = mkUserKey merchant ev
   has <- env.registry.hasActiveRide uk
   let trackBtn = [btn s.trackRide "status" | has]
-      bookBtn =
-        if flexiOffered merchant
-          then btn s.rideTypeFlexi "ride_type:flexi"
-          else btn s.bookARide "ride_type:regular"
-  pure (trackBtn <> [bookBtn, btn s.moreButton "more", btn s.chooseLanguage "choose_language"])
+      bookBtns = case merchant.rideTypesOrder of
+        [Regular] -> [btn s.bookARide "ride_type:regular"]
+        rts -> map (rideTypeBtn s) (fst (splitRideTypes merchant.maxDirectButtons rts))
+  pure (trackBtn <> bookBtns <> [btn s.moreButton "more"])
 
 flexiOffered :: MerchantCtx -> Bool
 flexiOffered merchant = Flexi `elem` merchant.rideTypesOrder

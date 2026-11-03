@@ -13,6 +13,7 @@ import qualified Kernel.External.AadhaarVerification.Types
 import qualified Kernel.External.BackgroundVerification.Types
 import qualified Kernel.External.Call
 import qualified Kernel.External.ChallanSearch.Types
+import qualified Kernel.External.EventTracking
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.Types
 import qualified Kernel.External.Payment.Types
@@ -38,6 +39,8 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     dashboardPanVerificationService :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService,
     dashboardUdyamVerificationService :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService,
     driverBackgroundVerificationService :: Kernel.External.Verification.Types.DriverBackgroundVerificationService,
+    eventTrackingOverrides :: Kernel.Prelude.Maybe (Data.Map.Strict.Map Kernel.Prelude.Text [Kernel.External.EventTracking.EventTrackingService]),
+    eventTrackingProviders :: [Kernel.External.EventTracking.EventTrackingService],
     faceMatchService :: Kernel.External.Verification.Types.VerificationService,
     faceVerificationService :: Kernel.External.Verification.Types.VerificationService,
     getBankAccount :: Kernel.External.Payment.Types.PaymentService,
@@ -45,6 +48,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getDistancesForCancelRide :: Kernel.External.Maps.Types.MapsService,
     getDistancesForScheduledRides :: Kernel.External.Maps.Types.MapsService,
     getEstimatedPickupDistances :: Kernel.External.Maps.Types.MapsService,
+    getEstimatedPickupDistancesFallback :: Kernel.Prelude.Maybe [Kernel.External.Maps.Types.MapsService],
     getExophone :: Kernel.External.Call.CallService,
     getPickupRoutes :: Kernel.External.Maps.Types.MapsService,
     getPlaceDetails :: Kernel.External.Maps.Types.MapsService,
@@ -88,9 +92,9 @@ data ProviderLookUpKey
   | BUS
   | TRAIN
   | FLIGHT
-  deriving (Eq, (Ord), (Show), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-type MerchantServiceUsageConfig = MerchantServiceUsageConfigD ('Safe)
+type MerchantServiceUsageConfig = MerchantServiceUsageConfigD 'Safe
 
 instance FromJSON (MerchantServiceUsageConfigD 'Unsafe)
 

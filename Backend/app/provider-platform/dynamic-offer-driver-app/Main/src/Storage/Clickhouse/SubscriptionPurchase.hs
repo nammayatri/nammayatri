@@ -53,3 +53,22 @@ findActiveDistinctOwnersByOwnerIds ownerIds ownerType = do
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE subscriptionPurchaseTTable)
       pure $ Set.size (Set.fromList res)
+
+findActiveOwnerIdsByOwnerIds ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Text] ->
+  DSP.SubscriptionOwnerType ->
+  m [Text]
+findActiveOwnerIdsByOwnerIds ownerIds ownerType =
+  if null ownerIds
+    then pure []
+    else
+      CH.findAll $
+        CH.select_ (\sub -> CH.notGrouped sub.ownerId) $
+          CH.filter_
+            ( \sub ->
+                sub.ownerId `CH.in_` ownerIds
+                  CH.&&. sub.ownerType CH.==. ownerType
+                  CH.&&. sub.status CH.==. DSP.ACTIVE
+            )
+            (CH.all_ @CH.APP_SERVICE_CLICKHOUSE subscriptionPurchaseTTable)

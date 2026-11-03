@@ -23,7 +23,7 @@ createMany = traverse_ create
 
 findByScheduledPayoutId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.ScheduledPayout.ScheduledPayout -> m ([Domain.Types.PayoutStatusHistory.PayoutStatusHistory]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.ScheduledPayout.ScheduledPayout -> m [Domain.Types.PayoutStatusHistory.PayoutStatusHistory])
 findByScheduledPayoutId limit offset scheduledPayoutId = do findAllWithOptionsKV [Se.Is Beam.scheduledPayoutId $ Se.Eq (Kernel.Types.Id.getId scheduledPayoutId)] (Se.Desc Beam.createdAt) limit offset
 
 findByPrimaryKey ::

@@ -19,6 +19,7 @@ import qualified API.Internal.DriverInactiveFCM as DriverInactiveFCM
 import qualified API.Internal.DriverReachedDestination as DriverReachedDestination
 import qualified API.Internal.DriverReferee as DriverReferee
 import qualified API.Internal.DriverSourceDeparted as DriverSourceDeparted
+import qualified API.Internal.EmailEvents as EmailEvents
 import qualified API.Internal.Estimate as Estimate
 import qualified API.Internal.FavouriteDrivers as FavouriteDrivers
 import qualified API.Internal.FeedbackForm as FeedbackForm
@@ -112,6 +113,7 @@ type API =
            :<|> XyneWebhook.IssuesAPI
            :<|> RadarXyneWebhook.API
            :<|> NotificationWebhook.API
+           :<|> EmailEvents.API
            :<|> SearchTryPoolStats.API
            :<|> VehicleServiceTierList.API
            :<|> BetterDriverSearch.API
@@ -170,6 +172,7 @@ handler env =
     :<|> XyneWebhook.issuesHandler
     :<|> RadarXyneWebhook.handler
     :<|> NotificationWebhook.handler
+    :<|> EmailEvents.handler
     :<|> SearchTryPoolStats.handler
     :<|> VehicleServiceTierList.handler
     :<|> BetterDriverSearch.handler

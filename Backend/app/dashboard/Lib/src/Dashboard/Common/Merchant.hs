@@ -555,6 +555,7 @@ data ServiceUsageConfigRes = ServiceUsageConfigRes
 data MapsServiceUsageConfigUpdateReq = MapsServiceUsageConfigUpdateReq
   { getDistances :: Maybe Maps.MapsService,
     getEstimatedPickupDistances :: Maybe Maps.MapsService,
+    getEstimatedPickupDistancesFallback :: Maybe [Maps.MapsService],
     getRoutes :: Maybe Maps.MapsService,
     snapToRoad :: Maybe Maps.MapsService,
     getPlaceName :: Maybe Maps.MapsService,
@@ -565,7 +566,7 @@ data MapsServiceUsageConfigUpdateReq = MapsServiceUsageConfigUpdateReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 mapsServiceUsedInReq :: MapsServiceUsageConfigUpdateReq -> Maps.MapsService -> Bool
-mapsServiceUsedInReq (MapsServiceUsageConfigUpdateReq a b c d e f g) service = service `elem` catMaybes [a, b, c, d, e, f, g]
+mapsServiceUsedInReq (MapsServiceUsageConfigUpdateReq a b c d e f g h) service = service `elem` (catMaybes [a, b, d, e, f, g, h] <> fromMaybe [] c)
 
 instance HideSecrets MapsServiceUsageConfigUpdateReq where
   hideSecrets = identity
@@ -576,6 +577,7 @@ validateMapsServiceUsageConfigUpdateReq MapsServiceUsageConfigUpdateReq {..} = d
   sequenceA_
     [ validateField "getDistances" getDistances $ InMaybe $ PredicateFunc mkMessage Maps.getDistancesProvided,
       validateField "getEstimatedPickupDistances" getEstimatedPickupDistances $ InMaybe $ PredicateFunc mkMessage Maps.getDistancesProvided,
+      validateField "getEstimatedPickupDistancesFallback" getEstimatedPickupDistancesFallback $ InMaybe $ InList $ PredicateFunc mkMessage Maps.getDistancesProvided,
       validateField "getRoutes" getRoutes $ InMaybe $ PredicateFunc mkMessage Maps.getRoutesProvided,
       validateField "snapToRoad" snapToRoad $ InMaybe $ PredicateFunc mkMessage Maps.snapToRoadProvided,
       validateField "getPlaceName" getPlaceName $ InMaybe $ PredicateFunc mkMessage Maps.getPlaceNameProvided,

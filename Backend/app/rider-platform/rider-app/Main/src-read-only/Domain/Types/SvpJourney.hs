@@ -32,10 +32,10 @@ data SvpJourney = SvpJourney
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SvpJourneyStatus = ENTERED | EXITED | TIMED_OUT deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
+data SvpJourneyStatus = ENTERED | EXITED | TIMED_OUT deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''SvpJourneyStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''SvpJourneyStatus)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''SvpJourneyStatus))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''SvpJourneyStatus)
 
-$(Kernel.Utils.TH.mkToHttpInstanceForEnum (''SvpJourneyStatus))
+$(Kernel.Utils.TH.mkToHttpInstanceForEnum ''SvpJourneyStatus)

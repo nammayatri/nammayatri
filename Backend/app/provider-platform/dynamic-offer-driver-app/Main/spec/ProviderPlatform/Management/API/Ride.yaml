@@ -64,6 +64,7 @@ apis:
         fleetOwnerId: Text
         customerCountryCode: Text
         driverCountryCode: Text
+        vehicleNo: Text
       auth: ApiAuthV2
       response:
         type: RideListRes
@@ -93,6 +94,7 @@ apis:
               fleetOwnerId: Text
               customerCountryCode: Text
               driverCountryCode: Text
+              vehicleNo: Text
             auth: ApiAuthV2
             response:
               type: RideListRes
@@ -242,6 +244,15 @@ apis:
         rideId: Id Ride
       response:
         type: RideEstimatedRouteRes
+      migrate:
+        capability: city-operations.ride.read
+  - GET: # RideSnappedRouteAPI
+      endpoint: /{rideId}/snappedRoute
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: RideSnappedRouteRes
       migrate:
         capability: city-operations.ride.read
   - GET: # TicketRideListAPI
@@ -603,6 +614,29 @@ types:
     - distanceMeters: Maybe Int
     - durationSec: Maybe Int
     - points: [LatLong]
+  RideSnappedRouteRes:
+    - batches: [SnapBatch]
+    - distanceFailures: [SnapDistanceFailure]
+    - derive: "'HideSecrets"
+  SnapBatch:
+    - rideStatus: Status
+    - calledAt: UTCTime
+    - inputPoints: [LatLong]
+    - snapped: Maybe SnappedResult
+  SnappedResult:
+    - provider: Text
+    - distanceMeters: Int
+    - snappedPoints: [LatLong]
+  SnapDistanceFailure:
+    - rideStatus: Status
+    - calledAt: UTCTime
+    - attempts: [SnapAttempt]
+  SnapAttempt:
+    - provider: Text
+    - reason: SnapRejectReason
+    - confidence: Maybe Double
+  SnapRejectReason:
+    - enum: "LOW_CONFIDENCE, POINTS_TOO_FAR_APART, END_TOO_FAR, SPLIT_ROUTE, CALL_FAILED"
   DriverEdaKafka:
     - driver_id: String
     - rid: Maybe String
@@ -849,3 +883,6 @@ types:
 extraOperations:
   - EXTRA_API_TYPES_FILE
   - EXTRA_API_COMMON_TYPES_FILE
+
+
+

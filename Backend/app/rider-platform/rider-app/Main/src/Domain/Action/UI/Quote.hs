@@ -295,7 +295,7 @@ getQuotes searchRequestId mbAllowMultiple = do
     whenJust activeBooking $ \booking -> processActiveBooking booking searchRequest.isDashboardRequest OnSearch
   logDebug $ "search Request is : " <> show searchRequest
   let lockKey = estimateBuildLockKey searchRequestId.getId
-  Redis.withLockRedisAndReturnValue lockKey 5 $ do
+  Redis.withWaitAndLockRedis lockKey 5 50000 $ do
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
     quoteList <- QQuote.findAllBySRId searchRequest.id
     estimateList <- QEstimate.findAllBySRId searchRequest.id
@@ -594,7 +594,7 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
       then
         withTryCatch
           "getOffers:offerListWithBasket"
-          (SOffer.offerListWithBasket searchReq.merchantId searchReq.riderId searchReq.merchantOperatingCityId DOrder.RideHailing products Nothing Nothing (Just searchReq))
+          (SOffer.offerListWithBasket searchReq.merchantId searchReq.riderId searchReq.merchantOperatingCityId DOrder.RideHailing products [] quoteList Nothing Nothing (Just searchReq))
           >>= \case
             Left _ -> pure []
             Right r -> pure r
@@ -657,7 +657,7 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
       then
         withTryCatch
           "getEstimates:offerListWithBasket"
-          (SOffer.offerListWithBasket searchRequest.merchantId searchRequest.riderId searchRequest.merchantOperatingCityId DOrder.RideHailing products Nothing Nothing (Just searchRequest))
+          (SOffer.offerListWithBasket searchRequest.merchantId searchRequest.riderId searchRequest.merchantOperatingCityId DOrder.RideHailing products sortedEstimates [] Nothing Nothing (Just searchRequest))
           >>= \case
             Left _ -> pure []
             Right r -> pure r

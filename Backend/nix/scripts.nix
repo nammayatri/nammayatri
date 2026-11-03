@@ -570,6 +570,19 @@ _:
             exec 9>&-
             echo "── Pre-flight: released devbox port lock ──"
 
+            # ── Control centre path prefix (read by its process and by caddy).
+            #    On a dev-box testers open it through hopper's gateway at
+            #    /api/<devbox>/<public port>/<workspace>/control-centre/; the
+            #    gateway and the front desk strip everything before
+            #    /control-centre, and Vite needs the full path back. A local
+            #    run has no prefix. ──
+            CC_PREFIX=""
+            if [[ "$DEVBOX_KEY" != local-* ]]; then
+              CC_PREFIX="/api/$(hostname)/''${FRONTDESK_PUBLIC_PORT:-8889}/$DEVBOX_KEY"
+            fi
+            mkdir -p "''${FLAKE_ROOT}/data"
+            printf '%s\n' "$CC_PREFIX" > "''${FLAKE_ROOT}/data/cc-prefix"
+
             # ── Generate the Caddyfile from our registry slice (single entry
             #    point). Service list is the source of truth in caddyfile.nix.
             #    The expression is single-quoted so the key never enters the Nix
@@ -742,6 +755,23 @@ _:
             # the checked-in templates on first run.
             [ -f assets/environments.json ] || cp assets/environments.json.example assets/environments.json
             [ -f assets/patches.json ] || cp assets/patches.json.example assets/patches.json
+            PORTS_JSON="''${FLAKE_ROOT}/data/ports.json"
+            if [ -f "$PORTS_JSON" ]; then
+              use_port() {
+                local p
+                p=$(${pkgs.jq}/bin/jq -r --arg k "$2" '.ports[$k] // empty' "$PORTS_JSON")
+                if [ -z "''${!1:-}" ] && [ -n "$p" ]; then
+                  export "$1=$p"
+                fi
+              }
+              use_port CONFIG_SYNC_LOCAL_DB_PORT db-primary
+              use_port RIDER_APP_PORT rider-app
+              use_port DRIVER_APP_PORT dynamic-offer-driver-app
+              use_port BECKN_GATEWAY_PORT beckn-gateway
+              use_port MOCK_REGISTRY_PORT mock-registry
+              use_port MOCK_SERVER_PORT mock-server
+              echo "── Using this stack's ports from data/ports.json (db ''${CONFIG_SYNC_LOCAL_DB_PORT:-default}, rider ''${RIDER_APP_PORT:-default}, driver ''${DRIVER_APP_PORT:-default}) ──"
+            fi
             echo "── Importing config data: $FROM_ENV → local ──"
             ${configSyncPython}/bin/python3 config_transfer.py import --from "$FROM_ENV" --to local --fetch \
               --fetch-url "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/''${FROM_ENV}_to_local/v2" "$@"

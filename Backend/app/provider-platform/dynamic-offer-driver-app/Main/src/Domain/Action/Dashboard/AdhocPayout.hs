@@ -41,6 +41,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation (Validate, runRequestValidation, validateField)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
@@ -165,11 +166,9 @@ lookupPayoutEligibility merchantShortId opCity mbPersonId mbMobileNumber mbMobil
   personId <- maybe (findPersonIdByMobileNumber merchant city mbMobileNumber mbMobileCountryCode) pure mbPersonId
   rp <- resolvePerson merchant city personId
   let counterparty = counterpartyFromRole rp.person.role
-  now <- getCurrentTime
-  let timeDiff = secondsToNominalDiffTime rp.transporterConfig.timeDiffFromUtc
-      cutoff = payoutCutoffTimeUTC timeDiff rp.transporterConfig.driverWalletConfig.payoutCutOffDays now
-  -- Same amount the initiate path pays. Money held for in-flight payouts is already excluded.
-  pb <- computePayoutableBalance counterparty personId.getId cutoff now
+  -- Same amount the initiate path pays. Money held for in-flight payouts is already
+  -- excluded; the redeemable cutoff comes from the kernel class config via the breakdown.
+  pb <- computePayoutableBalance counterparty personId.getId
   let eligibility = pb.eligibility
       walletBalance = pb.walletBalance
       payoutableBalance = pb.payoutableBalance
@@ -190,7 +189,7 @@ lookupPayoutEligibility merchantShortId opCity mbPersonId mbMobileNumber mbMobil
           { payoutableBalance = payoutableBalance,
             redeemableEntryIds = map (.getId) redeemableIds,
             merchantTransferAmount = merchantTransferAmt,
-            cutoff = cutoff,
+            cutoff = pb.resolvedCutoff,
             mbBankAccount = mbBankAccount
           }
       classifyReason = case classifyBulkCandidate rp.config rp.person snapshot of
@@ -199,8 +198,9 @@ lookupPayoutEligibility merchantShortId opCity mbPersonId mbMobileNumber mbMobil
         Right candidate -> candidate.exclusionReason
   -- Same account blocks the initiate path applies.
   blockReasons <- personBlockReasons [rp.person]
+  payoutsEnabled <- walletPayoutsEnabled merchant rp.transporterConfig (counterpartyFromRole rp.person.role)
   let mbIneligibilityReason =
-        (if walletPayoutsEnabled merchant rp.transporterConfig then Nothing else Just walletPayoutsDisabledReason)
+        (if payoutsEnabled then Nothing else Just walletPayoutsDisabledReason)
           <|> Map.lookup rp.person.id.getId blockReasons
           <|> classifyReason
   pure
@@ -229,16 +229,21 @@ initiateAdhocPayouts ::
 initiateAdhocPayouts merchantShortId opCity personIds = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   city <- resolveUrlCity merchant opCity
-  -- When ops turn payouts off, an admin cannot push one through by hand either.
-  unless (walletPayoutsEnabled merchant city.transporterConfig) $
-    throwError (InvalidRequest walletPayoutsDisabledReason)
   uniquePersonIds <- validateAdhocRequest city personIds
   resolved <- resolvePersons merchant city uniquePersonIds
+  -- Gate each person on THEIR class (DRIVER vs FLEET_OWNER) — the same gate the kernel
+  -- applies at initiate — so an admin cannot push a disabled class through by hand, and
+  -- one disabled class never blocks the other.
+  gated <- forM resolved $ \case
+    (pid, Left e) -> pure (pid, Left (show e))
+    (pid, Right rp) -> do
+      enabled <- walletPayoutsEnabled merchant rp.transporterConfig (counterpartyFromRole rp.person.role)
+      pure (pid, if enabled then Right rp else Left walletPayoutsDisabledReason)
   let failureResults =
-        [ ApiPayout.AdhocPayoutResultItem {personId = pid.getId, status = ApiPayout.FAILED, reason = Just (show e), payoutOrderId = Nothing}
-          | (pid, Left e) <- resolved
+        [ ApiPayout.AdhocPayoutResultItem {personId = pid.getId, status = ApiPayout.FAILED, reason = Just reason, payoutOrderId = Nothing}
+          | (pid, Left reason) <- gated
         ]
-      people = [rp | (_, Right rp) <- resolved]
+      people = [rp | (_, Right rp) <- gated]
   bulkResults <- if null people then pure [] else processBulkGroup merchant.id city people
   pure $ ApiPayout.AdhocPayoutInitiateResp (failureResults <> bulkResults)
 
@@ -306,10 +311,16 @@ processBulkGroup merchantId city group = do
                    | (rp, _) <- eligible
                  ]
 
--- | The city's wallet payout switch, the same one the scheduled sweep uses.
-walletPayoutsEnabled :: DM.Merchant -> DTConf.TransporterConfig -> Bool
-walletPayoutsEnabled merchant transporterConfig =
-  fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableWalletPayout
+-- | The wallet payout switch for the class of the person BEING PAID — the same class
+--   the kernel's initiateTransferOut gates on, so this pre-check can never disagree
+--   with it (a fleet owner is gated by the FLEET_OWNER row, a driver by DRIVER).
+--   (merchant.prepaidSubscriptionAndWalletEnabled gates the prepaid billing product and
+--   wallet-ledger emission, not payouts; prepaid-stack cities get their class rows from
+--   seed migration 0015.)
+walletPayoutsEnabled :: DM.Merchant -> DTConf.TransporterConfig -> FAccount.CounterpartyType -> Environment.Flow Bool
+walletPayoutsEnabled merchant transporterConfig counterparty = do
+  cfg <- walletClassConfig merchant.id.getId transporterConfig.merchantOperatingCityId.getId counterparty
+  pure cfg.transferOutEnabled
 
 walletPayoutsDisabledReason :: Text
 walletPayoutsDisabledReason = "Wallet payouts are disabled for this city"

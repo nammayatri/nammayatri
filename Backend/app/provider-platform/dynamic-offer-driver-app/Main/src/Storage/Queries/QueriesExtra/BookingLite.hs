@@ -29,6 +29,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.JSON
+import qualified Lib.Types.SpecialLocation
 import qualified Lib.Yudhishthira.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as Beam
@@ -127,7 +128,8 @@ data BookingLite = BookingLite
     startTime :: Kernel.Prelude.UTCTime,
     isScheduled :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
-    configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap]
+    configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
+    area :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -155,5 +157,6 @@ instance FromTType' BookingLiteTable BookingLite where
             startTime = startTime,
             isScheduled = fromMaybe False isScheduled,
             createdAt = createdAt,
-            configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)
+            configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions),
+            area = area
           }

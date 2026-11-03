@@ -27,6 +27,7 @@ import SharedLogic.DriverOnboarding (isFleetRole)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as OF
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.SocialLogin as SSocialLogin
 import Storage.Beam.IssueManagement ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -99,6 +100,7 @@ deleteDriver merchantShortId reqDriverId = do
           QDocumentVersionMetadata.deleteByPersonId person.id
           QDBA.deleteById person.id
           QFleetOwnerInformation.deleteByFleetOwnerPersonId person.id
+          SSocialLogin.deleteSocialIdentities person.id
           QPerson.deleteById person.id
           logTagInfo "deleteFleet : " (show reqDriverId)
         DP.DRIVER -> do
@@ -135,6 +137,7 @@ deleteDriver merchantShortId reqDriverId = do
           QPanCard.deleteByDriverId person.id
           QDriverIdentityInfo.deleteByDriverId person.id
           QDBA.deleteById person.id
+          SSocialLogin.deleteSocialIdentities person.id
           QPerson.deleteById person.id
           logTagInfo "deleteDriver : " (show reqDriverId)
         DP.OPERATOR -> do
@@ -146,6 +149,7 @@ deleteDriver merchantShortId reqDriverId = do
           QIV.deleteByPersonId person.id
           QImage.deleteByPersonId person.id
           QDocumentVersionMetadata.deleteByPersonId person.id
+          SSocialLogin.deleteSocialIdentities person.id
           QPerson.deleteById person.id
           logTagInfo "deleteOperator : " (show reqDriverId)
         _ -> pure ()

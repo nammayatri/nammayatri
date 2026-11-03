@@ -510,6 +510,12 @@ data CancellationRateConfig = CancellationRateConfig
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
+data RegionCondition = RegionCondition
+  { allowedRegion :: Maybe [Text],
+    notAllowedRegion :: Maybe [Text]
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
 -- | Configures a live, radius-based "is anyone eligible nearby" check for a
 -- tier, backed by an ops-assigned cohort tag's dedicated GEO bucket in
 -- location-tracking-service. When set, this replaces the general-driver-pool

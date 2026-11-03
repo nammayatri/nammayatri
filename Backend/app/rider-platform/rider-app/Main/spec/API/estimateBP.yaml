@@ -1,6 +1,7 @@
 imports:
   Text: Data.Text
   Ride: Domain.Types.Ride
+  Booking: Domain.Types.Booking
   PriceAPIEntity : Kernel.Types.Price
 module: EstimateBP
 types:
@@ -19,5 +20,14 @@ apis:
       auth: TokenAuth
       params:
         rideId: Id Ride
+      response:
+        type: API.Types.UI.EstimateBP.EstimateDetailsRes
+
+  # GET /rideBooking/{bookingId}/estimateBreakup
+  - GET:
+      endpoint: /rideBooking/{bookingId}/estimateBreakup
+      auth: TokenAuth
+      params:
+        bookingId: Id Booking
       response:
         type: API.Types.UI.EstimateBP.EstimateDetailsRes

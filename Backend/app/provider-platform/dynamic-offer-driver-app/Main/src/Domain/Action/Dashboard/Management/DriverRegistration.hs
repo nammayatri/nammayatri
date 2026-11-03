@@ -49,6 +49,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
   )
 where
 
+import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as CommonFleet
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.UI.DriverOnboardingV2
@@ -724,6 +725,7 @@ mapDocumentType Common.LegalEntityLegalEntityId = DVC.LegalEntityLegalEntityId
 mapDocumentType Common.LegalEntityTAXDetails = DVC.LegalEntityTAXDetails
 mapDocumentType Common.LegalEntityCompanyDetails = DVC.LegalEntityCompanyDetails
 mapDocumentType Common.TermsAndConditions = DVC.TermsAndConditions
+mapDocumentType Common.LedgerAdjustmentProof = DVC.LedgerAdjustmentProof
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
@@ -860,7 +862,7 @@ createCommonDocument merchantShortId opCity driverId Common.CommonDocumentCreate
       then do
         -- Redis lock to prevent TOCTOU race on duplicate invoice check + create
         let lockKey = "tds-dedup-lock:" <> driverPersonId.getId
-        Redis.withLockRedisAndReturnValue lockKey 10 $ do
+        Redis.withWaitAndLockRedis lockKey 10 50000 $ do
           -- Check for duplicate invoiceIds across existing TDS documents for this driver
           tdsData' <- parseTDSCertificateData documentData
           let newInvoiceIds' = map (.invoiceId) tdsData'.tdsCertificates
@@ -1488,7 +1490,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                       DRC.createdAt = now,
                       DRC.updatedAt = now,
                       DRC.verified = Nothing,
-                      DRC.docsVerificationStatusUpdatedAt = Nothing,
+                      DRC.docsVerificationStatusUpdatedAt = Just now,
                       DRC.pendingChallan = Nothing,
                       DRC.initiatedBy = Nothing,
                       DRC.rcVehicleType = Nothing
@@ -2404,6 +2406,29 @@ approveAndUpdateLdcDocument req _mId mOpCityId = do
   image <- findApproveImage DVC.LDCCertificate imageId
   STds.assertValidTdsRateFor mOpCityId image.personId req.tdsRate
   QImage.updateVerificationStatusByIdAndType VALID imageId DVC.LDCCertificate
+  let baseMeta =
+        fromMaybe
+          DImage.ImageMetadata
+            { documentNumber = Nothing,
+              nameOnCard = Nothing,
+              dateOfBirth = Nothing,
+              vehicleClass = Nothing,
+              manufacturer = Nothing,
+              vehicleModel = Nothing,
+              fuelType = Nothing,
+              colour = Nothing,
+              chassisNumber = Nothing,
+              engineNumber = Nothing,
+              registrationDate = Nothing,
+              ownerName = Nothing
+            }
+          image.metadata
+      incomingLdcNumber =
+        req.ldcNumber >>= \n ->
+          let trimmed = T.strip n
+           in if T.null trimmed then Nothing else Just trimmed
+      mergedMeta = baseMeta {DImage.documentNumber = incomingLdcNumber <|> baseMeta.documentNumber}
+  when (isJust mergedMeta.documentNumber) $ QImage.updateMetadata (Just mergedMeta) imageId
   whenJust req.tdsRate $ \rate ->
     STds.setTdsRateValidatedFor mOpCityId image.personId True (Just rate)
 
@@ -3468,34 +3493,45 @@ postDriverRegistrationAddVehicles merchantShortId opCity driverId mbAutoApprove 
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (driver.role == DP.DRIVER && driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCityId) $
     throwError (PersonDoesNotExist personId.getId)
-  -- Without a photo an RC can only be created from the row's details, which the register door honours only where the city allows it.
-  unless (transporterConfig.allowDashboardToPassVehicleDetails == Just True) $
-    throwError (InvalidRequest "Vehicle details from the dashboard are not enabled for this city")
   rows <- BulkUpload.readVehiclesCsv transporterConfig merchantOpCity req.file
+  let autoApproved = mbAutoApprove == Just True && transporterConfig.autoApproveOnAdminUpload == Just True
   -- The driver in the path owns every row, so the file's driver phone column is ignored.
   let registerRow (rcReq, mbFleetNo) = do
         whenJust mbFleetNo $ \_ -> throwError (InvalidRequest "Fleet phone number is not applicable for adding vehicles under a driver")
-        when (isNothing rcReq.vehicleDetails) $ throwError (InvalidRequest "Manufacturer, model and colour are required")
+        -- Where the city takes vehicle details from the dashboard the row must carry them; elsewhere the number alone goes to the verifier.
+        when (transporterConfig.allowDashboardToPassVehicleDetails == Just True && isNothing rcReq.vehicleDetails) $
+          throwError (InvalidRequest "Manufacturer, model and colour are required")
+        let addVehicleReq = BulkUpload.convertToAddVehicleReq rcReq
+        runRequestValidation (CommonFleet.validateAddVehicleReq transporterConfig.preProcessDocumentIdentifiers) addVehicleReq
         -- Bulk only creates vehicles; an existing plate is linked through the dashboard, as the single add does.
         mbExistingRC <- QRC.findLastVehicleRCWrapper rcReq.vehicleRegistrationCertNumber
         whenJust mbExistingRC $ \_ -> throwError (InvalidRequest "RC already exists for this vehicle number")
         imageId <- createBulkRcPlaceholderImage personId merchant.id merchantOpCityId
+        let vehicleReq = (addVehicleReq :: CommonFleet.AddVehicleReq) {CommonFleet.imageId = Just (cast imageId)}
         registered <-
           withTryCatch "register:postDriverRegistrationAddVehicles" $
-            postDriverRegistrationDocumentRegisterWithVerifiedBy DPan.DASHBOARD merchantShortId opCity driverId mbAutoApprove $
-              Common.DocumentRegisterReq {metadata = Common.RCData ((rcReq :: Common.RegisterRCReq) {Common.imageId = cast imageId})}
+            DCommon.runVerifyRCFlow False personId merchant merchantOpCityId opCity transporterConfig vehicleReq False True autoApproved Nothing
         case registered of
-          Right _ -> pure ()
+          Right () -> pure ()
           Left err -> do
             -- A row refused before its RC existed leaves no image behind; an image an RC already holds stays, as after a failed approve.
             mbRc <- QRC.findByAnyImageId imageId
             when (isNothing mbRc) $ QImage.deleteByIdAndPerson imageId personId
             throwM err
+        -- Only an RC built from the row's details exists at this point; one sent for external verification is settled by the verifier's answer.
+        let mbVehicleDetails = DCommon.mkDashboardVehicleDetails transporterConfig vehicleReq
+        -- An approved row's flags are recomputed by the approve; any other row refreshes them, as a single document register does.
+        if autoApproved && isJust mbVehicleDetails
+          then
+            void $
+              postDriverRegistrationDocumentsUpdate merchantShortId opCity $
+                Common.Approve (Common.RC (mkRCApproveDetails (cast imageId) vehicleReq.registrationNo mbVehicleDetails))
+          else refreshOnboardingFlags personId
   unprocessedEntities <-
     foldlM
       ( \unprocessed (rcReq, _, _, _, mbFleetNo, _) ->
           withTryCatch "process:postDriverRegistrationAddVehicles" (registerRow (rcReq, mbFleetNo)) <&> \case
-            Left err -> unprocessed <> ["Unable to add Vehicle (" <> rcReq.vehicleRegistrationCertNumber <> "): " <> T.pack (displayException err)]
+            Left err -> unprocessed <> ["Unable to add Vehicle (" <> rcReq.vehicleRegistrationCertNumber <> "): " <> BulkUpload.rowErrorMessage err]
             Right () -> unprocessed
       )
       []

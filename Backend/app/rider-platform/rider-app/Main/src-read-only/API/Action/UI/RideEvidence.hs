@@ -26,7 +26,7 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "ride" :> Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> "evidence"
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.RideEvidence.RideEvidenceItem]
       :<|> TokenAuth
       :> "ride"
@@ -37,7 +37,7 @@ type API =
            Kernel.Prelude.Text
       :> "file"
       :> Get
-           ('[JSON])
+           '[JSON]
            Kernel.Prelude.Text
   )
 

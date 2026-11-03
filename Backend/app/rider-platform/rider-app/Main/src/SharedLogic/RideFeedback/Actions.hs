@@ -174,6 +174,7 @@ executeAction env action = case action.actionType of
       phoneNumber <- mapM decrypt env.person.mobileNumber
       -- Xyne needs an id for the ticket's thread; each feedback ticket is its own thread.
       ticketThreadId <- generateGUID
+      rideDescription <- mapM (\ride -> SIVR.buildRideInfo ride env.person phoneNumber) env.ride
       let req =
             Ticket.CreateTicketReq
               { category,
@@ -185,7 +186,7 @@ executeAction env action = case action.actionType of
                 phoneNo = phoneNumber,
                 personId = env.person.id.getId,
                 classification = Ticket.CUSTOMER,
-                rideDescription = (\ride -> SIVR.buildRideInfo ride env.person phoneNumber) <$> env.ride,
+                rideDescription,
                 disposition = env.riderConfig.kaptureConfig.disposition,
                 queue,
                 becknIssueId = Nothing,

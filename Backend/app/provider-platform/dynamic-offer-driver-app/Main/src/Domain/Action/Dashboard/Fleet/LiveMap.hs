@@ -1,8 +1,10 @@
-module Domain.Action.Dashboard.Fleet.LiveMap (getLiveMapDrivers, getDemandHotspots) where
+module Domain.Action.Dashboard.Fleet.LiveMap (getLiveMapDrivers, getDemandHotspots, getLiveMapDemandHotspots) where
 
 import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as ATD
+import qualified API.Types.ProviderPlatform.Fleet.LiveMap
 import qualified API.Types.ProviderPlatform.Fleet.LiveMap as Common
 import qualified API.Types.UI.DemandHotspots as UIHotspots
+import qualified Data.Map.Strict as Map
 import qualified Domain.Action.Dashboard.Common as DCommon
 import Domain.Action.Dashboard.Fleet.Driver (validateRequestorRoleAndGetEntityId)
 import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
@@ -26,6 +28,7 @@ import Kernel.Types.Error
     PersonError (PersonNotFound),
     RideError (RideNotFound),
   )
+import qualified Kernel.Types.Id
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Common (withTryCatch)
 import Kernel.Utils.Error.Throwing (fromEitherM, fromMaybeM, throwError)
@@ -39,6 +42,8 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.Booking as CHB
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.DriverInformationExtra (findAllByDriverIds)
+import qualified Storage.Queries.DriverOperatorAssociationExtra as QDOA
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
@@ -53,8 +58,9 @@ getLiveMapDrivers ::
   Kernel.Prelude.Maybe Text ->
   Kernel.Prelude.Maybe (ID.Id ATD.Driver) ->
   Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong ->
+  Kernel.Prelude.Maybe [ID.Id ATD.Driver] ->
   Environment.Flow [Common.MapDriverInfoRes]
-getLiveMapDrivers merchantShortId opCity radius requestorId mbReqFleetOwnerId mbDriverIdForRadius mbPoint = do
+getLiveMapDrivers merchantShortId opCity radius requestorId mbReqFleetOwnerId mbDriverIdForRadius mbPoint mbDriverIds = do
   when (radius.getMeters <= 0) . throwError $ InvalidRequest "Radius must be positive"
   latLong <- getPoint mbDriverIdForRadius mbPoint
   merchant <- findMerchantByShortId merchantShortId
@@ -62,17 +68,44 @@ getLiveMapDrivers merchantShortId opCity radius requestorId mbReqFleetOwnerId mb
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing
   let allDriversAllowed = maybe False (\tc -> tc.allowNonFleetDriverLiveMap == Just True) mbTransporterConfig
   (mbFleetOwnerId, mbOperatorId) <- resolveScope allDriversAllowed
-  filtredNearbyDriverLocations <- LF.nearBy latLong.lat latLong.lon Nothing (Just autoTypeLs) radius.getMeters merchant.id mbFleetOwnerId mbOperatorId Nothing
-  driverInfoList <- findAllByDriverIds $ (.driverId.getId) <$> filtredNearbyDriverLocations
-  let mbPositionAndDriverInfoLs = mkTuple <$> filtredNearbyDriverLocations
+  nearByLocs <- LF.nearBy latLong.lat latLong.lon Nothing (Just autoTypeLs) radius.getMeters merchant.id mbFleetOwnerId mbOperatorId Nothing
+  byIdLocs <- fetchAuthorisedByIds mbFleetOwnerId mbOperatorId mbDriverIds
+  let keepFresher a b = if a.coordinatesCalculatedAt >= b.coordinatesCalculatedAt then a else b
+      mergedLocs = Map.elems $ Map.fromListWith keepFresher [(l.driverId, l) | l <- nearByLocs <> byIdLocs]
+  driverInfoList <- findAllByDriverIds $ (.driverId.getId) <$> mergedLocs
+  let mbPositionAndDriverInfoLs = mkTuple <$> mergedLocs
       driverIdDriverInfoMap = fromList [(di.driverId, di) | di <- driverInfoList]
       mkTuple location =
         let mbRideId = (.rideId) <$> location.rideDetails
             position = LatLong location.lat location.lon
+            lastUpdatedAt = location.coordinatesCalculatedAt
             mbDriverInfo = Kernel.Prelude.lookup location.driverId driverIdDriverInfoMap
-         in (mbRideId,position,) <$> mbDriverInfo
+         in (mbRideId,position,lastUpdatedAt,) <$> mbDriverInfo
   catMaybes <$> mapM (maybe (pure Nothing) (buildMapDriverInfo merchantOpCity.country)) mbPositionAndDriverInfoLs
   where
+    fetchAuthorisedByIds mbFleetOwnerId mbOperatorId = \case
+      Nothing -> pure []
+      Just [] -> pure []
+      Just reqIds -> case (mbFleetOwnerId, mbOperatorId) of
+        (Just fleetOwnerId, _) -> do
+          assocs <- QFDA.findAllByDriverIds (ID.cast <$> reqIds)
+          let authorisedIds = [a.driverId | a <- assocs, a.fleetOwnerId == fleetOwnerId]
+          if null authorisedIds then pure [] else safeDriversLocation authorisedIds
+        (Nothing, Just operatorId) -> do
+          assocs <- QDOA.findAllByDriverIds (ID.cast <$> reqIds)
+          let authorisedIds = [a.driverId | a <- assocs, a.operatorId == operatorId]
+          if null authorisedIds then pure [] else safeDriversLocation authorisedIds
+        _ -> do
+          logWarning $ "liveMap/drivers driverIds dropped: no fleet/operator scope resolved for requestor " <> requestorId
+          pure []
+
+    safeDriversLocation ids =
+      withTryCatch "driversLocation:fleetLiveMapById" (LF.driversLocation ids) >>= \case
+        Left err -> do
+          logWarning $ "fleet liveMap by-id driversLocation failed: " <> show err
+          pure []
+        Right locs -> pure locs
+
     resolveScope :: Bool -> Environment.Flow (Kernel.Prelude.Maybe Text, Kernel.Prelude.Maybe Text)
     resolveScope allDriversAllowed
       | allDriversAllowed && Kernel.Prelude.isNothing mbReqFleetOwnerId = do
@@ -154,9 +187,9 @@ buildRideRelatedInfo _ _ = pure $ Common.RideRelatedInfo Nothing Nothing notAvai
 
 buildMapDriverInfo ::
   Kernel.Types.Beckn.Context.Country ->
-  (Kernel.Prelude.Maybe Text, LatLong, DDI.DriverInformation) ->
+  (Kernel.Prelude.Maybe Text, LatLong, Kernel.Prelude.UTCTime, DDI.DriverInformation) ->
   Environment.Flow (Kernel.Prelude.Maybe Common.MapDriverInfoRes)
-buildMapDriverInfo country (mbRideId, position, driverInformation) = do
+buildMapDriverInfo country (mbRideId, position, lastUpdatedAt, driverInformation) = do
   let driverId = driverInformation.driverId
   mbVehicle <- QV.findById driverId
   whenNothing_ mbVehicle . logError $ "Vehicle not found for driverId: " <> driverId.getId
@@ -178,7 +211,8 @@ buildMapDriverInfo country (mbRideId, position, driverInformation) = do
 
     pure
       Common.MapDriverInfoRes
-        { driverName = unwords [driver.firstName, fromMaybe "" driver.lastName],
+        { driverId = ID.cast driverId,
+          driverName = unwords [driver.firstName, fromMaybe "" driver.lastName],
           driverStatus = castStatus <$> driverInformation.driverFlowStatus,
           vehicleNumber = vehicle.registrationNo,
           vehicleVariant = vehicle.variant,
@@ -188,6 +222,7 @@ buildMapDriverInfo country (mbRideId, position, driverInformation) = do
           vehicleIconURL = vehicleIconURL,
           profilePhotoImageId = profilePhotoImageId,
           position,
+          lastUpdatedAt = Just lastUpdatedAt,
           mobileCountryCode = fromMaybe (P.getCountryMobileCode country) driver.mobileCountryCode,
           mobileNumber,
           rideRelatedInfo
@@ -237,3 +272,8 @@ castStatus = \case
   DDFS.ON_RIDE -> Common.ON_RIDE
   DDFS.ACTIVE -> Common.ACTIVE
   DDFS.INACTIVE -> Common.INACTIVE
+
+--- << AUTOGENERATED Check this code, update export list and remove comment >> ---
+
+getLiveMapDemandHotspots :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow API.Types.ProviderPlatform.Fleet.LiveMap.DemandHotspotsResp)
+getLiveMapDemandHotspots _merchantShortId _opCity = do error "Logic yet to be decided"

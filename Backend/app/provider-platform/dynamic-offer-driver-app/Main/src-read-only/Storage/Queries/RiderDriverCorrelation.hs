@@ -35,6 +35,11 @@ checkRiderFavDriver riderDetailId driverId favourite = do
         ]
     ]
 
+findAllCorrelationsForRider ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m [Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation])
+findAllCorrelationsForRider riderDetailId = do findAllWithKV [Se.And [Se.Is Beam.riderDetailId $ Se.Eq (Kernel.Types.Id.getId riderDetailId)]]
+
 findByRiderIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation))
@@ -51,24 +56,6 @@ findFavDriversForRider ::
   (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> Kernel.Prelude.Bool -> m [Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation])
 findFavDriversForRider riderDetailId favourite = do findAllWithKV [Se.And [Se.Is Beam.riderDetailId $ Se.Eq (Kernel.Types.Id.getId riderDetailId), Se.Is Beam.favourite $ Se.Eq favourite]]
 
-updateFavouriteDriverForRider ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateFavouriteDriverForRider favourite riderDetailId driverId = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [Se.Set Beam.favourite favourite, Se.Set Beam.updatedAt _now]
-    [ Se.And
-        [ Se.Is Beam.riderDetailId $ Se.Eq (Kernel.Types.Id.getId riderDetailId),
-          Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)
-        ]
-    ]
-
-findAllCorrelationsForRider ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m [Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation])
-findAllCorrelationsForRider riderDetailId = do findAllWithKV [Se.And [Se.Is Beam.riderDetailId $ Se.Eq (Kernel.Types.Id.getId riderDetailId)]]
-
 updateBlackListedDriverForRider ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
@@ -76,6 +63,19 @@ updateBlackListedDriverForRider blackListed riderDetailId driverId = do
   _now <- getCurrentTime
   updateOneWithKV
     [Se.Set Beam.blackListed blackListed, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.riderDetailId $ Se.Eq (Kernel.Types.Id.getId riderDetailId),
+          Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)
+        ]
+    ]
+
+updateFavouriteDriverForRider ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateFavouriteDriverForRider favourite riderDetailId driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.favourite favourite, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.riderDetailId $ Se.Eq (Kernel.Types.Id.getId riderDetailId),
           Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)

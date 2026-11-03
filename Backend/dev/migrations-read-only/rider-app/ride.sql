@@ -481,3 +481,9 @@ ALTER TABLE atlas_app.ride ADD COLUMN cancellation_fee_immediate_capture boolean
 
 ALTER TABLE atlas_app.ride ADD COLUMN return_started_at timestamp with time zone ;
 ALTER TABLE atlas_app.ride ADD COLUMN return_otp text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ALTER COLUMN driver_mobile_number SET DEFAULT NULL;
+ALTER TABLE atlas_app.ride ALTER COLUMN driver_mobile_number DROP NOT NULL;

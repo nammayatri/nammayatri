@@ -31,6 +31,7 @@ import Kernel.External.BapHostRedirect (BapHostRedirectMap)
 import Kernel.External.Encryption (EncTools)
 import qualified Kernel.External.MasterCloudForward as MCF
 import Kernel.External.Slack.Types (SlackConfig)
+import Kernel.External.SocialLogin.Types (SocialLoginConfig)
 import Kernel.Prelude (NominalDiffTime, UTCTime)
 import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
@@ -210,6 +211,7 @@ data AppCfg = AppCfg
     singleBatchProcessingTempDelay :: NominalDiffTime,
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
+    socialLoginConfig :: SocialLoginConfig,
     quoteRespondCoolDown :: Int,
     sosAlertsTopicARN :: Text,
     slackNotificationConfig :: SlackNotificationConfig,
@@ -369,6 +371,7 @@ data AppEnv = AppEnv
     singleBatchProcessingTempDelay :: NominalDiffTime,
     ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
+    socialLoginConfig :: SocialLoginConfig,
     passettoContext :: PassettoContext,
     quoteRespondCoolDown :: Int,
     sosAlertsTopicARN :: Text,

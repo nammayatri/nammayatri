@@ -819,7 +819,6 @@ data MetroHopLeg = MetroHopLeg
     destStopCode :: Text,
     routeCode :: Text,
     lineName :: Text,
-    numStops :: Int,
     alternateRouteCodes :: [Text]
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
@@ -830,7 +829,7 @@ data MetroHopLeg = MetroHopLeg
 -- about -- a real answer, not an error -- and an empty list when source and destination are
 -- the same station. Both mean there is no journey to offer.
 newtype MetroHopResponse = MetroHopResponse
-  { legs :: Maybe [MetroHopLeg]
+  { legs :: Maybe [[MetroHopLeg]]
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
@@ -1235,7 +1234,8 @@ data NandiRoute = NandiRoute
     route_name :: Maybe Text,
     route_direction :: Maybe Text,
     start_point_id :: Value,
-    end_point_id :: Value
+    end_point_id :: Value,
+    route_distance :: Maybe Double
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 

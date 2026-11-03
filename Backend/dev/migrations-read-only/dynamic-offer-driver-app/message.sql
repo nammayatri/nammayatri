@@ -20,3 +20,8 @@ ALTER TABLE atlas_driver_offer_bpp.message ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.message ADD COLUMN shareable boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.message ADD COLUMN category character varying (36) ;

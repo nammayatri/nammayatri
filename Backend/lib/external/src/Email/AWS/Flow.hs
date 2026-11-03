@@ -16,6 +16,8 @@ module Email.AWS.Flow where
 
 import qualified Amazonka as AWS
 import Amazonka.SES
+import Amazonka.SES.Lens (sendRawEmailResponse_messageId, sendRawEmail_configurationSetName, sendRawEmail_tags)
+import Control.Lens ((.~), (^.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.Text as T
@@ -144,12 +146,30 @@ sendEmailWithAttachments ::
   Email.EmailBodyFormat ->
   [Email.EmailAttachment] ->
   IO ()
-sendEmailWithAttachments from to subject bodyText bodyFormat attachments = do
+sendEmailWithAttachments from to subject bodyText bodyFormat attachments =
+  void $ sendEmailWithAttachmentsTracked Email.noEmailSendOptions from to subject bodyText bodyFormat attachments
+
+-- | Same message as 'sendEmailWithAttachments', sent with the given configuration set and message tags;
+-- returns the SES MessageId so delivery and bounce events can be matched back to this send.
+sendEmailWithAttachmentsTracked ::
+  Email.EmailSendOptions ->
+  Text ->
+  [Text] ->
+  Text ->
+  Text ->
+  Email.EmailBodyFormat ->
+  [Email.EmailAttachment] ->
+  IO Text
+sendEmailWithAttachmentsTracked options from to subject bodyText bodyFormat attachments = do
   let rawEmail = buildMultiAttachmentRawEmail from to subject bodyText bodyFormat attachments
   env <- AWS.newEnv AWS.discover
   let rawMessage = newRawMessage (TE.encodeUtf8 rawEmail)
-      sendReq = newSendRawEmail rawMessage
-  void $ AWS.runResourceT $ AWS.send env sendReq
+      sendReq =
+        newSendRawEmail rawMessage
+          & sendRawEmail_configurationSetName .~ options.configurationSet
+          & sendRawEmail_tags .~ (if null options.tags then Nothing else Just (uncurry newMessageTag <$> options.tags))
+  response <- AWS.runResourceT $ AWS.send env sendReq
+  pure $ response ^. sendRawEmailResponse_messageId
 
 htmlToPlaintext :: Text -> Text
 htmlToPlaintext = T.strip . dropTags

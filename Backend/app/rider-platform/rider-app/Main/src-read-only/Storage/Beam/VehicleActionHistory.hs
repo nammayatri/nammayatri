@@ -12,21 +12,21 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VehicleActionHistoryT f = VehicleActionHistoryT
-  { action :: (B.C f Domain.Types.VehicleActionHistory.VehicleActionType),
-    conductorCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    currentVehicle :: (B.C f Kernel.Prelude.Text),
-    depotId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    dispatcherId :: (B.C f Kernel.Prelude.Text),
-    driverCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    reasonContent :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    reasonTag :: (B.C f Kernel.Prelude.Text),
-    replacedVehicle :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    waybillNo :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text))
+  { action :: B.C f Domain.Types.VehicleActionHistory.VehicleActionType,
+    conductorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    currentVehicle :: B.C f Kernel.Prelude.Text,
+    depotId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    dispatcherId :: B.C f Kernel.Prelude.Text,
+    driverCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    reasonContent :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    reasonTag :: B.C f Kernel.Prelude.Text,
+    replacedVehicle :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    waybillNo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +36,6 @@ instance B.Table VehicleActionHistoryT where
 
 type VehicleActionHistory = VehicleActionHistoryT Identity
 
-$(enableKVPG (''VehicleActionHistoryT) [('id)] [[('action)], [('dispatcherId)]])
+$(enableKVPG ''VehicleActionHistoryT ['id] [['action], ['dispatcherId]])
 
-$(mkTableInstances (''VehicleActionHistoryT) "vehicle_action_history")
+$(mkTableInstances ''VehicleActionHistoryT "vehicle_action_history")

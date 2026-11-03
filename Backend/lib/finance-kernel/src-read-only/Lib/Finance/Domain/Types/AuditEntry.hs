@@ -28,7 +28,7 @@ data AuditEntry = AuditEntry
   }
   deriving (Generic)
 
-data AuditAction = Created | Updated | Reversed | StatusChanged deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data AuditAction = Created | Updated | Reversed | StatusChanged | Approved | Rejected deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data AuditEntityType
   = LedgerEntry
@@ -38,6 +38,7 @@ data AuditEntityType
   | PgPaymentSettlementReport
   | SapJournalEntry
   | SubscriptionPurchase
+  | LedgerAdjustmentRequest
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AuditAction)

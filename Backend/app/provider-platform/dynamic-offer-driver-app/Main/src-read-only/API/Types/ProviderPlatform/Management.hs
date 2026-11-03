@@ -28,10 +28,12 @@ import qualified API.Types.ProviderPlatform.Management.Message
 import qualified API.Types.ProviderPlatform.Management.NammaTag
 import qualified API.Types.ProviderPlatform.Management.Notification
 import qualified API.Types.ProviderPlatform.Management.Payout
+import qualified API.Types.ProviderPlatform.Management.Person
 import qualified API.Types.ProviderPlatform.Management.PlanManagement
 import qualified API.Types.ProviderPlatform.Management.PolicyDocument
 import qualified API.Types.ProviderPlatform.Management.Pricing
 import qualified API.Types.ProviderPlatform.Management.PricingAdjustment
+import qualified API.Types.ProviderPlatform.Management.RSFReconciliation
 import qualified API.Types.ProviderPlatform.Management.RadarTickets
 import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified API.Types.ProviderPlatform.Management.Ride
@@ -41,6 +43,7 @@ import qualified API.Types.ProviderPlatform.Management.SearchTry
 import qualified API.Types.ProviderPlatform.Management.SosMedia
 import qualified API.Types.ProviderPlatform.Management.SpecialZoneQueue
 import qualified API.Types.ProviderPlatform.Management.System
+import qualified API.Types.ProviderPlatform.Management.TdsDistribution
 import qualified API.Types.ProviderPlatform.Management.Vehicle
 import qualified API.Types.ProviderPlatform.Management.VehicleDetails
 import qualified API.Types.ProviderPlatform.Management.VehicleInfo
@@ -78,10 +81,12 @@ data ManagementUserActionType
   | NAMMA_TAG API.Types.ProviderPlatform.Management.NammaTag.NammaTagUserActionType
   | NOTIFICATION API.Types.ProviderPlatform.Management.Notification.NotificationUserActionType
   | PAYOUT API.Types.ProviderPlatform.Management.Payout.PayoutUserActionType
+  | PERSON API.Types.ProviderPlatform.Management.Person.PersonUserActionType
   | PLAN_MANAGEMENT API.Types.ProviderPlatform.Management.PlanManagement.PlanManagementUserActionType
   | POLICY_DOCUMENT API.Types.ProviderPlatform.Management.PolicyDocument.PolicyDocumentUserActionType
   | PRICING API.Types.ProviderPlatform.Management.Pricing.PricingUserActionType
   | PRICING_ADJUSTMENT API.Types.ProviderPlatform.Management.PricingAdjustment.PricingAdjustmentUserActionType
+  | RSF_RECONCILIATION API.Types.ProviderPlatform.Management.RSFReconciliation.RSFReconciliationUserActionType
   | RADAR_TICKETS API.Types.ProviderPlatform.Management.RadarTickets.RadarTicketsUserActionType
   | REVENUE API.Types.ProviderPlatform.Management.Revenue.RevenueUserActionType
   | RIDE API.Types.ProviderPlatform.Management.Ride.RideUserActionType
@@ -91,6 +96,7 @@ data ManagementUserActionType
   | SOS_MEDIA API.Types.ProviderPlatform.Management.SosMedia.SosMediaUserActionType
   | SPECIAL_ZONE_QUEUE API.Types.ProviderPlatform.Management.SpecialZoneQueue.SpecialZoneQueueUserActionType
   | SYSTEM API.Types.ProviderPlatform.Management.System.SystemUserActionType
+  | TDS_DISTRIBUTION API.Types.ProviderPlatform.Management.TdsDistribution.TdsDistributionUserActionType
   | VEHICLE API.Types.ProviderPlatform.Management.Vehicle.VehicleUserActionType
   | VEHICLE_DETAILS API.Types.ProviderPlatform.Management.VehicleDetails.VehicleDetailsUserActionType
   | VEHICLE_INFO API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoUserActionType
@@ -125,10 +131,12 @@ instance Text.Show.Show ManagementUserActionType where
     NAMMA_TAG e -> "NAMMA_TAG/" <> show e
     NOTIFICATION e -> "NOTIFICATION/" <> show e
     PAYOUT e -> "PAYOUT/" <> show e
+    PERSON e -> "PERSON/" <> show e
     PLAN_MANAGEMENT e -> "PLAN_MANAGEMENT/" <> show e
     POLICY_DOCUMENT e -> "POLICY_DOCUMENT/" <> show e
     PRICING e -> "PRICING/" <> show e
     PRICING_ADJUSTMENT e -> "PRICING_ADJUSTMENT/" <> show e
+    RSF_RECONCILIATION e -> "RSF_RECONCILIATION/" <> show e
     RADAR_TICKETS e -> "RADAR_TICKETS/" <> show e
     REVENUE e -> "REVENUE/" <> show e
     RIDE e -> "RIDE/" <> show e
@@ -138,6 +146,7 @@ instance Text.Show.Show ManagementUserActionType where
     SOS_MEDIA e -> "SOS_MEDIA/" <> show e
     SPECIAL_ZONE_QUEUE e -> "SPECIAL_ZONE_QUEUE/" <> show e
     SYSTEM e -> "SYSTEM/" <> show e
+    TDS_DISTRIBUTION e -> "TDS_DISTRIBUTION/" <> show e
     VEHICLE e -> "VEHICLE/" <> show e
     VEHICLE_DETAILS e -> "VEHICLE_DETAILS/" <> show e
     VEHICLE_INFO e -> "VEHICLE_INFO/" <> show e
@@ -362,6 +371,15 @@ instance Text.Read.Read ManagementUserActionType where
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
                ]
+            ++ [ ( PERSON v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "PERSON/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( PLAN_MANAGEMENT v1,
                    r2
                  )
@@ -393,6 +411,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "PRICING_ADJUSTMENT/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( RSF_RECONCILIATION v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "RSF_RECONCILIATION/" r,
                    ( v1,
                      r2
                      ) <-
@@ -479,6 +506,15 @@ instance Text.Read.Read ManagementUserActionType where
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
                ]
+            ++ [ ( TDS_DISTRIBUTION v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "TDS_DISTRIBUTION/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( VEHICLE v1,
                    r2
                  )
@@ -520,4 +556,4 @@ instance Text.Read.Read ManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [(''ManagementUserActionType)])
+$(Data.Singletons.TH.genSingletons [''ManagementUserActionType])

@@ -20,7 +20,7 @@ module SharedLogic.Allocator where
 import Control.Applicative ((<|>))
 import qualified Dashboard.Common as Common
 import qualified DashboardAlert.Domain.Types.DashboardAlert as DAR
-import Data.Aeson (withObject, (.:))
+import Data.Aeson (object, withObject, (.!=), (.:), (.:?), (.=))
 import qualified Data.Map as M
 import Data.Singletons.TH
 import qualified Domain.Action.WebhookHandler as AWebhook
@@ -44,6 +44,7 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.ScheduledPayout as DSPayout
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import qualified Domain.Types.TDSDistributionBatch as DTDB
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import Kernel.External.Maps (LatLong)
@@ -121,6 +122,7 @@ data AllocatorJobType
   | SAPRideRevenueDispatch
   | ConnectAccountChargeDeduction
   | BulkUserCohortMappingUpload
+  | FleetAnalyticsRedisRecon
   | FleetEngineRetry
   | DeleteUnreferencedFarePolicies
   | GenerateInvoicePdf
@@ -206,6 +208,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSAPRideRevenueDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPRideRevenueDispatch jobData
   restoreAnyJobInfo SConnectAccountChargeDeduction jobData = AnyJobInfo <$> restoreJobInfo SConnectAccountChargeDeduction jobData
   restoreAnyJobInfo SBulkUserCohortMappingUpload jobData = AnyJobInfo <$> restoreJobInfo SBulkUserCohortMappingUpload jobData
+  restoreAnyJobInfo SFleetAnalyticsRedisRecon jobData = AnyJobInfo <$> restoreJobInfo SFleetAnalyticsRedisRecon jobData
   restoreAnyJobInfo SFleetEngineRetry jobData = AnyJobInfo <$> restoreJobInfo SFleetEngineRetry jobData
   restoreAnyJobInfo SDeleteUnreferencedFarePolicies jobData = AnyJobInfo <$> restoreJobInfo SDeleteUnreferencedFarePolicies jobData
   restoreAnyJobInfo SGenerateInvoicePdf jobData = AnyJobInfo <$> restoreJobInfo SGenerateInvoicePdf jobData
@@ -838,7 +841,10 @@ type instance JobContent 'TriggerSpecialZoneNotify = TriggerSpecialZoneNotifyJob
 data ScheduledTDSDistributionJobData = ScheduledTDSDistributionJobData
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    batchSize :: Maybe Int
+    batchSize :: Maybe Int,
+    -- | Set when started from the dashboard for one upload: send that batch's pending records, then stop.
+    -- Unset: the daily sweep of legacy (non-batch) records.
+    batchId :: Maybe (Id DTDB.TDSDistributionBatch)
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -929,13 +935,48 @@ data BulkUserCohortMappingUploadJobData = BulkUserCohortMappingUploadJobData
     -- | Seconds to wait before the next chunk job (throttles DB load).
     rescheduleDelaySeconds :: Int,
     -- | Stable id returned to dashboard for log/correlation across chunk jobs.
-    runId :: Text
+    runId :: Text,
+    -- | App-level attempt (Pattern B). Missing/Nothing treated as 1. Not scheduler curr_errors.
+    attemptCount :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 instance JobInfoProcessor 'BulkUserCohortMappingUpload
 
 type instance JobContent 'BulkUserCohortMappingUpload = BulkUserCohortMappingUploadJobData
+
+data FleetAnalyticsRedisReconJobData = FleetAnalyticsRedisReconJobData
+  { intervalSeconds :: Int,
+    -- | Rows read per batch. Nothing uses 50.
+    pageSize :: Maybe Int,
+    -- | Last fleet_operator_id finished in this pass. Nothing starts a pass.
+    cursor :: Maybe Text,
+    -- | Recount operator associated/active/enabled and fleet active-driver, active-vehicle, and online keys.
+    -- Absent or false skips those queries. The six running totals are always reconned.
+    reconLiveCounters :: Bool
+  }
+  deriving (Generic, Show, Eq)
+
+instance FromJSON FleetAnalyticsRedisReconJobData where
+  parseJSON = withObject "FleetAnalyticsRedisReconJobData" $ \o -> do
+    intervalSeconds <- o .: "intervalSeconds"
+    pageSize <- o .:? "pageSize"
+    cursor <- o .:? "cursor"
+    reconLiveCounters <- o .:? "reconLiveCounters" .!= False
+    pure FleetAnalyticsRedisReconJobData {..}
+
+instance ToJSON FleetAnalyticsRedisReconJobData where
+  toJSON FleetAnalyticsRedisReconJobData {..} =
+    object
+      [ "intervalSeconds" .= intervalSeconds,
+        "pageSize" .= pageSize,
+        "cursor" .= cursor,
+        "reconLiveCounters" .= reconLiveCounters
+      ]
+
+instance JobInfoProcessor 'FleetAnalyticsRedisRecon
+
+type instance JobContent 'FleetAnalyticsRedisRecon = FleetAnalyticsRedisReconJobData
 
 -- | Fare policies whose FareProducts were replaced or removed. Deleted only if still unreferenced when the job runs.
 newtype DeleteUnreferencedFarePoliciesJobData = DeleteUnreferencedFarePoliciesJobData

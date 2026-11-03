@@ -37,6 +37,7 @@ import qualified SharedLogic.CallBPPInternal as BPPInternal
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Auth
+import qualified Tools.EventTracking as ET
 import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 -------- Serviceability----------
@@ -79,7 +80,11 @@ checkOrignServiceability ::
   OriginServiceabilityReq ->
   FlowHandler DServiceability.ServiceabilityRes
 checkOrignServiceability settingAccessor (personId, merchantId) OriginServiceabilityReq {..} = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
-  DServiceability.checkServiceability settingAccessor (personId, merchantId) location True True
+  res <- DServiceability.checkServiceability settingAccessor (personId, merchantId) location True True
+  whenJust res.city $ \city ->
+    fork "event_tracking: user_onboarded_city" $
+      ET.trackOnboardedCityIfPending merchantId personId city
+  pure res
 
 checkDestinationServiceability ::
   (GeofencingConfig -> GeoRestriction) ->

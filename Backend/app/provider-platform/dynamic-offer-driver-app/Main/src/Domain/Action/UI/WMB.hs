@@ -27,6 +27,7 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.Alert
 import Domain.Types.Common
 import qualified Domain.Types.DriverInformation as DDI
@@ -212,7 +213,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
       Analytics.incrementFleetOwnerAnalyticsActiveDriverCount wmbTransporterConfig (Just vehicleRouteMapping.fleetOwnerId.getId) driverId
   let qrStartTransporterConfig = wmbTransporterConfig
   qrStartDriver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  SOnboardingComms.setOnboardingAs qrStartTransporterConfig qrStartDriver DDI.FLEET_DRIVER
+  SOnboardingComms.setOnboardingAs qrStartTransporterConfig SGuard.None qrStartDriver DDI.FLEET_DRIVER
   tripTransaction <-
     if fleetConfig.directlyStartFirstTripAssignment
       then WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber sourceStopInfo destinationStopInfo req.location DriverDirect (mbDriverBadge <&> (.id)) (mbDriverBadge <&> (.badgeName)) (mbConductorBadge <&> (.id)) (mbConductorBadge <&> (.badgeName))
@@ -525,7 +526,11 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
     SA.endDriverAssociations merchantOperatingCityId transporterConfig driver
     mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId driverId
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
+    -- A fleet driver drives the fleet's vehicle when the city blocks own RCs for fleet drivers.
+    when (transporterConfig.blockDriverOwnRCForFleetDrivers == Just True) $
+      DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig driverId
     FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
+    SOnboardingComms.setOnboardingAsWithoutLock transporterConfig driver DDI.FLEET_DRIVER
     fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver driverId merchantOperatingCityId
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId
     Analytics.handleDriverAnalyticsAndFlowStatus

@@ -23,4 +23,4 @@ data PartnerInvoiceDataLog = PartnerInvoiceDataLog
     requestedAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show), (Eq))
+  deriving (Generic, Show, Eq)

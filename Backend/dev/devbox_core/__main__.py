@@ -39,7 +39,7 @@ def _summary(m: dict) -> dict:
 
 
 def _devboxes(args: argparse.Namespace) -> tuple[list, str | None]:
-    res = fleet.fetch_machines(args.base_host, args.base_port)
+    res = fleet.fetch_machines(args.gateway)
     return fleet.devboxes(res.get("machines", [])), res.get("error")
 
 
@@ -57,9 +57,8 @@ def cmd_pick(args: argparse.Namespace) -> int:
     front desk (or --host, checked). --github-env also hands it to the next
     workflow steps as DEVBOX_HOST / DEVBOX_USER / DEVBOX_NAME, and the address
     its URLs are opened on (office network) as DEVBOX_URL_HOST."""
-    os.environ["BASE_API_HOST"], os.environ["BASE_API_PORT"] = args.base_host, args.base_port
     try:
-        t, name, url_host = flow.pick_target(args.user, args.host, None)
+        t, name, url_host = flow.pick_target(args.user, args.host, None, args.gateway)
     except RuntimeError as e:
         print(json.dumps({"error": str(e)}))
         return 1
@@ -264,12 +263,12 @@ def main(argv: list | None = None) -> int:
     ping.add_argument("--key", help="private key file (default: DEVBOX_SSH_KEY_FILE or ~/.ssh/id_*)")
     ping.set_defaults(func=cmd_ping)
 
-    base_host, base_port = fleet.base_api()
     for name, func, help_ in (("machines", cmd_machines, "list the dev-boxes and their route from here"),
                               ("pick", cmd_pick, "the least-loaded reachable dev-box with a front desk")):
         c = sub.add_parser(name, help=help_)
-        c.add_argument("--base-host", default=base_host, help="service discovery host (env BASE_API_HOST)")
-        c.add_argument("--base-port", default=base_port, help="service discovery port (env BASE_API_PORT)")
+        c.add_argument("--gateway", default=stack.GATEWAY_URL,
+                       help="hopper service discovery, whose /node/list names the machines "
+                            "(env HOPPER_GATEWAY_URL)")
         if name == "pick":
             c.add_argument("--host", help="use this dev-box (its front desk is still checked)")
             c.add_argument("--user", help="SSH user for --host")
@@ -332,9 +331,9 @@ def main(argv: list | None = None) -> int:
     dt.set_defaults(func=cmd_data)
 
     for name, help_, func in (
-        ("cc-start", "start the control centre next to the workspace (port 5300-5319)", cmd_cc_start),
-        ("cc-status", "control centre state + URL (+ last log lines unless running)", cmd_cc_status),
-        ("cc-stop", "stop the control centre", cmd_cc_stop),
+        ("cc-start", "check the stack runs the control centre (it starts with the stack)", cmd_cc_start),
+        ("cc-status", "control centre state + URL", cmd_cc_status),
+        ("cc-stop", "stop a control centre left by the old detached start", cmd_cc_stop),
     ):
         c = sub.add_parser(name, help=help_)
         _add_target_args(c)

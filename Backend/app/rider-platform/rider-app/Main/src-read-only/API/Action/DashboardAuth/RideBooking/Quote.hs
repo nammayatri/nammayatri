@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.RideBooking.Quote
 where
 
 import qualified API.Types.Dashboard.RideBooking.Quote
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.RideBooking.Quote
 import qualified "this" Domain.Action.UI.Quote
 import qualified Domain.Types.Merchant
@@ -15,6 +16,7 @@ import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.SearchRequest
 import qualified Environment
 import EulerHS.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -31,4 +33,9 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getQuoteResult merchantId city
 
 getQuoteResult :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler Domain.Action.UI.Quote.GetQuotesRes)
-getQuoteResult a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Quote.getQuoteResult a5 a4 a2 a1
+getQuoteResult a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Quote.getQuoteResult a5 a4 a2 a1
+    )

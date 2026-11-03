@@ -38,9 +38,32 @@ What it cannot prove: that Google would accept the payload. Every provider's `ba
 at the local mock server, which has no handler for these paths, so each call fails fast and
 rider-app logs it. The mock server records every hit for the test dashboard's **Mock calls**
 panel, so after a run you can eyeball `/firebase/mp/collect` with `firebase_app_id` and
-`api_secret` query params and the JSON body, but Newman cannot read that stream. Payload
+`api_secret` query params and the JSON body, and `01` does not assert on them (`02` does, through `GET /mock/hits`). Payload
 correctness against Google is verified once per environment by setting `"debug": true` on a
 staging row and confirming an empty `validationMessages` list in the logs.
+
+## `02-OnboardedCityFlow`: `ny_user_onboarded_city`
+
+`ny_user_onboarded` goes out at signup with the merchant's default city. `createPerson` also
+sets `EventTracking:OnboardedCityPending:<personId>` in Redis, and the first
+`POST /serviceability/origin` that resolves a city sends `ny_user_onboarded_city` with that
+city, claimed through `EventTracking:OnboardedCityClaim:<personId>` so it goes out once.
+
+| Step | Assertion |
+|---|---|
+| Rider Auth, Rider OTP | 200; person id captured |
+| Assert Pending Key Set | pending key exists (polled; it is set in a forked thread) and holds `MOBILENUMBER` |
+| Origin Serviceability | 200, serviceable, resolves a `city` |
+| Assert Onboarded City Event Sent | in the mock's Moengage hits for this rider: one `ny_user_onboarded`, exactly one `ny_user_onboarded_city` whose `city` equals the env file's `city` (events carry `show city`, e.g. `Bangalore`, not the API's `std:080`) |
+| Assert Pending Key Cleared, Assert Claim Key Set | pending key gone, claim key present |
+| Origin Serviceability (Concurrent Repeats) | three origin calls at once, all 200 |
+| Assert No Repeat Event | still exactly one `ny_user_onboarded_city` |
+
+Unlike `01`, this collection reads what reached the mock, through two read-only mock-server
+endpoints: `GET /mock/hits?path_contains=&body_contains=` (the recorded-hit buffer) and
+`POST /mock/redis/get {"pattern": ...}` (SCAN + GET across the cluster nodes, so the key prefix
+does not matter). Moengage has no mock handler; its calls hit the catch-all, which returns
+`{"status": "ok"}` and decodes as a Moengage success.
 
 ## Seeding: three service-config rows plus the provider list
 
@@ -81,7 +104,7 @@ caveat `PhoneShareConsentFlow/Rules.md` documents for `transporter_config` and `
 ## What is deliberately NOT covered here
 
 - **Delivery to a real provider, or the exact payload.** See above; there is no mock handler
-  and no hits endpoint Newman can read.
+  and `01` does not read `GET /mock/hits`.
 - **The "no app instance id" and "no platform" skip paths.** They only produce log lines. A
   rider registered without the profile step exercises the first; a profile request without
   `x-device` exercises the second.

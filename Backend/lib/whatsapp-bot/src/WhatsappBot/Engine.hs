@@ -43,7 +43,7 @@ import Kernel.Prelude
 -- edge runs Engine -> Env and never back).
 import WhatsappBot.Env (BotEnv, btn, ensureAuth, mkUserKey, rawInput, reply, replyButtons, resetContext, save, scopedSessionId)
 -- Booking CREATION now lives in Flow.Booking (Engine -> Flow.Booking -> {Ride, Env}).
-import WhatsappBot.Flow.Booking (bookTriggers, confirmRegularBooking, flexiOffered, handleConfirmingRegularDrop, handleFlexiEndOtp, handlePickup, handlePickupConfirm, handleRegularDrop, handleRideType, hiddenRideTypeButtons, menuRow, prefetchSavedLocations, promptForBookingEntry, promptForPickup, promptForRegularDrop, regularOffered, sendPickupConfirm, sendRegularFareConfirm)
+import WhatsappBot.Flow.Booking (bookTriggers, confirmRegularBooking, handleConfirmingRegularDrop, handleFlexiEndOtp, handlePickup, handlePickupConfirm, handleRegularDrop, handleRideType, hiddenRideTypeButtons, menuRow, prefetchSavedLocations, promptForBookingEntry, promptForPickup, promptForRegularDrop, sendPickupConfirm, sendRegularFareConfirm)
 import WhatsappBot.Handles (StoredPerson (..))
 import WhatsappBot.I18n (detectLanguage, getAllLanguages, languageCode, parseLanguage, t)
 -- Instances only: LanguageStrings / LanguageInfo are dot-accessed via RDP
@@ -278,35 +278,44 @@ isLangCode c = not (T.null c) && T.all isWordChar c
 -- More / help / support (engine.ts:365-387)
 -- ---------------------------------------------------------------------------
 
--- | "More options" submenu (@engine.ts:365-375@).
+-- | "More options" submenu (@engine.ts:365-375@, changed): the ride types the
+-- menu row had no room for, then help / support / language / main menu. Language
+-- moved here from the menu row, which now carries the ride types. Over 3 items,
+-- the sender sends it as a list.
 handleMore :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> m ()
 handleMore env ev ctx = do
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
       merchant = env.cfg.merchant
       items =
-        [btn s.rideTypeRegular "ride_type:regular" | flexiOffered merchant && regularOffered merchant]
-          <> [btn s.howItWorks "help", btn s.contactSupport "support", btn s.mainMenu "main_menu"]
+        hiddenRideTypeButtons s merchant.maxDirectButtons merchant.rideTypesOrder
+          <> [btn s.howItWorks "help", btn s.contactSupport "support", btn s.chooseLanguage "choose_language", btn s.mainMenu "main_menu"]
   replyButtons env to s.moreTitle items
 
--- | "How it works" (@engine.ts:376-380@): intro video + text, then loop to menu.
+-- | "How it works" (@engine.ts:376-380@, changed): the steps ride as the video's
+-- caption, or as the menu message's body when there is no video, instead of a
+-- separate text message.
 handleHelp :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> m ()
 handleHelp env ev ctx = do
-  sendHowItWorks env ev ctx
   let s = t env.cfg.translations ctx.language
+      to = ev.fromPhone
   row <- menuRow env ev s
-  replyButtons env (ev.fromPhone) s.moreTitle row
+  case env.cfg.merchant.flexiIntroVideoUrl of
+    Just url -> do
+      void $ env.sender.sendVideo to url (Just s.howItWorksText)
+      replyButtons env to s.moreTitle row
+    Nothing -> replyButtons env to s.howItWorksText row
 
--- | Support contact (@engine.ts:381-387@), then loop to menu.
+-- | Support contact (@engine.ts:381-387@, changed): the support text is the menu
+-- message's body, so text and menu go as one message.
 handleSupport :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> m ()
 handleSupport env ev ctx = do
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
       raw = fromMaybe "" env.cfg.merchant.flexiSupportPhone
       dial = fromMaybe raw (formatDialable (Just raw))
-  reply env to (s.supportMessage dial)
   row <- menuRow env ev s
-  replyButtons env to s.moreTitle row
+  replyButtons env to (s.supportMessage dial) row
 
 -- ---------------------------------------------------------------------------
 -- Intro video (engine.ts:1554-1594)
@@ -330,12 +339,6 @@ sendIntroVideo env ev ctx = do
   case env.cfg.merchant.flexiIntroVideoUrl of
     Just url -> void $ env.sender.sendVideo to url (Just s.howItWorksCaption)
     Nothing -> pure ()
-
--- | "How it works" explainer (@engine.ts:1586-1594@): intro video + text steps.
-sendHowItWorks :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> m ()
-sendHowItWorks env ev ctx = do
-  sendIntroVideo env ev ctx
-  reply env (ev.fromPhone) ((t env.cfg.translations ctx.language).howItWorksText)
 
 -- ---------------------------------------------------------------------------
 -- Small pure/effect helpers

@@ -31,6 +31,8 @@ module Lib.Payment.Domain.Action
     createRefundService,
     chargePaymentIntentService,
     createPayoutService,
+    createPayoutServiceWithStatusCheck,
+    payoutCreateCallFailedCode,
     PayoutStatusServiceReq (..),
     mkPayoutOrderStatusReq,
     CreatePayoutServiceReq (..),
@@ -1670,7 +1672,7 @@ upsertOfferStats offerId statsInput discountAmount payoutAmount payoutCurr merch
               }
   -- Upsert PersonDailyOfferStats (keyed by personId, not per entity)
   let dailyLockKey = "UpsertOfferStats:Daily:PersonId:" <> statsInput.personId <> ":OfferId:" <> offerId.getId
-  Redis.withWaitOnLockRedisWithExpiry dailyLockKey 10 20 $ do
+  Redis.withWaitAndLockRedisWithTimeout dailyLockKey 10 20 50000 $ do
     let today = utctDay now
     mbDailyStats <- QPersonDailyOfferStats.findByPersonIdAndDate statsInput.personId today
     case mbDailyStats of
@@ -1845,6 +1847,7 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall = do
                 taxAmount = Nothing,
                 netAmount = Nothing,
                 epgTxnId = Nothing,
+                rrn = Nothing,
                 cardBrand = Nothing,
                 cardIsin = Nothing,
                 cardLastFourDigits = Nothing,
@@ -1900,6 +1903,7 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall = do
                 taxAmount = (.taxAmount) =<< txnObj.txnDetail,
                 netAmount = (.netAmount) =<< txnObj.txnDetail,
                 epgTxnId = (.epgTxnId) =<< txnObj.paymentGatewayResponse,
+                rrn = (.rrn) =<< txnObj.paymentGatewayResponse,
                 cardBrand = (.cardBrand) =<< card,
                 cardIsin = (.cardIsin) =<< card,
                 cardLastFourDigits = (.lastFourDigits) =<< card,
@@ -1990,6 +1994,7 @@ data OrderTxn = OrderTxn
     taxAmount :: Maybe HighPrecMoney,
     netAmount :: Maybe HighPrecMoney,
     epgTxnId :: Maybe Text,
+    rrn :: Maybe Text,
     cardBrand :: Maybe Text,
     cardIsin :: Maybe Text,
     cardLastFourDigits :: Maybe Text,
@@ -2063,6 +2068,7 @@ updateOrderTransaction merchantOpCityId order resp respDump = do
                         taxAmount = resp.taxAmount,
                         netAmount = resp.netAmount,
                         epgTxnId = resp.epgTxnId,
+                        rrn = resp.rrn <|> transaction.rrn,
                         cardBrand = resp.cardBrand <|> transaction.cardBrand,
                         cardIsin = resp.cardIsin <|> transaction.cardIsin,
                         cardLastFourDigits = resp.cardLastFourDigits <|> transaction.cardLastFourDigits,
@@ -2134,6 +2140,7 @@ juspayWebhookService merchantOpCityId resp respDump = do
                 taxAmount = Nothing,
                 netAmount = Nothing,
                 epgTxnId = Nothing,
+                rrn = Nothing,
                 cardBrand = Nothing,
                 cardIsin = Nothing,
                 cardLastFourDigits = Nothing,
@@ -2182,6 +2189,7 @@ juspayWebhookService merchantOpCityId resp respDump = do
                 taxAmount = (.taxAmount) =<< txnObj.txnDetail,
                 netAmount = (.netAmount) =<< txnObj.txnDetail,
                 epgTxnId = (.epgTxnId) =<< txnObj.paymentGatewayResponse,
+                rrn = (.rrn) =<< txnObj.paymentGatewayResponse,
                 cardBrand = (.cardBrand) =<< card,
                 cardIsin = (.cardIsin) =<< card,
                 cardLastFourDigits = (.lastFourDigits) =<< card,
@@ -2396,6 +2404,7 @@ mkDefaultStripeOrderTxn transactionStatus amount currency =
       taxAmount = Nothing,
       netAmount = Nothing,
       epgTxnId = Nothing,
+      rrn = Nothing,
       cardBrand = Nothing,
       cardIsin = Nothing,
       cardLastFourDigits = Nothing,
@@ -2720,6 +2729,45 @@ data CreatePayoutServiceReq = CreatePayoutServiceReq
 
 mkCreatePayoutOrderReq :: Maybe Text -> Maybe Text -> CreatePayoutServiceReq -> PT.CreatePayoutOrderReq
 mkCreatePayoutOrderReq mRoutingId mConnectedAccountId CreatePayoutServiceReq {..} = PT.CreatePayoutOrderReq {mExternalAccountId = Nothing, ..}
+
+-- | Marker stored in payout_order.response_code when the partner create call threw: no answer ever came
+--   back, so the partner may or may not have the order.
+payoutCreateCallFailedCode :: Text
+payoutCreateCallFailedCode = "CREATE_CALL_FAILED"
+
+-- | 'createPayoutService' for callers that cannot tell what a failed call did to the payout: when the
+--   partner call throws, the saved order is marked as such and its status check is scheduled, so the
+--   real outcome is settled even though no answer came back; the exception is then rethrown. (Bulk has
+--   no per-order status API.) Callers that retry with a new order id on failure should not use this.
+createPayoutServiceWithStatusCheck ::
+  ( EncFlow m r,
+    BeamFlow m r,
+    Finance.HasActorInfo m r
+  ) =>
+  Id Merchant ->
+  Maybe (Id MerchantOperatingCity) ->
+  Id Person ->
+  Maybe [Text] ->
+  Maybe EntityName ->
+  Text ->
+  CreatePayoutServiceReq ->
+  (CreatePayoutServiceReq -> m PT.CreatePayoutOrderResp) ->
+  Maybe PGFeeConfig ->
+  (Payment.PayoutOrder -> m ()) ->
+  m (Maybe PT.CreatePayoutOrderResp, Maybe Payment.PayoutOrder)
+createPayoutServiceWithStatusCheck merchantId mbMerchantOpCityId personId mbEntityIds mbEntityName city req call mbPGFeeConfig afterPayoutOrderCreated =
+  withTryCatch "createPayoutService" (createPayoutService merchantId mbMerchantOpCityId personId mbEntityIds mbEntityName city req call mbPGFeeConfig afterPayoutOrderCreated) >>= \case
+    Right res -> pure res
+    Left err -> do
+      when (req.payoutServiceFlow /= PT.BulkFlow) $
+        withTryCatch "createPayoutService:findOrder" (QPayoutOrder.findByOrderId req.orderId) >>= \case
+          Right (Just order) -> do
+            void $
+              withTryCatch "createPayoutService:markCallFailed" $
+                QPayoutOrder.updateBulkSettled order.status order.transferStatus order.settlementRef order.settlementRefType (Just payoutCreateCallFailedCode) (Just "Payout create call failed before an answer arrived") order.id
+            void $ withTryCatch "afterPayoutOrderCreated:callFailed" (afterPayoutOrderCreated order)
+          _ -> pure ()
+      throwM err
 
 createPayoutService ::
   ( EncFlow m r,

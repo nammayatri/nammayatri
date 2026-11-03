@@ -273,7 +273,7 @@ applyNegotiatedFare :: Id DMOC.MerchantOperatingCity -> Id DQuote.Quote -> DSele
 applyNegotiatedFare merchantOpCityId quoteId sReq =
   -- Concurrent /select calls on the same quote would race their reads/writes.
   -- This locks per quoteId and re-fetches the quote inside the lock.
-  Redis.withLockRedisAndReturnValue (quoteNegotiationLockKey quoteId.getId) 60 $ do
+  Redis.withWaitAndLockRedis (quoteNegotiationLockKey quoteId.getId) 60 50000 $ do
     quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
     addOnData <- computeAddOnData quote
     -- Priced once, here, and frozen into the quote's FareParameters: the catalogue is what's on offer, the fare parameters are what was charged.

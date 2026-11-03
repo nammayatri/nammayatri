@@ -85,12 +85,12 @@ refundLedger rideId req apiKey = do
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
-  Redis.withLockRedis (refundLedgerLockKey req.refundRequestId) 60 $ do
+  Redis.withWaitAndLockRedis (refundLedgerLockKey req.refundRequestId) 60 50000 $ do
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
     mbDriver <- QPerson.findById ride.driverId
     mbDriverInfo <- QDI.findById (cast ride.driverId)
     -- online cab only; driver-deducted clawback legs debit OwnerLiability (the driver wallet), reducing payout.
-    ctx <- Wallet.buildFinanceCtx booking ride mbDriver Nothing mbDriverInfo transporterConfig True
+    ctx <- Wallet.buildFinanceCtx booking ride mbDriver Nothing mbDriverInfo transporterConfig True Nothing
     -- When the approval doesn't specify who bears the refund, the merchant config decides;
     -- with no config either, the platform absorbs.
     cancellationCommissionGross <- cancellationCommissionFromLedger ride

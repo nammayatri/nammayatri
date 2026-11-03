@@ -178,6 +178,25 @@ getActiveDriverIdsByOperatorId operatorId = do
       ]
   pure $ map (.driverId) associations
 
+findActiveDriverLinksByOperatorIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Text] ->
+  m [(Text, Id DP.Person)]
+findActiveDriverLinksByOperatorIds operatorIds = do
+  now <- getCurrentTime
+  if null operatorIds
+    then pure []
+    else do
+      associations <-
+        findAllWithKV
+          [ Se.And
+              [ Se.Is BeamDOA.operatorId $ Se.In operatorIds,
+                Se.Is BeamDOA.isActive $ Se.Eq True,
+                Se.Is BeamDOA.associatedTill (Se.GreaterThan $ Just now)
+              ]
+          ]
+      pure $ map (\assoc -> (assoc.operatorId, assoc.driverId)) associations
+
 endOperatorDriverAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id DP.Person -> m ()
 endOperatorDriverAssociation operatorId (Id driverId) = do
   now <- getCurrentTime
@@ -248,4 +267,15 @@ endById rowId = do
   now <- getCurrentTime
   updateWithKV
     [Se.Set BeamDOA.isActive False, Se.Set BeamDOA.associatedTill (Just now), Se.Set BeamDOA.updatedAt now]
+    [Se.Is BeamDOA.id $ Se.Eq rowId.getId]
+
+-- Activate a pending association in place. Only the activation fields are written; the vehicle
+-- category is overwritten only when one is given, otherwise the row keeps its own.
+activateById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverOperatorAssociation -> Maybe DVeh.VehicleCategory -> m ()
+activateById rowId mbOnboardingVehicleCategory = do
+  now <- getCurrentTime
+  updateWithKV
+    ( [Se.Set BeamDOA.isActive True, Se.Set BeamDOA.associatedOn (Just now), Se.Set BeamDOA.updatedAt now]
+        <> maybe [] (\category -> [Se.Set BeamDOA.onboardingVehicleCategory (Just category)]) mbOnboardingVehicleCategory
+    )
     [Se.Is BeamDOA.id $ Se.Eq rowId.getId]

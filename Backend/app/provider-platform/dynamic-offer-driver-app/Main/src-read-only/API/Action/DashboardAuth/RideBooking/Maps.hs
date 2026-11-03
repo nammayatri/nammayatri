@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.RideBooking.Maps
 where
 
 import qualified API.Types.Dashboard.RideBooking.Maps
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.RideBooking.Maps
 import qualified "this" Domain.Action.UI.Maps
 import qualified Domain.Types.Merchant
@@ -36,6 +37,7 @@ postMapsAutoComplete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant 
 postMapsAutoComplete a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/MAPS/POST_MAPS_AUTO_COMPLETE" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Maps.postMapsAutoComplete a5 a4 a2 a1
     )
@@ -44,6 +46,7 @@ postMapsGetPlaceName :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant 
 postMapsGetPlaceName a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/MAPS/POST_MAPS_GET_PLACE_NAME" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Maps.postMapsGetPlaceName a5 a4 a2 a1
     )

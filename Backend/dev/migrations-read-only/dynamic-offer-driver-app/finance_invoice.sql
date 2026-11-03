@@ -107,3 +107,8 @@ ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN unsigned_qr_code t
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

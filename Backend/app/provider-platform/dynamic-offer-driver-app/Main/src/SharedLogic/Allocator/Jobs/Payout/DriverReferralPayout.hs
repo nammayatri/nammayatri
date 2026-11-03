@@ -135,7 +135,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
         updatePayoutStatus DS.ManualReview dStats
 
     updatePayoutStatus status dStats = do
-      Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey dStats.driverId.getId) 1 1 $ do
+      Redis.withWaitAndLockRedisWithTimeout (DAP.payoutProcessingLockKey dStats.driverId.getId) 1 1 50000 $ do
         QDailyStats.updatePayoutStatusById status dStats.id
 
 callPayout ::
@@ -210,7 +210,7 @@ callPayoutHandler DS.DailyStats {..} _driverInfo payoutVpa payoutConfigList stat
           if dailyStat.payoutStatus /= statusForRetry
             then pure ()
             else do
-              Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 6 $ do
+              Redis.withWaitAndLockRedisWithTimeout (DAP.payoutProcessingLockKey driverId.getId) 3 6 50000 $ do
                 QDailyStats.updatePayoutStatusById DS.Processing id
                 QDailyStats.updatePayoutOrderId (Just uid) id
               phoneNo <- mapM decrypt person.mobileNumber
@@ -225,7 +225,7 @@ callPayoutHandler DS.DailyStats {..} _driverInfo payoutVpa payoutConfigList stat
                   mbPayoutOrderResp <- withTryCatch "createPayoutService:callPayout" $ Payout.createPayoutService (cast person.merchantId) (cast <$> merchantOperatingCityId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
                   errorCatchAndHandle id driverId.getId uid mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
                 else do
-                  Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do
+                  Redis.withWaitAndLockRedisWithTimeout (DAP.payoutProcessingLockKey driverId.getId) 3 3 50000 $ do
                     QDailyStats.updatePayoutStatusById DS.ManualReview id
               pure ()
         else pure ()
@@ -247,11 +247,11 @@ errorCatchAndHandle dailyStatsId driverId orderId resp' payoutConfig statusForRe
       logDebug $ "Error in calling create payout driverId: " <> driverId <> " | orderId: " <> orderId
       eligibleForRetryInNextBatch <- isEligibleForRetryInNextBatch (mkManualLinkErrorTrackingByDailyStatsIdKey dailyStatsId) payoutConfig.maxRetryCount
       if eligibleForRetryInNextBatch
-        then Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId) 3 3 $ do
+        then Redis.withWaitAndLockRedisWithTimeout (DAP.payoutProcessingLockKey driverId) 3 3 50000 $ do
           QDailyStats.updatePayoutStatusById statusForRetry dailyStatsId
         else do
           let status = if statusForRetry == DS.ManualReview then DS.Processing else DS.ManualReview
-          Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId) 3 3 $ do
+          Redis.withWaitAndLockRedisWithTimeout (DAP.payoutProcessingLockKey driverId) 3 3 50000 $ do
             QDailyStats.updatePayoutStatusById status dailyStatsId
     Right resp -> function resp
 

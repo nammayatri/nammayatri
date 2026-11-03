@@ -9,14 +9,19 @@ module SharedLogic.Finance.LedgerAdjustment
 where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement as API
+import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Dashboard.Common
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString as BS
 import Data.List (sortOn)
 import qualified Data.Ord
 import qualified Data.Text as T
 import Data.Time.Clock (utctDay)
+import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.FinancialYear (financialYearOf)
 import qualified Domain.Types.Image as DImage
@@ -27,6 +32,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import Environment
+import EulerHS.Types (base64Decode)
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -38,6 +44,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance as Finance
+import Lib.Finance.Audit.Interface (AuditInput (..))
+import qualified Lib.Finance.Audit.Service as Audit
+import qualified Lib.Finance.Domain.Types.AuditEntry as AuditDomain
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping as DTdsMap
 import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest as DTdsReq
@@ -55,6 +64,7 @@ import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.TdsReimbursement as TdsReimbursement
 import qualified SharedLogic.Finance.Wallet as Wallet
 import qualified SharedLogic.Merchant as SMerchant
+import qualified Storage.Beam.LedgerAdjustmentRequest as BeamLA
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
@@ -77,6 +87,52 @@ mkAdminName requestorName = \case
       <> maybe "" (" " <>) person.lastName
 
 --------------------------------------------------------------------------------
+-- Supporting document (maker)
+--------------------------------------------------------------------------------
+
+-- | Largest supporting document a maker can send with an adjustment.
+maxLedgerAdjustmentDocumentBytes :: Int
+maxLedgerAdjustmentDocumentBytes = 2 * 1024 * 1024
+
+-- | A supporting document that passed the checks and is ready to be stored.
+data LedgerAdjustmentDocument = LedgerAdjustmentDocument
+  { base64Content :: Text,
+    storedExtension :: Text
+  }
+
+hasSupportingDocument :: API.SubmitLedgerAdjustmentReq -> Bool
+hasSupportingDocument req = isJust req.documentId || isJust req.documentBase64
+
+validateLedgerAdjustmentDocument :: DTC.TransporterConfig -> Text -> Maybe Text -> Flow LedgerAdjustmentDocument
+validateLedgerAdjustmentDocument transporterConfig documentBase64 mbFileExtension = do
+  content <- base64Decode documentBase64 & fromMaybeM (InvalidRequest "Failed to decode the supporting document")
+  when (BS.length content > maxLedgerAdjustmentDocumentBytes) $
+    throwError (InvalidRequest "The supporting document must be 2 MB or smaller")
+  let enforceFileTypeCheck = fromMaybe False transporterConfig.enforceUploadFileTypeCheck
+  mbFileType <- Image.validateUploadedFileType enforceFileTypeCheck DVC.LedgerAdjustmentProof content mbFileExtension
+  pure
+    LedgerAdjustmentDocument
+      { base64Content = documentBase64,
+        storedExtension = Image.resolveStoredExtension enforceFileTypeCheck mbFileType mbFileExtension
+      }
+
+storeLedgerAdjustmentDocument :: DMOC.MerchantOperatingCity -> Id DP.Person -> LedgerAdjustmentDocument -> Flow (Id DImage.Image)
+storeLedgerAdjustmentDocument merchantOpCity personId document = do
+  documentPath <- Image.createPath personId.getId merchantOpCity.merchantId.getId DVC.LedgerAdjustmentProof document.storedExtension
+  s3Result <-
+    withTryCatch "S3:put:ledgerAdjustmentDocument" $
+      Redis.withWaitAndLockRedis (Image.imageS3Lock documentPath) 5 50000 $
+        S3.put (T.unpack documentPath) document.base64Content
+  case s3Result of
+    Left err -> do
+      logError $ "Ledger adjustment document upload to S3 failed: " <> show err
+      throwError $ InternalError "Document upload failed. Please try again"
+    Right _ -> pure ()
+  image <- Image.mkImage personId merchantOpCity.merchantId (Just merchantOpCity.id) documentPath DVC.LedgerAdjustmentProof Nothing Nothing Nothing Nothing
+  QImage.create image
+  pure image.id
+
+--------------------------------------------------------------------------------
 -- Submit (maker)
 --------------------------------------------------------------------------------
 
@@ -94,6 +150,8 @@ ledgerAdjustmentSubmit merchantShortId opCity requestorId requestorName req = do
       direction = castAdjustmentDirection req.direction
       lockKey = ledgerAdjustmentLockKey req.referenceId adjustmentRequestId
       h = categoryHandlers category -- Per-category handler
+  when (isJust req.documentId && isJust req.documentBase64) $
+    throwError (InvalidRequest "Send either documentId or documentBase64, not both")
   withLedgerAdjustmentLock lockKey $ do
     whenJust req.referenceId $ \referenceId -> do
       mbExisting <-
@@ -135,10 +193,13 @@ ledgerAdjustmentSubmit merchantShortId opCity requestorId requestorName req = do
       unless (image.merchantId == merchant.id) $ throwError (ImageNotFound documentId.getId)
       whenJust image.merchantOperatingCityId \imageMerchantOperatingCityId -> do
         unless (imageMerchantOperatingCityId == merchantOpCity.id) $ throwError (ImageNotFound documentId.getId)
+    mbDocument <- forM req.documentBase64 $ \documentBase64 ->
+      validateLedgerAdjustmentDocument transporterConfig documentBase64 req.documentFileExtension
 
     -- Per-category domain validation (ride/payout/TDS/etc.).
     h.validateCategory merchantOpCity transporterConfig personId direction req
 
+    mbStoredDocumentId <- forM mbDocument $ storeLedgerAdjustmentDocument merchantOpCity personId
     mbAdminMaker <- QP.findById (Id @DP.Person requestorId)
     let adminMakerName = mkAdminName requestorName mbAdminMaker
     adjustmentRequest <-
@@ -150,8 +211,10 @@ ledgerAdjustmentSubmit merchantShortId opCity requestorId requestorName req = do
         direction
         (Id @DP.Person requestorId)
         adminMakerName
+        (mbStoredDocumentId <|> mbDocumentId)
         req
     QLedgerAdjustmentRequest.create adjustmentRequest
+    logLedgerAdjustmentAudit AuditDomain.Created Nothing adjustmentRequest
     h.submitSideEffect adjustmentRequest
   pure Success
 
@@ -425,18 +488,16 @@ validateMiscellaneousAdjustment ::
   API.SubmitLedgerAdjustmentReq ->
   Flow ()
 validateMiscellaneousAdjustment personId direction req = do
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  unless (person.role `elem` [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
-    throwError (InvalidRequest "Miscellaneous adjustments are only supported for drivers and fleet owners")
-
-  -- TODO should we validate possible reference types?
   when (T.null $ T.strip req.referenceType) $
     throwError (InvalidRequest "Reference type required for Miscellaneous adjustments")
 
   let hasDescription = maybe False (not . T.null . T.strip) req.description
-      hasDocument = isJust req.documentId
-  unless (hasDescription || hasDocument) $
+  unless (hasDescription || hasSupportingDocument req) $
     throwError (InvalidRequest "Miscellaneous adjustments require a description or a supporting document")
+
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  unless (person.role `elem` [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
+    throwError (InvalidRequest "Miscellaneous adjustments are only supported for drivers and fleet owners")
 
   when (direction == DLA.Debit) $
     validateWalletDebitAmountForPerson person req.amount.amount
@@ -461,6 +522,11 @@ validateTdsReimbursementAdjustment merchantOpCity personId direction req = do
     req.referenceId
       & fromMaybeM (InvalidRequest "Reference id required for TdsReimbursement adjustments")
 
+  when (isJust req.documentId) $
+    throwError (InvalidRequest "Upload the finance approval as the supporting document; an existing document id is not accepted for TDS reimbursement adjustments")
+  unless (isJust req.documentBase64) $
+    throwError (InvalidRequest "A supporting document is required for TDS reimbursement adjustments")
+
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (person.role == DP.FLEET_BUSINESS) $
     throwError (InvalidRequest "TDS reimbursement adjustments are only supported for business fleet owners")
@@ -472,10 +538,6 @@ validateTdsReimbursementAdjustment merchantOpCity personId direction req = do
     throwError (InvalidRequest $ "TDS reimbursement request not found: " <> referenceId)
   unless (tdsRequest.fleetOwnerId == personId.getId) $
     throwError (InvalidRequest "Invalid personId for TDS reimbursement request")
-
-  whenJust req.documentId $ \docId ->
-    unless (docId.getId == tdsRequest.documentId.getId) $
-      throwError (InvalidRequest "Document id does not match the TDS reimbursement request document")
 
   void $
     assertTdsReimbursementClaimable tdsRequest referenceId $ \mappings -> do
@@ -651,9 +713,10 @@ buildLedgerAdjustmentRequest ::
   DLA.AdjustmentDirection ->
   Id DP.Person ->
   Text ->
+  Maybe (Id DImage.Image) -> -- supporting document (stored from the request, or the documentId sent)
   API.SubmitLedgerAdjustmentReq ->
   m DLA.LedgerAdjustmentRequest
-buildLedgerAdjustmentRequest adjustmentRequestId merchantOpCity personId category direction requestorId adminMakerName req = do
+buildLedgerAdjustmentRequest adjustmentRequestId merchantOpCity personId category direction requestorId adminMakerName mbDocumentId req = do
   now <- getCurrentTime
   pure
     DLA.LedgerAdjustmentRequest
@@ -666,7 +729,7 @@ buildLedgerAdjustmentRequest adjustmentRequestId merchantOpCity personId categor
         description = req.description,
         referenceType = req.referenceType,
         referenceId = req.referenceId,
-        documentId = cast @Dashboard.Common.Image @DImage.Image <$> req.documentId,
+        documentId = mbDocumentId,
         adminMakerId = requestorId,
         adminMakerName,
         adminCheckerId = Nothing,
@@ -677,6 +740,7 @@ buildLedgerAdjustmentRequest adjustmentRequestId merchantOpCity personId categor
         merchantId = merchantOpCity.merchantId,
         merchantOperatingCityId = merchantOpCity.id,
         postedAt = Nothing,
+        rejectionReason = Nothing,
         createdAt = now,
         updatedAt = now
       }
@@ -689,6 +753,38 @@ withLedgerAdjustmentLock :: Text -> Flow a -> Flow a
 withLedgerAdjustmentLock lockKey action =
   Redis.whenWithLockRedisAndReturnValue lockKey 60 action
     >>= either (\() -> throwError LedgerAdjustmentInProgress) pure
+
+ledgerAdjustmentToAuditValue :: DLA.LedgerAdjustmentRequest -> Aeson.Value
+ledgerAdjustmentToAuditValue = Aeson.toJSON . toTType' @BeamLA.LedgerAdjustmentRequest
+
+logLedgerAdjustmentAudit ::
+  AuditDomain.AuditAction ->
+  Maybe DLA.LedgerAdjustmentRequest ->
+  DLA.LedgerAdjustmentRequest ->
+  Flow ()
+logLedgerAdjustmentAudit action mbBefore afterRequest = do
+  actorInfo <- asks (.actorInfo)
+  auditResult <-
+    withTryCatch "logLedgerAdjustmentAudit" $
+      Audit.logAudit
+        AuditInput
+          { entityType = AuditDomain.LedgerAdjustmentRequest,
+            entityId = afterRequest.id.getId,
+            action = action,
+            actorType = actorInfo.actorType,
+            actorId = actorInfo.actorId,
+            beforeState = ledgerAdjustmentToAuditValue <$> mbBefore,
+            afterState = Just $ ledgerAdjustmentToAuditValue afterRequest,
+            merchantId = afterRequest.merchantId.getId,
+            merchantOperatingCityId = afterRequest.merchantOperatingCityId.getId
+          }
+  case auditResult of
+    Right (Right _) -> pure ()
+    Right (Left err) -> logAuditFailure (show err)
+    Left (err :: SomeException) -> logAuditFailure (T.pack $ displayException err)
+  where
+    logAuditFailure reason =
+      logWarning $ "Failed to audit ledger adjustment request " <> afterRequest.id.getId <> " (" <> show action <> "): " <> reason
 
 --------------------------------------------------------------------------------
 -- List
@@ -771,7 +867,10 @@ mkLedgerAdjustmentItem DLA.LedgerAdjustmentRequest {..} =
       ledgerEntryId = getId <$> ledgerEntryId,
       createdAt,
       updatedAt,
-      postedAt
+      postedAt,
+      rejectionReason,
+      -- REJECTED is terminal, so the reject is the row's last update.
+      rejectedAt = if status == DLA.REJECTED then Just updatedAt else Nothing
     }
 
 --------------------------------------------------------------------------------
@@ -829,6 +928,16 @@ ledgerAdjustmentApproveAndPost merchantShortId opCity adjustmentRequestId reques
             mbLedgerEntryId
             (Just now)
             adjustmentRequest.id
+          logLedgerAdjustmentAudit AuditDomain.Approved (Just adjustmentRequest) $
+            adjustmentRequest
+              { DLA.status = DLA.POSTED,
+                DLA.adminCheckerId = Just checkerId,
+                DLA.adminCheckerName = Just adminCheckerName,
+                DLA.errorMessage = Nothing,
+                DLA.ledgerEntryId = mbLedgerEntryId,
+                DLA.postedAt = Just now,
+                DLA.updatedAt = now
+              }
         Left (err :: SomeException) -> do
           let errMessage = T.pack (displayException err)
           logError $
@@ -842,6 +951,15 @@ ledgerAdjustmentApproveAndPost merchantShortId opCity adjustmentRequestId reques
             (Just adminCheckerName)
             (Just errMessage)
             adjustmentRequest.id
+          now <- getCurrentTime
+          logLedgerAdjustmentAudit AuditDomain.StatusChanged (Just adjustmentRequest) $
+            adjustmentRequest
+              { DLA.status = DLA.POST_FAILED,
+                DLA.adminCheckerId = Just checkerId,
+                DLA.adminCheckerName = Just adminCheckerName,
+                DLA.errorMessage = Just errMessage,
+                DLA.updatedAt = now
+              }
           throwM err
     pure Success
 
@@ -853,7 +971,7 @@ ledgerAdjustmentPostAction ::
   DLA.LedgerAdjustmentRequest ->
   Flow (Maybe (Id DLE.LedgerEntry))
 ledgerAdjustmentPostAction transporterConfig checkerId adminCheckerName adjustmentRequest =
-  Redis.withLockRedisAndReturnValue (makeWalletRunningBalanceLockKey adjustmentRequest.personId.getId) 10 $ do
+  Redis.withWaitAndLockRedis (makeWalletRunningBalanceLockKey adjustmentRequest.personId.getId) 10 50000 $ do
     logInfo $
       "Ledger adjustment post triggered: "
         <> adjustmentRequest.id.getId
@@ -942,6 +1060,7 @@ buildRideAdjustmentCtx transporterConfig booking ride = do
     Nothing
     transporterConfig
     True
+    Nothing
 
 postRideRelatedAdjustment :: PostLedgerAdjustment
 postRideRelatedAdjustment transporterConfig _checkerId _adminCheckerName adjustmentRequest = do
@@ -1141,6 +1260,7 @@ mkFinanceContextWithoutInvoice transporterConfig adjustmentRequest person =
           fromLocationAddress = Nothing,
           issuedToName = Nothing,
           enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck,
+          initialSettlementStatus = Nothing,
           buyerCounterpartyId = Nothing
         }
 
@@ -1160,9 +1280,15 @@ ledgerAdjustmentReject ::
   Id DLA.LedgerAdjustmentRequest ->
   Text ->
   Text ->
+  Text ->
   Flow APISuccess
-ledgerAdjustmentReject merchantShortId opCity adjustmentRequestId requestorId requestorName =
+ledgerAdjustmentReject merchantShortId opCity adjustmentRequestId requestorId requestorName rawRejectionReason =
   withLogTag ("adjustmentRequestId_" <> adjustmentRequestId.getId) $ do
+    let rejectionReason = T.strip rawRejectionReason
+    when (T.null rejectionReason) $
+      throwError (InvalidRequest "rejectionReason must not be empty")
+    when (T.length rejectionReason > maxRejectionReasonLength) $
+      throwError (InvalidRequest $ "rejectionReason must be at most " <> show maxRejectionReasonLength <> " characters")
     merchant <- SMerchant.findMerchantByShortId merchantShortId
     merchantOpCity <-
       CQMOC.findByMerchantIdAndCity merchant.id opCity
@@ -1188,21 +1314,33 @@ ledgerAdjustmentReject merchantShortId opCity adjustmentRequestId requestorId re
       mbAdminChecker <- QP.findById (Id @DP.Person requestorId)
       let adminCheckerName = mkAdminName requestorName mbAdminChecker
           checkerId = Id @DP.Person requestorId
-      QLedgerAdjustmentRequest.updateStatusAndChecker
+      QLedgerAdjustmentRequest.updateStatusCheckerAndRejectionReason
         DLA.REJECTED
         (Just checkerId)
         (Just adminCheckerName)
-        Nothing
+        (Just rejectionReason)
         adjustmentRequest.id
+      now <- getCurrentTime
+      logLedgerAdjustmentAudit AuditDomain.Rejected (Just adjustmentRequest) $
+        adjustmentRequest
+          { DLA.status = DLA.REJECTED,
+            DLA.adminCheckerId = Just checkerId,
+            DLA.adminCheckerName = Just adminCheckerName,
+            DLA.rejectionReason = Just rejectionReason,
+            DLA.updatedAt = now
+          }
       let h = categoryHandlers adjustmentRequest.category -- Per-category handler
-      h.rejectSideEffect checkerId adminCheckerName adjustmentRequest
+      h.rejectSideEffect checkerId adminCheckerName adjustmentRequest {DLA.rejectionReason = Just rejectionReason}
     pure Success
+
+maxRejectionReasonLength :: Int
+maxRejectionReasonLength = 100
 
 noopRejectSideEffect :: RejectLedgerAdjustmentSideEffect
 noopRejectSideEffect _ _ _ = pure ()
 
--- | Currently we don't have reimbursement request reject api, hence adj reject is currently the only admin path to close a PENDING cert claim,
---   so we mark the TDS request REJECTED (FO can resubmit for the same Q/AY).
+-- | The TDS reject API refuses claims that already have an adjustment, so rejecting the adjustment closes the PENDING cert claim
+--   with the checker's reason (FO can resubmit for the same Q/AY).
 rejectTdsReimbursementSideEffect :: RejectLedgerAdjustmentSideEffect
 rejectTdsReimbursementSideEffect checkerId adminCheckerName adjustmentRequest = do
   whenJust adjustmentRequest.referenceId $ \referenceId -> do
@@ -1212,7 +1350,7 @@ rejectTdsReimbursementSideEffect checkerId adminCheckerName adjustmentRequest = 
         -- Denormalize checker onto the TDS request row so the list API can filter/display without a join.
         QTdsReq.updateStatusRejectionReasonAndAdminChecker
           DTdsReq.REJECTED
-          (Just "Rejected via ledger adjustment")
+          adjustmentRequest.rejectionReason
           (Just checkerId.getId)
           (Just adminCheckerName)
           tdsRequest.id

@@ -22,6 +22,7 @@ import Data.Time.Calendar ()
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import Domain.Action.UI.Person
 import Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (LEADERBOARD))
 import qualified Domain.Types.LeaderBoardConfigs as LConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -40,6 +41,7 @@ import Kernel.Utils.Error
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.LeaderBoardConfig as CQLBC
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import Storage.ConfigPilot.Config.LeaderBoardConfigs (LeaderBoardConfigsDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 
@@ -71,8 +73,10 @@ getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) day = do
   distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOpCityId
   let currentDate = RideEndInt.getCurrentDate now
       dateDiff = diffDays currentDate day
+  leanFlowExcluded <- CQLF.isFeatureExcluded LEADERBOARD
+  when leanFlowExcluded $ throwError $ InvalidRequest "Leaderboard Feature Not Available Now"
   dailyLeaderBoardConfig <- getOneConfig (LeaderBoardConfigsDimensions {merchantOperatingCityId = merchantOpCityId.getId, leaderBoardType = Just LConfig.DAILY}) (Just (maybeToList <$> CQLBC.findLeaderBoardConfigbyType LConfig.DAILY merchantOpCityId Nothing)) >>= fromMaybeM (InternalError "Leaderboard configs not present")
-  unless dailyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
+  unless dailyLeaderBoardConfig.isEnabled $ throwError $ InvalidRequest "Leaderboard Not Available for Now"
   let numberOfSets = fromIntegral dailyLeaderBoardConfig.numberOfSets
   when (dateDiff > numberOfSets - 1 || dateDiff < 0) $
     throwError $ InvalidRequest "Date outside Range"
@@ -95,8 +99,10 @@ getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toD
       (reqWeekNumber, reqDayIndex) = sundayStartWeek fromDate
       (lastWeekOfYear, _) = sundayStartWeek $ getLastDayOfYear $ getYearFromDay fromDate
   let weekDiff = (currWeekNumber - reqWeekNumber + lastWeekOfYear) `mod` lastWeekOfYear
+  leanFlowExcluded <- CQLF.isFeatureExcluded LEADERBOARD
+  when leanFlowExcluded $ throwError $ InvalidRequest "Leaderboard Not Available Now"
   weeklyLeaderBoardConfig <- getOneConfig (LeaderBoardConfigsDimensions {merchantOperatingCityId = merchantOpCityId.getId, leaderBoardType = Just LConfig.WEEKLY}) (Just (maybeToList <$> CQLBC.findLeaderBoardConfigbyType LConfig.WEEKLY merchantOpCityId Nothing)) >>= fromMaybeM (InternalError "Leaderboard configs not present")
-  unless weeklyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
+  unless weeklyLeaderBoardConfig.isEnabled $ throwError $ InvalidRequest "Leaderboard Not Available Now"
   let numberOfSets = weeklyLeaderBoardConfig.numberOfSets
   when (weekDiff > numberOfSets - 1 || weekDiff < 0) $ throwError $ InvalidRequest "Week outside Range"
   when (diffDays toDate fromDate /= 6 || reqDayIndex /= 0) $ throwError $ InvalidRequest "Invalid Input"
@@ -109,8 +115,10 @@ getMonthlyDriverLeaderBoard (personId, merchantId, merchantOpCityId) month = do
   let currentDay = RideEndInt.getCurrentDate now
       fromDate = fromGregorian (getYearFromDay currentDay) month 1
       monthDiff = RideEndInt.getMonth currentDay - month
+  leanFlowExcluded <- CQLF.isFeatureExcluded LEADERBOARD
+  when leanFlowExcluded $ throwError $ InvalidRequest "Leaderboard Not Available Now"
   monthlyLeaderBoardConfig <- getOneConfig (LeaderBoardConfigsDimensions {merchantOperatingCityId = merchantOpCityId.getId, leaderBoardType = Just LConfig.MONTHLY}) (Just (maybeToList <$> CQLBC.findLeaderBoardConfigbyType LConfig.MONTHLY merchantOpCityId Nothing)) >>= fromMaybeM (InternalError "Leaderboard configs not present")
-  unless monthlyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
+  unless monthlyLeaderBoardConfig.isEnabled $ throwError $ InvalidRequest "Leaderboard Not Available  Now"
   when ((monthDiff < 0 && 12 + monthDiff > monthlyLeaderBoardConfig.numberOfSets - 1) || monthDiff > monthlyLeaderBoardConfig.numberOfSets - 1) $ throwError $ InvalidRequest "Month outside Range"
   getDriverListFromLeaderBoard (personId, merchantId, merchantOpCityId) fromDate fromDate monthDiff monthlyLeaderBoardConfig distanceUnit
 

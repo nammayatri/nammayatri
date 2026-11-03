@@ -377,9 +377,9 @@ recomputeBandQualifies mbBands estimatedDist distanceDelta = do
       distanceDelta > band.minThresholdDistance
         && distanceDelta.getMeters > (estimatedDist.getMeters * band.minThresholdPercentage) `div` 100
 
--- | Fleet default time forgiveness: a 5-minute window on every ride (single
--- catch-all band) — sub-5-min overruns bill the estimate, larger overruns
--- bill with the first 5 minutes deducted.
+-- | Fleet default time forgiveness: a 999999 s (~11.6 day) window on every
+-- ride (single catch-all band) — effectively unlimited, so time overruns are
+-- never billed unless a city configures its own window.
 defaultTimeForgivenessBands :: [ExtraTC.TimeForgivenessBand]
 defaultTimeForgivenessBands = [ExtraTC.TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = 999999}]
 

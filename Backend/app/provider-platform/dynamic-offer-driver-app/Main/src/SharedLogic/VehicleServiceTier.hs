@@ -18,6 +18,7 @@ import qualified Dashboard.Common as DC
 import qualified Data.HashMap.Strict as HashMap
 import Data.List (nub, sortOn)
 import Data.Ord (Down (..))
+import qualified Data.Text as T
 import Data.Time (diffDays, utctDay)
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverInformation as DI
@@ -31,6 +32,7 @@ import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Utils (getVehicleAge)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Documents (VerificationStatus (VALID))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance (CounterpartyType (..))
@@ -41,10 +43,12 @@ import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import SharedLogic.Finance.WalletAccount (getWalletBalanceByOwner)
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.Person.GetNearestDrivers (isTierEligibleForDriver)
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Storage.Queries.VehiclePermit as QVPermit
 import Tools.Error
 
 data ServiceTierFilterMode
@@ -53,8 +57,8 @@ data ServiceTierFilterMode
   | SelectedServiceTiers
   deriving (Show, Eq)
 
-selectVehicleTierForDriverWithUsageRestriction :: ServiceTierFilterMode -> DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> Maybe DDriverStats.DriverStats -> Maybe [LYT.TagNameValueExpiry] -> UTCTime -> [(DVST.VehicleServiceTier, Bool)]
-selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle vehicleServiceTiers mbDriverStats driverTag now =
+selectVehicleTierForDriverWithUsageRestriction :: ServiceTierFilterMode -> DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> Maybe DDriverStats.DriverStats -> Maybe [LYT.TagNameValueExpiry] -> Maybe [Text] -> UTCTime -> [(DVST.VehicleServiceTier, Bool)]
+selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle vehicleServiceTiers mbDriverStats driverTag mbPermitRegions now =
   map mapUsageRestriction $ filter filterVehicleTier vehicleServiceTiers
   where
     vehicleAgeInMonths = getVehicleAge vehicle.mYManufacturing now
@@ -79,16 +83,28 @@ selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle vehicleSe
               (Just cfg, Just stats) ->
                 not (stats.totalRides > cfg.cancellationRideThreshold && driverCancellationRate stats > cfg.cancellationRate)
               _ -> True
+          regionCheck =
+            case (vehicleServiceTier.regionCondition, mbPermitRegions) of
+              (Just cond, Just permitRegions) ->
+                let regions = map normalizeRegion permitRegions
+                    allowed = map normalizeRegion (fromMaybe [] cond.allowedRegion)
+                    notAllowed = map normalizeRegion (fromMaybe [] cond.notAllowedRegion)
+                 in (null allowed || any (`elem` allowed) regions) && not (any (`elem` notAllowed) regions)
+              _ -> True
 
-      let usageRestricted = not (luggageCapacityCheck && airConditionedCheck && driverRatingCheck && vehicleRatingCheck && mfcCheck && cancellationRateCheck)
+      let usageRestricted = not (luggageCapacityCheck && airConditionedCheck && driverRatingCheck && vehicleRatingCheck && mfcCheck && cancellationRateCheck && regionCheck)
       (vehicleServiceTier, usageRestricted)
 
     filterVehicleTier vehicleServiceTier = case mode of
       AutoSelectedVariants -> vehicle.variant `elem` vehicleServiceTier.autoSelectedVehicleVariant && isCohortEligible
       AllowedVariants -> vehicle.variant `elem` vehicleServiceTier.allowedVehicleVariant && isCohortEligible
-      SelectedServiceTiers -> vehicleServiceTier.serviceTierType `elem` vehicle.selectedServiceTiers
+      SelectedServiceTiers -> vehicleServiceTier.serviceTierType `elem` vehicle.selectedServiceTiers || isDefaultTier
       where
         isCohortEligible = isTierEligibleForDriver now driverTag tierConfigsMap vehicleServiceTier.serviceTierType
+        isDefaultTier =
+          vehicle.category /= Just VC.AMBULANCE
+            && vehicle.variant `elem` vehicleServiceTier.allowedVehicleVariant
+            && vehicle.variant `elem` vehicleServiceTier.defaultForVehicleVariant
 
     compareNumber :: Ord a => Maybe a -> Maybe a -> Bool
     compareNumber mbX mbY =
@@ -107,6 +123,22 @@ selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle vehicleSe
     driverCancellationRate stats =
       fromIntegral (fromMaybe 0 stats.ridesCancelled) / fromIntegral stats.totalRides
 
+    normalizeRegion = T.toLower . T.strip
+
+fetchPermitRegionsIfNeeded ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [DVST.VehicleServiceTier] ->
+  Id DP.Person ->
+  m (Maybe [Text])
+fetchPermitRegionsIfNeeded cityServiceTiers personId
+  | not (any (isJust . (.regionCondition)) cityServiceTiers) = pure Nothing
+  | otherwise = do
+    mbAssoc <- QDRCA.findActiveAssociationByDriver personId True
+    forM mbAssoc $ \assoc -> do
+      now <- getCurrentTime
+      permits <- QVPermit.findByRcId Nothing Nothing assoc.rcId
+      pure [permit.regionCovered | permit <- permits, permit.verificationStatus == VALID, permit.permitExpiry > now]
+
 fetchVehicleTierForDriverWithUsageRestriction ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   ServiceTierFilterMode ->
@@ -122,16 +154,17 @@ fetchVehicleTierForDriverWithUsageRestriction mode mbDriverInfo mbVehicle mbDriv
   vehicle <- maybe (QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)) pure mbVehicle
   driverStats <- maybe (QDriverStats.findById personId) (pure . Just) mbDriverStats
   cityServiceTiers <- maybe (CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing) pure mbCityServiceTiers
-  -- SelectedServiceTiers mode only re-filters tiers already in Vehicle.selectedServiceTiers and
-  -- never consults isTierEligibleForDriver (see filterVehicleTier above), so skip this fetch there
+  -- SelectedServiceTiers mode only re-filters tiers already in Vehicle.selectedServiceTiers (plus
+  -- default tiers) and never consults isTierEligibleForDriver (see filterVehicleTier above), so skip this fetch there
   -- entirely -- it would otherwise add an unconditional Person lookup to several automated,
   -- high-frequency recomputation call sites (rating changes, AC-score changes, etc.) that don't
   -- need it; the real dispatch-time hard gate is enforced independently regardless.
   driverTag <- case mode of
     SelectedServiceTiers -> pure Nothing
     _ -> (.driverTag) <$> (QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId))
+  mbPermitRegions <- fetchPermitRegionsIfNeeded cityServiceTiers personId
   now <- getCurrentTime
-  pure $ selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle cityServiceTiers driverStats driverTag now
+  pure $ selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle cityServiceTiers driverStats driverTag mbPermitRegions now
 
 -- | Automated service-tier recompute. Two rules, no memory of past choices:
 --
@@ -170,13 +203,14 @@ recomputeSelectedServiceTiers mbDriverInfo mbVehicle mbDriverStats mbCityService
   driverStats <- maybe (QDriverStats.findById personId) (pure . Just) mbDriverStats
   cityServiceTiers <- maybe (CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing) pure mbCityServiceTiers
   driverTag <- (.driverTag) <$> (QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId))
+  mbPermitRegions <- fetchPermitRegionsIfNeeded cityServiceTiers personId
   now <- getCurrentTime
   let keptSelected =
         [ vst.serviceTierType
-          | (vst, restricted) <- selectVehicleTierForDriverWithUsageRestriction SelectedServiceTiers driverInfo vehicle cityServiceTiers driverStats driverTag now,
+          | (vst, restricted) <- selectVehicleTierForDriverWithUsageRestriction SelectedServiceTiers driverInfo vehicle cityServiceTiers driverStats driverTag mbPermitRegions now,
             not restricted
         ]
-      eligibleRatingGated = eligibleRatingGatedTiers driverInfo vehicle cityServiceTiers driverStats driverTag now
+      eligibleRatingGated = eligibleRatingGatedTiers driverInfo vehicle cityServiceTiers driverStats driverTag mbPermitRegions now
   QVehicle.updateSelectedServiceTiers (nub (keptSelected <> eligibleRatingGated)) personId
 
 -- | Tiers that define a vehicleRating threshold are eligibility-driven, not
@@ -185,10 +219,10 @@ recomputeSelectedServiceTiers mbDriverInfo mbVehicle mbDriverStats mbCityService
 -- ops choices. Shared by the automated recompute, RC (re)activation, and the
 -- RC variant review so none of those flows can drop a tier the vehicle still
 -- qualifies for while rebuilding the selection.
-eligibleRatingGatedTiers :: DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> Maybe DDriverStats.DriverStats -> Maybe [LYT.TagNameValueExpiry] -> UTCTime -> [DTC.ServiceTierType]
-eligibleRatingGatedTiers driverInfo vehicle cityServiceTiers mbDriverStats driverTag now =
+eligibleRatingGatedTiers :: DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> Maybe DDriverStats.DriverStats -> Maybe [LYT.TagNameValueExpiry] -> Maybe [Text] -> UTCTime -> [DTC.ServiceTierType]
+eligibleRatingGatedTiers driverInfo vehicle cityServiceTiers mbDriverStats driverTag mbPermitRegions now =
   [ vst.serviceTierType
-    | (vst, restricted) <- selectVehicleTierForDriverWithUsageRestriction AllowedVariants driverInfo vehicle cityServiceTiers mbDriverStats driverTag now,
+    | (vst, restricted) <- selectVehicleTierForDriverWithUsageRestriction AllowedVariants driverInfo vehicle cityServiceTiers mbDriverStats driverTag mbPermitRegions now,
       not restricted,
       isJust vst.vehicleRating
   ]
@@ -304,7 +338,7 @@ selectedServiceTiersLockKey driverId = "Driver:SelectedServiceTiers:DId-" <> dri
 --   Called automatically after every wallet debit via PostActions, which already gates the call on enableWalletGatedTierCheck -- this function doesn't check the flag itself.
 checkAndAutoDisableWalletGatedTiers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m ()
 checkAndAutoDisableWalletGatedTiers driverId merchantOpCityId =
-  Redis.withWaitOnLockRedisWithExpiry (selectedServiceTiersLockKey driverId) 5 10 $ do
+  Redis.withWaitAndLockRedisWithTimeout (selectedServiceTiersLockKey driverId) 5 10 50000 $ do
     mbVehicle <- QVehicle.findById driverId
     whenJust mbVehicle $ \vehicle -> do
       let selectedAutoAcceptTiers = fromMaybe [] vehicle.selectedAutoAcceptTiers

@@ -63,6 +63,7 @@ types:
     busLocationData: Maybe [BusLocation]
     vehicleNumber: Maybe Text
     tripTime: Maybe UTCTime
+    imeiNumber: Maybe Text
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
@@ -246,6 +247,8 @@ types:
     googleWalletJWTUrl: Maybe Text
     integratedBppConfigId: Id IntegratedBPPConfig
     bppOrderId: Maybe Text
+    txnId: Maybe Text
+    selectedQuoteCategories: [FRFSQuoteCategoryAPIEntity]
     isSpotBooking: Maybe Bool
     overrideType: Maybe OverrideType
     # Whole booking: this is what the payment order was created for.

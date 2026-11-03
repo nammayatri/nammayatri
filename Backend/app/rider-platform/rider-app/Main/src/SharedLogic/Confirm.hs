@@ -597,6 +597,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           -- Both are filled in later, once a driver is assigned (eligibility roll / swap link).
           eligibleForBetterDriverSearch = Nothing,
           supersededByBookingId = Nothing,
+          betterDriverAbortRadiusMeters = Nothing,
           ..
         },
       bookingParties

@@ -14,16 +14,16 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FRFSPassTicketStatisticsT f = FRFSPassTicketStatisticsT
-  { createdAt :: (B.C f Data.Time.UTCTime),
-    date :: (B.C f Data.Time.Calendar.Day),
-    fareAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    personId :: (B.C f Kernel.Prelude.Text),
-    purchasedPassPaymentId :: (B.C f Kernel.Prelude.Text),
-    savedAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    ticketCount :: (B.C f Kernel.Prelude.Int),
-    updatedAt :: (B.C f Data.Time.UTCTime)
+  { createdAt :: B.C f Data.Time.UTCTime,
+    date :: B.C f Data.Time.Calendar.Day,
+    fareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    personId :: B.C f Kernel.Prelude.Text,
+    purchasedPassPaymentId :: B.C f Kernel.Prelude.Text,
+    savedAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    ticketCount :: B.C f Kernel.Prelude.Int,
+    updatedAt :: B.C f Data.Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +33,6 @@ instance B.Table FRFSPassTicketStatisticsT where
 
 type FRFSPassTicketStatistics = FRFSPassTicketStatisticsT Identity
 
-$(enableKVPG (''FRFSPassTicketStatisticsT) [('date), ('purchasedPassPaymentId)] [])
+$(enableKVPG ''FRFSPassTicketStatisticsT ['date, 'purchasedPassPaymentId] [])
 
-$(mkTableInstances (''FRFSPassTicketStatisticsT) "frfs_pass_ticket_statistics")
+$(mkTableInstances ''FRFSPassTicketStatisticsT "frfs_pass_ticket_statistics")

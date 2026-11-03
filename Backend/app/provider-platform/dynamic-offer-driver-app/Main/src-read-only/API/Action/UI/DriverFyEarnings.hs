@@ -26,7 +26,7 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "driver" :> "fyEarnings" :> QueryParam "financialYear" Kernel.Prelude.Int :> QueryParam "quarter" Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverFyEarnings.DriverFyEarningsResp
   )
 
@@ -38,8 +38,8 @@ getDriverFyEarnings ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler API.Types.UI.DriverFyEarnings.DriverFyEarningsResp
   )
 getDriverFyEarnings a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.DriverFyEarnings.getDriverFyEarnings (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

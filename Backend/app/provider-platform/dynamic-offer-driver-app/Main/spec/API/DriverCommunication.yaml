@@ -1,0 +1,40 @@
+imports:
+  Text: Data.Text
+  APISuccess: Kernel.Types.APISuccess
+  Communication: Domain.Types.Communication
+
+module: DriverCommunication
+
+types:
+  DriverCommunicationItem:
+    communicationId: Id Communication
+    title: Text
+    body: Text
+    senderName: Maybe Text
+    isRead: Bool
+    sentAt: UTCTime
+    derive: "Show"
+
+  DriverCommunicationListRes:
+    communications: "[DriverCommunicationItem]"
+    unreadCount: Int
+    hasMore: Bool
+    derive: "Show"
+
+apis:
+  - GET:
+      endpoint: /driver/communication/list
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: DriverCommunicationListRes
+
+  - POST:
+      endpoint: /driver/communication/{communicationId}/read
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        communicationId: Id Communication
+      response:
+        type: APISuccess

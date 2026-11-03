@@ -37,6 +37,6 @@ instance B.Table CommunicationDeliveryT where
 
 type CommunicationDelivery = CommunicationDeliveryT Identity
 
-$(enableKVPG ''CommunicationDeliveryT ['id] [['communicationId]])
+$(enableKVPG ''CommunicationDeliveryT ['id] [['communicationId], ['recipientId]])
 
 $(mkTableInstances ''CommunicationDeliveryT "communication_delivery")

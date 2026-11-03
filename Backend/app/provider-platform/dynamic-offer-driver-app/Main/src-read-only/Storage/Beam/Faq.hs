@@ -12,16 +12,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FaqT f = FaqT
-  { answer :: (B.C f Kernel.Prelude.Text),
-    category :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    faqGroupId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    language :: (B.C f Kernel.External.Types.Language),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    question :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { answer :: B.C f Kernel.Prelude.Text,
+    category :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    faqGroupId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    language :: B.C f Kernel.External.Types.Language,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    question :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table FaqT where
 
 type Faq = FaqT Identity
 
-$(enableKVPG (''FaqT) [('id)] [[('language)]])
+$(enableKVPG ''FaqT ['id] [['language]])
 
-$(mkTableInstances (''FaqT) "faq")
+$(mkTableInstances ''FaqT "faq")

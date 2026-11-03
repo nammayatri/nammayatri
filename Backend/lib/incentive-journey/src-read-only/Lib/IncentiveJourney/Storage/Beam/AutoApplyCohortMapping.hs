@@ -10,15 +10,15 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 
 data AutoApplyCohortMappingT f = AutoApplyCohortMappingT
-  { allowIfNoMapping :: (B.C f Kernel.Prelude.Bool),
-    cohortJourneyMappingId :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    enabled :: (B.C f Kernel.Prelude.Bool),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    vehicleCategory :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text))
+  { allowIfNoMapping :: B.C f Kernel.Prelude.Bool,
+    cohortJourneyMappingId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    enabled :: B.C f Kernel.Prelude.Bool,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +28,6 @@ instance B.Table AutoApplyCohortMappingT where
 
 type AutoApplyCohortMapping = AutoApplyCohortMappingT Identity
 
-$(enableKVPG (''AutoApplyCohortMappingT) [('id)] [[('cohortJourneyMappingId)]])
+$(enableKVPG ''AutoApplyCohortMappingT ['id] [['cohortJourneyMappingId]])
 
-$(mkTableInstancesGenericSchema (''AutoApplyCohortMappingT) "auto_apply_cohort_mapping")
+$(mkTableInstancesGenericSchema ''AutoApplyCohortMappingT "auto_apply_cohort_mapping")

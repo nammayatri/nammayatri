@@ -35,6 +35,8 @@ data PersonAPIEntity = PersonAPIEntity
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     email :: Maybe Text,
+    emailVerified :: Maybe Bool,
+    emailSource :: Maybe EmailSource,
     maskedMobileNumber :: Maybe Text,
     maskedDeviceToken :: Maybe Text,
     hasTakenRide :: Bool,
@@ -54,7 +56,8 @@ data PersonAPIEntity = PersonAPIEntity
     followsRide :: Bool,
     isSafetyCenterDisabled :: Bool,
     customerTags :: DA.Value,
-    operatorBadgeToken :: Maybe Text
+    operatorBadgeToken :: Maybe Text,
+    commsConsent :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

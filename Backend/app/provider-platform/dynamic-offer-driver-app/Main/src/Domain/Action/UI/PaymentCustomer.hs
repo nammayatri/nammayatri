@@ -63,7 +63,7 @@ getPaymentCustomer (mbPersonId, merchantId, merchantOpCityId) mbServiceName = do
       pure $ mkPaymentCustomerResp driverId (mbCustomer >>= (.clientAuthToken)) (mbCustomer >>= (.clientAuthTokenExpiry))
     else do
       let lockKey = "PaymentCustomer:Refresh:" <> driverId.getId <> ":" <> show serviceName
-      Redis.withLockRedisAndReturnValue lockKey 60 $ do
+      Redis.withWaitAndLockRedis lockKey 60 50000 $ do
         mbLocked <- QPaymentCustomer.findByDriverIdAndServiceName driverId serviceName
         now' <- getCurrentTime
         if isUsable paymentServiceName now' mbLocked

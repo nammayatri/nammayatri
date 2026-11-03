@@ -454,6 +454,7 @@ library
       Domain.Types.Extra.FRFSCachedQuote
       Domain.Types.Extra.IntegratedBPPConfig
       Domain.Types.Extra.InterCityDetails
+      Domain.Types.Extra.LeanFlow
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
       Domain.Types.Extra.MerchantServiceConfig
@@ -593,6 +594,7 @@ library
       SharedLogic.Confirm
       SharedLogic.CreateFareForMultiModal
       SharedLogic.DisplayBookingId
+      SharedLogic.DriverNumber
       SharedLogic.DummySignatureAuth
       SharedLogic.EditLocationThrottle
       SharedLogic.External.BbpsService.Flow
@@ -608,6 +610,7 @@ library
       SharedLogic.FareBreakupInfo
       SharedLogic.FeedbackForm
       SharedLogic.Finance.CashbackPayout
+      SharedLogic.Finance.Rails
       SharedLogic.Finance.RidePayment
       SharedLogic.FRFSCancel
       SharedLogic.FRFSCancelEffects
@@ -749,6 +752,7 @@ library
       SharedLogic.SharedCab.StopProgress.Rules
       SharedLogic.SharedCab.WalkUp
       SharedLogic.SilentReallocation
+      SharedLogic.SocialLogin
       SharedLogic.SosLocationTracking
       SharedLogic.SyncSearchDispatch
       SharedLogic.TicketRule.Apply
@@ -825,6 +829,7 @@ library
       Storage.CachedQueries.Seat
       Storage.CachedQueries.Sos
       Storage.CachedQueries.StationsExtraInformation
+      Storage.CachedQueries.SystemConfigs.LeanFlow
       Storage.CachedQueries.Translations
       Storage.CachedQueries.UiRiderConfig
       Storage.CachedQueries.ValueAddNP
@@ -1444,6 +1449,7 @@ library
       Domain.Types.PersonDisability
       Domain.Types.PersonFlowStatus
       Domain.Types.PersonPTStats
+      Domain.Types.PersonSocialIdentity
       Domain.Types.PersonStats
       Domain.Types.PickupInstructions
       Domain.Types.PlaceBasedServiceConfig
@@ -1621,6 +1627,7 @@ library
       Storage.Beam.Person
       Storage.Beam.PersonDisability
       Storage.Beam.PersonPTStats
+      Storage.Beam.PersonSocialIdentity
       Storage.Beam.PersonStats
       Storage.Beam.PickupInstructions
       Storage.Beam.PlaceBasedServiceConfig
@@ -1885,6 +1892,7 @@ library
       Storage.Queries.Person
       Storage.Queries.PersonDisability
       Storage.Queries.PersonPTStats
+      Storage.Queries.PersonSocialIdentity
       Storage.Queries.PersonStats
       Storage.Queries.PickupInstructions
       Storage.Queries.PlaceBasedServiceConfig
@@ -2018,6 +2026,7 @@ library
     , filepath
     , finance-kernel
     , geohash ==1.0.1
+    , gtfs-data-server
     , hashable
     , haskell-cac
     , hedis

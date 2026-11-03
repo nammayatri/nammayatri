@@ -405,11 +405,11 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
 makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe [Text] -> Vehicle
 makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now vehicleTag = do
   let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now vehicleTag
-  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction AutoSelectedVariants driverInfo vehicle vehicleServiceTiers Nothing driver.driverTag now
+  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction AutoSelectedVariants driverInfo vehicle vehicleServiceTiers Nothing driver.driverTag Nothing now
       -- Rating-gated tiers are eligibility-driven, not auto-selected: a vehicle whose RC
       -- already carries a qualifying rating must get/keep them on (re)activation, or an RC
       -- refresh would strip tiers the vehicle still qualifies for.
-      ratingGatedTiers = eligibleRatingGatedTiers driverInfo vehicle vehicleServiceTiers Nothing driver.driverTag now
+      ratingGatedTiers = eligibleRatingGatedTiers driverInfo vehicle vehicleServiceTiers Nothing driver.driverTag Nothing now
   addSelectedServiceTiers (DL.nub (availableServiceTiersForDriver <> ratingGatedTiers)) vehicle
   where
     addSelectedServiceTiers :: [DVST.ServiceTierType] -> Vehicle -> Vehicle
@@ -572,7 +572,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         vehicleRating = Nothing,
         vehicleRatingRemark = Nothing,
         failedRules = failedRules,
-        docsVerificationStatusUpdatedAt = Nothing,
+        docsVerificationStatusUpdatedAt = Just now,
         dateOfRegistration = input.dateOfRegistration,
         vehicleModelYear = input.vehicleModelYear,
         rejectReason = mbRejectReason,
@@ -991,6 +991,7 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.LegalEntityTAXDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LegalEntityTAXDetails
   Domain.Types.DocumentVerificationConfig.LegalEntityCompanyDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LegalEntityCompanyDetails
   Domain.Types.DocumentVerificationConfig.TermsAndConditions -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.TermsAndConditions
+  Domain.Types.DocumentVerificationConfig.LedgerAdjustmentProof -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LedgerAdjustmentProof
 
 -- Shared document-onboarding helpers (moved from Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate):
 -- these are used across RC, PAN, Aadhaar, DL, GST and Idfy webhook flows.
@@ -1060,7 +1061,7 @@ getValidDocumentImage personId imageId_ expectedDocType = do
 
 getImageFromS3 :: OnboardingFlow m r => Image.Image -> m Text
 getImageFromS3 imageMetadata =
-  Redis.withLockRedisAndReturnValue (imageS3Lock imageMetadata.s3Path) 5 $
+  Redis.withWaitAndLockRedis (imageS3Lock imageMetadata.s3Path) 5 50000 $
     S3.get $ T.unpack imageMetadata.s3Path
 
 -- | Outcome of a server-side selfie-vs-document face match.

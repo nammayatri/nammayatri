@@ -18,6 +18,9 @@ module Lib.LocationUpdates
     whenWithLocationUpdatesLock,
     buildRideInterpolationHandler,
     buildRidePickupInterpolationHandler,
+    pickupSnapEntityIdSuffix,
+    editDestinationSnapEntityIdSuffix,
+    snapToRoadReqPoints,
   )
 where
 
@@ -301,7 +304,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
   return $
     mkRideInterpolationHandler
       (fromMaybe transportConfig.normalRideBulkLocUpdateBatchSize mbBatchSize) -- keeping batch size of 98 by default for bulk location updates to trigger snapToRoad
-      98
+      snapToRoadReqPoints
       isEndRide
       (\driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed -> QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed)
       (\driverId tollCharges tollNames tollIds -> void (QRide.updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds))
@@ -362,11 +365,11 @@ buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRid
   -- or the pickup distance calculation is marked failed. This avoids paying for
   -- Google as a fallback on the pickup leg, which has no accuracy requirement
   -- justifying that cost.
-  let snapToRoad' _shouldRectifyDistantPointsFailure = TMaps.snapToRoadOSRMOnly merchantOpCityId (fmap getId rideId)
+  let snapToRoad' _shouldRectifyDistantPointsFailure = TMaps.snapToRoadOSRMOnly merchantOpCityId ((<> pickupSnapEntityIdSuffix) . getId <$> rideId)
   return $
     mkRideInterpolationHandler
       (fromMaybe transportConfig.normalRideBulkLocUpdateBatchSize mbBatchSize)
-      98
+      snapToRoadReqPoints
       isEndRide
       (\_driverId dist _googleSnapCalls _osrmSnapCalls _numberOfSelfTuned isDistCalcFailed -> whenJust rideId $ \rid -> updatePickupDistance rid dist isDistCalcFailed)
       (\_driverId _tollCharges _tollNames _tollIds -> pure ()) -- no toll accounting on the pickup leg
@@ -379,6 +382,15 @@ buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRid
       snapToRoad'
       (\_driverId -> pure ())
       (\_driverId -> pure ())
+
+snapToRoadReqPoints :: Integer
+snapToRoadReqPoints = 98
+
+pickupSnapEntityIdSuffix :: Text
+pickupSnapEntityIdSuffix = ":pickup"
+
+editDestinationSnapEntityIdSuffix :: Text
+editDestinationSnapEntityIdSuffix = ":editDestination"
 
 -- | Ratio of measured-to-estimated pickup distance past which the measurement is treated
 -- as a snap-to-road artefact rather than a real detour. The pickup leg runs OSRM-only and

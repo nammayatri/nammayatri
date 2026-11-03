@@ -561,7 +561,7 @@ in  { esqDBCfg
     , coreVersion = "0.9.4"
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/rider-app.log", logRawSql = True }
+        //  { logFilePath = "${common.logDir}/rider-app.log", logRawSql = True }
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
     , internalAPIKey = sec.internalAPIKey
@@ -590,6 +590,7 @@ in  { esqDBCfg
     , secondaryKafkaProducerCfg
     , dashboardToken = sec.dashboardToken
     , driverDashboardToken = Some sec.driverDashboardToken
+    , issueLookupToken = Some sec.issueLookupToken
     , cacheConfig
     , cacheTranslationConfig
     , cacheFeedbackFormConfig
@@ -620,6 +621,7 @@ in  { esqDBCfg
     , dashboardClickhouseCfg
     , ondcTokenMap = sec.ondcTokenMap
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
+    , socialLoginConfig = common.socialLoginConfig
     , isMetroTestTransaction = False
     , urlShortnerConfig = common.urlShortnerConfig
     , maxNotificationShards = +128

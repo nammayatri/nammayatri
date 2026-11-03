@@ -30,9 +30,9 @@ data VehicleNOCE e = VehicleNOC
   }
   deriving (Generic)
 
-type VehicleNOC = VehicleNOCE ('AsEncrypted)
+type VehicleNOC = VehicleNOCE 'AsEncrypted
 
-type DecryptedVehicleNOC = VehicleNOCE ('AsUnencrypted)
+type DecryptedVehicleNOC = VehicleNOCE 'AsUnencrypted
 
 instance EncryptedItem VehicleNOC where
   type Unencrypted VehicleNOC = (DecryptedVehicleNOC, HashSalt)

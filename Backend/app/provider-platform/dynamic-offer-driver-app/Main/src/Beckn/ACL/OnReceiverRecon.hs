@@ -1,0 +1,66 @@
+module Beckn.ACL.OnReceiverRecon
+  ( ReconReport (..),
+    buildOnReceiverReconReq,
+  )
+where
+
+import qualified BecknV2.RSF.Enums as Enums
+import qualified BecknV2.RSF.Types as Spec
+import qualified Data.Text as T
+import Kernel.Prelude
+import Kernel.Types.TimeRFC339 (UTCTimeRFC3339 (..))
+import Kernel.Utils.Common
+import qualified SharedLogic.RSFLedger as RSFLedger
+
+-- One entry of the response. orderId = Nothing makes it a settlement-level (UTR) entry.
+-- echo is the BAP_CLAIM leg the echo fields (invoice_no, settlement_id, ...) are read back from.
+data ReconReport = ReconReport
+  { orderId :: Maybe Text,
+    utr :: Text,
+    verdict :: RSFLedger.WireVerdict,
+    echo :: Maybe RSFLedger.Entry
+  }
+
+-- Phase 4 (step 11): the inbound context echoed back with the new action and a fresh timestamp.
+-- Every order answers with order_recon_status 02 (Finale) and a diff amount (0 when 01); message only when not 01.
+buildOnReceiverReconReq :: Spec.RSFContext -> UTCTime -> Text -> Currency -> [ReconReport] -> Spec.OnReceiverReconReq
+buildOnReceiverReconReq inboundCtx now receiverAppId currency reports =
+  Spec.OnReceiverReconReq
+    { onReceiverReconReqContext =
+        inboundCtx
+          { Spec.rsfContextAction = Just Enums.ON_RECEIVER_RECON,
+            Spec.rsfContextTimestamp = Just (UTCTimeRFC3339 now)
+          },
+      onReceiverReconReqMessage =
+        Spec.RSFOnReceiverReconMessage
+          { rsfOnReceiverReconMessageOrderbook =
+              Spec.RSFOnReceiverReconOrderbook
+                { rsfOnReceiverReconOrderbookOrders = map buildWireOrder reports
+                }
+          }
+    }
+  where
+    buildWireOrder report =
+      Spec.RSFOnReceiverReconOrder
+        { rsfOnOrderId = report.orderId,
+          rsfOnOrderInvoiceNo = report.orderId >> report.echo >>= (.invoiceNo),
+          rsfOnOrderCollectorAppId = report.echo >>= (.collectorAppId),
+          rsfOnOrderReceiverAppId = Just receiverAppId,
+          rsfOnOrderOrderReconStatus = Just Enums.ORS_FINALE,
+          rsfOnOrderTransactionId = report.echo >>= (.orderTransactionId),
+          rsfOnOrderSettlementId = report.echo >>= (.settlementId),
+          rsfOnOrderCounterpartyReconStatus = Just report.verdict.status,
+          rsfOnOrderCounterpartyDiffAmount =
+            Just
+              Spec.RSFCounterpartyDiffAmount
+                { rsfDiffAmountCurrency = Just (show currency),
+                  rsfDiffAmountValue = Just (showAmount report.verdict.diff)
+                },
+          rsfOnOrderMessage = report.verdict.code $> Spec.RSFDiffMessage report.verdict.name report.verdict.code,
+          rsfOnOrderSettlementReferenceNo = if T.null report.utr then Nothing else Just report.utr
+        }
+
+-- Exact decimal text ("0.05", never Show's Double "5.0e-2"); "100" rather than "100.0" for whole amounts, as the
+-- collector sends them.
+showAmount :: HighPrecMoney -> Text
+showAmount amount = let t = highPrecMoneyToText amount in fromMaybe t (T.stripSuffix ".0" t)

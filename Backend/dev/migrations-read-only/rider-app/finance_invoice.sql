@@ -107,3 +107,8 @@ ALTER TABLE atlas_app.finance_invoice ADD COLUMN unsigned_qr_code text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

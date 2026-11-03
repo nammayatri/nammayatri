@@ -256,6 +256,27 @@ createRedisKeysForCombinations time mocId tripCategories serviceTiers =
         serviceTier <- serviceTiers
     ]
 
+-- | Seconds a scheduled OTP-ride booking holds its OTP: until an hour past pickup instead of the hour
+-- after confirm an instant one gets, so no other booking in the city is handed the same OTP meanwhile.
+scheduledSpecialZoneOtpTtl :: UTCTime -> UTCTime -> Int
+scheduledSpecialZoneOtpTtl now startTime = max 3600 . ceiling $ diffUTCTime (addUTCTime 3600 startTime) now
+
+mkScheduledSpecialZoneOtpKey :: Id MerchantOperatingCity -> Text -> Text
+mkScheduledSpecialZoneOtpKey merchantOpCityId otpCode = "ScheduledSpecialZoneBooking:MerchantOperatingCityId:" <> merchantOpCityId.getId <> ":Otp:" <> otpCode
+
+-- | Indexes a scheduled OTP-ride booking by its OTP for the driver's OTP start, whose lookup by OTP
+-- only sees bookings created within specialZoneBookingOtpExpiry. Expires with the OTP's reservation.
+-- False when another scheduled booking already holds this OTP, drawn by a confirm racing this one.
+addScheduledSpecialZoneOtpBooking :: CacheFlow m r => DRB.Booking -> Text -> Int -> m Bool
+addScheduledSpecialZoneOtpBooking booking otpCode ttl =
+  Redis.setNxExpire (mkScheduledSpecialZoneOtpKey booking.merchantOperatingCityId otpCode) ttl booking.id
+
+findScheduledBookingBySpecialZoneOtp :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> m (Maybe DRB.Booking)
+findScheduledBookingBySpecialZoneOtp merchantOpCityId otpCode = do
+  mbBookingId :: Maybe (Id DRB.Booking) <- Redis.runInMultiCloudRedisMaybeResult $ Redis.get (mkScheduledSpecialZoneOtpKey merchantOpCityId otpCode)
+  mbBooking <- maybe (pure Nothing) QRB.findById mbBookingId
+  pure $ mbBooking >>= \booking -> if (booking.status == DRB.NEW && booking.specialZoneOtpCode == Just otpCode && booking.isScheduled) then Just booking else Nothing
+
 -- Stores a scheduled booking in Redis for efficient querying by drivers.
 -- Uses local timezone for keys and scores to ensure bookings are grouped by local date.
 -- Keys expire at midnight of the booking's local day, not current day.

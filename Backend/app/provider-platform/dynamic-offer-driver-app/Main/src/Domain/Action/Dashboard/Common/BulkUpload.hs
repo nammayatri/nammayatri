@@ -18,10 +18,12 @@ module Domain.Action.Dashboard.Common.BulkUpload
     addIndividualOrFleetSeekerDrivers,
     castCommonOnboardingAsToDomain,
     checkAndUpdateAddDriverLimit,
+    convertToAddVehicleReq,
     fetchOrCreatePerson,
     processDriverRows,
     readDriversCsv,
     readVehiclesCsv,
+    rowErrorMessage,
     validateDriverName,
   )
 where
@@ -58,6 +60,7 @@ import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverOnboarding.Common as SOnbCommon
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -141,7 +144,7 @@ addIndividualOrFleetSeekerDrivers merchantShortId opCity onboardingAs file = do
       (person, isNew) <- fetchOrCreatePerson merchantOpCity req_
       -- Only the OTP flow may change an existing driver's type, so bulk leaves existing numbers untouched.
       unless isNew $ throwError (InvalidRequest "Driver already exists")
-      SOnboardingComms.setOnboardingAs transporterConfig person (castCommonOnboardingAsToDomain onboardingAs)
+      SOnboardingComms.setOnboardingAs transporterConfig SGuard.None person (castCommonOnboardingAsToDomain onboardingAs)
       fork "Sending onboarding link SMS to Driver" $
         SOnbCommon.sendOnboardingLinkSms merchantOpCity transporterConfig person Nothing
       pure person.id
@@ -171,12 +174,19 @@ processDriverRows tag driverDetails mkFailure func =
               tag
               (func driverDetail)
               >>= \case
-                Left err -> return (processed, unprocessed <> [mkFailure driverDetail.driverPhoneNumber (T.pack (displayException err))])
+                Left err -> return (processed, unprocessed <> [mkFailure driverDetail.driverPhoneNumber (rowErrorMessage err)])
                 Right driverPersonId ->
                   return (processed <> [Common.ProcessedDriverInfo {driverId = cast @DP.Person @Common.Driver driverPersonId, phoneNo = driverDetail.driverPhoneNumber}], unprocessed)
     )
     ([], [])
     driverDetails
+
+-- | The error's own message, else the raw exception text.
+rowErrorMessage :: SomeException -> Text
+rowErrorMessage err
+  | Just (HTTPException e) <- fromException err = fromMaybe (show e) (toMessage e)
+  | Just (BaseException e) <- fromException err = fromMaybe (show e) (toMessage e)
+  | otherwise = T.pack (displayException err)
 
 mkAddDriverCounterKey :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Text
 mkAddDriverCounterKey merchantOpCityId driverId = "Fleet:AddDriverCount:" <> driverId.getId <> ":" <> merchantOpCityId.getId
@@ -380,3 +390,31 @@ parseVehicleInfo moc idx row = do
       mbFleetPhoneNo,
       mbDriverPhoneNo
     )
+
+-- | A bulk row as the add-vehicle request the single add takes; the image is set by the caller.
+convertToAddVehicleReq :: DRegCommon.RegisterRCReq -> Common.AddVehicleReq
+convertToAddVehicleReq rcReq =
+  Common.AddVehicleReq
+    { registrationNo = rcReq.vehicleRegistrationCertNumber,
+      vehicleClass = fromMaybe "" rcReq.vehicleClass,
+      capacity = Nothing,
+      colour = maybe "" (.vehicleColour) rcReq.vehicleDetails,
+      energyType = Nothing,
+      model = maybe "" (.vehicleModel) rcReq.vehicleDetails,
+      make = maybe "" (.vehicleManufacturer) rcReq.vehicleDetails,
+      airConditioned = rcReq.airConditioned,
+      driverName = Nothing,
+      imageId = Nothing,
+      imageId2 = rcReq.imageId2,
+      vehicleCategory = rcReq.vehicleCategory,
+      oxygen = rcReq.oxygen,
+      ventilator = rcReq.ventilator,
+      dateOfRegistration = rcReq.dateOfRegistration,
+      mYManufacturing = Nothing,
+      vehicleModelYear = rcReq.vehicleDetails >>= (.vehicleModelYear),
+      skipFleetChecks = Nothing,
+      vehicleTags = Nothing,
+      fuelType = Nothing,
+      udinNumber = rcReq.udinNumber,
+      previousRcNumber = rcReq.previousRcNumber
+    }

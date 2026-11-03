@@ -34,6 +34,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     driverOfferApiKey :: Kernel.Prelude.Text,
     driverOfferBaseUrl :: Kernel.Types.Common.BaseUrl,
     driverOfferMerchantId :: Kernel.Prelude.Text,
+    driverOfferMerchantShortId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverOnTheWayNotifyExpiry :: Kernel.Types.Common.Seconds,
     editPickupDistanceThreshold :: Kernel.Types.Common.Distance,
     fakeOtpEmails :: [Kernel.Prelude.Text],
@@ -61,13 +62,14 @@ data MerchantD (s :: UsageSafety) = Merchant
     signatureExpiry :: Kernel.Prelude.Int,
     signingPrivateKey :: Kernel.Prelude.Maybe Kernel.Types.Base64.Base64,
     signingPublicKey :: Kernel.Types.Base64.Base64,
+    socialIdentityValidityInDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     stuckRideAutoCancellationBuffer :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     subscriberId :: Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)
 
-type Merchant = MerchantD ('Safe)
+type Merchant = MerchantD 'Safe
 
 instance FromJSON (MerchantD 'Unsafe)
 

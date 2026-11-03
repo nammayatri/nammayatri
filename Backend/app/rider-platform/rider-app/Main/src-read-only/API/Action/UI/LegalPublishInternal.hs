@@ -19,14 +19,14 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( "internal" :> "legal" :> "publish" :> Header "x-internal-api-key" Kernel.Prelude.Text :> ReqBody ('[JSON]) API.Types.UI.LegalPublishInternal.LegalPublishReq
+  ( "internal" :> "legal" :> "publish" :> Header "x-internal-api-key" Kernel.Prelude.Text :> ReqBody '[JSON] API.Types.UI.LegalPublishInternal.LegalPublishReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.LegalPublishInternal.LegalPublishResp
   )
 
 handler :: Environment.FlowServer API
 handler = postInternalLegalPublish
 
-postInternalLegalPublish :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.LegalPublishInternal.LegalPublishReq -> Environment.FlowHandler API.Types.UI.LegalPublishInternal.LegalPublishResp)
+postInternalLegalPublish :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.LegalPublishInternal.LegalPublishReq -> Environment.FlowHandler API.Types.UI.LegalPublishInternal.LegalPublishResp)
 postInternalLegalPublish a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.LegalPublishInternal.postInternalLegalPublish a2 a1

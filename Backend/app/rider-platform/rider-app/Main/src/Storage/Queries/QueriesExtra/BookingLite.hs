@@ -13,8 +13,9 @@ import qualified Domain.Types.Quote
 import qualified Domain.Types.ServiceTierType
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, mkDistanceWithDefault)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as Beam
 import qualified Storage.Queries.Transformers.Booking
@@ -44,7 +45,9 @@ data BookingLite = BookingLite
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
-    createdAt :: Kernel.Prelude.UTCTime
+    createdAt :: Kernel.Prelude.UTCTime,
+    estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
+    estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -71,5 +74,7 @@ instance FromTType' BookingLiteTable BookingLite where
             tripCategory = tripCategory,
             isAirConditioned = isAirConditioned,
             paymentMode = paymentMode,
-            createdAt = createdAt
+            createdAt = createdAt,
+            estimatedDistance = mkDistanceWithDefault distanceUnit estimatedDistanceValue <$> estimatedDistance,
+            estimatedDuration = estimatedDuration
           }

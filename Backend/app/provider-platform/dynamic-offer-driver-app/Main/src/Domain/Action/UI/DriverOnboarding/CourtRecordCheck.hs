@@ -30,7 +30,7 @@ runCourtRecordCheck person merchantOpCity = do
   whenJust mbDriverInfo $ \driverInfo -> do
     mbIdentityInfoPre <- QDII.findByDriverId person.id
     when (isNothing mbIdentityInfoPre) $
-      Redis.withLockRedis (DIInfo.driverIdentityInfoLockKey person.id) 10 $ do
+      Redis.withWaitAndLockRedis (DIInfo.driverIdentityInfoLockKey person.id) 10 50000 $ do
         mbExisting <- QDII.findByDriverId person.id
         when (isNothing mbExisting) $
           void $ DIInfo.upsertDriverIdentityInfo mbExisting person.id person.merchantId merchantOpCity.id driverInfo Nothing Nothing Nothing Nothing Nothing Nothing

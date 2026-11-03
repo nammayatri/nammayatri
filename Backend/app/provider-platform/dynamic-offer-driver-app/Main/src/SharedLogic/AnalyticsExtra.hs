@@ -3,6 +3,7 @@ module SharedLogic.AnalyticsExtra where
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Domain.Types.DriverFlowStatus as DDF
+import qualified Domain.Types.FleetOperatorStats as DFS
 import Domain.Types.Person as DP
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.TransporterConfig as TC
@@ -15,6 +16,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverFlowStatus as SDFStatus
+import qualified SharedLogic.FleetOperatorStats as SFleetOperatorStats
 import qualified Storage.Clickhouse.DriverInformation as CDI
 import qualified Storage.Clickhouse.DriverOperatorAssociation as CDOA
 import qualified Storage.Clickhouse.FleetDriverAssociation as CFDA
@@ -23,6 +25,8 @@ import qualified Storage.Clickhouse.SubscriptionPurchase as CSubscriptionPurchas
 import qualified Storage.Clickhouse.Vehicle as CVehicle
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
+import qualified Storage.Queries.FleetOperatorStats as QFleetOps
+import qualified Storage.Queries.FleetOperatorStatsExtra as QFleetOpsExtra
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import Tools.Error (GenericError (InternalError, InvalidRequest))
 
@@ -62,7 +66,7 @@ data FleetAllTimeFallbackRes = FleetAllTimeFallbackRes
   deriving (Show, Eq)
 
 allTimeMetrics :: [AllTimeMetric]
-allTimeMetrics = [TOTAL_RIDE_COUNT, RATING_SUM, RATING_COUNT, CANCEL_COUNT, ACCEPTATION_COUNT, TOTAL_REQUEST_COUNT, TOTAL_ASSOCIATED_DRIVER, TOTAL_ACTIVE_DRIVERS, TOTAL_ENABLED_DRIVERS]
+allTimeMetrics = [TOTAL_RIDE_COUNT, RATING_SUM, RATING_COUNT, CANCEL_COUNT, ACCEPTATION_COUNT, TOTAL_REQUEST_COUNT]
 
 allTimeKeys :: Text -> [Text]
 allTimeKeys operatorId = map (makeOperatorAnalyticsKey operatorId) allTimeMetrics
@@ -104,8 +108,9 @@ convertToAllTimeFallbackRes metricsList =
             totalEnabledDrivers = getMetricValue TOTAL_ENABLED_DRIVERS
           }
 
--- | Common function to ensure Redis keys exist by falling back to ClickHouse if needed
--- Uses Person role to determine which fallback function to call
+-- | Rebuilds targetKey from ClickHouse when it is missing, then runs redisOps.
+-- skipDeltaOnRebuild skips redisOps after that rebuild. The six operator counters use it:
+-- the rebuild can already include this event. Fleet gauges pass False and still apply the delta.
 ensureRedisKeysExistForAllTimeCommon ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -114,6 +119,7 @@ ensureRedisKeysExistForAllTimeCommon ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
+  Bool ->
   TC.TransporterConfig ->
   DP.Role ->
   Text ->
@@ -121,7 +127,7 @@ ensureRedisKeysExistForAllTimeCommon ::
   (Text -> Integer -> m Integer) ->
   Integer ->
   m ()
-ensureRedisKeysExistForAllTimeCommon transporterConfig role entityId targetKey redisOps value = do
+ensureRedisKeysExistForAllTimeCommon skipDeltaOnRebuild transporterConfig role entityId targetKey redisOps value = do
   mbValue <- Redis.get @Int targetKey
   (msg, logTag, allTimeKeysData, handleCacheMiss) <- case role of
     DP.OPERATOR ->
@@ -144,7 +150,7 @@ ensureRedisKeysExistForAllTimeCommon transporterConfig role entityId targetKey r
     then fork msg $ do
       logTagInfo logTag $ "Key does not exist. Handling cache miss for " <> show role <> "Id: " <> show entityId
       void $ handleCacheMiss allTimeKeysData
-      void $ redisOps targetKey value
+      unless skipDeltaOnRebuild $ void $ redisOps targetKey value
       logTagInfo logTag $ "Updated key after cache miss: key=" <> show targetKey <> ", " <> show role <> "Id=" <> show entityId
     else do
       logTagInfo logTag $ "Key already exists for " <> show role <> " analytics key: " <> show targetKey <> ", " <> show role <> "Id=" <> show entityId
@@ -164,9 +170,8 @@ fallbackToClickHouseAndUpdateRedisForAllTime ::
   Text ->
   [Text] ->
   m CommonAllTimeFallbackRes
-fallbackToClickHouseAndUpdateRedisForAllTime transporterConfig operatorId allTimeKeysData = do
+fallbackToClickHouseAndUpdateRedisForAllTime _transporterConfig operatorId allTimeKeysData = do
   logTagInfo "FallbackClickhouseAllTime" $ "Initiating ClickHouse query to retrieve analytics data for operator ID: " <> operatorId
-  let useDBForAnalytics = transporterConfig.analyticsConfig.useDbForEarningAndMetrics
   operatorStats <- CFO.sumStatsByFleetOperatorId operatorId
   let tcr = operatorStats.totalCompletedRidesSum
       trn = operatorStats.totalRatingCountSum
@@ -174,19 +179,8 @@ fallbackToClickHouseAndUpdateRedisForAllTime transporterConfig operatorId allTim
       dcc = operatorStats.driverCancellationCountSum
       ac = operatorStats.acceptationRequestCountSum
       trc = operatorStats.totalRequestCountSum
-  operatorAssociatedDriverIds <- if useDBForAnalytics then QDOA.getActiveDriverIdsByOperatorId operatorId else CDOA.getDriverIdsByOperatorId operatorId
-  let tad = Just $ Set.size (Set.fromList operatorAssociatedDriverIds)
-  let driverOwnerIds = (.getId) <$> operatorAssociatedDriverIds
-  activeDrivers <- if useDBForAnalytics then QSubscriptionPurchaseExtra.findActiveDistinctOwnersByOwnerIds driverOwnerIds DSP.DRIVER else CSubscriptionPurchase.findActiveDistinctOwnersByOwnerIds driverOwnerIds DSP.DRIVER
-  let tadv = Just activeDrivers
-
-  ted <-
-    if useDBForAnalytics
-      then Just <$> QDI.countEnabledByDriverIds driverOwnerIds
-      else Just <$> CDI.countEnabledByDriverIds operatorAssociatedDriverIds
-
-  mapM_ (uncurry Redis.set) (zipJusts allTimeKeysData [tcr, rs, trn, dcc, ac, trc, tad, tadv, ted])
-  pure $ convertToAllTimeFallbackRes (zipJusts allTimeMetrics [tcr, rs, trn, dcc, ac, trc, tad, tadv, ted])
+  mapM_ (uncurry Redis.set) (zipJusts allTimeKeysData [tcr, rs, trn, dcc, ac, trc])
+  pure $ convertToAllTimeFallbackRes (zipJusts allTimeMetrics [tcr, rs, trn, dcc, ac, trc])
 
 convertToFleetAllTimeFallbackRes :: [(FleetAllTimeMetric, Int)] -> Maybe Int -> CommonAllTimeFallbackRes
 convertToFleetAllTimeFallbackRes metricsList mbCurrentOnlineDriverCount =
@@ -290,6 +284,82 @@ handleCacheMissForAnalyticsAllTimeCommon transporterConfig role entityId allTime
           logTagInfo logTag $ "inProgress lock already held for " <> show role <> "Id: " <> entityId <> " (race detected in else). Waiting for it to clear."
           handleCacheMissForAnalyticsAllTimeCommon transporterConfig role entityId allTimeKeysData
 
+-- Associated, subscribed, and enabled drivers. Same lookups as the old Redis miss path.
+-- Enabled is Nothing when the replica read fails.
+operatorGaugeCounts ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  Bool ->
+  Text ->
+  m (Int, Int, Maybe Int)
+operatorGaugeCounts useDb operatorId = do
+  operatorAssociatedDriverIds <-
+    if useDb
+      then QDOA.getActiveDriverIdsByOperatorId operatorId
+      else CDOA.getDriverIdsByOperatorId operatorId
+  let associated = Set.size $ Set.fromList operatorAssociatedDriverIds
+      driverOwnerIds = (.getId) <$> operatorAssociatedDriverIds
+  active <-
+    if useDb
+      then QSubscriptionPurchaseExtra.findActiveDistinctOwnersByOwnerIds driverOwnerIds DSP.DRIVER
+      else CSubscriptionPurchase.findActiveDistinctOwnersByOwnerIds driverOwnerIds DSP.DRIVER
+  mbEnabled <-
+    if useDb
+      then QDI.mbCountEnabledByDriverIds driverOwnerIds
+      else Just <$> CDI.countEnabledByDriverIds operatorAssociatedDriverIds
+  pure (associated, active, mbEnabled)
+
+operatorGaugeCount ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  Bool ->
+  AllTimeMetric ->
+  Text ->
+  m (Maybe Int)
+operatorGaugeCount useDb metric operatorId = do
+  (associated, active, mbEnabled) <- operatorGaugeCounts useDb operatorId
+  pure $ case metric of
+    TOTAL_ASSOCIATED_DRIVER -> Just associated
+    TOTAL_ACTIVE_DRIVERS -> Just active
+    TOTAL_ENABLED_DRIVERS -> mbEnabled
+    _ -> Nothing
+
+isOperatorLiveGauge :: AllTimeMetric -> Bool
+isOperatorLiveGauge metric = case metric of
+  TOTAL_ASSOCIATED_DRIVER -> True
+  TOTAL_ACTIVE_DRIVERS -> True
+  TOTAL_ENABLED_DRIVERS -> True
+  _ -> False
+
+operatorLiveColumn :: AllTimeMetric -> DFS.FleetOperatorStats -> Maybe Int
+operatorLiveColumn metric row = case metric of
+  TOTAL_ASSOCIATED_DRIVER -> row.totalAssociatedDriver
+  TOTAL_ACTIVE_DRIVERS -> row.totalActiveDrivers
+  TOTAL_ENABLED_DRIVERS -> row.totalEnabledDrivers
+  _ -> Nothing
+
+liveCountWrite :: AllTimeMetric -> Int -> (Maybe Int, Maybe Int, Maybe Int)
+liveCountWrite metric n = case metric of
+  TOTAL_ASSOCIATED_DRIVER -> (Just n, Nothing, Nothing)
+  TOTAL_ACTIVE_DRIVERS -> (Nothing, Just n, Nothing)
+  TOTAL_ENABLED_DRIVERS -> (Nothing, Nothing, Just n)
+  _ -> (Nothing, Nothing, Nothing)
+
+applyLiveCount :: AllTimeMetric -> Int -> DFS.FleetOperatorStats -> DFS.FleetOperatorStats
+applyLiveCount metric n row = case metric of
+  TOTAL_ASSOCIATED_DRIVER -> row {DFS.totalAssociatedDriver = Just n}
+  TOTAL_ACTIVE_DRIVERS -> row {DFS.totalActiveDrivers = Just n}
+  TOTAL_ENABLED_DRIVERS -> row {DFS.totalEnabledDrivers = Just n}
+  _ -> row
+
 adjustOperatorAllTimeAnalyticsMetric ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -305,11 +375,23 @@ adjustOperatorAllTimeAnalyticsMetric ::
   m ()
 adjustOperatorAllTimeAnalyticsMetric transporterConfig operatorIdText metric delta =
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
-    when (delta /= 0) $ do
-      let key = makeOperatorAnalyticsKey operatorIdText metric
-      if delta > 0
-        then ensureRedisKeysExistForAllTimeCommon transporterConfig DP.OPERATOR operatorIdText key Redis.incrby delta
-        else ensureRedisKeysExistForAllTimeCommon transporterConfig DP.OPERATOR operatorIdText key Redis.decrby (abs delta)
+    when (delta /= 0 && isOperatorLiveGauge metric) $
+      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorIdText) 10 5000 $ do
+        mbRow <- QFleetOps.findByPrimaryKey operatorIdText
+        let stored = mbRow >>= operatorLiveColumn metric
+        mbNext <- case stored of
+          Just n -> pure $ Just (n + fromIntegral delta)
+          -- The association row is already written, so a missing count is the current total.
+          Nothing -> operatorGaugeCount transporterConfig.analyticsConfig.useDbForEarningAndMetrics metric operatorIdText
+        case mbNext of
+          Nothing -> pure ()
+          Just n -> case mbRow of
+            Just _ -> do
+              let (mbAssociated, mbActive, mbEnabled) = liveCountWrite metric n
+              void $ QFleetOpsExtra.setOperatorLiveCounts operatorIdText mbAssociated mbActive mbEnabled
+            Nothing -> do
+              initStats <- SFleetOperatorStats.buildInitialFleetOperatorStats operatorIdText transporterConfig
+              QFleetOps.create (applyLiveCount metric n initStats)
 
 adjustOperatorDriverAssociationAnalytics ::
   ( MonadFlow m,

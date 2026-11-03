@@ -27,6 +27,7 @@ import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverStats as DStats
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DYNAMIC_PRICING))
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
@@ -63,6 +64,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.AddOn as SAddOn
+import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
@@ -74,6 +76,7 @@ import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.DriverPoolConfig as SCDPC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.FleetConfig (fleetForbidsDriverCancellation, getCityFleetConfigs)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -115,6 +118,7 @@ type AcceptDynamicOfferFlow m r c =
     -- HasFlowEnv, not plain HasField: avoids an overlapping-instance error where a caller also needs buildSearchRequestForDriver's own HasFlowEnv "version".
     HasFlowEnv m r '["version" ::: DeploymentVersion],
     HasKafkaProducer r,
+    Analytics.PublishesFleetAnalytics m,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     EventStreamFlow m r,
@@ -329,7 +333,8 @@ buildDriverQuote initialStatus clientId driver driverStats searchReq sd estimate
   now <- getCurrentTime
   deploymentVersion <- asks (.version)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
-  if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
+  dynamicPricingExcluded <- CQLF.isFeatureExcluded DYNAMIC_PRICING
+  if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True && not dynamicPricingExcluded
     then
       fork "updateDynamicPricingAcceptanceCounters" $
         geoAddDynamicPricingCounter mkAcceptanceVehicleCategoryWithDistanceBin mkAcceptanceVehicleCategory mkAcceptanceVehicleCategoryCity now sd.vehicleCategory searchReq.fromLocation.lat searchReq.fromLocation.lon sd.searchTryId.getId ((.getMeters) <$> searchReq.estimatedDistance) searchReq.merchantOperatingCityId.getId

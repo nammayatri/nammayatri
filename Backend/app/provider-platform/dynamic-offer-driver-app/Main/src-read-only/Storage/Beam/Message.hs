@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 data MessageT f = MessageT
   { messageType :: B.C f Domain.Types.Message.MessageType,
     alwaysTriggerOnOnboarding :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    category :: B.C f (Kernel.Prelude.Maybe Domain.Types.Message.MessageCategory),
     createdAt :: B.C f Data.Time.LocalTime,
     description :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,

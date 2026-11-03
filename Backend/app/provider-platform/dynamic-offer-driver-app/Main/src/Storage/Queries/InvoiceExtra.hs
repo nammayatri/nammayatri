@@ -203,6 +203,8 @@ updateInvoiceStatusByInvoiceId invoiceStatus invoiceId = do
     [ Se.And
         ( [Se.Is BeamI.id (Se.Eq $ getId invoiceId)]
             <> [Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE | invoiceStatus == Domain.INACTIVE]
+            -- FAILED -> SUCCESS is allowed (retry), SUCCESS -> FAILED is not
+            <> [Se.Is BeamI.invoiceStatus $ Se.Not $ Se.Eq Domain.SUCCESS | invoiceStatus == Domain.FAILED]
         )
     ]
 

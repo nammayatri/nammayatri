@@ -14,13 +14,11 @@
 
 module Domain.Action.Internal.TollChargeApproval
   ( RequestTollChargeApprovalReq (..),
-    TollChargeApprovalModeRes (..),
     PendingTollChargeApproval (..),
     TollChargeApprovalParam (..),
     pendingTollChargeApprovalKey,
     pendingTollChargeApprovalRedisTtlSec,
     requestTollChargeApproval,
-    getTollChargeApprovalMode,
   )
 where
 
@@ -35,10 +33,7 @@ import qualified Kernel.External.Notification as Notification
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
-import Kernel.Types.Version (textToVersion)
 import Kernel.Utils.Common hiding (id)
-import Lib.ConfigPilot.Interface.Types (getConfig)
-import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -53,11 +48,6 @@ data RequestTollChargeApprovalReq = RequestTollChargeApprovalReq
     approvalTimeoutSeconds :: Int,
     requestId :: Text,
     requestedAt :: UTCTime
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-newtype TollChargeApprovalModeRes = TollChargeApprovalModeRes
-  { customerApprovalSupported :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -88,20 +78,6 @@ pendingTollChargeApprovalKey rideId = "TollChargeApprovalRequest:RideId-" <> rid
 
 pendingTollChargeApprovalRedisTtlSec :: Int
 pendingTollChargeApprovalRedisTtlSec = 21600
-
--- The rider's app can show the approval prompt when its bundle version is at least the configured minimum.
--- Without a configured minimum, or with an unknown rider version, the prompt is not supported.
-getTollChargeApprovalMode :: Maybe Text -> Text -> Flow TollChargeApprovalModeRes
-getTollChargeApprovalMode apiKey bppBookingId = do
-  validateInternalApiKey apiKey
-  booking <- B.runInReplica $ QBooking.findByBPPBookingId (Id bppBookingId) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId)
-  person <- B.runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  let mbMinimumVersion = (either (const Nothing) Just . textToVersion) =<< riderConfig.manualChargeApprovalMinCustomerVersion
-      customerApprovalSupported = case (person.clientBundleVersion, mbMinimumVersion) of
-        (Just clientVersion, Just minimumVersion) -> clientVersion >= minimumVersion
-        _ -> False
-  pure TollChargeApprovalModeRes {customerApprovalSupported}
 
 -- Called by the BPP once a driver has declared a toll charge that needs the rider's approval. The
 -- request is kept until the rider answers or the approval window passes, and the rider is notified.
@@ -143,10 +119,9 @@ requestTollChargeApproval apiKey bppBookingId req = do
         [("amount", show req.amount), ("tollName", maybe "toll" (T.intercalate ", ") req.tollNames)]
         Nothing
         Nothing
-  whenLeft notifyResult $ \err -> do
-    -- Record stays; the rider's own poll can still surface it even though the push failed.
-    logError $ "Toll charge approval notification failed for ride " <> ride.id.getId <> ": " <> show err
-    throwError $ InvalidRequest "Could not notify the customer about this toll charge"
+  -- The request is stored and the rider's own poll still surfaces it, so a failed push does not fail the request.
+  whenLeft notifyResult $ \_ ->
+    logError $ "Toll charge approval notification failed for ride " <> ride.id.getId <> ", amount " <> show req.amount
   pure Success
 
 validateInternalApiKey :: Maybe Text -> Flow ()

@@ -47,7 +47,7 @@ offerHoldMaxScore = 1e15
 addOfferHoldAtKey :: (CacheFlow m r, MonadFlow m) => Text -> Text -> HighPrecMoney -> UTCTime -> m ()
 addOfferHoldAtKey key offerId amount validTill = do
   now <- getCurrentTime
-  Redis.withWaitOnLockRedisWithExpiry (key <> ":lock") 3 3 $ do
+  Redis.withWaitAndLockRedisWithTimeout (key <> ":lock") 3 3 50000 $ do
     existingRaw <- Redis.zRangeByScore key (utcToMilliseconds now) offerHoldMaxScore
     let sameOffer = [(r, amt) | r <- existingRaw, Just (OfferHold (oId, amt)) <- [Ae.decodeStrict r], oId == offerId]
     unless (null sameOffer) $ void $ Redis.zRem key (map (TE.decodeUtf8 . fst) sameOffer)
@@ -59,7 +59,7 @@ addOfferHoldAtKey key offerId amount validTill = do
 --   or the offer was withdrawn).
 removeOfferHoldAtKey :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m ()
 removeOfferHoldAtKey key offerId = do
-  Redis.withWaitOnLockRedisWithExpiry (key <> ":lock") 3 3 $ do
+  Redis.withWaitAndLockRedisWithTimeout (key <> ":lock") 3 3 50000 $ do
     rawItems <- Redis.zRangeByScore key 0 offerHoldMaxScore
     let matching = [r | r <- rawItems, Just (OfferHold (oId, _)) <- [Ae.decodeStrict r], oId == offerId]
     unless (null matching) $ void $ Redis.zRem key (map TE.decodeUtf8 matching)

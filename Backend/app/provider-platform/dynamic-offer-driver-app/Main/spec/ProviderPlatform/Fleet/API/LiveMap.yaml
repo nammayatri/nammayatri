@@ -16,6 +16,7 @@ apis:
         - fleetOwnerId: Text
         - driverIdForRadius: Id Driver
         - point: LatLong
+        - driverIds: [Id Driver]
       response:
         type: "[MapDriverInfoRes]"
       helperApi:
@@ -29,6 +30,7 @@ apis:
               - fleetOwnerId: Text
               - driverIdForRadius: Id Driver
               - point: LatLong
+              - driverIds: Maybe [Id Driver]
             response:
               type: "[MapDriverInfoRes]"
   - GET:
@@ -42,6 +44,7 @@ apis:
 
 types:
   MapDriverInfoRes:
+    - driverId: Id Driver
     - driverName: Text
     - driverStatus: Maybe Status
     - vehicleNumber: Text
@@ -52,6 +55,7 @@ types:
     - vehicleIconURL: Maybe Text
     - profilePhotoImageId: Maybe Text
     - position: LatLong
+    - lastUpdatedAt: Maybe UTCTime
     - mobileCountryCode: Text
     - mobileNumber: Text
     - rideRelatedInfo: RideRelatedInfo
@@ -75,3 +79,6 @@ types:
     - tripOption: Text
     - isScheduled: Bool
     - frequency: Int
+
+
+

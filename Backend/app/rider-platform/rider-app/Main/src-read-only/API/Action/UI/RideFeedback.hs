@@ -29,7 +29,7 @@ type API =
       :> Header
            "x-language"
            Kernel.External.Types.Language
-      :> Get ('[JSON]) API.Types.UI.RideFeedback.RideFeedbackQuestionsRes
+      :> Get '[JSON] API.Types.UI.RideFeedback.RideFeedbackQuestionsRes
       :<|> TokenAuth
       :> "booking"
       :> Capture
@@ -37,10 +37,10 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Booking.Booking)
       :> "feedback"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RideFeedback.SubmitRideFeedbackReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RideFeedback.SubmitRideFeedbackRes
   )
 
@@ -52,7 +52,7 @@ getBookingFeedbackQuestions ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Booking.Booking ->
-    Kernel.Prelude.Maybe (Kernel.External.Types.Language) ->
+    Kernel.Prelude.Maybe Kernel.External.Types.Language ->
     Environment.FlowHandler API.Types.UI.RideFeedback.RideFeedbackQuestionsRes
   )
 getBookingFeedbackQuestions a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.RideFeedback.getBookingFeedbackQuestions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
