@@ -200,6 +200,8 @@ services:
       - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
       # rider-app runs these migrations itself on every startup.
       - ./2023/Backend/dev:/opt/app/dev:ro
+      # Its own log FILE goes nowhere (2026-11-03): see the driver's note below.
+      - /dev/null:/tmp/rider-app.log
     restart: unless-stopped
 
   # The driver side (BPP). Same image — it already contains every executable in
@@ -218,6 +220,15 @@ services:
       - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
       # It applies dev/migrations/dynamic-offer-driver-app itself on startup.
       - ./2023/Backend/dev:/opt/app/dev:ro
+      # The log FILE goes nowhere (2026-11-03). dhall sets logFilePath =
+      # /tmp/dynamic-offer-driver-app.log with logRawSql = True, so every SQL
+      # statement was appended to a file inside the container that nothing
+      # rotates: 33 GB in 16 days, ~2 GB a day, found by the health check. The
+      # same lines still go to stdout, which Docker rotates (50 MB x 5), so
+      # `docker logs` is unchanged. The rider has the same setting, mounted
+      # alike. Bound to /dev/null rather than changed in dhall because dhall is
+      # in the image (see "Binaries" in the README).
+      - /dev/null:/tmp/dynamic-offer-driver-app.log
     restart: unless-stopped
 
   # The connector between the two sides. rider-app (BAP) does not call

@@ -59,6 +59,21 @@ re-exposes the API on `localhost:8014`.
 causes `column ... already exists` failures. Test data is loaded *after*
 rider-app has migrated.
 
+**The driver app's own log file grew to 33 GB inside its container, and no
+rotation could see it (2026-11-03).** `dhall-configs/dev/dynamic-offer-driver-app.dhall`
+sets `logFilePath = "/tmp/dynamic-offer-driver-app.log"` with `logRawSql = True`,
+so every SQL statement was appended to a file in the container's own layer:
+~2 GB a day since the 18 October restart. Docker's json logs (50 MB x 5) were
+never the problem, and `df` on the host only showed it as one more `docker`
+size. Found by the health check (`docker ps -s`, then `du` inside the
+container). The compose file now binds `/dev/null` over that path, and over the
+rider's `/tmp/rider-app.log`; stdout, the part `docker logs` shows, is
+untouched. It takes effect when the container is recreated by a release
+(`ops/deploy.sh`), and a file already grown is emptied by hand once, without a
+restart: `docker exec ny-driver sh -c ': > /tmp/dynamic-offer-driver-app.log'`.
+Test: `tests/compose-logfiles.test.js`. Why it is not changed in dhall: dhall is
+in the image.
+
 ## Known limitations
 
 - **This is the 2023 baseline, not current `main`.** Running today's backend
