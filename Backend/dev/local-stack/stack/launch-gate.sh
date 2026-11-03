@@ -69,6 +69,26 @@ if [ -f "$SECRETS/test-accounts.env" ] && grep -Eq '^SMS_BYPASS=.+' "$SECRETS/te
 else pass "no bypass list on disk (a reviewer's number is added only for the review, then removed)"; fi
 mode="$(envof ny-auth-guard | sed -n 's/^SMS_MODE=//p')"
 [ "$mode" = verify ] && pass "SMS_MODE is verify (the live gateway)" || warn "SMS_MODE is '$mode', not verify"
+# The SMS gateway must DELIVER, not merely be configured (2026-11-03). Found by
+# the API health check: Moorsyl answered 403 COMPLIANCE_REQUIRED to every code
+# request since 25 Oct (14 refusals, none accepted), the guard's /healthz carried
+# the error the whole time, and nothing asked it. A rider in Mauritania who taps
+# « SMS » gets nothing; WhatsApp still works, which is why nobody noticed.
+sms="$(curl -s --max-time 8 http://127.0.0.1:8031/healthz | python3 -c '
+import json, sys
+try:
+    g = json.load(sys.stdin)["gateway"]
+    print(g.get("sent", 0), "|", (g.get("lastError") or "")[:90])
+except Exception:
+    print("? | unreadable")' 2>/dev/null)"
+sent="${sms%% |*}"; lasterr="${sms#*| }"
+if [ "$sms" = "? | unreadable" ] || [ -z "$sms" ]; then warn "the guard's /healthz gateway block could not be read"
+elif [ -n "$lasterr" ] && [ "$sent" = 0 ]; then fail "the SMS gateway has refused every code since the guard started, and delivered none: $lasterr"
+elif [ -n "$lasterr" ]; then warn "the SMS gateway's last answer was an error ($lasterr), though $sent codes went through since the guard started"
+else pass "the SMS gateway has no error on record"; fi
+# Secrets are the owner's alone: every file in the secrets folder is checked for its mode.
+open="$(find "$SECRETS" -maxdepth 1 -type f -perm -004 2>/dev/null | sed "s#^$SECRETS/##" | paste -sd' ')"
+[ -z "$open" ] && pass "every file in $SECRETS has the right mode" || fail "these files in $SECRETS have the wrong mode: $open"
 if [ -s "$HERE/auth-guard/driver-codes.json" ] && [ "$(tr -d ' \n\t' < "$HERE/auth-guard/driver-codes.json")" != '{}' ]; then
   warn "auth-guard/driver-codes.json has personal drivers' codes: expected empty on the live server"
 else pass "no personal driver codes"; fi
