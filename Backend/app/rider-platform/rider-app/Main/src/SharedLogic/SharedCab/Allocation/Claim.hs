@@ -144,7 +144,7 @@ offerDeadline st = case st.timer of
   OfferTimer d -> Just d
   _ -> Nothing
 
--- | The driver's allocation push; for an offer it carries what the accept sheet shows and when the offer lapses.
+-- | The driver's allocation push; every push carries the fare, and an offer adds what the accept sheet shows and when it lapses.
 notifyDriverOfAllocation ::
   AllocFlow m r =>
   FindingBooking ->
@@ -159,7 +159,7 @@ notifyDriverOfAllocation booking cand mbOfferDeadline =
     call = do
       let s = cand.rcSession
       merchant <- CQM.findById s.merchantId >>= fromMaybeM (MerchantNotFound s.merchantId.getId)
-      offerBooking <- join <$> forM mbOfferDeadline (\_ -> QFRFSTicketBooking.findById booking.bookingId)
+      fullBooking <- QFRFSTicketBooking.findById booking.bookingId >>= fromMaybeM (InvalidRequest ("Shared cab booking not found: " <> booking.bookingId.getId))
       -- the addresses only dress the card, so a failed lookup must not cost the driver the offer
       offerAddresses <- forM mbOfferDeadline $ \_ ->
         fromRight Map.empty <$> withTryCatch "sharedCabOfferAddresses" (stopAddresses s.merchantOperatingCityId [booking.boardStopCode, booking.dropStopCode])
@@ -174,11 +174,11 @@ notifyDriverOfAllocation booking cand mbOfferDeadline =
             boardStopCode = Just booking.boardStopCode,
             etaSeconds = Just cand.rcEtaToBoardStopSec,
             offerExpiresAt = mbOfferDeadline,
-            fare = (.totalPrice.amount) <$> offerBooking,
+            fare = fullBooking.totalPrice.amount,
             firstName = join offerRider >>= (.firstName) >>= listToMaybe . T.words,
             dropStopCode = booking.dropStopCode <$ mbOfferDeadline,
-            boardStop = offerBooking >>= (.fromStationName),
-            dropStop = offerBooking >>= (.toStationName),
+            boardStop = mbOfferDeadline >> fullBooking.fromStationName,
+            dropStop = mbOfferDeadline >> fullBooking.toStationName,
             boardStopAddress = offerAddresses >>= Map.lookup booking.boardStopCode,
             dropStopAddress = offerAddresses >>= Map.lookup booking.dropStopCode
           }

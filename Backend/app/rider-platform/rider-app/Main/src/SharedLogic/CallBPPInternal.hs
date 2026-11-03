@@ -1808,9 +1808,9 @@ data SharedCabAllocationReq = SharedCabAllocationReq
     vehicleNumber :: Maybe Text,
     boardStopCode :: Maybe Text,
     etaSeconds :: Maybe Int,
+    fare :: HighPrecMoney,
     -- the rest are set only for an offer the driver accepts or declines
     offerExpiresAt :: Maybe UTCTime,
-    fare :: Maybe HighPrecMoney,
     firstName :: Maybe Text,
     dropStopCode :: Maybe Text,
     boardStop :: Maybe Text,
