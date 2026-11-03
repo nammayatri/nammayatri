@@ -431,6 +431,7 @@ types:
     journeyId: Maybe Text
     latLong: Maybe LatLong
     timestamp: Maybe UTCTime
+    serviceTier: Maybe ServiceTierType
     derive: "Show"
 
   AvailableRoute:
@@ -880,5 +881,6 @@ apis:
       query:
         routeCodes: Text
         allowClusters: Bool
+        serviceTier: ServiceTierType
       response:
         type: "[PassingRoutes]"

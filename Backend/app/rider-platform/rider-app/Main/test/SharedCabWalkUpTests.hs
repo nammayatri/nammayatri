@@ -10,7 +10,7 @@ import Data.IORef (modifyIORef, newIORef, readIORef)
 import Data.Time (UTCTime (..), fromGregorian)
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
-import "rider-app" SharedLogic.SharedCab.WalkUp (CodeResolution (..), cabRouteRequest, cabRouteServiceTier, cabRouteStations, declaresSharedCab, enabledCabConfig, isStickerCode, passingCab, resolveCode, stopPairLegs, withoutCabRows)
+import "rider-app" SharedLogic.SharedCab.WalkUp (CodeResolution (..), cabRouteServiceTier, cabRouteStations, declaresSharedCab, enabledCabConfig, isSharedCabTier, isStickerCode, passingCab, resolveCode, stopPairLegs, withoutCabRows)
 import qualified "rider-app" Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -31,9 +31,9 @@ tests =
           testCase "a vehicle lookup takes the cab path only when the client asks for the SHARED_CAB tier; every other lookup is the bus path" $
             map declaresSharedCab [Just [Spec.SHARED_CAB], Just [Spec.PREMIUM, Spec.SHARED_CAB], Just [Spec.PREMIUM, Spec.SHUTTLE], Just [], Nothing]
               @?= [True, True, False, False, False],
-          testCase "serviceability answers from the cabs only for routes of a readable shared-cab feed" $
-            [cabRouteRequest (Just ["SC-A-F", "SC-A-R"]) ["SC-A-F"], cabRouteRequest (Just ["SC-A-F"]) ["SC-A-F", "MTC-1"], cabRouteRequest (Just ["SC-A-F"]) []] @?= [True, False, False],
-          testCase "a stop-search request (two stop codes, or just the source stop, no route) is a cab request only when the cab feed has a route there" $
+          testCase "route serviceability and a stop's passing routes take the cab path only for the SHARED_CAB tier; anything else is the bus path" $
+            map isSharedCabTier [Just Spec.SHARED_CAB, Just Spec.PREMIUM, Just Spec.ORDINARY, Nothing] @?= [True, False, False, False],
+          testCase "a cab request with stop codes and no route asks for the cab feed's routes at the stops; none there is no leg" $
             map
               (fmap (map (\ApiTypes.RouteCodesWithLeg {ApiTypes.legOrder = o, ApiTypes.routeCodes = c} -> (o, c))))
               [ stopPairLegs (Just "SC_POLO") ["SC-PRD-F"],
@@ -55,8 +55,6 @@ tests =
               cabRouteServiceTier False (Just [Spec.SHARED_CAB])
             ]
               @?= [Just Spec.SHARED_CAB, Nothing, Nothing, Nothing],
-          testCase "a failed or absent feed read (OTP down, no shared-cab feed) leaves the request on the bus path" $
-            cabRouteRequest Nothing ["SC-A-F"] @?= False,
           testCase "a cab route's stops come back in stop order with their points and the route's code" $
             map
               (\ApiFRFS.FRFSStationAPI {ApiFRFS.code = c, ApiFRFS.sequenceNum = n, ApiFRFS.lat = la, ApiFRFS.routeCodes = rc} -> (c, n, la, rc))

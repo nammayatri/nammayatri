@@ -2115,18 +2115,9 @@ postMultimodalRouteServiceability ::
     API.Types.UI.MultimodalConfirm.RouteServiceabilityReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
   )
+postMultimodalRouteServiceability (mbPersonId, _) _ req
+  | SharedCab.isSharedCabTier req.serviceTier = SharedCab.routeServiceability mbPersonId req
 postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes req =
-  SharedCab.routeServiceability mbPersonId req >>= maybe (postMultimodalRouteServiceabilityBus (mbPersonId, merchantId) mbAllPassingRoutes req) pure
-
-postMultimodalRouteServiceabilityBus ::
-  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-    API.Types.UI.MultimodalConfirm.RouteServiceabilityReq ->
-    Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
-  )
-postMultimodalRouteServiceabilityBus (mbPersonId, merchantId) mbAllPassingRoutes req =
   BAPMetrics.withTimeFRFSMerchant "routeServiceability" "total" merchantId.getId $ do
     person <- authenticate mbPersonId
     -- Piggyback rider-location recording onto this already-frequent poll (the shuttle screen's ETA
@@ -3434,19 +3425,11 @@ getMultimodalTrackStopRoutes ::
   Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe ServiceTierType ->
   Environment.Flow [ApiTypes.PassingRoutes]
-getMultimodalTrackStopRoutes (mbPersonId, merchantId) stopCode mbAllowClusters mbRouteCodes =
-  SharedCab.trackStopRoutes mbPersonId stopCode mbRouteCodes >>= maybe (getMultimodalTrackStopRoutesBus (mbPersonId, merchantId) stopCode mbAllowClusters mbRouteCodes) pure
-
-getMultimodalTrackStopRoutesBus ::
-  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-  ) ->
-  Kernel.Prelude.Text ->
-  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-  Environment.Flow [ApiTypes.PassingRoutes]
-getMultimodalTrackStopRoutesBus (mbPersonId, _merchantId) stopCode mbAllowClusters mbRouteCodes = do
+getMultimodalTrackStopRoutes (mbPersonId, _) stopCode _ mbRouteCodes mbServiceTier
+  | SharedCab.isSharedCabTier mbServiceTier = SharedCab.trackStopRoutes mbPersonId stopCode mbRouteCodes
+getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbAllowClusters mbRouteCodes _ = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <-

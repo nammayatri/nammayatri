@@ -70,7 +70,7 @@ Content-Type: application/json
 [Options]
 retry: 5
 retry-interval: 1000ms
-{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
+{"serviceTier": "SHARED_CAB", "routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
 jsonpath "$.legs[0].routeWithLiveVehicles[0]..[?(@.number == '{{plate_code}}' || @.vehicleNumber == '{{plate_code}}')].availableSeats" == 2
@@ -92,7 +92,7 @@ jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "BOARDED"
 POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
 Content-Type: application/json
-{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
+{"serviceTier": "SHARED_CAB", "routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
 jsonpath "$.legs[0].routeWithLiveVehicles[0]..[?(@.number == '{{plate_code}}' || @.vehicleNumber == '{{plate_code}}')].availableSeats" == 2
@@ -110,7 +110,7 @@ Content-Type: application/json
 [Options]
 retry: 5
 retry-interval: 1000ms
-{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
+{"serviceTier": "SHARED_CAB", "routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
 jsonpath "$.legs[0].routeWithLiveVehicles[0]..[?(@.number == '{{plate_code}}' || @.vehicleNumber == '{{plate_code}}')].availableSeats" == 4
@@ -260,7 +260,7 @@ Content-Type: application/json
 [Options]
 retry: 5
 retry-interval: 1000ms
-{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
+{"serviceTier": "SHARED_CAB", "routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
 jsonpath "$.legs[0].routeWithLiveVehicles[0]..[?(@.number == '{{plate_code}}' || @.vehicleNumber == '{{plate_code}}')].availableSeats" == 4

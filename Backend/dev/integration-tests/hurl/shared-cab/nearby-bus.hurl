@@ -14,7 +14,7 @@ jsonpath "$.buses" count == 0
 POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
 Content-Type: application/json
-{"sourceStopCode": "{{stop_code}}"}
+{"serviceTier": "SHARED_CAB", "sourceStopCode": "{{stop_code}}"}
 HTTP 200
 [Asserts]
 jsonpath "$.legs[0].routeWithLiveVehicles[*].routeCode" includes "{{stop_route}}"

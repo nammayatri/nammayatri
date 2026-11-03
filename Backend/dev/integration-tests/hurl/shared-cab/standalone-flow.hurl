@@ -17,7 +17,7 @@ jsonpath "$.session.status" == "ACTIVE"
 POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
 Content-Type: application/json
-{"sourceStopCode": "SC_POLO", "destinationStopCode": "SC_NONGTHYMMAI", "allowClusteredStops": true}
+{"serviceTier": "SHARED_CAB", "sourceStopCode": "SC_POLO", "destinationStopCode": "SC_NONGTHYMMAI", "allowClusteredStops": true}
 HTTP 200
 [Asserts]
 jsonpath "$.legs[0].routeWithLiveVehicles[0].routeCode" == "{{route_a}}"
@@ -123,7 +123,7 @@ Content-Type: application/json
 [Options]
 retry: 8
 retry-interval: 2000ms
-{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
+{"serviceTier": "SHARED_CAB", "routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
 jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[?(@.number == '{{plate_code}}')].serviceTierType" == "SHARED_CAB"
@@ -138,7 +138,7 @@ body not contains "{{plate}}"
 POST {{base_url}}/v2/multimodal/routeServiceability?allPassingRoutes=false
 token: {{token}}
 Content-Type: application/json
-{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}], "vehicleNumber": "{{plate}}"}
+{"serviceTier": "SHARED_CAB", "routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}], "vehicleNumber": "{{plate}}"}
 HTTP 200
 [Asserts]
 jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[0].number" == "{{plate}}"

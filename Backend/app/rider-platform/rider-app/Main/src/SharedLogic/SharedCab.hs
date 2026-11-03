@@ -11,6 +11,7 @@ module SharedLogic.SharedCab
     sharedCabBoardStops,
     walkUpCab,
     declaresSharedCab,
+    isSharedCabTier,
     routeServiceability,
     trackStopRoutes,
     withoutCabRows,
@@ -49,4 +50,4 @@ import SharedLogic.SharedCab.LegState (isSharedCabAgency, sharedCabFareTiers)
 import SharedLogic.SharedCab.RefundDecision (Refund, cancelRefund, isSharedCabBooking, readRefundDecision, refundAmounts, refundWithheld)
 import SharedLogic.SharedCab.RouteSnapshot (filterCabLegs)
 import SharedLogic.SharedCab.Schedule (keepChainsAlive)
-import SharedLogic.SharedCab.WalkUp (cabRouteServiceTier, cabRouteStations, declaresSharedCab, routeServiceability, trackStopRoutes, walkUpCab, withoutCabRows)
+import SharedLogic.SharedCab.WalkUp (cabRouteServiceTier, cabRouteStations, declaresSharedCab, isSharedCabTier, routeServiceability, trackStopRoutes, walkUpCab, withoutCabRows)
