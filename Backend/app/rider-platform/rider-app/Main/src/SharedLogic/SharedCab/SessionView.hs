@@ -46,20 +46,15 @@ data RiderRow = RiderRow
   }
   deriving (Show, Eq)
 
--- | Per stop, in route order: riders to board and riders getting off. A rider whose stop the route lacks goes in a trailing "Other stops" group.
-groupRidersByStop :: [(Text, Text)] -> [RiderRow] -> [RidersAtStop]
-groupRidersByStop stops rows =
-  [group stopName (== code) | (code, stopName) <- stops, nonEmpty (group stopName (== code))]
-    ++ [other | let other = group otherStopsName (`notElem` map fst stops), nonEmpty other]
+-- | Every rider holding seats, once each, with both stops by name; the app groups them per stop. Open offers are pendingOffersOf's.
+ridersOf :: [(Text, Text)] -> [RiderRow] -> [SharedCabRider]
+ridersOf stops rows =
+  [ SharedCabRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, boardStop = nameOf r.boardStopCode, dropStop = nameOf r.dropStopCode, fare = r.fare, riderStatus = r.riderStatus, minutesAway = r.minutesAway, expiresAt = r.expiresAt, chatChannelId = r.chatChannelId, callable = r.callable, riderRating = r.riderRating, boardStopAddress = r.boardStopAddress, dropStopAddress = r.dropStopAddress, distanceMeters = r.distanceMeters}
+    | r <- rows,
+      r.seats > 0,
+      isNothing r.offerExpiresAt
+  ]
   where
-    held = filter (\r -> r.seats > 0 && isNothing r.offerExpiresAt) rows
-    group stopName atStop =
-      RidersAtStop
-        { stopName,
-          boarding = [BoardingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, dropStop = nameOf r.dropStopCode, fare = r.fare, riderStatus = r.riderStatus, minutesAway = r.minutesAway, expiresAt = r.expiresAt, chatChannelId = r.chatChannelId, callable = r.callable, riderRating = r.riderRating, boardStopAddress = r.boardStopAddress, dropStopAddress = r.dropStopAddress, distanceMeters = r.distanceMeters} | r <- held, not r.boarded, atStop r.boardStopCode],
-          alighting = [AlightingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, chatChannelId = r.chatChannelId, callable = r.callable} | r <- held, r.boarded, atStop r.dropStopCode]
-        }
-    nonEmpty g = not (null g.boarding && null g.alighting)
     nameOf code = fromMaybe code (lookup code stops)
 
 -- | Metres along the route from the board stop to the drop stop: the straight legs between consecutive stops added up. None when either stop is not
@@ -125,6 +120,3 @@ pendingOffersOf stops rows =
     ]
   where
     nameOf code = fromMaybe code (lookup code stops)
-
-otherStopsName :: Text
-otherStopsName = "Other stops"
