@@ -86,8 +86,10 @@ updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode bankErrorUpdatedAt id
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> m (Maybe Domain.Types.Invoice.Invoice))
-findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> m (Maybe Domain.Types.Invoice.Invoice))
+findByPrimaryKey driverFeeId id = do findOneWithKV [Se.And [Se.Is Beam.driverFeeId $ Se.Eq (Kernel.Types.Id.getId driverFeeId), Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Invoice.Invoice -> m ())
 updateByPrimaryKey (Domain.Types.Invoice.Invoice {..}) = do
@@ -96,7 +98,6 @@ updateByPrimaryKey (Domain.Types.Invoice.Invoice {..}) = do
     [ Se.Set Beam.bankErrorCode bankErrorCode,
       Se.Set Beam.bankErrorMessage bankErrorMessage,
       Se.Set Beam.bankErrorUpdatedAt bankErrorUpdatedAt,
-      Se.Set Beam.driverFeeId (Kernel.Types.Id.getId driverFeeId),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.invoiceShortId invoiceShortId,
       Se.Set Beam.invoiceStatus invoiceStatus,
@@ -108,4 +109,4 @@ updateByPrimaryKey (Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.serviceName (Just serviceName),
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+    [Se.And [Se.Is Beam.driverFeeId $ Se.Eq (Kernel.Types.Id.getId driverFeeId), Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

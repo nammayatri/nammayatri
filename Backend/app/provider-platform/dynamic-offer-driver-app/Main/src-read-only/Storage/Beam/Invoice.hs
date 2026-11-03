@@ -34,11 +34,11 @@ data InvoiceT f = InvoiceT
   deriving (Generic, B.Beamable)
 
 instance B.Table InvoiceT where
-  data PrimaryKey InvoiceT f = InvoiceId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = InvoiceId . id
+  data PrimaryKey InvoiceT f = InvoiceId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = InvoiceId <$> driverFeeId <*> id
 
 type Invoice = InvoiceT Identity
 
-$(enableKVPGWithPartialIndex ''InvoiceT ['id] [['driverFeeId], ['driverId], ['invoiceShortId]] [SKeyPartial [('invoiceStatus, "ACTIVE_INVOICE")]])
+$(enableKVPGWithPartialIndex ''InvoiceT ['driverFeeId, 'id] [['driverFeeId], ['driverId], ['id], ['invoiceShortId]] [SKeyPartial [('invoiceStatus, "ACTIVE_INVOICE")]])
 
 $(mkTableInstances ''InvoiceT "invoice")
