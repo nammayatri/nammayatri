@@ -1092,6 +1092,7 @@ TransporterConfig:
       driverActivationWindow: Maybe Seconds
       scheduledRideVisibilityStages: Maybe [ScheduledRideVisibilityStage]
       enableScheduledRidePenaltyOrReward: Maybe Bool
+      topDriversFirstAdvanceTime: Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     ManualTollChargeConfig:
       tripCategories: Maybe [Text]
