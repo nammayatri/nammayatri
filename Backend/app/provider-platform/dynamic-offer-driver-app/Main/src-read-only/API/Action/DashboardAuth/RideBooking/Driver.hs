@@ -126,12 +126,12 @@ postDriverV2ExemptCash a5 a4 a3 a2 a1 =
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Driver.postDriverV2ExemptCash a5 a4 a2 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3) a1
     )
 
-getDriverInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.RideBooking.Driver.DriverInfoRes)
-getDriverInfo a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+getDriverInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.RideBooking.Driver.DriverInfoRes)
+getDriverInfo a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
-        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a9 a11 a10
-        Tools.ActorInfo.withDashboardUserActorInfo a9 $ Domain.Action.DashboardAuth.RideBooking.Driver.getDriverInfo a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a10 a12 a11
+        Tools.ActorInfo.withDashboardUserActorInfo a10 $ Domain.Action.DashboardAuth.RideBooking.Driver.getDriverInfo a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
     )
 
 getDriverFeedbackList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.RideBooking.Driver.GetFeedbackListRes)

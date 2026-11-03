@@ -156,6 +156,7 @@ getDriverInfoByPhoneNumber merchantShortId tokenInfo mbMobileNumber mbMobileCoun
             Nothing -- email
             Nothing -- personId
             Nothing -- walletId
+            Nothing -- operatorBadgeToken
       )
         `catch` \(err :: HTTPException) ->
           if toErrorCode err `elem` driverMissErrorCodes
