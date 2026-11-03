@@ -31,13 +31,6 @@ HTTP 400
 [Asserts]
 body contains "suspended"
 
-# the route list is empty
-GET {{base_url}}/v2/sharedCab/routes
-token: {{token}}
-HTTP 200
-[Asserts]
-jsonpath "$.routes" count == 0
-
 # the earlier FINDING booking still times out and is cancelled by the draining tick (cancelReason NO_CAB_FOUND)
 GET {{base_url}}/v2/multimodal/journey/{{journeyId}}/status
 token: {{token}}

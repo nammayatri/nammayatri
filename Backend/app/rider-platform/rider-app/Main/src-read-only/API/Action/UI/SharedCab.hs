@@ -25,24 +25,15 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "sharedCab" :> "routes" :> Get '[JSON] API.Types.UI.SharedCab.SharedCabRouteListResp :<|> TokenAuth :> "sharedCab" :> "booking"
-      :> Capture
-           "bookingId"
-           (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
-      :> "skip"
+  ( TokenAuth :> "sharedCab" :> "booking" :> Capture "bookingId" (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking) :> "skip"
       :> ReqBody
            '[JSON]
            API.Types.UI.SharedCab.SharedCabSkipReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getSharedCabRoutes :<|> postSharedCabBookingSkip
-
-getSharedCabRoutes :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler API.Types.UI.SharedCab.SharedCabRouteListResp)
-getSharedCabRoutes a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.SharedCab.getSharedCabRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+handler = postSharedCabBookingSkip
 
 postSharedCabBookingSkip ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
