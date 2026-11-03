@@ -101,7 +101,7 @@ candidateRoutes booking =
 
 resolveCabByCode :: DBooking.FRFSTicketBooking -> Text -> Environment.Flow [Session]
 resolveCabByCode booking code = do
-  sessions <- concat <$> mapM Session.activeSessionsOnRoute (candidateRoutes booking)
+  sessions <- concat <$> mapM (Session.activeSessionsOnRoute booking.merchantOperatingCityId) (candidateRoutes booking)
   let candidates = filter (\s -> boardingCodeMatches code s.vehicleNumber) sessions
   catMaybes <$> mapM serveCheck candidates
   where

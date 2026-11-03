@@ -128,7 +128,7 @@ cabRouteStations integratedBppConfigId routeCode color longName stops =
 liveSharedCabByCode :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow CodeResolution
 liveSharedCabByCode integratedBppConfig code = do
   routes <- OTPRest.getRoutesByGtfsId integratedBppConfig
-  plates <- concatMap (map (.session.vehicleNumber)) <$> mapM (RouteSnapshot.routeSnapshot . (.code)) routes
+  plates <- concatMap (map (.session.vehicleNumber)) <$> mapM (RouteSnapshot.routeSnapshot integratedBppConfig.merchantOperatingCityId . (.code)) routes
   pure (resolveCode code plates)
 
 -- | A live cab as the bus builder's live vehicle: its route on its feed, tagged SHARED_CAB. A cab has no waybill or schedule.
@@ -239,7 +239,7 @@ trackStopRoutes mbPersonId stopCode mbRouteCodes = do
   where
     passingRoute cabIbc now cfg stopPoint code = do
       mbRoute <- OTPRest.getRouteByRouteId cabIbc code
-      snapshot <- RouteSnapshot.routeSnapshot code
+      snapshot <- RouteSnapshot.routeSnapshot cabIbc.merchantOperatingCityId code
       let cabs = flip mapMaybe snapshot $ \c -> do
             track <- c.track
             u <- Approach.cabStopEta now cfg stopCode (fromMaybe (LatLong track.vehicleInfo.latitude track.vehicleInfo.longitude) stopPoint) track
@@ -280,7 +280,7 @@ sharedCabRouteServiceability person cabIbc req legReqs = do
     routes <- forM (nub legReq.routeCodes) $ \code -> do
       mbRoute <- OTPRest.getRouteByRouteId cabIbc code
       stops <- sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode code cabIbc
-      snapshot <- RouteSnapshot.routeSnapshot code
+      snapshot <- RouteSnapshot.routeSnapshot cabIbc.merchantOperatingCityId code
       let wanted = filter (\c -> maybe True (\plate -> c.session.vehicleNumber == plate) req.vehicleNumber) snapshot
           boardStop = req.sourceStopCode >>= \stopCode -> (stopCode,) . (.stopPoint) <$> find ((== stopCode) . (.stopCode)) stops
           cabOf c =

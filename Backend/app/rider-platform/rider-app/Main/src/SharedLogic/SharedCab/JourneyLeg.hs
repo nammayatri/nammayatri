@@ -103,7 +103,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
           }
   -- how many cabs run the route matters only while the rider waits for one
   cabsComing <- case mbRouteCode of
-    Just routeCode | mbState == Just SharedCabLeg.FINDING -> length <$> RouteSnapshot.routeSnapshot routeCode
+    Just routeCode | mbState == Just SharedCabLeg.FINDING -> length <$> RouteSnapshot.routeSnapshot booking.merchantOperatingCityId routeCode
     _ -> pure 0
   let inWindow = isJust tripSession && maybe False SharedCabLeg.callWindowState mbState
   -- DIRECT puts the driver's own number where the app already reads the ExoPhone; a failed driver-app read must not fail the poll
@@ -127,7 +127,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
       skipAvailable = maybe False (\st -> SharedCabLeg.skipAvailableFor st skipUsed assignedEtaSec) mbState
   upcomingCabs <- case (shown, mbRouteCode) of
     (Just plate, Just routeCode) | approaching -> do
-      snapshot <- RouteSnapshot.routeSnapshot routeCode
+      snapshot <- RouteSnapshot.routeSnapshot booking.merchantOperatingCityId routeCode
       let approachingCabs =
             [ (c, etaSec)
               | c <- snapshot,

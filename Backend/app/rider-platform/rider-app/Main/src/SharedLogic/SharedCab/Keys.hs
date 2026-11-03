@@ -4,6 +4,7 @@ module SharedLogic.SharedCab.Keys
   ( -- * Session (per plate / route)
     sessionKey,
     routeKey,
+    legacyRouteKey,
     driverInfoKey,
     plateLockKey,
     offRouteKey,
@@ -51,8 +52,14 @@ type CityId = Id DMOC.MerchantOperatingCity
 sessionKey :: Text -> Text
 sessionKey plate = "sharedcab:session:" <> plate
 
-routeKey :: Text -> Text
-routeKey routeCode = "sharedcab:route:" <> routeCode
+-- | Per city: two cities' feeds may share a route code.
+routeKey :: CityId -> Text -> Text
+routeKey cityId routeCode = "sharedcab:route:" <> cityId.getId <> ":" <> routeCode
+
+-- | The route set before it was per city, read for one release so cabs whose sessions predate the deploy stay visible (it is no
+-- longer written, so it lapses with its 16 h TTL). TODO: drop with its read in activeSessionsOnRoute.
+legacyRouteKey :: Text -> Text
+legacyRouteKey routeCode = "sharedcab:route:" <> routeCode
 
 driverInfoKey :: Text -> Text
 driverInfoKey plate = "sharedcab:driverinfo:" <> plate

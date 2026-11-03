@@ -63,9 +63,11 @@ driver() { clean; h driver-flow.hurl; }
 flush() {
   clean
   h flush-before.hurl
-  # one DEL per key: the keys hash to different cluster slots
+  # one DEL per key: the keys hash to different cluster slots. The route set is per city, read off the session before it goes.
+  local city
+  city=$(${REDIS_CLI:-redis-cli} GET "sharedcab:session:$(var plate)" | jq -r .merchantOperatingCityId)
   ${REDIS_CLI:-redis-cli} DEL "sharedcab:session:$(var plate)" >/dev/null
-  ${REDIS_CLI:-redis-cli} DEL "sharedcab:route:$(var route_a)" >/dev/null
+  ${REDIS_CLI:-redis-cli} DEL "sharedcab:route:$city:$(var route_a)" >/dev/null
   h flush-after.hurl
 }
 # one login per run.sh invocation (/v2/auth is rate limited): the verify response is cached in a file

@@ -364,7 +364,7 @@ mkSessionRespFrom cabReads s = do
   shapePolyline <- (>>= (.polyline)) <$> OTPRest.getRouteByRouteId integratedBppConfig s.routeCode
   let polyline = maybe [] KEPP.decode shapePolyline
   snapshotCab <- case cabReads of
-    CachedCab -> find ((== s.vehicleNumber) . (.session.vehicleNumber)) <$> RouteSnapshot.routeSnapshot s.routeCode
+    CachedCab -> find ((== s.vehicleNumber) . (.session.vehicleNumber)) <$> RouteSnapshot.routeSnapshot s.merchantOperatingCityId s.routeCode
     FreshCab -> pure Nothing
   -- a cab missing from the snapshot (PAUSED, or not yet in it) is read fresh
   (mbTrack, available) <- case snapshotCab of

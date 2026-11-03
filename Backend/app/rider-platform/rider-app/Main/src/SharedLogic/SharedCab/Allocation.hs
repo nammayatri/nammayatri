@@ -130,7 +130,7 @@ claimPass cityId = do
     cfg <- Config.getTunables cityId
     now <- getCurrentTime
     (live, positionsByRoute) <- readCity cityId
-    claimFindings cfg now live positionsByRoute
+    claimFindings cityId cfg now live positionsByRoute
 
 type RoutePositions = [(Text, [LT.VehicleTrackingOnRouteResp])]
 
@@ -146,7 +146,7 @@ allocationPass cityId = do
   now <- getCurrentTime
   (live, positionsByRoute) <- readCity cityId
   closeExpired cfg now live positionsByRoute
-  when enabled $ claimFindings cfg now live positionsByRoute
+  when enabled $ claimFindings cityId cfg now live positionsByRoute
   pure (live, positionsByRoute)
 
 -- | The city's live bookings and the LTS positions of every route that has one waiting for, or holding, a cab.
@@ -169,8 +169,8 @@ closeExpired cfg now live positionsByRoute = expireTimers cfg now movingOn silen
     movingOn plate route = movingCab now cfg.ltsMaxAgeSec plate (onRoute route)
     silentOn plate route = silentCab now cfg.ltsMaxAgeSec plate (onRoute route)
 
-claimFindings :: AllocFlow m r => Config.SharedCabTunables -> UTCTime -> [LiveBooking] -> RoutePositions -> m ()
-claimFindings cfg now live positionsByRoute = do
+claimFindings :: AllocFlow m r => Id DMOC.MerchantOperatingCity -> Config.SharedCabTunables -> UTCTime -> [LiveBooking] -> RoutePositions -> m ()
+claimFindings cityId cfg now live positionsByRoute = do
   parties <- partySizes (map (.booking) (filter isFinding live)) -- one query for the tick; a party needs all its seats
   findings <- forM (mapMaybe (\lb -> (lb.booking,) <$> findingOf (partyOf parties) lb) live) $ \(b, fb) -> do
     since <- readFindingSince fb.bookingId fb.findingSince
@@ -178,7 +178,7 @@ claimFindings cfg now live positionsByRoute = do
   pushTimeFallbacks cfg now findings
   forM_ (groupAllOn (.routeCode) (map snd findings)) $ \(routeCode, bookings) ->
     whenJust (lookup routeCode positionsByRoute) $ \positions -> do
-      snapshot <- RouteSnapshot.routeSnapshot routeCode
+      snapshot <- RouteSnapshot.routeSnapshot cityId routeCode
       let sessions = map (.session) snapshot
       -- the route's stops in sequence, shared by its cabs
       routeSeats <- traverse Seats.cabSeats (listToMaybe sessions)

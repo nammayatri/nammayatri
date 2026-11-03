@@ -1,4 +1,4 @@
-# Flush recovery, part 2: run.sh has deleted sharedcab:session:{plate} and sharedcab:route:{route_a}. GET session rebuilds
+# Flush recovery, part 2: run.sh has deleted sharedcab:session:{plate} and sharedcab:route:{city}:{route_a}. GET session rebuilds
 # the session from the plate's live vehicle_trip row; no re-select needed.
 
 # Restored: same route and run, status from the trip row

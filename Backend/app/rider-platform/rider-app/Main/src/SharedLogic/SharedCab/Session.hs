@@ -22,22 +22,25 @@ module SharedLogic.SharedCab.Session
 where
 
 import qualified Data.Aeson as A
+import Data.List (nub)
 import qualified Database.Redis as RawRedis
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DBookingStatus
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.VehicleTrip as DVT
 import qualified Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import Lib.Scheduler (JobCreator)
 import SharedLogic.SharedCab.Booking (ridersOnBoard, shared)
 import qualified SharedLogic.SharedCab.Booking as Booking
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
-import SharedLogic.SharedCab.Keys (driverInfoKey, plateLockKey, routeKey, sessionKey)
+import SharedLogic.SharedCab.Keys (driverInfoKey, legacyRouteKey, plateLockKey, routeKey, sessionKey)
 import SharedLogic.SharedCab.LegState (seatsHeld)
 import SharedLogic.SharedCab.Lock (withOwnedLock)
 import SharedLogic.SharedCab.LtsAttach
@@ -127,14 +130,16 @@ restoreSeats s bookings = do
 
 -- | The route set is an index, the session key is truth: a stale member is repaired lazily under the plate lock (not re-entrant, so
 -- no caller may hold it), and the SREM is skipped if the plate flapped back onto this route, so an A->B->A move isn't undone.
-activeSessionsOnRoute :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Text -> m [Session]
-activeSessionsOnRoute route = do
-  plates <- shared $ Redis.sMembers (routeKey route)
-  catMaybes <$> mapM keepOrRepair plates
+activeSessionsOnRoute :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Id DMOC.MerchantOperatingCity -> Text -> m [Session]
+activeSessionsOnRoute cityId route = do
+  plates <- shared $ Redis.sMembers (routeKey cityId route)
+  legacyPlates <- shared $ Redis.sMembers (legacyRouteKey route)
+  catMaybes <$> mapM keepOrRepair (nub (plates <> legacyPlates))
   where
     keepOrRepair plate =
       routeMember route <$> readSessionStrict plate >>= \case
-        LiveMember s -> pure (Just s)
+        -- the legacy set is shared by every city: another city's cab on the same route code is live, not stale
+        LiveMember s -> pure $ if s.merchantOperatingCityId == cityId then Just s else Nothing
         StaleMember -> repair plate >> pure Nothing
         UnknownMember -> Nothing <$ logWarning ("sharedCab: session of " <> plate <> " on " <> route <> " unreadable, route-set repair skipped")
     repair plate =
@@ -142,7 +147,7 @@ activeSessionsOnRoute route = do
         >>= either (\e -> logWarning $ "sharedCab: route-set repair of " <> plate <> " on " <> route <> " skipped: " <> show e) pure
     reread plate =
       routeMember route <$> readSessionStrict plate >>= \case
-        StaleMember -> void $ shared $ Redis.srem (routeKey route) [plate]
+        StaleMember -> void $ shared $ Redis.srem (routeKey cityId route) [plate] >> Redis.srem (legacyRouteKey route) [plate]
         _ -> pure ()
 
 -- | 'readSession' answers Nothing for a missing key, a failed read and an undecodable value alike (and deletes the last); the route-set
@@ -161,8 +166,8 @@ saveSession :: (Redis.HedisFlow m r, MonadFlow m) => Maybe Session -> Session ->
 saveSession old new = shared $ do
   Redis.setExp (sessionKey new.vehicleNumber) new sessionTtlSec
   let moves = routeSetMoves old new
-  forM_ moves.removeFrom $ \route -> void $ Redis.srem (routeKey route) [new.vehicleNumber]
-  forM_ moves.addTo $ \route -> Redis.sAddExp (routeKey route) [new.vehicleNumber] sessionTtlSec
+  forM_ moves.removeFrom $ \route -> void $ Redis.srem (routeKey (maybe new.merchantOperatingCityId (.merchantOperatingCityId) old) route) [new.vehicleNumber]
+  forM_ moves.addTo $ \route -> Redis.sAddExp (routeKey new.merchantOperatingCityId route) [new.vehicleNumber] sessionTtlSec
   pure new
 
 closeLiveTrip :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> DVT.VehicleTripEndReason -> UTCTime -> m ()

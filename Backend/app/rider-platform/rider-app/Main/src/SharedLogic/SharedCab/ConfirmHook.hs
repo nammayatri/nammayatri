@@ -81,5 +81,5 @@ recordPreferredCab booking isSpotBooking = do
     when (isSharedCabBooking booking && not isSpotBooking) $ do
       cfg <- Config.getTunables booking.merchantOperatingCityId
       when cfg.pickEnabled $ do
-        sessions <- maybe (pure []) Session.activeSessionsOnRoute booking.routeCode
+        sessions <- maybe (pure []) (Session.activeSessionsOnRoute booking.merchantOperatingCityId) booking.routeCode
         whenJust (cabForId cabId sessions) $ writePreferred (allocKeyTtl cfg) booking.id

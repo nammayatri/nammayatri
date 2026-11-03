@@ -16,6 +16,7 @@ import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Common (Seconds (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import "rider-app" SharedLogic.SharedCab.JourneyLeg (sessionOnTrip)
+import "rider-app" SharedLogic.SharedCab.Keys (routeKey)
 import "rider-app" SharedLogic.SharedCab.Session (stranded)
 import "rider-app" SharedLogic.SharedCab.SessionState
 import qualified "rider-app" SharedLogic.SharedCab.SessionView as View
@@ -104,6 +105,8 @@ tests =
       testCase "route change points the session at the new trip" $
         switchRoute "R2" (Id "trip2") active
           @?= active {routeCode = "R2", vehicleTripId = Id "trip2", version = 4},
+      testCase "two cities whose feeds share a route code keep separate route sets" $
+        (routeKey (Id "shillong") "R1" == routeKey (Id "tura") "R1", routeKey (Id "shillong") "R1") @?= (False, "sharedcab:route:shillong:R1"),
       testCase "route change leaves the old route set and joins the new one" $
         routeSetMoves (Just active) (switchRoute "R2" (Id "trip2") active) @?= RouteSetMoves ["R1"] ["R2"],
       testCase "route change closes the old trip as COMPLETED" $
