@@ -22,6 +22,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.DriverPool.DriverPoolData
 import qualified SharedLogic.DriverPool.DriverPoolMigrations as Migrations
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv, poolField, publishDriverPoolData)
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
@@ -44,7 +45,8 @@ getOrBuildDriverPoolDataBatch ::
     MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Bool ->
   Bool ->
@@ -70,6 +72,8 @@ getOrBuildDriverPoolDataBatch onlinePayment isPrepaidEnabled driverIds = do
         logInfo $ "DriverPoolData cold start: building from DB for " <> show (length missing) <> " drivers"
         b <- buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled missing
         mapM_ (setDriverPoolDataByCloud deploymentCloudType) b
+        -- The vehicle number just written to the pool data, from the record in hand.
+        forM_ b $ \dpd -> publishDriverPoolData dpd.driverId [poolField "registrationNo" dpd.registrationNo]
         pure b
   pure $ migratedEntries <> builtFromDB
 

@@ -74,6 +74,7 @@ import SharedLogic.Allocator (AllocatorJobType (..), CheckDriverPickupProgressJo
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DriverPool as DP
+import qualified SharedLogic.DriverPool.DriverAnalyticsEvent as DAE
 import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -264,6 +265,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   unless bookingPreAssigned $ QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
   when booking.isScheduled $ FindAnotherDriver.clearSwap booking
+  DAE.publishRideAssigned booking ride
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
   Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
@@ -835,6 +837,7 @@ pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDrive
       DP.decrementSrdSentCount driverReq.createdAt driverId
       Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.OfferPulled driverId driverReq.searchTryId.getId)
       void $ QSRD.updateDriverResponse (Just SReqD.Pulled) SReqD.Inactive Nothing driverReq.renderedAt driverReq.respondedAt driverReq.id
+      DAE.publishPopupResponse driverReq SReqD.Pulled Nothing Nothing
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       Notify.notifyDriverClearedFare merchantOpCityId driver_ driverReq.searchTryId estimatedFare
 

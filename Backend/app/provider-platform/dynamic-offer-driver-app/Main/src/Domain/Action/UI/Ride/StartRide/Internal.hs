@@ -36,6 +36,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, HasShortDurationRetryCfg, fromMaybeM, logTagInfo)
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.SessionizerMetrics.Types.Event
+import qualified SharedLogic.DriverPool.DriverAnalyticsEvent as DAE
 import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -84,6 +85,7 @@ startRideTransaction driverId ride bookingId firstPoint merchantId odometer tran
   logTagInfo "startRide" ("Updating driver_flow_status to ON_RIDE for DriverId " <> getId driverId)
   DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig driverInfo.active Nothing DDFS.ON_RIDE driverInfo (Just True) Nothing
   QRide.updateStatus ride.id SRide.INPROGRESS
+  DAE.publishRideStarted ride
   QBE.logRideCommencedEvent (cast driverId) bookingId ride.id ride.distanceUnit
 
 -- | A shared-route run is a bus to the location service: pings carry the route and the plate, and the bus pipeline writes
