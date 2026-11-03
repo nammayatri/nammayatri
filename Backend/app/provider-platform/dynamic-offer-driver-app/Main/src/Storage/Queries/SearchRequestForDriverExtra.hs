@@ -20,6 +20,8 @@ import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Sequelize as Se
+import SharedLogic.DriverPool.DriverAnalyticsEvent (publishPopupResponse, publishPopupsSent)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.OrphanInstances.SearchRequestForDriver ()
@@ -39,8 +41,10 @@ searchReqestForDriverkeyExpiry = 5 * 60 -- 5 mins
 createWithoutDriverLookup :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequestForDriver -> m ()
 createWithoutDriverLookup = createWithKV
 
-createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => [SearchRequestForDriver] -> m ()
-createMany = traverse_ createOne
+createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r, DriverPoolStateEnv r) => [SearchRequestForDriver] -> m ()
+createMany srds = do
+  traverse_ createOne srds
+  publishPopupsSent srds
   where
     createOne :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => SearchRequestForDriver -> m ()
     createOne srd = do
@@ -98,13 +102,13 @@ partitionRespondable :: UTCTime -> [SearchRequestForDriver] -> ([SearchRequestFo
 partitionRespondable now = partition (isRespondableAt now)
 
 -- | Retract rows without recording a response: for offers that expired unanswered.
-setInactiveByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [SearchRequestForDriver] -> m ()
+setInactiveByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, DriverPoolStateEnv r) => [SearchRequestForDriver] -> m ()
 setInactiveByIds = retractByIds Nothing
 
-setInactiveAndPulledByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [SearchRequestForDriver] -> m ()
+setInactiveAndPulledByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, DriverPoolStateEnv r) => [SearchRequestForDriver] -> m ()
 setInactiveAndPulledByIds = retractByIds (Just Domain.Pulled)
 
-retractByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe SearchRequestForDriverResponse -> [SearchRequestForDriver] -> m ()
+retractByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, DriverPoolStateEnv r) => Maybe SearchRequestForDriverResponse -> [SearchRequestForDriver] -> m ()
 retractByIds _ [] = pure ()
 retractByIds mbResponse srfds = do
   now <- getCurrentTime
@@ -124,6 +128,8 @@ retractByIds mbResponse srfds = do
         <> maybe [] (\response -> [Se.Set BeamSRFD.response (Just response)]) mbResponse
     )
     [Se.Is BeamSRFD.id (Se.In $ (.id.getId) <$> srfds)]
+  when (mbResponse == Just Domain.Pulled) $
+    forM_ srfds $ \s -> publishPopupResponse s Domain.Pulled Nothing Nothing
 
 findByDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => Id Person -> m [SearchRequestForDriver]
 findByDriver (Id driverId) = do

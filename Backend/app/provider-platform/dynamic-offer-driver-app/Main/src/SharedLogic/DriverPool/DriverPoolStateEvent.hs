@@ -18,9 +18,10 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
--- | Env needed to publish driver pool data events. A 'Nothing' topic
--- disables publishing, so the event can be switched on per deployment.
-type DriverPoolStateEnv r = (HasKafkaProducer r, HasField "driverPoolStateTopic" r (Maybe Text))
+-- | Env needed to publish driver pool data events and driver analytics events
+-- ("SharedLogic.DriverPool.DriverAnalyticsEvent"). A 'Nothing' topic disables
+-- that stream, so each can be switched on per deployment.
+type DriverPoolStateEnv r = (HasKafkaProducer r, HasField "driverPoolStateTopic" r (Maybe Text), HasField "driverAnalyticsEventsTopic" r (Maybe Text))
 
 -- | One changed field of a driver's pool data, named as in 'DriverPoolData'.
 type PoolField = AT.Pair

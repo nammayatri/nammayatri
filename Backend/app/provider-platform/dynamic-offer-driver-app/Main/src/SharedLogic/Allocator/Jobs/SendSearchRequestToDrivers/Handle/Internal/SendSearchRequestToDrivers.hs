@@ -86,6 +86,7 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
 import qualified SharedLogic.DriverPool as SDP
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
+import qualified SharedLogic.DriverPool.DriverAnalyticsEvent as DAE
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -739,10 +740,12 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
                   QSRD.createMany [sReqFD]
                   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
                   driverStats <- QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
+                  acceptStartedAt <- getCurrentTime
                   -- first Nothing: the allocator's silent-assign already bailed on any reused (NEW) booking above, so it never needs the reallocation assign.
                   (driverFCMPulledList, _) <- acceptDynamicOfferDriverRequest Nothing Nothing merchant.id searchReq.merchantOperatingCityId merchant searchTry searchReq driver sReqFD Nothing Nothing Nothing Nothing Nothing Nothing driverStats transporterConfig Nothing
                   respondedAt <- getCurrentTime
                   QSRD.updateDriverResponse (Just Accept) Inactive Nothing (Just respondedAt) (Just respondedAt) sReqFD.id
+                  DAE.publishPopupAccepted sReqFD acceptStartedAt (Just respondedAt) (Just respondedAt)
                   -- The same post-accept bundle respondQuote runs, so silent and manual accepts
                   -- stay indistinguishable to analytics, funnel metrics and the score/pool counters.
                   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
