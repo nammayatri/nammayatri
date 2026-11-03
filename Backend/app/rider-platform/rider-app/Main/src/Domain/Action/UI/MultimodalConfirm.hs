@@ -871,9 +871,11 @@ getPublicTransportVehicleData ::
     Kernel.Prelude.Maybe [ServiceTierType] ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber mbNewServiceTiers =
-  SharedCab.walkUpVehicleData mbPersonId vehicleNumber $ \precomputed -> case vehicleType of
-    BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers precomputed
+getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber mbNewServiceTiers = do
+  -- only the app's shared-cab entry asks for the tier, so a bus lookup never pays for a cab one
+  cabLive <- if SharedCab.declaresSharedCab mbNewServiceTiers then Just <$> SharedCab.walkUpCab mbPersonId vehicleNumber else pure Nothing
+  case vehicleType of
+    BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers cabLive
     _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
 
 -- Bus block/unblock helpers (Redis-backed, TTL'd). Bus-only, so kept local to this module.
@@ -1157,10 +1159,10 @@ getPublicTransportDataImpl ::
     Kernel.Prelude.Maybe VehicleCategory ->
     Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe [ServiceTierType] ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Maybe (DIBC.IntegratedBPPConfig, JLU.VehicleLiveRouteInfo)) ->
+    Kernel.Prelude.Maybe (DIBC.IntegratedBPPConfig, JLU.VehicleLiveRouteInfo) ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData mbNewServiceTiers precomputedLive = do
+getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData mbNewServiceTiers cabLive = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -1187,23 +1189,21 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
     blocked <- isVehicleBlocked integratedBPPConfigs vehicleNumber
     when blocked $ throwError (BusBlocked vehicleNumber)
   mbVehicleLiveRouteInfo <-
-    case precomputedLive of
-      Just known -> pure known
-      Nothing ->
-        case mbVehicleNumber of
-          Just vehicleNumber -> do
-            mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo vehicleNumber
-            case mbVehicleOverrideInfo of
-              Just (overrideScope, (sourceVehicleNumber, overrideWaybillNo)) -> do
-                mbSourceRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs sourceVehicleNumber Nothing
-                case JLU.classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
-                  JLU.FleetOverrideUsable -> pure mbSourceRouteInfo
-                  JLU.FleetOverrideFinished -> do
-                    Dispatcher.delFleetOverrideInfo overrideScope vehicleNumber
-                    getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
-                  JLU.FleetOverrideNotYetUsable -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
-              Nothing -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
-          Nothing -> return Nothing
+    case mbVehicleNumber of
+      _ | isJust cabLive -> pure cabLive
+      Just vehicleNumber -> do
+        mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo vehicleNumber
+        case mbVehicleOverrideInfo of
+          Just (overrideScope, (sourceVehicleNumber, overrideWaybillNo)) -> do
+            mbSourceRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs sourceVehicleNumber Nothing
+            case JLU.classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
+              JLU.FleetOverrideUsable -> pure mbSourceRouteInfo
+              JLU.FleetOverrideFinished -> do
+                Dispatcher.delFleetOverrideInfo overrideScope vehicleNumber
+                getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
+              JLU.FleetOverrideNotYetUsable -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
+          Nothing -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
+      Nothing -> return Nothing
 
   -- Increment metrics for vehicle data fields
   fork "incrementVehicleDataMetrics" $
@@ -3030,10 +3030,9 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
   legSearchId <- journeyLeg.legSearchId & fromMaybeM (InvalidRequest $ "Leg search ID not found for journey: " <> journeyLeg.id.getId)
   booking <- QFRFSTicketBooking.findBySearchId (Id legSearchId) >>= fromMaybeM (BookingNotFound $ "FRFS booking with search ID:" <> legSearchId)
-  ticketsBefore <- map (.status) <$> QFRFSTicket.findAllByTicketBookingId booking.id
   SharedCab.tryBoardSharedCab journey journeyLeg booking mbPersonId req >>= \case
-    Just outcome -> do
-      when (SharedCab.firstUse ticketsBefore outcome) $
+    Just (outcome, firstUse) -> do
+      when firstUse $
         fork "event_tracking: pt_booking_used" $ trackPTBookingUsed journey booking
       SharedCab.boardingResponse outcome <$> (generateJourneyInfoResponse journey =<< JM.getAllLegsInfo journey.riderId journeyId)
     Nothing -> onboardBusOrMetro (mbPersonId, merchantId) journeyId req journey journeyLeg booking
@@ -3080,7 +3079,6 @@ onboardBusOrMetro (mbPersonId, merchantId) journeyId req journey journeyLeg book
   vehicleType <-
     case journeyLeg.mode of
       DTrip.Bus -> return Enums.BUS
-      DTrip.SharedCab -> return Enums.BUS
       DTrip.Metro -> return Enums.METRO
       DTrip.Subway -> return Enums.SUBWAY
       _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
@@ -3158,7 +3156,6 @@ onboardBusOrMetro (mbPersonId, merchantId) journeyId req journey journeyLeg book
       let frfsVehicleCategory =
             case journeyLeg.mode of
               DTrip.Bus -> Spec.BUS
-              DTrip.SharedCab -> Spec.BUS
               DTrip.Metro -> Spec.METRO
               DTrip.Subway -> Spec.SUBWAY
               _ -> Spec.BUS

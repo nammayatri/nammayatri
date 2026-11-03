@@ -261,18 +261,21 @@ applyBoarding journeyLeg booking freshBooking fresh eligible = do
         DJourneyLeg.finalBoardedBusServiceTierType = booking.serviceTierType
       }
 
--- | The SHARED_CAB branch; `Nothing` means "not our tier" and the caller falls through to the bus/metro body.
+-- | The SHARED_CAB branch; `Nothing` means "not our tier" and the caller falls through to the bus/metro body. With the outcome, whether
+-- it put the booking's tickets in use for the first time (see 'firstUse'), so only a cab boarding reads the tickets beforehand.
 tryBoardSharedCab ::
   DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
   DBooking.FRFSTicketBooking ->
   Maybe (Id DPerson.Person) ->
   API.OnboardedVehicleDetailsReq ->
-  Environment.Flow (Maybe SharedCabBoardOutcome)
+  Environment.Flow (Maybe (SharedCabBoardOutcome, Bool))
 tryBoardSharedCab _ _ booking _ _
   | not (isSharedCabBooking booking) = pure Nothing
-tryBoardSharedCab journey journeyLeg booking mbPersonId req =
-  requireSharedCabEnabled booking.merchantOperatingCityId >> boardSharedCab journey journeyLeg booking mbPersonId req
+tryBoardSharedCab journey journeyLeg booking mbPersonId req = do
+  requireSharedCabEnabled booking.merchantOperatingCityId
+  ticketsBefore <- map (.status) <$> QTicket.findAllByTicketBookingId booking.id
+  fmap (\outcome -> (outcome, firstUse ticketsBefore outcome)) <$> boardSharedCab journey journeyLeg booking mbPersonId req
 
 -- | A boarding that puts a booking's tickets in use for the first time (the bus counts its booking used at check-in, so a cab does at boarding).
 firstUse :: [TicketStatus.FRFSTicketStatus] -> SharedCabBoardOutcome -> Bool

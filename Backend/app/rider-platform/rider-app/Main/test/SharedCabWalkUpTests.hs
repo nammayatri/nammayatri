@@ -10,7 +10,7 @@ import Data.IORef (modifyIORef, newIORef, readIORef)
 import Data.Time (UTCTime (..), fromGregorian)
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
-import "rider-app" SharedLogic.SharedCab.WalkUp (CodeResolution (..), WalkUpChoice (..), cabRouteRequest, cabRouteServiceTier, cabRouteStations, chooseWalkUp, enabledCabConfig, isStickerCode, passingCab, probeBus, resolveCode, stopPairLegs, withoutCabRows)
+import "rider-app" SharedLogic.SharedCab.WalkUp (CodeResolution (..), cabRouteRequest, cabRouteServiceTier, cabRouteStations, declaresSharedCab, enabledCabConfig, isStickerCode, passingCab, resolveCode, stopPairLegs, withoutCabRows)
 import qualified "rider-app" Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -28,12 +28,9 @@ tests =
           testCase "no cab ends in the code" $ resolveCode "1234" ["ML05A9999", "ML05B8888"] @?= NoCab,
           testCase "two cabs end in the code: the rider picks a route" $ resolveCode "9999" ["ML05A9999", "ML07C9999"] @?= ManyCabs,
           testCase "one cab on two routes is still one cab" $ resolveCode "9999" ["ML05A9999", "ML05A9999"] @?= OneCab "ML05A9999",
-          testCase "a bus the fleet lookup knows by a four-digit code still resolves to the bus, even if cabs end in it" $
-            [chooseWalkUp True (OneCab "ML05A9999"), chooseWalkUp True ManyCabs, chooseWalkUp True NoCab] @?= [UseBus, UseBus, UseBus],
-          testCase "an unknown number (the bus path answers with the whole feed, no vehicle found) resolves to the one cab" $
-            chooseWalkUp False (OneCab "ML05A9999") @?= UseCab "ML05A9999",
-          testCase "several cabs, and no bus vehicle: the route picker; no cab either: the bus path's own answer" $
-            [chooseWalkUp False ManyCabs, chooseWalkUp False NoCab] @?= [PickRoute, UseBus],
+          testCase "a vehicle lookup takes the cab path only when the client asks for the SHARED_CAB tier; every other lookup is the bus path" $
+            map declaresSharedCab [Just [Spec.SHARED_CAB], Just [Spec.PREMIUM, Spec.SHARED_CAB], Just [Spec.PREMIUM, Spec.SHUTTLE], Just [], Nothing]
+              @?= [True, True, False, False, False],
           testCase "serviceability answers from the cabs only for routes of a readable shared-cab feed" $
             [cabRouteRequest (Just ["SC-A-F", "SC-A-R"]) ["SC-A-F"], cabRouteRequest (Just ["SC-A-F"]) ["SC-A-F", "MTC-1"], cabRouteRequest (Just ["SC-A-F"]) []] @?= [True, False, False],
           testCase "a stop-search request (two stop codes, or just the source stop, no route) is a cab request only when the cab feed has a route there" $
@@ -60,11 +57,6 @@ tests =
               @?= [Just Spec.SHARED_CAB, Nothing, Nothing, Nothing],
           testCase "a failed or absent feed read (OTP down, no shared-cab feed) leaves the request on the bus path" $
             cabRouteRequest Nothing ["SC-A-F"] @?= False,
-          testCase "the bus probe passes a found vehicle on, reports an unknown number as Nothing, and counts a failed lookup as not found (so a transient error can let exactly one live cab win, but never fails the walk-up)" $ do
-            found <- probeBus (pure (Just ("bus", 1 :: Int)))
-            unknown <- probeBus (pure (Nothing :: Maybe (String, Int)))
-            failed <- probeBus (ioError (userError "nandi down") :: IO (Maybe (String, Int)))
-            (found, unknown, failed) @?= (Just ("bus", 1), Nothing, Nothing),
           testCase "a cab route's stops come back in stop order with their points and the route's code" $
             map
               (\ApiFRFS.FRFSStationAPI {ApiFRFS.code = c, ApiFRFS.sequenceNum = n, ApiFRFS.lat = la, ApiFRFS.routeCodes = rc} -> (c, n, la, rc))

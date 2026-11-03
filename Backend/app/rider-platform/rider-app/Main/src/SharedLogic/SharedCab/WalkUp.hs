@@ -4,18 +4,16 @@ module SharedLogic.SharedCab.WalkUp
     liveSharedCabByCode,
     CodeResolution (..),
     resolveCode,
-    WalkUpChoice (..),
     cabRouteRequest,
     stopPairLegs,
     withoutCabRows,
     cabRouteServiceTier,
-    chooseWalkUp,
-    probeBus,
+    declaresSharedCab,
     cabRouteStations,
     isStickerCode,
     findSharedCabConfig,
     enabledCabConfig,
-    walkUpVehicleData,
+    walkUpCab,
     routeServiceability,
     cabVehicle,
     trackStopRoutes,
@@ -95,15 +93,15 @@ stopPairLegs _ _ = Nothing
 -- | The tier a route of this feed advertises in the public-transport data: a shared-cab route says SHARED_CAB, but only to a client
 -- that declared the tier (`newServiceTiers`), so every other client gets exactly the data it got before.
 cabRouteServiceTier :: Bool -> Maybe [Spec.ServiceTierType] -> Maybe Spec.ServiceTierType
-cabRouteServiceTier isCabFeed declared = Spec.SHARED_CAB <$ guard (isCabFeed && maybe False (Spec.SHARED_CAB `elem`) declared)
+cabRouteServiceTier isCabFeed declared = Spec.SHARED_CAB <$ guard (isCabFeed && declaresSharedCab declared)
+
+-- | The client asked for the shared-cab tier: the app's shared-cab entry does, no bus client does.
+declaresSharedCab :: Maybe [Spec.ServiceTierType] -> Bool
+declaresSharedCab = maybe False (Spec.SHARED_CAB `elem`)
 
 -- | The bus fleet's configs of a city: the shared-cab feed shares the BUS category but is never a bus.
 withoutCabRows :: (a -> Text) -> [a] -> [a]
 withoutCabRows agencyKeyOf = filter (not . isSharedCabAgency . agencyKeyOf)
-
--- | The bus fleet's lookup of a typed code, once. A failure counts as "the bus does not know it" (failing walk-ups on a transient error hurts riders more).
-probeBus :: (Monad m, TryException m) => m (Maybe a) -> m (Maybe a)
-probeBus lookupBus = either (const Nothing) identity <$> withTryCatch "walkUp:busProbe" lookupBus
 
 -- | A shared-cab route has no scheduled trip (frequency feed), so stops and shape come from the route's stop mapping, in stop order.
 cabRouteStations :: Id DIBC.IntegratedBPPConfig -> Text -> Maybe Text -> Text -> [(Text, Text, Int, LatLong)] -> [ApiFRFS.FRFSStationAPI]
@@ -127,18 +125,6 @@ cabRouteStations integratedBppConfigId routeCode color longName stops =
       }
     | (code, name, sequenceNum, point) <- sortOn (\(_, _, sequenceNum, _) -> sequenceNum) stops
   ]
-
-data WalkUpChoice = UseBus | UseCab Text | PickRoute
-  deriving (Show, Eq)
-
--- | A typed four-digit code is a bus first: a cab is tried only when the bus lookup found no live vehicle. Ambiguity applies among cabs only.
-chooseWalkUp :: Bool -> CodeResolution -> WalkUpChoice
-chooseWalkUp busVehicleFound resolution
-  | busVehicleFound = UseBus
-  | otherwise = case resolution of
-    OneCab plate -> UseCab plate
-    ManyCabs -> PickRoute
-    NoCab -> UseBus
 
 liveSharedCabByCode :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow CodeResolution
 liveSharedCabByCode integratedBppConfig code = do
@@ -192,41 +178,28 @@ findSharedCabConfig mbPersonId = do
 enabledCabConfig :: Monad m => m Bool -> Maybe a -> m (Maybe a)
 enabledCabConfig isEnabled = maybe (pure Nothing) (\cabConfig -> (cabConfig <$) . guard <$> isEnabled)
 
--- | A plate with a live shared-cab session is a spot booking's first step, whatever vehicleType the app sent.
-walkUpVehicleData ::
-  Maybe (Id DP.Person) ->
-  Text ->
-  (Maybe (Maybe (DIBC.IntegratedBPPConfig, JLU.VehicleLiveRouteInfo)) -> Environment.Flow ApiTypes.PublicTransportData) ->
-  Environment.Flow ApiTypes.PublicTransportData
-walkUpVehicleData mbPersonId vehicleNumber busPathWith =
+-- | The shared-cab entry's lookup: a live cab by its plate, else by its sticker code (the plate's last four) among the city's live
+-- cabs. It never asks the bus system; a code no cab answers fails as an unknown bus number does, which the app reads as a wrong code.
+walkUpCab :: Maybe (Id DP.Person) -> Text -> Environment.Flow (DIBC.IntegratedBPPConfig, JLU.VehicleLiveRouteInfo)
+walkUpCab mbPersonId vehicleNumber =
   liveSharedCab vehicleNumber >>= \case
-    Just session -> requireSharedCabEnabled session.merchantOperatingCityId >> cabPath session
-    Nothing
-      | isStickerCode vehicleNumber -> do
-        mbBusVehicle <- probeBus busKnowsVehicle
-        let busVehicleFound = isJust mbBusVehicle
-        resolution <-
-          if busVehicleFound
-            then pure NoCab
-            else
-              findSharedCabConfig mbPersonId >>= \case
-                Nothing -> pure NoCab
-                Just ibc -> do
-                  whenJust mbPersonId (enforceStickerCodeLimit . getId)
-                  liveSharedCabByCode ibc vehicleNumber
-        case chooseWalkUp busVehicleFound resolution of
-          UseBus -> busPathWith (Just <$> mbBusVehicle) -- the found vehicle is passed on: one lookup
-          UseCab plate -> liveSharedCab plate >>= maybe busPath cabPath
-          PickRoute -> throwError CodeAmbiguous
-      | otherwise -> busPath
+    Just session -> requireSharedCabEnabled session.merchantOperatingCityId >> cabLiveRoute session
+    Nothing -> do
+      resolution <-
+        if isStickerCode vehicleNumber
+          then
+            findSharedCabConfig mbPersonId >>= \case
+              Nothing -> pure NoCab
+              Just ibc -> do
+                whenJust mbPersonId (enforceStickerCodeLimit . getId)
+                liveSharedCabByCode ibc vehicleNumber
+          else pure NoCab
+      case resolution of
+        OneCab plate -> liveSharedCab plate >>= maybe notFound cabLiveRoute
+        ManyCabs -> throwError CodeAmbiguous
+        NoCab -> notFound
   where
-    busKnowsVehicle = do
-      personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
-      person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      configs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-      JLU.getVehicleLiveRouteInfo configs vehicleNumber Nothing
-    busPath = busPathWith Nothing
-    cabPath s = cabLiveRoute s >>= busPathWith . Just . Just
+    notFound = throwError (InvalidVehicleNumber $ "Vehicle " <> vehicleNumber <> ", not found on any route")
 
 routeServiceability :: Maybe (Id DP.Person) -> ApiTypes.RouteServiceabilityReq -> Environment.Flow (Maybe ApiTypes.RouteServiceabilityResp)
 routeServiceability mbPersonId req =

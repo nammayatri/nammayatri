@@ -27,6 +27,8 @@ body contains "suspended"
 # walk-up by the live plate: refused
 GET {{base_url}}/v2/publicTransport/vehicleData/%22BUS%22/{{plate}}
 token: {{token}}
+[QueryStringParams]
+newServiceTiers: ["SHARED_CAB"]
 HTTP 400
 [Asserts]
 body contains "suspended"

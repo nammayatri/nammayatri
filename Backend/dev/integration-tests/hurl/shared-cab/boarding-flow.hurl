@@ -266,6 +266,8 @@ HTTP 200
 # NOTE: the enum path segment is JSON-quoted (mkHttpInstancesForEnum): /BUS/ is a router-level 404, /%22BUS%22/ matches.
 GET {{base_url}}/v2/publicTransport/vehicleData/%22BUS%22/{{plate}}
 token: {{token}}
+[QueryStringParams]
+newServiceTiers: ["SHARED_CAB"]
 HTTP 200
 [Asserts]
 jsonpath "$.rs[0].st" == "SHARED_CAB"
@@ -274,6 +276,8 @@ jsonpath "$.rs[0].cd" == "{{route_a}}"
 # The sticker code (plate's last 4) resolves among the city's live cabs too
 GET {{base_url}}/v2/publicTransport/vehicleData/%22BUS%22/{{plate_code}}
 token: {{token}}
+[QueryStringParams]
+newServiceTiers: ["SHARED_CAB"]
 HTTP 200
 [Asserts]
 jsonpath "$.rs[0].st" == "SHARED_CAB"
