@@ -92,7 +92,6 @@ data ConsumerType
   | IJ_BEHAVIOR_TICK_CONSUMER
   | DRIVER_POOL_STATE
   | SESSIONIZER
-  | DRIVER_PERFORMANCE
   deriving (Generic, FromDhall, Read, Eq)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
@@ -106,7 +105,6 @@ instance Show ConsumerType where
   show IJ_BEHAVIOR_TICK_CONSUMER = "ij-behavior-tick-consumer"
   show DRIVER_POOL_STATE = "driver-pool-state-writer"
   show SESSIONIZER = "sessionizer"
-  show DRIVER_PERFORMANCE = "driver-performance"
 
 -- | Which transport a given Dhall deployment uses. Each consumer-type Dhall
 -- file picks one; switching is a config change, not a code change.
@@ -146,6 +144,7 @@ data AppCfg = AppCfg
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
     driverPoolStateTopic :: Maybe Text,
+    driverAnalyticsEventsTopic :: Maybe Text,
     secondaryKafkaProducerCfg :: Maybe KafkaProducerCfg,
     serviceClickhouseCfg :: ClickhouseCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
@@ -208,6 +207,7 @@ data AppEnv = AppEnv
     encTools :: EncTools,
     kafkaProducerTools :: KafkaProducerTools,
     driverPoolStateTopic :: Maybe Text,
+    driverAnalyticsEventsTopic :: Maybe Text,
     serviceClickhouseEnv :: ClickhouseEnv,
     kafkaClickhouseEnv :: ClickhouseEnv,
     serviceClickhouseCfg :: ClickhouseCfg,
