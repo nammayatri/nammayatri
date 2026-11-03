@@ -28,6 +28,7 @@ import Kernel.External.Call.Types (CallService (Exotel))
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -127,7 +128,9 @@ liveSessionForRider riderId = do
       cfg <- Config.getTunables booking.merchantOperatingCityId
       liveSession cfg.callEnabled booking
 
+-- | Kept in this pod's memory (never Redis) for a few minutes, because a DIRECT-mode rider's leg status asks on every poll. A failed
+-- call throws before anything is cached.
 driverNumberOfSession :: CallFlow m r => Session -> m Text
-driverNumberOfSession s = do
+driverNumberOfSession s = IM.withInMemCache ["SharedCabDriverNumber", s.driverId] 300 $ do
   merchant <- CQM.findById s.merchantId >>= fromMaybeM (MerchantNotFound s.merchantId.getId)
   (.driverNumber) <$> CallBPPInternal.sharedCabDriverCallNumber merchant.driverOfferApiKey merchant.driverOfferBaseUrl s.driverId

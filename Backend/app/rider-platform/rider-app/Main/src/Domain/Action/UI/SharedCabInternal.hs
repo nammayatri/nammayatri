@@ -314,9 +314,10 @@ liveRiderRows cfg sessionTrip stopPoints polyline addresses plate = do
                 AllocTypes.OfferTimer d -> Just d
                 _ -> Nothing
         let callable = cfg.callEnabled && onThisTrip b && isNothing offerDeadline
+        -- decrypting on every 5 s session poll is costly: cached in this pod's memory only, never in Redis or a log
         callNumber <-
           if callable && Config.activeCallMode cfg == Just DRC.DIRECT
-            then maybe (pure Nothing) SharedCabCall.personCallNumber (find ((== b.riderId) . (.id)) persons)
+            then maybe (pure Nothing) (IM.withInMemCache ["SharedCabRiderNumber", b.riderId.getId] 120 . SharedCabCall.personCallNumber) (find ((== b.riderId) . (.id)) persons)
             else pure Nothing
         let minutesAway = case (mbFix, Map.lookup b.fromStationCode pointsByCode) of
               (Just lastFix, Just stopPoint) -> Just $ View.walkMinutesAway (realToFrac (distanceBetweenInMeters lastFix.position stopPoint))
