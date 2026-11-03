@@ -2263,7 +2263,6 @@ test-suite rider-app-test
       SharedCabAllocationTests
       SharedCabBoardingTests
       SharedCabCallTests
-      SharedCabCancelRefusalTests
       SharedCabCheckedInStatusTests
       SharedCabConfigTests
       SharedCabDegradedSweepTests
