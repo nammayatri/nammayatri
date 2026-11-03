@@ -41,7 +41,8 @@ create vehicle = do
         LTSSync.mYManufacturing = LTSSync.Set vehicle.mYManufacturing,
         LTSSync.airConditioned = LTSSync.Set vehicle.airConditioned,
         LTSSync.luggageCapacity = LTSSync.Set vehicle.luggageCapacity,
-        LTSSync.vehicleRating = LTSSync.Set vehicle.vehicleRating
+        LTSSync.vehicleRating = LTSSync.Set vehicle.vehicleRating,
+        LTSSync.registrationNo = LTSSync.Set vehicle.registrationNo
       }
   publishDriverPoolData
     (cast vehicle.driverId)
@@ -52,7 +53,8 @@ create vehicle = do
       poolField "mYManufacturing" vehicle.mYManufacturing,
       poolField "airConditioned" vehicle.airConditioned,
       poolField "luggageCapacity" vehicle.luggageCapacity,
-      poolField "vehicleRating" vehicle.vehicleRating
+      poolField "vehicleRating" vehicle.vehicleRating,
+      poolField "registrationNo" vehicle.registrationNo
     ]
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => ([Vehicle] -> m ())
@@ -96,7 +98,8 @@ upsert a@Vehicle {..} = do
         LTSSync.vehicleTags = LTSSync.Set vehicleTags,
         LTSSync.airConditioned = LTSSync.Set airConditioned,
         LTSSync.luggageCapacity = LTSSync.Set luggageCapacity,
-        LTSSync.vehicleRating = LTSSync.Set vehicleRating
+        LTSSync.vehicleRating = LTSSync.Set vehicleRating,
+        LTSSync.registrationNo = LTSSync.Set registrationNo
       }
   publishDriverPoolData
     (cast driverId)
@@ -107,7 +110,8 @@ upsert a@Vehicle {..} = do
       poolField "vehicleTags" vehicleTags,
       poolField "airConditioned" airConditioned,
       poolField "luggageCapacity" luggageCapacity,
-      poolField "vehicleRating" vehicleRating
+      poolField "vehicleRating" vehicleRating,
+      poolField "registrationNo" registrationNo
     ]
 
 updateVehicleVariant ::
@@ -145,6 +149,7 @@ updateVariantAndServiceTiers variant selectedServiceTiers category driverId = do
       poolField "selectedServiceTiers" selectedServiceTiers
     ]
 
+-- | Unlinks the driver's vehicle: its fields leave the driver's pool data.
 deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamV.driverId (Se.Eq driverId)]
 

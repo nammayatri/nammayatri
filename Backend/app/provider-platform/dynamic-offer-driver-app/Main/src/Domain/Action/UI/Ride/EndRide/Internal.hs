@@ -113,6 +113,7 @@ import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.DriverFee (calculatePlatformFeeAttr)
 import qualified SharedLogic.DriverFyEarnings as SDFE
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverPool.DriverAnalyticsEvent as DAE
 import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -232,6 +233,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     markPrepaidSettlementPending settlementOwnerId ride.id.getId
   QRB.updateStatus booking.id SRB.COMPLETED
   QRide.updateAll ride.id ride
+  DAE.publishRideCompleted booking ride
   let safetyPlusCharges = maybe Nothing (\a -> find (\ac -> ac.chargeCategory == DAC.SAFETY_PLUS_CHARGES) a) $ (mbFareParams <&> (.conditionalCharges)) <|> (Just newFareParams.conditionalCharges)
   -- driverRideCount is incremented here for stats persistence; RC-stats-reminders and
   -- fleet/operator-dashboard side-effects now run in kafka-consumers RIDE_EVENTS_CONSUMER.

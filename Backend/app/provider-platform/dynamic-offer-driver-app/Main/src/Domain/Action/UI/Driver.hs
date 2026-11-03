@@ -285,6 +285,7 @@ import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
+import qualified SharedLogic.DriverPool.DriverAnalyticsEvent as DAE
 import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
@@ -2092,6 +2093,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             when (sReqFD.response == Just Reject) $ do
               throwError QuoteAlreadyRejected
             whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
+            acceptStartedAt <- getCurrentTime
             (driverFCMPulledList, mbRideRes) <- case DTC.tripCategoryToPricingPolicy searchTry.tripCategory of
               DTC.EstimateBased _ -> do
                 let oneShotAssignAction driverQuote =
@@ -2125,6 +2127,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig Nothing Nothing
             Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.OfferAccepted driverId searchTry.id.getId)
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
+            DAE.publishPopupAccepted sReqFD acceptStartedAt req.renderedAt req.respondedAt
             when (sReqFD.hasAvailableForRidesTag == Just True) $ AvailableForRides.resetRejectionStreak driverId
             cityLabel <- SML.getCityLabel merchantOpCityId
             Metrics.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (SML.driverSearchReqFunnelLabels metricsDistanceBucketEdges sReqFD)
@@ -2142,6 +2145,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     Reject -> do
       Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.OfferRejected driverId searchTry.id.getId)
       QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
+      DAE.publishPopupResponse sReqFD Reject req.renderedAt req.respondedAt
       when (sReqFD.hasAvailableForRidesTag == Just True) $
         whenJust ((,) <$> transporterConfig.availableForRidesTagValidityMinutes <*> mfilter (> 0) transporterConfig.availableForRidesMaxConsecutiveRejections) $ \(validity, maxRejections) ->
           fork "availableForRidesRejectionStreak" $ AvailableForRides.recordRejection driverId validity maxRejections
@@ -2189,6 +2193,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     Pulled -> do
       Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.OfferPulled driverId searchTry.id.getId)
       QSRD.updateDriverResponse (Just Pulled) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
+      DAE.publishPopupResponse sReqFD Pulled Nothing Nothing
       (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
       Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (SML.driverSearchReqFunnelLabels metricsDistanceBucketEdges sReqFD)
       throwError UnexpectedResponseValue
