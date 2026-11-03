@@ -4,6 +4,8 @@ module SharedLogic.SharedCab
   ( -- * Tier predicates
     isSharedCabBooking,
     isSharedCabAgency,
+    legAgencyGtfsId,
+    searchAgencyKey,
     filterCabLegs,
     requireSharedCabEnabled,
     sharedCabFareTiers,
@@ -45,7 +47,7 @@ import SharedLogic.SharedCab.ConfirmHook (SharedCabConfirmFlow, confirmHook, onB
 import SharedLogic.SharedCab.Demand (recordSearch, sharedCabBoardStops)
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
 import SharedLogic.SharedCab.JourneyLeg (getSharedCabLegState, liveCabLegCities, noBookingLegState)
-import SharedLogic.SharedCab.LegState (isSharedCabAgency, sharedCabFareTiers)
+import SharedLogic.SharedCab.LegState (isSharedCabAgency, legAgencyGtfsId, searchAgencyKey, sharedCabFareTiers)
 import SharedLogic.SharedCab.RefundDecision (Refund, cancelRefund, isSharedCabBooking, refundAmounts, refundWithheld)
 import SharedLogic.SharedCab.RouteSnapshot (filterCabLegs)
 import SharedLogic.SharedCab.Schedule (keepChainsAlive)

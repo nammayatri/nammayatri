@@ -1113,7 +1113,7 @@ buildJourneyAndLeg booking fareParameters = do
               endLocation = LatLngV2 toLocation.lat toLocation.lon,
               distance = Just distance,
               duration = duration,
-              agency = Just $ MultiModalAgency {name = integratedBppConfig.agencyKey, gtfsId = Just integratedBppConfig.agencyKey},
+              agency = Just $ MultiModalAgency {name = integratedBppConfig.agencyKey, gtfsId = Just (SharedCab.legAgencyGtfsId integratedBppConfig.agencyKey integratedBppConfig.feedKey)},
               fromArrivalTime = Nothing,
               fromDepartureTime = Just booking.createdAt,
               toArrivalTime =

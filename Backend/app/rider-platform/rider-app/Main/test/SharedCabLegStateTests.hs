@@ -34,7 +34,15 @@ tests :: TestTree
 tests =
   testGroup
     "shared-cab leg state"
-    [ testGroup
+    [ testCase "a bus leg stores and is searched by main's values (feed key, agency name); only a cab leg uses its agency key" $
+        ( legAgencyGtfsId "chennai_bus:MTC" "chennai_bus",
+          legAgencyGtfsId "shillong_shared_cab:SHARED_CAB" "shillong_shared_cab",
+          searchAgencyKey (Just MultiModalTypes.MultiModalAgency {MultiModalTypes.name = "MTC", MultiModalTypes.gtfsId = Just "chennai_bus:MTC"}),
+          searchAgencyKey (Just MultiModalTypes.MultiModalAgency {MultiModalTypes.name = "Shared Cab", MultiModalTypes.gtfsId = Just "shillong_shared_cab:SHARED_CAB"}),
+          searchAgencyKey Nothing
+        )
+          @?= ("chennai_bus", "shillong_shared_cab:SHARED_CAB", Just "MTC", Just "shillong_shared_cab:SHARED_CAB", Nothing),
+      testGroup
         "search gate: shared-cab leg detection"
         [ testCase "SHARED_CAB agency" $ isSharedCabAgency "shillong_shared_cab:SHARED_CAB" @?= True,
           testCase "bus agency" $ isSharedCabAgency "chennai_bus:MTC" @?= False,
