@@ -37,6 +37,7 @@ Offer:
     frequencyType: Maybe OfferFrequency
     maxApplyCount: Maybe Int
     showMilestoneCard: Maybe Bool
+    budgetAmount: Maybe HighPrecMoney
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime
@@ -140,6 +141,12 @@ OfferStats:
       kvFunction: findAllWithKV
       where:
         and: [entityId, entityType]
+    findAllByEntityIdsAndEntityType:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [entityId]
+          - eq: [entityType]
 
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

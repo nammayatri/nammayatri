@@ -14,6 +14,7 @@ import qualified Lib.Payment.Domain.Types.Offer
 
 data OfferT f = OfferT
   { autoApply :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    budgetAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f Kernel.Types.Common.Currency,
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

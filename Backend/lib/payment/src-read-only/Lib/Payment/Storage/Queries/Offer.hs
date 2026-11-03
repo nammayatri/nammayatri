@@ -46,6 +46,7 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.Offer.Offer {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.autoApply autoApply,
+      Se.Set Beam.budgetAmount budgetAmount,
       Se.Set Beam.currency currency,
       Se.Set Beam.description description,
       Se.Set Beam.discountType discountType,
@@ -77,6 +78,7 @@ instance FromTType' Beam.Offer Lib.Payment.Domain.Types.Offer.Offer where
       Just
         Lib.Payment.Domain.Types.Offer.Offer
           { autoApply = autoApply,
+            budgetAmount = budgetAmount,
             createdAt = createdAt,
             currency = currency,
             description = description,
@@ -107,6 +109,7 @@ instance ToTType' Beam.Offer Lib.Payment.Domain.Types.Offer.Offer where
   toTType' (Lib.Payment.Domain.Types.Offer.Offer {..}) = do
     Beam.OfferT
       { Beam.autoApply = autoApply,
+        Beam.budgetAmount = budgetAmount,
         Beam.createdAt = createdAt,
         Beam.currency = currency,
         Beam.description = description,
