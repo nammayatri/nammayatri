@@ -127,6 +127,7 @@ IntegratedBPPConfig:
     ondcRegistryPublicKey: Maybe Text
     ondcEncryptionPrivateKey: Maybe (EncryptedField 'AsEncrypted Text)
     paymentGatewayReferenceId: Maybe Text
+    passTicketOverlapWarningTime: Maybe Int
 
   beamFields:
     providerConfig:

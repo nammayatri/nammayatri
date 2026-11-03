@@ -66,3 +66,8 @@ ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN auto_enforce_frfs_pass bo
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN payment_gateway_reference_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN pass_ticket_overlap_warning_time integer ;
