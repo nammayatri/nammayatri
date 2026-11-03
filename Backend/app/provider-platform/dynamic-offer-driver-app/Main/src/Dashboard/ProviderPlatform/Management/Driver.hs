@@ -23,7 +23,11 @@ import API.Types.ProviderPlatform.Management.Endpoints.Driver as Reexport
 import qualified API.Types.UI.StclMembership as MembershipAPI
 import Dashboard.Common as Reexport hiding (Role (..))
 import Dashboard.Common.Driver as Reexport hiding (Role (..))
+import qualified Data.Csv as Csv
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Kernel.Prelude
+import Kernel.ServantMultipart
 import Kernel.Types.Predicate
 import Kernel.Utils.Common (maskText)
 import qualified Kernel.Utils.Predicates as P
@@ -31,6 +35,50 @@ import Kernel.Utils.Validation
 
 instance HideSecrets [ReviewRCVariantReq] where
   hideSecrets = identity
+
+-- Bulk airport block using csv --
+
+instance FromMultipart Tmp BulkAirportBlockReq where
+  fromMultipart form = do
+    fileData <- lookupFile "file" form
+    let specialZoneId = lookupInput "specialZoneId" form
+    pure $
+      BulkAirportBlockReq
+        { file = fdPayload fileData,
+          specialZoneId = case specialZoneId of
+            Left _ -> Nothing
+            Right x -> Just x
+        }
+
+instance ToMultipart Tmp BulkAirportBlockReq where
+  toMultipart form = do
+    let zoneInput = case form.specialZoneId of
+          Nothing -> []
+          Just zoneId -> [Input "specialZoneId" zoneId]
+    MultipartData zoneInput [FileData "file" (T.pack form.file) "" (form.file)]
+
+data BulkAirportBlockCsvRow = BulkAirportBlockCsvRow
+  { driverId :: Text,
+    enableForAirport :: AirportRestrictionType,
+    blockReason :: Maybe Text,
+    blockedDays :: Maybe Int
+  }
+
+instance Csv.FromField AirportRestrictionType where
+  parseField field =
+    case T.toUpper . T.strip . DT.decodeUtf8 $ field of
+      "ENABLED" -> pure ENABLED
+      "DISABLED" -> pure DISABLED
+      "BLOCKED" -> pure BLOCKED
+      other -> fail $ "Unsupported enableForAirport: " <> T.unpack other
+
+instance Csv.FromNamedRecord BulkAirportBlockCsvRow where
+  parseNamedRecord r =
+    BulkAirportBlockCsvRow
+      <$> r Csv..: "driverId"
+      <*> r Csv..: "enableForAirport"
+      <*> r Csv..: "blockReason"
+      <*> r Csv..: "blockedDays"
 
 validateUpdatePhoneNumberReq :: Validate UpdatePhoneNumberReq
 validateUpdatePhoneNumberReq UpdatePhoneNumberReq {..} =
