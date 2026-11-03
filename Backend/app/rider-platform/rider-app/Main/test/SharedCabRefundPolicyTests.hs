@@ -159,12 +159,12 @@ tests =
           testCase "trimmed" $ requireReason (Just " rider not at stop ") @?= Right "rider not at stop",
           -- the body the driver-app proxy sends (driver-app-test pins its shape)
           testCase "rider-app reads the proxy's reason" $
-            (decode "{\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":\"cab breakdown\"}" >>= \r -> Just (API.reason r)) @?= Just (Just "cab breakdown"),
+            (decode "{\"operation\":\"CANCEL\",\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":\"cab breakdown\"}" >>= \r -> Just (API.reason r)) @?= Just (Just "cab breakdown"),
           testCase "a null reason (other actions) reads as Nothing" $
-            (decode "{\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":null}" >>= \r -> Just (API.reason r)) @?= Just Nothing,
+            (decode "{\"operation\":\"ACCEPT\",\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":null}" >>= \r -> Just (API.reason r)) @?= Just Nothing,
           testCase "a blank reason from the proxy is refused" $
-            (decode "{\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":\"  \"}" >>= \r -> Just (requireReason (API.reason r))) @?= Just (Left CancelReasonRequired),
+            (decode "{\"operation\":\"CANCEL\",\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":\"  \"}" >>= \r -> Just (requireReason (API.reason r))) @?= Just (Left CancelReasonRequired),
           testCase "a body with no reason field is refused when cancelling" $
-            (decode "{\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\"}" >>= \r -> Just (requireReason (API.reason r))) @?= Just (Left CancelReasonRequired)
+            (decode "{\"operation\":\"CANCEL\",\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\"}" >>= \r -> Just (requireReason (API.reason r))) @?= Just (Left CancelReasonRequired)
         ]
     ]
