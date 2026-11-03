@@ -211,6 +211,12 @@ types:
     status: StatusType
     passType: Maybe PassEnum
     refunds: "[RefundAPIEntity]"
+    passId: Maybe (Id Pass)
+    unlimitedTripCount: Bool
+    frfsOverrideConfig: Maybe FrfsOverrideConfigAPIEntity
+    routePass: Maybe RoutePassAPIEntity
+    validityDays: Maybe Int
+    applicableVehicleServiceTiers: "[ServiceTierType]"
     derive: "Show"
 
   FRFSPassDailyTicketStatAPIEntity:
