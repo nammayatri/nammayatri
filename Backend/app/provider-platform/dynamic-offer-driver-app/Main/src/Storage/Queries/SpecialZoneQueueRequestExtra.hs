@@ -104,6 +104,27 @@ findAllByGateIdStatusAndVehicleType createdAtFrom gateId status vehicleType =
     ]
     Nothing
 
+-- | Count Active + Accepted requests at a gate for a given vehicle type, scoped to a
+-- recent time window (caller passes the lower bound to share a single getCurrentTime).
+-- Used for load-balancing gate assignments for prioritised drivers.
+countActiveAndAcceptedByGateIdAndVehicleType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.UTCTime ->
+  Kernel.Prelude.Text ->
+  Kernel.Prelude.Text ->
+  m Kernel.Prelude.Int
+countActiveAndAcceptedByGateIdAndVehicleType createdAtFrom gateId vehicleType =
+  length
+    <$> findAllWithKVAndConditionalDB
+      [ Se.And
+          [ Se.Is Beam.createdAt $ Se.GreaterThanOrEq createdAtFrom,
+            Se.Is Beam.gateId $ Se.Eq gateId,
+            Se.Is Beam.status $ Se.In [Domain.Types.SpecialZoneQueueRequest.Active, Domain.Types.SpecialZoneQueueRequest.Accepted],
+            Se.Is Beam.vehicleType $ Se.Eq vehicleType
+          ]
+      ]
+      Nothing
+
 findAllByDriverIdAndTimeRange ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
