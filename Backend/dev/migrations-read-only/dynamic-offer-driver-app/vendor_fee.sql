@@ -11,5 +11,3 @@ CREATE INDEX idx_driver_fee ON atlas_driver_offer_bpp.vendor_fee USING btree (dr
 
 
 ------- SQL updates -------
-
-DROP INDEX idx_driver_fee;
