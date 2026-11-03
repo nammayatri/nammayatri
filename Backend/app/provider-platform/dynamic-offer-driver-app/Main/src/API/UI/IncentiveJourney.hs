@@ -25,6 +25,7 @@ import qualified Domain.Types.Person as SP
 import Environment (FlowHandler, FlowServer)
 import qualified Environment as Fields
 import EulerHS.Prelude
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.IncentiveJourney.API.UI.IncentiveJourney as IA
@@ -41,6 +42,7 @@ handler = externalHandler
     externalHandler (personId, merchantId, merchantOpCityId) =
       getIncentiveJourneyList (Just personId, merchantId, merchantOpCityId)
         :<|> getIncentiveJourneyHistory (Just personId, merchantId, merchantOpCityId)
+        :<|> postIncentiveJourneyOptIn (Just personId, merchantId, merchantOpCityId)
 
 getIncentiveJourneyList ::
   (Maybe (Id SP.Person), Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -58,3 +60,10 @@ getIncentiveJourneyHistory ::
   FlowHandler Common.IncentiveJourneyHistoryRes
 getIncentiveJourneyHistory authParams mbDate mbLimit mbOffset =
   withFlowHandlerAPI $ Domain.getIncentiveJourneyHistory authParams mbDate mbLimit mbOffset
+
+postIncentiveJourneyOptIn ::
+  (Maybe (Id SP.Person), Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Common.OptInIncentiveJourneyReq ->
+  FlowHandler APISuccess
+postIncentiveJourneyOptIn authParams req =
+  withFlowHandlerAPI $ Domain.postIncentiveJourneyOptIn authParams req

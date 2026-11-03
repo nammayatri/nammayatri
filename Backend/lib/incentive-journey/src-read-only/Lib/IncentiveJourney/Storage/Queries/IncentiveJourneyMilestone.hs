@@ -49,6 +49,7 @@ updateByPrimaryKey (Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.
       Se.Set Beam.conditionType conditionType,
       Se.Set Beam.conditionValue conditionValue,
       Se.Set Beam.description description,
+      Se.Set Beam.evaluation evaluation,
       Se.Set Beam.journeyId (Kernel.Types.Id.getId journeyId),
       Se.Set Beam.name name,
       Se.Set Beam.order order,

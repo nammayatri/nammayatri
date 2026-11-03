@@ -35,7 +35,9 @@ data Results = Results
     eligiblePayoutAmount :: HighPrecMoney,
     payoutAmountPaid :: HighPrecMoney,
     lastPayoutAt :: Maybe UTCTime,
-    vpaVerificationMode :: Maybe DPC.VpaVerificationMode
+    vpaVerificationMode :: Maybe DPC.VpaVerificationMode,
+    -- | Lifetime ₹ from Incentive Journey rewards (driver_stats.total_incentive_journey_earnings).
+    totalIncentiveJourneyEarnings :: HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -57,5 +59,19 @@ getDriverPerformance (driverId, _, merchantOpCityId) = do
   driverStats <- QDS.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let eligiblePayoutAmount = driverStats.totalPayoutEarnings
       totalPayoutAmountPaid = fromMaybe 0.0 driverStats.totalPayoutAmountPaid
+      totalIncentiveJourneyEarnings = driverStats.totalIncentiveJourneyEarnings
   mbLatestPayoutOrder <- QPayoutOrder.findLatestPaidPayoutByCustomerId driverId.getId
-  pure $ PerformanceRes (Results (length allRefferedCustomers) (length ridesTakenList) totalReferredDrivers payoutConfig.isPayoutEnabled di.payoutVpa eligiblePayoutAmount totalPayoutAmountPaid (mbLatestPayoutOrder <&> (.createdAt)) (Just payoutConfig.vpaVerificationMode))
+  pure $
+    PerformanceRes
+      ( Results
+          (length allRefferedCustomers)
+          (length ridesTakenList)
+          totalReferredDrivers
+          payoutConfig.isPayoutEnabled
+          di.payoutVpa
+          eligiblePayoutAmount
+          totalPayoutAmountPaid
+          (mbLatestPayoutOrder <&> (.createdAt))
+          (Just payoutConfig.vpaVerificationMode)
+          totalIncentiveJourneyEarnings
+      )

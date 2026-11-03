@@ -65,6 +65,7 @@ import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.StopInformation as Fields
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.Yudhishthira as Y
+import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pi)
 import Kernel.Beam.Functions (runInMasterDbAndRedis)
@@ -93,6 +94,7 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
 import Lib.Scheduler.Environment (JobCreator)
@@ -111,6 +113,7 @@ import qualified SharedLogic.ParkingFeeExemption as SPFE
 import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.Ride (validateRideLocation)
 import qualified SharedLogic.Type as SLT
+import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -201,7 +204,12 @@ data ServiceHandle m = ServiceHandle
   }
 
 buildEndRideHandle ::
-  (LocUpd.LocationUpdateFlow m r c, HasField "activeDriversListKeyShards" r Int, HasField "enableDriverFeeShardedFanOut" r Bool) =>
+  ( LocUpd.LocationUpdateFlow m r c,
+    HasField "activeDriversListKeyShards" r Int,
+    HasField "enableDriverFeeShardedFanOut" r Bool,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    IJBeamFlow.BeamFlow m r
+  ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe (Id DRide.Ride) ->

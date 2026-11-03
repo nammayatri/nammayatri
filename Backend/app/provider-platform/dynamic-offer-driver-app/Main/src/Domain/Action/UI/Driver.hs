@@ -139,7 +139,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Image as ImageAction
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.DriverReferral as DUR
 import qualified Domain.Action.UI.Merchant as DM
-import qualified Domain.Action.UI.Payout as Payout
+import qualified Domain.Action.UI.Payout as UIPayout
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Action.UI.PolicyDocument as PolicyDoc
@@ -229,7 +229,6 @@ import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder as Fields
 import qualified Kernel.External.Payout.Interface as IPayout
-import Kernel.External.Types (SchedulerFlow)
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (handle, intToNominalDiffTime, roundToIntegral)
 import Kernel.Serviceability (rideServiceable)
@@ -318,7 +317,9 @@ import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidAvailableBalanceByOwner, hasPrepaidCreditsValidAt)
 import qualified SharedLogic.Finance.Wallet as FWallet
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
+import qualified SharedLogic.FleetDriverSettings as FleetDriverSettings
 import qualified SharedLogic.FleetEngine as FleetEngine
+import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MetricsLabels as SML
@@ -336,6 +337,7 @@ import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.Subscription.BillingModel (isPrepaidDriverWithCatalogueFallback)
 import qualified SharedLogic.Type as SLT
 import SharedLogic.VehicleServiceTier
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.Cac.DriverPoolConfig as SCDPC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -1758,7 +1760,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   let distanceTag = LYT.TagNameValue AreaPref.distancePreferenceEnabledTagName
   clearDistanceTag <-
     if (isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold) && Yudhishthira.elemTagName distanceTag tag
-      then not . maybe False (.disableDriverAreaAndDistancePreference) <$> QFDA.getDriverFleetAutoAssignConfig personId merchantOpCityId
+      then not . maybe False (.disableDriverAreaAndDistancePreference) <$> FleetDriverSettings.getDriverFleetAutoAssignConfig personId merchantOpCityId
       else pure False
   let updatedTag = if clearDistanceTag then Yudhishthira.removeTagName (Just tag) distanceTag else tag
   unless (Just (Yudhishthira.showRawTags updatedTag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
@@ -2133,6 +2135,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo sReqFD.isForwardRequest
             when (sReqFD.response == Just Reject) $ do
               throwError QuoteAlreadyRejected
+            -- Already accepted (e.g. silent-assign left response=Accept): do not bump ij:bm again.
+            when (sReqFD.response == Just Accept) $ throwError RideRequestAlreadyAccepted
             whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
             (driverFCMPulledList, mbRideRes) <- case DTC.tripCategoryToPricingPolicy searchTry.tripCategory of
               DTC.EstimateBased _ -> do
@@ -2170,8 +2174,16 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             when (sReqFD.hasAvailableForRidesTag == Just True) $ AvailableForRides.resetRejectionStreak driverId
             cityLabel <- SML.getCityLabel merchantOpCityId
             Metrics.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (SML.driverSearchReqFunnelLabels metricsDistanceBucketEdges sReqFD)
-            DP.recordQuoteResponseCounters merchantOpCityId driverId Accept
-            -- accept counting happens in driverScoreEventHandler's Accept case (bt: QUOTE_RESPONSE_ACCEPT)
+            -- City bt: + campaign ij:bm rrAccepted (policy in Lib.BehaviorTracker.CampaignQuote).
+            -- Do not also publish bare QUOTE_RESPONSE_ACCEPT — that duplicated the tick and
+            -- the old 3s debounce could drop a later legitimate accept/cancel sync.
+            -- Single-count: AlreadyAccepted / inactive SRFD (incl. after silent assign).
+            SLJourney.recordQuoteResponseAndCampaignMetrics
+              merchantId
+              merchantOpCityId
+              transporterConfig.timeDiffFromUtc
+              driverId
+              Accept
             DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id searchTry.requestId driverFCMPulledList
             unless (sReqFD.isForwardRequest) $ Redis.unlockRedis (editDestinationLockKey driverId)
             pure mbRideRes
@@ -4017,11 +4029,14 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
 
     calcPercentage percentage = (percentage * fee') / 100.0
 
-verifyVpaStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl], HasKafkaProducer r, Finance.HasActorInfo m r, SchedulerFlow r, HasField "blackListedJobs" r [Text]) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess
+verifyVpaStatus ::
+  SLJourney.JourneyCashPayoutFlow m r =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  m APISuccess
 verifyVpaStatus (personId, _, opCityId) = do
   void $ QDriverInformation.updatePayoutVpaStatus (Just DriverInfo.VERIFIED_BY_USER) personId
   driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
-  fork ("processing backlog payout for driver via verify vpaStatus " <> personId.getId) $ Payout.processPreviousPayoutAmount (cast personId) driverInfo.payoutVpa opCityId
+  fork ("processing backlog payout for driver via verify vpaStatus " <> personId.getId) $ UIPayout.processPreviousPayoutAmount (cast personId) driverInfo.payoutVpa opCityId
   pure Success
 
 getSecurityDepositDfStatus ::

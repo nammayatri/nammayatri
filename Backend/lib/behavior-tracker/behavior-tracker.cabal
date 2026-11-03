@@ -6,7 +6,7 @@ cabal-version: 1.12
 
 name:           behavior-tracker
 version:        0.1.0.0
-description:    Behavior tracking library - records entity actions and builds behavior snapshots using sliding window counters
+description:    Behavior tracking library — city bt: SWC counters/snapshots plus campaign-scoped ij:bm: counters (Incentive Journey)
 homepage:       https://github.com/nammayatri/nammayatri#readme
 bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
@@ -27,7 +27,13 @@ flag Local
 library
   exposed-modules:
       Lib.BehaviorTracker.Accumulator
+      Lib.BehaviorTracker.ActionTypes
       Lib.BehaviorTracker.BlockTracker
+      Lib.BehaviorTracker.CampaignCancel
+      Lib.BehaviorTracker.CampaignCounters
+      Lib.BehaviorTracker.CampaignNames
+      Lib.BehaviorTracker.CampaignOnline
+      Lib.BehaviorTracker.CampaignQuote
       Lib.BehaviorTracker.EventsWindow
       Lib.BehaviorTracker.EventsWindowSettings
       Lib.BehaviorTracker.Recorder

@@ -217,8 +217,7 @@ getStatus ::
     JobCreatorEnv r,
     Redis.HedisLTSFlowEnv r,
     HasField "schedulerType" r SchedulerType,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     Finance.HasActorInfo m r
   ) =>
@@ -360,8 +359,7 @@ getStatusV2 ::
     Redis.HedisLTSFlowEnv r,
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     Finance.HasActorInfo m r
   ) =>
@@ -663,8 +661,7 @@ processPayment ::
     EncFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->

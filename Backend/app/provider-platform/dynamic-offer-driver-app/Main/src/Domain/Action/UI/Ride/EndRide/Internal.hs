@@ -103,6 +103,7 @@ import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
@@ -133,6 +134,7 @@ import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.RideEvents.Publisher as RideEventsPublisher
+import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -191,10 +193,13 @@ endRideTransaction ::
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasField "rideEventsPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     HasKafkaProducer r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    CoreMetrics m
+    CoreMetrics m,
+    BeamFlow m r,
+    IJBeamFlow.BeamFlow m r
   ) =>
   Id DP.Driver ->
   SRB.Booking ->
@@ -326,14 +331,15 @@ processEndRideFinance ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     HasField "blackListedJobs" r [Text],
     HasField "activeDriversListKeyShards" r Int,
     HasField "enableDriverFeeShardedFanOut" r Bool,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    BeamFlow m r
+    BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
+    CoreMetrics m
   ) =>
   Merchant ->
   Ride.Ride ->
@@ -554,7 +560,9 @@ createDriverWalletTransaction ::
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "blackListedJobs" r [Text],
-    PostActionsEnv r
+    PostActionsEnv r,
+    IJBeamFlow.BeamFlow m r,
+    CoreMetrics m
   ) =>
   Ride.Ride ->
   SRB.Booking ->

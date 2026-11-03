@@ -29,11 +29,13 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.BehaviorTracker.Types
 
--- | Unified Redis key scheme
+-- | City / entity sliding-window Redis key scheme (pooling, score, cancel rates).
 -- Format: "bt:{entityType}:{actionType}:{counterType}:{entityId}"
 -- Examples:
 --   "bt:DRIVER:RIDE_CANCELLATION:ACTION_COUNT:driver-abc-123"
 --   "bt:RIDER:BOOKING_CANCELLATION:ELIGIBLE_COUNT:rider-xyz-456"
+-- Campaign Incentive Journey counters use a separate keyspace — see
+-- 'Lib.BehaviorTracker.CampaignCounters' (ij:bm:…); do not mix the two.
 mkCounterKey :: Bool -> EntityType -> Text -> CounterType -> Text -> Text
 mkCounterKey hashTagEntityId entityType actionType counterType entityId =
   "bt:" <> show entityType <> ":" <> actionType <> ":" <> show counterType <> ":" <> entityIdPart

@@ -10,7 +10,6 @@ import Domain.Types.TransporterConfig
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
-import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -21,6 +20,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
+import SharedLogic.Finance.PostActions (PostActionsEnv)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -41,8 +41,7 @@ notificationAndOrderStatusUpdate ::
     SchedulerFlow r,
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasField "blackListedJobs" r [Text],
     Redis.HedisLTSFlowEnv r,

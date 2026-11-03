@@ -38,4 +38,10 @@ findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Ty
 updateByPrimaryKey :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.IncentiveJourney.Domain.Types.IncentiveJourney.IncentiveJourney -> m ())
 updateByPrimaryKey (Lib.IncentiveJourney.Domain.Types.IncentiveJourney.IncentiveJourney {..}) = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.description description, Se.Set Beam.journeyType journeyType, Se.Set Beam.name name, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+  updateWithKV
+    [ Se.Set Beam.description description,
+      Se.Set Beam.journeyType journeyType,
+      Se.Set Beam.name name,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
