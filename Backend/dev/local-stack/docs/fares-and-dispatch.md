@@ -32,6 +32,16 @@ for the *pickup* and shipped it (`5d56a58fac`, live a few hours: 5 km = 315 DA);
 the owner then said the boss meant the per-km, and the next release restored the
 pickup and set the per-km. The website's price page follows the same numbers.
 
+**It IS applied, live since 2026-10-25 10:43 UTC.** The commit messages of
+`5d56a58fac` and `8da21a36f3` end « NOT APPLIED YET »: that was true when they
+were written, and they were never amended (a pushed commit message is history,
+not edited). Read back from the live `fare_policy` on 2026-11-03: Voiture
+**25 / 40 / 65 DA** (start / per km / pickup) in Algeria and **8 / 12 / 20 MRU**
+in Mauritania, both `updated_at` 2026-10-25 10:43. Trust the table, not those
+two messages -- and never take « NOT APPLIED YET » in a commit message as the
+state of the server: read `fare_policy` (the query `apply-tariff.sh` prints at
+its end), or run `ops/deploy.sh status` for what is released.
+
 Re-measured 2026-08-24, on both merchants, all four variants:
 
 | App name | Variant | Start | Per km | Pickup | Max extra |
