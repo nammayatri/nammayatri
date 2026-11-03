@@ -208,7 +208,6 @@ getServiceNameConfigJson = \case
   Domain.EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
     EventTrackingInterface.MoengageConfig cfg -> (Domain.EventTrackingService EventTracking.Moengage, toJSON cfg)
     EventTrackingInterface.ClevertapConfig cfg -> (Domain.EventTrackingService EventTracking.Clevertap, toJSON cfg)
-    EventTrackingInterface.BreezeConfig cfg -> (Domain.EventTrackingService EventTracking.Breeze, toJSON cfg)
     EventTrackingInterface.FirebaseAnalyticsConfig cfg -> (Domain.EventTrackingService EventTracking.FirebaseAnalytics, toJSON cfg)
     EventTrackingInterface.BreezeConfig cfg -> (Domain.EventTrackingService EventTracking.Breeze, toJSON cfg)
   Domain.FleetEngineServiceConfig cfg -> (Domain.FleetEngineService Domain.GoogleFleetEngine, toJSON cfg)
