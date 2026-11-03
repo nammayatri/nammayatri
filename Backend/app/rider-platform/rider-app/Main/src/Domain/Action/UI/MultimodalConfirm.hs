@@ -570,7 +570,7 @@ postMultimodalRiderLocation ::
   ApiTypes.RiderLocationReq ->
   Environment.Flow ApiTypes.JourneyStatusResp
 postMultimodalRiderLocation (_, merchantId) journeyId mbFleetNo req = do
-  (journeyStatus, legs) <- getMultimodalJourneyStatusAndLegs journeyId mbFleetNo
+  (journeyStatus, legs) <- getMultimodalJourneyStatusAndLegs Nothing journeyId mbFleetNo
   let concatLegs =
         concatMap
           ( \leg -> case leg of
@@ -663,24 +663,27 @@ getMultimodalJourneyStatus ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatusResp
 getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
-  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
-  (journeyStatusResp, legs) <- getMultimodalJourneyStatusAndLegs journeyId Nothing
+  (journeyStatusResp, legs) <- getMultimodalJourneyStatusAndLegs (Just mbPersonId) journeyId Nothing
   -- a rider polling a live cab leg keeps the city's job chains alive (see SharedCab.keepChainsAlive)
   mapM_ (SharedCab.keepChainsAlive merchantId) (SharedCab.liveCabLegCities legs)
   return journeyStatusResp
 
+-- | `ownerCheck` is the caller to check the journey against, on the journey this loads anyway; Nothing skips the check.
 getMultimodalJourneyStatusAndLegs ::
+  Kernel.Prelude.Maybe (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person)) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow (ApiTypes.JourneyStatusResp, [JMTypes.JourneyLegState])
-getMultimodalJourneyStatusAndLegs journeyId mbFleetNo = do
+getMultimodalJourneyStatusAndLegs ownerCheck journeyId mbFleetNo = do
   journey <- JM.getJourney journeyId
+  whenJust ownerCheck (`checkJourneyOwner` journey)
   legs <- JM.getAllLegsStatus journey mbFleetNo
   (,legs) <$> generateJourneyStatusResponse journey legs
 
 postMultimodalJourneyFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> API.Types.UI.MultimodalConfirm.JourneyFeedBackForm -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalJourneyFeedback (mbPersonId, merchantId) journeyId journeyFeedbackForm = do
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   riderId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   now <- getCurrentTime
   whenJust journeyFeedbackForm.rating $ \rating -> do
@@ -1540,8 +1543,9 @@ postMultimodalComplete (mbPersonId, _) journeyId = do
   journey <- JM.getJourney journeyId
   checkJourneyOwner mbPersonId journey
   legs <- QJourneyLeg.getJourneyLegs journeyId
-  mapM_ dropSharedCabRider legs
-  updatedLegStatus <- JM.markJourneyComplete journey legs
+  -- a never-boarded cab leg is cancelled instead, so it must not be marked completed after
+  cancelledLegIds <- map (.id) <$> filterM dropSharedCabRider legs
+  updatedLegStatus <- JM.markJourneyComplete journey (filter ((`Kernel.Prelude.notElem` cancelledLegIds) . (.id)) legs)
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse updatedJourney updatedLegStatus
 
