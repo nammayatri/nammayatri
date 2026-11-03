@@ -7,7 +7,7 @@ module SharedCabProxyTests (tests) where
 import "dynamic-offer-driver-app" API.Types.UI.SharedCab (SharedCabBookingOperation (..), SharedCabBookingOperationReq (..), SharedCabMessageReq (..))
 import Data.Aeson (Value (..), decode, encode, object, (.=))
 import "dynamic-offer-driver-app" Domain.Action.Internal.SharedCabCallNumber (callNumberAllowed)
-import "dynamic-offer-driver-app" Domain.Action.UI.SharedCabBooking (BookingAction (..), actionReason, bookingActionOf)
+import "dynamic-offer-driver-app" Domain.Action.UI.SharedCab (BookingAction (..), actionReason, bookingActionOf)
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as SP
 import "beckn-spec" Domain.Types.SharedCabSession (RiderStatus (..))
 import qualified "beckn-spec" Domain.Types.VehicleVariant as DV

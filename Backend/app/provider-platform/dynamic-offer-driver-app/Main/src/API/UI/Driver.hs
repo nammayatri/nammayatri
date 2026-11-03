@@ -40,7 +40,7 @@ where
 import qualified "this" API.Types.ProviderPlatform.Management.Driver as DCommon
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.Registration as DRegistration
-import qualified Domain.Action.UI.SharedCabExtra as SharedCabExtra
+import qualified Domain.Action.UI.SharedCab as SharedCab
 import Domain.Types
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.Common as DI
@@ -320,7 +320,7 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant c
 
 withPublicTransportVersion :: Id DMOC.MerchantOperatingCity -> DDriver.DriverInformationRes -> Flow DDriver.DriverInformationRes
 withPublicTransportVersion merchantOpCityId res = do
-  version <- SharedCabExtra.sharedCabFeedVersion merchantOpCityId ((.variant) <$> res.linkedVehicle)
+  version <- SharedCab.sharedCabFeedVersion merchantOpCityId ((.variant) <$> res.linkedVehicle)
   pure res {DDriver.publicTransportVersion = version}
 
 marketingEventsPostLogin :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DRegistration.MarketEventReq -> FlowHandler APISuccess
