@@ -87,6 +87,7 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     vehicleTags :: SetField (Maybe [Text]),
     mYManufacturing :: SetField (Maybe Days.Day),
     fleetOwnerId :: SetField (Maybe Text),
+    mgCampaign :: SetField (Maybe Value),
     -- On-ride / forward batching fields
     driverTripEndLocation :: SetField (Maybe Maps.LatLong),
     hasRideStarted :: SetField (Maybe Bool),
@@ -147,6 +148,7 @@ emptyUpdate =
       vehicleTags = Unchanged,
       mYManufacturing = Unchanged,
       fleetOwnerId = Unchanged,
+      mgCampaign = Unchanged,
       driverTripEndLocation = Unchanged,
       hasRideStarted = Unchanged,
       lastRideEndedAt = Unchanged,
@@ -286,6 +288,7 @@ applyUpdate now u d =
       DPD.vehicleTags = applyField u.vehicleTags d.vehicleTags,
       DPD.mYManufacturing = applyField u.mYManufacturing d.mYManufacturing,
       DPD.fleetOwnerId = applyField u.fleetOwnerId d.fleetOwnerId,
+      DPD.mgCampaign = applyField u.mgCampaign d.mgCampaign,
       DPD.driverTripEndLocation = applyField u.driverTripEndLocation d.driverTripEndLocation,
       DPD.hasRideStarted = applyField u.hasRideStarted d.hasRideStarted,
       DPD.lastRideEndedAt = applyField u.lastRideEndedAt d.lastRideEndedAt,

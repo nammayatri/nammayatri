@@ -9,6 +9,8 @@ module SharedLogic.FleetDriverSettings
     applyFleetSettings,
     applyFleetSettingsToDriver,
     removeAutoAssign,
+    clearAllAutoAssign,
+    reconcileAutoAssignAfterMgSync,
   )
 where
 
@@ -21,9 +23,12 @@ import Domain.Types.Person (Person)
 import qualified Domain.Types.Vehicle as DV
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.IncentiveJourney.Domain.Types.Common as IJCommon
+import qualified Lib.IncentiveJourney.MgCampaign as Mg
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
@@ -57,7 +62,7 @@ autoAssignedTiers tags = case Yudhishthira.accessTagKey (LYT.TagName autoAssignT
 -- switch), then area preference off and trip-distance preference off when the fleet ignores them. No-op for a driver
 -- whose fleet has no auto-assign settings, unless forced.
 applyFleetSettings ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r) =>
   Bool ->
   [DVST.VehicleServiceTier] ->
   Person ->
@@ -84,7 +89,7 @@ applyFleetSettings forceAutoAssign cityTiers driver vehicle = do
 
 -- | For a driver who becomes active in a fleet: applies the fleet's settings to the vehicle they already have, if any.
 applyFleetSettingsToDriver ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m ()
@@ -93,6 +98,37 @@ applyFleetSettingsToDriver driverId merchantOpCityId =
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     cityTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
     applyFleetSettings False cityTiers driver vehicle
+
+-- | Strip AutoAssign tag + selectedAutoAcceptTiers so leftover fleet/MG tiers cannot silent-assign.
+clearAllAutoAssign ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Id Person ->
+  m ()
+clearAllAutoAssign driverId = do
+  mbVehicle <- QVehicle.findById driverId
+  mbDriver <- QPerson.findById driverId
+  case (mbVehicle, mbDriver) of
+    (Just vehicle, Just driver) -> removeAutoAssign (fromMaybe [] vehicle.selectedAutoAcceptTiers) driver vehicle
+    _ -> pure ()
+
+-- | After DI.mg_campaign sync: opt-in applies MG auto-assign (via getDriverFleetAutoAssignConfig);
+-- invite/cleared opt-in strips tags (MG member, never fleet); unassign restores fleet settings.
+reconcileAutoAssignAfterMgSync ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r) =>
+  Id IJCommon.Person ->
+  Maybe Mg.MgCampaignSnapshot ->
+  m ()
+reconcileAutoAssignAfterMgSync personId mbSnap = do
+  let driverId = cast personId
+  case mbSnap of
+    Just snap
+      | snap.optedIn -> do
+        clearAllAutoAssign driverId
+        QPerson.findById driverId >>= mapM_ \driver -> applyFleetSettingsToDriver driver.id driver.merchantOperatingCityId
+      | otherwise -> clearAllAutoAssign driverId
+    Nothing -> do
+      clearAllAutoAssign driverId
+      QPerson.findById driverId >>= mapM_ \driver -> applyFleetSettingsToDriver driver.id driver.merchantOperatingCityId
 
 -- | The fleet's per-driver switch turned off: these tiers come off the AutoAssign tag and the vehicle's auto-accept tiers.
 removeAutoAssign ::

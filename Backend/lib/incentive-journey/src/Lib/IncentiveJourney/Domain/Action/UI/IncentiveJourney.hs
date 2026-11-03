@@ -1,14 +1,16 @@
 module Lib.IncentiveJourney.Domain.Action.UI.IncentiveJourney
   ( getIncentiveJourneyList,
     getIncentiveJourneyHistory,
+    postIncentiveJourneyOptIn,
   )
 where
 
-import Data.List (find, nub)
+import Data.List (find, nub, nubBy, sortOn)
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime), addDays, defaultTimeLocale, parseTimeM, utctDay)
-import EulerHS.Prelude hiding (find, id)
+import EulerHS.Prelude hiding (find, id, sortOn)
+import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -16,12 +18,18 @@ import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.IncentiveJourney.Common as IJC
 import qualified Lib.IncentiveJourney.Common.UI.IncentiveJourney as API
 import Lib.IncentiveJourney.Domain.Action.Dashboard.ServiceHandle (ServiceHandle (..))
+import qualified Lib.IncentiveJourney.Domain.Types.CohortDetails as DCD
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as DIJC
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats as DIJS
+import qualified Lib.IncentiveJourney.Domain.Types.UserCohortMapping as DUCM
+import qualified Lib.IncentiveJourney.MgCampaign as MgCampaign
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.Queries.CohortDetailsExtra as QCDExtra
+import qualified Lib.IncentiveJourney.Storage.Queries.CohortJourneyMappingExtra as QCJMExtra
+import qualified Lib.IncentiveJourney.Storage.Queries.UserCohortMappingExtra as QUCMExtra
 
 buildSpecialLocationNames :: BeamFlow m r => ServiceHandle m -> [DIJM.IncentiveJourneyMilestone] -> m [(Text, Text)]
 buildSpecialLocationNames handle milestones = do
@@ -46,6 +54,48 @@ toSpecialLocationNames specialLocationNames =
 
 resolveDisplayRewardValue :: DIJM.IncentiveJourneyMilestone -> Maybe Int
 resolveDisplayRewardValue = (.rewardValue)
+
+-- | Driver/rider self opt-in for OptIn cohorts. Requires invite UCM row.
+postIncentiveJourneyOptIn ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ( Maybe (Id IJC.Person),
+    Id IJC.Merchant,
+    Id IJC.MerchantOperatingCity
+  ) ->
+  API.OptInIncentiveJourneyReq ->
+  m APISuccess
+postIncentiveJourneyOptIn handle (mbPersonId, merchantId, merchantOpCityId) req = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person id passed")
+  cjm <-
+    QCJMExtra.findCohortJourneyMappingById req.cohortJourneyMappingId
+      >>= fromMaybeM (InvalidRequest "Cohort journey mapping not found")
+  unless (cjm.merchantId == merchantId && cjm.merchantOperatingCityId == merchantOpCityId) $
+    throwError (InvalidRequest "Cohort journey mapping does not belong to this merchant/city")
+  cohort <-
+    QCDExtra.findCohortDetailsById cjm.cohortId
+      >>= fromMaybeM (InvalidRequest "Cohort not found")
+  unless (fromMaybe DCD.Assigned cohort.cohortType == DCD.OptIn) $
+    throwError (InvalidRequest "Opt-in is only supported for OptIn cohorts")
+  let optInPeriod = fromMaybe DUCM.Daily req.optInPeriod
+  void $ QUCMExtra.markUserCohortMappingOptedIn personId cjm.id optInPeriod req.validTill "driver"
+  handle.clearAssignmentCacheByPersonId personId
+  journey <-
+    handle.getOneJourney cjm.journeyId
+      >>= fromMaybeM (InvalidRequest "Incentive journey not found")
+  when (fromMaybe False cjm.isMg) $
+    whenJust handle.syncMgCampaignSnapshot $ \sync -> do
+      milestones <- sortOn (.order) <$> handle.getMilestonesByJourneyId journey.id
+      let mbTimeBounds = (.timeBounds) =<< listToMaybe milestones
+          snap =
+            MgCampaign.mkSnapshotFromCjm
+              journey.id.getId
+              cjm
+              mbTimeBounds
+              True
+              (Just req.validTill)
+      sync personId (Just snap)
+  pure Success
 
 getIncentiveJourneyList ::
   BeamFlow m r =>
@@ -90,9 +140,10 @@ getIncentiveJourneyList handle (mbPersonId, merchantId, merchantOpCityId) mbLimi
           journeys <-
             forM pagedPairs $ \(journey, cjm) -> do
               milestones <- handle.loadJourneyMilestones journey.id
-              let periodKey = IJ.mkJourneyPeriodKeyFor localTime journey
+              let periodKey = IJ.mkJourneyPeriodKeyFor localTime journey cjm.startDate
+                  -- Inclusive last day for drivers (backend window uses exclusive computeStreakEndDate).
                   endDate =
-                    IJ.computeStreakEndDate
+                    IJ.displayStreakEndDate
                       cjm.startDate
                       cjm.streakRange
                       journey.journeyType
@@ -106,6 +157,8 @@ getIncentiveJourneyList handle (mbPersonId, merchantId, merchantOpCityId) mbLimi
                     name = journey.name,
                     description = journey.description,
                     journeyType = journey.journeyType,
+                    isMg = fromMaybe False cjm.isMg,
+                    mgAmount = cjm.mgAmount,
                     startDate = cjm.startDate,
                     endDate = endDate,
                     streakRange = cjm.streakRange,
@@ -151,7 +204,10 @@ toMilestoneItem specialLocationNames statsRows milestone = do
             _ -> Nothing,
         timeBounds = milestone.timeBounds,
         status = maybe DIJS.NotStarted (.status) mbStats,
-        currentValue = maybe 0 (.currentValue) mbStats
+        currentValue = maybe 0 (.currentValue) mbStats,
+        metricSnapshot = mbStats >>= (.metricSnapshot),
+        mgNetEarnings = mbStats >>= (.mgNetEarnings),
+        nonMgNetEarnings = mbStats >>= (.nonMgNetEarnings)
       }
 
 getIncentiveJourneyHistory ::
@@ -172,19 +228,30 @@ getIncentiveJourneyHistory handle (mbPersonId, merchantId, merchantOpCityId) mbD
   let historyDay = fromMaybe (utctDay localTime) (mbDate >>= parseDateText)
       historyDayUtc = UTCTime historyDay 0
       dailyPeriodKey = IJ.mkDailyPeriodKey historyDayUtc
-      weeklyPeriodKey = IJ.mkWeeklyPeriodKey historyDayUtc
-      monthlyPeriodKey = IJ.mkMonthlyPeriodKey historyDayUtc
       limitVal = fromMaybe 30 mbLimit
       offsetVal = fromMaybe 0 mbOffset
-  dailyStatsRows <- handle.findStatsByPersonIdAndPeriodKey driverId dailyPeriodKey
-  weeklyStatsRows <- handle.findStatsByPersonIdAndPeriodKey driverId weeklyPeriodKey
-  monthlyStatsRows <- handle.findStatsByPersonIdAndPeriodKey driverId monthlyPeriodKey
-  let dailyStatsIds = map (.id) dailyStatsRows
-      weeklyOnly = filter (\stats -> stats.id `notElem` dailyStatsIds) weeklyStatsRows
-      knownIds = dailyStatsIds <> map (.id) weeklyOnly
-      monthlyOnly = filter (\stats -> stats.id `notElem` knownIds) monthlyStatsRows
-      statsRows = dailyStatsRows <> weeklyOnly <> monthlyOnly
-  let statsCampaigns = nub [(stats.journeyId, stats.cohortJourneyMappingId) | stats <- statsRows]
+  assignments <- handle.findAssignmentsByUserId driverId
+  let assignmentJourneyIds = nub $ map ((.journeyId) . (.cohortJourneyMapping)) assignments
+  assignmentJourneys <-
+    if null assignmentJourneyIds
+      then pure []
+      else handle.getJourneysByIds assignmentJourneyIds
+  -- Daily key + per-assignment anchored Week:/Month:YYYY-MM-DD keys for this history day.
+  let anchoredPeriodKeys =
+        nub $
+          [ IJ.mkJourneyPeriodKeyFor historyDayUtc journey cjm.startDate
+            | assignment <- assignments,
+              let cjm = assignment.cohortJourneyMapping,
+              journey <- assignmentJourneys,
+              journey.id == cjm.journeyId,
+              cjm.enabled,
+              cjm.merchantId == merchantId,
+              cjm.merchantOperatingCityId == merchantOpCityId
+          ]
+      periodKeysToFetch = nub (dailyPeriodKey : anchoredPeriodKeys)
+  statsRowsNested <- forM periodKeysToFetch $ handle.findStatsByPersonIdAndPeriodKey driverId
+  let statsRows = nubBy (\a b -> a.id == b.id) (concat statsRowsNested)
+      statsCampaigns = nub [(stats.journeyId, stats.cohortJourneyMappingId) | stats <- statsRows]
       statsCjmIds = mapMaybe snd statsCampaigns
   statsExpanded <-
     concat
@@ -196,12 +263,11 @@ getIncentiveJourneyHistory handle (mbPersonId, merchantId, merchantOpCityId) mbD
                   filter
                     (\s -> s.journeyId == journeyId && s.cohortJourneyMappingId == mbCohortJourneyMappingId)
                     statsRows
-            expandHistoryJourney handle historyDayUtc journeyId mbCohortJourneyMappingId mbJourney journeyStats
+            expandHistoryJourney handle historyDayUtc journeyId mbCohortJourneyMappingId mbJourney journeyStats assignments
         )
   -- Eligible assignments with no stats for this date still belong in history.
   -- Another campaign of the same journey is included when its own rows are absent.
   -- The app shows those untouched milestones as missed. Status stays NotStarted.
-  assignments <- handle.findAssignmentsByUserId driverId
   let dayStart = historyDayUtc
       dayEnd = UTCTime (addDays 1 historyDay) 0
       candidateCjms =
@@ -227,7 +293,7 @@ getIncentiveJourneyHistory handle (mbPersonId, merchantId, merchantOpCityId) mbD
         ]
   eligibleExpanded <-
     concat
-      <$> forM eligiblePairs (\(journey, cjm) -> expandHistoryJourney handle historyDayUtc journey.id (Just cjm.id) (Just journey) [])
+      <$> forM eligiblePairs (\(journey, cjm) -> expandHistoryJourney handle historyDayUtc journey.id (Just cjm.id) (Just journey) [] assignments)
   let history =
         take limitVal
           . drop offsetVal
@@ -242,23 +308,34 @@ expandHistoryJourney ::
   Maybe (Id DCJM.CohortJourneyMapping) ->
   Maybe DIJ.IncentiveJourney ->
   [DIJS.IncentiveJourneyStats] ->
+  [IJ.JourneyAssignment] ->
   m [API.IncentiveJourneyHistoryItem]
-expandHistoryJourney handle historyDayUtc journeyId mbCohortJourneyMappingId mbJourney journeyStats = do
+expandHistoryJourney handle historyDayUtc journeyId mbCohortJourneyMappingId mbJourney journeyStats assignments = do
   milestones <- handle.loadJourneyMilestones journeyId
   specialLocationNames <- buildSpecialLocationNames handle milestones
   let journeyName = maybe journeyId.getId (.name) mbJourney
       journeyType = maybe DIJ.Daily (.journeyType) mbJourney
+      mbCjm =
+        case mbCohortJourneyMappingId of
+          Just cjmId ->
+            (.cohortJourneyMapping) <$> find (\a -> a.cohortJourneyMapping.id == cjmId) assignments
+          Nothing -> Nothing
+      -- Prefer stats snapshot when present; else live CJM (not-started history rows).
+      isMgFromCjm = maybe False (fromMaybe False . (.isMg)) mbCjm
+      mgAmount = mbCjm >>= (.mgAmount)
+      mbStartDate = (.startDate) <$> mbCjm
       defaultPeriodKey =
         case listToMaybe journeyStats of
           Just stats -> stats.periodKey
           Nothing ->
-            case mbJourney of
-              Just journey -> IJ.mkJourneyPeriodKeyFor historyDayUtc journey
-              Nothing -> "Day:" <> T.pack (show (utctDay historyDayUtc))
+            case (mbJourney, mbStartDate) of
+              (Just journey, Just startDate) -> IJ.mkJourneyPeriodKeyFor historyDayUtc journey startDate
+              _ -> IJ.mkDailyPeriodKey historyDayUtc
   forM milestones $ \milestone -> do
     let mbStats = find (\s -> s.milestoneId == milestone.id) journeyStats
         displayRewardValue = resolveDisplayRewardValue milestone
-    pure $ mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyName journeyType milestones milestone defaultPeriodKey displayRewardValue mbStats
+        isMg = maybe isMgFromCjm (fromMaybe False . (.isMg)) mbStats
+    pure $ mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyName journeyType isMg mgAmount milestones milestone defaultPeriodKey displayRewardValue mbStats
 
 -- | The history date overlaps the cohort mapping window. End is exclusive, same as the list check.
 historyDayOverlapsJourney :: UTCTime -> UTCTime -> DIJ.IncentiveJourney -> DCJM.CohortJourneyMapping -> Bool
@@ -272,13 +349,15 @@ mkHistoryItem ::
   Maybe (Id DCJM.CohortJourneyMapping) ->
   Text ->
   DIJ.IncentiveJourneyType ->
+  Bool ->
+  Maybe HighPrecMoney ->
   [DIJM.IncentiveJourneyMilestone] ->
   DIJM.IncentiveJourneyMilestone ->
   Text ->
   Maybe Int ->
   Maybe DIJS.IncentiveJourneyStats ->
   API.IncentiveJourneyHistoryItem
-mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyName journeyType journeyMilestones milestone defaultPeriodKey displayRewardValue mbStats =
+mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyName journeyType isMg mgAmount journeyMilestones milestone defaultPeriodKey displayRewardValue mbStats =
   let milestoneOrder = IJ.milestoneOrderInJourney milestone journeyMilestones
    in case mbStats of
         Just stats ->
@@ -287,6 +366,10 @@ mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyNam
               cohortJourneyMappingId = mbCohortJourneyMappingId,
               journeyName = journeyName,
               journeyType = journeyType,
+              isMg = isMg,
+              mgAmount = mgAmount,
+              mgNetEarnings = stats.mgNetEarnings,
+              nonMgNetEarnings = stats.nonMgNetEarnings,
               milestoneId = milestone.id,
               milestoneName = milestone.name,
               milestoneDescription = milestone.description,
@@ -297,6 +380,7 @@ mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyNam
               areaType = milestone.areaType,
               specialLocationNames = toSpecialLocationNames specialLocationNames milestone.specialLocationIds,
               currentValue = stats.currentValue,
+              metricSnapshot = stats.metricSnapshot,
               status = stats.status,
               rewardType = stats.rewardType,
               rewardValue = displayRewardValue,
@@ -309,6 +393,10 @@ mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyNam
               cohortJourneyMappingId = mbCohortJourneyMappingId,
               journeyName = journeyName,
               journeyType = journeyType,
+              isMg = isMg,
+              mgAmount = mgAmount,
+              mgNetEarnings = Nothing,
+              nonMgNetEarnings = Nothing,
               milestoneId = milestone.id,
               milestoneName = milestone.name,
               milestoneDescription = milestone.description,
@@ -319,6 +407,7 @@ mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyNam
               areaType = milestone.areaType,
               specialLocationNames = toSpecialLocationNames specialLocationNames milestone.specialLocationIds,
               currentValue = 0,
+              metricSnapshot = Nothing,
               status = DIJS.NotStarted,
               rewardType = milestone.rewardType,
               rewardValue = displayRewardValue,

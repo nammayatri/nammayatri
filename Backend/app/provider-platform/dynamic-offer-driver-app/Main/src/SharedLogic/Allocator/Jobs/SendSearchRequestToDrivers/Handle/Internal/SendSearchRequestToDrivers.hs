@@ -92,6 +92,7 @@ import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.FarePolicy
 import SharedLogic.Finance.Wallet (addOfferHoldsForSearchTry)
 import SharedLogic.GoogleTranslate
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaign
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (offerQuoteLockKeyWithCoolDown)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
@@ -215,10 +216,12 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
     if any (isJust . (.driverPoolResult.fleetOwnerId)) driverPool
       then getCityFleetConfigs searchReq.merchantOperatingCityId
       else pure Map.empty
-  dispatchPool <- attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolConfig batchNumber transporterConfig coinConfigCache fleetConfigs driverPool
+  -- MG perks come from LTS DriverPoolData.mgCampaign (no DI query on this path).
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  dispatchPool <- attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolConfig batchNumber transporterConfig coinConfigCache fleetConfigs localTime driverPool
   dynamicPickupMetrics <- fetchDynamicPickupMetrics driverPoolConfig searchReq dispatchPool
   languageDictionary <- foldM (addLanguageToDictionary transporterConfig searchReq) M.empty dispatchPool
-  searchRequestsForDrivers <- mapM (\dp -> buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache fleetConfigs False driverPoolConfig.autoAssignMaxPickupDistance (M.lookup dp.driverPoolResult.driverId.getId dynamicPickupMetrics) dp) dispatchPool
+  searchRequestsForDrivers <- mapM (\dp -> buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache fleetConfigs localTime False driverPoolConfig.autoAssignMaxPickupDistance (M.lookup dp.driverPoolResult.driverId.getId dynamicPickupMetrics) dp) dispatchPool
   let driverPoolZipSearchRequests = zip dispatchPool searchRequestsForDrivers
   (merchantLabel, cityLabel) <- SML.getMetricsLabels searchReq.providerId searchReq.merchantOperatingCityId
   let metricsDistanceBucketEdges = SML.distanceBucketEdges transporterConfig
@@ -443,12 +446,13 @@ buildSearchRequestForDriver ::
   Maybe (Id RiderDetails) ->
   M.Map DVST.ServiceTierType (Maybe Int) ->
   M.Map Text DFC.FleetConfig ->
+  UTCTime ->
   Bool ->
   Maybe Meters ->
   Maybe (Meters, Seconds) ->
   SDP.DriverPoolWithActualDistResult ->
   m SearchRequestForDriver
-buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache fleetConfigs isAutoAccepted autoAssignMaxPickupDistance mbDynamicPickup dpwRes = do
+buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache fleetConfigs localTime isAutoAccepted autoAssignMaxPickupDistance mbDynamicPickup dpwRes = do
   let currency = searchTry.currency
   guid <- generateGUID
   now <- getCurrentTime
@@ -472,7 +476,12 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
     _ -> pure $ tripQuoteDetail.baseFare + additionalCharges
   deploymentVersion <- asks (.version)
   isFavourite <- maybe (pure Nothing) (\riderid -> findByRiderIdAndDriverId riderid (cast dpRes.driverId) <&> fmap (.favourite)) riderId
-  let fleetForbidsCancellation = fleetForbidsDriverCancellation (dpRes.fleetOwnerId >>= (`M.lookup` fleetConfigs))
+  -- MG campaign from LTS pool data: Just → never fleet; Nothing → fleet fallback.
+  let mgSource = MgCampaign.resolveMgPerkSourceFromCampaign localTime dpRes.mgCampaign
+      fleetForbidsCancellation =
+        case MgCampaign.mgForbidsDriverCancellation mgSource of
+          Just forbid -> forbid
+          Nothing -> fleetForbidsDriverCancellation (dpRes.fleetOwnerId >>= (`M.lookup` fleetConfigs))
       searchRequestForDriver =
         SearchRequestForDriver
           { id = guid,
@@ -672,20 +681,28 @@ attemptPriorityDirectAssign ::
   DTR.TransporterConfig ->
   Map.Map DVST.ServiceTierType (Maybe Int) ->
   Map.Map Text DFC.FleetConfig ->
+  UTCTime ->
   [SDP.DriverPoolWithActualDistResult] ->
   m [SDP.DriverPoolWithActualDistResult]
-attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolCfg batchNum transporterConfig coinConfigCache fleetConfigs batch = do
-  if null sortedPriority
+attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolCfg batchNum transporterConfig coinConfigCache fleetConfigs localTime batch = do
+  let mgEligiblePriority = filter mgAllowsSilentAssign sortedPriority
+  if null mgEligiblePriority
     then pure batch
     else do
       now <- getCurrentTime
       let validTill = fromIntegral driverPoolCfg.singleBatchProcessTime `addUTCTime` now
       quoteRespondCoolDown <- asks (.quoteRespondCoolDown)
-      assigned <- tryAssign validTill quoteRespondCoolDown sortedPriority
+      assigned <- tryAssign validTill quoteRespondCoolDown mgEligiblePriority
       -- On success return [] -- broadcasting the remainder would still notify for an already-taken ride.
       pure $ if assigned then [] else batch
   where
     tripQuoteDetailsHashMap = HashMap.fromList $ (\tqd -> (tqd.vehicleServiceTier, tqd)) <$> tripQuoteDetails
+    -- MG membership from LTS: never silent-assign from leftover fleet tags unless MG auto-assign perks are active.
+    mgAllowsSilentAssign dp =
+      let mgSource = MgCampaign.resolveMgPerkSourceFromCampaign localTime dp.driverPoolResult.mgCampaign
+       in case mgSource of
+            MgCampaign.UseFleet -> True
+            MgCampaign.MgMember {} -> isJust (MgCampaign.mgAutoAssignConfig mgSource)
     -- Closes over the outer args; only validTill, the cooldown, and the candidate list vary per call.
     tryAssign :: UTCTime -> Int -> [SDP.DriverPoolWithActualDistResult] -> m Bool
     tryAssign _ _ [] = pure False
@@ -736,7 +753,7 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
             if onRide || inCoolOff || not isStillLive || not (null activeQuotes) || isJust mbActiveBooking
               then pure False
               else do
-                sReqFD <- buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum validTill transporterConfig searchReq.riderId coinConfigCache fleetConfigs True driverPoolCfg.autoAssignMaxPickupDistance Nothing dp
+                sReqFD <- buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum validTill transporterConfig searchReq.riderId coinConfigCache fleetConfigs localTime True driverPoolCfg.autoAssignMaxPickupDistance Nothing dp
                 -- Nested try: a failure after the SRFD row exists must retract it, otherwise the
                 -- driver can still poll and manually accept an offer this loop already abandoned.
                 assignResult :: Either SomeException [SearchRequestForDriver] <- C.try $ do

@@ -11,15 +11,16 @@ module SharedLogic.IncentiveJourney
     selectPreferredJourney,
     orderJourneysForDisplay,
     mkJourneyPeriodKey,
-    mkWeeklyPeriodKey,
-    mkMonthlyPeriodKey,
     mkDailyPeriodKey,
     journeyTypeOrDefault,
     isJourneyWindowActive,
     evaluateDriverJourney,
+    evaluateDriverBehaviorTick,
+    publishBehaviorMetricTick,
     loadJourneyMilestones,
     waiveDriverMilestone,
     retryVerifiedVpaJourneyCashPayouts,
+    JourneyRewardDispatchFlow,
   )
 where
 
@@ -35,12 +36,15 @@ import qualified Domain.Types.Overlay as DOverlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DTV
+import qualified Environment
 import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.External.Types (Language (..), SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis (HedisLTSFlowEnv)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis.Config (HedisFlow)
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
@@ -65,6 +69,10 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified SharedLogic.FleetDriverSettings as FDS
+import qualified SharedLogic.IncentiveJourney.BehaviorTickPublisher as BehaviorTickPublisher
+import qualified SharedLogic.IncentiveJourney.MetricBag as MetricBag
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaignSync
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Payment ()
@@ -100,8 +108,10 @@ type JourneyRewardDispatchFlow m r =
   ( MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     EncFlow m r,
     ServiceFlow m r,
+    HedisLTSFlowEnv r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     PaymentBeamFlow.BeamFlow m r,
     BeamFlow m r,
@@ -140,14 +150,8 @@ orderJourneysForDisplay = IJ.orderJourneysForDisplay
 isJourneyWindowActive :: UTCTime -> DIJ.IncentiveJourney -> DCJM.CohortJourneyMapping -> Bool
 isJourneyWindowActive = IJ.isJourneyWindowActiveFor
 
-mkJourneyPeriodKey :: UTCTime -> DIJ.IncentiveJourney -> Text
+mkJourneyPeriodKey :: UTCTime -> DIJ.IncentiveJourney -> UTCTime -> Text
 mkJourneyPeriodKey = IJ.mkJourneyPeriodKeyFor
-
-mkWeeklyPeriodKey :: UTCTime -> Text
-mkWeeklyPeriodKey = IJ.mkWeeklyPeriodKey
-
-mkMonthlyPeriodKey :: UTCTime -> Text
-mkMonthlyPeriodKey = IJ.mkMonthlyPeriodKey
 
 mkDailyPeriodKey :: UTCTime -> Text
 mkDailyPeriodKey = IJ.mkDailyPeriodKey
@@ -224,9 +228,63 @@ sendMilestoneWaivedOverlay merchantOpCityId driverId journey milestone journeyMi
             }
     sendOverlay merchantOpCityId driver $ mkOverlayReq overlay'
 
--- | EndRide journey evaluation. Call when driver has user_cohort_mapping rows.
+mkDriverEvaluateHandle ::
+  JourneyRewardDispatchFlow m r =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  DTV.VehicleCategory ->
+  Maybe DCommon.ServiceTierType ->
+  m (IJ.IncentiveJourneyHandle m)
+mkDriverEvaluateHandle driverId merchantId merchantOpCityId transporterConfig vehCategory mbServiceTier =
+  pure
+    IJ.IncentiveJourneyHandle
+      { actor = IJ.DriverActor,
+        loadJourneysByIds = CQJourney.findByIds IJ.DriverActor,
+        loadMilestones = loadJourneyMilestones,
+        dispatchReward = \journey ctx spec ->
+          dispatchDriverReward
+            driverId
+            merchantId
+            merchantOpCityId
+            transporterConfig
+            journey
+            vehCategory
+            mbServiceTier
+            ctx
+            spec,
+        dispatchStreakEndReward = \journey campaignKey spec ->
+          dispatchDriverStreakEndReward
+            driverId
+            merchantId
+            merchantOpCityId
+            transporterConfig
+            journey
+            vehCategory
+            mbServiceTier
+            campaignKey
+            spec,
+        mbOnMilestoneCompleted =
+          Just $ \journey milestone journeyMilestones awarded ->
+            void $
+              withTryCatch "IncentiveJourney:sendMilestoneCompletedOverlay" $
+                sendMilestoneCompletedOverlay
+                  merchantOpCityId
+                  driverId
+                  journey
+                  milestone
+                  journeyMilestones
+                  awarded,
+        mbOnMgOptInCleared = Just $ \personId cjmId -> do
+          MgCampaignSync.clearMgOptedInOnDriverInfo personId cjmId
+          FDS.clearAllAutoAssign (cast personId),
+        buildMetricContext = MetricBag.buildMetricContext
+      }
+
+-- | Kafka RIDE_EVENTS journey evaluation (not HTTP EndRide).
 evaluateDriverJourney ::
-  (JourneyRewardDispatchFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r) =>
+  JourneyRewardDispatchFlow m r =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -240,46 +298,15 @@ evaluateDriverJourney ::
   IncentiveMetrics.RideIncentiveDeltas ->
   m ()
 evaluateDriverJourney driverId merchantId merchantOpCityId transporterConfig vehCategory mbServiceTier _mbEntityId mbPickupSpecialLocationId mbDropSpecialLocationId timeBoundReferenceUtc rideDeltas = do
-  let ijHandle =
-        IJ.IncentiveJourneyHandle
-          { actor = IJ.DriverActor,
-            loadJourneysByIds = CQJourney.findByIds IJ.DriverActor,
-            loadMilestones = loadJourneyMilestones,
-            dispatchReward = \journey ctx spec ->
-              dispatchDriverReward
-                driverId
-                merchantId
-                merchantOpCityId
-                transporterConfig
-                journey
-                vehCategory
-                mbServiceTier
-                ctx
-                spec,
-            dispatchStreakEndReward = \journey campaignKey spec ->
-              dispatchDriverStreakEndReward
-                driverId
-                merchantId
-                merchantOpCityId
-                transporterConfig
-                journey
-                vehCategory
-                mbServiceTier
-                campaignKey
-                spec,
-            mbOnMilestoneCompleted =
-              Just $ \journey milestone journeyMilestones awarded ->
-                void $
-                  withTryCatch "IncentiveJourney:sendMilestoneCompletedOverlay" $
-                    sendMilestoneCompletedOverlay
-                      merchantOpCityId
-                      driverId
-                      journey
-                      milestone
-                      journeyMilestones
-                      awarded
-          }
-      input =
+  ijHandle <-
+    mkDriverEvaluateHandle
+      driverId
+      merchantId
+      merchantOpCityId
+      transporterConfig
+      vehCategory
+      mbServiceTier
+  let input =
         IJ.EvaluateInput
           { personId = cast driverId,
             merchantId = cast merchantId,
@@ -293,6 +320,62 @@ evaluateDriverJourney driverId merchantId merchantOpCityId transporterConfig veh
             mbRideServiceTierType = show <$> mbServiceTier
           }
   IJ.evaluateIncentiveJourneys ijHandle input
+
+-- | Consumer-side (IJ_BEHAVIOR_TICK_CONSUMER): full bag + JsonLogic + stats upsert.
+-- Do not call from app HTTP — use 'publishBehaviorMetricTick' after BT bump.
+evaluateDriverBehaviorTick ::
+  JourneyRewardDispatchFlow m r =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  Maybe DTV.VehicleCategory ->
+  UTCTime ->
+  m ()
+evaluateDriverBehaviorTick driverId merchantId merchantOpCityId transporterConfig mbVehCategory timeBoundReferenceUtc = do
+  vehCategory <-
+    case mbVehCategory of
+      Just vc -> pure vc
+      Nothing -> do
+        mbVeh <- QVeh.findById driverId
+        pure $ fromMaybe DTV.AUTO_CATEGORY ((.category) =<< mbVeh)
+  let mbServiceTier = Nothing
+  ijHandle <-
+    mkDriverEvaluateHandle
+      driverId
+      merchantId
+      merchantOpCityId
+      transporterConfig
+      vehCategory
+      mbServiceTier
+  IJ.evaluateBehaviorJourneys
+    ijHandle
+    IJ.BehaviorEvaluateInput
+      { personId = cast driverId,
+        merchantId = cast merchantId,
+        merchantOperatingCityId = cast merchantOpCityId,
+        timeBoundReferenceUtc = timeBoundReferenceUtc,
+        timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
+        mbRideVehicleCategory = Just (show vehCategory)
+      }
+
+-- | App HTTP after BT Redis bump (cancel / accept / online): fire-and-forget stream publish.
+-- No assignment / bag / stats work here (that would hit the app pod). Consumer loads
+-- assignments and no-ops when empty — same isolation as ride-end → RIDE_EVENTS_CONSUMER.
+publishBehaviorMetricTick ::
+  ( MonadFlow m,
+    HedisFlow m r,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    Metrics.CoreMetrics m
+  ) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  m ()
+publishBehaviorMetricTick driverId merchantId merchantOpCityId actionType =
+  fork "IncentiveJourney:publishBehaviorMetricTick" $
+    BehaviorTickPublisher.publishBehaviorMetricTick driverId merchantId merchantOpCityId actionType
 
 dispatchDriverReward ::
   JourneyRewardDispatchFlow m r =>
@@ -717,7 +800,7 @@ defaultSubscriptionWaiveOff =
 
 -- | Dashboard waive-off for one driver milestone period row.
 waiveDriverMilestone ::
-  (JourneyRewardDispatchFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r) =>
+  JourneyRewardDispatchFlow m r =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -740,7 +823,9 @@ waiveDriverMilestone driverId merchantId merchantOpCityId transporterConfig jour
               dispatchDriverReward driverId merchantId merchantOpCityId transporterConfig j vehCategory mbServiceTier ctx spec,
             dispatchStreakEndReward = \j campaignKey spec ->
               dispatchDriverStreakEndReward driverId merchantId merchantOpCityId transporterConfig j vehCategory mbServiceTier campaignKey spec,
-            mbOnMilestoneCompleted = Nothing
+            mbOnMilestoneCompleted = Nothing,
+            mbOnMgOptInCleared = Nothing,
+            buildMetricContext = MetricBag.buildMetricContext
           }
   didWaive <-
     IJ.waiveMilestoneForPeriod
@@ -765,6 +850,7 @@ toLibDeltas deltas =
   IJ.RideDeltas
     { ridesDelta = deltas.ridesDelta,
       earningsDelta = deltas.earningsDelta,
+      netEarningsDelta = deltas.netEarningsDelta,
       distanceMetersDelta = deltas.distanceMetersDelta,
       rideTimeSecondsDelta = deltas.rideTimeSecondsDelta
     }

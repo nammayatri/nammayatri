@@ -986,3 +986,24 @@ updateForwardBatchingEnabled forwardBatchingEnabled driverId = do
   updateOneWithKV [Se.Set BeamDI.forwardBatchingEnabled (Just forwardBatchingEnabled), Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.forwardBatchingEnabled = LTSSync.Set forwardBatchingEnabled}
+
+-- | MG campaign perk snapshot (IncentiveJourney). Nothing clears membership marker.
+updateMgCampaign ::
+  ( EsqDBFlow m r,
+    MonadFlow m,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  Id Person.Person ->
+  Maybe Value ->
+  m ()
+updateMgCampaign driverId mbCampaign = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.mgCampaign mbCampaign,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.mgCampaign = LTSSync.Set mbCampaign}

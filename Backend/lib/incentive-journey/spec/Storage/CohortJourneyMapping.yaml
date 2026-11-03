@@ -18,6 +18,8 @@ CohortJourneyMapping:
     startDate: UTCTime
     streakRange: Int
     enabled: Bool
+    # Previous campaign row when this mapping is a roll; null for the first run.
+    parentId: Maybe (Id CohortJourneyMapping)
     maxWaiveOffCount: Maybe Int
     streakEndRewardType: Maybe MilestoneRewardType
     streakEndRewardValue: Maybe Int
@@ -25,19 +27,38 @@ CohortJourneyMapping:
     # Extra fields per reward type (e.g. SubscriptionWaiveOff: serviceName, waiveOffMode).
     # Percentage / daysValidFor reuse streakEndRewardValue / streakEndRewardExpirationAt.
     streakEndRewardMetadata: Maybe Value
+    # MG membership + perks are per campaign mapping (same journey may map to multiple cohorts).
+    # Maybe for generator backwards-compat; treat Nothing as False.
+    isMg: Maybe Bool
+    # MG earning target (₹). Required when isMg; used for delta payout max(0, mgAmount - mgNetEarnings).
+    mgAmount: Maybe HighPrecMoney
+    # Same semantics as FleetConfig.allowCancellationByDriver (False = cancel forbidden).
+    allowCancellationByDriver: Maybe Bool
+    # Same JSON shape as FleetConfig.autoAssign (AutoAssignConfig).
+    autoAssign: Maybe Value
+    # Same JSON shape as FleetConfig.fleetPoolingPriority (FleetPoolingPriority).
+    poolingPriority: Maybe Value
     createdAt: UTCTime
     updatedAt: UTCTime
 
   default:
     enabled: "true"
+    parentId: "NULL"
     maxWaiveOffCount: "1"
     streakEndRewardType: "NULL"
     streakEndRewardValue: "NULL"
     streakEndRewardExpirationAt: "NULL"
     streakEndRewardMetadata: "NULL"
+    isMg: "NULL"
+    mgAmount: "NULL"
+    allowCancellationByDriver: "NULL"
+    autoAssign: "NULL"
+    poolingPriority: "NULL"
 
   sqlType:
     streakEndRewardMetadata: json
+    autoAssign: json
+    poolingPriority: json
 
   constraints:
     id: PrimaryKey
@@ -60,7 +81,9 @@ CohortJourneyMapping:
     - columns: [merchantOperatingCityId]
     - columns: [cohortId]
     - columns: [journeyId]
-    - columns: [merchantOperatingCityId, cohortId, journeyId]
+    - columns: [parentId]
+    # Rolling campaigns: same city+cohort+journey may repeat with a new startDate.
+    - columns: [merchantOperatingCityId, cohortId, journeyId, startDate]
       unique: true
 
   extraOperations:

@@ -21,12 +21,14 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (DbHash, getDbHash)
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaign
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverBankAccount as BeamDBA
 import qualified Storage.Beam.DriverInformation as BeamDI
@@ -34,6 +36,7 @@ import qualified Storage.Beam.FleetDriverAssociation as BeamFDVA
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Vehicle as BeamV
 import Storage.ConfigPilot.Config.FleetConfig (getCityFleetConfigs)
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformationExtra as QDIE
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.OrphanInstances.DriverBankAccount ()
@@ -210,10 +213,19 @@ getFleetAutoAssignConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text 
 getFleetAutoAssignConfig ownerId merchantOpCityId =
   (\fleetConfigs -> M.lookup ownerId fleetConfigs >>= (.autoAssign)) <$> getCityFleetConfigs merchantOpCityId
 
--- | Auto-assign settings of the driver's active fleet.
-getDriverFleetAutoAssignConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id MerchantOperatingCity -> m (Maybe DFC.AutoAssignConfig)
-getDriverFleetAutoAssignConfig driverId merchantOpCityId =
-  findByDriverId driverId True >>= maybe (pure Nothing) (\assoc -> getFleetAutoAssignConfig assoc.fleetOwnerId merchantOpCityId)
+-- | Auto-assign settings: MG campaign on DI wins (never fleet when present); else active fleet.
+getDriverFleetAutoAssignConfig ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
+  Id Person ->
+  Id MerchantOperatingCity ->
+  m (Maybe DFC.AutoAssignConfig)
+getDriverFleetAutoAssignConfig driverId merchantOpCityId = do
+  mbInfo <- QDI.findById driverId
+  mgSource <- MgCampaign.resolveMgPerkSource merchantOpCityId mbInfo
+  case mgSource of
+    MgCampaign.MgMember {} -> pure $ MgCampaign.mgAutoAssignConfig mgSource
+    MgCampaign.UseFleet ->
+      findByDriverId driverId True >>= maybe (pure Nothing) (\assoc -> getFleetAutoAssignConfig assoc.fleetOwnerId merchantOpCityId)
 
 findByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

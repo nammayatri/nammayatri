@@ -16,6 +16,7 @@ import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
@@ -47,10 +48,16 @@ data CohortJourneyMappingListItem = CohortJourneyMappingListItem
     journeyName :: Kernel.Prelude.Text,
     isActive :: Kernel.Prelude.Bool,
     journeyType :: IncentiveJourneyType,
+    isMg :: Kernel.Prelude.Bool,
+    mgAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    allowCancellationByDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    autoAssign :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    poolingPriority :: Kernel.Prelude.Maybe Data.Aeson.Value,
     maxWaiveOffCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     startDate :: Kernel.Prelude.UTCTime,
     endDate :: Kernel.Prelude.UTCTime,
     streakRange :: Kernel.Prelude.Int,
+    parentId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.CohortJourneyMapping),
     streakEndRewardType :: Kernel.Prelude.Maybe MilestoneRewardType,
     streakEndRewardValue :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     streakEndRewardExpirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -65,7 +72,19 @@ data CohortJourneyMappingListRes = CohortJourneyMappingListRes {mappings :: [Coh
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CreateCohortDetailsReq = CreateCohortDetailsReq {name :: Kernel.Prelude.Text, category :: Kernel.Prelude.Text, description :: Kernel.Prelude.Maybe Kernel.Prelude.Text, cohortRule :: Kernel.Prelude.Maybe Data.Aeson.Value}
+data CohortType
+  = Assigned
+  | OptIn
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+data CreateCohortDetailsReq = CreateCohortDetailsReq
+  { name :: Kernel.Prelude.Text,
+    category :: Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cohortRule :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    cohortType :: Kernel.Prelude.Maybe CohortType
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -86,7 +105,12 @@ data CreateCohortJourneyMappingReq = CreateCohortJourneyMappingReq
     streakEndRewardType :: Kernel.Prelude.Maybe MilestoneRewardType,
     streakEndRewardValue :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     streakEndRewardExpirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    streakEndSubscriptionWaiveOff :: Kernel.Prelude.Maybe SubscriptionWaiveOffConfig
+    streakEndSubscriptionWaiveOff :: Kernel.Prelude.Maybe SubscriptionWaiveOffConfig,
+    isMg :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    mgAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    allowCancellationByDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    autoAssign :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    poolingPriority :: Kernel.Prelude.Maybe Data.Aeson.Value
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -106,6 +130,8 @@ data CreateIncentiveJourneyMilestoneReq = CreateIncentiveJourneyMilestoneReq
     conditionType :: MilestoneConditionType,
     conditionOperator :: MilestoneConditionOperator,
     conditionValue :: Kernel.Prelude.Int,
+    conditionLogic :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    disqualifyIfConditionNotMet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     areaType :: Kernel.Prelude.Maybe MilestoneAreaType,
     specialLocationIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
@@ -161,6 +187,8 @@ data IncentiveJourneyMilestoneListItem = IncentiveJourneyMilestoneListItem
     conditionType :: MilestoneConditionType,
     conditionOperator :: MilestoneConditionOperator,
     conditionValue :: Kernel.Prelude.Int,
+    conditionLogic :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    disqualifyIfConditionNotMet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     areaType :: Kernel.Prelude.Maybe MilestoneAreaType,
     specialLocationIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
@@ -187,6 +215,7 @@ data IncentiveJourneyPersonAssignmentItem = IncentiveJourneyPersonAssignmentItem
     journeyId :: Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney,
     journeyName :: Kernel.Prelude.Text,
     journeyType :: IncentiveJourneyType,
+    isMg :: Kernel.Prelude.Bool,
     enabled :: Kernel.Prelude.Bool,
     userEnabled :: Kernel.Prelude.Bool,
     startDate :: Kernel.Prelude.UTCTime,
@@ -205,15 +234,20 @@ data IncentiveJourneyStatsHistoryItem = IncentiveJourneyStatsHistoryItem
   { statsId :: Kernel.Prelude.Text,
     personId :: Kernel.Types.Id.Id Dashboard.Common.Person,
     journeyId :: Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney,
+    isMg :: Kernel.Prelude.Bool,
     cohortJourneyMappingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.CohortJourneyMapping),
+    cohortType :: CohortType,
     milestoneId :: Kernel.Types.Id.Id Dashboard.Common.IncentiveJourneyMilestone,
     periodKey :: Kernel.Prelude.Text,
     conditionType :: MilestoneConditionType,
     conditionValue :: Kernel.Prelude.Int,
     currentValue :: Kernel.Prelude.Int,
+    metricSnapshot :: Kernel.Prelude.Maybe Data.Aeson.Value,
     status :: JourneyMilestoneStatus,
     rewardType :: MilestoneRewardType,
     rewardValue :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    mgNetEarnings :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    nonMgNetEarnings :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -238,6 +272,7 @@ data JourneyMilestoneStatus
   | Rewarded
   | WaivedOff
   | RewardPending
+  | Disqualified
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -264,6 +299,9 @@ data MilestoneConditionType
   | Distance
   | RideDuration
   | BookingTicket
+  | CancellationRate
+  | AcceptanceRate
+  | OnlineMinutes
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -276,6 +314,36 @@ data MilestoneRewardType
   | PoolingPriority
   | NoReward
   deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OptInIncentiveJourneyReq = OptInIncentiveJourneyReq
+  { personId :: Kernel.Types.Id.Id Dashboard.Common.Person,
+    cohortJourneyMappingId :: Kernel.Types.Id.Id Dashboard.Common.CohortJourneyMapping,
+    validTill :: Kernel.Prelude.UTCTime,
+    optInPeriod :: Kernel.Prelude.Maybe OptInPeriod,
+    optedInBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets OptInIncentiveJourneyReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data OptInPeriod
+  = OptInDaily
+  | OptInWeekly
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+data RollCohortJourneyMappingReq = RollCohortJourneyMappingReq {cohortJourneyMappingId :: Kernel.Types.Id.Id Dashboard.Common.CohortJourneyMapping, startDate :: Kernel.Prelude.UTCTime}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets RollCohortJourneyMappingReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data RollCohortJourneyMappingRes = RollCohortJourneyMappingRes {cohortJourneyMappingId :: Kernel.Types.Id.Id Dashboard.Common.CohortJourneyMapping}
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SubscriptionWaiveOffConfig = SubscriptionWaiveOffConfig {percentage :: Kernel.Prelude.Int, daysValidFor :: Kernel.Prelude.Int, serviceName :: Kernel.Prelude.Text, waiveOffMode :: Kernel.Prelude.Text}
@@ -298,7 +366,8 @@ data UpdateCohortJourneyMappingReq = UpdateCohortJourneyMappingReq
     streakEndRewardType :: Kernel.Prelude.Maybe MilestoneRewardType,
     streakEndRewardValue :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     streakEndRewardExpirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    streakEndSubscriptionWaiveOff :: Kernel.Prelude.Maybe SubscriptionWaiveOffConfig
+    streakEndSubscriptionWaiveOff :: Kernel.Prelude.Maybe SubscriptionWaiveOffConfig,
+    mgAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -319,7 +388,7 @@ data WaiveIncentiveJourneyMilestoneReq = WaiveIncentiveJourneyMilestoneReq
 instance Kernel.Types.HideSecrets.HideSecrets WaiveIncentiveJourneyMilestoneReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("incentiveJourney" :> (GetIncentiveJourneyList :<|> PostIncentiveJourneyCreate :<|> GetIncentiveJourneyMilestoneList :<|> PostIncentiveJourneyMilestoneCreate :<|> GetIncentiveJourneyStatsHistory :<|> PostIncentiveJourneyStatsWaiveOff :<|> GetIncentiveJourneyPersonAssignments :<|> PostIncentiveJourneyCohortCreate :<|> PostIncentiveJourneyCohortJourneyCreate :<|> PutIncentiveJourneyCohortJourneyUpdate :<|> GetIncentiveJourneyCohortJourneyList :<|> PostIncentiveJourneyAssign :<|> PostIncentiveJourneyUnassign))
+type API = ("incentiveJourney" :> (GetIncentiveJourneyList :<|> PostIncentiveJourneyCreate :<|> GetIncentiveJourneyMilestoneList :<|> PostIncentiveJourneyMilestoneCreate :<|> GetIncentiveJourneyStatsHistory :<|> PostIncentiveJourneyStatsWaiveOff :<|> GetIncentiveJourneyPersonAssignments :<|> PostIncentiveJourneyCohortCreate :<|> PostIncentiveJourneyCohortJourneyCreate :<|> PutIncentiveJourneyCohortJourneyUpdate :<|> PostIncentiveJourneyCohortJourneyRoll :<|> GetIncentiveJourneyCohortJourneyList :<|> PostIncentiveJourneyAssign :<|> PostIncentiveJourneyOptIn :<|> PostIncentiveJourneyUnassign))
 
 type GetIncentiveJourneyList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
@@ -373,6 +442,8 @@ type PostIncentiveJourneyCohortJourneyCreate = ("cohortJourney" :> "create" :> R
 
 type PutIncentiveJourneyCohortJourneyUpdate = ("cohortJourney" :> "update" :> ReqBody '[JSON] UpdateCohortJourneyMappingReq :> Put '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostIncentiveJourneyCohortJourneyRoll = ("cohortJourney" :> "roll" :> ReqBody '[JSON] RollCohortJourneyMappingReq :> Post '[JSON] RollCohortJourneyMappingRes)
+
 type GetIncentiveJourneyCohortJourneyList =
   ( "cohortJourney" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
       :> QueryParam
@@ -392,6 +463,8 @@ type GetIncentiveJourneyCohortJourneyList =
 
 type PostIncentiveJourneyAssign = ("assign" :> ReqBody '[JSON] AssignUserToIncentiveJourneyReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostIncentiveJourneyOptIn = ("optIn" :> ReqBody '[JSON] OptInIncentiveJourneyReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
 type PostIncentiveJourneyUnassign = ("unassign" :> ReqBody '[JSON] UnassignUserFromIncentiveJourneyReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data IncentiveJourneyAPIs = IncentiveJourneyAPIs
@@ -405,15 +478,17 @@ data IncentiveJourneyAPIs = IncentiveJourneyAPIs
     postIncentiveJourneyCohortCreate :: CreateCohortDetailsReq -> EulerHS.Types.EulerClient CreateCohortDetailsRes,
     postIncentiveJourneyCohortJourneyCreate :: CreateCohortJourneyMappingReq -> EulerHS.Types.EulerClient CreateCohortJourneyMappingRes,
     putIncentiveJourneyCohortJourneyUpdate :: UpdateCohortJourneyMappingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postIncentiveJourneyCohortJourneyRoll :: RollCohortJourneyMappingReq -> EulerHS.Types.EulerClient RollCohortJourneyMappingRes,
     getIncentiveJourneyCohortJourneyList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe IncentiveJourneyType -> EulerHS.Types.EulerClient CohortJourneyMappingListRes,
     postIncentiveJourneyAssign :: AssignUserToIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postIncentiveJourneyOptIn :: OptInIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postIncentiveJourneyUnassign :: UnassignUserFromIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkIncentiveJourneyAPIs :: (Client EulerHS.Types.EulerClient API -> IncentiveJourneyAPIs)
 mkIncentiveJourneyAPIs incentiveJourneyClient = (IncentiveJourneyAPIs {..})
   where
-    getIncentiveJourneyList :<|> postIncentiveJourneyCreate :<|> getIncentiveJourneyMilestoneList :<|> postIncentiveJourneyMilestoneCreate :<|> getIncentiveJourneyStatsHistory :<|> postIncentiveJourneyStatsWaiveOff :<|> getIncentiveJourneyPersonAssignments :<|> postIncentiveJourneyCohortCreate :<|> postIncentiveJourneyCohortJourneyCreate :<|> putIncentiveJourneyCohortJourneyUpdate :<|> getIncentiveJourneyCohortJourneyList :<|> postIncentiveJourneyAssign :<|> postIncentiveJourneyUnassign = incentiveJourneyClient
+    getIncentiveJourneyList :<|> postIncentiveJourneyCreate :<|> getIncentiveJourneyMilestoneList :<|> postIncentiveJourneyMilestoneCreate :<|> getIncentiveJourneyStatsHistory :<|> postIncentiveJourneyStatsWaiveOff :<|> getIncentiveJourneyPersonAssignments :<|> postIncentiveJourneyCohortCreate :<|> postIncentiveJourneyCohortJourneyCreate :<|> putIncentiveJourneyCohortJourneyUpdate :<|> postIncentiveJourneyCohortJourneyRoll :<|> getIncentiveJourneyCohortJourneyList :<|> postIncentiveJourneyAssign :<|> postIncentiveJourneyOptIn :<|> postIncentiveJourneyUnassign = incentiveJourneyClient
 
 data IncentiveJourneyUserActionType
   = GET_INCENTIVE_JOURNEY_LIST
@@ -426,12 +501,18 @@ data IncentiveJourneyUserActionType
   | POST_INCENTIVE_JOURNEY_COHORT_CREATE
   | POST_INCENTIVE_JOURNEY_COHORT_JOURNEY_CREATE
   | PUT_INCENTIVE_JOURNEY_COHORT_JOURNEY_UPDATE
+  | POST_INCENTIVE_JOURNEY_COHORT_JOURNEY_ROLL
   | GET_INCENTIVE_JOURNEY_COHORT_JOURNEY_LIST
   | POST_INCENTIVE_JOURNEY_ASSIGN
+  | POST_INCENTIVE_JOURNEY_OPT_IN
   | POST_INCENTIVE_JOURNEY_UNASSIGN
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+$(mkHttpInstancesForEnum ''CohortType)
+
 $(mkHttpInstancesForEnum ''IncentiveJourneyType)
+
+$(mkHttpInstancesForEnum ''OptInPeriod)
 
 $(Data.Singletons.TH.genSingletons [''IncentiveJourneyUserActionType])

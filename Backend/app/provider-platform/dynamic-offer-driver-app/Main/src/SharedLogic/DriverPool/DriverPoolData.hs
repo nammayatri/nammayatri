@@ -12,6 +12,8 @@ module SharedLogic.DriverPool.DriverPoolData
   )
 where
 
+import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Time.Calendar as Days
 import Domain.Types.Common (DriverMode)
@@ -94,6 +96,8 @@ data DriverPoolData = DriverPoolData
     -- a value still deserialise. New records leave it Nothing.
     safetyPlusEnabled :: Maybe Bool,
     fleetOwnerId :: Maybe Text,
+    -- | Snapshot of driver_information.mg_campaign (MG membership perks). Nothing = not MG / use fleet.
+    mgCampaign :: Maybe Value,
     -- On-ride / forward batching fields
     driverTripEndLocation :: Maybe Maps.LatLong,
     hasRideStarted :: Maybe Bool,
@@ -117,7 +121,16 @@ data DriverPoolData = DriverPoolData
     -- 'Nothing' means a pre-timestamp record (treated as oldest).
     lastUpdatedAt :: Maybe Milliseconds
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, ToJSON)
+
+-- Absent mgCampaign on legacy LTS JSON => not MG (fleet path). Other new Maybe fields
+-- historically relied on cold rebuild / migrators after a successful decode.
+instance FromJSON DriverPoolData where
+  parseJSON = A.genericParseJSON A.defaultOptions . withJsonDefault "mgCampaign" A.Null
+
+withJsonDefault :: A.Key -> A.Value -> A.Value -> A.Value
+withJsonDefault k fallback (A.Object o) | not (AKM.member k o) = A.Object (AKM.insert k fallback o)
+withJsonDefault _ _ v = v
 
 driverPoolDataKey :: Id Driver -> Text
 driverPoolDataKey driverId = "driver-pool-data:" <> driverId.getId
@@ -237,6 +250,7 @@ defaultDriverPoolData dId =
       mYManufacturing = Nothing,
       safetyPlusEnabled = Just False,
       fleetOwnerId = Nothing,
+      mgCampaign = Nothing,
       driverTripEndLocation = Nothing,
       hasRideStarted = Nothing,
       airConditionScore = Nothing,

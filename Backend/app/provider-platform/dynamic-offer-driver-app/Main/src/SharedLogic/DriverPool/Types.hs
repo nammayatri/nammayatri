@@ -92,7 +92,8 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     tripDistanceMinThreshold :: Maybe Meters,
     tripDistanceMaxThreshold :: Maybe Meters,
     isTollRouteEligible :: Bool,
-    fleetOwnerId :: Maybe Text
+    fleetOwnerId :: Maybe Text,
+    mgCampaign :: Maybe A.Value
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -161,6 +162,7 @@ data DriverPoolResult = DriverPoolResult
     driverGender :: Maybe Person.Gender,
     vehicleNumber :: Maybe Text,
     fleetOwnerId :: Maybe Text,
+    mgCampaign :: Maybe A.Value,
     -- On-ride forward batching fields (Nothing for non-on-ride drivers)
     onRide :: Maybe Bool,
     previousRideDropLat :: Maybe Double,
@@ -206,6 +208,7 @@ instance Default DriverPoolResult where
         driverGender = Nothing,
         vehicleNumber = Nothing,
         fleetOwnerId = Nothing,
+        mgCampaign = Nothing,
         onRide = Nothing,
         previousRideDropLat = Nothing,
         previousRideDropLon = Nothing,
@@ -247,9 +250,13 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     isPetModeEnabled :: Bool,
     isTollRouteEligible :: Bool, -- True if driver is not blocked for toll routes
     vehicleNumber :: Maybe Text,
-    fleetOwnerId :: Maybe Text
+    fleetOwnerId :: Maybe Text,
+    mgCampaign :: Maybe A.Value
   }
-  deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
+  deriving (Generic, Show, HasCoordinates, ToJSON)
+
+instance FromJSON DriverPoolResultCurrentlyOnRide where
+  parseJSON = A.genericParseJSON A.defaultOptions . withJsonDefault "mgCampaign" A.Null
 
 data DriverPoolTags = GoHomeDriverToDestination | GoHomeDriverNotToDestination | SpecialZoneQueueDriver | NormalDriver | OnRideDriver | FavouriteDriver | SafetyPlusDriver
   deriving (Generic, Show, FromJSON, ToJSON)
@@ -400,7 +407,11 @@ withJsonDefault _ _ v = v
 
 instance FromJSON DriverPoolResult where
   -- absent isPetModeEnabled => driver had not opted into pet rides
-  parseJSON = A.genericParseJSON A.defaultOptions . withJsonDefault "isPetModeEnabled" (A.Bool False)
+  -- absent mgCampaign => not an MG member (fleet path)
+  parseJSON =
+    A.genericParseJSON A.defaultOptions
+      . withJsonDefault "isPetModeEnabled" (A.Bool False)
+      . withJsonDefault "mgCampaign" A.Null
 
 instance FromJSON DriverPoolWithActualDistResult where
   parseJSON = A.genericParseJSON A.defaultOptions . withJsonDefault "hasApplicablePreferences" (A.Bool False) . withJsonDefault "preferenceMatchScore" (A.Number 1.0)

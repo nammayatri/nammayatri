@@ -48,12 +48,18 @@ updateByPrimaryKey :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) 
 updateByPrimaryKey (Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.cohortId (Kernel.Types.Id.getId cohortId),
+    [ Se.Set Beam.allowCancellationByDriver allowCancellationByDriver,
+      Se.Set Beam.autoAssign autoAssign,
+      Se.Set Beam.cohortId (Kernel.Types.Id.getId cohortId),
       Se.Set Beam.enabled enabled,
+      Se.Set Beam.isMg isMg,
       Se.Set Beam.journeyId (Kernel.Types.Id.getId journeyId),
       Se.Set Beam.maxWaiveOffCount maxWaiveOffCount,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.mgAmount mgAmount,
+      Se.Set Beam.parentId (Kernel.Types.Id.getId <$> parentId),
+      Se.Set Beam.poolingPriority poolingPriority,
       Se.Set Beam.startDate startDate,
       Se.Set Beam.streakEndRewardExpirationAt streakEndRewardExpirationAt,
       Se.Set Beam.streakEndRewardMetadata streakEndRewardMetadata,

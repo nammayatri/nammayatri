@@ -29,3 +29,24 @@ CREATE INDEX CONCURRENTLY incentive_journey_stats_idx_cohort_id ON atlas_driver_
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats ADD COLUMN cohort_journey_mapping_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats DROP CONSTRAINT incentive_journey_stats_unique_idx_journey_id_milestone_id_period_key_person_id;
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats ADD CONSTRAINT incentive_journey_stats_unique_idx_cohort_journey_mapping_id_milestone_id_period_key_person_id UNIQUE (cohort_journey_mapping_id, milestone_id, period_key, person_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats ADD COLUMN cohort_type text  default NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats ADD COLUMN metric_snapshot json  default NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats ADD COLUMN non_mg_net_earnings double precision  default NULL;
+ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats ADD COLUMN mg_net_earnings double precision  default NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats ADD COLUMN is_mg boolean  default NULL;

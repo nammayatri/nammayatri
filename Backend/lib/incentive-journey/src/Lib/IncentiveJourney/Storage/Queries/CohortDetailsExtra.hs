@@ -17,14 +17,16 @@ import qualified Sequelize as Se
 
 -- | Create a cohort row. Uniqueness of (category, name) is enforced in DB
 -- (@extraIndexes@) and checked here for a clearer API error.
+-- Default cohortType = Assigned keeps existing bulk/auto-apply flows unchanged.
 createCohortDetails ::
   (BeamFlow m r) =>
   Text ->
   Text ->
   Maybe Text ->
   Maybe Value ->
+  DCD.CohortType ->
   m DCD.CohortDetails
-createCohortDetails name category mbDescription mbCohortRule = do
+createCohortDetails name category mbDescription mbCohortRule cohortType = do
   now <- getCurrentTime
   cohortId <- generateGUID
   let row =
@@ -34,6 +36,7 @@ createCohortDetails name category mbDescription mbCohortRule = do
             category = category,
             description = mbDescription,
             cohortRule = mbCohortRule,
+            cohortType = Just cohortType,
             createdAt = now,
             updatedAt = now
           }

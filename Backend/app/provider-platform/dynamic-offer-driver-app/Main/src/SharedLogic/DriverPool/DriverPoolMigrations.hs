@@ -71,7 +71,8 @@ migrations =
     MigrationEntry 5 backfillEnableCashRide,
     MigrationEntry 6 backfillMerchantOperatingCityId,
     MigrationEntry 7 backfillRideBillingModel,
-    MigrationEntry 8 backfillFleetOwnerId
+    MigrationEntry 8 backfillFleetOwnerId,
+    MigrationEntry 9 backfillMgCampaign
   ]
 
 -- | The "head" version, derived from the registry. Equals the largest
@@ -159,6 +160,19 @@ backfillFleetOwnerId entries = do
   pure $
     map
       (\e -> e {fleetOwnerId = HashMap.lookup (cast e.driverId :: Id Person.Person) fleetOwnerMap})
+      entries
+
+-- | v9: backfill 'mgCampaign' from driver_information for MG perk resolve on the allocator hot path.
+backfillMgCampaign ::
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Migrator m
+backfillMgCampaign entries = do
+  let driverIdTexts = map (getId . (.driverId)) entries
+  dis <- QDI.findAllByDriverIds driverIdTexts
+  let mgMap = HashMap.fromList $ map (\di -> (cast di.driverId :: Id Person.Person, di.mgCampaign)) dis
+  pure $
+    map
+      (\e -> e {mgCampaign = join $ HashMap.lookup (cast e.driverId :: Id Person.Person) mgMap})
       entries
 
 -- | v3: backfill the new 'cloudType' field from the person table.

@@ -15,11 +15,13 @@ import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
 
 data IncentiveJourneyMilestoneT f = IncentiveJourneyMilestoneT
   { areaType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    conditionLogic :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     conditionOperator :: B.C f Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneConditionOperator,
     conditionType :: B.C f Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneConditionType,
     conditionValue :: B.C f Kernel.Prelude.Int,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    disqualifyIfConditionNotMet :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     journeyId :: B.C f Kernel.Prelude.Text,
     name :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -20,11 +20,13 @@ instance FromTType' Beam.IncentiveJourneyMilestone Lib.IncentiveJourney.Domain.T
       Just
         Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.IncentiveJourneyMilestone
           { areaType = Kernel.Prelude.maybe Nothing (Kernel.Prelude.readMaybe . Data.Text.unpack) areaType,
+            conditionLogic = conditionLogic,
             conditionOperator = conditionOperator,
             conditionType = conditionType,
             conditionValue = conditionValue,
             createdAt = createdAt,
             description = description,
+            disqualifyIfConditionNotMet = disqualifyIfConditionNotMet,
             id = Kernel.Types.Id.Id id,
             journeyId = Kernel.Types.Id.Id journeyId,
             name = name,
@@ -46,11 +48,13 @@ instance ToTType' Beam.IncentiveJourneyMilestone Lib.IncentiveJourney.Domain.Typ
   toTType' (Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.IncentiveJourneyMilestone {..}) = do
     Beam.IncentiveJourneyMilestoneT
       { Beam.areaType = Kernel.Prelude.fmap (Data.Text.pack . Kernel.Prelude.show) areaType,
+        Beam.conditionLogic = conditionLogic,
         Beam.conditionOperator = conditionOperator,
         Beam.conditionType = conditionType,
         Beam.conditionValue = conditionValue,
         Beam.createdAt = createdAt,
         Beam.description = description,
+        Beam.disqualifyIfConditionNotMet = disqualifyIfConditionNotMet,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.journeyId = Kernel.Types.Id.getId journeyId,
         Beam.name = name,

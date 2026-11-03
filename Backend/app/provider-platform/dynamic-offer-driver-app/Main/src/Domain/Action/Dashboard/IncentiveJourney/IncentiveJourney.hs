@@ -9,9 +9,11 @@ module Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
     postIncentiveJourneyCohortCreate,
     getIncentiveJourneyCohortList,
     postIncentiveJourneyCohortJourneyCreate,
+    postIncentiveJourneyCohortJourneyRoll,
     putIncentiveJourneyCohortJourneyUpdate,
     getIncentiveJourneyCohortJourneyList,
     postIncentiveJourneyAssign,
+    postIncentiveJourneyOptIn,
     postIncentiveJourneyUnassign,
     postIncentiveJourneyAssignBulkFromS3,
     getIncentiveJourneyAssignBulkFromS3List,
@@ -54,7 +56,9 @@ import SharedLogic.Allocator
   ( AllocatorJobType (..),
     BulkUserCohortMappingUploadJobData (..),
   )
+import qualified SharedLogic.FleetDriverSettings as FDS
 import qualified SharedLogic.IncentiveJourney as SLJourney
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaignSync
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.Finance ()
 import Storage.Beam.IncentiveJourney ()
@@ -159,7 +163,10 @@ mkHandle =
                   }
           createJobByTime @_ @'BulkUserCohortMappingUpload (Just (cast merchantId)) (Just (cast merchantOpCityId)) scheduledAt jobData,
       findSpecialLocationNameById = Nothing,
-      loadJourneyMilestones = SLJourney.loadJourneyMilestones
+      loadJourneyMilestones = SLJourney.loadJourneyMilestones,
+      syncMgCampaignSnapshot = Just $ \personId mbSnap -> do
+        MgCampaignSync.syncMgCampaignSnapshot personId mbSnap
+        FDS.reconcileAutoAssignAfterMgSync personId mbSnap
     }
 
 getIncentiveJourneyList ::
@@ -255,6 +262,14 @@ postIncentiveJourneyCohortJourneyCreate ::
 postIncentiveJourneyCohortJourneyCreate merchantShortId opCity =
   LibProvider.postIncentiveJourneyCohortJourneyCreate mkHandle (ShortId merchantShortId.getShortId) opCity
 
+postIncentiveJourneyCohortJourneyRoll ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.RollCohortJourneyMappingReq ->
+  Environment.Flow Common.RollCohortJourneyMappingRes
+postIncentiveJourneyCohortJourneyRoll merchantShortId opCity =
+  LibProvider.postIncentiveJourneyCohortJourneyRoll mkHandle (ShortId merchantShortId.getShortId) opCity
+
 putIncentiveJourneyCohortJourneyUpdate ::
   ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
@@ -284,6 +299,14 @@ postIncentiveJourneyAssign ::
   Environment.Flow APISuccess
 postIncentiveJourneyAssign merchantShortId opCity =
   LibProvider.postIncentiveJourneyAssign mkHandle (ShortId merchantShortId.getShortId) opCity
+
+postIncentiveJourneyOptIn ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.OptInIncentiveJourneyReq ->
+  Environment.Flow APISuccess
+postIncentiveJourneyOptIn merchantShortId opCity =
+  LibProvider.postIncentiveJourneyOptIn mkHandle (ShortId merchantShortId.getShortId) opCity
 
 postIncentiveJourneyUnassign ::
   ShortId DM.Merchant ->

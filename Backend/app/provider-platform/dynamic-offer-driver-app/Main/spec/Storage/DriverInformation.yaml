@@ -179,6 +179,9 @@ DriverInformation:
     addressDocumentType: Maybe AddressDocumentType # deprecated: moved to driver_identity_info;
     nomineeName: Maybe Text # deprecated: moved to driver_identity_info;
     nomineeRelationship: Maybe Text # deprecated: moved to driver_identity_info;
+    # MG / OptIn campaign perk snapshot (Lib.IncentiveJourney.MgCampaign.MgCampaignSnapshot).
+    # Nothing = not an MG member → fleet perk fallback. Just = MG member (never fleet for these perks).
+    mgCampaign: Maybe Value
 
   default:
     active: "false"
@@ -202,6 +205,7 @@ DriverInformation:
     hasAdvanceBooking: "false"
     isInteroperable: "false"
     onlineDurationRefreshedAt: 'CURRENT_TIMESTAMP'
+    mgCampaign: "NULL"
   constraints:
     driverId: PrimaryKey
 
@@ -248,6 +252,7 @@ DriverInformation:
     softBlockStiers: "text[]"
     servicesEnabledForSubscription: "text[]"
     ruleBasedUpgradeTiers: "json"
+    mgCampaign: "json"
     onboardingAs: character varying (255)
 
   fromTType:

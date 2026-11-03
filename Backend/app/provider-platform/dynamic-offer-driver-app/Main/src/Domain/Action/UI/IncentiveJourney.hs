@@ -1,6 +1,7 @@
 module Domain.Action.UI.IncentiveJourney
   ( getIncentiveJourneyList,
     getIncentiveJourneyHistory,
+    postIncentiveJourneyOptIn,
   )
 where
 
@@ -9,6 +10,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -24,7 +26,9 @@ import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyMile
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyStats as CQStats
 import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyStatsExtra as QStats
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified SharedLogic.FleetDriverSettings as FDS
 import qualified SharedLogic.IncentiveJourney as SLJourney
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaignSync
 import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.SpecialZone ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -76,7 +80,10 @@ mkHandle =
         Just $ \locId -> do
           mbLoc <- QSpecialLocation.findById (Id locId)
           pure $ (.locationName) <$> mbLoc,
-      loadJourneyMilestones = SLJourney.loadJourneyMilestones
+      loadJourneyMilestones = SLJourney.loadJourneyMilestones,
+      syncMgCampaignSnapshot = Just $ \personId mbSnap -> do
+        MgCampaignSync.syncMgCampaignSnapshot personId mbSnap
+        FDS.reconcileAutoAssignAfterMgSync personId mbSnap
     }
 
 getIncentiveJourneyList ::
@@ -103,5 +110,17 @@ getIncentiveJourneyHistory ::
   Flow LibUI.IncentiveJourneyHistoryRes
 getIncentiveJourneyHistory (mbPersonId, merchantId, merchantOpCityId) =
   LibUIAction.getIncentiveJourneyHistory
+    mkHandle
+    (cast <$> mbPersonId, cast merchantId, cast merchantOpCityId)
+
+postIncentiveJourneyOptIn ::
+  ( Maybe (Id SP.Person),
+    Id DM.Merchant,
+    Id DMOC.MerchantOperatingCity
+  ) ->
+  LibUI.OptInIncentiveJourneyReq ->
+  Flow APISuccess
+postIncentiveJourneyOptIn (mbPersonId, merchantId, merchantOpCityId) =
+  LibUIAction.postIncentiveJourneyOptIn
     mkHandle
     (cast <$> mbPersonId, cast merchantId, cast merchantOpCityId)

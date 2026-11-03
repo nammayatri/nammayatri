@@ -72,6 +72,7 @@ import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import SharedLogic.DriverPool.DriverPoolData (checkRequestCount)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaign
 import Storage.Beam.Yudhishthira ()
 import Storage.ConfigPilot.Config.FleetConfig (getCityFleetConfigs)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -190,17 +191,30 @@ ensurePoolingLogicVersion searchReq
 getFleetPoolingPriorities ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id MerchantOperatingCity ->
+  DTC.TransporterConfig ->
   [DriverPoolWithActualDistResult] ->
   m (Map.Map (Id Driver) FleetPoolingPriority)
-getFleetPoolingPriorities mOCityId drivers = do
+getFleetPoolingPriorities mOCityId transporterCfg drivers = do
   fleetConfigs <- getCityFleetConfigs mOCityId
-  pure $
-    Map.fromList
-      [ (d.driverPoolResult.driverId, priority)
-        | d <- drivers,
-          Just fleetOwnerId <- [d.driverPoolResult.fleetOwnerId],
-          Just priority <- [Map.lookup fleetOwnerId fleetConfigs >>= (.fleetPoolingPriority)]
-      ]
+  localTime <- getLocalCurrentTime transporterCfg.timeDiffFromUtc
+  -- MG snapshot already on DriverPoolResult (from LTS); no DI read on this path.
+  let priorities = flip map drivers $ \d ->
+        let mgSource = MgCampaign.resolveMgPerkSourceFromCampaign localTime d.driverPoolResult.mgCampaign
+         in case MgCampaign.mgPoolingPriorityValue mgSource of
+              Just val ->
+                ( d.driverPoolResult.driverId,
+                  case A.fromJSON val of
+                    A.Success (p :: FleetPoolingPriority) -> Just p
+                    A.Error _ -> Nothing
+                )
+              Nothing ->
+                case mgSource of
+                  MgCampaign.MgMember {} -> (d.driverPoolResult.driverId, Nothing) -- MG member, perks off
+                  MgCampaign.UseFleet ->
+                    ( d.driverPoolResult.driverId,
+                      d.driverPoolResult.fleetOwnerId >>= (`Map.lookup` fleetConfigs) >>= (.fleetPoolingPriority)
+                    )
+  pure $ Map.fromList [(did, p) | (did, Just p) <- priorities]
 
 -- | Per-driver preference-match checks for a search. Each entry is one independently
 -- pluggable dimension over the driver's own self-selected preferences.
@@ -294,7 +308,7 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
   fleetPriorities <-
     if null allLogics
       then pure Map.empty
-      else withTimeAPI "driverPooling" "fetchingFleetPoolingPriority" $ getFleetPoolingPriorities mOCityId onlyNewDriversWithCustomerInfo
+      else withTimeAPI "driverPooling" "fetchingFleetPoolingPriority" $ getFleetPoolingPriorities mOCityId transporterCfg onlyNewDriversWithCustomerInfo
   -- The search's area plus its pickup and drop special locations, so the fleet's Pickup_ and Drop_ entries both count.
   let priorityAreas = catMaybes [searchReq.area, searchReq.pickupArea, searchReq.dropArea]
   -- Enrich drivers with their per-driver SRD sliding-window counters and idle time so the POOLING

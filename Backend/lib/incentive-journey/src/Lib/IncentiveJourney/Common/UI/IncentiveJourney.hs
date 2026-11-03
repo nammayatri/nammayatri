@@ -7,9 +7,12 @@
 
 module Lib.IncentiveJourney.Common.UI.IncentiveJourney where
 
+import Data.Aeson (Value)
 import qualified Domain.Types.ServiceTierType as ServiceTierType
 import qualified Domain.Types.VehicleCategory as VehicleCategory
 import Kernel.Prelude
+import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Kernel.Types.TimeBound (TimeBound)
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
@@ -17,6 +20,7 @@ import qualified Lib.IncentiveJourney.Domain.Types.Common as DIJC
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats as DIJS
+import qualified Lib.IncentiveJourney.Domain.Types.UserCohortMapping as DUCM
 import Servant
 
 data SubscriptionWaiveOffConfig = SubscriptionWaiveOffConfig
@@ -34,6 +38,11 @@ data IncentiveJourneyMilestoneItem = IncentiveJourneyMilestoneItem
     conditionType :: DIJM.MilestoneConditionType,
     conditionValue :: Int,
     currentValue :: Int,
+    -- | JsonLogic progress: only vars used in conditionLogic, e.g. {"earnings":1200,"cancellationRate":8}.
+    metricSnapshot :: Maybe Value,
+    -- | MG only: net earnings inside / outside milestone timeBounds this period.
+    mgNetEarnings :: Maybe HighPrecMoney,
+    nonMgNetEarnings :: Maybe HighPrecMoney,
     description :: Maybe Text,
     milestoneId :: Id DIJM.IncentiveJourneyMilestone,
     name :: Maybe Text,
@@ -55,6 +64,9 @@ data IncentiveJourneyListItem = IncentiveJourneyListItem
     description :: Maybe Text,
     enabled :: Bool,
     endDate :: UTCTime,
+    isMg :: Bool,
+    -- | MG earning target (₹) from CJM; null for non-MG.
+    mgAmount :: Maybe HighPrecMoney,
     journeyId :: Id DIJ.IncentiveJourney,
     journeyType :: DIJ.IncentiveJourneyType,
     milestones :: [IncentiveJourneyMilestoneItem],
@@ -77,6 +89,11 @@ data IncentiveJourneyHistoryItem = IncentiveJourneyHistoryItem
     conditionType :: DIJM.MilestoneConditionType,
     conditionValue :: Int,
     currentValue :: Int,
+    isMg :: Bool,
+    mgAmount :: Maybe HighPrecMoney,
+    mgNetEarnings :: Maybe HighPrecMoney,
+    nonMgNetEarnings :: Maybe HighPrecMoney,
+    metricSnapshot :: Maybe Value,
     journeyId :: Id DIJ.IncentiveJourney,
     journeyName :: Text,
     journeyType :: DIJ.IncentiveJourneyType,
@@ -97,6 +114,14 @@ data IncentiveJourneyHistoryRes = IncentiveJourneyHistoryRes {history :: [Incent
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data OptInIncentiveJourneyReq = OptInIncentiveJourneyReq
+  { cohortJourneyMappingId :: Id DCJM.CohortJourneyMapping,
+    validTill :: UTCTime,
+    optInPeriod :: Maybe DUCM.OptInPeriod
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 type IncentiveJourneyListAPI =
   QueryParam "limit" Int
     :> QueryParam "offset" Int
@@ -107,3 +132,7 @@ type IncentiveJourneyHistoryAPI =
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
     :> Get '[JSON] IncentiveJourneyHistoryRes
+
+type IncentiveJourneyOptInAPI =
+  ReqBody '[JSON] OptInIncentiveJourneyReq
+    :> Post '[JSON] APISuccess.APISuccess

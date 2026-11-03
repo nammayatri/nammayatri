@@ -70,11 +70,13 @@ import SharedLogic.DriverOnboarding (isFleetRole)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaign
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.ConfigPilot.Config.FleetConfig (fleetForbidsDriverCancellation, getCityFleetConfigs)
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -126,6 +128,7 @@ cancelRideHandle ::
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe RideEventsPublisherCfg),
     Redis.HedisLTSFlowEnv r,
     CH.ClickhouseFlow m r,
     Finance.HasActorInfo m r,
@@ -250,12 +253,17 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation all
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
           -- Fare-params snapshot of the service-tier/fare-policy config; dashboard and system requestors stay exempt.
           when (booking.fareParams.driverCancellationNotAllowed == Just True) $ throwError $ DriverCancellationNotAllowedOnRide ride.id.getId
-          -- Static-quote rides are priced before a driver exists, so the fleet's rule never reaches their fare params:
-          -- check the fleet the ride was assigned under (dynamic rides carry it in the fare params above).
-          unless (DTC.isDynamicOfferTrip booking.tripCategory) $
-            whenJust ride.fleetOwnerId $ \fleetOwnerId -> do
-              fleetConfigs <- getCityFleetConfigs booking.merchantOperatingCityId
-              when (fleetForbidsDriverCancellation (M.lookup fleetOwnerId.getId fleetConfigs)) $ throwError $ DriverCancellationNotAllowedOnRide ride.id.getId
+          -- Static-quote: MG snapshot on DI first; else fleet (dynamic rides already stamped fare params above).
+          unless (DTC.isDynamicOfferTrip booking.tripCategory) $ do
+            mbDriverInfo <- QDI.findById driverId
+            mgSource <- MgCampaign.resolveMgPerkSource booking.merchantOperatingCityId mbDriverInfo
+            case MgCampaign.mgForbidsDriverCancellation mgSource of
+              Just True -> throwError $ DriverCancellationNotAllowedOnRide ride.id.getId
+              Just False -> pure () -- MG member: no fleet fallback
+              Nothing ->
+                whenJust ride.fleetOwnerId $ \fleetOwnerId -> do
+                  fleetConfigs <- getCityFleetConfigs booking.merchantOperatingCityId
+                  when (fleetForbidsDriverCancellation (M.lookup fleetOwnerId.getId fleetConfigs)) $ throwError $ DriverCancellationNotAllowedOnRide ride.id.getId
           goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> booking.merchantOperatingCityId.getId)
           dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
           (cancellationCount, isGoToDisabled, driverGoHomeRequestId) <-

@@ -68,6 +68,7 @@ import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaign
 import qualified SharedLogic.ParkingFeeExemption as SPFE
 import SharedLogic.Pricing
 import SharedLogic.Ride
@@ -79,6 +80,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.FleetConfig (fleetForbidsDriverCancellation, getCityFleetConfigs)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
@@ -171,11 +173,17 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
   mbFleetConfig <- case sReqFD.fleetOwnerId of
     Just fleetOwnerId -> Map.lookup fleetOwnerId.getId <$> getCityFleetConfigs merchantOpCityId
     Nothing -> pure Nothing
+  mbDriverInfo <- QDI.findById driver.id
+  mgSource <- MgCampaign.resolveMgPerkSource merchantOpCityId mbDriverInfo
+  let mgOrFleetForbidsCancel =
+        case MgCampaign.mgForbidsDriverCancellation mgSource of
+          Just forbid -> forbid
+          Nothing -> fleetForbidsDriverCancellation mbFleetConfig
   let farePolicy' =
         farePolicy
           { DFarePolicy.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
             DFarePolicy.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage,
-            DFarePolicy.driverCancellationNotAllowed = if fleetForbidsDriverCancellation mbFleetConfig then Just True else farePolicy.driverCancellationNotAllowed
+            DFarePolicy.driverCancellationNotAllowed = if mgOrFleetForbidsCancel then Just True else farePolicy.driverCancellationNotAllowed
           } ::
           DFarePolicy.FullFarePolicy
   -- Only look the RC up when the pickup zone has opted in, so ordinary rides pay nothing for this.

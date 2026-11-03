@@ -8,17 +8,20 @@ module Lib.IncentiveJourney.Storage.CachedQueries.Assignment
   )
 where
 
-import Data.List (nubBy)
+import Data.List (nub, nubBy)
+import qualified Data.Map.Strict as M
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.IncentiveJourney.Assignment as Assignment
+import qualified Lib.IncentiveJourney.Domain.Types.CohortDetails as DCD
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as Common
 import qualified Lib.IncentiveJourney.Domain.Types.UserCohortMapping as DUCM
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.AutoApplyCohortMapping as CQAuto
+import qualified Lib.IncentiveJourney.Storage.Queries.CohortDetailsExtra as QCDExtra
 import qualified Lib.IncentiveJourney.Storage.Queries.CohortJourneyMappingExtra as QCJMExtra
 import qualified Lib.IncentiveJourney.Storage.Queries.UserCohortMappingExtra as QUCMExtra
 import Lib.IncentiveJourney.Types.Actor (JourneyActor (..), actorCachePrefix)
@@ -31,13 +34,15 @@ findAssignmentsByUserId ::
 findAssignmentsByUserId actor personId = do
   ucms <- findUserCohortMappingsByPersonId actor personId
   cjms <- mapM (findCohortJourneyMappingById actor . (.cohortMappingId)) ucms
+  let pairs = [(ucm, cjm) | (ucm, Just cjm) <- zip ucms cjms]
+  activePairs <- filterOptInActive pairs
   pure $
     [ Assignment.JourneyAssignment
         { userCohortMapping = Just ucm,
           cohortJourneyMapping = cjm,
           assignedAt = ucm.createdAt
         }
-      | (ucm, Just cjm) <- zip ucms cjms
+      | (ucm, cjm) <- activePairs
     ]
 
 -- | UCM assignments plus enabled city auto-apply rows.
@@ -45,6 +50,7 @@ findAssignmentsByUserId actor personId = do
 -- allowIfNoMapping rows apply only when the driver has no active user_cohort_mapping.
 -- The same cohort journey mapping is kept once, so a driver is not rewarded twice.
 -- row.enabled turns off only this auto-apply. cjm.enabled still has to be true.
+-- OptIn cohorts are never auto-applied; they require an opted-in UCM row.
 findAssignmentsForDriver ::
   (BeamFlow m r) =>
   JourneyActor ->
@@ -56,34 +62,59 @@ findAssignmentsForDriver ::
 findAssignmentsForDriver actor personId merchantId merchantOperatingCityId mbVehicleCategory = do
   ucms <- findUserCohortMappingsByPersonId actor personId
   ucmCjms <- mapM (findCohortJourneyMappingById actor . (.cohortMappingId)) ucms
+  let ucmPairs = [(ucm, cjm) | (ucm, Just cjm) <- zip ucms ucmCjms]
+  activeUcmPairs <- filterOptInActive ucmPairs
   let ucmAssignments =
         [ Assignment.JourneyAssignment
             { userCohortMapping = Just ucm,
               cohortJourneyMapping = cjm,
               assignedAt = ucm.createdAt
             }
-          | (ucm, Just cjm) <- zip ucms ucmCjms
+          | (ucm, cjm) <- activeUcmPairs
         ]
       hasActiveUcm = not (null ucms)
   rows <- CQAuto.findApplicableByMerchantAndCity actor merchantId merchantOperatingCityId mbVehicleCategory
   autoAssignments <-
     catMaybes <$> forM rows \row -> do
       mbCjm <- findCohortJourneyMappingById actor row.cohortJourneyMappingId
-      pure $ case mbCjm of
+      case mbCjm of
         Just cjm
           | row.enabled
               && cjm.enabled
               && cjm.merchantId == merchantId
               && cjm.merchantOperatingCityId == merchantOperatingCityId
-              && (not row.allowIfNoMapping || not hasActiveUcm) ->
-            Just
-              Assignment.JourneyAssignment
-                { userCohortMapping = Nothing,
-                  cohortJourneyMapping = cjm,
-                  assignedAt = row.createdAt
-                }
-        _ -> Nothing
+              && (not row.allowIfNoMapping || not hasActiveUcm) -> do
+            mbCohort <- QCDExtra.findCohortDetailsById cjm.cohortId
+            let isAssignedCohort = maybe True ((/= DCD.OptIn) . fromMaybe DCD.Assigned . (.cohortType)) mbCohort
+            pure $
+              if isAssignedCohort
+                then
+                  Just
+                    Assignment.JourneyAssignment
+                      { userCohortMapping = Nothing,
+                        cohortJourneyMapping = cjm,
+                        assignedAt = row.createdAt
+                      }
+                else Nothing
+        _ -> pure Nothing
   pure $ nubBy sameCohortJourneyMapping (ucmAssignments <> autoAssignments)
+
+-- | OptIn cohorts require optedInAt; Assigned (or missing / null cohortType) stay active.
+filterOptInActive ::
+  (BeamFlow m r) =>
+  [(DUCM.UserCohortMapping, DCJM.CohortJourneyMapping)] ->
+  m [(DUCM.UserCohortMapping, DCJM.CohortJourneyMapping)]
+filterOptInActive pairs = do
+  cohorts <- QCDExtra.findByIds (nub $ map ((.cohortId) . snd) pairs)
+  let cohortById = M.fromList [(c.id, c) | c <- cohorts]
+  pure $
+    filter
+      ( \(ucm, cjm) ->
+          case M.lookup cjm.cohortId cohortById of
+            Just cohort | fromMaybe DCD.Assigned cohort.cohortType == DCD.OptIn -> isJust ucm.optedInAt
+            _ -> True
+      )
+      pairs
 
 sameCohortJourneyMapping :: Assignment.JourneyAssignment -> Assignment.JourneyAssignment -> Bool
 sameCohortJourneyMapping assignment other = assignment.cohortJourneyMapping.id == other.cohortJourneyMapping.id

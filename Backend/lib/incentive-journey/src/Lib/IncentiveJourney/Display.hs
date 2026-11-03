@@ -120,6 +120,9 @@ buildMilestoneTargetDescription milestone displayConditionValue =
     DIJM.Distance -> formatDistanceCompleted displayConditionValue
     DIJM.RideDuration -> formatDurationCompleted displayConditionValue
     DIJM.BookingTicket -> formatTicketsBooked displayConditionValue
+    DIJM.CancellationRate -> "Cancellation rate ≤ " <> show displayConditionValue <> "%"
+    DIJM.AcceptanceRate -> "Acceptance rate ≥ " <> show displayConditionValue <> "%"
+    DIJM.OnlineMinutes -> "Online " <> show displayConditionValue <> " minutes"
 
 resolveOverlayMilestoneDescription ::
   DIJM.IncentiveJourneyMilestone ->

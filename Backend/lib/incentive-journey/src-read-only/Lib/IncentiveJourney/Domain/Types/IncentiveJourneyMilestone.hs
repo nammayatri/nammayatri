@@ -17,11 +17,13 @@ import qualified Tools.Beam.UtilsTH
 
 data IncentiveJourneyMilestone = IncentiveJourneyMilestone
   { areaType :: Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneAreaType,
+    conditionLogic :: Kernel.Prelude.Maybe Data.Aeson.Value,
     conditionOperator :: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneConditionOperator,
     conditionType :: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneConditionType,
     conditionValue :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    disqualifyIfConditionNotMet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.IncentiveJourneyMilestone,
     journeyId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourney.IncentiveJourney,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -50,6 +52,9 @@ data MilestoneConditionType
   | Distance
   | RideDuration
   | BookingTicket
+  | CancellationRate
+  | AcceptanceRate
+  | OnlineMinutes
   deriving (Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''MilestoneConditionType)

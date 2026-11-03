@@ -33,6 +33,10 @@ deltaForCondition conditionType deltas =
     Distance -> deltas.distanceMetersDelta
     RideDuration -> deltas.rideTimeSecondsDelta
     BookingTicket -> 0
+    -- Behavior metrics are absolute Redis reads, not ride deltas.
+    CancellationRate -> 0
+    AcceptanceRate -> 0
+    OnlineMinutes -> 0
 
 -- | Nothing on the milestone means unrestricted. Compare against ride's shown category/tier.
 rideMatchesVehicleFilter :: EvalMilestone -> Maybe Text -> Maybe Text -> Bool

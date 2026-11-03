@@ -1303,6 +1303,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                 IJ.RideDeltas
                   { ridesDelta = 1,
                     earningsDelta,
+                    -- Rider path has no MG net-earnings tracking.
+                    netEarningsDelta = 0,
                     distanceMetersDelta = distanceDelta,
                     rideTimeSecondsDelta = rideTimeDelta
                   }

@@ -37,11 +37,13 @@ import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
 import qualified Kernel.Utils.Servant.Server as Server
 import Kernel.Utils.Shutdown
+import qualified Lib.IncentiveJourney.BehaviorMetric as BM
 import Lib.Scheduler.InMemManagement (inMemManagementApp)
 import Network.Wai.Handler.Warp
 import qualified Processor.BroadcastMessage.Processor as BMProcessor
 import qualified Processor.FleetAnalytics.Realtime as FleetAnalyticsProcessor
 import qualified Processor.FleetCommunication.Processor as FCProcessor
+import qualified Processor.IncentiveJourney.BehaviorTick as IJBehaviorTick
 import qualified Processor.LocationUpdate.Processor as LCProcessor
 import qualified Processor.LocationUpdate.Types as LU
 import qualified Processor.RideEvents.Processor as RideEventsProcessor
@@ -119,6 +121,10 @@ startKafkaTransport flowRt appEnv = do
       kc <- KafkaFlow.newKafkaConsumer appEnv
       KafkaFlow.runPerEvent flowRt appEnv kc $ \event _key ->
         RideEventsProcessor.processRideEnded event
+    IJ_BEHAVIOR_TICK_CONSUMER -> do
+      kc <- KafkaFlow.newKafkaConsumer appEnv
+      KafkaFlow.runPerEvent flowRt appEnv kc $ \(tick :: BM.BehaviorMetricTick) _key ->
+        IJBehaviorTick.handleBehaviorMetricTick tick
     BROADCAST_MESSAGE -> do
       kc <- KafkaFlow.newKafkaConsumer appEnv
       KafkaFlow.runPerEvent flowRt appEnv kc BMProcessor.broadcastMessage
@@ -146,6 +152,8 @@ startRedisStreamTransport flowRt appEnv = do
   case appEnv.consumerType of
     RIDE_EVENTS_CONSUMER ->
       RSFlow.run flowRt appEnv cfg instanceName RideEventsProcessor.processRideEnded
+    IJ_BEHAVIOR_TICK_CONSUMER ->
+      RSFlow.run flowRt appEnv cfg instanceName IJBehaviorTick.handleBehaviorMetricTick
     BROADCAST_MESSAGE ->
       RSFlow.run flowRt appEnv cfg instanceName $ \BroadcastEntry {messageDict, driverId} ->
         BMProcessor.broadcastMessage messageDict driverId

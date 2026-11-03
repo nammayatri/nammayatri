@@ -382,6 +382,7 @@ in
         cabalExecutables ++ [
           "rider-producer-exe"
           "kafka-ride-events-consumer-exe"
+          "kafka-ij-behavior-tick-consumer-exe"
           "kafka-fleet-analytics-consumer-exe"
           "ride-events-stream-groups"
           "nammayatri-init"
@@ -589,6 +590,9 @@ in
                   for i in $(seq 0 9); do
                     redis-cli -p ${toString ports.redis-cluster-n1} -c XGROUP CREATE "dynamic-offer-driver-app:ride_events_stream_$i" ride-events-consumers 0 MKSTREAM || true
                     redis-cli -p ${toString ports.redis} XGROUP CREATE "dynamic-offer-driver-app:ride_events_stream_$i" ride-events-consumers 0 MKSTREAM || true
+                    # IJ BehaviourMetricTick streams (IJ_BEHAVIOR_TICK_CONSUMER).
+                    redis-cli -p ${toString ports.redis-cluster-n1} -c XGROUP CREATE "dynamic-offer-driver-app:ij_behavior_tick_stream_$i" ij-behavior-tick-consumers 0 MKSTREAM || true
+                    redis-cli -p ${toString ports.redis} XGROUP CREATE "dynamic-offer-driver-app:ij_behavior_tick_stream_$i" ij-behavior-tick-consumers 0 MKSTREAM || true
                   done
                 '';
               };
@@ -625,6 +629,9 @@ in
                       key="dynamic-offer-driver-app:ride_events_stream_$i"
                       redis-cli -p ${toString ports.redis-cluster-n1} -c XGROUP CREATE "$key" ride-events-consumers 0 MKSTREAM >/dev/null 2>&1 || true
                       redis-cli -p ${toString ports.redis} XGROUP CREATE "$key" ride-events-consumers 0 MKSTREAM >/dev/null 2>&1 || true
+                      ij_key="dynamic-offer-driver-app:ij_behavior_tick_stream_$i"
+                      redis-cli -p ${toString ports.redis-cluster-n1} -c XGROUP CREATE "$ij_key" ij-behavior-tick-consumers 0 MKSTREAM >/dev/null 2>&1 || true
+                      redis-cli -p ${toString ports.redis} XGROUP CREATE "$ij_key" ij-behavior-tick-consumers 0 MKSTREAM >/dev/null 2>&1 || true
                     done
                     sleep 30
                   done
@@ -1186,6 +1193,28 @@ in
                 CONSUMER_TYPE = "RIDE_EVENTS_CONSUMER";
                 METRICS_PORT = toString ports.kafka-ride-events-consumer-metrics;
                 # See kafka-consumers-exe above.
+                GET_MY_SCHEMA = "atlas_driver_offer_bpp";
+              };
+              depends_on = {
+                "nammayatri-init".condition = "process_completed_successfully";
+                "mock-registry".condition = "process_healthy";
+                "dynamic-offer-driver-app-exe".condition = "process_healthy";
+              };
+              shutdown.signal = 9;
+            };
+
+            # IJ BehaviourMetricTick consumer: Accept/Cancel BT bump publishes to
+            # ij_behavior_tick_stream_*; this process runs JsonLogic bag eval +
+            # stats upsert. Required for IncentiveJourneyFlow suite 03's
+            # BehaviourMetricTick-only award path.
+            kafka-ij-behavior-tick-consumer-exe = {
+              imports = [
+                common
+                (haskellProcessFor "kafka-consumers-exe")
+              ];
+              environment = {
+                CONSUMER_TYPE = "IJ_BEHAVIOR_TICK_CONSUMER";
+                METRICS_PORT = toString ports.kafka-ij-behavior-tick-consumer-metrics;
                 GET_MY_SCHEMA = "atlas_driver_offer_bpp";
               };
               depends_on = {

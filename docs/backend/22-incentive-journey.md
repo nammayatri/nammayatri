@@ -96,41 +96,99 @@ Bulk audit (provider): BulkUserCohortMappingRun
 | conditionType | see enums | |
 | conditionOperator | default `GTE` | |
 | conditionValue | Int | target |
+| conditionLogic | Maybe JSON | when set, JsonLogic is **award/progress** source of truth (AND/OR) |
+| disqualifyLogic | Maybe JSON | dedicated JsonLogic for campaign exit; when true → Disqualified + disable UCM. Nothing → no exit |
 | areaType | Maybe | special-location filter |
 | specialLocationIds | Maybe [Text] | |
 | vehicleCategory, serviceTierType | Maybe | ride must match if set |
 | rewardType | `MilestoneRewardType` | |
 | rewardValue, rewardExpirationAt | Maybe Int | SWO: % and daysValidFor |
 | rewardMetadata | Maybe JSON | SWO: `{serviceName, waiveOffMode}` |
-| timeBounds | Maybe TimeBound | peak window |
+| timeBounds | Maybe TimeBound | ride peak filter **or** online-minutes slice for rates |
 
 **Enums**
 
-- `MilestoneConditionType`: `RideCompleted | Earnings | Distance | RideDuration | BookingTicket`
+- `MilestoneConditionType`: `RideCompleted | Earnings | Distance | RideDuration | BookingTicket | CancellationRate | AcceptanceRate | OnlineMinutes`
 - `MilestoneConditionOperator`: `GTE | GT | EQ | LTE | LT`
 - `MilestoneAreaType`: `Default | Pickup | Drop | PickupDrop`
 - `MilestoneRewardType`: `Coins | Cash | Coupons | WalletMoney | SubscriptionWaiveOff | PoolingPriority | NoReward`
 
 ### 4.3 `cohort_details`
 
-`id`, `name`, `category`, `description`, `cohortRule` (JSON). Unique `(category, name)`.
+`id`, `name`, `category`, `description`, `cohortRule` (JSON), `cohortType` (Maybe; NULL → `Assigned` | `OptIn`). Unique `(category, name)`.
 
 ### 4.4 `cohort_journey_mapping`
 
 | Field | Notes |
 |-------|--------|
 | merchantId, merchantOperatingCityId | city scope |
-| cohortId, journeyId | unique with city |
+| cohortId, journeyId, startDate | unique with city (rolling campaigns reuse cohort+journey with a new start) |
+| parentId | Maybe — previous CJM id when this row is a roll; null for the first run |
 | startDate, streakRange | window `[start, start + streakRange periods)` |
 | enabled | |
 | maxWaiveOffCount | default 1 |
 | streakEndReward* | optional campaign completion bonus |
 
-**Start-date rules** (`Streak.validateMappingStartDate`): Weekly → Monday; Monthly → 1st; Daily unrestricted.
+**Start-date rules:** any calendar day is allowed. Weekly/monthly period keys are always **anchored** to `startDate` (`Week:YYYY-MM-DD` / `Month:YYYY-MM-DD`). See §10.
+
+**endDate in APIs:** dashboard + app UI return the **inclusive** last day via `displayStreakEndDate` (exclusive backend end minus 1 calendar day). Eval still uses exclusive `computeStreakEndDate`.
+
+**Rolling campaigns:** do not mutate `startDate` on a finished window. `POST /cohortJourney/roll` inserts a new CJM (same cohort/journey/streak/rewards, new `startDate`, `parentId` = previous id). Requires `newStartDate >= previous exclusive endDate`. Create rejects a second insert for the same city/cohort/journey (use roll). Auto-apply rows are cloned onto the new mapping and the old auto-apply rows are disabled. Drivers get new `user_cohort_mapping` rows for the new mapping id (bulk/CSV). Stats stay keyed by `cohortJourneyMappingId` + `periodKey`, so prior `Completed` / `WaivedOff` rows are not reused.
 
 ### 4.5 `user_cohort_mapping`
 
-`userId`, `cohortMappingId` (→ CJM), `enabled`, `validTill`. Unique `(userId, cohortMappingId)`. Active if `enabled && validTill >= now`.
+`userId`, `cohortMappingId` (→ CJM), `enabled`, `validTill`, plus opt-in fields (`optInPeriod`, `optedInAt`, `optedInBy`, `termsAcceptedAt` — null for Assigned). Unique `(userId, cohortMappingId)`.
+
+**Active for eval:** `enabled && validTill >= now && (cohortType == Assigned || isJust optedInAt)`. Invited-but-not-opted OptIn rows stay out of `findAssignments*`. Auto-apply never applies to OptIn cohorts.
+
+---
+
+## 4A. Behavior metrics, OptIn & JsonLogic (unified bag)
+
+**Principle:** Ride counters and behaviour rates are the **same level** in one `MetricContext` bag. HTTP app stays light (BT Redis bump + stream publish only). **Full bag load + JsonLogic + stats write + reward** runs on a **separate consumer pod** — same reason ride-end journey uses `RIDE_EVENTS_CONSUMER` instead of `fork` on EndRide.
+
+| Milestone | Trigger | Eval |
+|-----------|---------|------|
+| No `conditionLogic` / `disqualifyLogic` (legacy ride) | Ride-end → `RIDE_EVENTS_CONSUMER` | Mid-ride simple columns + deltas (unchanged) |
+| Has `conditionLogic` | Ride-end **or** cancel/accept → `IJ_BEHAVIOR_TICK_CONSUMER` | Load full bag → JsonLogic; False + `disqualifyIfConditionNotMet` → Disqualified; else award / InProgress |
+| Simple `CancellationRate` / `AcceptanceRate` / `OnlineMinutes` | Cancel / accept → `IJ_BEHAVIOR_TICK_CONSUMER` | Same bag + simple columns → upsert stats |
+
+**Full bag (consumer only):** period ride counters in Redis (`ij:metricBag:ride:…`) + behaviour-tracker rates. On every check, merge both — not only the side that moved.
+
+**App HTTP (cancel / accept):** BT Redis bump + fire-and-forget `publishBehaviorMetricTick` (forked xAdd only; no assignment lookup). Never run IJ eval / bag load / stats on the app pod — that stays on `IJ_BEHAVIOR_TICK_CONSUMER`.
+
+**Stats UI fields:**
+- `currentValue` — legacy single int from `conditionType` (kept for non-JsonLogic / progress bar fallback).
+- `metricSnapshot` — flat JSON of **only** vars referenced in `conditionLogic` (e.g. `{"ridesCompleted":3,"earnings":1200}`). Not the full Redis bag. App/dashboard should prefer this when present.
+
+**UI:** stats read-only.
+
+**Opt-in:** `POST .../optIn` (dashboard + UI). OptIn cohorts need `optedInAt`.
+
+**Disqualify:** only when milestone.`disqualifyIfConditionNotMet` is true **and** the condition (`conditionLogic` / columns) evaluates **False** → terminal `Disqualified` + clear assignment cache. **OptIn cohorts:** clear `optedInAt` (UCM stays `enabled`); MG DI keeps membership with `optedIn=false`. **Assigned:** disable UCM. If the flag is false/NULL, a failed condition is only `InProgress`. Condition **True** → Complete (or InProgress when `rewardType = NoReward`). There is **no** `disqualifyLogic` column.
+
+### MG campaign perks (driver)
+
+**Per cohort-journey mapping** (not on journey template — same journey can map to multiple cohorts with different perks): `isMg` (Maybe; NULL → false), `mgAmount` (Maybe HighPrecMoney — ₹ target when `isMg`; required on create/update for MG), `allowCancellationByDriver`, `autoAssign`, `poolingPriority` (FleetConfig-shaped JSON).
+
+**MG evaluation differs from Assigned milestone rewards:** typically one `NoReward` milestone with `conditionLogic` (snapshot + optional `disqualifyIfConditionNotMet`). Hitting the condition does **not** award a milestone reward; snapshot still updates in real time for eligibility / DQ. The real target is `cjm.mgAmount`.
+
+**MG net earnings (stats, MG only):** on ride-end, for opted-in enabled MG assignments:
+- `net = max(0, fare − toll − parking)` (`RideIncentiveDeltas.netEarningsDelta`)
+- inside milestone `timeBounds` → accumulate `stats.mgNetEarnings`
+- outside peak (still in campaign window) → accumulate `stats.nonMgNetEarnings` (perks off; still tracked)
+- Assigned / non-MG campaigns never touch these columns
+- Future payout (not implemented): `max(0, mgAmount − mgNetEarnings)`
+
+`driver_information.mg_campaign` snapshot sync on assign / opt-in / unassign / OptIn-disqualify (snapshot built from CJM perk fields). Milestone `timeBounds` gates perk hours.
+
+Hot path (cancel forbid, pooling priority, auto-assign):
+- `mg_campaign` **null** → existing **fleet** path
+- `mg_campaign` **present** → **never fleet** for any of the three; perks ON iff `optedIn && now ≤ validTill && within milestone timeBounds`
+- Auto-assign reads go through `getDriverFleetAutoAssignConfig` → `resolveMgPerkSource` / `mgAutoAssignConfig` (UI locks, preference disable, `applyFleetSettings`)
+- Silent assign additionally drops MG members unless `mgAutoAssignConfig` is active; opt-in/unassign sync reconciles vehicle AutoAssign tags via `reconcileAutoAssignAfterMgSync`
+
+**DDL:** generator `migrations-read-only` for `cohort_details` / `user_cohort_mapping` / `incentive_journey_milestone` / CJM `mg_amount` / stats `mg_net_earnings` + `non_mg_net_earnings`. Provider dashboard OptIn/roll capabilities: `ddl-migrations/dashboard/0112-…` (generator only emitted RIDER rows).
 
 ### 4.6 `auto_apply_cohort_mapping` (provider-focused)
 
@@ -142,11 +200,15 @@ Auto-enroll by merchant/city/(optional) `vehicleCategory` (`null` = all categori
 | Field | Notes |
 |-------|--------|
 | personId, merchant*, cohortId, journeyId, milestoneId | |
+| cohortType | Maybe snapshot of `cohort_details.cohortType` (`Assigned` / `OptIn`); NULL → Assigned. Orthogonal to `isMg` (membership mode vs MG campaign). |
+| isMg | Maybe snapshot of `cjm.isMg` at first write; NULL → false |
 | cohortJourneyMappingId | Maybe (campaign instance) |
 | periodKey | `Day:…` / `Week:…` / `Month:…` |
-| condition* snapshot, currentValue | |
+| condition* snapshot, currentValue | legacy single progress int |
+| metricSnapshot | Maybe JSON of conditionLogic vars only |
 | status | see §5 |
 | rewardType, rewardValue | |
+| mgNetEarnings / nonMgNetEarnings | MG only; fare−toll−parking inside / outside milestone timeBounds |
 
 Unique: `(personId, cohortJourneyMappingId, milestoneId, periodKey)`.
 
@@ -213,7 +275,7 @@ Templates support placeholders via `applyMilestoneOverlayTemplates` (journey nam
 Dashboard waiveOff ──────────────────────────► WaivedOff
 ```
 
-- **Terminal for sequencing:** `Completed | Rewarded | WaivedOff | RewardPending`
+- **Terminal for sequencing:** `Completed | Rewarded | WaivedOff | RewardPending | Disqualified`
 - **Streak-end satisfied:** same set
 - **Eval persist mapping:** progress → `InProgress`; awaiting payout → `RewardPending`; success → `Completed` (+ `rewardValue`); waive → `WaivedOff`
 - `RewardPending`: no more delta on that milestone; later rides retry award; after retry, ride **can** count on the next milestone
@@ -282,18 +344,17 @@ Kafka RIDE_EVENTS (RideEnded)
   → Processor.RideEvents.Handlers
   → processRideEndedCoinsAndJourney
        → fraud / daily coin block? → skip awards
-       → DynamicOffer + valid ride:
-            if hasAssignedJourneys:          -- UCM and/or auto-apply
+       → category counters (DynamicOffer / OTP) unchanged
+       → any valid ride:
+            if hasAssignedJourneys:          -- UCM and/or auto-apply; trip-category agnostic
               withJourneyEvalIdempotency(DriverActor, rideId)
                 → evaluateDriverJourney
-            else legacy DC.driverCoinsEvent
-       → OTP + valid ride:
-            if hasAssignedJourneys: suppress legacy coins only
-            else legacy coins
-            -- NO evaluateDriverJourney on OTP today
+            else legacy DC.driverCoinsEvent only for DynamicOffer / OTP
 ```
 
 - Not on EndRide HTTP (latency isolation).  
+- **No `tripCategory` column** on IJ tables; journey eval runs for every valid ride when assigned.  
+- Legacy Incentive# coins remain DynamicOffer/OTP-specific for drivers **without** journeys.  
 - `timeBoundReferenceUtc` = `tripStartTime` (fallback `ride.createdAt`).  
 - Pickup/drop special-location ids from `booking.area`.
 
@@ -400,23 +461,32 @@ Driver `mbOnMilestoneCompleted` → completed overlay. Waive path sends waived o
 ### 9.8 Waive-off (`waiveMilestoneForPeriod`)
 
 1. Validate milestone ∈ journey; CJM matches journey + city.  
-2. Person must be assigned (current assignments **or** UCM row for CJM).  
-3. Skip if stats already terminal.  
-4. Enforce `maxWaiveOffCount` (count of `WaivedOff` rows for person+CJM+period).  
-5. Upsert stats `WaivedOff` (currentValue at least conditionValue).  
-6. Optionally `tryAwardStreakEnd`.
+2. `periodKey` must be in `listPeriodKeysInStreak` for that CJM (avoids writing `WaivedOff` against the wrong roll).  
+3. Person must be assigned (current assignment for that CJM whose streak keys contain `periodKey`, **or** UCM row for CJM).  
+4. Skip if stats already terminal.  
+5. Enforce `maxWaiveOffCount` (count of `WaivedOff` rows for person+CJM+period).  
+6. Upsert stats `WaivedOff` (currentValue at least conditionValue).  
+7. Optionally `tryAwardStreakEnd`.
 
 ---
 
 ## 10. Period keys & streak
 
-| JourneyType | periodKey | streakRange=2 exclusive end |
-|-------------|-----------|-----------------------------|
-| Daily | `Day:YYYY-MM-DD` | start + 2 calendar days |
-| Weekly | `Week:YYYY-Www` | start + 14 days |
-| Monthly | `Month:YYYY-MM` | start + 2 months |
+Period keys via `mkJourneyPeriodKeyWithStart(localTime, journeyType, cjm.startDate)`:
 
-Peak windows are **not** in the period key.
+| JourneyType | periodKey format | Bucket |
+|-------------|------------------|--------|
+| Daily | `Day:YYYY-MM-DD` | calendar day |
+| Weekly | `Week:YYYY-MM-DD` | 7-day windows from startDate (incl. Monday starts) |
+| Monthly | `Month:YYYY-MM-DD` | month steps from startDate (incl. 1st starts) |
+
+| JourneyType | streakRange=2 | Backend exclusive end | UI/dashboard `endDate` shown |
+|-------------|---------------|----------------------|------------------------------|
+| Daily | start + 2 days | start+2 | start+1 (inclusive last day) |
+| Weekly | start + 14 days | e.g. Wed 22 Oct → Wed 5 Nov | **Tue 4 Nov** |
+| Monthly | start + 2 months | e.g. 15 Jan → 15 Mar | **14 Mar** |
+
+Peak windows are **not** in the period key. Eval: `startDate <= t < exclusiveEnd`. Drivers should only see the inclusive last day.
 
 **Streak-end** (`StreakEnd.hs`), when `cjm.streakEndRewardType` set:
 
@@ -445,6 +515,7 @@ Waive of mid-streak milestones still counts toward satisfaction once all periods
 | GET | `/cohort/list` |
 | POST | `/cohortJourney/create` |
 | PUT | `/cohortJourney/update` |
+| POST | `/cohortJourney/roll` |
 | GET | `/cohortJourney/list` |
 | POST | `/assign` |
 | POST | `/unassign` |
@@ -466,7 +537,7 @@ Auth: ApiAuthV2. Capability: `system-config.coins.read` / `.write`.
 | POST | `/stats/waiveOff` |
 | GET | `/person/{personId}/assignments` |
 | POST | `/cohort/create` |
-| POST/PUT/GET | `/cohortJourney/create`, `/update`, `/list` |
+| POST/PUT/GET | `/cohortJourney/create`, `/update`, `/roll`, `/list` |
 | POST | `/assign`, `/unassign` |
 
 **Not on rider:** `/cohort/list`, auto-apply*, bulkFromS3*.
@@ -552,9 +623,9 @@ Ops: stats history / waiveOff / bulk run list
 2. Filter failure (time/vehicle/location) **stops** the milestone chain for that ride.  
 3. Completing a milestone does not double-count the ride on the next; `RewardPending` retry does allow continuation.  
 4. Progress is per **(person, CJM, milestone, periodKey)** — same journey template can run under multiple campaigns.  
-5. OTP path: **no journey eval**; assignment only gates legacy coins.  
+5. Journey eval is trip-category agnostic (any valid ride); OTP and other categories count when assigned.  
 6. `BookingTicket` delta is 0 on the ride evaluation path until wired.  
-7. Weekly/Monthly `startDate` validation at CJM create/update.  
+7. Weekly/Monthly may start any day; all use anchored `Week:/Month:YYYY-MM-DD` keys. UI `endDate` is inclusive (exclusive−1 day).  
 8. Eval writes `Completed` (not `Rewarded`); `Rewarded` remains a terminal/satisfied enum for reads/legacy.  
 9. Location filters with `Pickup`/`Drop`/`PickupDrop` require a non-empty `specialLocationIds` list or the filter fails.  
 10. Rider payouts are largely deferred; do not assume Coins/Cash work on rider-app.  
@@ -570,7 +641,8 @@ lib/incentive-journey/
   Types.hs, Types/Actor.hs, Display.hs, Reward.hs, Convert.hs, Common.hs
   Eval.hs, Condition.hs, Window.hs, Period.hs
   Streak.hs, StreakEnd.hs, Idempotency.hs, Assignment.hs
-  Domain/Action/Evaluate.hs
+  JsonLogic.hs, BehaviorMetric.hs, Produce.hs, MetricBagRedis.hs
+  Domain/Action/Evaluate.hs              # evaluateIncentiveJourneys + evaluateBehaviorJourneys
   Domain/Action/Dashboard/{Core,Provider,Rider,ServiceHandle}.hs
   Domain/Action/UI/IncentiveJourney.hs
   Domain/Types/{Common,BulkAssignUserCohortFromS3}.hs
@@ -583,6 +655,7 @@ dynamic-offer-driver-app/.../
   SharedLogic/IncentiveJourney.hs        # rewards, overlays, VPA retry, assignment wrapper
   SharedLogic/RideEvents/DriverCoinsAndJourney.hs
   SharedLogic/Allocator/Jobs/IncentiveJourney/BulkUserCohortMappingUpload.hs
+  SharedLogic/IncentiveJourney/MetricBag.hs   # Kafka full bag (ride Redis + BT rates)
   Domain/Action/{UI,Dashboard}/IncentiveJourney/...
   Domain/Action/UI/Payout.hs             # calls retryVerifiedVpaJourneyCashPayouts
   Allocator App.hs
@@ -593,4 +666,5 @@ rider-app/.../
   Domain/Action/Dashboard/IncentiveJourney/...
 
 kafka-consumers/.../Processor/RideEvents/Handlers.hs
+kafka-consumers/.../Processor/IncentiveJourney/BehaviorTick.hs  # tick → evaluateDriverBehaviorTick
 ```

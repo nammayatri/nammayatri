@@ -19,12 +19,16 @@ module Lib.IncentiveJourney.Domain.Action.Dashboard.Core
     listAssignmentViews,
     assignUser,
     unassignUser,
+    optInUser,
+    assertNoExistingCohortJourneyMapping,
+    rollCohortJourneyMapping,
   )
 where
 
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.HashMap.Strict as HM
-import Data.List (sortOn)
+import Data.List (nub, sortOn)
+import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 import Data.Time (Day)
 import EulerHS.Prelude hiding (id, sortOn)
@@ -35,13 +39,18 @@ import Kernel.Utils.Common
 import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.IncentiveJourney.Common as IJC
 import Lib.IncentiveJourney.Domain.Action.Dashboard.ServiceHandle (ServiceHandle (..))
+import qualified Lib.IncentiveJourney.Domain.Types.AutoApplyCohortMapping as DAuto
 import qualified Lib.IncentiveJourney.Domain.Types.CohortDetails as DCD
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as DIJC
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats as DIJS
+import qualified Lib.IncentiveJourney.Domain.Types.UserCohortMapping as DUCM
+import qualified Lib.IncentiveJourney.MgCampaign as MgCampaign
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.Queries.AutoApplyCohortMapping as QAuto
+import qualified Lib.IncentiveJourney.Storage.Queries.AutoApplyCohortMappingExtra as QAutoExtra
 import qualified Lib.IncentiveJourney.Storage.Queries.CohortDetailsExtra as QCDExtra
 import qualified Lib.IncentiveJourney.Storage.Queries.CohortJourneyMappingExtra as QCJMExtra
 import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourney as QJourney
@@ -147,14 +156,15 @@ createCohort ::
   Text ->
   Maybe Text ->
   Maybe Value ->
+  DCD.CohortType ->
   m DCD.CohortDetails
-createCohort name category description cohortRule = do
+createCohort name category description cohortRule cohortType = do
   when (T.null name) $ throwError (InvalidRequest "cohort name must be non-empty")
   when (T.null category) $ throwError (InvalidRequest "cohort category must be non-empty")
   mbExisting <- QCDExtra.findByNameAndCategory name category
   when (isJust mbExisting) $
     throwError (InvalidRequest "cohort with the same name and category already exists")
-  QCDExtra.createCohortDetails name category description cohortRule
+  QCDExtra.createCohortDetails name category description cohortRule cohortType
 
 listCohortJourneyRows ::
   BeamFlow m r =>
@@ -238,6 +248,7 @@ data AssignmentView = AssignmentView
     journeyId :: ID.Id DIJ.IncentiveJourney,
     journeyName :: Text,
     journeyType :: DIJ.IncentiveJourneyType,
+    isMg :: Bool,
     enabled :: Bool,
     userEnabled :: Bool,
     startDate :: UTCTime,
@@ -287,10 +298,11 @@ toAssignmentView merchantId merchantOpCityId assignment = do
                 journeyId = journey.id,
                 journeyName = journey.name,
                 journeyType = journeyType,
+                isMg = fromMaybe False cjm.isMg,
                 enabled = cjm.enabled,
                 userEnabled = maybe True (.enabled) assignment.userCohortMapping,
                 startDate = cjm.startDate,
-                endDate = IJ.computeStreakEndDate cjm.startDate cjm.streakRange journeyType,
+                endDate = IJ.displayStreakEndDate cjm.startDate cjm.streakRange journeyType,
                 streakRange = cjm.streakRange,
                 assignedAt = assignment.assignedAt
               }
@@ -324,6 +336,47 @@ assignUser handle merchantShortId opCity personId cjmId enabled validTill notFou
     throwError (InvalidRequest "Cohort journey mapping has expired")
   void $ QUCMExtra.upsertUserCohortMapping personId cjmId enabled validTill
   handle.clearAssignmentCacheByPersonId personId
+  syncMgMembershipSnapshot handle personId journey cjm False Nothing
+
+-- | Opt-in for OptIn cohorts. Requires an existing invite UCM row.
+-- validTill should be the period end (caller computes from terms / daily|weekly).
+optInUser ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ID.Id DIJC.Person ->
+  ID.Id DCJM.CohortJourneyMapping ->
+  DUCM.OptInPeriod ->
+  UTCTime ->
+  Text ->
+  Text ->
+  Text ->
+  m ()
+optInUser handle merchantShortId opCity personId cjmId optInPeriod validTill optedInBy notFoundMessage cityMessage = do
+  (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
+  person <- handle.findPersonById personId >>= fromMaybeM (InvalidRequest notFoundMessage)
+  unless (person.merchantId == merchant.id && person.merchantOperatingCityId == merchantOpCityId) $
+    throwError (InvalidRequest cityMessage)
+  cjm <- QCJMExtra.findCohortJourneyMappingById cjmId >>= fromMaybeM (InvalidRequest "Cohort journey mapping not found")
+  unless (cjm.merchantId == ID.cast merchant.id && cjm.merchantOperatingCityId == ID.cast merchantOpCityId) $
+    throwError (InvalidRequest "Cohort journey mapping does not belong to this merchant/city")
+  cohort <-
+    QCDExtra.findCohortDetailsById cjm.cohortId
+      >>= fromMaybeM (InvalidRequest "Cohort not found")
+  unless (fromMaybe DCD.Assigned cohort.cohortType == DCD.OptIn) $
+    throwError (InvalidRequest "Opt-in is only supported for OptIn cohorts")
+  journey <- QJourney.findById cjm.journeyId >>= fromMaybeM (InvalidRequest "Incentive journey not found")
+  timeDiffFromUtc <- handle.getTimeDiffFromUtc merchantOpCityId
+  localTime <- getLocalCurrentTime timeDiffFromUtc
+  let endDate = IJ.computeStreakEndDate cjm.startDate cjm.streakRange journey.journeyType
+  when (localTime >= endDate) $
+    throwError (InvalidRequest "Cohort journey mapping has expired")
+  when (validTill <= localTime) $
+    throwError (InvalidRequest "validTill must be in the future")
+  void $ QUCMExtra.markUserCohortMappingOptedIn personId cjmId optInPeriod validTill optedInBy
+  handle.clearAssignmentCacheByPersonId personId
+  syncMgMembershipSnapshot handle personId journey cjm True (Just validTill)
 
 unassignUser ::
   BeamFlow m r =>
@@ -342,3 +395,129 @@ unassignUser handle merchantShortId opCity personId cjmId notFoundMessage cityMe
     throwError (InvalidRequest cityMessage)
   QUCMExtra.disableUserCohortMapping personId cjmId
   handle.clearAssignmentCacheByPersonId personId
+  whenJust handle.syncMgCampaignSnapshot $ \sync -> sync personId Nothing
+
+-- | Write / refresh DI mg_campaign for isMg cohort-journey mappings. Non-MG → no-op.
+syncMgMembershipSnapshot ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.Id DIJC.Person ->
+  DIJ.IncentiveJourney ->
+  DCJM.CohortJourneyMapping ->
+  Bool ->
+  Maybe UTCTime ->
+  m ()
+syncMgMembershipSnapshot handle personId journey cjm optedIn mbValidTill =
+  when (fromMaybe False cjm.isMg) $
+    whenJust handle.syncMgCampaignSnapshot $ \sync -> do
+      milestones <- sortOn (.order) <$> handle.getMilestonesByJourneyId journey.id
+      let mbTimeBounds = (.timeBounds) =<< listToMaybe milestones
+          snap =
+            MgCampaign.mkSnapshotFromCjm
+              journey.id.getId
+              cjm
+              mbTimeBounds
+              optedIn
+              mbValidTill
+      sync personId (Just snap)
+
+-- | First create only. Later windows for the same city/cohort/journey must use roll.
+assertNoExistingCohortJourneyMapping ::
+  BeamFlow m r =>
+  ID.Id DIJC.MerchantOperatingCity ->
+  ID.Id DCD.CohortDetails ->
+  ID.Id DIJ.IncentiveJourney ->
+  m ()
+assertNoExistingCohortJourneyMapping merchantOpCityId cohortId journeyId = do
+  existing <-
+    QCJMExtra.findAllByMerchantOperatingCityIdAndCohortIdAndJourneyId
+      merchantOpCityId
+      cohortId
+      journeyId
+  unless (null existing) $
+    throwError
+      ( InvalidRequest
+          "Cohort journey mapping already exists for this city/cohort/journey; use /cohortJourney/roll to start the next campaign window"
+      )
+
+-- | Insert a new CJM row for the next window (same cohort/journey/streak/rewards).
+-- Requires newStartDate >= previous exclusive endDate. Clones auto-apply onto the
+-- new mapping and disables the previous auto-apply rows.
+rollCohortJourneyMapping ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.Id DIJC.Merchant ->
+  ID.Id DIJC.MerchantOperatingCity ->
+  ID.Id DCJM.CohortJourneyMapping ->
+  UTCTime ->
+  m DCJM.CohortJourneyMapping
+rollCohortJourneyMapping handle merchantId merchantOpCityId previousId newStartDate = do
+  previous <-
+    QCJMExtra.findCohortJourneyMappingById previousId
+      >>= fromMaybeM (InvalidRequest "Cohort journey mapping not found")
+  unless (previous.merchantId == merchantId && previous.merchantOperatingCityId == merchantOpCityId) $
+    throwError (InvalidRequest "Cohort journey mapping does not belong to this merchant/city")
+  journey <-
+    QJourney.findById previous.journeyId
+      >>= fromMaybeM (InvalidRequest "Incentive journey not found")
+  let previousEnd = IJ.computeStreakEndDate previous.startDate previous.streakRange journey.journeyType
+  when (newStartDate < previousEnd) $
+    throwError $
+      InvalidRequest $
+        "Roll startDate must be >= previous exclusive endDate ("
+          <> show previousEnd
+          <> ")"
+  mbExact <-
+    QCJMExtra.findByMerchantOperatingCityIdAndCohortIdAndJourneyIdAndStartDate
+      previous.merchantOperatingCityId
+      previous.cohortId
+      previous.journeyId
+      newStartDate
+  whenJust mbExact $ \_ ->
+    throwError (InvalidRequest "A cohort journey mapping already exists for this city/cohort/journey/startDate")
+  rolled <-
+    QCJMExtra.createCohortJourneyMapping
+      previous.merchantId
+      previous.merchantOperatingCityId
+      previous.cohortId
+      previous.journeyId
+      newStartDate
+      previous.streakRange
+      previous.enabled
+      (Just previous.id)
+      previous.maxWaiveOffCount
+      previous.streakEndRewardType
+      previous.streakEndRewardValue
+      previous.streakEndRewardExpirationAt
+      previous.streakEndRewardMetadata
+      previous.isMg
+      previous.mgAmount
+      previous.allowCancellationByDriver
+      previous.autoAssign
+      previous.poolingPriority
+  rolloverAutoApplyMappings handle previous rolled
+  handle.clearAssignmentCacheByCohortMappingId previous.id
+  handle.clearAssignmentCacheByCohortMappingId rolled.id
+  pure rolled
+
+rolloverAutoApplyMappings ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  DCJM.CohortJourneyMapping ->
+  DCJM.CohortJourneyMapping ->
+  m ()
+rolloverAutoApplyMappings handle previous rolled = do
+  oldRows <- QAuto.findByCohortJourneyMappingId previous.id
+  forM_ oldRows $ \row -> do
+    void $
+      QAutoExtra.createAutoApplyCohortMapping
+        rolled.id
+        row.merchantId
+        row.merchantOperatingCityId
+        row.vehicleCategory
+        row.allowIfNoMapping
+        row.enabled
+    void $ QAutoExtra.updateAutoApplyCohortMapping row {DAuto.enabled = False}
+  let categoriesToClear = nub $ map (.vehicleCategory) oldRows
+  unless (null oldRows) $
+    handle.clearAutoApplyCacheByMerchantAndCity previous.merchantId previous.merchantOperatingCityId categoriesToClear

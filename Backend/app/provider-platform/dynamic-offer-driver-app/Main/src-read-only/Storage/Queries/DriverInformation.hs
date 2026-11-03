@@ -314,6 +314,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.latestScheduledPickupLat (Kernel.Prelude.fmap (.lat) latestScheduledPickup),
       Se.Set Beam.latestScheduledPickupLon (Kernel.Prelude.fmap (.lon) latestScheduledPickup),
       Se.Set Beam.maxPickupRadius maxPickupRadius,
+      Se.Set Beam.mgCampaign mgCampaign,
       Se.Set Beam.mode mode,
       Se.Set Beam.nomineeName nomineeName,
       Se.Set Beam.nomineeRelationship nomineeRelationship,

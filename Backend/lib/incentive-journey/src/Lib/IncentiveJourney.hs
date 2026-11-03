@@ -20,16 +20,24 @@ module Lib.IncentiveJourney
     module Lib.IncentiveJourney.StreakEnd,
     module Lib.IncentiveJourney.Assignment,
     module Lib.IncentiveJourney.Display,
+    module Lib.IncentiveJourney.BehaviorMetric,
+    module Lib.IncentiveJourney.JsonLogic,
+    module Lib.IncentiveJourney.MetricBagRedis,
+    module Lib.IncentiveJourney.MgCampaign,
   )
 where
 
 import Lib.IncentiveJourney.Assignment
+import Lib.IncentiveJourney.BehaviorMetric
 import Lib.IncentiveJourney.Condition
 import Lib.IncentiveJourney.Convert
 import Lib.IncentiveJourney.Display
 import Lib.IncentiveJourney.Domain.Action.Evaluate
 import Lib.IncentiveJourney.Eval
 import Lib.IncentiveJourney.Idempotency
+import Lib.IncentiveJourney.JsonLogic
+import Lib.IncentiveJourney.MetricBagRedis
+import Lib.IncentiveJourney.MgCampaign
 import Lib.IncentiveJourney.Period
 import Lib.IncentiveJourney.Reward
 import Lib.IncentiveJourney.Streak

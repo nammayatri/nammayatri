@@ -141,6 +141,17 @@ apis:
       migrate:
         capability: system-config.coins.write
 
+  # Next campaign window for the same city/cohort/journey: new CJM row, parentId = previous.
+  - POST:
+      endpoint: /cohortJourney/roll
+      auth: ApiAuthV2
+      request:
+        type: RollCohortJourneyMappingReq
+      response:
+        type: RollCohortJourneyMappingRes
+      migrate:
+        capability: system-config.coins.write
+
   - GET:
       endpoint: /cohortJourney/list
       auth: ApiAuthV2
@@ -162,6 +173,17 @@ apis:
       auth: ApiAuthV2
       request:
         type: AssignUserToIncentiveJourneyReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.coins.write
+
+  # OptIn cohorts only. Requires an invite UCM row; sets optedInAt / validTill.
+  - POST:
+      endpoint: /optIn
+      auth: ApiAuthV2
+      request:
+        type: OptInIncentiveJourneyReq
       response:
         type: APISuccess
       migrate:
@@ -234,7 +256,7 @@ apis:
 
 types:
   MilestoneConditionType:
-    - enum: "RideCompleted, Earnings, Distance, RideDuration, BookingTicket"
+    - enum: "RideCompleted, Earnings, Distance, RideDuration, BookingTicket, CancellationRate, AcceptanceRate, OnlineMinutes"
 
   MilestoneAreaType:
     - enum: "Default, Pickup, Drop, PickupDrop"
@@ -255,8 +277,17 @@ types:
     - enum: "Daily, Weekly, Monthly"
     - derive: "HttpInstance"
 
+  CohortType:
+    - enum: "Assigned, OptIn"
+    - derive: "HttpInstance"
+
+  # Distinct constructors — same module also defines IncentiveJourneyType Daily/Weekly.
+  OptInPeriod:
+    - enum: "OptInDaily, OptInWeekly"
+    - derive: "HttpInstance"
+
   JourneyMilestoneStatus:
-    - enum: "NotStarted, InProgress, Completed, Rewarded, WaivedOff, RewardPending"
+    - enum: "NotStarted, InProgress, Completed, Rewarded, WaivedOff, RewardPending, Disqualified"
 
   CreateIncentiveJourneyReq:
     - name: Text
@@ -286,6 +317,9 @@ types:
     - conditionType: MilestoneConditionType
     - conditionOperator: MilestoneConditionOperator
     - conditionValue: Int
+    # True→Complete (or stay if NoReward). False→InProgress unless disqualifyIfConditionNotMet.
+    - conditionLogic: Maybe Value
+    - disqualifyIfConditionNotMet: Maybe Bool
     - areaType: Maybe MilestoneAreaType
     - specialLocationIds: Maybe [Text]
     - vehicleCategory: Maybe VehicleCategory
@@ -309,6 +343,8 @@ types:
     - conditionType: MilestoneConditionType
     - conditionOperator: MilestoneConditionOperator
     - conditionValue: Int
+    - conditionLogic: Maybe Value
+    - disqualifyIfConditionNotMet: Maybe Bool
     - areaType: Maybe MilestoneAreaType
     - specialLocationIds: Maybe [Text]
     - vehicleCategory: Maybe VehicleCategory
@@ -329,16 +365,23 @@ types:
     - driverId: Id Driver
     - journeyId: Id IncentiveJourney
     - journeyName: Text
+    # Snapshotted from CJM at first stats write; false if null.
+    - isMg: Bool
     - cohortJourneyMappingId: Maybe (Id CohortJourneyMapping)
+    - cohortType: CohortType
     - milestoneId: Id IncentiveJourneyMilestone
     - milestoneName: Maybe Text
     - periodKey: Text
     - conditionType: MilestoneConditionType
     - conditionValue: Int
     - currentValue: Int
+    - metricSnapshot: Maybe Value
     - status: JourneyMilestoneStatus
     - rewardType: MilestoneRewardType
     - rewardValue: Maybe Int
+    # MG only (null for Assigned / non-MG).
+    - mgNetEarnings: Maybe HighPrecMoney
+    - nonMgNetEarnings: Maybe HighPrecMoney
     - createdAt: UTCTime
     - updatedAt: UTCTime
 
@@ -353,6 +396,7 @@ types:
     - journeyId: Id IncentiveJourney
     - journeyName: Text
     - journeyType: IncentiveJourneyType
+    - isMg: Bool
     - enabled: Bool
     - userEnabled: Bool
     - startDate: UTCTime
@@ -376,6 +420,8 @@ types:
     - category: Text
     - description: Maybe Text
     - cohortRule: Maybe Value
+    # Optional; defaults to Assigned (bulk/auto-apply).
+    - cohortType: Maybe CohortType
     - derive: "'HideSecrets"
 
   CreateCohortDetailsRes:
@@ -387,6 +433,7 @@ types:
     - category: Text
     - description: Maybe Text
     - cohortRule: Maybe Value
+    - cohortType: CohortType
     - createdAt: UTCTime
     - updatedAt: UTCTime
 
@@ -404,6 +451,13 @@ types:
     - streakEndRewardValue: Maybe Int
     - streakEndRewardExpirationAt: Maybe Int
     - streakEndSubscriptionWaiveOff: Maybe SubscriptionWaiveOffConfig
+    # MG membership + FleetConfig-shaped perks (per campaign mapping).
+    - isMg: Maybe Bool
+    # MG earning target (₹). Required when isMg=true.
+    - mgAmount: Maybe HighPrecMoney
+    - allowCancellationByDriver: Maybe Bool
+    - autoAssign: Maybe Value
+    - poolingPriority: Maybe Value
     - derive: "'HideSecrets"
 
   CreateCohortJourneyMappingRes:
@@ -419,7 +473,17 @@ types:
     - streakEndRewardValue: Maybe Int
     - streakEndRewardExpirationAt: Maybe Int
     - streakEndSubscriptionWaiveOff: Maybe SubscriptionWaiveOffConfig
+    - mgAmount: Maybe HighPrecMoney
     - derive: "'HideSecrets"
+
+  # Only startDate changes; cohort/journey/streak/rewards are copied from the previous mapping.
+  RollCohortJourneyMappingReq:
+    - cohortJourneyMappingId: Id CohortJourneyMapping
+    - startDate: UTCTime
+    - derive: "'HideSecrets"
+
+  RollCohortJourneyMappingRes:
+    - cohortJourneyMappingId: Id CohortJourneyMapping
 
   CohortJourneyMappingListItem:
     - cohortJourneyMappingId: Id CohortJourneyMapping
@@ -433,10 +497,16 @@ types:
     - journeyName: Text
     - isActive: Bool
     - journeyType: IncentiveJourneyType
+    - isMg: Bool
+    - mgAmount: Maybe HighPrecMoney
+    - allowCancellationByDriver: Maybe Bool
+    - autoAssign: Maybe Value
+    - poolingPriority: Maybe Value
     - maxWaiveOffCount: Maybe Int
     - startDate: UTCTime
     - endDate: UTCTime
     - streakRange: Int
+    - parentId: Maybe (Id CohortJourneyMapping)
     - streakEndRewardType: Maybe MilestoneRewardType
     - streakEndRewardValue: Maybe Int
     - streakEndRewardExpirationAt: Maybe Int
@@ -453,6 +523,15 @@ types:
     - cohortJourneyMappingId: Id CohortJourneyMapping
     - enabled: Bool
     - validTill: UTCTime
+    - derive: "'HideSecrets"
+
+  # Invite must already exist (assign/bulk). Sets optedInAt for OptIn cohorts.
+  OptInIncentiveJourneyReq:
+    - driverId: Id Driver
+    - cohortJourneyMappingId: Id CohortJourneyMapping
+    - validTill: UTCTime
+    - optInPeriod: Maybe OptInPeriod
+    - optedInBy: Maybe Text
     - derive: "'HideSecrets"
 
   UnassignUserFromIncentiveJourneyReq:

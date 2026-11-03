@@ -45,10 +45,12 @@ updateByPrimaryKey (Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.areaType (Kernel.Prelude.fmap (Data.Text.pack . Kernel.Prelude.show) areaType),
+      Se.Set Beam.conditionLogic conditionLogic,
       Se.Set Beam.conditionOperator conditionOperator,
       Se.Set Beam.conditionType conditionType,
       Se.Set Beam.conditionValue conditionValue,
       Se.Set Beam.description description,
+      Se.Set Beam.disqualifyIfConditionNotMet disqualifyIfConditionNotMet,
       Se.Set Beam.journeyId (Kernel.Types.Id.getId journeyId),
       Se.Set Beam.name name,
       Se.Set Beam.order order,

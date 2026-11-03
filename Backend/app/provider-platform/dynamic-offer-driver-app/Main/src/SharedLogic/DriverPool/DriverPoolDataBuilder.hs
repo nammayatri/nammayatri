@@ -178,6 +178,7 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
             mYManufacturing = v.mYManufacturing,
             safetyPlusEnabled = Just False,
             fleetOwnerId = HashMap.lookup did fleetOwnerIdMap,
+            mgCampaign = di.mgCampaign,
             driverTripEndLocation = di.driverTripEndLocation,
             hasRideStarted = di.hasRideStarted,
             airConditionScore = di.airConditionScore,

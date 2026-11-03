@@ -42,6 +42,7 @@ updateByPrimaryKey (Lib.IncentiveJourney.Domain.Types.CohortDetails.CohortDetail
   updateWithKV
     [ Se.Set Beam.category category,
       Se.Set Beam.cohortRule cohortRule,
+      Se.Set Beam.cohortType cohortType,
       Se.Set Beam.description description,
       Se.Set Beam.name name,
       Se.Set Beam.updatedAt _now

@@ -563,6 +563,15 @@ let rideEventsPublisherCfg =
         , shardCount = rideEventsStream.shardCount
         }
 
+let ijBehaviorTickStream =
+      { streamPrefix = "ij_behavior_tick_stream_", shardCount = +10 }
+
+let ijBehaviorTickPublisherCfg =
+      Some
+        { streamPrefix = ijBehaviorTickStream.streamPrefix
+        , shardCount = ijBehaviorTickStream.shardCount
+        }
+
 let dashboardLoginRateLimitOptions =
       { limit = +100, limitResetTimeInSec = +600 }
 
@@ -735,6 +744,7 @@ in  { esqDBCfg
       { masterUrl = None Text, masterSecret = Some "123" }
     , enableLtsPoolDataForPooling = True
     , rideEventsPublisherCfg
+    , ijBehaviorTickPublisherCfg
     , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
     , xyneWebhookBearerToken = "<XYNE_WEBHOOK_BEARER_TOKEN>"
     }

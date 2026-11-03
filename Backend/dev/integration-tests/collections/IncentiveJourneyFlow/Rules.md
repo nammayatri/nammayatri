@@ -10,9 +10,11 @@ Provider/driver **Incentive Journey** E2E for **NAMMA_YATRI** (Bangalore): dashb
    ```bash
    , run-mobility-stack-full
    ```
-   Must include `dynamic-offer-driver-app` (`:8016`), `driver-offer-allocator`, `provider-dashboard` (`:8018`), `rider-app` (`:8013`), Postgres (`:5434`), Redis, Kafka, **`kafka-consumers`**, and **mock-server** (`:8080`). Suite `02` sends the CSV as a multipart file on `POST .../assign/bulkFromS3`. Driver-app writes that object under `Backend/s3/local/test-bucket/<key>`, and the allocator reads it from there. The mock `put-text` step also writes `collections/IncentiveJourneyFlow/fixtures/bulk-assign.csv` so newman can attach that file. Restart mock-server after pulling that endpoint.
+   Must include `dynamic-offer-driver-app` (`:8016`), `driver-offer-allocator`, `provider-dashboard` (`:8018`), `rider-app` (`:8013`), Postgres (`:5434`), Redis, Kafka, **`kafka-ride-events-consumer-exe`**, **`kafka-ij-behavior-tick-consumer-exe`**, and **mock-server** (`:8080`). Suite `02` sends the CSV as a multipart file on `POST .../assign/bulkFromS3`. Driver-app writes that object under `Backend/s3/local/test-bucket/<key>`, and the allocator reads it from there. The mock `put-text` step also writes `collections/IncentiveJourneyFlow/fixtures/bulk-assign.csv` so newman can attach that file. Restart mock-server after pulling that endpoint.
 
-2. **Kafka consumer** — ride-end processing updates journey milestones via `DriverCoinsAndJourney` (`SharedLogic.RideEvents.DriverCoinsAndJourney` / `handleDriverCoinsAndJourney`). Without `kafka-consumers`, the poll step will fail.
+2. **Consumers** —
+   - Ride-end: `kafka-ride-events-consumer-exe` (`RIDE_EVENTS_CONSUMER` / `DriverCoinsAndJourney`). Without it, ride-end milestone polls fail.
+   - Behaviour ticks: `kafka-ij-behavior-tick-consumer-exe` (`IJ_BEHAVIOR_TICK_CONSUMER`, Redis stream `dynamic-offer-driver-app:ij_behavior_tick_stream_*`). Accept publishes via `publishBehaviorMetricTick`; without it, suite `03`'s BehaviourMetricTick-only award poll fails. Restart the stack (or start that process) after pulling this wiring.
 
 3. **Dashboard auth** (auto-run by `./run-tests.sh incentive-journey`, or after DB reset):
    ```bash
@@ -40,6 +42,8 @@ Examples:
 | Create milestone | `POST .../milestone/create` |
 | List milestones | `GET .../milestone/{journeyId}/list` |
 | Cohort↔journey map | `POST .../cohortJourney/create` (enabled, maxWaiveOffCount, streak-end reward) |
+| Roll next campaign window | `POST .../cohortJourney/roll` (`cohortJourneyMappingId`, new `startDate`; copies streak/rewards, sets `parentId`) — covered in `01` |
+| List cohort↔journey maps | `GET .../cohortJourney/list` (includes `parentId`) |
 | Assign driver | `POST .../assign` (one user mapping per cohort-journey mapping) |
 | Unassign | `DELETE .../unassign` |
 | Disable cohort mapping | `PUT .../cohortJourney/update` (`cohortJourneyMappingId`, `enabled: false`) |
@@ -71,6 +75,7 @@ cd Backend/dev/integration-tests
 ./run-tests.sh incentive-journey NY_Bangalore
 ./run-tests.sh incentive-journey NY_Bangalore 01-IncentiveJourneyRideProgressFlow
 ./run-tests.sh incentive-journey NY_Bangalore 02-IncentiveJourneyBulkAssignRideProgressFlow
+./run-tests.sh incentive-journey NY_Bangalore 03-IncentiveJourneyMgCampaignOptInFlow
 ```
 
 Skip automatic SQL seed: `NY_TEST_SKIP_INCENTIVE_SEED=1 ./run-tests.sh incentive-journey`
@@ -85,10 +90,28 @@ newman run collections/IncentiveJourneyFlow/01-IncentiveJourneyRideProgressFlow.
 
 ## Collection
 
-| File | What it tests |
-|------|----------------|
-| `01-IncentiveJourneyRideProgressFlow.json` | One cohort, two journeys (two mappings, two `/assign` calls). Journey 2 is RideCompleted GTE 2 for 200 coins and completes on ride 2. A second cohort is auto-applied for `AUTO_CATEGORY` with no user mapping and completes on ride 1. Then waive earnings → streak-end cash ₹1 does not change coin balance → unassign both mappings, disable them, and disable auto-apply |
-| `02-IncentiveJourneyBulkAssignRideProgressFlow.json` | Same ride progress as `01`, except both user mappings are inserted by one `POST .../assign/bulkFromS3` job (`batchSize` 1, so two allocator ticks). That request uploads the CSV as a multipart file, and driver-app stores it at the given S3 key |
+| `01-IncentiveJourneyRideProgressFlow.json` | One cohort, two journeys (two mappings, two `/assign` calls). Journey 1 milestones stay legacy simple columns. Journey 2 uses **JsonLogic** `ridesCompleted>=2 AND (earnings>=1 OR distanceMeters>=1)` (200 coins) on ride 2. Auto-apply uses the same AND/OR shape with `ridesCompleted>=1` (30 coins) on ride 1. Polls assert `metricSnapshot`. Then waive earnings → streak-end cash ₹1. Before cleanup: roll campaign checks. Then unassign / disable mappings |
+| `02-IncentiveJourneyBulkAssignRideProgressFlow.json` | Same ride progress as `01`, except both user mappings are inserted by one `POST .../assign/bulkFromS3` job (`batchSize` 1, so two allocator ticks). That request uploads the CSV as a multipart file, and driver-app stores it at the given S3 key. Roll API is covered in `01` only |
+| `03-IncentiveJourneyMgCampaignOptInFlow.json` | **MG membership campaign** (separate from Assigned progress in `01`/`02`). OptIn cohort + `isMg` journey (cancel forbid + autoAssign + poolingPriority). Invite assign → list omits until opt-in → driver UI opt-in → `isMg` on UI list/history and dashboard assignments → ride (cancel after accept must fail) → milestone progress → stats history `isMg` + `cohortType=OptIn` → unassign → re-invite → dashboard opt-in → cleanup. Reuses Bangalore Local env; onboard is repeated on purpose so suites stay independent |
+
+## MG OptIn suite (`03`)
+
+Do **not** fold this into `01` — Assigned ride progress and MG membership are different products; stuffing both makes failures harder to diagnose and slows the happy path suite.
+
+`03` is self-contained (repeats driver/rider onboard like `02` does) and covers:
+
+1. OptIn cohort + **MG perks on CJM** (`isMg`, `mgAmount`, `allowCancellationByDriver=false`, autoAssign, poolingPriority) — not on journey; milestones stay `NoReward` (snapshot/DQ); net earnings tracked on stats (`mgNetEarnings` / `nonMgNetEarnings`)
+
+2. Opt-in **before** invite must fail; invite assign; driver list empty until opted in
+3. Driver UI `/incentive/journey/optIn` then `isMg` on UI list/history + dashboard assignments
+4. **BehaviourMetricTick-only award** (order 1): `conditionLogic` `acceptanceRate>=1 AND cancellationRate<=50` (no ride vars). After **Driver Accept**, BT bump + `publishBehaviorMetricTick` → `IJ_BEHAVIOR_TICK_CONSUMER` → stats **Completed** with behaviour `metricSnapshot` while ride/exit-gate stay open
+5. Full AUTO cash ride **after** opt-in; driver cancel after accept must be **non-2xx** (MG cancel forbid stamped on offer)
+6. Ride-end award (order 2): JsonLogic ride+behaviour `ridesCompleted>=1 AND earnings>=1 AND acceptanceRate>=1 AND cancellationRate<=50`
+7. Same ride-end eval: exit gate (order 3) `NoReward` + `conditionLogic` `ridesCompleted < 1` + `disqualifyIfConditionNotMet=true` — **False after ride** → **Disqualified** + OptIn clear (UCM invite stays enabled)
+8. List omits after disqualify; assignments still present; **re-opt-in without re-assign** restores list
+9. Unassign → list clears; re-invite → dashboard `/optIn`; cleanup disable
+
+Run alone: `./run-tests.sh incentive-journey NY_Bangalore 03-IncentiveJourneyMgCampaignOptInFlow`
 
 ## Bulk assign suite
 
@@ -110,17 +133,17 @@ Eval does not carry progress into the next milestone, and it does not start the 
 | 2 | RideCompleted GTE | 1 | Still open after ride 1; completed by ride 2 (10 coins) |
 | 3 | Earnings GTE | 1000000 | Left open, then `POST .../stats/waiveOff` |
 
-Same cohort, second mapping (separate assign; a user mapping points at one cohort-journey mapping, not the whole cohort):
+Same cohort, second mapping (separate assign; a user mapping points at one cohort-journey mapping, not the whole cohort) — **JsonLogic bag eval on ride-end**:
 
 | Order | Condition | Value | What the test does |
 |-------|-----------|-------|--------------------|
-| 1 | RideCompleted GTE | 2 | Open at 1 after ride 1; completed on ride 2 (200 coins) |
+| 1 | `conditionLogic`: `ridesCompleted >= 2` **AND** (`earnings >= 1` **OR** `distanceMeters >= 1`) | 2 | Open at `currentValue=1` after ride 1; completed on ride 2 (200 coins). Snapshot includes rides + earnings/distance vars |
 
-Separate auto-apply cohort (no user mapping, `allowIfNoMapping` false so it still applies while the driver has the other mappings, `vehicleCategory` `AUTO_CATEGORY`, matching Add Vehicle):
+Separate auto-apply cohort (no user mapping, `allowIfNoMapping` false so it still applies while the driver has the other mappings, `vehicleCategory` `AUTO_CATEGORY`, matching Add Vehicle) — **JsonLogic**:
 
 | Order | Condition | Value | What the test does |
 |-------|-----------|-------|--------------------|
-| 1 | RideCompleted GTE | 1 | Completed by ride 1 (30 coins) |
+| 1 | `ridesCompleted >= 1` **AND** (`earnings >= 1` **OR** `distanceMeters >= 1`) | 1 | Completed by ride 1 (30 coins) + compound `metricSnapshot` |
 
 `periodKey` is taken from the completed ride stats row (`Day:YYYY-MM-DD`, city local day). Cohort mapping `startDate` is noon UTC on that same IST calendar day so streak-end (streakRange 1, cash ₹1) matches the ride period. `maxWaiveOffCount` is 1.
 
@@ -132,6 +155,7 @@ Separate auto-apply cohort (no user mapping, `allowIfNoMapping` false so it stil
 
 ## Env notes
 
-- `ij_eval_wait_ms` (default `12000`) — busy-wait before each list poll so Kafka can catch up.
+- `ij_eval_wait_ms` (default `12000`) — busy-wait before ride-end list/stats polls so Kafka can catch up.
+- `ij_behaviour_tick_wait_ms` (falls back to `ij_eval_wait_ms`) — wait after Accept before BehaviourMetricTick stats poll.
 - `_test_start_date` — noon UTC of today's IST day, so streak period keys match ride eval.
 - `envType=Local` enables mock-server steps; non-Local auto-skips URLs containing `mockServerUrl` / `mock_fcm_url`.

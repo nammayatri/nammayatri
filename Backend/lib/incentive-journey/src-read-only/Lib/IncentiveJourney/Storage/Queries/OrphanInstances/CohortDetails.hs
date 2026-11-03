@@ -19,6 +19,7 @@ instance FromTType' Beam.CohortDetails Lib.IncentiveJourney.Domain.Types.CohortD
         Lib.IncentiveJourney.Domain.Types.CohortDetails.CohortDetails
           { category = category,
             cohortRule = cohortRule,
+            cohortType = cohortType,
             createdAt = createdAt,
             description = description,
             id = Kernel.Types.Id.Id id,
@@ -31,6 +32,7 @@ instance ToTType' Beam.CohortDetails Lib.IncentiveJourney.Domain.Types.CohortDet
     Beam.CohortDetailsT
       { Beam.category = category,
         Beam.cohortRule = cohortRule,
+        Beam.cohortType = cohortType,
         Beam.createdAt = createdAt,
         Beam.description = description,
         Beam.id = Kernel.Types.Id.getId id,

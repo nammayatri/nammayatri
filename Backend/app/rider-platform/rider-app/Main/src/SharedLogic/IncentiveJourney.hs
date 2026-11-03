@@ -9,8 +9,6 @@ module SharedLogic.IncentiveJourney
   ( hasAssignedJourneys,
     findAssignmentsByUserId,
     mkJourneyPeriodKey,
-    mkWeeklyPeriodKey,
-    mkMonthlyPeriodKey,
     journeyTypeOrDefault,
     isJourneyWindowActive,
     evaluateRiderJourney,
@@ -46,14 +44,8 @@ journeyTypeOrDefault = IJ.journeyTypeOrDefault
 isJourneyWindowActive :: UTCTime -> DIJ.IncentiveJourney -> DCJM.CohortJourneyMapping -> Bool
 isJourneyWindowActive = IJ.isJourneyWindowActiveFor
 
-mkJourneyPeriodKey :: UTCTime -> DIJ.IncentiveJourney -> Text
+mkJourneyPeriodKey :: UTCTime -> DIJ.IncentiveJourney -> UTCTime -> Text
 mkJourneyPeriodKey = IJ.mkJourneyPeriodKeyFor
-
-mkWeeklyPeriodKey :: UTCTime -> Text
-mkWeeklyPeriodKey = IJ.mkWeeklyPeriodKey
-
-mkMonthlyPeriodKey :: UTCTime -> Text
-mkMonthlyPeriodKey = IJ.mkMonthlyPeriodKey
 
 loadJourneyMilestones ::
   (Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -71,7 +63,10 @@ mkRiderHandle =
       loadMilestones = loadJourneyMilestones,
       dispatchReward = \_journey -> dispatchRiderReward,
       dispatchStreakEndReward = dispatchRiderStreakEndReward,
-      mbOnMilestoneCompleted = Nothing
+      mbOnMilestoneCompleted = Nothing,
+      mbOnMgOptInCleared = Nothing,
+      -- Rider: period ride counters only (Kafka ride path).
+      buildMetricContext = IJ.loadOrApplyRideDeltas
     }
 
 evaluateRiderJourney ::

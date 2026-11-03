@@ -13,7 +13,7 @@ IncentiveJourneyMilestone:
 
   types:
     MilestoneConditionType:
-      enum: "RideCompleted, Earnings, Distance, RideDuration, BookingTicket"
+      enum: "RideCompleted, Earnings, Distance, RideDuration, BookingTicket, CancellationRate, AcceptanceRate, OnlineMinutes"
       derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
     MilestoneConditionOperator:
       enum: "GTE, GT, EQ, LTE, LT"
@@ -39,6 +39,13 @@ IncentiveJourneyMilestone:
     conditionType: MilestoneConditionType
     conditionOperator: MilestoneConditionOperator
     conditionValue: Int
+    # When set, JsonLogic-style JSON is the bag-eval source of truth (AND/OR). Simple columns ignored.
+    # True → award Complete (or stay InProgress if rewardType = NoReward).
+    # False → InProgress, unless disqualifyIfConditionNotMet.
+    conditionLogic: Maybe Value
+    # When Just True and conditionLogic/columns evaluate False → Disqualified
+    # (OptIn clear / Assigned disable). Nothing/False → never disqualify on fail.
+    disqualifyIfConditionNotMet: Maybe Bool
     areaType: Maybe MilestoneAreaType
     specialLocationIds: "Maybe [Text]"
     vehicleCategory: Maybe VehicleCategory
@@ -55,12 +62,15 @@ IncentiveJourneyMilestone:
 
   default:
     conditionOperator: "'GTE'"
+    conditionLogic: "NULL"
+    disqualifyIfConditionNotMet: "NULL"
     areaType: "NULL"
     specialLocationIds: 'NULL'
     rewardMetadata: "NULL"
 
   sqlType:
     rewardMetadata: json
+    conditionLogic: json
 
   constraints:
     id: PrimaryKey

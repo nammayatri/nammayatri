@@ -2,6 +2,7 @@
 
 module Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyStatsExtra where
 
+import Control.Applicative ((<|>))
 import Data.Time (Day, UTCTime (UTCTime), addDays, addUTCTime)
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -47,6 +48,18 @@ upsertJourneyStats stats = do
                 DIJS.conditionOperator = stats.conditionOperator,
                 DIJS.conditionValue = stats.conditionValue,
                 DIJS.rewardType = stats.rewardType,
+                DIJS.cohortType = case stats.cohortType of
+                  Just ct -> Just ct
+                  Nothing -> existing.cohortType,
+                DIJS.isMg = case stats.isMg of
+                  Just v -> Just v
+                  Nothing -> existing.isMg,
+                DIJS.metricSnapshot = case stats.metricSnapshot of
+                  Just snap -> Just snap
+                  Nothing -> existing.metricSnapshot,
+                -- Prefer incoming MG earnings when set (accumulate path); else keep existing.
+                DIJS.mgNetEarnings = stats.mgNetEarnings <|> existing.mgNetEarnings,
+                DIJS.nonMgNetEarnings = stats.nonMgNetEarnings <|> existing.nonMgNetEarnings,
                 DIJS.updatedAt = now
               }
       updateWithKV
@@ -57,6 +70,11 @@ upsertJourneyStats stats = do
           Se.Set Beam.conditionOperator updated.conditionOperator,
           Se.Set Beam.conditionValue updated.conditionValue,
           Se.Set Beam.rewardType updated.rewardType,
+          Se.Set Beam.cohortType updated.cohortType,
+          Se.Set Beam.isMg updated.isMg,
+          Se.Set Beam.metricSnapshot updated.metricSnapshot,
+          Se.Set Beam.mgNetEarnings updated.mgNetEarnings,
+          Se.Set Beam.nonMgNetEarnings updated.nonMgNetEarnings,
           Se.Set Beam.updatedAt now
         ]
         [Se.Is Beam.id $ Se.Eq (getId existing.id)]

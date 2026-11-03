@@ -18,6 +18,7 @@ import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats as DIJS
+import qualified Lib.IncentiveJourney.MgCampaign as MgCampaign
 
 -- | App-injected callbacks for dashboard (+ UI) incentive-journey handlers.
 data ServiceHandle m = ServiceHandle
@@ -95,7 +96,9 @@ data ServiceHandle m = ServiceHandle
         ),
     -- | Special location id -> display name for UI (provider).
     findSpecialLocationNameById :: Maybe (Text -> m (Maybe Text)),
-    loadJourneyMilestones :: Id DIJ.IncentiveJourney -> m [DIJM.IncentiveJourneyMilestone]
+    loadJourneyMilestones :: Id DIJ.IncentiveJourney -> m [DIJM.IncentiveJourneyMilestone],
+    -- | Driver-app: sync driver_information.mg_campaign. Rider leaves Nothing.
+    syncMgCampaignSnapshot :: Maybe (Id Common.Person -> Maybe MgCampaign.MgCampaignSnapshot -> m ())
   }
 
 defaultBatchSize :: Int

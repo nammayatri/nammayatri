@@ -45,6 +45,9 @@ data ConditionType
   | Distance
   | RideDuration
   | BookingTicket
+  | CancellationRate
+  | AcceptanceRate
+  | OnlineMinutes
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 data ConditionOperator
@@ -80,11 +83,14 @@ data MilestoneStatus
   | Rewarded
   | WaivedOff
   | RewardPending
+  | Disqualified
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 data RideDeltas = RideDeltas
   { ridesDelta :: Int,
     earningsDelta :: Int,
+    -- | fare - toll - parking (rupees, rounded). Used for MG mgNetEarnings / nonMgNetEarnings only.
+    netEarningsDelta :: Int,
     distanceMetersDelta :: Int,
     rideTimeSecondsDelta :: Int
   }
@@ -167,6 +173,8 @@ data EvalMilestone = EvalMilestone
     conditionType :: ConditionType,
     conditionOperator :: ConditionOperator,
     conditionValue :: Int,
+    -- | When set, JsonLogic is the award/progress eval source of truth.
+    conditionLogic :: Maybe Value,
     -- | Nothing / Default = no location filter. Pickup/Drop/PickupDrop use specialLocationIds.
     areaType :: Maybe AreaType,
     specialLocationIds :: Maybe [Text],
@@ -190,8 +198,8 @@ awardAmount (Awarded n) = n
 
 -- | Milestone is done for sequencing (no further progress).
 isTerminalStatus :: MilestoneStatus -> Bool
-isTerminalStatus status = status `elem` [Completed, Rewarded, WaivedOff, RewardPending]
+isTerminalStatus status = status `elem` [Completed, Rewarded, WaivedOff, RewardPending, Disqualified]
 
--- | Counts toward streak-end payout eligibility.
+-- | Counts toward streak-end payout eligibility (Disqualified does not).
 isStreakEndSatisfiedStatus :: MilestoneStatus -> Bool
 isStreakEndSatisfiedStatus status = status `elem` [Completed, Rewarded, WaivedOff, RewardPending]

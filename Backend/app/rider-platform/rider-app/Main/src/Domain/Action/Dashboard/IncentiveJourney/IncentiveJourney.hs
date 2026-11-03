@@ -8,9 +8,11 @@ module Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
     postIncentiveJourneyStatsWaiveOff,
     postIncentiveJourneyCohortCreate,
     postIncentiveJourneyCohortJourneyCreate,
+    postIncentiveJourneyCohortJourneyRoll,
     putIncentiveJourneyCohortJourneyUpdate,
     getIncentiveJourneyCohortJourneyList,
     postIncentiveJourneyAssign,
+    postIncentiveJourneyOptIn,
     postIncentiveJourneyUnassign,
   )
 where
@@ -110,7 +112,8 @@ mkHandle =
       putBulkAssignCsv = Nothing,
       scheduleBulkUpload = Nothing,
       findSpecialLocationNameById = Nothing,
-      loadJourneyMilestones = SLJourney.loadJourneyMilestones
+      loadJourneyMilestones = SLJourney.loadJourneyMilestones,
+      syncMgCampaignSnapshot = Nothing
     }
 
 getIncentiveJourneyList ::
@@ -195,6 +198,14 @@ postIncentiveJourneyCohortJourneyCreate ::
 postIncentiveJourneyCohortJourneyCreate merchantShortId opCity =
   LibRider.postIncentiveJourneyCohortJourneyCreate mkHandle (ShortId merchantShortId.getShortId) opCity
 
+postIncentiveJourneyCohortJourneyRoll ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.RollCohortJourneyMappingReq ->
+  Environment.Flow Common.RollCohortJourneyMappingRes
+postIncentiveJourneyCohortJourneyRoll merchantShortId opCity =
+  LibRider.postIncentiveJourneyCohortJourneyRoll mkHandle (ShortId merchantShortId.getShortId) opCity
+
 putIncentiveJourneyCohortJourneyUpdate ::
   ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
@@ -223,6 +234,14 @@ postIncentiveJourneyAssign ::
   Environment.Flow APISuccess
 postIncentiveJourneyAssign merchantShortId opCity =
   LibRider.postIncentiveJourneyAssign mkHandle (ShortId merchantShortId.getShortId) opCity
+
+postIncentiveJourneyOptIn ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.OptInIncentiveJourneyReq ->
+  Environment.Flow APISuccess
+postIncentiveJourneyOptIn merchantShortId opCity =
+  LibRider.postIncentiveJourneyOptIn mkHandle (ShortId merchantShortId.getShortId) opCity
 
 postIncentiveJourneyUnassign ::
   ShortId DM.Merchant ->

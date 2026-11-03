@@ -6,6 +6,7 @@ module Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats where
 import Data.Aeson
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Utils.TH
 import qualified Lib.IncentiveJourney.Domain.Types.CohortDetails
@@ -18,16 +19,21 @@ import qualified Tools.Beam.UtilsTH
 data IncentiveJourneyStats = IncentiveJourneyStats
   { cohortId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortDetails.CohortDetails,
     cohortJourneyMappingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping),
+    cohortType :: Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.CohortDetails.CohortType,
     conditionOperator :: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneConditionOperator,
     conditionType :: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneConditionType,
     conditionValue :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     currentValue :: Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.IncentiveJourneyStats,
+    isMg :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourney.IncentiveJourney,
     merchantId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.MerchantOperatingCity,
+    metricSnapshot :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    mgNetEarnings :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     milestoneId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.IncentiveJourneyMilestone,
+    nonMgNetEarnings :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     periodKey :: Kernel.Prelude.Text,
     personId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.Person,
     rewardType :: Lib.IncentiveJourney.Domain.Types.Common.MilestoneRewardType,
@@ -44,6 +50,7 @@ data JourneyMilestoneStatus
   | Rewarded
   | WaivedOff
   | RewardPending
+  | Disqualified
   deriving (Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''JourneyMilestoneStatus)

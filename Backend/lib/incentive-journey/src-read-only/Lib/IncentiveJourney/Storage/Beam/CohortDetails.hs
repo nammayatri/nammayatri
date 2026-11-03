@@ -9,10 +9,12 @@ import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Lib.IncentiveJourney.Domain.Types.CohortDetails
 
 data CohortDetailsT f = CohortDetailsT
   { category :: B.C f Kernel.Prelude.Text,
     cohortRule :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    cohortType :: B.C f (Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.CohortDetails.CohortType),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,

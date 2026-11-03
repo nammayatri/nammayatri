@@ -89,6 +89,7 @@ data DriverInformationT f = DriverInformationT
     latestScheduledPickupLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     latestScheduledPickupLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     maxPickupRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
+    mgCampaign :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     mode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.DriverMode),
     nomineeName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     nomineeRelationship :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

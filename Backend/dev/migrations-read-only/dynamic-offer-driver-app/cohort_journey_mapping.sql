@@ -21,3 +21,24 @@ CREATE INDEX CONCURRENTLY cohort_journey_mapping_idx_merchant_operating_city_id 
 CREATE INDEX CONCURRENTLY cohort_journey_mapping_idx_cohort_id ON atlas_driver_offer_bpp.cohort_journey_mapping USING btree (cohort_id);
 CREATE INDEX CONCURRENTLY cohort_journey_mapping_idx_journey_id ON atlas_driver_offer_bpp.cohort_journey_mapping USING btree (journey_id);
 ALTER TABLE atlas_driver_offer_bpp.cohort_journey_mapping ADD CONSTRAINT cohort_journey_mapping_unique_idx_cohort_id_journey_id_merchant_operating_city_id UNIQUE (cohort_id, journey_id, merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.cohort_journey_mapping ADD COLUMN parent_id character varying(36)  default NULL;
+ALTER TABLE atlas_driver_offer_bpp.cohort_journey_mapping DROP CONSTRAINT cohort_journey_mapping_unique_idx_cohort_id_journey_id_merchant_operating_city_id;
+CREATE INDEX CONCURRENTLY cohort_journey_mapping_idx_parent_id ON atlas_driver_offer_bpp.cohort_journey_mapping USING btree (parent_id);
+ALTER TABLE atlas_driver_offer_bpp.cohort_journey_mapping ADD CONSTRAINT cohort_journey_mapping_unique_idx_cohort_id_journey_id_merchant_operating_city_id_start_date UNIQUE (cohort_id, journey_id, merchant_operating_city_id, start_date);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.cohort_journey_mapping ADD COLUMN pooling_priority json  default NULL;
+ALTER TABLE atlas_driver_offer_bpp.cohort_journey_mapping ADD COLUMN is_mg boolean  default NULL;
+ALTER TABLE atlas_driver_offer_bpp.cohort_journey_mapping ADD COLUMN auto_assign json  default NULL;
+ALTER TABLE atlas_driver_offer_bpp.cohort_journey_mapping ADD COLUMN allow_cancellation_by_driver boolean  default NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.cohort_journey_mapping ADD COLUMN mg_amount double precision  default NULL;

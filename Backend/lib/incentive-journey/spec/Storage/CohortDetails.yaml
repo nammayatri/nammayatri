@@ -4,18 +4,31 @@ imports:
 CohortDetails:
   tableName: cohort_details
 
+  types:
+    CohortType:
+      enum: "Assigned, OptIn"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CohortType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <CohortType>
+
   fields:
     id: Id CohortDetails
     name: Text
     category: Text
     description: Maybe Text
     cohortRule: Maybe Value
+    # Assigned = bulk/auto-apply. OptIn = invited; eval requires optedInAt on UCM.
+    # Maybe for generator backwards-compat; treat Nothing as Assigned in app code.
+    cohortType: Maybe CohortType
     createdAt: UTCTime
     updatedAt: UTCTime
 
   default:
     description: "NULL"
     cohortRule: "NULL"
+    cohortType: "NULL"
 
   sqlType:
     cohortRule: json

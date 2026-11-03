@@ -759,6 +759,9 @@ library
       SharedLogic.GoogleTranslate
       SharedLogic.IffcoTokioInsurance
       SharedLogic.IncentiveJourney
+      SharedLogic.IncentiveJourney.BehaviorTickPublisher
+      SharedLogic.IncentiveJourney.MetricBag
+      SharedLogic.IncentiveJourney.MgCampaign
       SharedLogic.IntegratedBPPConfig
       SharedLogic.KaalChakra.Actions
       SharedLogic.KaalChakra.Chakras

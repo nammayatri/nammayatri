@@ -84,6 +84,7 @@ data NearestDriversResult = NearestDriversResult
     driverGender :: Person.Gender,
     vehicleNumber :: Maybe Text,
     fleetOwnerId :: Maybe Text,
+    mgCampaign :: Maybe A.Value,
     -- On-ride forward batching fields (Nothing for non-on-ride drivers)
     previousRideDropLat :: Maybe Double,
     previousRideDropLon :: Maybe Double,
@@ -366,6 +367,7 @@ mkResultHelper now dpd location dist mbDefaultServiceTierForDriver cityServiceTi
         previousRideDropLon = mbPrevDropLon,
         vehicleNumber = Just dpd.registrationNo,
         fleetOwnerId = dpd.fleetOwnerId,
+        mgCampaign = dpd.mgCampaign,
         distanceFromDriverToDestination = mbDistToDestination
       }
 

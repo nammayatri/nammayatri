@@ -25,6 +25,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Environment
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Maps.HasCoordinates (HasCoordinates (..))
 import Kernel.External.Maps.Interface.Types
@@ -106,6 +107,7 @@ type ScheduledRideAssignedOnUpdateFlow m r c =
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     CH.ClickhouseFlow m r,
     Finance.HasActorInfo m r,
     BeamFlow m r,
@@ -373,6 +375,7 @@ cancelOrReallocate ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     CH.ClickhouseFlow m r,
     Finance.HasActorInfo m r,
     BeamFlow m r,

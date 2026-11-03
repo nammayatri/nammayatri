@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Incentive Journey Ride Progress Flow",
-    "description": "Provider E2E: Daily journey with two RideCompleted milestones (each GTE 1, progress resets) and one Earnings milestone the driver does not finish. The same cohort has a second journey (one RideCompleted GTE 2, 200 coins) via a second cohort-journey mapping and a second driver assign. A separate cohort and journey are auto-applied for AUTO_CATEGORY, the same category set when the driver vehicle is added, with no user mapping (allowIfNoMapping false, so it still applies when the driver has other mappings). Two AUTO cash rides complete journey 1's ride milestones, journey 2's 2-ride target, and the auto-apply ride milestone. Dashboard waive-off marks the earnings milestone WaivedOff for that periodKey, and the first cohort mapping streak-end reward pays cash ₹1. Milestone 1 pays a YATRI_SUBSCRIPTION waive-off instead of coins. Milestone 2 pays cash ₹10. The driver VPA is stored as VERIFIED_BY_USER so that cash payout is allowed. Cleanup unassigns both user mappings, disables those cohort-journey mappings, and disables the auto-apply row.\n\nRequires kafka-consumers (DriverCoinsAndJourney / RIDE_EVENTS). Dashboard peer path: .../incentiveJourney/...\n\nSee IncentiveJourneyFlow/Rules.md.",
+    "description": "Provider E2E: Daily journey with two RideCompleted milestones (each GTE 1, progress resets) and one Earnings milestone the driver does not finish. The same cohort has a second journey (JsonLogic ridesCompleted>=2 AND (earnings>=1 OR distanceMeters>=1), 200 coins) via a second cohort-journey mapping and a second driver assign. A separate cohort and journey are auto-applied for AUTO_CATEGORY (JsonLogic ridesCompleted>=1 AND (earnings>=1 OR distanceMeters>=1)), the same category set when the driver vehicle is added, with no user mapping (allowIfNoMapping false, so it still applies when the driver has other mappings). Two AUTO cash rides complete journey 1's ride milestones, journey 2's 2-ride target, and the auto-apply ride milestone. Dashboard waive-off marks the earnings milestone WaivedOff for that periodKey, and the first cohort mapping streak-end reward pays cash \u20b91. Milestone 1 pays a YATRI_SUBSCRIPTION waive-off instead of coins. Milestone 2 pays cash \u20b910. The driver VPA is stored as VERIFIED_BY_USER so that cash payout is allowed. Before cleanup, a separate roll cohort/journey checks POST /cohortJourney/roll (second create rejected, parentId on list, auto-apply cloned). Cleanup unassigns both user mappings, disables those cohort-journey mappings, and disables the auto-apply rows.\n\nRequires kafka-consumers (DriverCoinsAndJourney / RIDE_EVENTS). Dashboard peer path: .../incentiveJourney/...\n\nSee IncentiveJourneyFlow/Rules.md.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -38,6 +38,9 @@
           "  pm.collectionVariables.set('_test_journey_2_name', 'INT_TEST_IJ_JOURNEY2_' + suffix);",
           "  pm.collectionVariables.set('_test_auto_cohort_name', 'INT_TEST_IJ_AUTO_COHORT_' + suffix);",
           "  pm.collectionVariables.set('_test_auto_journey_name', 'INT_TEST_IJ_AUTO_JOURNEY_' + suffix);",
+          "  pm.collectionVariables.set('_test_roll_cohort_name', 'INT_TEST_IJ_ROLL_COHORT_' + suffix);",
+          "  pm.collectionVariables.set('_test_roll_cohort_category', 'integration-test-roll');",
+          "  pm.collectionVariables.set('_test_roll_journey_name', 'INT_TEST_IJ_ROLL_JOURNEY_' + suffix);",
           "  var now = new Date();",
           "  var validTill = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);",
           "  pm.collectionVariables.set('_test_valid_till', validTill.toISOString());",
@@ -46,13 +49,23 @@
           "  // and is already <= local time, including runs between midnight and 5:30 PM IST.",
           "  // Noon UTC is still in the future during that span, so the list hides every journey.",
           "  var ist = new Date(now.getTime() + (5 * 60 + 30) * 60 * 1000);",
-          "  var istDay = ist.getUTCFullYear() + '-' + String(ist.getUTCMonth() + 1).padStart(2, '0') + '-' + String(ist.getUTCDate()).padStart(2, '0');",
+          "  var y = ist.getUTCFullYear();",
+          "  var m = ist.getUTCMonth();",
+          "  var d = ist.getUTCDate();",
+          "  var istDay = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');",
           "  pm.collectionVariables.set('_test_start_date', istDay + 'T00:00:00.000Z');",
           "  pm.collectionVariables.set('_test_from_date', istDay);",
           "  var to = new Date(istDay + 'T12:00:00.000Z');",
           "  to.setUTCDate(to.getUTCDate() + 1);",
           "  var toDay = to.getUTCFullYear() + '-' + String(to.getUTCMonth() + 1).padStart(2, '0') + '-' + String(to.getUTCDate()).padStart(2, '0');",
           "  pm.collectionVariables.set('_test_to_date', toDay);",
+          "  // Roll window: yesterday start + streakRange 1 Daily \u2192 exclusive end = today; roll start = today.",
+          "  function isoDayUtc(yy, mm, dd) {",
+          "    return yy + '-' + String(mm + 1).padStart(2, '0') + '-' + String(dd).padStart(2, '0') + 'T00:00:00.000Z';",
+          "  }",
+          "  var prevUtc = new Date(Date.UTC(y, m, d - 1));",
+          "  pm.collectionVariables.set('_test_roll_prev_start', isoDayUtc(prevUtc.getUTCFullYear(), prevUtc.getUTCMonth(), prevUtc.getUTCDate()));",
+          "  pm.collectionVariables.set('_test_roll_start', istDay + 'T00:00:00.000Z');",
           "  console.log('IJ test driver:', dNum, 'rider:', rNum, 'reg:', regNo, 'suffix:', suffix, 'istDay:', istDay);",
           "}"
         ]
@@ -605,7 +618,7 @@
       ]
     },
     {
-      "name": "Create Journey 2 Milestone RideCompleted GTE 2 Coins 200 (Dashboard)",
+      "name": "Create Journey 2 Milestone JsonLogic AND/OR rides+earnings Coins 200 (Dashboard)",
       "request": {
         "method": "POST",
         "header": [
@@ -623,7 +636,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"journeyId\": \"{{ij_journey_2_id}}\",\n  \"name\": \"Complete 2 rides\",\n  \"description\": \"One milestone; currentValue is 1 after ride 1 and completes on ride 2\",\n  \"order\": 1,\n  \"conditionType\": \"RideCompleted\",\n  \"conditionOperator\": \"GTE\",\n  \"conditionValue\": 2,\n  \"areaType\": \"Default\",\n  \"specialLocationIds\": null,\n  \"vehicleCategory\": null,\n  \"serviceTierType\": null,\n  \"rewardType\": \"Coins\",\n  \"rewardValue\": 200,\n  \"rewardExpirationAt\": null,\n  \"subscriptionWaiveOff\": null,\n  \"timeBounds\": null\n}"
+          "raw": "{\n  \"journeyId\": \"{{ij_journey_2_id}}\",\n  \"name\": \"Complete 2 rides\",\n  \"description\": \"JsonLogic: ridesCompleted>=2 AND (earnings>=1 OR distanceMeters>=1); open after ride 1, completes on ride 2 (200 coins)\",\n  \"order\": 1,\n  \"conditionType\": \"RideCompleted\",\n  \"conditionOperator\": \"GTE\",\n  \"conditionValue\": 2,\n  \"conditionLogic\": {\n    \"and\": [\n      {\n        \">=\": [\n          {\n            \"var\": \"ridesCompleted\"\n          },\n          2\n        ]\n      },\n      {\n        \"or\": [\n          {\n            \">=\": [\n              {\n                \"var\": \"earnings\"\n              },\n              1\n            ]\n          },\n          {\n            \">=\": [\n              {\n                \"var\": \"distanceMeters\"\n              },\n              1\n            ]\n          }\n        ]\n      }\n    ]\n  },\n  \"disqualifyIfConditionNotMet\": false,\n  \"areaType\": \"Default\",\n  \"specialLocationIds\": null,\n  \"vehicleCategory\": null,\n  \"serviceTierType\": null,\n  \"rewardType\": \"Coins\",\n  \"rewardValue\": 200,\n  \"rewardExpirationAt\": null,\n  \"subscriptionWaiveOff\": null,\n  \"timeBounds\": null\n}"
         }
       },
       "event": [
@@ -787,7 +800,7 @@
       ]
     },
     {
-      "name": "Create Auto Apply Milestone RideCompleted GTE 1 Coins 30 (Dashboard)",
+      "name": "Create Auto Apply Milestone JsonLogic AND/OR rides+earnings Coins 30 (Dashboard)",
       "request": {
         "method": "POST",
         "header": [
@@ -805,7 +818,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"journeyId\": \"{{ij_auto_journey_id}}\",\n  \"name\": \"Complete 1 auto-apply ride\",\n  \"description\": \"Completes on ride 1 with no user_cohort_mapping row\",\n  \"order\": 1,\n  \"conditionType\": \"RideCompleted\",\n  \"conditionOperator\": \"GTE\",\n  \"conditionValue\": 1,\n  \"areaType\": \"Default\",\n  \"specialLocationIds\": null,\n  \"vehicleCategory\": null,\n  \"serviceTierType\": null,\n  \"rewardType\": \"Coins\",\n  \"rewardValue\": 30,\n  \"rewardExpirationAt\": null,\n  \"subscriptionWaiveOff\": null,\n  \"timeBounds\": null\n}"
+          "raw": "{\n  \"journeyId\": \"{{ij_auto_journey_id}}\",\n  \"name\": \"Complete 1 auto-apply ride\",\n  \"description\": \"JsonLogic: ridesCompleted>=1 AND (earnings>=1 OR distanceMeters>=1); completes on ride 1\",\n  \"order\": 1,\n  \"conditionType\": \"RideCompleted\",\n  \"conditionOperator\": \"GTE\",\n  \"conditionValue\": 1,\n  \"conditionLogic\": {\n    \"and\": [\n      {\n        \">=\": [\n          {\n            \"var\": \"ridesCompleted\"\n          },\n          1\n        ]\n      },\n      {\n        \"or\": [\n          {\n            \">=\": [\n              {\n                \"var\": \"earnings\"\n              },\n              1\n            ]\n          },\n          {\n            \">=\": [\n              {\n                \"var\": \"distanceMeters\"\n              },\n              1\n            ]\n          }\n        ]\n      }\n    ]\n  },\n  \"disqualifyIfConditionNotMet\": false,\n  \"areaType\": \"Default\",\n  \"specialLocationIds\": null,\n  \"vehicleCategory\": null,\n  \"serviceTierType\": null,\n  \"rewardType\": \"Coins\",\n  \"rewardValue\": 30,\n  \"rewardExpirationAt\": null,\n  \"subscriptionWaiveOff\": null,\n  \"timeBounds\": null\n}"
         }
       },
       "event": [
@@ -1733,7 +1746,7 @@
               "      var hit = journeys.find(function (j) { return j.journeyId === journeyId; });",
               "      var hit2 = journeys.find(function (j) { return j.journeyId === journey2Id; });",
               "      var hitAuto = journeys.find(function (j) { return j.journeyId === autoJourneyId; });",
-              "      if (hit && ((function () { var m1 = byName(hit, 'Complete 1 ride'); var m2 = byName(hit, 'Complete 1 more ride'); var earn = byName(hit, 'Earn target'); var two = hit2 && byName(hit2, 'Complete 2 rides'); var autoM = hitAuto && byName(hitAuto, 'Complete 1 auto-apply ride'); if (!(isDone(m1) && m2 && !isDone(m2) && earn && !isDone(earn) && hit2 && two && !isDone(two) && two.currentValue === 1 && hitAuto && isDone(autoM) && autoM.currentValue === 1)) return false; pm.test('Milestone 1 completed after first ride', function () { pm.expect(isDone(m1)).to.be.true; }); pm.test('Milestone 1 reward is subscription waive-off', function () { pm.expect(m1.rewardType).to.eql('SubscriptionWaiveOff'); pm.expect(m1.subscriptionWaiveOff && m1.subscriptionWaiveOff.percentage).to.eql(100); pm.expect(m1.subscriptionWaiveOff.serviceName).to.eql('YATRI_SUBSCRIPTION'); pm.expect(m1.subscriptionWaiveOff.waiveOffMode).to.eql('WITHOUT_OFFER'); }); pm.test('Milestone 2 still open after first ride', function () { pm.expect(isDone(m2)).to.be.false; }); pm.test('Earnings milestone still open', function () { pm.expect(isDone(earn)).to.be.false; }); pm.test('Journey 2 still open at 1 ride', function () { pm.expect(isDone(two)).to.be.false; pm.expect(two.currentValue).to.eql(1); }); pm.test('Auto-apply journey completed on ride 1 without a user mapping', function () { pm.expect(isDone(autoM)).to.be.true; pm.expect(autoM.currentValue).to.eql(1); pm.expect(autoM.rewardValue).to.eql(30); }); console.log('IJ ride1 m1', m1.status, m1.currentValue, 'm2', m2.status, m2.currentValue, 'j2', two.currentValue, 'auto', autoM.status); return true;})())) {",
+              "      if (hit && ((function () { var m1 = byName(hit, 'Complete 1 ride'); var m2 = byName(hit, 'Complete 1 more ride'); var earn = byName(hit, 'Earn target'); var two = hit2 && byName(hit2, 'Complete 2 rides'); var autoM = hitAuto && byName(hitAuto, 'Complete 1 auto-apply ride'); if (!(isDone(m1) && m2 && !isDone(m2) && earn && !isDone(earn) && hit2 && two && !isDone(two) && two.currentValue === 1 && hitAuto && isDone(autoM) && autoM.currentValue === 1)) return false; pm.test('Milestone 1 completed after first ride', function () { pm.expect(isDone(m1)).to.be.true; }); pm.test('Milestone 1 reward is subscription waive-off', function () { pm.expect(m1.rewardType).to.eql('SubscriptionWaiveOff'); pm.expect(m1.subscriptionWaiveOff && m1.subscriptionWaiveOff.percentage).to.eql(100); pm.expect(m1.subscriptionWaiveOff.serviceName).to.eql('YATRI_SUBSCRIPTION'); pm.expect(m1.subscriptionWaiveOff.waiveOffMode).to.eql('WITHOUT_OFFER'); }); pm.test('Milestone 2 still open after first ride', function () { pm.expect(isDone(m2)).to.be.false; }); pm.test('Earnings milestone still open', function () { pm.expect(isDone(earn)).to.be.false; }); pm.test('Journey 2 still open at 1 ride', function () { pm.expect(isDone(two)).to.be.false; pm.expect(two.currentValue).to.eql(1); }); pm.test('Journey 2 JsonLogic metricSnapshot after ride 1', function () { pm.expect(two.metricSnapshot && two.metricSnapshot.ridesCompleted).to.eql(1); pm.expect(two.metricSnapshot.earnings >= 1 || two.metricSnapshot.distanceMeters >= 1).to.be.true; }); pm.test('Auto-apply journey completed on ride 1 without a user mapping', function () { pm.expect(isDone(autoM)).to.be.true; pm.expect(autoM.currentValue).to.eql(1); pm.expect(autoM.rewardValue).to.eql(30); }); pm.test('Auto-apply JsonLogic metricSnapshot after ride 1', function () { pm.expect(autoM.metricSnapshot && autoM.metricSnapshot.ridesCompleted).to.eql(1); pm.expect(autoM.metricSnapshot.earnings >= 1 || autoM.metricSnapshot.distanceMeters >= 1).to.be.true; }); console.log('IJ ride1 m1', m1.status, m1.currentValue, 'm2', m2.status, m2.currentValue, 'j2', two.currentValue, 'auto', autoM.status); return true;})())) {",
               "        return;",
               "      }",
               "    }",
@@ -2377,7 +2390,7 @@
               "      var journeys = d.journeys || [];",
               "      var hit = journeys.find(function (j) { return j.journeyId === journeyId; });",
               "      var hit2 = journeys.find(function (j) { return j.journeyId === journey2Id; });",
-              "      if (hit && ((function () { var m1 = byName(hit, 'Complete 1 ride'); var m2 = byName(hit, 'Complete 1 more ride'); var earn = byName(hit, 'Earn target'); var two = hit2 && byName(hit2, 'Complete 2 rides'); if (!(isDone(m1) && cashReached(m2) && earn && !isDone(earn) && hit2 && isDone(two) && two.currentValue === 2)) return false; pm.test('Milestone 1 still completed', function () { pm.expect(isDone(m1)).to.be.true; }); pm.test('Milestone 2 cash reward after second ride', function () { pm.expect(cashReached(m2)).to.be.true; pm.expect(m2.currentValue).to.eql(1); pm.expect(m2.rewardType).to.eql('Cash'); pm.expect(m2.rewardValue).to.eql(10); }); pm.test('Earnings milestone not completed', function () { pm.expect(['Completed', 'Rewarded', 'WaivedOff'].indexOf(earn.status)).to.eql(-1); }); pm.test('Journey 2 completed on second ride for 200 coins', function () { pm.expect(isDone(two)).to.be.true; pm.expect(two.currentValue).to.eql(2); pm.expect(two.rewardValue).to.eql(200); }); console.log('IJ ride2 m2', m2.status, m2.currentValue, 'earn', earn.status, earn.currentValue, 'j2', two.status, two.currentValue); return true;})())) {",
+              "      if (hit && ((function () { var m1 = byName(hit, 'Complete 1 ride'); var m2 = byName(hit, 'Complete 1 more ride'); var earn = byName(hit, 'Earn target'); var two = hit2 && byName(hit2, 'Complete 2 rides'); if (!(isDone(m1) && cashReached(m2) && earn && !isDone(earn) && hit2 && isDone(two) && two.currentValue === 2)) return false; pm.test('Milestone 1 still completed', function () { pm.expect(isDone(m1)).to.be.true; }); pm.test('Milestone 2 cash reward after second ride', function () { pm.expect(cashReached(m2)).to.be.true; pm.expect(m2.currentValue).to.eql(1); pm.expect(m2.rewardType).to.eql('Cash'); pm.expect(m2.rewardValue).to.eql(10); }); pm.test('Earnings milestone not completed', function () { pm.expect(['Completed', 'Rewarded', 'WaivedOff'].indexOf(earn.status)).to.eql(-1); }); pm.test('Journey 2 completed on second ride for 200 coins', function () { pm.expect(isDone(two)).to.be.true; pm.expect(two.currentValue).to.eql(2); pm.expect(two.rewardValue).to.eql(200); }); pm.test('Journey 2 JsonLogic metricSnapshot after ride 2', function () { pm.expect(two.metricSnapshot && two.metricSnapshot.ridesCompleted).to.eql(2); pm.expect(two.metricSnapshot.earnings >= 1 || two.metricSnapshot.distanceMeters >= 1).to.be.true; }); console.log('IJ ride2 m2', m2.status, m2.currentValue, 'earn', earn.status, earn.currentValue, 'j2', two.status, two.currentValue); return true;})())) {",
               "        return;",
               "      }",
               "    }",
@@ -2609,8 +2622,8 @@
             }
           ]
         }
-        }
-      },
+      }
+    },
     {
       "name": "GET coins balance after streak-end cash",
       "event": [
@@ -2655,6 +2668,324 @@
           ]
         }
       }
+    },
+    {
+      "name": "Create Roll Cohort (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/cohort/create"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{_test_roll_cohort_name}}\",\n  \"category\": \"{{_test_roll_cohort_category}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('ij_roll_cohort_id', d.cohortId);",
+              "pm.test('Create roll cohort 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('cohortId returned', function () { pm.expect(d.cohortId).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Roll Journey Daily (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/create"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{_test_roll_journey_name}}\",\n  \"description\": \"Roll campaign check inside ride progress flow\",\n  \"journeyType\": \"Daily\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('ij_roll_journey_id', d.journeyId);",
+              "pm.test('Create roll journey 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('journeyId returned', function () { pm.expect(d.journeyId).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Roll CohortJourney Mapping (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/cohortJourney/create"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cohortId\": \"{{ij_roll_cohort_id}}\",\n  \"journeyId\": \"{{ij_roll_journey_id}}\",\n  \"startDate\": \"{{_test_roll_prev_start}}\",\n  \"streakRange\": 1,\n  \"enabled\": true,\n  \"maxWaiveOffCount\": 1,\n  \"streakEndRewardType\": null,\n  \"streakEndRewardValue\": null,\n  \"streakEndRewardExpirationAt\": null,\n  \"streakEndSubscriptionWaiveOff\": null\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('ij_roll_prev_mapping_id', d.cohortJourneyMappingId);",
+              "pm.test('Create previous roll cohortJourney 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('mappingId returned', function () { pm.expect(d.cohortJourneyMappingId).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create AutoApply for Roll Mapping (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/autoApplyCohort/create"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cohortJourneyMappingId\": \"{{ij_roll_prev_mapping_id}}\",\n  \"vehicleCategory\": \"CAB\",\n  \"allowIfNoMapping\": false,\n  \"enabled\": true\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('ij_roll_prev_auto_apply_id', d.autoApplyCohortMappingId);",
+              "pm.test('Create roll auto apply 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('autoApply id returned', function () { pm.expect(d.autoApplyCohortMappingId).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Same City Cohort Journey Again Should Fail (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/cohortJourney/create"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cohortId\": \"{{ij_roll_cohort_id}}\",\n  \"journeyId\": \"{{ij_roll_journey_id}}\",\n  \"startDate\": \"{{_test_roll_start}}\",\n  \"streakRange\": 1,\n  \"enabled\": true,\n  \"maxWaiveOffCount\": 1,\n  \"streakEndRewardType\": null,\n  \"streakEndRewardValue\": null,\n  \"streakEndRewardExpirationAt\": null,\n  \"streakEndSubscriptionWaiveOff\": null\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Second create rejected (use roll)', function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([400, 401, 403]);",
+              "});",
+              "var body = pm.response.text() || '';",
+              "pm.test('Error mentions roll or already exists', function () {",
+              "  pm.expect(body.toLowerCase()).to.match(/roll|already exists|cohort journey mapping/);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Roll CohortJourney Mapping (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/cohortJourney/roll"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cohortJourneyMappingId\": \"{{ij_roll_prev_mapping_id}}\",\n  \"startDate\": \"{{_test_roll_start}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('ij_roll_new_mapping_id', d.cohortJourneyMappingId);",
+              "pm.test('Roll cohortJourney 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('new mappingId returned', function () { pm.expect(d.cohortJourneyMappingId).to.be.a('string').and.not.empty; });",
+              "pm.test('rolled id differs from previous', function () {",
+              "  pm.expect(d.cohortJourneyMappingId).to.not.eql(pm.environment.get('ij_roll_prev_mapping_id'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List CohortJourney Mappings After Roll (Dashboard)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/cohortJourney/list?limit=50&offset=0&cohortId={{ij_roll_cohort_id}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var prevId = pm.environment.get('ij_roll_prev_mapping_id');",
+              "var newId = pm.environment.get('ij_roll_new_mapping_id');",
+              "var rollStart = pm.collectionVariables.get('_test_roll_start');",
+              "pm.test('List cohortJourney 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('mappings array present', function () { pm.expect(d.mappings).to.be.an('array'); });",
+              "var rolled = (d.mappings || []).find(function (m) { return m.cohortJourneyMappingId === newId; });",
+              "pm.test('rolled mapping in list', function () { pm.expect(rolled).to.exist; });",
+              "pm.test('rolled parentId equals previous mapping', function () {",
+              "  pm.expect(rolled.parentId).to.eql(prevId);",
+              "});",
+              "pm.test('rolled startDate matches roll start', function () {",
+              "  pm.expect(String(rolled.startDate)).to.include(String(rollStart).slice(0, 10));",
+              "});",
+              "var previous = (d.mappings || []).find(function (m) { return m.cohortJourneyMappingId === prevId; });",
+              "pm.test('previous mapping still listed', function () { pm.expect(previous).to.exist; });",
+              "pm.test('previous parentId is null', function () {",
+              "  pm.expect(previous.parentId === null || previous.parentId === undefined).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List AutoApply After Roll (Dashboard)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/autoApplyCohort/list?limit=100&offset=0"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var prevMappingId = pm.environment.get('ij_roll_prev_mapping_id');",
+              "var newMappingId = pm.environment.get('ij_roll_new_mapping_id');",
+              "var prevAutoId = pm.environment.get('ij_roll_prev_auto_apply_id');",
+              "pm.test('List autoApply 200', function () { pm.response.to.have.status(200); });",
+              "var rows = d.mappings || [];",
+              "var oldRow = rows.find(function (r) { return r.autoApplyCohortMappingId === prevAutoId; });",
+              "var newRow = rows.find(function (r) { return r.cohortJourneyMappingId === newMappingId; });",
+              "pm.test('previous auto-apply still listed', function () { pm.expect(oldRow).to.exist; });",
+              "pm.test('previous auto-apply disabled after roll', function () {",
+              "  pm.expect(oldRow.enabled).to.eql(false);",
+              "  pm.expect(oldRow.cohortJourneyMappingId).to.eql(prevMappingId);",
+              "});",
+              "pm.test('new auto-apply cloned onto rolled mapping', function () { pm.expect(newRow).to.exist; });",
+              "pm.test('new auto-apply enabled', function () {",
+              "  pm.expect(newRow.enabled).to.eql(true);",
+              "  pm.expect(newRow.vehicleCategory).to.eql('CAB');",
+              "});",
+              "if (newRow) {",
+              "  pm.environment.set('ij_roll_new_auto_apply_id', newRow.autoApplyCohortMappingId);",
+              "}"
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "Unassign Driver (Cleanup)",
@@ -2855,6 +3186,108 @@
             "type": "text/javascript",
             "exec": [
               "pm.test('Disable auto cohortJourney mapping 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Disable Rolled CohortJourney Mapping (Cleanup)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/cohortJourney/update"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cohortJourneyMappingId\": \"{{ij_roll_new_mapping_id}}\",\n  \"startDate\": null,\n  \"streakRange\": null,\n  \"enabled\": false,\n  \"maxWaiveOffCount\": null,\n  \"streakEndRewardType\": null,\n  \"streakEndRewardValue\": null,\n  \"streakEndRewardExpirationAt\": null,\n  \"streakEndSubscriptionWaiveOff\": null\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Disable rolled mapping 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Disable Previous Roll CohortJourney Mapping (Cleanup)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/cohortJourney/update"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cohortJourneyMappingId\": \"{{ij_roll_prev_mapping_id}}\",\n  \"startDate\": null,\n  \"streakRange\": null,\n  \"enabled\": false,\n  \"maxWaiveOffCount\": null,\n  \"streakEndRewardType\": null,\n  \"streakEndRewardValue\": null,\n  \"streakEndRewardExpirationAt\": null,\n  \"streakEndSubscriptionWaiveOff\": null\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Disable previous roll mapping 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Disable Rolled AutoApply (Cleanup)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/autoApplyCohort/update"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"autoApplyCohortMappingId\": \"{{ij_roll_new_auto_apply_id}}\",\n  \"vehicleCategory\": null,\n  \"allVehicleCategories\": null,\n  \"allowIfNoMapping\": null,\n  \"enabled\": false\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Disable rolled auto apply 200', function () { pm.response.to.have.status(200); });"
             ]
           }
         }

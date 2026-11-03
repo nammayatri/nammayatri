@@ -29,6 +29,7 @@ library
       Lib.IncentiveJourney
       Lib.IncentiveJourney.API.UI.IncentiveJourney
       Lib.IncentiveJourney.Assignment
+      Lib.IncentiveJourney.BehaviorMetric
       Lib.IncentiveJourney.Common
       Lib.IncentiveJourney.Common.UI.IncentiveJourney
       Lib.IncentiveJourney.Condition
@@ -44,6 +45,9 @@ library
       Lib.IncentiveJourney.Domain.Types.Common
       Lib.IncentiveJourney.Eval
       Lib.IncentiveJourney.Idempotency
+      Lib.IncentiveJourney.JsonLogic
+      Lib.IncentiveJourney.MetricBagRedis
+      Lib.IncentiveJourney.MgCampaign
       Lib.IncentiveJourney.Period
       Lib.IncentiveJourney.Reward
       Lib.IncentiveJourney.Storage.Beam.BeamFlow
@@ -157,12 +161,14 @@ library
     , containers
     , euler-hs
     , extra
+    , json-logic-hs
     , lib-dashboard
     , mobility-core
     , openapi3
     , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , scientific
     , sequelize
     , servant
     , servant-client
@@ -174,6 +180,7 @@ library
     , text
     , time
     , unordered-containers
+    , vector
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4

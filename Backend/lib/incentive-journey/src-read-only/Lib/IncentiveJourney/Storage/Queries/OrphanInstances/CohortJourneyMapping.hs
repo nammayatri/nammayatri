@@ -17,14 +17,20 @@ instance FromTType' Beam.CohortJourneyMapping Lib.IncentiveJourney.Domain.Types.
     pure $
       Just
         Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping
-          { cohortId = Kernel.Types.Id.Id cohortId,
+          { allowCancellationByDriver = allowCancellationByDriver,
+            autoAssign = autoAssign,
+            cohortId = Kernel.Types.Id.Id cohortId,
             createdAt = createdAt,
             enabled = enabled,
             id = Kernel.Types.Id.Id id,
+            isMg = isMg,
             journeyId = Kernel.Types.Id.Id journeyId,
             maxWaiveOffCount = maxWaiveOffCount,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            mgAmount = mgAmount,
+            parentId = Kernel.Types.Id.Id <$> parentId,
+            poolingPriority = poolingPriority,
             startDate = startDate,
             streakEndRewardExpirationAt = streakEndRewardExpirationAt,
             streakEndRewardMetadata = streakEndRewardMetadata,
@@ -37,14 +43,20 @@ instance FromTType' Beam.CohortJourneyMapping Lib.IncentiveJourney.Domain.Types.
 instance ToTType' Beam.CohortJourneyMapping Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping where
   toTType' (Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping {..}) = do
     Beam.CohortJourneyMappingT
-      { Beam.cohortId = Kernel.Types.Id.getId cohortId,
+      { Beam.allowCancellationByDriver = allowCancellationByDriver,
+        Beam.autoAssign = autoAssign,
+        Beam.cohortId = Kernel.Types.Id.getId cohortId,
         Beam.createdAt = createdAt,
         Beam.enabled = enabled,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.isMg = isMg,
         Beam.journeyId = Kernel.Types.Id.getId journeyId,
         Beam.maxWaiveOffCount = maxWaiveOffCount,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.mgAmount = mgAmount,
+        Beam.parentId = Kernel.Types.Id.getId <$> parentId,
+        Beam.poolingPriority = poolingPriority,
         Beam.startDate = startDate,
         Beam.streakEndRewardExpirationAt = streakEndRewardExpirationAt,
         Beam.streakEndRewardMetadata = streakEndRewardMetadata,

@@ -3,19 +3,21 @@ imports:
   IncentiveJourney: Lib.IncentiveJourney.Domain.Types.IncentiveJourney
   IncentiveJourneyMilestone: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
   CohortDetails: Lib.IncentiveJourney.Domain.Types.CohortDetails
+  CohortType: Lib.IncentiveJourney.Domain.Types.CohortDetails
   CohortJourneyMapping: Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
   MilestoneConditionType: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
   MilestoneConditionOperator: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
   MilestoneRewardType: Lib.IncentiveJourney.Domain.Types.Common
   Merchant: Lib.IncentiveJourney.Domain.Types.Common
   MerchantOperatingCity: Lib.IncentiveJourney.Domain.Types.Common
+  Value: Data.Aeson
 
 IncentiveJourneyStats:
   tableName: incentive_journey_stats
 
   types:
     JourneyMilestoneStatus:
-      enum: "NotStarted, InProgress, Completed, Rewarded, WaivedOff, RewardPending"
+      enum: "NotStarted, InProgress, Completed, Rewarded, WaivedOff, RewardPending, Disqualified"
       derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   domainInstance:
@@ -28,6 +30,12 @@ IncentiveJourneyStats:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     cohortId: Id CohortDetails
+    # Snapshot of cohort_details.cohortType (Assigned = normal, OptIn = invite/opt-in).
+    # Orthogonal to isMg: OptIn is membership mode; isMg is MG earning-target campaign.
+    # Maybe for generator backwards-compat; treat Nothing as Assigned when reading.
+    cohortType: Maybe CohortType
+    # Snapshot of cohort_journey_mapping.isMg at first write. Maybe; treat Nothing as False.
+    isMg: Maybe Bool
     cohortJourneyMappingId: Maybe (Id CohortJourneyMapping)
     journeyId: Id IncentiveJourney
     milestoneId: Id IncentiveJourneyMilestone
@@ -35,15 +43,30 @@ IncentiveJourneyStats:
     conditionType: MilestoneConditionType
     conditionOperator: MilestoneConditionOperator
     conditionValue: Int
+    # Legacy single progress int (conditionType column). Kept for non-JsonLogic milestones.
     currentValue: Int
+    # JsonLogic only: flat {varName: int} for vars referenced in conditionLogic (not full bag).
+    metricSnapshot: Maybe Value
     status: JourneyMilestoneStatus
     rewardType: MilestoneRewardType
     rewardValue: Maybe Int
+    # MG only: net earnings (fare - toll - parking) inside milestone timeBounds this period.
+    mgNetEarnings: Maybe HighPrecMoney
+    # MG only: same formula for rides outside milestone timeBounds while still opted-in on this CJM.
+    nonMgNetEarnings: Maybe HighPrecMoney
     createdAt: UTCTime
     updatedAt: UTCTime
 
   default:
     conditionOperator: "'GTE'"
+    cohortType: "NULL"
+    isMg: "NULL"
+    metricSnapshot: "NULL"
+    mgNetEarnings: "NULL"
+    nonMgNetEarnings: "NULL"
+
+  sqlType:
+    metricSnapshot: json
 
   constraints:
     id: PrimaryKey
