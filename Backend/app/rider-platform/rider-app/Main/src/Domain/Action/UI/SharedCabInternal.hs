@@ -128,7 +128,7 @@ postSharedCabRoutesDemand mbToken req = do
   cfg <- Config.getTunables cityId
   when (length req.routeCodes > cfg.maxDemandRoutes) $ throwError (InvalidRequest "Too many routes for one demand read")
   candidates <- forM req.routeCodes $ \routeCode -> (routeCode,) . take cfg.demandStopsPerRoute . map (.stopCode) <$> routeStops integratedBppConfig routeCode
-  stops <- Demand.demandOnRoutes cfg cityId.getId candidates
+  stops <- if null candidates then pure [] else Demand.demandOnRoutes cfg cityId.getId candidates
   publicTransportVersion <- feedVersion integratedBppConfig
   pure View.SharedCabDemandResp {publicTransportVersion, stops}
 

@@ -25,6 +25,7 @@ import qualified Domain.Types.Vehicle as DVehicle
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Allocator (SharedCabReconcilerJobData (..))
@@ -79,6 +80,22 @@ getSharedCabRouteData (personId, _merchantId, merchantOpCityId) = do
   integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
   bap <- bapInternal
   SharedCabBAP.getSharedCabRouteData bap.apiKey bap.url integratedBPPConfig.agencyKey
+
+-- | Rider-app owns the feed, so a demand read with no routes fetches its version. A failure only leaves the app on its cached routes.
+sharedCabFeedVersion :: Id MerchantOperatingCity -> Maybe DV.VehicleVariant -> Flow (Maybe Text)
+sharedCabFeedVersion merchantOpCityId variant
+  | variant /= Just DV.SHARED_CAB = pure Nothing
+  | otherwise =
+    either (const Nothing) identity
+      <$> withTryCatch
+        "sharedCabFeedVersion"
+        ( do
+            integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
+            bap <- bapInternal
+            IM.withInMemCache ["SharedCabFeedVersion", integratedBPPConfig.agencyKey] 300 $
+              (.publicTransportVersion)
+                <$> SharedCabBAP.postSharedCabRoutesDemand bap.apiKey bap.url SharedCabBAP.BAPDemandReq {SharedCabBAP.agencyId = integratedBPPConfig.agencyKey, SharedCabBAP.routeCodes = []}
+        )
 
 postSharedCabRoutesDemand :: DriverAuthInfo -> SharedCabDemandReq -> Flow SharedCabDemandResp
 postSharedCabRoutesDemand (personId, _merchantId, merchantOpCityId) req = do

@@ -703,9 +703,9 @@ data SharedCabAllocationEntityData = SharedCabAllocationEntityData
     vehicleNumber :: Maybe Text,
     boardStopCode :: Maybe Text,
     etaSeconds :: Maybe Int,
+    fare :: HighPrecMoney,
     -- set only for an offer the driver accepts or declines: when it lapses and what the accept sheet shows
     offerExpiresAt :: Maybe UTCTime,
-    fare :: Maybe HighPrecMoney,
     firstName :: Maybe Text,
     dropStopCode :: Maybe Text,
     boardStop :: Maybe Text,
