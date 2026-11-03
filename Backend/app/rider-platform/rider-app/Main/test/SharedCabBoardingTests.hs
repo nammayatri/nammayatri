@@ -16,11 +16,13 @@ tests :: TestTree
 tests =
   testGroup
     "SharedCab boarding"
-    [ testCase "a typed code matches its cab whatever the rider's case, spaces or punctuation; four characters or fewer match the plate's end" $
+    [ testCase "a typed code matches its cab whatever the rider's case, spaces or punctuation; a four-character code matches the plate's end" $
         map
           (uncurry boardingCodeMatches)
           [("ml05a1234", "ML05A1234"), ("ML 05-A 1234", "ML05A1234"), ("1234", "ML05A1234"), ("1235", "ML05A1234"), ("ML05B1234", "ML05A1234")]
           @?= [True, True, True, False, False],
+      testCase "a blank, punctuation-only or too-short code matches no plate; a punctuated sticker code still does" $
+        map (`boardingCodeMatches` "ML05A1234") ["", "--", "234", "12-34"] @?= [False, False, False, True],
       testGroup
         "unknown code"
         [ testCase "no confirm: asks, never boards" $

@@ -64,11 +64,14 @@ data SharedCabBoardOutcome
   deriving (Show, Generic)
 
 -- | A rider types the code: the one place a plate is compared with human input, so both sides drop case, spaces and punctuation.
+-- The four-character sticker code is the shortest that names a cab; anything shorter (a blank code included) would match many plates.
 boardingCodeMatches :: Text -> Text -> Bool
 boardingCodeMatches code plate
-  | T.length code <= 4 = normCode code `T.isSuffixOf` normCode plate
-  | otherwise = normCode code == normCode plate
+  | T.length typed < 4 = False
+  | T.length typed == 4 = typed `T.isSuffixOf` normCode plate
+  | otherwise = typed == normCode plate
   where
+    typed = normCode code
     normCode = T.toUpper . T.filter Char.isAlphaNum
 
 -- | An unknown code never boards on its own (a typo would consume the ticket); the rider confirms an unlisted cab via forceCheckIn.
