@@ -569,8 +569,8 @@ postMultimodalRiderLocation ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   ApiTypes.RiderLocationReq ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalRiderLocation (_, merchantId) journeyId mbFleetNo req = do
-  (journeyStatus, legs) <- getMultimodalJourneyStatusAndLegs Nothing journeyId mbFleetNo
+postMultimodalRiderLocation (mbPersonId, merchantId) journeyId mbFleetNo req = do
+  (journeyStatus, legs) <- getMultimodalJourneyStatusAndLegs mbPersonId journeyId mbFleetNo
   let concatLegs =
         concatMap
           ( \leg -> case leg of
@@ -663,20 +663,20 @@ getMultimodalJourneyStatus ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatusResp
 getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
-  (journeyStatusResp, legs) <- getMultimodalJourneyStatusAndLegs (Just mbPersonId) journeyId Nothing
+  (journeyStatusResp, legs) <- getMultimodalJourneyStatusAndLegs mbPersonId journeyId Nothing
   -- a rider polling a live cab leg keeps the city's job chains alive (see SharedCab.keepChainsAlive)
   mapM_ (SharedCab.keepChainsAlive merchantId) (SharedCab.liveCabLegCities legs)
   return journeyStatusResp
 
--- | `ownerCheck` is the caller to check the journey against, on the journey this loads anyway; Nothing skips the check.
+-- | Both callers are rider endpoints, so the caller is checked against the journey this loads anyway.
 getMultimodalJourneyStatusAndLegs ::
-  Kernel.Prelude.Maybe (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person)) ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow (ApiTypes.JourneyStatusResp, [JMTypes.JourneyLegState])
-getMultimodalJourneyStatusAndLegs ownerCheck journeyId mbFleetNo = do
+getMultimodalJourneyStatusAndLegs mbPersonId journeyId mbFleetNo = do
   journey <- JM.getJourney journeyId
-  whenJust ownerCheck (`checkJourneyOwner` journey)
+  checkJourneyOwner mbPersonId journey
   legs <- JM.getAllLegsStatus journey mbFleetNo
   (,legs) <$> generateJourneyStatusResponse journey legs
 
