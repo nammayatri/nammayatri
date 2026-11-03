@@ -4,11 +4,13 @@ module Domain.Action.UI.SpecialZoneQueue
   ( getSpecialZoneQueueRequest,
     postSpecialZoneQueueRequestRespond,
     postSpecialZoneQueueRequestCancel,
+    assignPickupGateForPrioritizedDriver,
   )
 where
 
 import qualified API.Types.UI.SpecialZoneQueue
-import Data.List (partition)
+import Data.List (minimumBy, partition)
+import Data.Ord (comparing)
 import qualified Data.Text as T
 import Data.Time (addUTCTime)
 import qualified Domain.Types.DriverInformation as DI
@@ -29,6 +31,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as LQSL
+import qualified Lib.Types.GateInfo as GI
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), CheckPickupZoneArrivalJobData (..))
 import qualified SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival as ArrivalCheck
@@ -272,3 +275,72 @@ postSpecialZoneQueueRequestCancel (mbPersonId, _merchantId, _merchantOpCityId) r
     fork "specialZoneSupplyDecrementOnRequestCancel" $
       SpecialZoneDriverDemand.runSupplyDecrementForRequest requestId.getId request.gateId request.vehicleType
   pure Kernel.Types.APISuccess.Success
+
+-- | Called from the /position API for fleet drivers. Checks for an existing
+-- Active/Accepted request at the location; if none, picks the least-loaded
+-- Pickup gate (by vehicleType) and creates an auto-accepted request.
+-- Returns True if the driver already had or was just given a pickup assignment,
+-- False if no Pickup gates exist (caller should fall back to LTS queue).
+assignPickupGateForPrioritizedDriver ::
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Kernel.Prelude.Text ->
+  Kernel.Prelude.Text ->
+  Environment.Flow Kernel.Prelude.Bool
+assignPickupGateForPrioritizedDriver driverId merchantId merchantOpCityId specialLocationId vehicleType = do
+  existingReqs <- QSZQR.findActiveByStasusListAndDriverId driverId [Domain.Types.SpecialZoneQueueRequest.Active, Domain.Types.SpecialZoneQueueRequest.Accepted]
+  case find (\r -> r.specialLocationId == specialLocationId) existingReqs of
+    Just _ -> pure Kernel.Prelude.True
+    Nothing -> do
+      allGates <- QGI.findAllBySpecialLocationId (Kernel.Types.Id.Id specialLocationId)
+      let pickupGates = filter (\g -> g.gateType == GI.Pickup) allGates
+      if null pickupGates
+        then pure Kernel.Prelude.False
+        else do
+          now <- getCurrentTime
+          let windowStart = addUTCTime (-1800) now
+          counts <- forM pickupGates $ \gate -> do
+            n <- QSZQR.countActiveAndAcceptedByGateIdAndVehicleType windowStart gate.id.getId vehicleType
+            pure (gate, n)
+          let (assignedGate, _) = Data.List.minimumBy (comparing snd) counts
+          mbSpecialLoc <- LQSL.findById (Kernel.Types.Id.Id specialLocationId)
+          let specialLocName = maybe specialLocationId (.locationName) mbSpecialLoc
+          reqId <- generateGUID
+          let timeoutSec = fromMaybe 1200 assignedGate.pickupZoneArrivalTimeoutInSec
+              deadline = addUTCTime (fromIntegral timeoutSec) now
+              request =
+                Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest
+                  { id = reqId,
+                    driverId = driverId,
+                    gateId = assignedGate.id.getId,
+                    specialLocationId = specialLocationId,
+                    merchantId = merchantId,
+                    merchantOperatingCityId = merchantOpCityId,
+                    status = Domain.Types.SpecialZoneQueueRequest.Accepted,
+                    response = Just Domain.Types.SpecialZoneQueueRequest.Accept,
+                    validTill = deadline,
+                    arrivalDeadlineTime = Just deadline,
+                    gateName = assignedGate.name,
+                    specialLocationName = specialLocName,
+                    vehicleType = vehicleType,
+                    triggerSource = Just Domain.Types.SpecialZoneQueueRequest.App,
+                    triggerRequestId = Nothing,
+                    createdAt = now,
+                    updatedAt = now
+                  }
+          QSZQR.create request
+          createJobIn @_ @'CheckPickupZoneArrival
+            (Just merchantId)
+            (Just merchantOpCityId)
+            (secondsToNominalDiffTime $ Seconds timeoutSec)
+            CheckPickupZoneArrivalJobData
+              { requestId = reqId.getId,
+                driverId = driverId,
+                gateId = assignedGate.id.getId,
+                specialLocationId = specialLocationId,
+                vehicleType = vehicleType,
+                merchantId = merchantId,
+                merchantOperatingCityId = merchantOpCityId
+              }
+          pure Kernel.Prelude.True
