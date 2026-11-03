@@ -2,12 +2,13 @@
   Finance.Invoice.InvoiceNumber
 
   Structured invoice number generation with Redis-based daily sequences.
-  Format: DDMMYY-PURPOSE-XXXXXX
+  Format: DDMMYY-PURPOSE-XXXXXX (or PURPOSE-DDMMYY-XXXXXX)
 
   Moved from rider-app SharedLogic.PaymentInvoice to be shared across modules.
 -}
 module Lib.Finance.Invoice.InvoiceNumber
-  ( generateInvoiceNumber,
+  ( InvoiceNumberLayout (..),
+    generateInvoiceNumber,
     parseInvoiceNumberSequence,
 
     -- * Purpose abbreviations
@@ -23,6 +24,7 @@ module Lib.Finance.Invoice.InvoiceNumber
   )
 where
 
+import Data.Char (isDigit)
 import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime), addUTCTime, diffUTCTime, fromGregorian, toGregorian, utctDay)
 import Kernel.Prelude hiding (length, replicate)
@@ -43,6 +45,9 @@ purposeCommission = "CM"
 purposeAggregatedCommission = "CMB"
 purposeRefund = "R"
 
+data InvoiceNumberLayout = DatePurposeSeq | PurposeDateSeq
+  deriving (Eq, Show)
+
 -- | Generate invoice number
 -- Format: DDMMYY-PURPOSE-XXXXXX, padded to a fixed 16-character total (including both hyphens).
 -- The sequence width flexes with the purpose length so the whole number is always 16 chars.
@@ -54,12 +59,13 @@ purposeRefund = "R"
 -- Falls back to database query if Redis key doesn't exist.
 generateInvoiceNumber ::
   (MonadFlow m, CacheFlow m r, Redis.HedisFlow m r) =>
+  InvoiceNumberLayout ->
   Text -> -- Purpose abbreviation (e.g., "S", "RF")
   Maybe Text -> -- Optional isolation key (e.g., Just "CMB" to give AggregatedCommission its own counter)
   UTCTime ->
   m (Maybe Text) -> -- DB fallback: get latest invoice number for sequence recovery (must match isolation)
   m Text
-generateInvoiceNumber purposeAbbr mbKeySuffix createdAt dbFallback = do
+generateInvoiceNumber layout purposeAbbr mbKeySuffix createdAt dbFallback = do
   let (year, month, day) = toGregorian $ utctDay createdAt
       yy = year `mod` 100
       dateStr = T.pack $ padLeft 2 '0' (show day) <> padLeft 2 '0' (show month) <> padLeft 2 '0' (show yy)
@@ -69,7 +75,10 @@ generateInvoiceNumber purposeAbbr mbKeySuffix createdAt dbFallback = do
 
   -- Format: DDMMYY-PURPOSE-XXXXXX, fixed at 16 chars total
   let seqWidth = max 1 (16 - T.length dateStr - 2 - T.length purposeAbbr)
-  return $ dateStr <> "-" <> purposeAbbr <> "-" <> T.pack (padLeft seqWidth '0' (show seqNum))
+      seqStr = T.pack (padLeft seqWidth '0' (show seqNum))
+  return $ case layout of
+    DatePurposeSeq -> dateStr <> "-" <> purposeAbbr <> "-" <> seqStr
+    PurposeDateSeq -> purposeAbbr <> "-" <> dateStr <> "-" <> seqStr
 
 -- | Per-date sequence generator (resets daily). When 'mbKeySuffix' is 'Just s',
 -- the Redis key includes that suffix so the counter is isolated from the global
@@ -120,15 +129,14 @@ getNextSequenceForDate dateStr mbKeySuffix createdAt dbFallback = do
           secondsUntilMidnight = nominalDiffTimeToSeconds $ diffUTCTime midnightTomorrow now
       when (secondsUntilMidnight > 0) $ Hedis.expire key $ secondsUntilMidnight.getSeconds
 
--- | Parse invoice number in format DDMMYY-PURPOSE-XXXXXX
+-- | Parse invoice number in format DDMMYY-PURPOSE-XXXXXX or PURPOSE-DDMMYY-XXXXXX
 -- Returns (sequenceNumber, date) if parse succeeds
 parseInvoiceNumberSequence :: Text -> Maybe (Int, Day)
 parseInvoiceNumberSequence invoiceNumber = do
   let parts = T.splitOn "-" invoiceNumber
   guard (Prelude.length parts == 3) -- DDMMYY-PURPOSE-XXXXXX has 3 parts
-  datePart <- listToMaybe parts
+  datePart <- find (\p -> T.length p == 6 && T.all isDigit p) (take 2 parts)
   seqPart <- listToMaybe (drop 2 parts) -- Last part is sequence
-  guard (T.length datePart == 6) -- DDMMYY = 6 characters
   guard (not (T.null seqPart))
   seqNum <- readMaybe (T.unpack seqPart)
   -- Parse DDMMYY

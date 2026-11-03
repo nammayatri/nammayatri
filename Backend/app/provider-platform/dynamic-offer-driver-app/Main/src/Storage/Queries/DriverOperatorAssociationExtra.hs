@@ -3,6 +3,7 @@ module Storage.Queries.DriverOperatorAssociationExtra where
 import Control.Applicative (liftA2)
 import Data.Text (toLower)
 import qualified Database.Beam as B
+import Database.Beam.Postgres (Postgres)
 import qualified Domain.Types.Common as DC
 import Domain.Types.DriverOperatorAssociation
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -19,6 +20,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.DriverOperatorAssociation as BeamDOA
+import qualified Storage.Beam.FleetDriverAssociation as BeamFDA
 import qualified Storage.Beam.Person as BeamP
 import Storage.Queries.OrphanInstances.DriverInformation ()
 import Storage.Queries.OrphanInstances.DriverOperatorAssociation ()
@@ -54,6 +56,7 @@ findAllByOperatorIdWithLimitOffsetSearch operatorId mbIsActive mbLimit mbOffset 
                           B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> person.id B.==?. B.val_ driverId.getId) mbDriverId
                           B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> doa.isActive B.==?. B.val_ isActive) mbIsActive
                           B.&&?. B.sqlBool_ (doa.associatedTill B.>=. B.val_ (Just now))
+                          B.&&?. B.sqlBool_ (doa.isActive B.||. B.not_ (pendingInviteSuperseded doa.driverId doa.id (B.coalesce_ [doa.associatedOn] doa.createdAt)))
                           B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mode -> di.mode B.==?. B.val_ (Just mode)) mbMode
                           B.&&?. ( case mbSearchString of
                                      Nothing -> B.sqlBool_ $ B.val_ True
@@ -80,6 +83,33 @@ findAllByOperatorIdWithLimitOffsetSearch operatorId mbIsActive mbLimit mbOffset 
       Right doaList ->
         catMaybes <$> mapM (\(d, p, di) -> fmap (\(doa, person) -> (doa, person, BeamDI.mode di)) <$> (liftA2 (,) <$> fromTType' d <*> fromTType' p)) doaList
       Left _ -> pure []
+
+pendingInviteSuperseded ::
+  B.QGenExpr B.QValueContext Postgres s Text ->
+  B.QGenExpr B.QValueContext Postgres s Text ->
+  B.QGenExpr B.QValueContext Postgres s UTCTime ->
+  B.QGenExpr B.QValueContext Postgres s Bool
+pendingInviteSuperseded driverId inviteId invitedAt =
+  B.exists_
+    ( B.filter_
+        ( \fda ->
+            BeamFDA.driverId fda B.==. driverId
+              B.&&. BeamFDA.id fda B./=. inviteId
+              B.&&. BeamFDA.isActive fda B.==. B.val_ True
+              B.&&. B.coalesce_ [BeamFDA.associatedOn fda] (BeamFDA.createdAt fda) B.>. invitedAt
+        )
+        (B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB))
+    )
+    B.||. B.exists_
+      ( B.filter_
+          ( \doa ->
+              BeamDOA.driverId doa B.==. driverId
+                B.&&. BeamDOA.id doa B./=. inviteId
+                B.&&. BeamDOA.isActive doa B.==. B.val_ True
+                B.&&. B.coalesce_ [BeamDOA.associatedOn doa] (BeamDOA.createdAt doa) B.>. invitedAt
+          )
+          (B.all_ (BeamCommon.driverOperatorAssociation BeamCommon.atlasDB))
+      )
 
 createDriverOperatorAssociationIfNotExists ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

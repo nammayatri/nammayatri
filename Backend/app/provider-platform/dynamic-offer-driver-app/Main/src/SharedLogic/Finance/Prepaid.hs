@@ -83,6 +83,7 @@ import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import qualified Lib.Finance.FinanceM as FinanceM
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QInvoiceLedgerLink
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Finance.EInvoice
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
@@ -668,6 +669,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
   let gstAmount = case mbGstBreakdown of
         Just breakdown -> fromMaybe 0 breakdown.cgstAmount + fromMaybe 0 breakdown.sgstAmount + fromMaybe 0 breakdown.igstAmount
         Nothing -> 0
+  eInvoiceEnabled <- if isJust mbInvoiceParams then SharedLogic.Finance.EInvoice.isEInvoiceEnabledForCity merchantOperatingCityId else pure False
   mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId mbVehicleCategory
   mbSellerAsset <- getOrCreateSellerAssetAccount currency merchantId merchantOperatingCityId
   mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
@@ -772,10 +774,12 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
               pure $ either (const Nothing) (Just . (.id)) result
           else pure Nothing
       -- Collect all entry IDs
-      let entryIds = catMaybes [gstEntryId, liabilityEntryId, tdsEntryId]
+      let existingLegIds = map (.id) (filter (\entry -> entry.status == SETTLED) (existingPurchaseEntries <> existingTdsEntries))
+          entryIds = existingLegIds <> catMaybes [gstEntryId, liabilityEntryId, tdsEntryId]
+      alreadyInvoiced <- or <$> mapM (fmap isJust . QInvoiceLedgerLink.findByLedgerEntry) existingLegIds
       -- Create invoice for subscription purchases
       mbInvoiceId <- case mbInvoiceParams of
-        Just invoiceParams | not (null entryIds) -> do
+        Just invoiceParams | not (null entryIds) && not alreadyInvoiced -> do
           panDecrypted <- traverse (decrypt . (.panCardNumber)) mbPanCard
           let panTypeText = mbPanCard >>= (fmap show . (.docType))
           let invoiceInput =
@@ -851,7 +855,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     periodStart = Nothing,
                     periodEnd = Nothing
                   }
-          invoiceResult <- createInvoice invoiceInput entryIds
+          invoiceResult <- createInvoiceWithLayout (if eInvoiceEnabled then PurposeDateSeq else DatePurposeSeq) invoiceInput entryIds
           case invoiceResult of
             Right inv -> do
               -- Only reached once the purchase payment is CHARGED; a failure here must not fail the purchase.

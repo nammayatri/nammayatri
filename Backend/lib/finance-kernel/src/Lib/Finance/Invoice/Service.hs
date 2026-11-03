@@ -9,6 +9,7 @@
 module Lib.Finance.Invoice.Service
   ( -- * Invoice operations
     createInvoice,
+    createInvoiceWithLayout,
     getInvoice,
     getByNumber,
     updateInvoiceStatus,
@@ -223,7 +224,18 @@ createInvoice ::
   InvoiceInput ->
   [Id LedgerEntry] -> -- Ledger entries to link
   m (Either FinanceError Invoice)
-createInvoice input entryIds = do
+createInvoice = createInvoiceWithLayout DatePurposeSeq
+
+createInvoiceWithLayout ::
+  ( BeamFlow.BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasActorInfo m r
+  ) =>
+  InvoiceNumberLayout ->
+  InvoiceInput ->
+  [Id LedgerEntry] -> -- Ledger entries to link
+  m (Either FinanceError Invoice)
+createInvoiceWithLayout layout input entryIds = do
   actorInfo <- asks (.actorInfo)
   now <- getCurrentTime
   invoiceId <- generateGUID
@@ -235,7 +247,7 @@ createInvoice input entryIds = do
           (Just purposeAggregatedCommission, fmap (.invoiceNumber) <$> QInvoice.findLatestAggregatedCommissionByCreatedAt now)
         _ ->
           (Nothing, fmap (.invoiceNumber) <$> QInvoice.findLatestByCreatedAt now)
-  invoiceNum <- generateInvoiceNumber purposeAbbr mbKeySuffix now dbFallback
+  invoiceNum <- generateInvoiceNumber layout purposeAbbr mbKeySuffix now dbFallback
 
   -- Calculate totals from line items
   -- subtotal: excludes external charges (toll, parking) and tax line items

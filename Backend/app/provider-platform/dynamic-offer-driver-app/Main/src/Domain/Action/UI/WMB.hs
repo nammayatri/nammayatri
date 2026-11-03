@@ -523,13 +523,14 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
   SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver fleetOwner.id (cast driverId)) SGuard.ActivateToFleet (SGuard.TargetDriver (cast driverId)) $ do
-    SA.endDriverAssociations merchantOperatingCityId transporterConfig driver
+    pendingInvite <- FDV.findPendingById fleetDriverAssociation.id >>= fromMaybeM (InactiveFleetDriverAssociationNotFound driverId.getId)
     mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId driverId
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
+    SA.endDriverAssociationsKeepingInviteFrom merchantOperatingCityId transporterConfig driver (Just fleetOwner.id)
     -- A fleet driver drives the fleet's vehicle when the city blocks own RCs for fleet drivers.
     when (transporterConfig.blockDriverOwnRCForFleetDrivers == Just True) $
       DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig driverId
-    FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
+    FDV.updateByPrimaryKey (pendingInvite {isActive = True})
     SOnboardingComms.setOnboardingAsWithoutLock transporterConfig driver DDI.FLEET_DRIVER
     fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver driverId merchantOperatingCityId
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId

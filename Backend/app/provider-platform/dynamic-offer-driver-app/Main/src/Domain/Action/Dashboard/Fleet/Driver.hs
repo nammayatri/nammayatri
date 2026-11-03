@@ -4518,7 +4518,8 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
   (pnType, messageBuilder) <- case req.approve of
     Just True -> do
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) driverId) SGuard.ActivateToFleet (SGuard.TargetDriver driverId) $ do
-        SA.endDriverAssociations merchantOpCityId transporterConfig driver
+        void $ QFDV.findPendingById fleetDriverAssociation.id >>= fromMaybeM (InvalidRequest "No pending fleet association found")
+        SA.endDriverAssociationsKeepingInviteFrom merchantOpCityId transporterConfig driver (Just (Id fleetOwnerId))
         QFDV.approveFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
         SOnboardingComms.setOnboardingAsWithoutLock transporterConfig driver DI.FLEET_DRIVER
         when (merchant.overwriteAssociation == Just True) $ do

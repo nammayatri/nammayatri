@@ -93,7 +93,7 @@ import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPayoutRequestExtra
 import SharedLogic.Finance.PostActions (runFinance)
-import SharedLogic.Finance.Prepaid (counterpartyFleetOwner)
+import SharedLogic.Finance.Prepaid (counterpartyFleetOwner, tdsReimbursementReferenceType)
 import qualified SharedLogic.Finance.Rails as Rails
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.Finance.WalletAccount as WA
@@ -546,6 +546,7 @@ referenceTypeToItemName isVat ref
   | ref == walletReferenceTDSDeductionOnline = "TDS (Online)"
   | ref == walletReferenceTDSDeductionCash = "TDS (Cash)"
   | ref == walletReferenceTDSDeductionCancellation = "TDS (Cancellation)"
+  | ref == tdsReimbursementReferenceType = "TDS Reimbursement"
   | ref == walletReferencePayout = "Withdrawal"
   | ref == walletReferenceGateDriverFee = "Gate Fee"
   | ref == walletReferenceAirportCashRecharge = "Airport cash recharge (booth)"
@@ -827,7 +828,7 @@ getWalletLedgerHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbLi
     _ -> pure emptyLedgerEntriesResponse
 
 ledgerHistoryMaxDays :: Int
-ledgerHistoryMaxDays = 7
+ledgerHistoryMaxDays = 31
 
 emptyLedgerEntriesResponse :: DriverWallet.WalletLedgerEntriesResponse
 emptyLedgerEntriesResponse =

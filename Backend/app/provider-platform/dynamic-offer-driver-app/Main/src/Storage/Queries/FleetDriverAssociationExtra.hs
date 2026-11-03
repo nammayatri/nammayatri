@@ -36,6 +36,7 @@ import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Vehicle as BeamV
 import Storage.ConfigPilot.Config.FleetConfig (getCityFleetConfigs)
 import qualified Storage.Queries.DriverInformationExtra as QDIE
+import Storage.Queries.DriverOperatorAssociationExtra (pendingInviteSuperseded)
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.OrphanInstances.DriverBankAccount ()
 import Storage.Queries.OrphanInstances.DriverInformation ()
@@ -401,6 +402,14 @@ findByDriverIdAndFleetOwnerId driverId fleetOwnerId isActive = do
   now <- getCurrentTime
   findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is BeamFDVA.isActive $ Se.Eq isActive, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
 
+findPendingById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id FleetDriverAssociation ->
+  m (Maybe FleetDriverAssociation)
+findPendingById associationId = do
+  now <- getCurrentTime
+  findOneWithKV [Se.And [Se.Is BeamFDVA.id $ Se.Eq associationId.getId, Se.Is BeamFDVA.isActive $ Se.Eq False, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]]
+
 findByDriverIdAndFleetOwnerIdWithStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id Person ->
@@ -688,6 +697,7 @@ findAllActiveDriverByFleetOwnerIds fleetOwnerIds Nothing Nothing mbMobileNumberS
                   B.sqlBool_ (fleetDriverAssociation.fleetOwnerId `B.in_` (B.val_ <$> fleetOwnerIds))
                     B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> fleetDriverAssociation.isActive B.==?. B.val_ isActive) mbIsActive
+                    B.&&?. B.sqlBool_ (fleetDriverAssociation.isActive B.||. B.not_ (pendingInviteSuperseded fleetDriverAssociation.driverId fleetDriverAssociation.id (B.coalesce_ [fleetDriverAssociation.associatedOn] fleetDriverAssociation.createdAt)))
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbName
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> driverInfo.verified B.==?. B.val_ verified) mbVerified
@@ -732,6 +742,7 @@ findAllActiveDriverByFleetOwnerIds fleetOwnerIds mbLimit mbOffset mbMobileNumber
                       B.sqlBool_ (fleetDriverAssociation.fleetOwnerId `B.in_` (B.val_ <$> fleetOwnerIds))
                         B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> fleetDriverAssociation.isActive B.==?. B.val_ isActive) mbIsActive
+                        B.&&?. B.sqlBool_ (fleetDriverAssociation.isActive B.||. B.not_ (pendingInviteSuperseded fleetDriverAssociation.driverId fleetDriverAssociation.id (B.coalesce_ [fleetDriverAssociation.associatedOn] fleetDriverAssociation.createdAt)))
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbName
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> driverInfo.verified B.==?. B.val_ verified) mbVerified
@@ -886,6 +897,7 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merch
                                    )
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> driver.id B.==?. B.val_ driverId) mbDriverId
                             B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
+                            B.&&?. B.sqlBool_ (fleetDriverAssociation.isActive B.||. B.not_ (pendingInviteSuperseded fleetDriverAssociation.driverId fleetDriverAssociation.id (B.coalesce_ [fleetDriverAssociation.associatedOn] fleetDriverAssociation.createdAt)))
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.>=. B.val_ (Just from))) mbFrom
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\to -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.<=. B.val_ (Just to))) mbTo
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mode -> driverInformation.mode B.==?. B.val_ (Just mode)) mbMode
@@ -938,6 +950,7 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merch
                                        )
                                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> fleetDriverAssociation.driverId B.==?. B.val_ driverId) mbDriverId
                                 B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
+                                B.&&?. B.sqlBool_ (fleetDriverAssociation.isActive B.||. B.not_ (pendingInviteSuperseded fleetDriverAssociation.driverId fleetDriverAssociation.id (B.coalesce_ [fleetDriverAssociation.associatedOn] fleetDriverAssociation.createdAt)))
                                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.>=. B.val_ (Just from))) mbFrom
                                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\to -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.<=. B.val_ (Just to))) mbTo
                                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> fleetDriverAssociation.isActive B.==?. B.val_ isActive) mbIsActive
@@ -979,6 +992,7 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merch
                                        )
                                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> driver.id B.==?. B.val_ driverId) mbDriverId
                                 B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
+                                B.&&?. B.sqlBool_ (fleetDriverAssociation.isActive B.||. B.not_ (pendingInviteSuperseded fleetDriverAssociation.driverId fleetDriverAssociation.id (B.coalesce_ [fleetDriverAssociation.associatedOn] fleetDriverAssociation.createdAt)))
                                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.>=. B.val_ (Just from))) mbFrom
                                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\to -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.<=. B.val_ (Just to))) mbTo
                                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> fleetDriverAssociation.isActive B.==?. B.val_ isActive) mbIsActive
