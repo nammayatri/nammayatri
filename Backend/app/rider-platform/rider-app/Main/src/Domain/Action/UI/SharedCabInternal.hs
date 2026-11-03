@@ -157,6 +157,8 @@ selectRoute req = do
   routeCode <- required "routeCode" req.routeCode
   walkupCount <- required "walkupCount" req.walkupCount
   integratedBppConfig <- getIntegratedBppConfigByAgency agencyId
+  -- opening or changing a route attaches it, which fails on an unknown one; a route queued for after the last drop is only saved
+  void $ OTPRest.getRouteByRouteId integratedBppConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)
   priorRoute <- fmap (.routeCode) . mfilter ((/= ENDED) . (.status)) <$> Session.getSessionFresh req.vehicleNumber
   selected <-
     Session.selectRoute
