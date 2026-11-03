@@ -155,3 +155,4 @@ getConfigNameFromConsumertype = \case
   FLEET_COMMUNICATION_DISPATCH -> pure "fleet-communication-dispatch"
   RIDE_EVENTS_CONSUMER -> pure "ride-events-consumer"
   FLEET_ANALYTICS_REALTIME -> pure "fleet-analytics-realtime"
+  IJ_BEHAVIOR_TICK_CONSUMER -> pure "ij-behavior-tick-consumer"

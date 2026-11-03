@@ -146,6 +146,7 @@ library:
           - -j4
   dependencies:
     - dynamic-offer-driver-app
+    - incentive-journey
     - rider-app
 
 executables:

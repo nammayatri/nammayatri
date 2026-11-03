@@ -16,7 +16,8 @@
 -- Invoked from kafka-consumers RIDE_EVENTS_CONSUMER (best-effort RideEndedEvent),
 -- not from the EndRide HTTP path, so EndRide latency is unaffected.
 -- Same branching as the former EndRide fork: fraud block, metro/valid-ride counters,
--- user_cohort_mapping vs Incentive# / driverCoinsEvent, DynamicOffer vs OTP.
+-- user_cohort_mapping vs Incentive# / driverCoinsEvent. Journey eval is trip-category
+-- agnostic (any valid ride); legacy coins remain DynamicOffer / OTP specific.
 module SharedLogic.RideEvents.DriverCoinsAndJourney
   ( processRideEndedCoinsAndJourney,
   )
@@ -50,6 +51,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.Queries.FareParameters as QFareParameters
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
@@ -95,26 +97,14 @@ processRideEndedCoinsAndJourney ride booking thresholdConfig = do
     else do
       when (DCT.isMetroRideType metroRideType && validRideTaken) $ do
         DC.incrementMetroRideCount driverId metroRideType expirationPeriod 1
-      when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
+      let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault ride.vehicleVariant
+          timeBoundReferenceUtc = fromMaybe ride.createdAt ride.tripStartTime
+          mbPickupSpecialLocationId = booking.area >>= SL.pickupSpecialZoneIdFromArea
+          mbDropSpecialLocationId = booking.area >>= SL.dropSpecialZoneIdFromArea
+          isDynamicOffer = DTC.isDynamicOfferTrip booking.tripCategory
+          isOtp = DTC.isRideOtpTrip booking.tripCategory
+      when (isDynamicOffer && validRideTaken) $ do
         DC.incrementValidRideCount driverId expirationPeriod 1
-        let earningsDelta = maybe 0 (roundToIntegral . getHighPrecMoney) ride.fare
-            distanceDelta = maybe 0 getMeters ride.chargeableDistance
-            rideTimeDelta =
-              fromMaybe 0 $
-                (\start end -> max 0 (roundToIntegral (diffUTCTime end start)))
-                  <$> ride.tripStartTime
-                  <*> ride.tripEndTime
-            vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault ride.vehicleVariant
-            timeBoundReferenceUtc = fromMaybe ride.createdAt ride.tripStartTime
-            mbPickupSpecialLocationId = booking.area >>= SL.pickupSpecialZoneIdFromArea
-            mbDropSpecialLocationId = booking.area >>= SL.dropSpecialZoneIdFromArea
-            rideDeltas =
-              IncentiveMetrics.RideIncentiveDeltas
-                { ridesDelta = 1,
-                  earningsDelta,
-                  distanceMetersDelta = distanceDelta,
-                  rideTimeSecondsDelta = rideTimeDelta
-                }
         DC.incrementValidRideCountForTimeBoundCohort
           driverId
           booking.providerId
@@ -125,11 +115,49 @@ processRideEndedCoinsAndJourney ride booking thresholdConfig = do
           thresholdConfig.timeDiffFromUtc
           timeBoundReferenceUtc
         DC.incrementScopedValidRideCounts DCT.DynamicOfferTrip driverId booking.vehicleServiceTier mbPickupSpecialLocationId mbDropSpecialLocationId expirationPeriod
-        -- Assigned journeys take precedence: skip Incentive# / legacy coin flow.
-        -- Ride-level SETNX so kafka/retries cannot re-eval the same ride.
+      when (isOtp && validRideTaken) $ do
+        DC.incrementOTPValidRideCount driverId expirationPeriod 1
+        DC.incrementScopedValidRideCounts DCT.OTPRideTrip driverId booking.vehicleServiceTier mbPickupSpecialLocationId mbDropSpecialLocationId expirationPeriod
+        DC.incrementValidRideCountForTimeBoundCohort
+          driverId
+          booking.providerId
+          booking.merchantOperatingCityId
+          vehCategory
+          DCT.OTPRideTrip
+          expirationPeriod
+          thresholdConfig.timeDiffFromUtc
+          timeBoundReferenceUtc
+      -- Assigned journeys take precedence over Incentive# for any valid ride (any trip category).
+      -- Ride-level SETNX so kafka/retries cannot re-eval the same ride.
+      when validRideTaken $ do
         hasJourneys <- SLJourney.hasAssignedJourneys driverId
         if hasJourneys
-          then
+          then do
+            parkingCharge <-
+              case ride.fareParametersId of
+                Just fpId -> maybe 0 (fromMaybe 0 . (.parkingCharge)) <$> QFareParameters.findById fpId
+                Nothing -> pure 0
+            let fareAmount = fromMaybe 0 ride.fare
+                tollAmount = fromMaybe 0 ride.tollCharges
+                earningsDelta = roundToIntegral (getHighPrecMoney fareAmount)
+                -- MG net: final fare − toll − parking (never negative).
+                netEarningsDelta =
+                  max 0 $
+                    roundToIntegral (getHighPrecMoney (fareAmount - tollAmount - parkingCharge))
+                distanceDelta = maybe 0 getMeters ride.chargeableDistance
+                rideTimeDelta =
+                  fromMaybe 0 $
+                    (\start end -> max 0 (roundToIntegral (diffUTCTime end start)))
+                      <$> ride.tripStartTime
+                      <*> ride.tripEndTime
+                rideDeltas =
+                  IncentiveMetrics.RideIncentiveDeltas
+                    { ridesDelta = 1,
+                      earningsDelta,
+                      netEarningsDelta,
+                      distanceMetersDelta = distanceDelta,
+                      rideTimeSecondsDelta = rideTimeDelta
+                    }
             IJ.withJourneyEvalIdempotency IJ.DriverActor ride.id.getId $
               SLJourney.evaluateDriverJourney
                 driverId
@@ -143,26 +171,11 @@ processRideEndedCoinsAndJourney ride booking thresholdConfig = do
                 mbDropSpecialLocationId
                 timeBoundReferenceUtc
                 rideDeltas
-          else DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) ride metroRideType DCT.DynamicOfferTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) booking.area
-      when (DTC.isRideOtpTrip booking.tripCategory && validRideTaken) $ do
-        DC.incrementOTPValidRideCount driverId expirationPeriod 1
-        let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault ride.vehicleVariant
-            timeBoundReferenceUtc = fromMaybe ride.createdAt ride.tripStartTime
-            mbPickupSpecialLocationId = booking.area >>= SL.pickupSpecialZoneIdFromArea
-            mbDropSpecialLocationId = booking.area >>= SL.dropSpecialZoneIdFromArea
-        DC.incrementScopedValidRideCounts DCT.OTPRideTrip driverId booking.vehicleServiceTier mbPickupSpecialLocationId mbDropSpecialLocationId expirationPeriod
-        DC.incrementValidRideCountForTimeBoundCohort
-          driverId
-          booking.providerId
-          booking.merchantOperatingCityId
-          vehCategory
-          DCT.OTPRideTrip
-          expirationPeriod
-          thresholdConfig.timeDiffFromUtc
-          timeBoundReferenceUtc
-        hasJourneys <- SLJourney.hasAssignedJourneys driverId
-        unless hasJourneys $
-          DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) ride metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) booking.area
+          else do
+            when isDynamicOffer $
+              DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) ride metroRideType DCT.DynamicOfferTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) booking.area
+            when isOtp $
+              DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) ride metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) booking.area
 
 computeShouldFlagRiderForRepeatCustomerFraud ::
   (MonadFlow m, Esq.EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>

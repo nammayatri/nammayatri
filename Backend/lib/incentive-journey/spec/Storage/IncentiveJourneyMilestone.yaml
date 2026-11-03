@@ -13,7 +13,7 @@ IncentiveJourneyMilestone:
 
   types:
     MilestoneConditionType:
-      enum: "RideCompleted, Earnings, Distance, RideDuration, BookingTicket"
+      enum: "RideCompleted, Earnings, Distance, RideDuration, BookingTicket, CancellationRate, AcceptanceRate, OnlineMinutes, JSONLogic"
       derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
     MilestoneConditionOperator:
       enum: "GTE, GT, EQ, LTE, LT"
@@ -39,6 +39,10 @@ IncentiveJourneyMilestone:
     conditionType: MilestoneConditionType
     conditionOperator: MilestoneConditionOperator
     conditionValue: Int
+    # Condition JsonLogic only. Shape: { "logic": <JsonLogic> } or bare JsonLogic.
+    # Legacy "rule" slabs still parsed as fallback; prefer rewardMetadata.
+    # Absent/null → legacy simple columns. logic False → no-op (no disqualify).
+    evaluation: Maybe Value
     areaType: Maybe MilestoneAreaType
     specialLocationIds: "Maybe [Text]"
     vehicleCategory: Maybe VehicleCategory
@@ -46,8 +50,9 @@ IncentiveJourneyMilestone:
     rewardType: MilestoneRewardType
     rewardValue: Maybe Int
     rewardExpirationAt: Maybe Int
-    # Extra fields per reward type (e.g. SubscriptionWaiveOff: serviceName, waiveOffMode).
-    # Percentage / daysValidFor reuse rewardValue / rewardExpirationAt.
+    # Extra fields per reward type (SWO: serviceName, waiveOffMode).
+    # NetOffEarnings: includeEarningsAllDay, mgAmountSlabs, percentSlabs, violationPercentSlabs.
+    # Static MG fallback = rewardValue (₹) when mgAmountSlabs empty.
     rewardMetadata: Maybe Value
     timeBounds: Maybe TimeBound
     createdAt: UTCTime
@@ -55,12 +60,14 @@ IncentiveJourneyMilestone:
 
   default:
     conditionOperator: "'GTE'"
+    evaluation: "NULL"
     areaType: "NULL"
     specialLocationIds: 'NULL'
     rewardMetadata: "NULL"
 
   sqlType:
     rewardMetadata: json
+    evaluation: json
 
   constraints:
     id: PrimaryKey

@@ -23,16 +23,20 @@ import qualified Domain.Types.Merchant as Dmerch
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.TransporterConfig as DTConf
+import qualified Environment
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, HasShortDurationRetryCfg, logTagInfo)
+import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Ride as QRide
 import Tools.Event
@@ -43,9 +47,12 @@ startRideTransaction ::
     EsqDBFlow m r,
     EventStreamFlow m r,
     LT.HasLocationService m r,
+    BeamFlow m r,
+    Metrics.CoreMetrics m,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "minDistanceBetweenTwoPoints" r Int,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     HasShortDurationRetryCfg r c,
     Redis.HedisLTSFlowEnv r
   ) =>

@@ -8,9 +8,11 @@ module Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
     postIncentiveJourneyStatsWaiveOff,
     postIncentiveJourneyCohortCreate,
     postIncentiveJourneyCohortJourneyCreate,
+    postIncentiveJourneyCohortJourneyRoll,
     putIncentiveJourneyCohortJourneyUpdate,
     getIncentiveJourneyCohortJourneyList,
     postIncentiveJourneyAssign,
+    postIncentiveJourneyOptIn,
     postIncentiveJourneyUnassign,
   )
 where
@@ -90,13 +92,15 @@ mkHandle =
                 merchantId = cast p.merchantId,
                 merchantOperatingCityId = cast p.merchantOperatingCityId
               },
-      findAssignmentsByUserId = \personId -> SLJourney.findAssignmentsByUserId (cast personId),
+      findAssignmentsByUserId = SLJourney.findAssignmentsByUserId . cast,
+      findDashboardAssignmentsByUserId = SLJourney.findDashboardAssignmentsByUserId . cast,
       findStatsHistoryByPersonId = \personId dayStart dayEnd mbLimit mbOffset ->
         QStats.findHistoryByPersonIdAndCreatedAtRange personId dayStart dayEnd mbLimit mbOffset,
       findStatsByPersonIdAndPeriodKey = \personId periodKey ->
         QStats.findByPersonIdAndPeriodKey personId periodKey,
       findStatsByPersonIdCjmAndPeriodKey = QStats.findStatsByPersonCjmAndPeriod,
       waiveDriverMilestone = Nothing,
+      inspectOrTriggerStreakEnd = Nothing,
       waiveRiderMilestone =
         Just $ \personId merchantId merchantOpCityId journey cohortJourneyMappingId milestoneId periodKey ->
           SLJourney.waiveRiderMilestone
@@ -110,7 +114,9 @@ mkHandle =
       putBulkAssignCsv = Nothing,
       scheduleBulkUpload = Nothing,
       findSpecialLocationNameById = Nothing,
-      loadJourneyMilestones = SLJourney.loadJourneyMilestones
+      loadJourneyMilestones = SLJourney.loadJourneyMilestones,
+      syncCampaignMembership = Nothing,
+      clearCampaignMembership = Nothing
     }
 
 getIncentiveJourneyList ::
@@ -192,8 +198,16 @@ postIncentiveJourneyCohortJourneyCreate ::
   Kernel.Types.Beckn.Context.City ->
   Common.CreateCohortJourneyMappingReq ->
   Environment.Flow Common.CreateCohortJourneyMappingRes
-postIncentiveJourneyCohortJourneyCreate merchantShortId opCity =
-  LibRider.postIncentiveJourneyCohortJourneyCreate mkHandle (ShortId merchantShortId.getShortId) opCity
+postIncentiveJourneyCohortJourneyCreate merchantShortId =
+  LibRider.postIncentiveJourneyCohortJourneyCreate mkHandle (ShortId merchantShortId.getShortId)
+
+postIncentiveJourneyCohortJourneyRoll ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.RollCohortJourneyMappingReq ->
+  Environment.Flow Common.RollCohortJourneyMappingRes
+postIncentiveJourneyCohortJourneyRoll merchantShortId =
+  LibRider.postIncentiveJourneyCohortJourneyRoll mkHandle (ShortId merchantShortId.getShortId)
 
 putIncentiveJourneyCohortJourneyUpdate ::
   ShortId DM.Merchant ->
@@ -223,6 +237,14 @@ postIncentiveJourneyAssign ::
   Environment.Flow APISuccess
 postIncentiveJourneyAssign merchantShortId opCity =
   LibRider.postIncentiveJourneyAssign mkHandle (ShortId merchantShortId.getShortId) opCity
+
+postIncentiveJourneyOptIn ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.OptInIncentiveJourneyReq ->
+  Environment.Flow APISuccess
+postIncentiveJourneyOptIn merchantShortId =
+  LibRider.postIncentiveJourneyOptIn mkHandle (ShortId merchantShortId.getShortId)
 
 postIncentiveJourneyUnassign ::
   ShortId DM.Merchant ->

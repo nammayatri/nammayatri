@@ -73,11 +73,13 @@ updateByPrimaryKey :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) 
 updateByPrimaryKey (Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.IncentiveJourneyStats {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.cohortId (Kernel.Types.Id.getId cohortId),
+    [ Se.Set Beam.campaignUserLinkType campaignUserLinkType,
+      Se.Set Beam.cohortId (Kernel.Types.Id.getId cohortId),
       Se.Set Beam.cohortJourneyMappingId (Kernel.Types.Id.getId <$> cohortJourneyMappingId),
       Se.Set Beam.conditionOperator conditionOperator,
       Se.Set Beam.conditionType conditionType,
       Se.Set Beam.conditionValue conditionValue,
+      Se.Set Beam.currentMetrics currentMetrics,
       Se.Set Beam.currentValue currentValue,
       Se.Set Beam.journeyId (Kernel.Types.Id.getId journeyId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

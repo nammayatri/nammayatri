@@ -46,6 +46,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleVariant as Veh
+import qualified Environment
 import EulerHS.Prelude hiding (whenJust)
 import Kernel.External.Maps
 import Kernel.External.Types (ServiceFlow)
@@ -90,6 +91,7 @@ import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.FleetEngine as FleetEngine
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.RuleBasedTierUpgrade
@@ -160,6 +162,7 @@ cancelRideImpl ::
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     Redis.HedisLTSFlowEnv r,
     ClickhouseFlow m r,
     Finance.HasActorInfo m r,
@@ -219,6 +222,27 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             -- blacklist, driver overlay, coin event, driver money, rate counting — then
             -- the customer-side charge (dues + counters + ledger entries).
             applyImmediateConsequences consequenceCtx doCancellationRateBasedBlocking
+            -- Campaign cancellationRate = (dx + daf) / rrAccepted — one bump per event.
+            let wouldBump = driverCancelMetricsWouldBump consequenceCtx
+                bump metric action =
+                  SLJourney.bumpCampaignBehaviorMetric
+                    driver.id
+                    merchantId
+                    booking.merchantOperatingCityId
+                    transporterConfig.timeDiffFromUtc
+                    metric
+                    1
+                    action
+            when wouldBump $
+              SLJourney.publishBehaviorMetricTick
+                driver.id
+                merchantId
+                booking.merchantOperatingCityId
+                "RIDE_CANCELLATION"
+            case bookingCReason.source of
+              SBCR.ByDriver -> when wouldBump $ bump "dxCancel" "RIDE_CANCELLATION"
+              SBCR.ByUser -> bump "dafCancel" "CUSTOMER_CANCELLATION"
+              _ -> when wouldBump $ bump "dafCancel" "RIDE_CANCELLATION"
             chargesOutcome <- applyTerminalConsequences consequenceCtx (\base gst mbCreditDebit -> createCancellationLedgerEntries booking ride base gst transporterConfig mbCreditDebit)
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
             -- Release pickup-zone counters (idempotent). ByDriver triggers reallocation,

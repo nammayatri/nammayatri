@@ -295,7 +295,9 @@ import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidAvailableBalanceByOwner, hasPrepaidCreditsValidAt)
 import qualified SharedLogic.Finance.Wallet as FWallet
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
+import qualified SharedLogic.FleetDriverSettings as FleetDriverSettings
 import qualified SharedLogic.FleetEngine as FleetEngine
+import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MetricsLabels as SML
@@ -311,6 +313,7 @@ import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.Subscription.BillingModel (isPrepaidDriverWithCatalogueFallback)
 import qualified SharedLogic.Type as SLT
 import SharedLogic.VehicleServiceTier
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.Cac.DriverPoolConfig as SCDPC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -1720,7 +1723,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   let distanceTag = LYT.TagNameValue AreaPref.distancePreferenceEnabledTagName
   clearDistanceTag <-
     if (isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold) && Yudhishthira.elemTagName distanceTag tag
-      then not . maybe False (.disableDriverAreaAndDistancePreference) <$> QFDA.getDriverFleetAutoAssignConfig personId merchantOpCityId
+      then not . maybe False (.disableDriverAreaAndDistancePreference) <$> FleetDriverSettings.getDriverFleetAutoAssignConfig personId merchantOpCityId
       else pure False
   let updatedTag = if clearDistanceTag then Yudhishthira.removeTagName (Just tag) distanceTag else tag
   unless (Just (Yudhishthira.showRawTags updatedTag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
@@ -2133,7 +2136,16 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             cityLabel <- SML.getCityLabel merchantOpCityId
             Metrics.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (SML.driverSearchReqFunnelLabels metricsDistanceBucketEdges sReqFD)
             DP.recordQuoteResponseCounters merchantOpCityId driverId Accept
-            -- accept counting happens in driverScoreEventHandler's Accept case (bt: QUOTE_RESPONSE_ACCEPT)
+            -- BT bumped; campaign ij:bm gated; IJ eval on IJ_BEHAVIOR_TICK_CONSUMER.
+            SLJourney.publishBehaviorMetricTick driverId merchantId merchantOpCityId "QUOTE_RESPONSE_ACCEPT"
+            SLJourney.bumpCampaignBehaviorMetric
+              driverId
+              merchantId
+              merchantOpCityId
+              transporterConfig.timeDiffFromUtc
+              "rrAccepted"
+              1
+              "QUOTE_RESPONSE_ACCEPT"
             DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id searchTry.requestId driverFCMPulledList
             unless (sReqFD.isForwardRequest) $ Redis.unlockRedis (editDestinationLockKey driverId)
             pure mbRideRes

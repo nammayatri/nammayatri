@@ -1,0 +1,2713 @@
+{
+  "info": {
+    "_postman_id": "dea4148f-9bf8-4344-ac20-b991f2638869",
+    "name": "Incentive Journey MG Campaign OptIn Flow",
+    "description": "OptIn + controlFeatures: invite → opt-in → behaviour stats-sync (InProgress, no mid-period award) → ride metrics sync → Redis-seed closed Day (streakRange=2, startDate=yesterday) → GET list settles previous period (behaviour Coins) → unassign/re-invite cleanup. See IncentiveJourneyFlow/Rules.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Driver Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.environment.set('driver_id', d.person.id);",
+              "console.log('Driver ID:', d.person.id);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{driver_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Switch City (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);",
+              "console.log('Switched to', d.merchantId, d.city);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Add Vehicle (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Vehicle added', function () { pm.response.to.have.status(200); });",
+              "console.log('AddVehicle:', pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"registrationNo\": \"{{_test_reg_no}}\",\n  \"vehicleClass\": \"3w\",\n  \"colour\": \"Green\",\n  \"model\": \"AUTO RICKSHAW\",\n  \"make\": \"Bajaj\",\n  \"vehicleCategory\": \"AUTO_CATEGORY\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "addVehicle"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Enable Driver (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Driver enabled', function () { pm.response.to.have.status(200); });",
+              "console.log('Enable:', pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "enable"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Set Driver Payout VPA (Dashboard)",
+      "request": {
+        "description": "vpaStatus MANUALLY_ADDED does not start a cash payout. To test cash payout, set vpaStatus to VERIFIED_BY_USER. Leave verify false so Juspay is not called.",
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/payout/payout/vpa/update"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"personId\": \"{{driver_id}}\",\n  \"vpa\": \"gareeb@okaxis\",\n  \"verify\": false,\n  \"vpaStatus\": \"MANUALLY_ADDED\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Payout VPA set 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Payout VPA:', pm.response.text());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create OptIn Cohort (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/cohort/create",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "cohort",
+            "create"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{_test_mg_cohort_name}}\",\n  \"category\": \"{{_test_mg_cohort_category}}\",\n  \"description\": \"MG opt-in cohort for integration test\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('ij_mg_cohort_id', d.cohortId);",
+              "pm.test('Create cohort 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('cohortId returned', function () { pm.expect(d.cohortId).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create MG Journey Daily (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/create",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "create"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{_test_mg_journey_name}}\",\n  \"description\": \"Integration test MG membership journey\",\n  \"journeyType\": \"Daily\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('ij_mg_journey_id', d.journeyId);",
+              "pm.test('Create MG journey 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('journeyId returned', function () { pm.expect(d.journeyId).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET Journey List Assert Created (Dashboard)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/list?limit=100",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Journey list 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var hit = (d.journeys || []).find(function (j) { return j.journeyId === pm.environment.get('ij_mg_journey_id'); });",
+              "pm.test(\"MG journey listed\", function () {",
+              "  pm.expect(hit, \"journey\").to.be.ok;",
+              "  pm.expect(hit.journeyType).to.eql(\"Daily\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET Cohort List Assert OptIn (Dashboard)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/cohort/list?limit=100",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "cohort",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Cohort list 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var hit = (d.cohorts || []).find(function (c) { return c.cohortId === pm.environment.get('ij_mg_cohort_id'); });",
+              "pm.test(\"Cohort listed\", function () {",
+              "  pm.expect(hit, \"cohort\").to.be.ok;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create MG Milestone BehaviourTick-Only Coins 15 (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/milestone/create",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "milestone",
+            "create"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"journeyId\": \"{{ij_mg_journey_id}}\",\n  \"order\": 1,\n  \"name\": \"MG behaviour tick only\",\n  \"description\": \"BehaviourMetricTick-only: acceptanceRate>=1 AND cancellationRate<=50 (no ride vars)\",\n  \"conditionType\": \"AcceptanceRate\",\n  \"conditionOperator\": \"GTE\",\n  \"conditionValue\": 1,\n  \"rewardType\": \"Coins\",\n  \"rewardValue\": 15,\n  \"evaluation\": {\n    \"logic\": {\n      \"and\": [\n        {\n          \">=\": [\n            {\n              \"var\": \"acceptanceRate\"\n            },\n            1\n          ]\n        },\n        {\n          \"<=\": [\n            {\n              \"var\": \"cancellationRate\"\n            },\n            50\n          ]\n        }\n      ]\n    }\n  }\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('ij_mg_behaviour_milestone_id', d.milestoneId);",
+              "pm.test('Create behaviour-only milestone 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('behaviour milestoneId returned', function () { pm.expect(d.milestoneId).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create MG Milestone JsonLogic Ride+Behaviour Coins 25 (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/milestone/create",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "milestone",
+            "create"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"journeyId\": \"{{ij_mg_journey_id}}\",\n  \"order\": 2,\n  \"name\": \"MG JsonLogic ride+behaviour\",\n  \"description\": \"Ride-end bag: ridesCompleted>=1 AND earnings>=1 AND acceptanceRate>=1 AND cancellationRate<=50\",\n  \"conditionType\": \"RideCompleted\",\n  \"conditionOperator\": \"GTE\",\n  \"conditionValue\": 1,\n  \"rewardType\": \"Coins\",\n  \"rewardValue\": 25,\n  \"evaluation\": {\n    \"logic\": {\n      \"and\": [\n        {\n          \">=\": [\n            {\n              \"var\": \"ridesCompleted\"\n            },\n            1\n          ]\n        },\n        {\n          \">=\": [\n            {\n              \"var\": \"earnings\"\n            },\n            1\n          ]\n        },\n        {\n          \">=\": [\n            {\n              \"var\": \"acceptanceRate\"\n            },\n            1\n          ]\n        },\n        {\n          \"<=\": [\n            {\n              \"var\": \"cancellationRate\"\n            },\n            50\n          ]\n        }\n      ]\n    }\n  }\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('ij_mg_milestone_id', d.milestoneId);",
+              "pm.test('Create JsonLogic award milestone 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('milestoneId returned', function () { pm.expect(d.milestoneId).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create MG Exit Gate NoReward evaluation (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/milestone/create",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "milestone",
+            "create"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"journeyId\": \"{{ij_mg_journey_id}}\",\n  \"order\": 3,\n  \"name\": \"MG exit gate\",\n  \"description\": \"Exit gate legacy: evaluation.logic false is no-op (no disqualify)\",\n  \"conditionType\": \"RideCompleted\",\n  \"conditionOperator\": \"GTE\",\n  \"conditionValue\": 0,\n  \"rewardType\": \"NoReward\",\n  \"rewardValue\": null,\n  \"evaluation\": {\n    \"logic\": {\n      \"<\": [\n        {\n          \"var\": \"ridesCompleted\"\n        },\n        1\n      ]\n    }\n  }\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('ij_mg_dq_milestone_id', d.milestoneId);",
+              "pm.test('Create disqualify milestone 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('dq milestoneId returned', function () { pm.expect(d.milestoneId).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create MG CohortJourney Mapping (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/cohortJourney/create",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "cohortJourney",
+            "create"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cohortId\": \"{{ij_mg_cohort_id}}\",\n  \"journeyId\": \"{{ij_mg_journey_id}}\",\n  \"startDate\": \"{{_test_start_date}}\",\n  \"streakRange\": 2,\n  \"enabled\": true,\n  \"maxWaiveOffCount\": 0,\n  \"streakEndRewardType\": \"NoReward\",\n  \"streakEndRewardValue\": null,\n  \"streakEndRewardExpirationAt\": null,\n  \"streakEndSubscriptionWaiveOff\": null,\n  \"campaignUserLinkType\": \"OptIn\",\n  \"controlFeatures\": [\n    {\n      \"feature\": \"CanDxCancelBooking\",\n      \"config\": false,\n      \"enableIn\": \"AllDay\"\n    },\n    {\n      \"feature\": \"AutoAssign\",\n      \"config\": {\n        \"defaultOn\": true,\n        \"allowDriverToToggle\": false,\n        \"disableDriverAreaAndDistancePreference\": true\n      },\n      \"enableIn\": \"AllDay\"\n    },\n    {\n      \"feature\": \"PoolingPriority\",\n      \"config\": {\n        \"Default\": \"HIGH\"\n      },\n      \"enableIn\": \"AllDay\"\n    }\n  ],\n  \"periodDays\": 1\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('ij_mg_cjm_id', d.cohortJourneyMappingId);",
+              "pm.test('Create MG CJM 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('cjm id returned', function () { pm.expect(d.cohortJourneyMappingId).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "OptIn Without Invite Should Fail (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/optIn",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "optIn"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_mg_cjm_id}}\",\n  \"validTill\": \"{{_test_valid_till}}\",\n  \"optInPeriod\": \"OptInDaily\",\n  \"optedInBy\": \"integration-test\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Opt-in without invite fails\", function () { pm.expect(pm.response.code).to.be.at.least(400); });",
+              "console.log(\"pre-invite opt-in:\", pm.response.code, pm.response.text());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assign Driver Invite OptIn MG (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/assign",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "assign"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_mg_cjm_id}}\",\n  \"enabled\": true,\n  \"validTill\": \"{{_test_valid_till}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Assign invite 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET Assignments After Invite Assert controlFeatures (Dashboard)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/driver/{{driver_id}}/assignments",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "driver",
+            "{{driver_id}}",
+            "assignments"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Assignments 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var hit = (d.assignments || []).find(function (a) { return a.cohortJourneyMappingId === pm.environment.get('ij_mg_cjm_id'); });",
+              "pm.test(\"Invite assignment present\", function () {",
+              "  pm.expect(hit, \"assignment\").to.be.ok;",
+              "  pm.expect(hit.controlFeatures).to.be.ok;",
+              "  pm.expect(hit.journeyId).to.eql(pm.environment.get(\"ij_mg_journey_id\"));",
+              "  pm.expect(hit.campaignUserLinkType).to.eql(\"OptIn\");",
+              "  pm.expect(hit.optInStatus).to.eql(\"Pending\");",
+              "  pm.expect(hit.optedInAt).to.eql(null);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET Driver List Before OptIn Should Omit MG (UI)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/incentive/journey/list",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "incentive",
+            "journey",
+            "list"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('List 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var hit = (d.journeys || []).find(function (j) { return j.journeyId === pm.environment.get('ij_mg_journey_id'); });",
+              "pm.test(\"OptIn invite not on active list before opt-in\", function () {",
+              "  pm.expect(hit, \"should be absent until opted in\").to.not.be.ok;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver UI OptIn to MG Campaign",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/incentive/journey/optIn",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "incentive",
+            "journey",
+            "optIn"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cohortJourneyMappingId\": \"{{ij_mg_cjm_id}}\",\n  \"validTill\": \"{{_test_valid_till}}\",\n  \"optInPeriod\": \"Daily\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Driver UI opt-in 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET Driver List After OptIn Assert controlFeatures (UI)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/incentive/journey/list",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "incentive",
+            "journey",
+            "list"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('List 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var hit = (d.journeys || []).find(function (j) { return j.journeyId === pm.environment.get('ij_mg_journey_id'); });",
+              "pm.test(\"Journey on list after opt-in with controlFeatures\", function () {",
+              "  pm.expect(hit, \"journey\").to.be.ok;",
+              "  pm.expect(hit.controlFeatures).to.be.ok;",
+              "  pm.expect(hit.name).to.eql(pm.collectionVariables.get(\"_test_mg_journey_name\"));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET Driver History Assert controlFeatures (UI)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/incentive/journey/history",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "incentive",
+            "journey",
+            "history"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('History 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var hit = (d.history || []).find(function (h) { return h.journeyId === pm.environment.get('ij_mg_journey_id'); });",
+              "pm.test(\"History row has controlFeatures\", function () {",
+              "  pm.expect(hit, \"history item\").to.be.ok;",
+              "  pm.expect(hit.controlFeatures).to.be.ok;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscribe Plan",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Plan subscribed', function () { pm.expect(pm.response.code).to.be.oneOf([200, 500]); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe?serviceName=%22YATRI_SUBSCRIPTION%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "plan",
+            "{{plan_id}}",
+            "subscribe"
+          ],
+          "query": [
+            {
+              "key": "serviceName",
+              "value": "%22YATRI_SUBSCRIPTION%22"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Set Location",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "AUTO_RICKSHAW"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Set Online",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"NAMMA_YATRI\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-rider\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{rider_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Location Update",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "AUTO_RICKSHAW"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Ride Search",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 2000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('searchId', d.searchId);",
+              "console.log('Search ID:', d.searchId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async beckn search processing across services\nconst _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Search Results",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 5000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "function rideEstimates(body) {",
+              "    if (body.estimates && body.estimates.length > 0) return body.estimates;",
+              "    if (body.suggestedEstimates && body.suggestedEstimates.estimates && body.suggestedEstimates.estimates.length > 0) return body.suggestedEstimates.estimates;",
+              "    var alts = (body.alternateSuggestions && body.alternateSuggestions.alternates) || [];",
+              "    var withFares = alts.filter(function (a) { return a.estimates && a.estimates.length > 0; });",
+              "    var preferred = withFares.filter(function (a) { return a.isDefault; });",
+              "    var chosen = preferred[0] || withFares[0];",
+              "    return chosen ? chosen.estimates : [];",
+              "}",
+              "var estimates = rideEstimates(d);",
+              "if (estimates.length > 0) {",
+              "    var want = pm.environment.get('auto_vehicle_variant') || 'AUTO_RICKSHAW';",
+              "    var est = estimates.find(e => e.vehicleVariant === want)",
+              "           || estimates.find(e => e.vehicleServiceTierType === want)",
+              "           || estimates[0];",
+              "    pm.environment.set('estimateId', est.id);",
+              "    console.log('Estimate:', est.id, est.vehicleVariant, est.estimatedFare, '(wanted', want + ')');",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(estimates, 'estimates').to.be.an('array'); pm.expect(estimates.length, 'estimate count').to.be.above(0); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "{{searchId}}",
+            "results"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Select Estimate (Auto Assign)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async select processing before next step\nconst _sel_delay = 8000; const _sel_start = Date.now(); while (Date.now() - _sel_start < _sel_delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/estimate/{{estimateId}}/select2",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "estimate",
+            "{{estimateId}}",
+            "select2"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Nearby Ride Requests (Driver)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait 25s for Kafka allocator batch cycle (~22s) to distribute search to nearby drivers",
+              "const start = Date.now();",
+              "while (Date.now() - start < 25000) { /* busy wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
+              "    var req = d.searchRequestsForDriver[0];",
+              "    pm.environment.set('searchTryId', req.searchTryId);",
+              "    console.log('Got search request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare, 'variant:', req.requestedVehicleVariant);",
+              "} else {",
+              "    console.log('WARNING: No nearby ride requests found for driver. Response:', JSON.stringify(d));",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has search requests', function () {",
+              "    pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "nearbyRideRequest"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Accept Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Driver accepted ride!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"searchTryId\": \"{{searchTryId}}\", \"offeredFare\": null, \"response\": \"Accept\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "searchRequest",
+            "quote",
+            "respond"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Poll stats after Accept (behaviour sync InProgress)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/stats/history/{{driver_id}}?fromDate={{_test_from_date}}&toDate={{_test_to_date}}&journeyId={{ij_mg_journey_id}}",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "stats",
+            "history",
+            "{{driver_id}}"
+          ],
+          "query": [
+            {
+              "key": "fromDate",
+              "value": "{{_test_from_date}}"
+            },
+            {
+              "key": "toDate",
+              "value": "{{_test_to_date}}"
+            },
+            {
+              "key": "journeyId",
+              "value": "{{ij_mg_journey_id}}"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var waitMs = parseInt(pm.environment.get('ij_behaviour_tick_wait_ms') || pm.environment.get('ij_eval_wait_ms') || '12000', 10);",
+              "var start = Date.now();",
+              "while (Date.now() - start < waitMs) { /* ij-behavior-tick-consumer catch-up */ }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var MAX_ATTEMPTS = 12;",
+              "var POLL_MS = 2500;",
+              "var attempt = 0;",
+              "var token = pm.environment.get('dashboard_token');",
+              "var base = pm.environment.get('dashboard_base_url');",
+              "var merchant = pm.environment.get('dashboard_merchant_id');",
+              "var city = pm.environment.get('city');",
+              "var driverId = pm.environment.get('driver_id');",
+              "var journeyId = pm.environment.get('ij_mg_journey_id');",
+              "var fromDate = pm.collectionVariables.get('_test_from_date');",
+              "var toDate = pm.collectionVariables.get('_test_to_date');",
+              "var curKey = pm.collectionVariables.get('_test_current_period_key');",
+              "var url = base + '/bpp/driver-offer/' + merchant + '/' + city + '/incentiveJourney/stats/history/' + driverId + '?fromDate=' + fromDate + '&toDate=' + toDate + '&journeyId=' + journeyId;",
+              "function poll() {",
+              "  pm.sendRequest({ url: url, method: \"GET\", header: { token: token } }, function (err, res) {",
+              "    attempt++;",
+              "    if (!err && res.code === 200) {",
+              "      var rows = (res.json().stats || []).filter(function (r) { return r.journeyId === journeyId; });",
+              "      var mBeh = rows.find(function (r) { return r.milestoneId === pm.environment.get(\"ij_mg_behaviour_milestone_id\") && (!curKey || r.periodKey === curKey); });",
+              "      var mRide = rows.find(function (r) { return r.milestoneId === pm.environment.get(\"ij_mg_milestone_id\") && (!curKey || r.periodKey === curKey); });",
+              "      var snap = mBeh && mBeh.currentMetrics;",
+              "      var syncOk = mBeh && mBeh.status === \"InProgress\" && snap && snap.acceptanceRate >= 1 && snap.cancellationRate <= 50;",
+              "      var rideNotDone = !mRide || [\"Completed\",\"Rewarded\"].indexOf(mRide.status) < 0;",
+              "      if (syncOk && rideNotDone) {",
+              "        pm.test(\"Behaviour tick syncs metrics InProgress (no mid-period award)\", function () {",
+              "          pm.expect(mBeh.status).to.eql(\"InProgress\");",
+              "          pm.expect(snap.acceptanceRate).to.be.at.least(1);",
+              "          pm.expect(snap.cancellationRate).to.be.at.most(50);",
+              "          pm.expect(snap.ridesCompleted == null || snap.ridesCompleted === 0).to.be.true;",
+              "        });",
+              "        pm.test(\"Ride milestone not awarded on Accept tick\", function () { pm.expect(rideNotDone).to.be.true; });",
+              "        return;",
+              "      }",
+              "    }",
+              "    if (attempt >= MAX_ATTEMPTS) {",
+              "      pm.test(\"BehaviourMetricTick sync poll failed\", function () {",
+              "        throw new Error(\"Expected InProgress + acceptanceRate after Accept (deferred: no Completed). Attempts=\" + MAX_ATTEMPTS);",
+              "      });",
+              "      return;",
+              "    }",
+              "    var t0 = Date.now(); while (Date.now() - t0 < POLL_MS) {}",
+              "    poll();",
+              "  });",
+              "}",
+              "poll();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Booking (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait for booking to be created after driver acceptance",
+              "const delay = pm.environment.get('booking_wait_ms') || 5000;",
+              "const start = Date.now();",
+              "while (Date.now() - start < delay) { /* busy wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    var booking = d.list[0];",
+              "    pm.environment.set('customer_bookingId', booking.id);",
+              "    var otp = booking.rideOtp;",
+              "    if (!otp && booking.rideList && booking.rideList.length > 0) {",
+              "        otp = booking.rideList[0].rideOtp;",
+              "    }",
+              "    pm.environment.set('ride_otp', otp);",
+              "    console.log('Booking:', booking.id, 'OTP:', otp, 'Status:', booking.status);",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "onlyActive",
+              "value": "true"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Ride (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    pm.environment.set('driver_ride_id', d.list[0].id);",
+              "    console.log('Ride:', d.list[0].id, 'Status:', d.list[0].status);",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "isActive",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Cancel After Accept Should Fail (MG forbids)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Driver cancel blocked by MG (non-2xx)\", function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([400, 403]);",
+              "});",
+              "var body = {}; try { body = pm.response.json(); } catch (e) {}",
+              "console.log(\"MG cancel forbid:\", pm.response.code, JSON.stringify(body));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reasonCode\": \"OTHER\", \"additionalInfo\": \"test cancellation\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/cancel",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "cancel"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Start Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); }); console.log('Ride started!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "start"
+          ]
+        }
+      }
+    },
+    {
+      "name": "End Ride",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Small delay before ending ride",
+              "const start = Date.now();",
+              "while (Date.now() - start < 1000) { /* busy wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); }); console.log('Ride ended!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"point\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "end"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Poll stats after MG ride (deferred InProgress + metrics)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/stats/history/{{driver_id}}?fromDate={{_test_from_date}}&toDate={{_test_to_date}}&journeyId={{ij_mg_journey_id}}",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "stats",
+            "history",
+            "{{driver_id}}"
+          ],
+          "query": [
+            {
+              "key": "fromDate",
+              "value": "{{_test_from_date}}"
+            },
+            {
+              "key": "toDate",
+              "value": "{{_test_to_date}}"
+            },
+            {
+              "key": "journeyId",
+              "value": "{{ij_mg_journey_id}}"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var waitMs = parseInt(pm.environment.get('ij_eval_wait_ms') || '12000', 10);",
+              "var start = Date.now();",
+              "while (Date.now() - start < waitMs) { /* kafka catch-up */ }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var MAX_ATTEMPTS = 12;",
+              "var POLL_MS = 2500;",
+              "var attempt = 0;",
+              "var token = pm.environment.get('dashboard_token');",
+              "var base = pm.environment.get('dashboard_base_url');",
+              "var merchant = pm.environment.get('dashboard_merchant_id');",
+              "var city = pm.environment.get('city');",
+              "var driverId = pm.environment.get('driver_id');",
+              "var journeyId = pm.environment.get('ij_mg_journey_id');",
+              "var fromDate = pm.collectionVariables.get('_test_from_date');",
+              "var toDate = pm.collectionVariables.get('_test_to_date');",
+              "var curKey = pm.collectionVariables.get('_test_current_period_key');",
+              "var url = base + '/bpp/driver-offer/' + merchant + '/' + city + '/incentiveJourney/stats/history/' + driverId + '?fromDate=' + fromDate + '&toDate=' + toDate + '&journeyId=' + journeyId;",
+              "function poll() {",
+              "  pm.sendRequest({ url: url, method: \"GET\", header: { token: token } }, function (err, res) {",
+              "    attempt++;",
+              "    if (!err && res.code === 200) {",
+              "      var rows = (res.json().stats || []).filter(function (r) { return r.journeyId === journeyId; });",
+              "      var mBeh = rows.find(function (r) { return r.milestoneId === pm.environment.get(\"ij_mg_behaviour_milestone_id\") && (!curKey || r.periodKey === curKey); });",
+              "      var m1 = rows.find(function (r) { return r.milestoneId === pm.environment.get(\"ij_mg_milestone_id\") && (!curKey || r.periodKey === curKey); });",
+              "      var m2 = rows.find(function (r) { return r.milestoneId === pm.environment.get(\"ij_mg_dq_milestone_id\") && (!curKey || r.periodKey === curKey); });",
+              "      var snap = m1 && m1.currentMetrics;",
+              "      var snapOk = snap && snap.ridesCompleted >= 1 && snap.earnings >= 1 && snap.acceptanceRate >= 1 && snap.cancellationRate <= 50;",
+              "      var deferredOk = mBeh && mBeh.status === \"InProgress\" && m1 && m1.status === \"InProgress\" && snapOk;",
+              "      var notDq = !m2 || m2.status !== \"Disqualified\";",
+              "      if (deferredOk && notDq && m1.campaignUserLinkType === \"OptIn\") {",
+              "        pm.test(\"Behaviour still InProgress after ride (deferred settle)\", function () { pm.expect(mBeh.status).to.eql(\"InProgress\"); });",
+              "        pm.test(\"Ride+behaviour still InProgress after ride (deferred)\", function () { pm.expect(m1.status).to.eql(\"InProgress\"); });",
+              "        pm.test(\"currentMetrics has ride + behaviour vars\", function () {",
+              "          pm.expect(snap.ridesCompleted).to.be.at.least(1);",
+              "          pm.expect(snap.earnings).to.be.at.least(1);",
+              "          pm.expect(snap.acceptanceRate).to.be.at.least(1);",
+              "          pm.expect(snap.cancellationRate).to.be.at.most(50);",
+              "        });",
+              "        pm.test(\"Exit NoReward is no-op (not Disqualified)\", function () { pm.expect(notDq).to.be.true; });",
+              "        pm.test(\"Stats OptIn on rows\", function () { pm.expect(m1.campaignUserLinkType).to.eql(\"OptIn\"); });",
+              "        return;",
+              "      }",
+              "    }",
+              "    if (attempt >= MAX_ATTEMPTS) {",
+              "      pm.test(\"MG deferred ride metrics poll failed\", function () {",
+              "        throw new Error(\"Expected current-period InProgress metrics (not Completed/Disqualified). Attempts=\" + MAX_ATTEMPTS);",
+              "      });",
+              "      return;",
+              "    }",
+              "    var t0 = Date.now(); while (Date.now() - t0 < POLL_MS) {}",
+              "    poll();",
+              "  });",
+              "}",
+              "poll();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Seed Redis closed-period ij:bm (Local settle hook)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pattern\": \"ij:bm:rrAccepted:{{driver_id}}:{{ij_mg_cjm_id}}:{{_test_closed_period_key}}:daily\",\n  \"target\": \"cluster\"\n}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/redis/get",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "redis",
+            "get"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var driverId = pm.environment.get('driver_id');",
+              "var cjmId = pm.environment.get('ij_mg_cjm_id');",
+              "var closed = pm.collectionVariables.get('_test_closed_period_key');",
+              "var base = (pm.environment.get('mockServerUrl') || '').replace(/\\/$/, '');",
+              "pm.test('settle hook vars present', function () {",
+              "  pm.expect(driverId).to.be.ok;",
+              "  pm.expect(cjmId).to.be.ok;",
+              "  pm.expect(closed).to.be.ok;",
+              "  pm.expect(base).to.be.ok;",
+              "});",
+              "var ops = [];",
+              "ops.push({ url: base + '/mock/redis/del', body: { key: 'ij:settle:done:' + driverId + ':' + cjmId, target: 'cluster' } });",
+              "['rrReceived', 'rrAccepted'].forEach(function (met) {",
+              "  var k = 'ij:bm:' + met + ':' + driverId + ':' + cjmId + ':' + closed + ':daily';",
+              "  ops.push({ url: base + '/mock/redis/set', body: { key: k, value: '1', target: 'cluster' } });",
+              "  ops.push({ url: base + '/mock/redis/set', body: { key: k, value: '1', target: 'standalone' } });",
+              "});",
+              "var i = 0;",
+              "function next() {",
+              "  if (i >= ops.length) return;",
+              "  var op = ops[i++];",
+              "  pm.sendRequest({ url: op.url, method: 'POST', header: { 'Content-Type': 'application/json' }, body: { mode: 'raw', raw: JSON.stringify(op.body) } }, function (err, res) {",
+              "    if (err || !res || res.code >= 400) {",
+              "      console.log('redis op failed', op.url, err || (res && res.code), res && res.text && res.text());",
+              "    } else {",
+              "      console.log('redis op ok', (op.body.key || 'del'), op.body.target);",
+              "    }",
+              "    next();",
+              "  });",
+              "}",
+              "next();"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var wait = 2000; var t0 = Date.now(); while (Date.now() - t0 < wait) {}",
+              "pm.test('Redis seed verify request 200', function () { pm.response.to.have.status(200); });",
+              "console.log('redis get after seed', pm.response.text());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET List triggers closed-period settle (UI)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/incentive/journey/list",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "incentive",
+            "journey",
+            "list"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('List 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var hit = (d.journeys || []).find(function (j) { return j.journeyId === pm.environment.get('ij_mg_journey_id'); });",
+              "pm.test('MG journey still active on current period', function () { pm.expect(hit).to.be.ok; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Poll stats history — closed period behaviour Completed",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/stats/history/{{driver_id}}?fromDate={{_test_from_date}}&toDate={{_test_to_date}}&journeyId={{ij_mg_journey_id}}",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "stats",
+            "history",
+            "{{driver_id}}"
+          ],
+          "query": [
+            {
+              "key": "fromDate",
+              "value": "{{_test_from_date}}"
+            },
+            {
+              "key": "toDate",
+              "value": "{{_test_to_date}}"
+            },
+            {
+              "key": "journeyId",
+              "value": "{{ij_mg_journey_id}}"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var waitMs = parseInt(pm.environment.get('ij_eval_wait_ms') || '12000', 10);",
+              "var start = Date.now();",
+              "while (Date.now() - start < waitMs) { /* settle fork catch-up */ }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var MAX_ATTEMPTS = 12;",
+              "var POLL_MS = 2500;",
+              "var attempt = 0;",
+              "var token = pm.environment.get('dashboard_token');",
+              "var base = pm.environment.get('dashboard_base_url');",
+              "var merchant = pm.environment.get('dashboard_merchant_id');",
+              "var city = pm.environment.get('city');",
+              "var driverId = pm.environment.get('driver_id');",
+              "var journeyId = pm.environment.get('ij_mg_journey_id');",
+              "var fromDate = pm.collectionVariables.get('_test_from_date');",
+              "var toDate = pm.collectionVariables.get('_test_to_date');",
+              "var closed = pm.collectionVariables.get('_test_closed_period_key');",
+              "var behId = pm.environment.get('ij_mg_behaviour_milestone_id');",
+              "var url = base + '/bpp/driver-offer/' + merchant + '/' + city + '/incentiveJourney/stats/history/' + driverId + '?fromDate=' + fromDate + '&toDate=' + toDate + '&journeyId=' + journeyId;",
+              "function poll() {",
+              "  pm.sendRequest({ url: url, method: 'GET', header: { token: token } }, function (err, res) {",
+              "    attempt++;",
+              "    if (!err && res.code === 200) {",
+              "      var rows = (res.json().stats || []).filter(function (r) { return r.journeyId === journeyId; });",
+              "      var closedBeh = rows.find(function (r) { return r.milestoneId === behId && r.periodKey === closed; });",
+              "      var done = closedBeh && ['Completed','Rewarded'].indexOf(closedBeh.status) >= 0;",
+              "      if (done) {",
+              "        pm.test('Closed-period behaviour milestone settled Completed', function () {",
+              "          pm.expect(closedBeh.status).to.be.oneOf(['Completed','Rewarded']);",
+              "          pm.expect(closedBeh.periodKey).to.eql(closed);",
+              "        });",
+              "        return;",
+              "      }",
+              "    }",
+              "    if (attempt >= MAX_ATTEMPTS) {",
+              "      pm.test('Closed-period settle poll failed', function () {",
+              "        throw new Error('Expected Completed for ' + closed + ' behaviour milestone after list settle. Attempts=' + MAX_ATTEMPTS);",
+              "      });",
+              "      return;",
+              "    }",
+              "    var t0 = Date.now(); while (Date.now() - t0 < POLL_MS) {}",
+              "    poll();",
+              "  });",
+              "}",
+              "poll();"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET Assignments still present after settle (Dashboard)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/driver/{{driver_id}}/assignments",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "driver",
+            "{{driver_id}}",
+            "assignments"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Assignments 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var hit = (d.assignments || []).find(function (a) { return a.cohortJourneyMappingId === pm.environment.get('ij_mg_cjm_id'); });",
+              "pm.test('Invite UCM stays enabled after settle', function () {",
+              "  pm.expect(hit, 'assignment').to.be.ok;",
+              "  pm.expect(hit.controlFeatures).to.be.ok;",
+              "  pm.expect(hit.userEnabled).to.eql(true);",
+              "  pm.expect(hit.campaignUserLinkType).to.eql('OptIn');",
+              "  pm.expect(hit.optInStatus).to.eql('OptedIn');",
+              "  pm.expect(hit.optedInAt).to.be.ok;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "POST streakEnd/inspect closed periodDays slice (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('streakEnd/inspect periodDays 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var closed = pm.collectionVariables.get('_test_closed_period_key');",
+              "pm.test('Periodized slice inspect for NoReward streak', function () {",
+              "  pm.expect(d.mode).to.eql('PeriodizedSlice');",
+              "  pm.expect(d.periodDays).to.eql(1);",
+              "  pm.expect(d.streakEndRewardType).to.eql('NoReward');",
+              "  pm.expect(d.periodKey).to.eql(closed);",
+              "  pm.expect(d.triggered).to.eql(false);",
+              "  pm.expect(d.verdict).to.be.oneOf(['ReadyToAward', 'SliceIncomplete']);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/streakEnd/inspect"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_mg_cjm_id}}\",\n  \"periodKey\": \"{{_test_closed_period_key}}\",\n  \"trigger\": false\n}"
+        }
+      }
+    },
+    {
+      "name": "Unassign Driver From MG (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/unassign",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "unassign"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_mg_cjm_id}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Unassign 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET List After Unassign Omits MG (UI)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/incentive/journey/list",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "incentive",
+            "journey",
+            "list"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('List 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var hit = (d.journeys || []).find(function (j) { return j.journeyId === pm.environment.get('ij_mg_journey_id'); });",
+              "pm.test(\"MG journey gone after unassign\", function () { pm.expect(hit).to.not.be.ok; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Re-Assign Invite After Unassign (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/assign",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "assign"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_mg_cjm_id}}\",\n  \"enabled\": true,\n  \"validTill\": \"{{_test_valid_till}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Re-assign invite 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard OptIn After Re-Invite",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/optIn",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "optIn"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_mg_cjm_id}}\",\n  \"validTill\": \"{{_test_valid_till}}\",\n  \"optInPeriod\": \"OptInDaily\",\n  \"optedInBy\": \"integration-test-dashboard\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Dashboard opt-in 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET List After Dashboard OptIn Assert controlFeatures (UI)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/incentive/journey/list",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "incentive",
+            "journey",
+            "list"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('List 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var hit = (d.journeys || []).find(function (j) { return j.journeyId === pm.environment.get('ij_mg_journey_id'); });",
+              "pm.test(\"MG journey back after dashboard opt-in\", function () {",
+              "  pm.expect(hit).to.be.ok;",
+              "  pm.expect(hit.controlFeatures).to.be.ok;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unassign Driver Final Cleanup (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/unassign",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "unassign"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_mg_cjm_id}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Final unassign 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Disable MG CohortJourney Mapping (Cleanup)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/cohortJourney/update",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "bpp",
+            "driver-offer",
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "incentiveJourney",
+            "cohortJourney",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cohortJourneyMappingId\": \"{{ij_mg_cjm_id}}\",\n  \"enabled\": false\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Disable CJM 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    console.log('[skip] mock-only request on envType=' + envType + ': ' + (pm.info && pm.info.requestName));",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "  var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "  var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "  var regNo = 'KA' + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+          "  var suffix = String(Math.floor(100000 + Math.random() * 899999));",
+          "  pm.collectionVariables.set('_test_driver_number', dNum);",
+          "  pm.collectionVariables.set('_test_rider_number', rNum);",
+          "  pm.collectionVariables.set('_test_reg_no', regNo);",
+          "  pm.collectionVariables.set('_test_ij_suffix', suffix);",
+          "  pm.collectionVariables.set('_test_mg_cohort_name', 'INT_TEST_IJ_MG_COHORT_' + suffix);",
+          "  pm.collectionVariables.set('_test_mg_cohort_category', 'integration-test-mg');",
+          "  pm.collectionVariables.set('_test_mg_journey_name', 'INT_TEST_IJ_MG_JOURNEY_' + suffix);",
+          "  var now = new Date();",
+          "  var ist = new Date(now.getTime() + (5 * 60 + 30) * 60 * 1000);",
+          "  var y = ist.getUTCFullYear();",
+          "  var m = ist.getUTCMonth();",
+          "  var d = ist.getUTCDate();",
+          "  var istDay = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');",
+          "  var yest = new Date(Date.UTC(y, m, d));",
+          "  yest.setUTCDate(yest.getUTCDate() - 1);",
+          "  var yestDay = yest.getUTCFullYear() + '-' + String(yest.getUTCMonth() + 1).padStart(2, '0') + '-' + String(yest.getUTCDate()).padStart(2, '0');",
+          "  // streakRange=2 starting yesterday → today has a previous closed Day key for list-API settle",
+          "  pm.collectionVariables.set('_test_start_date', yestDay + 'T00:00:00.000Z');",
+          "  // Exclusive campaign end = startDate + streakRange (Daily). validTill == endDate is allowed.",
+          "  var endExclusive = new Date(Date.UTC(yest.getUTCFullYear(), yest.getUTCMonth(), yest.getUTCDate()));",
+          "  endExclusive.setUTCDate(endExclusive.getUTCDate() + 2);",
+          "  pm.collectionVariables.set('_test_valid_till', endExclusive.toISOString());",
+          "  pm.collectionVariables.set('_test_from_date', yestDay);",
+          "  pm.collectionVariables.set('_test_closed_period_key', 'Day:' + yestDay);",
+          "  pm.collectionVariables.set('_test_current_period_key', 'Day:' + istDay);",
+          "  var to = new Date(istDay + 'T12:00:00.000Z');",
+          "  to.setUTCDate(to.getUTCDate() + 1);",
+          "  var toDay = to.getUTCFullYear() + '-' + String(to.getUTCMonth() + 1).padStart(2, '0') + '-' + String(to.getUTCDate()).padStart(2, '0');",
+          "  pm.collectionVariables.set('_test_to_date', toDay);",
+          "  console.log('IJ MG test driver:', dNum, 'rider:', rNum, 'reg:', regNo, 'suffix:', suffix, 'istDay:', istDay, 'startYesterday:', yestDay, 'validTill:', endExclusive.toISOString());",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "_test_driver_number",
+      "value": ""
+    },
+    {
+      "key": "_test_rider_number",
+      "value": ""
+    },
+    {
+      "key": "_test_reg_no",
+      "value": ""
+    }
+  ]
+}

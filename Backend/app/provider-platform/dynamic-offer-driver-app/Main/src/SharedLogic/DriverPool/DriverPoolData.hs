@@ -12,6 +12,7 @@ module SharedLogic.DriverPool.DriverPoolData
   )
 where
 
+import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Time.Calendar as Days
 import Domain.Types.Common (DriverMode)
@@ -121,7 +122,10 @@ data DriverPoolData = DriverPoolData
     -- 'Nothing' means a pre-timestamp record (treated as oldest).
     lastUpdatedAt :: Maybe Milliseconds
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, ToJSON)
+
+instance FromJSON DriverPoolData where
+  parseJSON = A.genericParseJSON A.defaultOptions
 
 driverPoolDataKey :: Id Driver -> Text
 driverPoolDataKey driverId = "driver-pool-data:" <> driverId.getId

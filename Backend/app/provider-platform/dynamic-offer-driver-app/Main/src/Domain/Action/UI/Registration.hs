@@ -69,6 +69,7 @@ import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.TransporterConfig as TC
 import qualified Email.Types
 import Environment (Flow)
+import qualified Environment
 -- import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
@@ -81,6 +82,7 @@ import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context as Context
@@ -99,12 +101,14 @@ import Kernel.Utils.Version
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.GtfsDataServer.Flow as NandiFlow
 import Lib.GtfsDataServer.Types (GimsEmployeeLoginReq (..), GimsEmployeeRole (..))
+import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, getGimsBaseUrl)
 import qualified SharedLogic.OTP as SOTP
 import qualified SharedLogic.SocialLogin as SSL
+import Storage.Beam.IncentiveJourney ()
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
@@ -981,8 +985,11 @@ getPersonOTPChannel personId = do
 logout ::
   ( EsqDBFlow m r,
     CacheFlow m r,
+    BeamFlow m r,
+    Metrics.CoreMetrics m,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     Redis.HedisLTSFlowEnv r
   ) =>
   (Id SP.Person, Id DO.Merchant, Id DMOC.MerchantOperatingCity) ->

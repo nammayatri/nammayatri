@@ -21,6 +21,7 @@
 --   driver mode, so it lives here rather than in the generic post-posting hook.
 module SharedLogic.Finance.WalletFloor
   ( WalletFloor (..),
+    WalletFloorOfflineFlow,
     getWalletFloor,
     isBelowWalletFloor,
     enforceWalletFloorForOwner,
@@ -41,19 +42,23 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
+import qualified Environment
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import SharedLogic.Finance.WalletAccount
 import SharedLogic.Finance.WalletAutopay (ensureAutopayRecharge)
 import SharedLogic.Finance.WalletBalanceCache (setDriverWalletBalanceInPool)
 import SharedLogic.Finance.WalletSubscription (resolveWalletOwner)
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPlan as QDPlan
@@ -99,16 +104,23 @@ isBelowWalletFloor floor' balance = balance < floor'.requiredBalance
 -- | Re-check the driver this wallet belongs to and take them offline when below the floor. Only
 --   driver wallets matter: the floor is checked on the driver's own wallet, so a posting on a fleet
 --   owner's wallet changes nothing for the fleet's drivers.
-enforceWalletFloorForOwner ::
+-- | Offline flip needs IJ BeamFlow + behaviour-tick publisher (DriverMode → processingChangeOnline).
+type WalletFloorOfflineFlow m r =
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
     BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
+    Metrics.CoreMetrics m,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
-  ) =>
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg)
+  )
+
+enforceWalletFloorForOwner ::
+  WalletFloorOfflineFlow m r =>
   DTC.TransporterConfig ->
   FAccount.CounterpartyType ->
   Text ->
@@ -122,15 +134,7 @@ enforceWalletFloorForOwner transporterConfig counterpartyType ownerId =
 -- | Offline flip for one driver. Only online drivers are touched; a driver on a ride or with an
 --   accepted advance booking keeps it -- the pool guard stops new offers.
 enforceWalletFloorForDriver ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    BeamFlow m r,
-    Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
-  ) =>
+  WalletFloorOfflineFlow m r =>
   DTC.TransporterConfig ->
   FAccount.CounterpartyType ->
   Text ->
@@ -152,13 +156,7 @@ isOnlineAndFree :: DI.DriverInformation -> Bool
 isOnlineAndFree driverInfo = driverInfo.mode `elem` [Just DCommon.ONLINE, Just DCommon.SILENT] && not driverInfo.onRide && not driverInfo.hasAdvanceBooking
 
 setOfflineIfBelowFloor ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisLTSFlowEnv r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
-  ) =>
+  WalletFloorOfflineFlow m r =>
   DTC.TransporterConfig ->
   DP.Person ->
   DI.DriverInformation ->
@@ -180,15 +178,7 @@ setOfflineIfBelowFloor transporterConfig person driverInfo floor' balance =
 --   trigger level ('autopayTriggerBalance'), schedule an Autopay recharge (wallet-subscription cities
 --   only) or nudge the driver to recharge, at most once a day.
 afterWalletDebit ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    BeamFlow m r,
-    Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
-  ) =>
+  WalletFloorOfflineFlow m r =>
   DTC.TransporterConfig ->
   DP.Person ->
   m ()

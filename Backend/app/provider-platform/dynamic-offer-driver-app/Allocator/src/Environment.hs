@@ -161,6 +161,7 @@ data HandlerEnv = HandlerEnv
     enableLtsPoolDataForPooling :: Bool,
     cloudType :: Maybe CloudType,
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
+    ijBehaviorTickPublisherCfg :: Maybe RideEventsPublisherCfg,
     actorInfo :: Finance.ActorInfo,
     driverQuoteExpirationSeconds :: NominalDiffTime,
     quoteRespondCoolDown :: Int,

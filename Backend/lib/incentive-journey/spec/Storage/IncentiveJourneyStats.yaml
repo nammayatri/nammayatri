@@ -3,19 +3,21 @@ imports:
   IncentiveJourney: Lib.IncentiveJourney.Domain.Types.IncentiveJourney
   IncentiveJourneyMilestone: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
   CohortDetails: Lib.IncentiveJourney.Domain.Types.CohortDetails
+  CampaignUserLinkType: Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
   CohortJourneyMapping: Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
   MilestoneConditionType: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
   MilestoneConditionOperator: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
   MilestoneRewardType: Lib.IncentiveJourney.Domain.Types.Common
   Merchant: Lib.IncentiveJourney.Domain.Types.Common
   MerchantOperatingCity: Lib.IncentiveJourney.Domain.Types.Common
+  Value: Data.Aeson
 
 IncentiveJourneyStats:
   tableName: incentive_journey_stats
 
   types:
     JourneyMilestoneStatus:
-      enum: "NotStarted, InProgress, Completed, Rewarded, WaivedOff, RewardPending"
+      enum: "NotStarted, InProgress, Completed, Rewarded, WaivedOff, RewardPending, Disqualified"
       derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   domainInstance:
@@ -28,6 +30,8 @@ IncentiveJourneyStats:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     cohortId: Id CohortDetails
+    # Snapshot of CJM.campaignUserLinkType at first write. Nothing → treat as Assigned.
+    campaignUserLinkType: Maybe CampaignUserLinkType
     cohortJourneyMappingId: Maybe (Id CohortJourneyMapping)
     journeyId: Id IncentiveJourney
     milestoneId: Id IncentiveJourneyMilestone
@@ -35,7 +39,11 @@ IncentiveJourneyStats:
     conditionType: MilestoneConditionType
     conditionOperator: MilestoneConditionOperator
     conditionValue: Int
+    # Legacy single progress int (conditionType column). Kept for non-evaluation milestones.
     currentValue: Int
+    # Campaign metrics bag: bag vars + earningInsideTimebound / earningOutsideTimebound /
+    # slabPercent (and any other keys).
+    currentMetrics: Maybe Value
     status: JourneyMilestoneStatus
     rewardType: MilestoneRewardType
     rewardValue: Maybe Int
@@ -44,6 +52,11 @@ IncentiveJourneyStats:
 
   default:
     conditionOperator: "'GTE'"
+    campaignUserLinkType: "NULL"
+    currentMetrics: "NULL"
+
+  sqlType:
+    currentMetrics: json
 
   constraints:
     id: PrimaryKey

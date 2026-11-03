@@ -19,6 +19,7 @@ import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
+import qualified Environment
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.External.Types (SchedulerFlow)
@@ -29,6 +30,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import Lib.LocationUpdates
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
@@ -42,6 +44,7 @@ import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import SharedLogic.Ride (getRcIdForRide)
 import qualified SharedLogic.Ride as SharedRide
 import Storage.Beam.Finance ()
+import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverRidePayoutBankAccount as QDRPB
@@ -51,7 +54,7 @@ import qualified Storage.Queries.ScheduledPayout as QSP
 import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
 import qualified Tools.Payout as TP
 
-sendSpecialZonePayout ::
+type SpecialZonePayoutFlow m r c =
   ( EncFlow m r,
     FinanceBeamFlow.BeamFlow m r,
     PaymentBeamFlow.BeamFlow m r,
@@ -62,9 +65,14 @@ sendSpecialZonePayout ::
     LocationUpdateFlow m r c,
     HasField "activeDriversListKeyShards" r Int,
     HasField "enableDriverFeeShardedFanOut" r Bool,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    IJBeamFlow.BeamFlow m r,
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text]
-  ) =>
+  )
+
+sendSpecialZonePayout ::
+  SpecialZonePayoutFlow m r c =>
   Job 'SpecialZonePayout ->
   m ExecutionResult
 sendSpecialZonePayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
@@ -82,19 +90,7 @@ sendSpecialZonePayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
 -- ---------------------------------------------------------------------------
 
 handleNewFlow ::
-  ( EncFlow m r,
-    FinanceBeamFlow.BeamFlow m r,
-    PaymentBeamFlow.BeamFlow m r,
-    Redis.HedisFlow m r,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r,
-    RideEnd.EndRideFlow m r,
-    LocationUpdateFlow m r c,
-    HasField "activeDriversListKeyShards" r Int,
-    HasField "enableDriverFeeShardedFanOut" r Bool,
-    SchedulerFlow r,
-    HasField "blackListedJobs" r [Text]
-  ) =>
+  SpecialZonePayoutFlow m r c =>
   Id DPR.PayoutRequest ->
   m ExecutionResult
 handleNewFlow payoutRequestId = do
@@ -115,19 +111,7 @@ handleNewFlow payoutRequestId = do
             executeSpecialZonePayout payoutRequest
 
 executeSpecialZonePayout ::
-  ( EncFlow m r,
-    FinanceBeamFlow.BeamFlow m r,
-    PaymentBeamFlow.BeamFlow m r,
-    Redis.HedisFlow m r,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r,
-    RideEnd.EndRideFlow m r,
-    LocationUpdateFlow m r c,
-    HasField "activeDriversListKeyShards" r Int,
-    HasField "enableDriverFeeShardedFanOut" r Bool,
-    SchedulerFlow r,
-    HasField "blackListedJobs" r [Text]
-  ) =>
+  SpecialZonePayoutFlow m r c =>
   DPR.PayoutRequest ->
   m ExecutionResult
 executeSpecialZonePayout payoutRequest = do
@@ -175,19 +159,7 @@ executeSpecialZonePayout payoutRequest = do
 -- ---------------------------------------------------------------------------
 
 handleOldFlow ::
-  ( EncFlow m r,
-    FinanceBeamFlow.BeamFlow m r,
-    PaymentBeamFlow.BeamFlow m r,
-    Redis.HedisFlow m r,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r,
-    RideEnd.EndRideFlow m r,
-    LocationUpdateFlow m r c,
-    HasField "activeDriversListKeyShards" r Int,
-    HasField "enableDriverFeeShardedFanOut" r Bool,
-    SchedulerFlow r,
-    HasField "blackListedJobs" r [Text]
-  ) =>
+  SpecialZonePayoutFlow m r c =>
   Id DSP.ScheduledPayout ->
   m ExecutionResult
 handleOldFlow scheduledPayoutId = do
@@ -234,19 +206,7 @@ handleOldFlow scheduledPayoutId = do
                 executeOldSpecialZonePayout scheduledPayout
 
 executeOldSpecialZonePayout ::
-  ( EncFlow m r,
-    FinanceBeamFlow.BeamFlow m r,
-    PaymentBeamFlow.BeamFlow m r,
-    Redis.HedisFlow m r,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r,
-    RideEnd.EndRideFlow m r,
-    LocationUpdateFlow m r c,
-    HasField "activeDriversListKeyShards" r Int,
-    HasField "enableDriverFeeShardedFanOut" r Bool,
-    SchedulerFlow r,
-    HasField "blackListedJobs" r [Text]
-  ) =>
+  SpecialZonePayoutFlow m r c =>
   DSP.ScheduledPayout ->
   m ExecutionResult
 executeOldSpecialZonePayout scheduledPayout = do

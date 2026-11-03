@@ -95,10 +95,12 @@ import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Finance.Prepaid as SFPrepaid
 import qualified SharedLogic.Finance.Wallet as SFWallet
+import qualified SharedLogic.FleetDriverSettings as FleetDriverSettings
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.PersonBankAccount as SPBA
 import SharedLogic.VehicleServiceTier
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.DocumentVerificationStagesConfig as CQDVSC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -505,7 +507,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   let isACAllowedForDriver = SDO.checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
   let isACWorkingForVehicle = vehicle.airConditioned /= Just False
   let isACWorking = isACAllowedForDriver && isACWorkingForVehicle
-  autoAcceptLockedByFleet <- maybe False (not . (.allowDriverToToggle)) <$> FDA.getDriverFleetAutoAssignConfig personId merchantOpCityId
+  autoAcceptLockedByFleet <- maybe False (not . (.allowDriverToToggle)) <$> FleetDriverSettings.getDriverFleetAutoAssignConfig personId merchantOpCityId
   let tierOptions =
         driverVehicleServiceTierTypes <&> \(VehicleServiceTier {..}, usageRestricted) -> do
           let isNonACDefault = isACCheckEnabledForCity && not isACWorking && isNothing airConditionedThreshold
@@ -659,7 +661,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
           Yudhishthira.elemTagValue (LYT.TagName "AutoAssign") (show tier) (Yudhishthira.filterExpiredTags' now (fromMaybe [] person.driverTag))
 
     -- A fleet that doesn't let its drivers toggle auto-assign keeps its auto-accept tiers as they are.
-    fleetLocksAutoAssign <- maybe False (not . (.allowDriverToToggle)) <$> FDA.getDriverFleetAutoAssignConfig personId merchantOperatingCityId
+    fleetLocksAutoAssign <- maybe False (not . (.allowDriverToToggle)) <$> FleetDriverSettings.getDriverFleetAutoAssignConfig personId merchantOperatingCityId
     -- Single pass over the driver's own filtered tier list, not cityVehicleServiceTiers -- force-select must never bypass isUsageRestricted.
     driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOperatingCityId
     tierResults <-

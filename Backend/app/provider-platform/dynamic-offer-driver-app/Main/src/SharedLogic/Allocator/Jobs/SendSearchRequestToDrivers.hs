@@ -32,6 +32,7 @@ import qualified Domain.Types.SearchRequestForDriver as DSRD
 import Domain.Types.SearchTry (SearchTry)
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.VehicleVariant as DVeh
+import qualified Environment
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Functions as B
 import Kernel.Beam.Types (TxnIdKey (..))
@@ -49,6 +50,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Types.SpecialLocation as SL
@@ -66,6 +68,7 @@ import SharedLogic.MerchantPaymentMethod (mkPaymentMethodInfo)
 import SharedLogic.ScheduledRideTopDrivers (topDriversRoundCutoff)
 import qualified SharedLogic.SearchTry as SST
 import qualified SharedLogic.Type as SLT
+import Storage.Beam.IncentiveJourney ()
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -219,8 +222,10 @@ type SendSearchRequestJobFlow m r c =
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
     BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
     CoreMetrics m,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     HasFlowEnv m r '["version" ::: DeploymentVersion],
     Metrics.HasDriverSearchRequestResponseMetrics m r,
     EventStreamFlow m r,
@@ -370,53 +375,7 @@ processSendSearchRequestJobWithMode dispatchMode jobId jobData = withLogTag ("Jo
       catMaybes $ [safetyCharges, nyregularCharges]
 
 sendSearchRequestToDrivers' ::
-  ( EncFlow m r,
-    TranslateFlow m r,
-    EsqDBReplicaFlow m r,
-    Metrics.HasSendSearchRequestToDriverMetrics m r,
-    Metrics.HasDriverSearchRequestResponseMetrics m r,
-    Metrics.HasBPPMetrics m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    Finance.HasActorInfo m r,
-    LT.HasLocationService m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    HasField "maxShards" r Int,
-    HasField "schedulerSetName" r Text,
-    HasField "schedulerType" r SchedulerType,
-    HasField "jobInfoMap" r (M.Map Text Bool),
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasHttpClientOptions r c,
-    HasLongDurationRetryCfg r c,
-    HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    HasShortDurationRetryCfg r c,
-    HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool,
-    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasField "blackListedJobs" r [Text],
-    ClickhouseFlow m r,
-    Redis.HedisLTSFlowEnv r,
-    HasField "enableLtsPoolDataForPooling" r Bool,
-    Redis.HedisFlow m r,
-    BeamFlow m r,
-    CoreMetrics m,
-    HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
-    HasFlowEnv m r '["version" ::: DeploymentVersion],
-    EventStreamFlow m r,
-    HasPrettyLogger m r,
-    ServiceFlow m r,
-    HasField "quoteRespondCoolDown" r Int,
-    HasField "driverUnlockDelay" r Seconds,
-    C.MonadCatch m,
-    Analytics.PublishesFleetAnalytics m
-  ) =>
+  SendSearchRequestJobFlow m r c =>
   DriverPoolConfig ->
   SearchTry ->
   DriverSearchBatchInput m ->

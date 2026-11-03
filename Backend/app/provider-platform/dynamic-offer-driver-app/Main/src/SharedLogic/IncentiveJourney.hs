@@ -8,21 +8,30 @@
 module SharedLogic.IncentiveJourney
   ( hasAssignedJourneys,
     findAssignmentsByUserId,
+    findDashboardAssignmentsByUserId,
     selectPreferredJourney,
     orderJourneysForDisplay,
     mkJourneyPeriodKey,
-    mkWeeklyPeriodKey,
-    mkMonthlyPeriodKey,
     mkDailyPeriodKey,
     journeyTypeOrDefault,
     isJourneyWindowActive,
     evaluateDriverJourney,
+    evaluateDriverBehaviorTick,
+    syncDriverBehaviorMetricTick,
+    forkSettleClosedPeriodsForList,
+    forkEnsureAssignedCampaignTags,
+    publishBehaviorMetricTick,
+    bumpCampaignBehaviorMetric,
+    bumpCampaignBehaviorMetricFromMemberships,
     loadJourneyMilestones,
     waiveDriverMilestone,
+    inspectOrTriggerStreakEndReward,
     retryVerifiedVpaJourneyCashPayouts,
+    JourneyRewardDispatchFlow,
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DriverInformation as DI
@@ -35,12 +44,16 @@ import qualified Domain.Types.Overlay as DOverlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DTV
+import qualified Environment
 import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.External.Types (Language (..), SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis (HedisLTSFlowEnv)
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis.Config (HedisFlow)
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
@@ -49,6 +62,10 @@ import qualified Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney as IJ
+import qualified Lib.IncentiveJourney.BehaviorMetric as BM
+import qualified Lib.IncentiveJourney.BehaviorMetricRedis as BMRedis
+import qualified Lib.IncentiveJourney.CampaignSync as CampaignSync
+import qualified Lib.IncentiveJourney.CampaignTag as CampaignTag
 import Lib.IncentiveJourney.Condition (evaluateCondition)
 import qualified Lib.IncentiveJourney.Convert as Convert
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
@@ -56,6 +73,8 @@ import qualified Lib.IncentiveJourney.Domain.Types.Common as IJCommon
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats as DIJS
+import qualified Lib.IncentiveJourney.MgCampaign as Mg
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.Assignment as CQAssignment
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourney as CQJourney
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyMilestone as CQMilestone
@@ -65,6 +84,12 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified SharedLogic.FleetDriverSettings as FDS
+import qualified SharedLogic.IncentiveJourney.BehaviorTickPublisher as BehaviorTickPublisher
+import qualified SharedLogic.IncentiveJourney.CampaignBehaviorBump as CampaignBehaviorBump
+import SharedLogic.IncentiveJourney.CampaignControlsCache (getCampaignControls)
+import qualified SharedLogic.IncentiveJourney.MetricBag as MetricBag
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaignSync
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Payment ()
@@ -100,11 +125,14 @@ type JourneyRewardDispatchFlow m r =
   ( MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     EncFlow m r,
     ServiceFlow m r,
+    HedisLTSFlowEnv r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     PaymentBeamFlow.BeamFlow m r,
     BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
     Finance.HasActorInfo m r,
     Coins.EventFlow m r,
     SchedulerFlow r,
@@ -128,6 +156,21 @@ findAssignmentsByUserId personId = do
         (cast person.merchantOperatingCityId)
         (T.pack . show <$> (mbVehicle >>= (.category)))
 
+-- | Dashboard list: pending OptIn invites included (no optedInAt filter).
+findDashboardAssignmentsByUserId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> m [IJ.JourneyAssignment]
+findDashboardAssignmentsByUserId personId = do
+  mbPerson <- QPerson.findById personId
+  mbVehicle <- QVeh.findById personId
+  case mbPerson of
+    Nothing -> CQAssignment.findMembershipsByUserId IJ.DriverActor (cast personId)
+    Just person ->
+      CQAssignment.findMembershipsForDriver
+        IJ.DriverActor
+        (cast personId)
+        (cast person.merchantId)
+        (cast person.merchantOperatingCityId)
+        (T.pack . show <$> (mbVehicle >>= (.category)))
+
 journeyTypeOrDefault :: Maybe DIJ.IncentiveJourneyType -> DIJ.IncentiveJourneyType
 journeyTypeOrDefault = IJ.journeyTypeOrDefault
 
@@ -140,14 +183,8 @@ orderJourneysForDisplay = IJ.orderJourneysForDisplay
 isJourneyWindowActive :: UTCTime -> DIJ.IncentiveJourney -> DCJM.CohortJourneyMapping -> Bool
 isJourneyWindowActive = IJ.isJourneyWindowActiveFor
 
-mkJourneyPeriodKey :: UTCTime -> DIJ.IncentiveJourney -> Text
+mkJourneyPeriodKey :: UTCTime -> DIJ.IncentiveJourney -> UTCTime -> Text
 mkJourneyPeriodKey = IJ.mkJourneyPeriodKeyFor
-
-mkWeeklyPeriodKey :: UTCTime -> Text
-mkWeeklyPeriodKey = IJ.mkWeeklyPeriodKey
-
-mkMonthlyPeriodKey :: UTCTime -> Text
-mkMonthlyPeriodKey = IJ.mkMonthlyPeriodKey
 
 mkDailyPeriodKey :: UTCTime -> Text
 mkDailyPeriodKey = IJ.mkDailyPeriodKey
@@ -224,9 +261,63 @@ sendMilestoneWaivedOverlay merchantOpCityId driverId journey milestone journeyMi
             }
     sendOverlay merchantOpCityId driver $ mkOverlayReq overlay'
 
--- | EndRide journey evaluation. Call when driver has user_cohort_mapping rows.
+mkDriverEvaluateHandle ::
+  JourneyRewardDispatchFlow m r =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  DTV.VehicleCategory ->
+  Maybe DCommon.ServiceTierType ->
+  m (IJ.IncentiveJourneyHandle m)
+mkDriverEvaluateHandle driverId merchantId merchantOpCityId transporterConfig vehCategory mbServiceTier =
+  pure
+    IJ.IncentiveJourneyHandle
+      { actor = IJ.DriverActor,
+        loadJourneysByIds = CQJourney.findByIds IJ.DriverActor,
+        loadMilestones = loadJourneyMilestones,
+        dispatchReward = \journey ctx spec ->
+          dispatchDriverReward
+            driverId
+            merchantId
+            merchantOpCityId
+            transporterConfig
+            journey
+            vehCategory
+            mbServiceTier
+            ctx
+            spec,
+        dispatchStreakEndReward = \journey campaignKey spec ->
+          dispatchDriverStreakEndReward
+            driverId
+            merchantId
+            merchantOpCityId
+            transporterConfig
+            journey
+            vehCategory
+            mbServiceTier
+            campaignKey
+            spec,
+        mbOnMilestoneCompleted =
+          Just $ \journey milestone journeyMilestones awarded ->
+            void $
+              withTryCatch "IncentiveJourney:sendMilestoneCompletedOverlay" $
+                sendMilestoneCompletedOverlay
+                  merchantOpCityId
+                  driverId
+                  journey
+                  milestone
+                  journeyMilestones
+                  awarded,
+        mbOnMgOptInCleared = Just $ \personId cjmId -> do
+          matched <- MgCampaignSync.clearMgOptedInOnDriverInfo personId cjmId
+          when matched $ FDS.onCampaignMembershipCleared (cast personId) (cast cjmId),
+        buildMetricContext = MetricBag.buildMetricContext
+      }
+
+-- | Kafka RIDE_EVENTS journey evaluation (not HTTP EndRide).
 evaluateDriverJourney ::
-  (JourneyRewardDispatchFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r) =>
+  JourneyRewardDispatchFlow m r =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -240,46 +331,15 @@ evaluateDriverJourney ::
   IncentiveMetrics.RideIncentiveDeltas ->
   m ()
 evaluateDriverJourney driverId merchantId merchantOpCityId transporterConfig vehCategory mbServiceTier _mbEntityId mbPickupSpecialLocationId mbDropSpecialLocationId timeBoundReferenceUtc rideDeltas = do
-  let ijHandle =
-        IJ.IncentiveJourneyHandle
-          { actor = IJ.DriverActor,
-            loadJourneysByIds = CQJourney.findByIds IJ.DriverActor,
-            loadMilestones = loadJourneyMilestones,
-            dispatchReward = \journey ctx spec ->
-              dispatchDriverReward
-                driverId
-                merchantId
-                merchantOpCityId
-                transporterConfig
-                journey
-                vehCategory
-                mbServiceTier
-                ctx
-                spec,
-            dispatchStreakEndReward = \journey campaignKey spec ->
-              dispatchDriverStreakEndReward
-                driverId
-                merchantId
-                merchantOpCityId
-                transporterConfig
-                journey
-                vehCategory
-                mbServiceTier
-                campaignKey
-                spec,
-            mbOnMilestoneCompleted =
-              Just $ \journey milestone journeyMilestones awarded ->
-                void $
-                  withTryCatch "IncentiveJourney:sendMilestoneCompletedOverlay" $
-                    sendMilestoneCompletedOverlay
-                      merchantOpCityId
-                      driverId
-                      journey
-                      milestone
-                      journeyMilestones
-                      awarded
-          }
-      input =
+  ijHandle <-
+    mkDriverEvaluateHandle
+      driverId
+      merchantId
+      merchantOpCityId
+      transporterConfig
+      vehCategory
+      mbServiceTier
+  let input =
         IJ.EvaluateInput
           { personId = cast driverId,
             merchantId = cast merchantId,
@@ -293,6 +353,420 @@ evaluateDriverJourney driverId merchantId merchantOpCityId transporterConfig veh
             mbRideServiceTierType = show <$> mbServiceTier
           }
   IJ.evaluateIncentiveJourneys ijHandle input
+
+-- | Consumer-side (IJ_BEHAVIOR_TICK_CONSUMER): full bag + JsonLogic + stats upsert.
+-- Do not call from app HTTP — use 'publishBehaviorMetricTick' after BT bump.
+evaluateDriverBehaviorTick ::
+  JourneyRewardDispatchFlow m r =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  Maybe DTV.VehicleCategory ->
+  UTCTime ->
+  m ()
+evaluateDriverBehaviorTick driverId merchantId merchantOpCityId transporterConfig mbVehCategory timeBoundReferenceUtc = do
+  vehCategory <-
+    case mbVehCategory of
+      Just vc -> pure vc
+      Nothing -> do
+        mbVeh <- QVeh.findById driverId
+        pure $ fromMaybe DTV.AUTO_CATEGORY ((.category) =<< mbVeh)
+  let mbServiceTier = Nothing
+  ijHandle <-
+    mkDriverEvaluateHandle
+      driverId
+      merchantId
+      merchantOpCityId
+      transporterConfig
+      vehCategory
+      mbServiceTier
+  IJ.evaluateBehaviorJourneys
+    ijHandle
+    IJ.BehaviorEvaluateInput
+      { personId = cast driverId,
+        merchantId = cast merchantId,
+        merchantOperatingCityId = cast merchantOpCityId,
+        timeBoundReferenceUtc = timeBoundReferenceUtc,
+        timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
+        mbRideVehicleCategory = Just (show vehCategory)
+      }
+
+-- | Stats-sync + closed-period settle (no mid-period reward). Used by IJ_BEHAVIOR_TICK_CONSUMER.
+syncDriverBehaviorMetricTick ::
+  JourneyRewardDispatchFlow m r =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  UTCTime ->
+  [Text] ->
+  Text ->
+  Int ->
+  m ()
+syncDriverBehaviorMetricTick driverId merchantId merchantOpCityId transporterConfig occurredAt cjmIds metricOrAction delta = do
+  mbVeh <- QVeh.findById driverId
+  let vehCategory = fromMaybe DTV.AUTO_CATEGORY ((.category) =<< mbVeh)
+  ijHandle <-
+    mkDriverEvaluateHandle
+      driverId
+      merchantId
+      merchantOpCityId
+      transporterConfig
+      vehCategory
+      Nothing
+  IJ.syncBehaviorMetricAndSettle
+    ijHandle
+    (cast driverId)
+    (cast merchantId)
+    (cast merchantOpCityId)
+    transporterConfig.timeDiffFromUtc
+    occurredAt
+    cjmIds
+    metricOrAction
+    delta
+    (Just (show vehCategory))
+
+-- | Homescreen list: sole closed-period settle path (fork).
+-- Steady state (already caught up): Redis GET of done-watermark per CJM → no
+-- milestone load / vehicle / evaluate-handle / DB settle. Catch-up only when
+-- watermark lags (incl. final day during post-end grace).
+forkSettleClosedPeriodsForList ::
+  JourneyRewardDispatchFlow m r =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  m ()
+forkSettleClosedPeriodsForList driverId merchantId merchantOpCityId transporterConfig =
+  fork "IncentiveJourney:listSettleClosedPeriods" $ do
+    localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    assignments <- findAssignmentsByUserId driverId
+    -- Cheap scan: journeys + done-watermark only. Collect CJMs that still need settle.
+    pendingWork <-
+      fmap concat $
+        forM assignments $ \assignment -> do
+          let cjm = assignment.cohortJourneyMapping
+          if not cjm.enabled
+            then pure []
+            else do
+              journeys <- CQJourney.findByIds IJ.DriverActor [cjm.journeyId]
+              fmap concat $
+                forM journeys $ \journey -> do
+                  let endExclusive = IJ.computeStreakEndDate cjm.startDate cjm.streakRange journey.journeyType
+                      graceEnd = addUTCTime (3 * 24 * 3600) endExclusive
+                      canSettle =
+                        IJ.isJourneyWindowActiveFor localTime journey cjm
+                          || (localTime >= endExclusive && localTime < graceEnd)
+                  if not canSettle
+                    then pure []
+                    else do
+                      let doneKey = IJ.settleDoneKey driverId.getId cjm.id.getId
+                      mbDone <- Hedis.withCrossAppRedis $ Hedis.get doneKey
+                      let pending =
+                            IJ.pendingClosedPeriodKeysAfterDone localTime journey cjm mbDone
+                      pure [(journey, cjm) | not (null pending)]
+    -- Hot path: nothing pending → fork ends here (no vehicle / handle / milestones).
+    unless (null pendingWork) $ do
+      mbVeh <- QVeh.findById driverId
+      let vehCategory = fromMaybe DTV.AUTO_CATEGORY ((.category) =<< mbVeh)
+      ijHandle <-
+        mkDriverEvaluateHandle
+          driverId
+          merchantId
+          merchantOpCityId
+          transporterConfig
+          vehCategory
+          Nothing
+      forM_ pendingWork $ \(journey, cjm) -> do
+        milestones <- loadJourneyMilestones journey.id
+        IJ.settleClosedPeriodIfNeeded
+          ijHandle
+          (cast driverId)
+          (cast merchantId)
+          (cast merchantOpCityId)
+          localTime
+          journey
+          cjm
+          milestones
+
+-- | Non-blocking list fork: ensure Assigned IJCampaign tags (never written on assign/bulk).
+-- Tag expiry = min(UCM.validTill, streak end) so Unbounded timeBounds cannot keep
+-- cancel/AA/pooling alive after the campaign or assignment ends.
+-- Also clears tags for CJMs no longer in active assignments. OptIn tags left to their own expiry.
+forkEnsureAssignedCampaignTags ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    HedisFlow m r,
+    HedisLTSFlowEnv r,
+    IJBeamFlow.BeamFlow m r,
+    Metrics.HasCoreMetrics r
+  ) =>
+  Id DP.Person ->
+  m ()
+forkEnsureAssignedCampaignTags driverId =
+  fork "IncentiveJourney:ensureAssignedCampaignTags" $ do
+    localNow <- getCurrentTime
+    mbPerson <- QPerson.findById driverId
+    let memberships = maybe [] CampaignBehaviorBump.membershipsFromPersonTags ((.driverTag) =<< mbPerson)
+    assignments <- findAssignmentsByUserId driverId
+    let activeCjmIds = [a.cohortJourneyMapping.id.getId | a <- assignments, a.cohortJourneyMapping.enabled]
+        staleMemberships = filter (\m -> m.cjmId `notElem` activeCjmIds) memberships
+        personId = cast driverId :: Id IJCommon.Person
+    -- Drop perks for expired/disabled UCMs still lingering on person tags.
+    forM_ staleMemberships $ \m -> do
+      matched <- MgCampaignSync.clearMgOptedInOnDriverInfo personId (Id m.cjmId)
+      when matched $ FDS.onCampaignMembershipCleared driverId (Id m.cjmId)
+    existingControlsCjmIds <-
+      fmap catMaybes $
+        forM memberships $ \m -> do
+          if m.cjmId `elem` activeCjmIds
+            then do
+              mbControls <- getCampaignControls (Id m.cjmId)
+              pure $
+                if maybe False (Mg.valueHasControlFeatures . (.controlFeatures)) mbControls
+                  then Just m.cjmId
+                  else Nothing
+            else pure Nothing
+    let assignedActive =
+          [ a
+            | a <- assignments,
+              let cjm = a.cohortJourneyMapping,
+              cjm.enabled,
+              fromMaybe DCJM.Assigned cjm.campaignUserLinkType == DCJM.Assigned
+          ]
+    -- Upsert with boundary expiry (refresh fixes older tags written with no expiry).
+    payloadRows <-
+      fmap catMaybes $
+        forM assignedActive $ \a -> do
+          let cjm = a.cohortJourneyMapping
+          mbJourney <- CQJourney.findById IJ.DriverActor cjm.journeyId
+          case mbJourney of
+            Nothing -> pure Nothing
+            Just journey -> do
+              let streakEnd = IJ.computeStreakEndDate cjm.startDate cjm.streakRange journey.journeyType
+              -- Outside live window [start, end): do not (re)write; clear leftovers from early/late sync.
+              if localNow < cjm.startDate || localNow >= streakEnd
+                then do
+                  when (cjm.id.getId `elem` map (.cjmId) memberships) $ do
+                    matched <- MgCampaignSync.clearMgOptedInOnDriverInfo personId cjm.id
+                    when matched $ FDS.onCampaignMembershipCleared driverId cjm.id
+                  pure Nothing
+                else do
+                  milestones <- loadJourneyMilestones journey.id
+                  let ucmTill = maybe streakEnd (.validTill) a.userCohortMapping
+                      tagExpiry = min ucmTill streakEnd
+                  pure $
+                    case CampaignSync.mkHotPathSync localNow journey cjm milestones True (Just tagExpiry) of
+                      Nothing -> Nothing
+                      Just p -> Just (p, Mg.cjmHasControlFeatures cjm)
+    let payloads = map fst payloadRows
+        controlsIds = [p.membership.cjmId | (p, hasControls) <- payloadRows, hasControls]
+        -- Prefer refreshing the controls tag already on the person; else first controls payload.
+        selectedControls =
+          case find (\p -> p.membership.cjmId `elem` existingControlsCjmIds) payloads of
+            Just p -> [p]
+            Nothing ->
+              case listToMaybe [p | p <- payloads, p.membership.cjmId `elem` controlsIds] of
+                Just p | null existingControlsCjmIds -> [p]
+                _ -> []
+        behaviourPayloads =
+          filter (\p -> p.membership.cjmId `notElem` controlsIds) payloads
+        selectedPayloads = behaviourPayloads <> selectedControls
+    case selectedPayloads of
+      [] -> pure ()
+      ps -> do
+        MgCampaignSync.syncCampaignMembershipBatch personId ps
+        -- Any opted-in snap is enough: reconcile rebuilds AA from all memberships.
+        let mbSnap =
+              ((.snapshot) <$> find (\p -> p.membership.cjmId `elem` controlsIds) ps)
+                <|> ((.snapshot) <$> listToMaybe ps)
+        FDS.reconcileAutoAssignAfterMgSync personId mbSnap
+
+-- No assignment / bag / stats work here (that would hit the app pod). Consumer loads
+-- assignments and no-ops when empty — same isolation as ride-end → RIDE_EVENTS_CONSUMER.
+publishBehaviorMetricTick ::
+  ( MonadFlow m,
+    HedisFlow m r,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    Metrics.CoreMetrics m
+  ) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  m ()
+publishBehaviorMetricTick driverId merchantId merchantOpCityId actionType =
+  fork "IncentiveJourney:publishBehaviorMetricTick" $
+    BehaviorTickPublisher.publishBehaviorMetricTick driverId merchantId merchantOpCityId actionType
+
+-- | Gated ij:bm bump for campaign members; publishes BehaviourMetricTick only when a key was written.
+-- metricName: onlineMinutes | rrReceived | rrAccepted | dxCancel | dafCancel
+-- rrReceived: Redis INCR every request; Kafka/stats sync only every N bumps (hot SRD path).
+bumpCampaignBehaviorMetric ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HedisFlow m r,
+    IJBeamFlow.BeamFlow m r,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    Metrics.CoreMetrics m
+  ) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Seconds ->
+  Text ->
+  Int ->
+  Text ->
+  m ()
+bumpCampaignBehaviorMetric driverId merchantId merchantOpCityId timeDiffFromUtc metricName delta actionType =
+  fork "IncentiveJourney:bumpCampaignBehaviorMetric" $ do
+    case parseCampaignMetric metricName of
+      Nothing -> pure ()
+      Just metric -> do
+        localTime <- getLocalCurrentTime timeDiffFromUtc
+        bumpedCjmIds <- CampaignBehaviorBump.bumpIfCampaignMemberDetailed driverId metric delta localTime
+        publishAfterCampaignBump driverId merchantId merchantOpCityId metricName delta actionType metric bumpedCjmIds
+
+-- | SRD / pool hot path: memberships already parsed from DriverPoolResult.driverTags.
+-- Empty memberships → no fork / no Person read. Same Redis + tick behaviour as bumpCampaignBehaviorMetric.
+bumpCampaignBehaviorMetricFromMemberships ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HedisFlow m r,
+    IJBeamFlow.BeamFlow m r,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    Metrics.CoreMetrics m
+  ) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Seconds ->
+  Text ->
+  Int ->
+  Text ->
+  [CampaignTag.CampaignMembership] ->
+  m ()
+bumpCampaignBehaviorMetricFromMemberships _driverId _merchantId _merchantOpCityId _timeDiffFromUtc _metricName _delta _actionType [] = pure ()
+bumpCampaignBehaviorMetricFromMemberships driverId merchantId merchantOpCityId timeDiffFromUtc metricName delta actionType memberships =
+  fork "IncentiveJourney:bumpCampaignBehaviorMetric" $ do
+    case parseCampaignMetric metricName of
+      Nothing -> pure ()
+      Just metric -> do
+        localTime <- getLocalCurrentTime timeDiffFromUtc
+        bumpedCjmIds <-
+          CampaignBehaviorBump.bumpIfCampaignMemberDetailedFromMemberships driverId memberships metric delta localTime
+        publishAfterCampaignBump driverId merchantId merchantOpCityId metricName delta actionType metric bumpedCjmIds
+
+publishAfterCampaignBump ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HedisFlow m r,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    Metrics.CoreMetrics m
+  ) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  Int ->
+  Text ->
+  BMRedis.CampaignBehaviorMetric ->
+  [Text] ->
+  m ()
+publishAfterCampaignBump driverId merchantId merchantOpCityId metricName delta actionType metric bumpedCjmIds =
+  unless (null bumpedCjmIds) $ do
+    let publishMetric metName publishDelta act =
+          BehaviorTickPublisher.publishBehaviorMetricTickDetailed
+            driverId
+            merchantId
+            merchantOpCityId
+            act
+            (Just bumpedCjmIds)
+            (Just metName)
+            (Just publishDelta)
+    case metric of
+      BMRedis.RrReceived -> do
+        mbFlush <- takeRrReceivedStatsSyncDelta driverId delta
+        whenJust mbFlush $ \flushDelta ->
+          publishMetric "rrReceived" flushDelta actionType
+      BMRedis.OnlineMinutes ->
+        -- Online ticks are frequent; do not drain rrReceived batch here.
+        publishMetric metricName delta actionType
+      _ -> do
+        -- Accept/cancel: drain pending rrReceived so stats catch up without waiting for N more RRs.
+        mbRrFlush <- takeRrReceivedStatsSyncDelta driverId 0
+        whenJust mbRrFlush $ \rrDelta ->
+          publishMetric "rrReceived" rrDelta "RR_RECEIVED_FLUSH"
+        publishMetric metricName delta actionType
+
+parseCampaignMetric :: Text -> Maybe BMRedis.CampaignBehaviorMetric
+parseCampaignMetric = \case
+  "onlineMinutes" -> Just BMRedis.OnlineMinutes
+  "rrReceived" -> Just BMRedis.RrReceived
+  "rrAccepted" -> Just BMRedis.RrAccepted
+  "dxCancel" -> Just BMRedis.DxCancel
+  "dafCancel" -> Just BMRedis.DafCancel
+  _ -> Nothing
+
+-- | Accumulate rrReceived for stats sync. Returns Just flushedDelta when Kafka should fire.
+-- delta=0 → only try to flush an existing pending buffer (used by other behaviour events).
+takeRrReceivedStatsSyncDelta ::
+  (MonadFlow m, CacheFlow m r, HedisFlow m r) =>
+  Id DP.Person ->
+  Int ->
+  m (Maybe Int)
+takeRrReceivedStatsSyncDelta driverId delta = do
+  let key = BM.rrReceivedPendingSyncKey driverId.getId
+      thresh = fromIntegral BM.rrReceivedStatsSyncThreshold :: Integer
+      ttlSeconds = 24 * 3600
+  pending <-
+    if delta > 0
+      then
+        Hedis.runInMultiCloudRedisWrite $
+          Hedis.withCrossAppRedis $
+            Hedis.incrby key (fromIntegral delta)
+      else do
+        mbPending <- Hedis.withCrossAppRedis (Hedis.get key)
+        pure $ fromMaybe (0 :: Integer) mbPending
+  when (delta > 0) $
+    void $
+      Hedis.runInMultiCloudRedisWrite $
+        Hedis.withCrossAppRedis $
+          Hedis.expire key ttlSeconds
+  let shouldFlush =
+        if delta > 0
+          then pending >= thresh
+          else pending > 0
+  if not shouldFlush
+    then pure Nothing
+    else do
+      let lockKey = key <> ":flush"
+      acquired <-
+        Hedis.withCrossAppRedis $
+          Hedis.setNxExpire lockKey 60 ("1" :: Text)
+      if not acquired
+        then pure Nothing
+        else -- Atomic-ish drain: get n then incrby (-n) so concurrent incrbys survive
+        -- (setExp 0 would overwrite them). Always release :flush so accept/cancel
+        -- can drain again without waiting for the 60s lock TTL.
+        flip finally (Hedis.withCrossAppRedis $ Hedis.del lockKey) $ do
+          mbLatest <- Hedis.withCrossAppRedis (Hedis.get key)
+          let n = fromMaybe (0 :: Integer) mbLatest
+          when (n > 0) $
+            void $
+              Hedis.runInMultiCloudRedisWrite $
+                Hedis.withCrossAppRedis $
+                  Hedis.incrby key (negate n)
+          pure $
+            if n > 0
+              then Just (fromIntegral n)
+              else Nothing
 
 dispatchDriverReward ::
   JourneyRewardDispatchFlow m r =>
@@ -717,7 +1191,7 @@ defaultSubscriptionWaiveOff =
 
 -- | Dashboard waive-off for one driver milestone period row.
 waiveDriverMilestone ::
-  (JourneyRewardDispatchFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r) =>
+  JourneyRewardDispatchFlow m r =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -740,7 +1214,9 @@ waiveDriverMilestone driverId merchantId merchantOpCityId transporterConfig jour
               dispatchDriverReward driverId merchantId merchantOpCityId transporterConfig j vehCategory mbServiceTier ctx spec,
             dispatchStreakEndReward = \j campaignKey spec ->
               dispatchDriverStreakEndReward driverId merchantId merchantOpCityId transporterConfig j vehCategory mbServiceTier campaignKey spec,
-            mbOnMilestoneCompleted = Nothing
+            mbOnMilestoneCompleted = Nothing,
+            mbOnMgOptInCleared = Nothing,
+            buildMetricContext = MetricBag.buildMetricContext
           }
   didWaive <-
     IJ.waiveMilestoneForPeriod
@@ -760,11 +1236,49 @@ waiveDriverMilestone driverId merchantId merchantOpCityId transporterConfig jour
         withTryCatch "IncentiveJourney:sendMilestoneWaivedOverlay" $
           sendMilestoneWaivedOverlay merchantOpCityId driverId journey milestone milestones
 
+-- | Dashboard: diagnose streak-end / periodDays-slice reward; optionally trigger if ReadyToAward.
+-- Scoped stats only (period keys the award path checks). Idempotent on trigger via campaignKey.
+inspectOrTriggerStreakEndReward ::
+  JourneyRewardDispatchFlow m r =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  DIJ.IncentiveJourney ->
+  DCJM.CohortJourneyMapping ->
+  Text ->
+  Bool ->
+  Maybe DTV.VehicleCategory ->
+  Maybe DCommon.ServiceTierType ->
+  m IJ.StreakEndInspectResult
+inspectOrTriggerStreakEndReward driverId merchantId merchantOpCityId transporterConfig journey cjm periodKey trigger mbVehCategory mbServiceTier = do
+  let vehCategory = fromMaybe DTV.CAR mbVehCategory
+  milestones <- loadJourneyMilestones journey.id
+  let dispatchStreak j =
+        dispatchDriverStreakEndReward
+          driverId
+          merchantId
+          merchantOpCityId
+          transporterConfig
+          j
+          vehCategory
+          mbServiceTier
+  IJ.inspectAndMaybeTriggerStreakEnd
+    dispatchStreak
+    (cast driverId)
+    journey
+    cjm
+    milestones
+    periodKey
+    trigger
+    transporterConfig.timeDiffFromUtc
+
 toLibDeltas :: IncentiveMetrics.RideIncentiveDeltas -> IJ.RideDeltas
 toLibDeltas deltas =
   IJ.RideDeltas
     { ridesDelta = deltas.ridesDelta,
       earningsDelta = deltas.earningsDelta,
+      netEarningsDelta = deltas.netEarningsDelta,
       distanceMetersDelta = deltas.distanceMetersDelta,
       rideTimeSecondsDelta = deltas.rideTimeSecondsDelta
     }

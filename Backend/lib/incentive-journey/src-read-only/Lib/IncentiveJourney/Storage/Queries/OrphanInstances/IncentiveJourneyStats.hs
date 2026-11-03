@@ -17,12 +17,14 @@ instance FromTType' Beam.IncentiveJourneyStats Lib.IncentiveJourney.Domain.Types
     pure $
       Just
         Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.IncentiveJourneyStats
-          { cohortId = Kernel.Types.Id.Id cohortId,
+          { campaignUserLinkType = campaignUserLinkType,
+            cohortId = Kernel.Types.Id.Id cohortId,
             cohortJourneyMappingId = Kernel.Types.Id.Id <$> cohortJourneyMappingId,
             conditionOperator = conditionOperator,
             conditionType = conditionType,
             conditionValue = conditionValue,
             createdAt = createdAt,
+            currentMetrics = currentMetrics,
             currentValue = currentValue,
             id = Kernel.Types.Id.Id id,
             journeyId = Kernel.Types.Id.Id journeyId,
@@ -40,12 +42,14 @@ instance FromTType' Beam.IncentiveJourneyStats Lib.IncentiveJourney.Domain.Types
 instance ToTType' Beam.IncentiveJourneyStats Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.IncentiveJourneyStats where
   toTType' (Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.IncentiveJourneyStats {..}) = do
     Beam.IncentiveJourneyStatsT
-      { Beam.cohortId = Kernel.Types.Id.getId cohortId,
+      { Beam.campaignUserLinkType = campaignUserLinkType,
+        Beam.cohortId = Kernel.Types.Id.getId cohortId,
         Beam.cohortJourneyMappingId = Kernel.Types.Id.getId <$> cohortJourneyMappingId,
         Beam.conditionOperator = conditionOperator,
         Beam.conditionType = conditionType,
         Beam.conditionValue = conditionValue,
         Beam.createdAt = createdAt,
+        Beam.currentMetrics = currentMetrics,
         Beam.currentValue = currentValue,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.journeyId = Kernel.Types.Id.getId journeyId,

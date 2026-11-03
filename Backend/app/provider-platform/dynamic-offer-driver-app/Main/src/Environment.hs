@@ -248,6 +248,8 @@ data AppCfg = AppCfg
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
     enableLtsPoolDataForPooling :: Bool,
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
+    -- | Same shape as ride-events publisher; stream prefix for BehaviourMetricTick.
+    ijBehaviorTickPublisherCfg :: Maybe RideEventsPublisherCfg,
     xyneWebhookSigningSecret :: Text,
     xyneWebhookBearerToken :: Text
   }
@@ -417,6 +419,7 @@ data AppEnv = AppEnv
     masterCloudForwarderManager :: Http.Manager,
     enableLtsPoolDataForPooling :: Bool,
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
+    ijBehaviorTickPublisherCfg :: Maybe RideEventsPublisherCfg,
     xyneWebhookSigningSecret :: Text,
     xyneWebhookBearerToken :: Text,
     actorInfo :: Finance.ActorInfo

@@ -8,9 +8,8 @@
 module SharedLogic.IncentiveJourney
   ( hasAssignedJourneys,
     findAssignmentsByUserId,
+    findDashboardAssignmentsByUserId,
     mkJourneyPeriodKey,
-    mkWeeklyPeriodKey,
-    mkMonthlyPeriodKey,
     journeyTypeOrDefault,
     isJourneyWindowActive,
     evaluateRiderJourney,
@@ -40,20 +39,18 @@ hasAssignedJourneys personId = not . null <$> CQAssignment.findAssignmentsByUser
 findAssignmentsByUserId :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> m [IJ.JourneyAssignment]
 findAssignmentsByUserId personId = CQAssignment.findAssignmentsByUserId IJ.RiderActor (cast personId)
 
+-- | Dashboard list: pending OptIn invites included (no optedInAt filter).
+findDashboardAssignmentsByUserId :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> m [IJ.JourneyAssignment]
+findDashboardAssignmentsByUserId personId = CQAssignment.findMembershipsByUserId IJ.RiderActor (cast personId)
+
 journeyTypeOrDefault :: Maybe DIJ.IncentiveJourneyType -> DIJ.IncentiveJourneyType
 journeyTypeOrDefault = IJ.journeyTypeOrDefault
 
 isJourneyWindowActive :: UTCTime -> DIJ.IncentiveJourney -> DCJM.CohortJourneyMapping -> Bool
 isJourneyWindowActive = IJ.isJourneyWindowActiveFor
 
-mkJourneyPeriodKey :: UTCTime -> DIJ.IncentiveJourney -> Text
+mkJourneyPeriodKey :: UTCTime -> DIJ.IncentiveJourney -> UTCTime -> Text
 mkJourneyPeriodKey = IJ.mkJourneyPeriodKeyFor
-
-mkWeeklyPeriodKey :: UTCTime -> Text
-mkWeeklyPeriodKey = IJ.mkWeeklyPeriodKey
-
-mkMonthlyPeriodKey :: UTCTime -> Text
-mkMonthlyPeriodKey = IJ.mkMonthlyPeriodKey
 
 loadJourneyMilestones ::
   (Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -71,7 +68,10 @@ mkRiderHandle =
       loadMilestones = loadJourneyMilestones,
       dispatchReward = \_journey -> dispatchRiderReward,
       dispatchStreakEndReward = dispatchRiderStreakEndReward,
-      mbOnMilestoneCompleted = Nothing
+      mbOnMilestoneCompleted = Nothing,
+      mbOnMgOptInCleared = Nothing,
+      -- Rider: period ride counters only (Kafka ride path).
+      buildMetricContext = IJ.loadOrApplyRideDeltas
     }
 
 evaluateRiderJourney ::

@@ -29,3 +29,12 @@ CREATE INDEX CONCURRENTLY incentive_journey_stats_idx_cohort_id ON atlas_driver_
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats ADD COLUMN cohort_journey_mapping_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats DROP CONSTRAINT incentive_journey_stats_unique_idx_journey_id_milestone_id_period_key_person_id;
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats ADD CONSTRAINT incentive_journey_stats_unique_idx_cohort_journey_mapping_id_milestone_id_period_key_person_id UNIQUE (cohort_journey_mapping_id, milestone_id, period_key, person_id);
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats ADD COLUMN current_metrics json  default NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.incentive_journey_stats ADD COLUMN campaign_user_link_type text  default NULL;

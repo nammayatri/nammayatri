@@ -25,12 +25,15 @@ import Environment
 import EulerHS.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.DriverFlowStatus as SDF
+import Storage.Beam.IncentiveJourney ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverOperatorAssociationExtra as QDriverOperatorAssociationExtra
@@ -253,7 +256,16 @@ decrementOperatorStatusKeyForFleetOwner = updateAtomicallyOperatorStatusKeyForFl
 
 -- | Common function to update both the fleet/operator status key and the driver activity in the DB
 updateDriverModeAndFlowStatus ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, Redis.HedisLTSFlowEnv r) =>
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    BeamFlow m r,
+    Metrics.CoreMetrics m,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    Redis.HedisLTSFlowEnv r
+  ) =>
   Id DP.Person ->
   DTC.TransporterConfig ->
   Bool ->
@@ -274,7 +286,16 @@ updateDriverModeAndFlowStatus driverId transporterConfig isActive mbNewMode newF
     processingChangeOnline driverId transporterConfig mbNewMode oldDriverInfo.mode
 
 forceDriverOfflineOnVehicleChange ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, Redis.HedisLTSFlowEnv r) =>
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    BeamFlow m r,
+    Metrics.CoreMetrics m,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    Redis.HedisLTSFlowEnv r
+  ) =>
   Id DP.Person ->
   DTC.TransporterConfig ->
   DI.DriverInformation ->

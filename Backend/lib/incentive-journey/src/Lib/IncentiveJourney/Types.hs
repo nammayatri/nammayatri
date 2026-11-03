@@ -24,6 +24,7 @@ module Lib.IncentiveJourney.Types
     EvalStats (..),
     awardAmount,
     isTerminalStatus,
+    isDeferredSettleDoneStatus,
     isStreakEndSatisfiedStatus,
   )
 where
@@ -45,6 +46,11 @@ data ConditionType
   | Distance
   | RideDuration
   | BookingTicket
+  | CancellationRate
+  | AcceptanceRate
+  | OnlineMinutes
+  | -- | Condition is evaluation.logic only; conditionOperator/conditionValue ignored.
+    JSONLogic
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 data ConditionOperator
@@ -71,6 +77,7 @@ data RewardKind
   | SubscriptionWaiveOff
   | PoolingPriority
   | NoReward
+  | NetOffEarnings
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 data MilestoneStatus
@@ -80,11 +87,14 @@ data MilestoneStatus
   | Rewarded
   | WaivedOff
   | RewardPending
+  | Disqualified
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 data RideDeltas = RideDeltas
   { ridesDelta :: Int,
     earningsDelta :: Int,
+    -- | fare - toll - parking (rupees, rounded). Accumulated into currentMetrics earnings keys.
+    netEarningsDelta :: Int,
     distanceMetersDelta :: Int,
     rideTimeSecondsDelta :: Int
   }
@@ -167,6 +177,8 @@ data EvalMilestone = EvalMilestone
     conditionType :: ConditionType,
     conditionOperator :: ConditionOperator,
     conditionValue :: Int,
+    -- | Milestone.evaluation JSON: condition JsonLogic ({ logic } or bare). Slabs in rewardMetadata.
+    evaluation :: Maybe Value,
     -- | Nothing / Default = no location filter. Pickup/Drop/PickupDrop use specialLocationIds.
     areaType :: Maybe AreaType,
     specialLocationIds :: Maybe [Text],
@@ -189,9 +201,15 @@ awardAmount AwardSkipped = 0
 awardAmount (Awarded n) = n
 
 -- | Milestone is done for sequencing (no further progress).
+-- RewardPending is terminal for mid-period sequencing but retryable on closed-period settle.
 isTerminalStatus :: MilestoneStatus -> Bool
-isTerminalStatus status = status `elem` [Completed, Rewarded, WaivedOff, RewardPending]
+isTerminalStatus status = status `elem` [Completed, Rewarded, WaivedOff, RewardPending, Disqualified]
 
--- | Counts toward streak-end payout eligibility.
+-- | Closed-period settle is finished for this row. RewardPending is intentionally excluded
+-- so list/ride-end can retry payout (cash/coins use their own referenceId / entityId idempotency).
+isDeferredSettleDoneStatus :: MilestoneStatus -> Bool
+isDeferredSettleDoneStatus status = status `elem` [Completed, Rewarded, WaivedOff, Disqualified]
+
+-- | Counts toward streak-end payout eligibility (Disqualified does not).
 isStreakEndSatisfiedStatus :: MilestoneStatus -> Bool
 isStreakEndSatisfiedStatus status = status `elem` [Completed, Rewarded, WaivedOff, RewardPending]

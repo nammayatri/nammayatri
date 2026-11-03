@@ -1,6 +1,7 @@
 module Domain.Action.UI.IncentiveJourney
   ( getIncentiveJourneyList,
     getIncentiveJourneyHistory,
+    postIncentiveJourneyOptIn,
   )
 where
 
@@ -9,6 +10,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -24,7 +26,9 @@ import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyMile
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyStats as CQStats
 import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyStatsExtra as QStats
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified SharedLogic.FleetDriverSettings as FDS
 import qualified SharedLogic.IncentiveJourney as SLJourney
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaignSync
 import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.SpecialZone ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -62,13 +66,16 @@ mkHandle =
             >>= fromMaybeM (InvalidRequest "TransporterConfig not found")
         pure transporterConfig.timeDiffFromUtc,
       findPersonById = \_ -> pure Nothing,
-      findAssignmentsByUserId = \personId -> SLJourney.findAssignmentsByUserId (cast personId),
+      findAssignmentsByUserId = SLJourney.findAssignmentsByUserId . cast,
+      -- UI does not list dashboard memberships; keep opt-in filtered path.
+      findDashboardAssignmentsByUserId = SLJourney.findAssignmentsByUserId . cast,
       findStatsHistoryByPersonId = \personId dayStart dayEnd mbLimit mbOffset ->
         QStats.findHistoryByPersonIdAndCreatedAtRange personId dayStart dayEnd mbLimit mbOffset,
       findStatsByPersonIdAndPeriodKey = \personId periodKey ->
         QStats.findByPersonIdAndPeriodKey personId periodKey,
       findStatsByPersonIdCjmAndPeriodKey = CQStats.findByPersonIdAndCjmAndPeriodKey IJ.DriverActor,
       waiveDriverMilestone = Nothing,
+      inspectOrTriggerStreakEnd = Nothing,
       waiveRiderMilestone = Nothing,
       putBulkAssignCsv = Nothing,
       scheduleBulkUpload = Nothing,
@@ -76,7 +83,13 @@ mkHandle =
         Just $ \locId -> do
           mbLoc <- QSpecialLocation.findById (Id locId)
           pure $ (.locationName) <$> mbLoc,
-      loadJourneyMilestones = SLJourney.loadJourneyMilestones
+      loadJourneyMilestones = SLJourney.loadJourneyMilestones,
+      syncCampaignMembership = Just $ \personId mbPayload -> do
+        MgCampaignSync.syncCampaignMembership personId mbPayload
+        FDS.reconcileAutoAssignAfterMgSync personId (fmap (.snapshot) mbPayload),
+      clearCampaignMembership = Just $ \personId cjmId -> do
+        matched <- MgCampaignSync.clearMgOptedInOnDriverInfo personId cjmId
+        when matched $ FDS.onCampaignMembershipCleared (cast personId) (cast cjmId)
     }
 
 getIncentiveJourneyList ::
@@ -87,10 +100,22 @@ getIncentiveJourneyList ::
   Maybe Int ->
   Maybe Int ->
   Flow LibUI.IncentiveJourneyListRes
-getIncentiveJourneyList (mbPersonId, merchantId, merchantOpCityId) =
+getIncentiveJourneyList (mbPersonId, merchantId, merchantOpCityId) mbLimit mbOffset = do
+  -- Non-blocking: attempt closed-period settle without delaying the list response.
+  whenJust mbPersonId $ \personId -> do
+    transporterConfig <-
+      getOneConfig
+        (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+        Nothing
+    whenJust transporterConfig $ \tc ->
+      SLJourney.forkSettleClosedPeriodsForList personId merchantId merchantOpCityId tc
+    -- Non-blocking Assigned tag ensure (OptIn tags only on opt-in; never on assign/bulk).
+    SLJourney.forkEnsureAssignedCampaignTags personId
   LibUIAction.getIncentiveJourneyList
     mkHandle
     (cast <$> mbPersonId, cast merchantId, cast merchantOpCityId)
+    mbLimit
+    mbOffset
 
 getIncentiveJourneyHistory ::
   ( Maybe (Id SP.Person),
@@ -103,5 +128,17 @@ getIncentiveJourneyHistory ::
   Flow LibUI.IncentiveJourneyHistoryRes
 getIncentiveJourneyHistory (mbPersonId, merchantId, merchantOpCityId) =
   LibUIAction.getIncentiveJourneyHistory
+    mkHandle
+    (cast <$> mbPersonId, cast merchantId, cast merchantOpCityId)
+
+postIncentiveJourneyOptIn ::
+  ( Maybe (Id SP.Person),
+    Id DM.Merchant,
+    Id DMOC.MerchantOperatingCity
+  ) ->
+  LibUI.OptInIncentiveJourneyReq ->
+  Flow APISuccess
+postIncentiveJourneyOptIn (mbPersonId, merchantId, merchantOpCityId) =
+  LibUIAction.postIncentiveJourneyOptIn
     mkHandle
     (cast <$> mbPersonId, cast merchantId, cast merchantOpCityId)

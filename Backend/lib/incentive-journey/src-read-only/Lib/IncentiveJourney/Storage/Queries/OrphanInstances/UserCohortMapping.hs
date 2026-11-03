@@ -21,6 +21,10 @@ instance FromTType' Beam.UserCohortMapping Lib.IncentiveJourney.Domain.Types.Use
             createdAt = createdAt,
             enabled = enabled,
             id = Kernel.Types.Id.Id id,
+            optInPeriod = optInPeriod,
+            optedInAt = optedInAt,
+            optedInBy = optedInBy,
+            termsAcceptedAt = termsAcceptedAt,
             updatedAt = updatedAt,
             userId = Kernel.Types.Id.Id userId,
             validTill = validTill
@@ -33,6 +37,10 @@ instance ToTType' Beam.UserCohortMapping Lib.IncentiveJourney.Domain.Types.UserC
         Beam.createdAt = createdAt,
         Beam.enabled = enabled,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.optInPeriod = optInPeriod,
+        Beam.optedInAt = optedInAt,
+        Beam.optedInBy = optedInBy,
+        Beam.termsAcceptedAt = termsAcceptedAt,
         Beam.updatedAt = updatedAt,
         Beam.userId = Kernel.Types.Id.getId userId,
         Beam.validTill = validTill

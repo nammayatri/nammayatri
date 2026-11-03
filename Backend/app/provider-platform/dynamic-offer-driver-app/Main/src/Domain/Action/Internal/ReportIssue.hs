@@ -42,6 +42,7 @@ import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
 import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST

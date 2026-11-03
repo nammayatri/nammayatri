@@ -17,7 +17,9 @@ instance FromTType' Beam.CohortJourneyMapping Lib.IncentiveJourney.Domain.Types.
     pure $
       Just
         Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping
-          { cohortId = Kernel.Types.Id.Id cohortId,
+          { campaignUserLinkType = campaignUserLinkType,
+            cohortId = Kernel.Types.Id.Id cohortId,
+            controlFeatures = controlFeatures,
             createdAt = createdAt,
             enabled = enabled,
             id = Kernel.Types.Id.Id id,
@@ -25,6 +27,7 @@ instance FromTType' Beam.CohortJourneyMapping Lib.IncentiveJourney.Domain.Types.
             maxWaiveOffCount = maxWaiveOffCount,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            parentId = Kernel.Types.Id.Id <$> parentId,
             startDate = startDate,
             streakEndRewardExpirationAt = streakEndRewardExpirationAt,
             streakEndRewardMetadata = streakEndRewardMetadata,
@@ -37,7 +40,9 @@ instance FromTType' Beam.CohortJourneyMapping Lib.IncentiveJourney.Domain.Types.
 instance ToTType' Beam.CohortJourneyMapping Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping where
   toTType' (Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping {..}) = do
     Beam.CohortJourneyMappingT
-      { Beam.cohortId = Kernel.Types.Id.getId cohortId,
+      { Beam.campaignUserLinkType = campaignUserLinkType,
+        Beam.cohortId = Kernel.Types.Id.getId cohortId,
+        Beam.controlFeatures = controlFeatures,
         Beam.createdAt = createdAt,
         Beam.enabled = enabled,
         Beam.id = Kernel.Types.Id.getId id,
@@ -45,6 +50,7 @@ instance ToTType' Beam.CohortJourneyMapping Lib.IncentiveJourney.Domain.Types.Co
         Beam.maxWaiveOffCount = maxWaiveOffCount,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.parentId = Kernel.Types.Id.getId <$> parentId,
         Beam.startDate = startDate,
         Beam.streakEndRewardExpirationAt = streakEndRewardExpirationAt,
         Beam.streakEndRewardMetadata = streakEndRewardMetadata,
