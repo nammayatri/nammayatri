@@ -2,7 +2,9 @@
 
 module SharedCabCallTests (tests) where
 
+import "rider-app" Domain.Types.RiderConfig (SharedCabCallMode (..))
 import "rider-app" SharedLogic.SharedCab.Call (riderCallTarget)
+import "rider-app" SharedLogic.SharedCab.Config (SharedCabTunables (..), activeCallMode, defaultTunables)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -15,7 +17,22 @@ target :: Maybe Bool -> Maybe Bool -> Maybe (Either Ride Cab)
 target ride cab = riderCallTarget ((Ride,) <$> ride) ((Cab,) <$> cab)
 
 tests :: TestTree
-tests =
+tests = testGroup "shared-cab calls" [callTargetTests, callModeTests]
+
+callModeTests :: TestTree
+callModeTests =
+  testGroup
+    "how rider and driver reach each other"
+    [ testCase "calls off: no number either way, whatever the mode" $
+        [activeCallMode defaultTunables {callEnabled = False, callMode = m} | m <- [MASKED, DIRECT]] @?= [Nothing, Nothing],
+      testCase "calls on: the city's mode" $
+        [activeCallMode defaultTunables {callEnabled = True, callMode = m} | m <- [MASKED, DIRECT]] @?= [Just MASKED, Just DIRECT],
+      testCase "a city that only turns calls on gets masked calls" $
+        activeCallMode defaultTunables {callEnabled = True} @?= Just MASKED
+    ]
+
+callTargetTests :: TestTree
+callTargetTests =
   testGroup
     "whose driver a rider's call to the city ExoPhone reaches"
     [ testCase "a rider with a taxi and a live cab who dials the cab's ExoPhone reaches the cab" $

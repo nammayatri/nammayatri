@@ -3,6 +3,7 @@ module SharedLogic.SharedCab.Config
     defaultTunables,
     tunablesFrom,
     getTunables,
+    activeCallMode,
   )
 where
 
@@ -41,6 +42,7 @@ data SharedCabTunables = SharedCabTunables
     maxCabSpeedMps :: Int,
     -- | Masked rider/driver call and per-booking chat; off unless the city's rider_config turns them on.
     callEnabled :: Bool,
+    callMode :: DRC.SharedCabCallMode,
     chatEnabled :: Bool,
     -- | The rider may pick a specific cab; off unless the city's rider_config turns it on.
     pickEnabled :: Bool,
@@ -81,6 +83,7 @@ defaultTunables =
       noLocationSpotBookingsPerVehiclePerDay = 5,
       maxCabSpeedMps = 14,
       callEnabled = False,
+      callMode = DRC.MASKED,
       chatEnabled = False,
       pickEnabled = False,
       interestWindowSec = 10 * 60,
@@ -115,6 +118,7 @@ tunablesFrom (Just rc) =
       noLocationSpotBookingsPerVehiclePerDay = pick rc.sharedCabNoLocationSpotBookingsPerVehiclePerDay (.noLocationSpotBookingsPerVehiclePerDay),
       maxCabSpeedMps = pick rc.sharedCabMaxCabSpeedMps (.maxCabSpeedMps),
       callEnabled = pick rc.sharedCabCallEnabled (.callEnabled),
+      callMode = pick rc.sharedCabCallMode (.callMode),
       chatEnabled = pick rc.sharedCabChatEnabled (.chatEnabled),
       pickEnabled = pick rc.sharedCabPickEnabled (.pickEnabled),
       interestWindowSec = pick rc.sharedCabInterestWindowSec (.interestWindowSec),
@@ -130,3 +134,8 @@ tunablesFrom (Just rc) =
 
 getTunables :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m SharedCabTunables
 getTunables cityId = tunablesFrom <$> getConfig (RiderConfigDimensions {merchantOperatingCityId = cityId.getId}) Nothing
+
+-- | How the rider and the cab's driver reach each other, Nothing while the city's calls are off: MASKED through the city's ExoPhone,
+-- DIRECT on each other's own number. rider-app decides for both sides, so driver-app needs no setting of its own.
+activeCallMode :: SharedCabTunables -> Maybe DRC.SharedCabCallMode
+activeCallMode cfg = if cfg.callEnabled then Just cfg.callMode else Nothing

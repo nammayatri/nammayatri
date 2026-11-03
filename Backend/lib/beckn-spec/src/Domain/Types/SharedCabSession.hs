@@ -104,6 +104,8 @@ data SharedCabRider = SharedCabRider
     expiresAt :: Maybe UTCTime,
     chatChannelId :: Maybe Text,
     callable :: Bool,
+    -- | The rider's own number, only on a callable row in a city whose calls are DIRECT: the driver app dials it instead of the masked call.
+    callNumber :: Maybe Text,
     -- | The rider's rating, one decimal; none when unrated.
     riderRating :: Maybe Double,
     boardStopAddress :: Maybe Text,

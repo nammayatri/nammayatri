@@ -9,6 +9,7 @@ import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import "rider-app" Domain.Types.IntegratedBPPConfig (PlatformType (..))
+import "rider-app" Domain.Types.RiderConfig (SharedCabCallMode (..))
 import "rider-app" SharedLogic.IntegratedBPPConfig (newestNonCab)
 import "rider-app" SharedLogic.SharedCab.Config
 import "rider-app" SharedLogic.SharedCab.Enabled (cabItineraryShown, sharedCabEnabledDecision, tickChainContinues)
@@ -91,6 +92,7 @@ tests =
               noLocationSpotBookingsPerVehiclePerDay = 5,
               maxCabSpeedMps = 14,
               callEnabled = False,
+              callMode = MASKED,
               chatEnabled = False,
               pickEnabled = False,
               interestWindowSec = 600,

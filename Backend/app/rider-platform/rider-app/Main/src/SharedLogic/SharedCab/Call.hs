@@ -5,6 +5,8 @@ module SharedLogic.SharedCab.Call
     cabExophone,
     maskedCallNumber,
     riderCallNumber,
+    personCallNumber,
+    CallFlow,
     liveSessionForRider,
     driverNumberOfSession,
     riderCallTarget,
@@ -98,8 +100,12 @@ riderCallTarget mbRide mbCab = case (mbRide, mbCab) of
 riderCallNumber :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => DFTB.FRFSTicketBooking -> m Text
 riderCallNumber booking = do
   person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  personCallNumber person >>= fromMaybeM SharedCabCallNumberMissing
+
+personCallNumber :: EncFlow m r => DP.Person -> m (Maybe Text)
+personCallNumber person = do
   decrypted <- mapM decrypt person.mobileNumber
-  fromMaybeM SharedCabCallNumberMissing $ (<>) <$> person.mobileCountryCode <*> decrypted
+  pure $ (<>) <$> person.mobileCountryCode <*> decrypted
 
 type CallFlow m r =
   ( CacheFlow m r,

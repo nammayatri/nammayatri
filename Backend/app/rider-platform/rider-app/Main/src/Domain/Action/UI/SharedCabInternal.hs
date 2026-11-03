@@ -22,6 +22,7 @@ import Data.Time (Day, UTCTime (..))
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.RouteStopMapping as DRSM
 import qualified Domain.Types.VehicleTrip as DVT
@@ -312,6 +313,11 @@ liveRiderRows cfg sessionTrip stopPoints polyline addresses plate = do
               mbAlloc >>= \st -> case st.timer of
                 AllocTypes.OfferTimer d -> Just d
                 _ -> Nothing
+        let callable = cfg.callEnabled && onThisTrip b && isNothing offerDeadline
+        callNumber <-
+          if callable && Config.activeCallMode cfg == Just DRC.DIRECT
+            then maybe (pure Nothing) SharedCabCall.personCallNumber (find ((== b.riderId) . (.id)) persons)
+            else pure Nothing
         let minutesAway = case (mbFix, Map.lookup b.fromStationCode pointsByCode) of
               (Just lastFix, Just stopPoint) -> Just $ View.walkMinutesAway (realToFrac (distanceBetweenInMeters lastFix.position stopPoint))
               _ -> Nothing
@@ -329,7 +335,8 @@ liveRiderRows cfg sessionTrip stopPoints polyline addresses plate = do
               expiresAt,
               -- a live row holds a seat on a live cab; a rider boarded on an earlier run of the plate is not this run's rider
               chatChannelId = if cfg.chatEnabled && onThisTrip b && isNothing offerDeadline then Just b.id.getId else Nothing,
-              callable = cfg.callEnabled && onThisTrip b && isNothing offerDeadline,
+              callable,
+              callNumber,
               offerExpiresAt = offerDeadline,
               boardStopAddress = Map.lookup b.fromStationCode addresses,
               dropStopAddress = Map.lookup b.toStationCode addresses,

@@ -215,6 +215,7 @@ data RiderConfig = RiderConfig
     sharedCabBoardAttemptsPer10Min :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabBoardProximityM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabCallEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    sharedCabCallMode :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.SharedCabCallMode,
     sharedCabChatEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sharedCabDegradedTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabDemandStopsPerRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -330,6 +331,8 @@ data ServiceTierRelationshipCfg = ServiceTierRelationshipCfg {canBoardIn :: [Bec
 
 data ServiceTierSource = NANDI | QUOTES deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data SharedCabCallMode = MASKED | DIRECT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notificationMessage :: Kernel.Prelude.Text, notificationTitle :: Kernel.Prelude.Text, vehicleNo :: Kernel.Prelude.Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
@@ -343,3 +346,5 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSTriggerSource)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SharedCabCallMode)

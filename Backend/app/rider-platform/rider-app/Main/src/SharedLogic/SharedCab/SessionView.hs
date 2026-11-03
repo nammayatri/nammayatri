@@ -37,6 +37,7 @@ data RiderRow = RiderRow
     expiresAt :: Maybe UTCTime,
     chatChannelId :: Maybe Text,
     callable :: Bool,
+    callNumber :: Maybe Text,
     -- | Set while the driver has not accepted this rider: the row is an offer, not a rider to board.
     offerExpiresAt :: Maybe UTCTime,
     riderRating :: Maybe Double,
@@ -49,7 +50,7 @@ data RiderRow = RiderRow
 -- | Every rider holding seats, once each, with both stops by name; the app groups them per stop. Open offers are pendingOffersOf's.
 ridersOf :: [(Text, Text)] -> [RiderRow] -> [SharedCabRider]
 ridersOf stops rows =
-  [ SharedCabRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, boardStop = nameOf r.boardStopCode, dropStop = nameOf r.dropStopCode, fare = r.fare, riderStatus = r.riderStatus, minutesAway = r.minutesAway, expiresAt = r.expiresAt, chatChannelId = r.chatChannelId, callable = r.callable, riderRating = r.riderRating, boardStopAddress = r.boardStopAddress, dropStopAddress = r.dropStopAddress, distanceMeters = r.distanceMeters}
+  [ SharedCabRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, boardStop = nameOf r.boardStopCode, dropStop = nameOf r.dropStopCode, fare = r.fare, riderStatus = r.riderStatus, minutesAway = r.minutesAway, expiresAt = r.expiresAt, chatChannelId = r.chatChannelId, callable = r.callable, callNumber = r.callNumber, riderRating = r.riderRating, boardStopAddress = r.boardStopAddress, dropStopAddress = r.dropStopAddress, distanceMeters = r.distanceMeters}
     | r <- rows,
       r.seats > 0,
       isNothing r.offerExpiresAt

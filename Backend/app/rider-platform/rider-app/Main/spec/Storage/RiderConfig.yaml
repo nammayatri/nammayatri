@@ -74,6 +74,8 @@ RiderConfig:
       enum: "STRAIGHT_LINE,MAPS"
     ExternalSOSFlow:
       enum: "ERSS,GJ112,Trinity"
+    SharedCabCallMode:
+      enum: "MASKED,DIRECT"
     ExternalSOSTriggerSource:
       enum: "FRONTEND,DASHBOARD"
     ExternalSOSConfig:
@@ -198,6 +200,7 @@ RiderConfig:
     sharedCabNoLocationSpotBookingsPerVehiclePerDay: Maybe Int
     sharedCabMaxCabSpeedMps: Maybe Int
     sharedCabCallEnabled: Maybe Bool # masked rider/driver call; null or Just False is off
+    sharedCabCallMode: Maybe SharedCabCallMode # with calls on, MASKED dials the ExoPhone, DIRECT each other's own number; null = MASKED
     sharedCabChatEnabled: Maybe Bool # per-booking rider/driver chat; null or Just False is off
     sharedCabDriverAcceptEnabled: Maybe Bool # a driver accepts or declines each newly allocated rider; null or Just False is off
     sharedCabOfferTimeoutSec: Maybe Int # seconds to answer the first offer to a booking; null = 30

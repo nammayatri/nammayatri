@@ -212,6 +212,7 @@ data RiderConfigT f = RiderConfigT
     sharedCabBoardAttemptsPer10Min :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     sharedCabBoardProximityM :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     sharedCabCallEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    sharedCabCallMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.RiderConfig.SharedCabCallMode),
     sharedCabChatEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     sharedCabDegradedTimeoutSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     sharedCabDemandStopsPerRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
