@@ -10,7 +10,7 @@ import Data.IORef (modifyIORef, newIORef, readIORef)
 import Data.Time (UTCTime (..), fromGregorian)
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
-import "rider-app" SharedLogic.SharedCab.WalkUp (CodeResolution (..), cabRouteServiceTier, cabRouteStations, declaresSharedCab, enabledCabConfig, isSharedCabTier, isStickerCode, passingCab, resolveCode, stopPairLegs, withoutCabRows)
+import "rider-app" SharedLogic.SharedCab.WalkUp (CodeResolution (..), cabRouteServiceTier, cabRouteStations, cabRouteView, declaresSharedCab, enabledCabConfig, isSharedCabTier, isStickerCode, passingCab, resolveCode, stopPairLegs, withoutCabRows)
 import qualified "rider-app" Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -60,6 +60,10 @@ tests =
               (\ApiFRFS.FRFSStationAPI {ApiFRFS.code = c, ApiFRFS.sequenceNum = n, ApiFRFS.lat = la, ApiFRFS.routeCodes = rc} -> (c, n, la, rc))
               (cabRouteStations (Id "ibc") "SC-A-F" Nothing "A to C" [("C", "Charlie", 3, LatLong 25.3 91.3), ("A", "Alpha", 1, LatLong 25.1 91.1), ("B", "Bravo", 2, LatLong 25.2 91.2)])
               @?= [("A", Just 1, Just 25.1, Just ["SC-A-F"]), ("B", Just 2, Just 25.2, Just ["SC-A-F"]), ("C", Just 3, Just 25.3, Just ["SC-A-F"])],
+          testCase "a cab route's shape is its polyline when it has one, else its stops in order, and nothing with neither" $
+            let stops = [("B", "Bravo", 2, LatLong 25.2 91.2), ("A", "Alpha", 1, LatLong 25.1 91.1)]
+                shape s p = snd (cabRouteView (Id "ibc") "SC-A-B" Nothing "A to B" s p)
+             in [shape stops (Just [LatLong 1 1]), shape stops Nothing, shape [] Nothing] @?= [Just [LatLong 1 1], Just [LatLong 25.1 91.1, LatLong 25.2 91.2], Nothing],
           testCase "four digits only" $ map isStickerCode ["9999", "ML05", "99999", "999", ""] @?= [True, False, False, False, False]
         ]
     ]

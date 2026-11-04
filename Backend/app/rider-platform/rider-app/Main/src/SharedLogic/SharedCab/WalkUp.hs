@@ -10,6 +10,7 @@ module SharedLogic.SharedCab.WalkUp
     declaresSharedCab,
     isSharedCabTier,
     cabRouteStations,
+    cabRouteView,
     isStickerCode,
     findSharedCabConfig,
     enabledCabConfig,
@@ -25,6 +26,7 @@ import qualified API.Types.UI.FRFSTicketService as ApiFRFS
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
+import Control.Applicative ((<|>))
 import qualified Data.Char as Char
 import Data.Either (partitionEithers)
 import Data.List (nub, sortOn)
@@ -124,6 +126,13 @@ cabRouteStations integratedBppConfigId routeCode color longName stops =
       }
     | (code, name, sequenceNum, point) <- sortOn (\(_, _, sequenceNum, _) -> sequenceNum) stops
   ]
+
+-- | A cab route's stops and map shape: the route's own polyline when it has one, else a line through its stops.
+cabRouteView :: Id DIBC.IntegratedBPPConfig -> Text -> Maybe Text -> Text -> [(Text, Text, Int, LatLong)] -> Maybe [LatLong] -> ([ApiFRFS.FRFSStationAPI], Maybe [LatLong])
+cabRouteView integratedBppConfigId routeCode color longName stops polyline =
+  ( cabRouteStations integratedBppConfigId routeCode color longName stops,
+    polyline <|> if null stops then Nothing else Just [point | (_, _, _, point) <- sortOn (\(_, _, sequenceNum, _) -> sequenceNum) stops]
+  )
 
 liveSharedCabByCode :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow CodeResolution
 liveSharedCabByCode integratedBppConfig code = do

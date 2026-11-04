@@ -310,11 +310,12 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
           Nothing -> return []
       else return []
 
-  -- a shared-cab route has no scheduled trip, so its stops (and the shape through them, as the LTS route geojson draws it) come from the stop mapping
-  let cabStops = [(s.stopCode, s.stopName, s.sequenceNum, s.stopPoint) | SharedCab.isSharedCabAgency integratedBPPConfig.agencyKey, s <- stopsSortedBySequenceNumber]
-      stations = if null stops && not (null cabStops) then SharedCab.cabRouteStations integratedBPPConfig.id route.code route.color route.longName cabStops else map snd stops
-      polylineWaypoints = route.polyline <&> decode <&> fmap (\point -> LatLong {lat = point.latitude, lon = point.longitude})
-      waypoints' = polylineWaypoints <|> (if null cabStops then Nothing else Just [point | (_, _, _, point) <- cabStops])
+  let polylineWaypoints = route.polyline <&> decode <&> fmap (\point -> LatLong {lat = point.latitude, lon = point.longitude})
+      -- a shared-cab route has no scheduled trip: its stops and shape come from the stop mapping
+      (stations, waypoints')
+        | SharedCab.isSharedCabAgency integratedBPPConfig.agencyKey =
+          SharedCab.cabRouteView integratedBPPConfig.id route.code route.color route.longName [(s.stopCode, s.stopName, s.sequenceNum, s.stopPoint) | s <- stopsSortedBySequenceNumber] polylineWaypoints
+        | otherwise = (map snd stops, polylineWaypoints)
   return $
     FRFSTicketService.FRFSRouteAPI
       { code = route.code,

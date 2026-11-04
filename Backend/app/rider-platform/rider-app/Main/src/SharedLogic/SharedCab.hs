@@ -18,6 +18,7 @@ module SharedLogic.SharedCab
     withoutCabRows,
     cabRouteServiceTier,
     cabRouteStations,
+    cabRouteView,
     SharedCabConfirmFlow,
     onBookingCreated,
     recordPreferredCab,
@@ -50,4 +51,4 @@ import SharedLogic.SharedCab.LegState (isSharedCabAgency, legAgencyGtfsId, searc
 import SharedLogic.SharedCab.RefundDecision (Refund, cancelRefund, isSharedCabBooking, refundAmounts, refundWithheld)
 import SharedLogic.SharedCab.RouteSnapshot (filterCabLegs)
 import SharedLogic.SharedCab.Schedule (keepChainsAlive)
-import SharedLogic.SharedCab.WalkUp (cabRouteServiceTier, cabRouteStations, declaresSharedCab, isSharedCabTier, routeServiceability, trackStopRoutes, walkUpCab, withoutCabRows)
+import SharedLogic.SharedCab.WalkUp (cabRouteServiceTier, cabRouteStations, cabRouteView, declaresSharedCab, isSharedCabTier, routeServiceability, trackStopRoutes, walkUpCab, withoutCabRows)
