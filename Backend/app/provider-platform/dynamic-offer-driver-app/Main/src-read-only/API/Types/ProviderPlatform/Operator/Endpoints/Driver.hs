@@ -67,7 +67,8 @@ data DriverInfo = DriverInfo
     approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     verified :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    documents :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.StatusRes
+    documents :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.StatusRes,
+    isDriverOnRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
