@@ -300,19 +300,20 @@ refreshJourneyLegDataOnReschedule oldLeg newSearchId stagingBooking tripId newRo
             DRouteDetails.trackingStatusLastUpdatedAt = Just now,
             DRouteDetails.updatedAt = now
           }
-      -- (3) journey row: start/end/duration reflect the new trip
-      mkNewJourney journey =
-        journey
-          { DJourney.startTime = Just boardingT,
-            DJourney.endTime = Just alightingT,
-            DJourney.estimatedDuration = Just . Seconds . round $ diffUTCTime alightingT boardingT,
-            DJourney.updatedAt = now
-          }
+      -- (3) journey row: start/end/duration reflect the new trip; a rescheduled trip is not over, so its status follows the new departure
+      rescheduledStatus journey
+        | journey.status `elem` [DJourney.CANCELLED, DJourney.FAILED, DJourney.EXPIRED] = journey.status
+        | now < boardingT = DJourney.CONFIRMED
+        | otherwise = DJourney.INPROGRESS
+      writeNewJourney journey =
+        QJourney.updateTripTimesAndStatus (rescheduledStatus journey) (Just boardingT) (Just alightingT) (Just . Seconds . round $ diffUTCTime alightingT boardingT) journey.id
+      restoreJourney journey =
+        QJourney.updateTripTimesAndStatus journey.status journey.startTime journey.endTime journey.estimatedDuration journey.id
   eWrite <-
     withTryCatch "FRFSReschedule:refreshJourneyLegDataOnReschedule:writes" $ do
       QJourneyLeg.updateByPrimaryKey newLeg
       forM_ oldRouteDetails (QRouteDetails.updateByPrimaryKey . mkNewRouteDetail)
-      whenJust mbOldJourney (QJourney.updateByPrimaryKey . mkNewJourney)
+      whenJust mbOldJourney writeNewJourney
   -- (4) invalidate the legSearchId -> journeyId cache for both the old and the new search (either outcome)
   let clearCaches = whenJust oldLeg.legSearchId CQJourneyLeg.clearCache >> CQJourneyLeg.clearCache newSearchId.getId
   case eWrite of
@@ -326,7 +327,7 @@ refreshJourneyLegDataOnReschedule oldLeg newSearchId stagingBooking tripId newRo
         withTryCatch "FRFSReschedule:refreshJourneyLegDataOnReschedule:restore" $ do
           QJourneyLeg.updateByPrimaryKey oldLeg
           forM_ oldRouteDetails QRouteDetails.updateByPrimaryKey
-          whenJust mbOldJourney QJourney.updateByPrimaryKey
+          whenJust mbOldJourney restoreJourney
       clearCaches
       throwError $ InternalError $ "refreshJourneyLegDataOnReschedule failed and old leg data was restored: " <> show err
 

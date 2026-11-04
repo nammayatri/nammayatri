@@ -38,6 +38,15 @@ apis:
       response:
         type: "Kernel.Types.APISuccess.APISuccess"
   - POST:
+      endpoint: /frfs/trip/{tripId}/notifyTripEnded
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        tripId: Text
+      response:
+        type: "Kernel.Types.APISuccess.APISuccess"
+  - POST:
       endpoint: /frfs/trip/{tripId}/stop/{stopCode}/notifyApproaching
       auth: NoAuth
       headers:

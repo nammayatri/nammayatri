@@ -1,6 +1,7 @@
 module Domain.Action.UI.FRFSInternal
   ( getFrfsTripRouteManifest,
     postFrfsTripNotifyTripStarted,
+    postFrfsTripNotifyTripEnded,
     postFrfsTripStopNotifyApproaching,
     postMultimodalTicketVerify,
   )
@@ -40,6 +41,17 @@ postFrfsTripNotifyTripStarted tripId mbToken = do
   unless (Just internalAPIKey == mbToken) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   fork ("notifyBusTripStartedForTrip" <> tripId) (FRFSTicketService.notifyBusTripStartedForTrip tripId)
+  pure APISuccess.Success
+
+postFrfsTripNotifyTripEnded ::
+  Text ->
+  Maybe Text ->
+  Environment.Flow APISuccess.APISuccess
+postFrfsTripNotifyTripEnded tripId mbToken = do
+  internalAPIKey <- asks (.internalAPIKey)
+  unless (Just internalAPIKey == mbToken) $
+    throwError $ AuthBlocked "Invalid BPP internal api key"
+  fork ("handleBusTripEndedForTrip" <> tripId) (FRFSTicketService.handleBusTripEndedForTrip tripId)
   pure APISuccess.Success
 
 postFrfsTripStopNotifyApproaching ::

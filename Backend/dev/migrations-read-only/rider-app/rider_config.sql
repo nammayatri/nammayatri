@@ -950,3 +950,12 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_xyne_support_bot boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN flow_status_unpaid_journey_window_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN flow_status_stale_journey_lookback_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN flow_status_live_journey_window_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN flow_status_feedback_window_sec integer ;

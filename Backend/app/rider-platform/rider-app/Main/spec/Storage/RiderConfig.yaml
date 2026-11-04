@@ -258,6 +258,10 @@ RiderConfig:
     sourceOfServiceTier: ServiceTierSource
     domainRouteCalculationEnabledModes: "Maybe [GeneralVehicleType]"
     upcomingBusThresholdSec: Maybe Seconds
+    flowStatusLiveJourneyWindowSec: Maybe Seconds
+    flowStatusFeedbackWindowSec: Maybe Seconds
+    flowStatusUnpaidJourneyWindowSec: Maybe Seconds
+    flowStatusStaleJourneyLookbackSec: Maybe Seconds
     serviceTierRelationshipCfg: "Maybe [ServiceTierRelationshipCfg]"
     busScanRouteCalculationEnabledModes: "Maybe Bool"
     trackVehicleKeyExpiry: Maybe Int

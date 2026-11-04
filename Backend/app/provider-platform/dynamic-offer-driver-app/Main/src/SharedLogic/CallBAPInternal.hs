@@ -567,6 +567,36 @@ notifyFrfsTripStarted apiKey internalUrl tripId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsNotifyTripStartedClient tripId (Just apiKey)) "NotifyFrfsTripStarted" frfsNotifyTripStartedAPI
 
+type FrfsNotifyTripEndedAPI =
+  "internal"
+    :> "frfs"
+    :> "trip"
+    :> Capture "tripId" Text
+    :> "notifyTripEnded"
+    :> Header "token" Text
+    :> Post '[JSON] APISuccess
+
+frfsNotifyTripEndedClient :: Text -> Maybe Text -> EulerClient APISuccess
+frfsNotifyTripEndedClient = client (Proxy @FrfsNotifyTripEndedAPI)
+
+frfsNotifyTripEndedAPI :: Proxy FrfsNotifyTripEndedAPI
+frfsNotifyTripEndedAPI = Proxy
+
+notifyFrfsTripEnded ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m APISuccess
+notifyFrfsTripEnded apiKey internalUrl tripId = do
+  logInfo $ "CallBAPInternal: Notifying FRFS trip ended for tripId: " <> tripId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsNotifyTripEndedClient tripId (Just apiKey)) "NotifyFrfsTripEnded" frfsNotifyTripEndedAPI
+
 -- Toll charge approval (BPP -> BAP): the BAP owns the rider, so it delivers the prompt.
 
 type RequestTollChargeApprovalAPI =
