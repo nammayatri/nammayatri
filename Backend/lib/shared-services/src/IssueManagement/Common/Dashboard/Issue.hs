@@ -535,7 +535,10 @@ data IssueOptionDetailRes = IssueOptionDetailRes
     priority :: Int,
     isActive :: Bool,
     translations :: [Translation],
-    childMessages :: [IssueMessageDetailRes]
+    childMessages :: [IssueMessageDetailRes],
+    restrictedVariants :: [VehicleVariant],
+    restrictedRideStatuses :: [RideStatus],
+    showOnlyWhenUserBlocked :: Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
