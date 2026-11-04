@@ -339,7 +339,7 @@ activateScheduledRideAtPickup ::
   m APISuccess
 activateScheduledRideAtPickup activator rideId driverLocation = do
   (ride, booking, driver, vehicle, transporterConfig) <- validateScheduledRideActivationAtPickup activator rideId driverLocation
-  ScheduledRideAssignedOnUpdate.activateScheduledRide ride.driverId booking.id booking ride driver vehicle transporterConfig (Just driverLocation)
+  ScheduledRideAssignedOnUpdate.activateScheduledRide ride.driverId booking.id booking ride driver vehicle transporterConfig
   pure Success
 
 validateScheduledRideActivationAtPickup ::
