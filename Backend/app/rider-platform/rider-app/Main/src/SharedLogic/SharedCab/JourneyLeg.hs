@@ -18,6 +18,7 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Trip as DTrip
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
@@ -36,6 +37,7 @@ import SharedLogic.SharedCab.BookingState (readBookingState)
 import qualified SharedLogic.SharedCab.Call as SharedCabCall
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as SharedCabDegraded
+import SharedLogic.SharedCab.Interest (bestEffort)
 import qualified SharedLogic.SharedCab.LegState as SharedCabLeg
 import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
@@ -55,7 +57,7 @@ liveCabLegCities legs = nub [d.merchantOperatingCityId | d <- datas, Just cab <-
 type CabTrack = (SharedCabLeg.CabPosition, Maybe Int, Maybe Int)
 
 getSharedCabLegState ::
-  LegFlow m r =>
+  (LegFlow m r, SharedCabCall.CallFlow m r) =>
   UTCTime ->
   [APITypes.RiderLocationReq] ->
   DJourneyLeg.JourneyLeg ->
@@ -101,10 +103,14 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
           }
   -- how many cabs run the route matters only while the rider waits for one
   cabsComing <- case mbRouteCode of
-    Just routeCode | mbState == Just SharedCabLeg.FINDING -> length <$> RouteSnapshot.routeSnapshot routeCode
+    Just routeCode | mbState == Just SharedCabLeg.FINDING -> length <$> RouteSnapshot.routeSnapshot booking.merchantOperatingCityId routeCode
     _ -> pure 0
   let inWindow = isJust tripSession && maybe False SharedCabLeg.callWindowState mbState
-  maskedCall <- if cfg.callEnabled && inWindow then SharedCabCall.maskedCallNumber booking.merchantOperatingCityId else pure Nothing
+  -- DIRECT puts the driver's own number where the app already reads the ExoPhone; a failed driver-app read must not fail the poll
+  maskedCall <- case (Config.activeCallMode cfg, tripSession) of
+    (Just DRC.MASKED, Just _) | inWindow -> SharedCabCall.maskedCallNumber booking.merchantOperatingCityId
+    (Just DRC.DIRECT, Just s) | inWindow -> bestEffort (logError . ("shared-cab driver number lookup failed: " <>)) (SharedCabCall.driverNumberOfSession s)
+    _ -> pure Nothing
   let chatChannel = if cfg.chatEnabled && inWindow then Just booking.id.getId else Nothing
   -- where the rider is while a cab is on its way decides the blame if it passes the stop
   when (mbState == Just SharedCabLeg.ALLOCATED) $
@@ -121,17 +127,18 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
       skipAvailable = maybe False (\st -> SharedCabLeg.skipAvailableFor st skipUsed assignedEtaSec) mbState
   upcomingCabs <- case (shown, mbRouteCode) of
     (Just plate, Just routeCode) | approaching -> do
-      snapshot <- RouteSnapshot.routeSnapshot routeCode
+      snapshot <- RouteSnapshot.routeSnapshot booking.merchantOperatingCityId routeCode
       let approachingCabs =
             [ (c, etaSec)
               | c <- snapshot,
                 plate /= c.session.vehicleNumber,
                 Just etaSec <- [Approach.plausibleEtaFrom now cfg booking.fromStationCode =<< c.track]
             ]
-      forM (SharedCabLeg.nearestAfter snd assignedEtaSec approachingCabs) $ \(c, etaSec) -> do
-        seats <- SharedCabSeats.cabSeats c.session
-        let freeSeats = maybe 0 (SharedCabSeats.freeOverBitmaps (RouteSnapshot.cabBitmapsOf c)) (SharedCabSeats.bookingRange seats booking.fromStationCode booking.toStationCode)
-        pure SharedCabLeg.UpcomingCab {cabId = c.session.vehicleTripId.getId, etaSec, freeSeats}
+      pure
+        [ SharedCabLeg.UpcomingCab {cabId = c.session.vehicleTripId.getId, etaSec, freeSeats}
+          | (c, etaSec) <- SharedCabLeg.nearestAfter snd assignedEtaSec approachingCabs,
+            let freeSeats = maybe 0 (SharedCabSeats.freeOver c.seats) (SharedCabSeats.bookingRange c.seats booking.fromStationCode booking.toStationCode)
+        ]
     _ -> pure []
   pure $
     JT.Single

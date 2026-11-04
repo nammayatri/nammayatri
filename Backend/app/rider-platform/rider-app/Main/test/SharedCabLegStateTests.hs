@@ -34,7 +34,15 @@ tests :: TestTree
 tests =
   testGroup
     "shared-cab leg state"
-    [ testGroup
+    [ testCase "a bus leg stores and is searched by main's values (feed key, agency name); only a cab leg uses its agency key" $
+        ( legAgencyGtfsId "chennai_bus:MTC" "chennai_bus",
+          legAgencyGtfsId "shillong_shared_cab:SHARED_CAB" "shillong_shared_cab",
+          searchAgencyKey (Just MultiModalTypes.MultiModalAgency {MultiModalTypes.name = "MTC", MultiModalTypes.gtfsId = Just "chennai_bus:MTC"}),
+          searchAgencyKey (Just MultiModalTypes.MultiModalAgency {MultiModalTypes.name = "Shared Cab", MultiModalTypes.gtfsId = Just "shillong_shared_cab:SHARED_CAB"}),
+          searchAgencyKey Nothing
+        )
+          @?= ("chennai_bus", "shillong_shared_cab:SHARED_CAB", Just "MTC", Just "shillong_shared_cab:SHARED_CAB", Nothing),
+      testGroup
         "search gate: shared-cab leg detection"
         [ testCase "SHARED_CAB agency" $ isSharedCabAgency "shillong_shared_cab:SHARED_CAB" @?= True,
           testCase "bus agency" $ isSharedCabAgency "chennai_bus:MTC" @?= False,
@@ -59,6 +67,11 @@ tests =
           testCase "a lone cab leg is" $ onlyTransitLeg [DTrip.SharedCab] @?= True,
           testCase "a cab leg beside a bus leg is not" $ onlyTransitLeg [DTrip.SharedCab, DTrip.Walk, DTrip.Bus] @?= False,
           testCase "a journey of walks only has none" $ onlyTransitLeg [DTrip.Walk, DTrip.Walk] @?= False
+        ],
+      testGroup
+        "waybill refresh"
+        [ testCase "a waybill moves a bus or metro booking, never a shared cab's plate" $
+            map waybillMovesBooking [DTrip.Bus, DTrip.Metro, DTrip.SharedCab] @?= [True, True, False]
         ],
       testGroup
         "driver info beside the session"

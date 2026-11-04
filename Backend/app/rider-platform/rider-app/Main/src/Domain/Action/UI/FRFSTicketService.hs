@@ -1029,7 +1029,8 @@ postFrfsQuoteV2ConfirmWithTimeAPI (mbPersonId, merchantId) quoteId mbIsMockPayme
             quoteCategories
 
   quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
-  whenJust req.cabId $ SharedCab.stagePickedCab quote.searchId.getId
+  -- the confirm's own owner check runs later; until then nothing is staged on another rider's search
+  when (personId == quote.riderId) $ whenJust req.cabId $ SharedCab.stagePickedCab quote.searchId.getId
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
 
   -- Apply rate limit only when seats will actually be held (manual selection or auto-assign)
@@ -1311,14 +1312,15 @@ cancelFRFSTicketBooking booking = do
   void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.FAILED "cancelled_by_application" booking
 
 postFrfsBookingCanCancel :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow APISuccess.APISuccess
-postFrfsBookingCanCancel (_, merchantId) bookingId = do
+postFrfsBookingCanCancel (mbPersonId, merchantId) bookingId = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid ticketBookingId")
+  unless (mbPersonId == Just ticketBooking.riderId) $ throwError AccessDenied
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show ticketBooking.merchantOperatingCityId)
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
   mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision ticketBooking
-  SharedCab.guardRiderCancel SharedCab.SoftCancel ticketBooking $ do
-    mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.SOFT_CANCEL CallExternalBPP.UserInitiated True mbLiveDecision ticketBooking
+  SharedCab.guardRiderCancel SharedCab.SoftCancel ticketBooking $ \mbRefund -> do
+    mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.SOFT_CANCEL CallExternalBPP.UserInitiated True mbLiveDecision mbRefund ticketBooking
     whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, fareParameters, updatedBooking) ->
       FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode fareParameters
   return APISuccess.Success
@@ -1349,14 +1351,15 @@ getFrfsBookingCanCancelStatus _ bookingId = do
       }
 
 postFrfsBookingCancel :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow APISuccess.APISuccess
-postFrfsBookingCancel (_, merchantId) bookingId = do
+postFrfsBookingCancel (mbPersonId, merchantId) bookingId = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  unless (mbPersonId == Just ticketBooking.riderId) $ throwError AccessDenied
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (InvalidRequest $ "Invalid merchant operating city id" <> ticketBooking.merchantOperatingCityId.getId)
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
   mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision ticketBooking
-  SharedCab.guardRiderCancel SharedCab.ConfirmCancel ticketBooking $ do
-    mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL CallExternalBPP.UserInitiated True mbLiveDecision ticketBooking
+  SharedCab.guardRiderCancel SharedCab.ConfirmCancel ticketBooking $ \mbRefund -> do
+    mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL CallExternalBPP.UserInitiated True mbLiveDecision mbRefund ticketBooking
     whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, fareParameters, updatedBooking) -> do
       FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode fareParameters
       FRFSCancelJourney.cancelJourney updatedBooking

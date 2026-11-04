@@ -1,0 +1,128 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  CallRes: Domain.Action.UI.Call
+  GetCallStatusRes: Domain.Action.UI.Call
+  CallStatus: Domain.Types.CallStatus
+  SharedCabDemandResp: Domain.Types.SharedCabSession
+  SharedCabRouteDataResp: Domain.Types.SharedCabSession
+  SharedCabSession: Domain.Types.SharedCabSession
+
+module: SharedCab
+
+types:
+  SharedCabDemandReq:
+    routeCodes: "[Text]"
+    derive: "Show,Eq"
+
+  SelectRouteMode:
+    enum: "AfterLastDrop,Force"
+    derive': "Show, Eq, Generic, ToSchema"
+
+  SharedCabRouteOperation:
+    enum: "SELECT_ROUTE,RETURN_TRIP,CHANGE_ROUTE,END_ROUTE"
+
+  SharedCabRouteOperationReq:
+    operation: SharedCabRouteOperation
+    routeCode: Maybe Text
+    walkupCount: Maybe Int
+    mode: Maybe SelectRouteMode
+    atLastStop: Maybe Bool
+    forceEnd: Maybe Bool
+    derive': "Show, Eq, Generic, ToSchema"
+
+  AffectedRider:
+    bookingId: Text
+    dropStop: Text
+    firstName: Text
+    derive: "Show,Eq"
+
+  SelectRouteResp:
+    affectedRiders: Maybe [AffectedRider]
+    session: Maybe SharedCabSession
+    derive: "Show,Eq"
+
+  SharedCabSessionOperation:
+    enum: "SET_SEATS,RESUME,CAB_FULL"
+
+  SharedCabSessionOperationReq:
+    operation: SharedCabSessionOperation
+    version: Maybe Int
+    walkupCount: Maybe Int
+    derive: "Show,Eq"
+
+  SharedCabBookingOperation:
+    enum: "ACCEPT,DECLINE,CANCEL,BOARDED_WITHOUT_CODE,DROPPED"
+
+  SharedCabBookingOperationReq:
+    operation: SharedCabBookingOperation
+    reason: Maybe Text
+    derive: "Show,Eq"
+
+  SharedCabMessageReq:
+    message: Text
+    derive: "Show,Eq"
+
+apis:
+  - GET:
+      endpoint: /publicTransport/data
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: SharedCabRouteDataResp
+  - POST:
+      endpoint: /sharedCab/routes/demand
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: SharedCabDemandReq
+      response:
+        type: SharedCabDemandResp
+  - POST:
+      endpoint: /sharedCab/route/operations
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: SharedCabRouteOperationReq
+      response:
+        type: SelectRouteResp
+  - GET:
+      endpoint: /sharedCab/session
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "(Kernel.Prelude.Maybe Domain.Types.SharedCabSession.SharedCabSession)"
+  - POST:
+      endpoint: /sharedCab/session/operations
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: SharedCabSessionOperationReq
+      response:
+        type: SharedCabSession
+  - POST:
+      endpoint: /sharedCab/booking/{bookingId}/operations
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        bookingId: Text
+      request:
+        type: SharedCabBookingOperationReq
+      response:
+        type: SharedCabSession
+  - POST:
+      endpoint: /sharedCab/booking/{bookingId}/call
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        bookingId: Text
+      response:
+        type: CallRes
+  - POST:
+      endpoint: /sharedCab/booking/{bookingId}/message
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        bookingId: Text
+      request:
+        type: SharedCabMessageReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /sharedCab/call/{callId}/status
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        callId: Id CallStatus
+      response:
+        type: GetCallStatusRes

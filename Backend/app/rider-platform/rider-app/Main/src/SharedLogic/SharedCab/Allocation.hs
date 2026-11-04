@@ -31,7 +31,7 @@ import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, 
 import SharedLogic.SharedCab.Allocation.Reallocate (Closed (..), afterClose, closeAllocation, closeLocked)
 import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), PreferenceLoss (..), PreferenceVerdict (..), RankedCandidate, allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, onlyPreferred, preferenceVerdict, silentCab, skippedWhileFinding, withRoomFor, withoutSkipped)
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (cityLiveWindowSec, liveSince, partyOf, partySizes, plateLiveWindowSec, withBookingLock)
+import SharedLogic.SharedCab.Booking (cityLiveWindowSec, liveSince, partyOf, partySizes, plateBookings, withBookingLock)
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
@@ -96,8 +96,7 @@ type ClosedUnboarded = (Config.SharedCabTunables, Id DFTB.FRFSTicketBooking, Clo
 -- | The closes of `releaseUnboarded`, each under its booking lock and nothing else, so a caller holding the plate lock may run them.
 closeUnboarded :: AllocFlow m r => Text -> AllocationOutcome -> m [ClosedUnboarded]
 closeUnboarded plate outcome = do
-  now <- getCurrentTime
-  live <- QFRFSTicketBooking.findSharedCabPlateUpdatedSince plate [CONFIRMED] (liveSince plateLiveWindowSec now) >>= liveBookingsOf
+  live <- plateBookings [plate] [CONFIRMED] >>= liveBookingsOf
   fmap catMaybes . forM [lb.booking | lb <- live, isJust (allocatedPlate lb)] $ \b -> do
     cfg <- Config.getTunables b.merchantOperatingCityId
     fmap (cfg,b.id,) <$> withBookingLock b.id (closeLocked cfg b.id plate outcome)
@@ -130,7 +129,7 @@ claimPass cityId = do
     cfg <- Config.getTunables cityId
     now <- getCurrentTime
     (live, positionsByRoute) <- readCity cityId
-    claimFindings cfg now live positionsByRoute
+    claimFindings cityId cfg now live positionsByRoute
 
 type RoutePositions = [(Text, [LT.VehicleTrackingOnRouteResp])]
 
@@ -146,7 +145,7 @@ allocationPass cityId = do
   now <- getCurrentTime
   (live, positionsByRoute) <- readCity cityId
   closeExpired cfg now live positionsByRoute
-  when enabled $ claimFindings cfg now live positionsByRoute
+  when enabled $ claimFindings cityId cfg now live positionsByRoute
   pure (live, positionsByRoute)
 
 -- | The city's live bookings and the LTS positions of every route that has one waiting for, or holding, a cab.
@@ -169,8 +168,8 @@ closeExpired cfg now live positionsByRoute = expireTimers cfg now movingOn silen
     movingOn plate route = movingCab now cfg.ltsMaxAgeSec plate (onRoute route)
     silentOn plate route = silentCab now cfg.ltsMaxAgeSec plate (onRoute route)
 
-claimFindings :: AllocFlow m r => Config.SharedCabTunables -> UTCTime -> [LiveBooking] -> RoutePositions -> m ()
-claimFindings cfg now live positionsByRoute = do
+claimFindings :: AllocFlow m r => Id DMOC.MerchantOperatingCity -> Config.SharedCabTunables -> UTCTime -> [LiveBooking] -> RoutePositions -> m ()
+claimFindings cityId cfg now live positionsByRoute = do
   parties <- partySizes (map (.booking) (filter isFinding live)) -- one query for the tick; a party needs all its seats
   findings <- forM (mapMaybe (\lb -> (lb.booking,) <$> findingOf (partyOf parties) lb) live) $ \(b, fb) -> do
     since <- readFindingSince fb.bookingId fb.findingSince
@@ -178,17 +177,15 @@ claimFindings cfg now live positionsByRoute = do
   pushTimeFallbacks cfg now findings
   forM_ (groupAllOn (.routeCode) (map snd findings)) $ \(routeCode, bookings) ->
     whenJust (lookup routeCode positionsByRoute) $ \positions -> do
-      snapshot <- RouteSnapshot.routeSnapshot routeCode
+      snapshot <- RouteSnapshot.routeSnapshot cityId routeCode
       let sessions = map (.session) snapshot
-      -- the route's stops in sequence, shared by its cabs
-      routeSeats <- traverse Seats.cabSeats (listToMaybe sessions)
       flip (eachIsolated (withTryCatch "sharedCabClaim") failed) bookings $ \booking -> do
         attempts <- readAttempts booking.bookingId
         skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> readSkipped booking.bookingId
         let freeFor s = fromMaybe 0 $ do
               cab <- find ((== s.vehicleNumber) . (.session.vehicleNumber)) snapshot
-              range <- routeSeats >>= \seats -> Seats.bookingRange seats booking.boardStopCode booking.dropStopCode
-              pure (Seats.freeOverBitmaps (RouteSnapshot.cabBitmapsOf cab) range)
+              range <- Seats.bookingRange cab.seats booking.boardStopCode booking.dropStopCode
+              pure (Seats.freeOver cab.seats range)
             roomy = withRoomFor freeFor booking.seats (eligibleCandidates now cfg positions sessions booking)
         candidates <- narrowToPreferred cfg now sessions booking (withoutSkipped skipped roomy)
         void $ claimFirst cfg booking candidates

@@ -2086,11 +2086,11 @@ tripIdForServiceTier :: Maybe Spec.ServiceTierType -> Maybe Text -> Maybe Text
 tripIdForServiceTier (Just Spec.SHARED_CAB) _ = Nothing
 tripIdForServiceTier _ mbTripId = mbTripId
 
--- | A shared cab gets its plate from allocation. The only booking born with one is a spot booking made from inside the cab;
+-- | A shared cab gets its plate from allocation. The only booking created with one is a spot booking made from inside the cab;
 -- any other plate would skip allocation and claim a seat.
-birthVehicleNumber :: Maybe Spec.ServiceTierType -> Bool -> Maybe Text -> Maybe Text
-birthVehicleNumber (Just Spec.SHARED_CAB) False _ = Nothing
-birthVehicleNumber _ _ mbVehicleNumber = mbVehicleNumber
+vehicleNumberForServiceTier :: Maybe Spec.ServiceTierType -> Bool -> Maybe Text -> Maybe Text
+vehicleNumberForServiceTier (Just Spec.SHARED_CAB) False _ = Nothing
+vehicleNumberForServiceTier _ _ mbVehicleNumber = mbVehicleNumber
 
 riderSpendKey :: Id DP.Person -> Text
 riderSpendKey personId = "rider:spend:" <> personId.getId

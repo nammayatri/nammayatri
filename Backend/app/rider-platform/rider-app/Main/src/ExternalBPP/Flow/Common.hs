@@ -47,7 +47,7 @@ import Lib.JourneyModule.Types (mkRouteDetail)
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.FRFSLiveTrip as FRFSLiveTrip
 import SharedLogic.FRFSUtils
-import SharedLogic.SharedCab (Refund, isSharedCabAgency, refundAmounts)
+import SharedLogic.SharedCab (Refund, isSharedCabAgency, legAgencyGtfsId, refundAmounts)
 import qualified Storage.CachedQueries.FRFSCancellationConfig as CQFRFSCancellationConfig
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -360,7 +360,7 @@ buildInterchangeJourney searchReq integratedBPPConfig transitRoute legsRouteDeta
                 endLocation = LatLngV2 toLat toLon,
                 distance = Just transitRoute.distance,
                 duration = Just transitRoute.duration,
-                agency = Just $ MultiModalTypes.MultiModalAgency {name = integratedBPPConfig.agencyKey, gtfsId = Just integratedBPPConfig.feedKey},
+                agency = Just $ MultiModalTypes.MultiModalAgency {name = integratedBPPConfig.agencyKey, gtfsId = Just (legAgencyGtfsId integratedBPPConfig.agencyKey integratedBPPConfig.feedKey)},
                 fromArrivalTime = firstSubLeg.fromArrivalTime,
                 fromDepartureTime = firstSubLeg.fromDepartureTime,
                 toArrivalTime = lastSubLeg.toArrivalTime,
