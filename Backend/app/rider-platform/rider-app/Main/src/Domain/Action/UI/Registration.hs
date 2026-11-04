@@ -338,7 +338,8 @@ auth ::
   Maybe Bool ->
   m AuthRes
 auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor mbSenderHash mbIsDashboardRequest = do
-  let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = ShortId "NAMMA_YATRI"} else req'
+  let reqWithNormalizedEmail = (req' :: AuthReq) {email = SSL.normalizeEmail <$> req'.email}
+      req = if req'.merchantId.getShortId == "YATRI" then reqWithNormalizedEmail {merchantId = ShortId "NAMMA_YATRI"} else reqWithNormalizedEmail
   mbClientIP <- extractClientIP mbXForwardedFor
   whenJust mbClientIP $ \clientIP -> do
     logInfo $ "Auth request from IP: " <> clientIP <> " for identifier: " <> show req'.mobileNumber
@@ -372,7 +373,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
         person <-
-          Person.findByEmailAndMerchantId merchant.id email
+          SSL.findPersonByEmail merchant.id email
             >>= maybe (createPerson req SP.EMAIL Nothing mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) cloudType merchant Nothing Nothing) return
         return (person, SOTP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar auth is not supported"
