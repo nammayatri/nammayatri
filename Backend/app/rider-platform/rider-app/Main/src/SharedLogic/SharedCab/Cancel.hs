@@ -1,9 +1,10 @@
--- | Every shared-cab cancel, rider's or driver's, passes here. Under the booking lock it decides from a fresh read, hands
--- the refund to `ExternalBPP.Flow.Common.cancel`, runs the cancel and drops the allocation state.
+-- | Every shared-cab cancel, rider's or driver's, passes here. Under the booking lock it decides from a fresh read, runs the
+-- cancel with that refund (it goes down to `ExternalBPP.Flow.Common.cancel` as an argument) and drops the allocation state.
 module SharedLogic.SharedCab.Cancel
   ( CancelStage (..),
     withSharedCabCancel,
     guardRiderCancel,
+    routeCancel,
     dropRider,
   )
 where
@@ -24,10 +25,9 @@ import SharedLogic.SharedCab.BookingState (readAlloc)
 import qualified SharedLogic.SharedCab.BookingState as BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.LegState (CancelReason (DRIVER, RIDER))
-import SharedLogic.SharedCab.RefundDecision (Refund (..), clearRefundDecision, gateByPayment, isSharedCabBooking, setRefundDecision)
+import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, isSharedCabBooking)
 import SharedLogic.SharedCab.RefundPolicy
 import SharedLogic.SharedCab.Seats (markDropped)
-import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -36,8 +36,8 @@ data CancelStage = SoftCancel | ConfirmCancel
   deriving (Eq)
 
 -- | `checkFresh` sees the booking as read under the lock (the driver's cancel checks it is still on their cab).
--- `cancelAction` must not take the booking lock itself.
-withSharedCabCancel :: CancelBy -> CancelStage -> Maybe Text -> (DFTB.FRFSTicketBooking -> Flow ()) -> DFTB.FRFSTicketBooking -> Flow () -> Flow ()
+-- `cancelAction` gets the decided refund and must not take the booking lock itself.
+withSharedCabCancel :: CancelBy -> CancelStage -> Maybe Text -> (DFTB.FRFSTicketBooking -> Flow ()) -> DFTB.FRFSTicketBooking -> (Refund -> Flow ()) -> Flow ()
 withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
   withBookingLock booking.id $ do
     fresh <- QFRFSTicketBooking.findById booking.id >>= fromMaybeM (InvalidRequest "Booking not found")
@@ -45,8 +45,8 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
     unless (cancellableStatus fresh.status) $ throwError (InvalidRequest "Booking is already cancelled")
     checkFresh fresh
     refund <- decide by fresh
-    setRefundDecision booking.id refund
-    (cancelAction >> when (stage == ConfirmCancel) (BookingState.clearBookingState booking.id >> Seats.releaseBooking booking.id)) `finally` clearRefundDecision booking.id
+    cancelAction refund
+    when (stage == ConfirmCancel) (BookingState.clearBookingState booking.id)
   when (stage == ConfirmCancel) $ do
     -- the leg-state surface shows why. Swallowed: the booking is cancelled by now, so a Redis hiccup here must not error a
     -- finished cancel. The leg is cancelled for good: the journey ends with it when it was the journey's only non-walk leg.
@@ -56,14 +56,18 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
       >>= either (\err -> logError $ "shared-cab cancel-reason not recorded for booking " <> booking.id.getId <> ": " <> show err) pure
     whenJust mbReason $ \reason -> logInfo $ "shared-cab booking " <> booking.id.getId <> " cancelled by " <> byText by <> ": " <> T.take 200 reason
 
-guardRiderCancel :: CancelStage -> DFTB.FRFSTicketBooking -> Flow () -> Flow ()
-guardRiderCancel stage booking cancelAction
-  | isSharedCabBooking booking = withSharedCabCancel ByRider stage Nothing (const $ pure ()) booking cancelAction
-  | otherwise = cancelAction
+guardRiderCancel :: CancelStage -> DFTB.FRFSTicketBooking -> (Maybe Refund -> Flow ()) -> Flow ()
+guardRiderCancel stage booking = routeCancel (isSharedCabBooking booking) (withSharedCabCancel ByRider stage Nothing (const $ pure ()) booking)
+
+-- | The cancel gets the shared-cab guard's refund; Nothing for any other tier, which keeps its tier table.
+routeCancel :: Bool -> ((Refund -> m ()) -> m ()) -> (Maybe Refund -> m ()) -> m ()
+routeCancel isSharedCab sharedCabGuard cancelAction
+  | isSharedCab = sharedCabGuard (cancelAction . Just)
+  | otherwise = cancelAction Nothing
 
 -- | "I got down" and journey complete end a boarded shared-cab ticket (USED) before the leg is marked finished. A ticket that
 -- never boarded is cancelled under the refund policy by `cancelLeg`; True when it was, so the caller leaves the leg's status alone.
-dropRider :: Flow () -> DJourneyLeg.JourneyLeg -> Flow Bool
+dropRider :: (Maybe Refund -> Flow ()) -> DJourneyLeg.JourneyLeg -> Flow Bool
 dropRider cancelLeg journeyLeg = do
   mbBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId
   case mbBooking of

@@ -50,13 +50,14 @@ cancelState now plate =
 besideWaitingCab :: Maybe UTCTime -> Bool -> Bool
 besideWaitingCab arrivalDeadline near = isJust arrivalDeadline && near
 
+-- | Near only by a fresh fix within the radius: a rider whose whereabouts are unknown can still cancel in-app.
 riderNearStop :: Int -> Int -> UTCTime -> Maybe LatLong -> Maybe RiderFix -> Bool
 riderNearStop radiusM maxAgeSec now mbStop = \case
   Just riderFix
     | Just stop <- mbStop,
       diffUTCTime now riderFix.takenAt <= fromIntegral maxAgeSec ->
       distanceBetweenInMeters riderFix.position stop <= fromIntegral radiusM
-  _ -> True
+  _ -> False
 
 cancellableStatus :: DFRFSBooking.FRFSTicketBookingStatus -> Bool
 cancellableStatus = (`notElem` [DFRFSBooking.CANCELLED, DFRFSBooking.COUNTER_CANCELLED, DFRFSBooking.CANCEL_INITIATED, DFRFSBooking.FAILED, DFRFSBooking.RESCHEDULED])

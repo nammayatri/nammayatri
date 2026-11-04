@@ -365,7 +365,7 @@ wireTicketStatus = \case
 castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> Bool -> Spec.VehicleCategory -> m Ticket.FRFSTicketStatus
 castTicketStatus "UNCLAIMED" _ False _ = return Ticket.ACTIVE -- False means solicited on_status or on_confirm call
 -- True means unsolicited on_status received, or an on_confirm spot booking:
-castTicketStatus "UNCLAIMED" booking True vehicleCategory = return $ checkedInBirthStatus (FRFSUtils.getServiceTierTypeFromRouteStationsJson booking.routeStationsJson) vehicleCategory
+castTicketStatus "UNCLAIMED" booking True vehicleCategory = return $ checkedInStatus (FRFSUtils.getServiceTierTypeFromRouteStationsJson booking.routeStationsJson) vehicleCategory
 castTicketStatus "CLAIMED" _ _ Spec.METRO = return Ticket.USED
 castTicketStatus "CANCELLED" booking _ _
   | booking.customerCancelled = return Ticket.CANCELLED
@@ -373,15 +373,15 @@ castTicketStatus "CANCELLED" booking _ _
 castTicketStatus "EXPIRED" _ _ _ = return Ticket.EXPIRED
 castTicketStatus _ _ _ _ = throwError $ InternalError "Invalid ticket status"
 
-checkedInBirthStatus :: Maybe Spec.ServiceTierType -> Spec.VehicleCategory -> Ticket.FRFSTicketStatus
-checkedInBirthStatus (Just Spec.SHARED_CAB) Spec.BUS =
-  -- a shared-cab ticket is never born USED or boarded: walking up is not a conductor scan. The rider boards by typing the
-  -- sticker code (SharedLogic.SharedCab.Boarding), which drives ACTIVE -> INPROGRESS itself.
+checkedInStatus :: Maybe Spec.ServiceTierType -> Spec.VehicleCategory -> Ticket.FRFSTicketStatus
+checkedInStatus (Just Spec.SHARED_CAB) Spec.BUS =
+  -- a shared-cab walk-up is not a conductor scan, so its ticket starts ACTIVE: the rider boards by typing the sticker code
+  -- (SharedLogic.SharedCab.Boarding), which drives ACTIVE -> INPROGRESS itself.
   Ticket.ACTIVE
-checkedInBirthStatus _ Spec.BUS =
+checkedInStatus _ Spec.BUS =
   -- In case of bus, ticket is scanned only once to validate the booking
   Ticket.USED
-checkedInBirthStatus _ _ = Ticket.INPROGRESS
+checkedInStatus _ _ = Ticket.INPROGRESS
 
 data BppData = BppData
   { bppId :: Text,
