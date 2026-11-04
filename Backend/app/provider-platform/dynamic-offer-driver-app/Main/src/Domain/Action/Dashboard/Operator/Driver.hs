@@ -591,7 +591,8 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
             verified = Just driverInfo.verified,
             approved = driverInfo.approved,
             enabled = Just driverInfo.enabled,
-            documents = statusRes
+            documents = statusRes,
+            isDriverOnRide = Just driverInfo.onRide
           }
 
 ---------------------------------------------------------------------

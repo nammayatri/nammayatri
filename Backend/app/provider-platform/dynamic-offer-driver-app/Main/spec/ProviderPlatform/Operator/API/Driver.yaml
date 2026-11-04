@@ -260,6 +260,7 @@ types:
     - verified: Maybe Bool
     - enabled: Maybe Bool
     - documents: Maybe StatusRes
+    - isDriverOnRide: Maybe Bool
   VerifyOperatorJoiningOtpReq:
     - mobileCountryCode: Text
     - mobileNumber: Text
