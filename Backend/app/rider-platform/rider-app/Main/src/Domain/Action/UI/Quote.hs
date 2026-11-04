@@ -81,6 +81,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
 import Kernel.Utils.JSON (objectWithSingleFieldParsing)
 import qualified Kernel.Utils.Schema as S
 import Lib.ConfigPilot.Interface.Types (getConfig)
@@ -299,7 +300,7 @@ getQuotes searchRequestId mbAllowMultiple = do
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
     quoteList <- QQuote.findAllBySRId searchRequest.id
     estimateList <- QEstimate.findAllBySRId searchRequest.id
-    res <- buildGetQuotesRes searchRequest estimateList quoteList riderConfig
+    res <- buildGetQuotesRes "rideSearchResults" searchRequest estimateList quoteList riderConfig
     -- The sync path already has the suggestion in hand and overrides this field; on the
     -- polling path the shadow search has been persisting its estimates in the background
     -- since /rideSearch, so read them here.
@@ -318,26 +319,33 @@ getQuotesFromInMemory ::
   Maybe DRC.RiderConfig ->
   Flow GetQuotesRes
 getQuotesFromInMemory searchRequest estimateList quoteList mbRiderConfig = do
-  activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
-  whenJust activeBooking $ \booking -> processActiveBooking booking searchRequest.isDashboardRequest OnSearch
-  buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig
+  withTimeAPI "rideSearch" "quotesActiveBooking" $ do
+    activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
+    whenJust activeBooking $ \booking -> processActiveBooking booking searchRequest.isDashboardRequest OnSearch
+  buildGetQuotesRes "rideSearch" searchRequest estimateList quoteList mbRiderConfig
 
+-- | The first argument is the metric's datastore label, which keeps the sync path and polling apart.
 buildGetQuotesRes ::
+  Text ->
   SSR.SearchRequest ->
   [DEstimate.Estimate] ->
   [SQuote.Quote] ->
   Maybe DRC.RiderConfig ->
   Flow GetQuotesRes
-buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig = do
-  journeyData <- getJourneys searchRequest searchRequest.hasMultimodalSearch
-  person <- QP.findById searchRequest.riderId >>= fromMaybeM (PersonDoesNotExist searchRequest.riderId.getId)
+buildGetQuotesRes timerLabel searchRequest estimateList quoteList mbRiderConfig = do
+  (journeyData, person, providerLookup) <- withTimeAPI timerLabel "quotesLoadContext" $ do
+    journeyData <- getJourneys searchRequest searchRequest.hasMultimodalSearch
+    person <- QP.findById searchRequest.riderId >>= fromMaybeM (PersonDoesNotExist searchRequest.riderId.getId)
+    providerLookup <- buildProviderLookup estimateList quoteList
+    pure (journeyData, person, providerLookup)
   let mostFrequentVehicleCategory = SLS.mostFrequent person.lastUsedVehicleServiceTiers
       isReferredRide = isJust searchRequest.driverIdentifier
       enableRideHailingOffers = maybe False (.enableRideHailingOffers) mbRiderConfig
       language = fromMaybe Lang.ENGLISH person.language
-  providerLookup <- buildProviderLookup estimateList quoteList
-  offers <- getOffers searchRequest enableRideHailingOffers providerLookup quoteList language
-  estimates' <- getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList language
+  (offers, estimates') <- withTimeAPI timerLabel "quotesAndEstimates" $ do
+    offers <- getOffers searchRequest enableRideHailingOffers providerLookup quoteList language
+    estimates' <- getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList language
+    pure (offers, estimates')
   let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) mbRiderConfig
       defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) mbRiderConfig
       specialLocationTierOrderConfig = getSpecialLocationTierOrder searchRequest.discoveredSpecialLocationId mbRiderConfig
