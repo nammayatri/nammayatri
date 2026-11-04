@@ -559,28 +559,31 @@ def _apply_local_testing_data():
 
 def _restart_haskell_services():
     """Kill rider/driver/mock-registry so process-compose restarts them and they
-    re-read boot-time config from the freshly-synced DB."""
-    proj = str(PROJECT_ROOT)
-    for exe in ("rider-app-exe", "dynamic-offer-driver-app-exe"):
+    re-read boot-time config from the freshly-synced DB (e.g. rider-app builds
+    its Beckn signing HTTP managers from the merchant table only at startup —
+    without a restart, search fails with HttpManagerNotFound).
+
+    Each app is found by the port THIS workspace resolved for it, and only the
+    process LISTENING there is killed. That is the real app: not its
+    .cabal-wrapped launcher (whose command line also names the exe), and not
+    another workspace's or a CI runner's app on the same machine. The driver
+    app listens on dynamic-offer-driver-app-internal; dynamic-offer-driver-app
+    is the driver-proxy (Caddy) in front of it, which must stay up."""
+    for name, default in (("rider-app", 8013),
+                          ("dynamic-offer-driver-app-internal", 8116),
+                          ("mock-registry", 8020)):
+        port = _svc_port(name, default)
         try:
-            r = subprocess.run(["pgrep", "-f", f"{proj}.*{exe}"],
+            r = subprocess.run(["lsof", "-t", f"-iTCP:{port}", "-sTCP:LISTEN"],
                                capture_output=True, text=True, timeout=5)
-            for pid in r.stdout.strip().splitlines()[:1]:
-                if pid:
-                    subprocess.run(["kill", pid], timeout=5)
-                    print(f"  \033[96m[config-sync]\033[0m killed {exe} (PID {pid}) — process-compose will restart")
-        except Exception as e:
-            print(f"  \033[96m[config-sync]\033[0m restart {exe} failed: {e}")
-    mock_port = _svc_port("mock-registry", 8020)
-    try:
-        r = subprocess.run(["lsof", "-ti", f":{mock_port}"],
-                           capture_output=True, text=True, timeout=5)
-        for pid in r.stdout.strip().splitlines()[:1]:
-            if pid:
+            pids = r.stdout.split()
+            if not pids:
+                print(f"  \033[96m[config-sync]\033[0m {name}: nothing listening on port {port}, not restarted")
+            for pid in pids:
                 subprocess.run(["kill", pid], timeout=5)
-                print(f"  \033[96m[config-sync]\033[0m killed mock-registry (PID {pid}, port {mock_port})")
-    except Exception as e:
-        print(f"  \033[96m[config-sync]\033[0m restart mock-registry failed: {e}")
+                print(f"  \033[96m[config-sync]\033[0m killed {name} (PID {pid}, port {port}) — process-compose will restart")
+        except Exception as e:
+            print(f"  \033[96m[config-sync]\033[0m restart {name} failed: {e}")
     time.sleep(3)
 
 
