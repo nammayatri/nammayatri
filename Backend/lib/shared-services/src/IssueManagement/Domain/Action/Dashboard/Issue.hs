@@ -2165,7 +2165,10 @@ mkOptionDetailRes language identifier (opt, mbTranslation) = do
         priority = opt.priority,
         isActive = opt.isActive,
         translations = mkTranslation <$> translations,
-        childMessages = childMessageDetails
+        childMessages = childMessageDetails,
+        restrictedVariants = opt.restrictedVariants,
+        restrictedRideStatuses = opt.restrictedRideStatuses,
+        showOnlyWhenUserBlocked = opt.showOnlyWhenUserBlocked
       }
   where
     mkTranslation :: DIT.IssueTranslation -> Translation
@@ -2187,7 +2190,10 @@ mkOptionDetailResWithoutChildren _language _identifier (opt, mbTranslation) = do
         priority = opt.priority,
         isActive = opt.isActive,
         translations = mkTranslation <$> translations,
-        childMessages = []
+        childMessages = [],
+        restrictedVariants = opt.restrictedVariants,
+        restrictedRideStatuses = opt.restrictedRideStatuses,
+        showOnlyWhenUserBlocked = opt.showOnlyWhenUserBlocked
       }
   where
     mkTranslation :: DIT.IssueTranslation -> Translation
