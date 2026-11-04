@@ -61,6 +61,8 @@ data PoolCalculationStage = Estimate | DriverSelection deriving (Eq, Show)
 
 data PoolType = NormalPool | GoHomePool | SpecialDriversPool | SpecialZoneQueuePool | SkipPool deriving (Ord, Eq, Show)
 
+data DispatchMode = RegularDispatch | ScheduledTopDriversDispatch deriving (Eq, Show)
+
 data NearestGoHomeDriversResult = NearestGoHomeDriversResult
   { driverId :: Id Driver,
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,

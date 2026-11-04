@@ -832,6 +832,7 @@ library
       SharedLogic.ScheduledBooking.OverlapCheck
       SharedLogic.ScheduledBooking.WindowValidation
       SharedLogic.ScheduledNotifications
+      SharedLogic.ScheduledRideTopDrivers
       SharedLogic.ScheduledRideVisibility
       SharedLogic.SearchRequestProcessing
       SharedLogic.SearchTry
