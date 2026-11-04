@@ -11,7 +11,6 @@
 -- the spec, so this logic lives here and is never overwritten by the generator.
 module Domain.Action.DashboardAuth.Fleet.LiveMap
   ( getLiveMapDrivers,
-    getDemandHotspots,
     getLiveMapDemandHotspots,
   )
 where
@@ -37,10 +36,6 @@ getLiveMapDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> 
 getLiveMapDrivers a8 a7 a6 a5 a4 a3 a2 a1 = do
   (mbFleetOwnerId, requestorId) <- SharedLogic.Fleet.getMbFleetOwnerAndRequestorIdMerchantBased (Tools.Auth.DashboardUserAuth.requestorHasFleetMemberHierarchy a6) (Tools.Auth.DashboardUserAuth.requestorIsFleetOwner a6) (Tools.Auth.DashboardUserAuth.dashboardRequestorId a6) a4
   Domain.Action.Dashboard.Fleet.LiveMap.getLiveMapDrivers a8 a7 a5 requestorId mbFleetOwnerId a3 a2 a1
-
-getDemandHotspots :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.Flow API.Types.ProviderPlatform.Fleet.LiveMap.DemandHotspotsResp)
-getDemandHotspots merchantShortId opCity _dashboardUser =
-  Domain.Action.Dashboard.Fleet.LiveMap.getDemandHotspots merchantShortId opCity
 
 getLiveMapDemandHotspots :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.Flow API.Types.ProviderPlatform.Fleet.LiveMap.DemandHotspotsResp)
 getLiveMapDemandHotspots merchantShortId opCity _dashboardUser =
