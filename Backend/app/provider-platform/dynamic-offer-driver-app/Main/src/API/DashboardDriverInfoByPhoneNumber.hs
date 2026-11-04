@@ -134,6 +134,13 @@ getDriverInfoByPhoneNumber merchantShortId tokenInfo mbMobileNumber mbMobileCoun
 
     -- A genuine miss becomes a Left so the loop can move on; every other failure
     -- propagates untouched.
+    --
+    -- Catches 'HTTPException' (the parent of every domain error, e.g. PersonError,
+    -- MerchantError) rather than the dashboard's 'E.Error': that type is only
+    -- produced by decoding a servant-client HTTP response, which this direct call
+    -- never makes, so catching it would never match and the first city's miss
+    -- would abort the whole search.
+    tryCity :: Text -> Context.City -> Flow (Either HTTPException Common.DriverInfoRes)
     tryCity mobileNumber city =
       ( Right
           <$> RBDriver.getDriverInfo
@@ -154,7 +161,7 @@ getDriverInfoByPhoneNumber merchantShortId tokenInfo mbMobileNumber mbMobileCoun
             Nothing -- personId
             Nothing -- walletId
       )
-        `catch` \(err :: E.Error) ->
-          if err.contents.errorCode `elem` driverMissErrorCodes
+        `catch` \(err :: HTTPException) ->
+          if toErrorCode err `elem` driverMissErrorCodes
             then pure (Left err)
             else throwError err
