@@ -14,6 +14,7 @@
 
 module API where
 
+import qualified API.Action.UI.FRFSBookingRatingInternal as FRFSBookingRatingInternal
 import qualified API.Action.UI.LegalPublishInternal as LegalPublishInternal
 import qualified API.Beckn as Beckn
 import qualified API.DashboardCacAuth as DashboardCacAuth
@@ -145,6 +146,7 @@ type MainAPI =
          )
     :<|> Internal.API
     :<|> LegalPublishInternal.API
+    :<|> FRFSBookingRatingInternal.API
 
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy
@@ -179,6 +181,7 @@ mainServer env =
          )
     :<|> Internal.handler env
     :<|> LegalPublishInternal.handler
+    :<|> FRFSBookingRatingInternal.handler
 
 driverOfferServer :: AppEnv -> FlowServer DriverOfferAPI
 driverOfferServer env =

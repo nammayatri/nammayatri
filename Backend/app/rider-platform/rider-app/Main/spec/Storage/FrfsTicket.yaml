@@ -1428,6 +1428,8 @@ FRFSTicketBookingFeedback:
     merchantOperatingCityId: Id MerchantOperatingCity
     isFareAccepted: Maybe Bool
     feedbackDetails: Maybe Text
+    driverRating: Maybe Int
+    fleetRating: Maybe Int
   constraints:
     id: PrimaryKey
     bookingId: SecondaryKey
@@ -1442,6 +1444,6 @@ FRFSTicketBookingFeedback:
         and: [merchantId, merchantOperatingCityId]
     updateByBookingId:
       kvFunction: updateOneWithKV
-      params: [isFareAccepted, feedbackDetails, updatedAt]
+      params: [isFareAccepted, feedbackDetails, driverRating, fleetRating, updatedAt]
       where:
         and: [bookingId]
