@@ -1221,6 +1221,7 @@ buildFareBreakUp mbDiscount fp@DFP.FareParameters {..} = do
       tollFareTaxWithCurrency = flip PriceAPIEntity currency <$> tollFareTax,
       discountWithCurrency = flip PriceAPIEntity currency <$> mbDiscount,
       discountTaxWithCurrency = flip PriceAPIEntity currency <$> postDiscountTax,
+      negotiatedFareDeltaWithCurrency = flip PriceAPIEntity currency <$> negotiatedFareDelta,
       ..
     }
 
