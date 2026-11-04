@@ -15,7 +15,7 @@
 module Tools.Error (module Tools.Error) where
 
 import qualified Dashboard.Common as Common
-import Data.Aeson (Value (Null), object, (.=))
+import Data.Aeson (Value (Null), decode, object, (.=))
 import qualified Data.Text as T
 import Kernel.External.Types (Language)
 import Kernel.Prelude
@@ -23,7 +23,10 @@ import Kernel.Types.Common (HighPrecMoney)
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error as Tools.Error hiding (PersonError, SosError, SosIdDoesNotExist)
 import Kernel.Types.Error.BaseError.HTTPError
+import Kernel.Types.Error.BaseError.HTTPError.FromResponse (FromResponse (..))
 import Kernel.Utils.Common (Meters)
+import qualified Network.HTTP.Types.Status as HTTP
+import Servant.Client (ResponseF (Response))
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data RatingError
@@ -2694,3 +2697,8 @@ instance IsHTTPError BapProxyError where
 
 instance IsAPIError BapProxyError where
   toPayload (BapProxyResponseError _ _ _ payload) = payload
+
+instance FromResponse BapProxyError where
+  fromResponse (Response status _ _ body) = do
+    APIError code message payload <- decode body
+    pure $ BapProxyResponseError (codeToHttpCodeWith500Default (HTTP.statusCode status)) code message payload

@@ -80,6 +80,7 @@ import Servant (FromHttpApiData (..))
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.DriverNumber as SDN
 import qualified SharedLogic.SharedCab.Call as SharedCabCall
+import SharedLogic.SharedCab.Interest (bestEffort)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -316,21 +317,23 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
   merchantId <- CQMOC.findById exophone.merchantOperatingCityId >>= fmap (.merchantId) . fromMaybeM (MerchantOperatingCityDoesNotExist exophone.merchantOperatingCityId.getId)
 
   mobileNumberHash <- getDbHash callFrom
-  mbRiderDetails <- findRiderDetails merchantId mobileNumberHash
-  -- a rider with no ride-hailing booking may be calling the driver of their shared cab
-  mbSharedCabNumber <- case mbRiderDetails of
-    Nothing ->
-      runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash merchantId) >>= \case
-        Nothing -> pure Nothing
-        Just person -> SharedCabCall.driverNumberForRider person.id
-    Just _ -> pure Nothing
-  case mbSharedCabNumber of
-    Just number -> do
+  mbRider <- runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash merchantId)
+  rideClaim <- fmap (\details@(_, booking) -> (details, booking.primaryExophone == exophone.primaryPhone)) <$> maybe (pure Nothing) findRiderDetails mbRider
+  -- best effort: a failed driver-app lookup must not fail a ride-hailing rider's call
+  cabClaim <-
+    fmap join . bestEffort (logError . ("shared-cab call lookup failed: " <>)) $
+      maybe (pure Nothing) (SharedCabCall.liveSessionForRider . (.id)) mbRider >>= traverse \s -> do
+        number <- SharedCabCall.driverNumberOfSession s
+        dialledIsCab <- maybe False ((== exophone.id) . (.id)) <$> SharedCabCall.cabExophone s.merchantOperatingCityId
+        pure (number, dialledIsCab)
+  case SharedCabCall.riderCallTarget rideClaim cabClaim of
+    Just (Right number) -> do
       createSharedCabCallStatus id callSid callStatus exophone merchantId
       QCallStatus.updateCallStatusInformation (Just merchantId.getId) (Just exophone.callService) Nothing id
       DCE.sendCallDataToKafka (Just "EXOTEL") Nothing (Just "ANONYMOUS_CALLER") (Just callSid) Nothing System (Just to)
       return number
-    Nothing -> do
+    target -> do
+      let mbRiderDetails = target >>= either Just (const Nothing)
       let driverNumberType' = if driverNumberType == BothNumber then (if exophone.callService == CallTypes.Exotel && exophone.enableAlternateNumber == Just True then BothNumber else PrimaryNumber) else driverNumberType
 
       (resNumber, ride, callType, dtmfNumberUsed) <-
@@ -367,20 +370,17 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
           callStatusObj <- buildCallStatus id callId Nothing (exotelStatusToInterfaceStatus callStatus') exophone.merchantOperatingCityId merchantId
           void $ QCallStatus.create callStatusObj
 
-    findRiderDetails merchantId mobileNumberHash =
-      runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash merchantId) >>= \case
+    findRiderDetails person = do
+      activeBooking <-
+        QB.findAssignedByRiderId person.id >>= \case
+          bk@(Just _) -> pure bk
+          Nothing ->
+            QBPL.findOneActivePartyByRiderId person.id >>= \case
+              Nothing -> pure Nothing
+              Just party -> QRB.findById party.bookingId
+      case activeBooking of
         Nothing -> pure Nothing
-        Just person -> do
-          activeBooking <-
-            QB.findAssignedByRiderId person.id >>= \case
-              bk@(Just _) -> pure bk
-              Nothing ->
-                QBPL.findOneActivePartyByRiderId person.id >>= \case
-                  Nothing -> pure Nothing
-                  Just party -> QRB.findById party.bookingId
-          case activeBooking of
-            Nothing -> pure Nothing
-            Just activeBooking_ -> return $ Just (Nothing, activeBooking_)
+        Just activeBooking_ -> return $ Just (Nothing, activeBooking_)
 
     ensureCallStatusExists id callId rideId callStatus' merchantOperatingCityId merchantId =
       QCallStatus.findOneByRideId (Just $ getId rideId) >>= \case

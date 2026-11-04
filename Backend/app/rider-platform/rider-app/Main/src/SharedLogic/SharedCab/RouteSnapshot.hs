@@ -1,19 +1,17 @@
 -- | A route's live cabs for display paths, read once per pod every couple of seconds: every rider polling the route's cab list, a
--- leg's upcoming cabs or a stop's cabs reads the same sessions, LTS fixes and seat bitmaps. Claim, boarding, drop and cancel never
--- read it: they read sessions and seats fresh under their locks, and the seat engine's hold stays the arbiter.
+-- leg's upcoming cabs or a stop's cabs reads the same sessions, LTS fixes and seat counts. Claim, boarding, drop and cancel never
+-- read it: they read sessions and seats fresh under their locks, and the seat check under the plate lock stays the arbiter.
 -- One request rebuilds an expired snapshot while the others keep serving the old one (a plain TTL cache let every queued request
 -- rebuild at once under load).
 module SharedLogic.SharedCab.RouteSnapshot
   ( SnapshotCab (..),
     routeSnapshot,
-    cabBitmapsOf,
     filterCabLegs,
     SnapshotRead (..),
     snapshotRead,
   )
 where
 
-import Data.ByteString (ByteString)
 import Data.IORef (IORef, atomicModifyIORef', newIORef)
 import qualified Data.Map.Strict as Map
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
@@ -25,6 +23,7 @@ import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Enabled (cabItineraryShown, sharedCabEnabled)
+import SharedLogic.SharedCab.Keys (routeKey)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Seats as Seats
@@ -35,19 +34,15 @@ import System.IO.Unsafe (unsafePerformIO)
 data SnapshotCab = SnapshotCab
   { session :: Session,
     track :: Maybe LT.VehicleTrackingOnRouteResp,
-    -- | seat 1 to capacity
-    bitmaps :: [Maybe ByteString]
+    seats :: Seats.CabSeats
   }
-
-cabBitmapsOf :: SnapshotCab -> [Maybe ByteString]
-cabBitmapsOf = (.bitmaps)
 
 data Slot = Slot
   { built :: Maybe ([SnapshotCab], UTCTime),
     rebuilding :: Bool
   }
 
--- | Per pod, per route. The kernel's in-memory cache has no in-flight marker, so this is a module-level IORef, as KMRL's manager cache.
+-- | Per pod, per city and route (keyed like the route set). The kernel's in-memory cache has no in-flight marker, so this is a module-level IORef, as KMRL's manager cache.
 routeSnapshots :: IORef (Map.Map Text Slot)
 routeSnapshots = unsafePerformIO (newIORef Map.empty)
 {-# NOINLINE routeSnapshots #-}
@@ -68,42 +63,44 @@ snapshotRead now mbBuiltAt rebuilding = case mbBuiltAt of
     where
       age = diffUTCTime now builtAt
 
--- | The route's ACTIVE sessions, their fixes from one HGETALL of the LTS route hash, and each cab's seat bitmaps from one MGET.
+-- | The route's ACTIVE sessions, their fixes from one HGETALL of the LTS route hash, and their cabs' seats from one read of bookings.
 routeSnapshot ::
-  (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m) =>
+  (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m) =>
+  Id DMOC.MerchantOperatingCity ->
   Text ->
   m [SnapshotCab]
-routeSnapshot routeCode = do
+routeSnapshot cityId routeCode = do
   now <- getCurrentTime
   -- decide and, for a rebuild, claim it in one atomic step
   (decision, current) <- liftIO . atomicModifyIORef' routeSnapshots $ \slots ->
-    let slot = Map.findWithDefault (Slot Nothing False) routeCode slots
+    let slot = Map.findWithDefault (Slot Nothing False) slotKey slots
         decision = snapshotRead now (snd <$> slot.built) slot.rebuilding
-        slots' = if decision == Rebuild then Map.insert routeCode slot {rebuilding = True} slots else slots
+        slots' = if decision == Rebuild then Map.insert slotKey slot {rebuilding = True} slots else slots
      in (slots', (decision, maybe [] fst slot.built))
   case decision of
-    Rebuild -> rebuild `finally` liftIO (atomicModifyIORef' routeSnapshots (\slots -> (Map.adjust (\slot -> slot {rebuilding = False}) routeCode slots, ())))
+    Rebuild -> rebuild `finally` liftIO (atomicModifyIORef' routeSnapshots (\slots -> (Map.adjust (\slot -> slot {rebuilding = False}) slotKey slots, ())))
     _ -> pure current
   where
+    slotKey = routeKey cityId routeCode
     rebuild = do
-      cabs <- buildSnapshot routeCode
+      cabs <- buildSnapshot cityId routeCode
       builtAt <- getCurrentTime
-      liftIO . atomicModifyIORef' routeSnapshots $ \slots -> (Map.insert routeCode (Slot (Just (cabs, builtAt)) True) slots, ())
+      liftIO . atomicModifyIORef' routeSnapshots $ \slots -> (Map.insert slotKey (Slot (Just (cabs, builtAt)) True) slots, ())
       pure cabs
 
 buildSnapshot ::
-  (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m) =>
+  (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m) =>
+  Id DMOC.MerchantOperatingCity ->
   Text ->
   m [SnapshotCab]
-buildSnapshot routeCode = do
-  sessions <- Session.activeSessionsOnRoute routeCode
+buildSnapshot cityId routeCode = do
+  sessions <- Session.activeSessionsOnRoute cityId routeCode
   positions <- either (const []) identity <$> withTryCatch "sharedCab:snapshot:positions" (Lts.readRoutePositions routeCode)
-  forM sessions $ \s -> do
-    bitmaps <- Seats.cabBitmaps s
-    pure SnapshotCab {session = s, track = find ((== s.vehicleNumber) . (.vehicleNumber)) positions, bitmaps}
+  seats <- Seats.cabsSeats sessions
+  pure [SnapshotCab {session = s, track = find ((== s.vehicleNumber) . (.vehicleNumber)) positions, seats = c} | (s, c) <- zip sessions seats]
 
 -- | A shared-cab itinerary is shown only while a cab is running its route. TODO: also require the cab not to have passed the board stop.
-filterCabLegs :: (Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadMask m) => Id DMOC.MerchantOperatingCity -> [MultiModalTypes.MultiModalLeg] -> m (Maybe [MultiModalTypes.MultiModalLeg])
+filterCabLegs :: (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m) => Id DMOC.MerchantOperatingCity -> [MultiModalTypes.MultiModalLeg] -> m (Maybe [MultiModalTypes.MultiModalLeg])
 filterCabLegs cityId legs = case filter isSharedCabLeg legs of
   [] -> pure (Just legs)
   cabLegs -> do
@@ -113,5 +110,5 @@ filterCabLegs cityId legs = case filter isSharedCabLeg legs of
   where
     isSharedCabLeg leg = maybe False isSharedCabAgency (leg.agency >>= (.gtfsId))
     hasCabComing leg =
-      maybe (return False) (fmap (not . null) . routeSnapshot . gtfsIdtoDomainCode) $
+      maybe (return False) (fmap (not . null) . routeSnapshot cityId . gtfsIdtoDomainCode) $
         listToMaybe leg.routeDetails >>= (.gtfsId)

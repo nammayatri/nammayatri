@@ -2262,7 +2262,8 @@ test-suite rider-app-test
       FRFS.DirectQR
       SharedCabAllocationTests
       SharedCabBoardingTests
-      SharedCabCancelRefusalTests
+      SharedCabCallTests
+      SharedCabCheckedInStatusTests
       SharedCabConfigTests
       SharedCabDegradedSweepTests
       SharedCabDegradedTests
@@ -2278,7 +2279,6 @@ test-suite rider-app-test
       SharedCabSeatTests
       SharedCabSessionTests
       SharedCabStopProgressTests
-      SharedCabTicketBirthTests
       SharedCabWalkUpTests
       Paths_rider_app
   hs-source-dirs:

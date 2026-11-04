@@ -67,8 +67,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
-import SharedLogic.SharedCab.LegState (isSharedCabAgency)
+import SharedLogic.SharedCab.LegState (isSharedCabAgency, waybillMovesBooking)
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
@@ -2201,8 +2200,7 @@ data RefreshedTicketVehicleInfo = RefreshedTicketVehicleInfo
 applyWaybillMetadataToTicket ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
-    MonadMask m
+    MonadFlow m
   ) =>
   DFRFSTicketBooking.FRFSTicketBooking ->
   Maybe DJourneyLeg.JourneyLeg ->
@@ -2252,10 +2250,8 @@ applyWaybillMetadataToTicket booking mbJourneyLeg meta = do
             <> fetchedBus
       when (busChanged || variantChanged) $
         QJourneyLeg.updateFinalBoardedBusById effectiveBus effectiveBusTag effectiveBusVariant journeyLeg.id
-      when busChanged $
-        if journeyLeg.mode == DTrip.SharedCab
-          then SharedCabBooking.reseatOnWaybill effectiveBus booking.id
-          else QFRFSTicketBooking.updateFRFSTicketBookingVehicleNumberById effectiveBus booking.id
+      when (busChanged && waybillMovesBooking journeyLeg.mode) $
+        QFRFSTicketBooking.updateFRFSTicketBookingVehicleNumberById effectiveBus booking.id
       pure (effectiveBus, effectiveBusTag, busChanged)
   pure
     RefreshedTicketVehicleInfo

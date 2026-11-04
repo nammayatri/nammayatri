@@ -94,12 +94,13 @@ declineOffer :: Text -> Text -> Id DFTB.FRFSTicketBooking -> Environment.Flow Se
 declineOffer driver plate bookingId = do
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM BookingNotOnThisCab
   cfg <- Config.getTunables booking.merchantOperatingCityId
-  decision <- Session.withPlateLock plate $ do
+  Session.withPlateLock plate $ do
     void $ Session.readSession plate >>= either throwError pure . ownedSession driver
     fresh <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM BookingNotOnThisCab
     mbAlloc <- readAlloc bookingId
-    either throwError pure $ decideDecline plate fresh.vehicleNumber mbAlloc
-  -- the release takes the booking lock itself, outside the plate lock like every other close
-  when (decision == DeclineNow) . void $ Allocation.releaseSharedCabAllocation cfg bookingId plate DriverDeclined
+    decision <- either throwError pure $ decideDecline plate fresh.vehicleNumber mbAlloc
+    -- closed under the plate lock acceptOffer also takes (plate -> booking order; the close takes no plate lock), so an accept
+    -- cannot land between the check and the close
+    when (decision == DeclineNow) . void $ Allocation.releaseSharedCabAllocation cfg bookingId plate DriverDeclined
   Session.getSession plate >>= fromMaybeM SessionNotFound
   where

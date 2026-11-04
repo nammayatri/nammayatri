@@ -5,11 +5,13 @@ module SharedCabRefundPolicyTests (tests) where
 
 import qualified "rider-app" API.Types.UI.SharedCabInternal as API
 import Data.Aeson (decode)
+import Data.IORef (modifyIORef', newIORef, readIORef)
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import "beckn-spec" Domain.Types.FRFSTicketStatus (FRFSTicketStatus (ACTIVE, INPROGRESS, USED))
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "rider-app" SharedLogic.SharedCab.Allocation.Types (RiderFix (..))
+import "rider-app" SharedLogic.SharedCab.Cancel (routeCancel)
 import "rider-app" SharedLogic.SharedCab.DriverAction (requireReason)
 import "rider-app" SharedLogic.SharedCab.LegState (SharedCabState (..))
 import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..), cancelRefund, gateNoPayment, owesRefund, refundAmounts, refundWithheld)
@@ -69,10 +71,10 @@ tests =
           testCase "the driver's cancel refunds in full with the rider away" $ driver ALLOCATED 0 False @?= Allowed FullRefund
         ],
       testGroup
-        "3: near = within the board radius by a fresh fix; unknown or stale counts as near"
-        [ testCase "no fix" $ nearStop (Just stop) Nothing @?= True,
-          testCase "no stop to measure from" $ nearStop Nothing (fixAt 5 far) @?= True,
-          testCase "stale fix, far" $ nearStop (Just stop) (fixAt 61 far) @?= True,
+        "3: near = within the board radius by a fresh fix; unknown or stale is not near"
+        [ testCase "no fix" $ nearStop (Just stop) Nothing @?= False,
+          testCase "no stop to measure from" $ nearStop Nothing (fixAt 5 nearby) @?= False,
+          testCase "stale fix, even beside the stop" $ nearStop (Just stop) (fixAt 61 nearby) @?= False,
           testCase "fresh fix at the age limit, far" $ nearStop (Just stop) (fixAt 60 far) @?= False,
           testCase "fresh fix inside the radius" $ nearStop (Just stop) (fixAt 5 nearby) @?= True,
           testCase "fresh fix outside the radius" $ nearStop (Just stop) (fixAt 5 far) @?= False,
@@ -138,7 +140,16 @@ tests =
           testCase "shared cab, system cancel with no decision: full refund" $ cancelRefund True False Nothing @?= Right (Just FullRefund),
           testCase "shared cab, the guard's decision wins (no refund)" $ cancelRefund True True (Just NoRefund) @?= Right (Just NoRefund),
           testCase "shared cab, the guard's decision wins (full refund)" $ cancelRefund True True (Just FullRefund) @?= Right (Just FullRefund),
-          testCase "shared cab, a system cancel keeps a published decision" $ cancelRefund True False (Just NoRefund) @?= Right (Just NoRefund)
+          testCase "shared cab, a system cancel keeps a published decision" $ cancelRefund True False (Just NoRefund) @?= Right (Just NoRefund),
+          testCase "the guard's decision reaches the FRFS cancel as its argument; any other tier gets Nothing and keeps its table" $ do
+            -- what CallAPI.Cancel resolves from the argument the cancel action was handed, for a rider's cancel
+            let reachingCancel isSharedCab decided = do
+                  handed <- newIORef []
+                  routeCancel isSharedCab ($ decided) (\mbRefund -> modifyIORef' handed (mbRefund :))
+                  map (cancelRefund isSharedCab True) <$> readIORef handed
+            sharedCab <- mapM (reachingCancel True) [NoRefund, FullRefund, NothingPaid]
+            bus <- reachingCancel False NoRefund
+            (sharedCab, bus) @?= ([[Right (Just NoRefund)], [Right (Just FullRefund)], [Right (Just NothingPaid)]], [Right Nothing])
         ],
       testGroup
         "driver cancel reason"
@@ -148,12 +159,12 @@ tests =
           testCase "trimmed" $ requireReason (Just " rider not at stop ") @?= Right "rider not at stop",
           -- the body the driver-app proxy sends (driver-app-test pins its shape)
           testCase "rider-app reads the proxy's reason" $
-            (decode "{\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":\"cab breakdown\"}" >>= \r -> Just (API.reason r)) @?= Just (Just "cab breakdown"),
+            (decode "{\"operation\":\"CANCEL\",\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":\"cab breakdown\"}" >>= \r -> Just (API.reason r)) @?= Just (Just "cab breakdown"),
           testCase "a null reason (other actions) reads as Nothing" $
-            (decode "{\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":null}" >>= \r -> Just (API.reason r)) @?= Just Nothing,
+            (decode "{\"operation\":\"ACCEPT\",\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":null}" >>= \r -> Just (API.reason r)) @?= Just Nothing,
           testCase "a blank reason from the proxy is refused" $
-            (decode "{\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":\"  \"}" >>= \r -> Just (requireReason (API.reason r))) @?= Just (Left CancelReasonRequired),
+            (decode "{\"operation\":\"CANCEL\",\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":\"  \"}" >>= \r -> Just (requireReason (API.reason r))) @?= Just (Left CancelReasonRequired),
           testCase "a body with no reason field is refused when cancelling" $
-            (decode "{\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\"}" >>= \r -> Just (requireReason (API.reason r))) @?= Just (Left CancelReasonRequired)
+            (decode "{\"operation\":\"CANCEL\",\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\"}" >>= \r -> Just (requireReason (API.reason r))) @?= Just (Left CancelReasonRequired)
         ]
     ]

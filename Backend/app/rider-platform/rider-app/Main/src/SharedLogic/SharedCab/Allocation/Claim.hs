@@ -12,7 +12,9 @@ module SharedLogic.SharedCab.Allocation.Claim
 where
 
 import Control.Monad.Extra (whenJustM)
+import Data.Either (fromRight)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Kernel.External.Types (ServiceFlow)
@@ -25,7 +27,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), LiveBooking (..), RankedCandidate (..), armedTimer, claimPush, claimable, skippedWhileFinding)
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (shared, stopAddresses, withBookingLock)
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
@@ -78,7 +80,7 @@ data ClaimMiss = ClaimSessionGone | ClaimSeatsGone | ClaimCasLost | ClaimSkipped
   deriving (Show, Eq)
 
 -- | The claim's decision under both locks, pure: the plate was not skipped and the booking is still waiting for a cab with no
--- degrade marker. The seats are then held in the seat engine, which decides ClaimSeatsGone.
+-- degrade marker. The cab's seat count then decides ClaimSeatsGone.
 claimGate :: Session -> [Text] -> Maybe LiveBooking -> Bool -> Either ClaimMiss ()
 claimGate s skipped mbLive markerAlive
   | s.vehicleNumber `elem` skipped = Left ClaimSkipped
@@ -86,7 +88,7 @@ claimGate s skipped mbLive markerAlive
     Just (LiveBooking b statuses) | claimable b.status b.vehicleNumber statuses markerAlive -> Right ()
     _ -> Left ClaimCasLost
 
--- | One candidate under both locks: re-read the session, hold the seats, CAS vehicleNumber, write the alloc key. A miss counts no attempt.
+-- | One candidate under both locks: re-read the session, check the seats, CAS vehicleNumber, write the alloc key. A miss counts no attempt.
 attemptClaim ::
   (Seats.SeatFlow m r, MonadMask m) =>
   Config.SharedCabTunables ->
@@ -101,7 +103,7 @@ attemptClaim cfg booking cand =
   where
     plate = cand.rcSession.vehicleNumber
 
--- | The seat hold is the seat guard: two bookings claiming the cab's last seat in one tick can't both win it, whatever a DB read says.
+-- | The seat check under the plate lock is the seat guard: two bookings claiming the cab's last seat in one tick can't both win it.
 claimUnderLocks ::
   (Seats.SeatFlow m r, MonadMask m) =>
   Config.SharedCabTunables ->
@@ -118,20 +120,17 @@ claimUnderLocks cfg booking cand s = do
   case claimGate s skipped mbLive markerAlive of
     Left miss -> pure (Left miss)
     Right () -> do
-      -- a FINDING booking holds no seat; drop any a lost write left behind
-      Seats.releaseBooking booking.bookingId
-      Seats.holdForStops s booking.boardStopCode booking.dropStopCode booking.seats >>= \case
-        Nothing -> pure (Left ClaimSeatsGone)
-        Just held -> Right <$> (commit now held `onException` Seats.releaseHeld held)
+      Seats.takeSeats s booking.bookingId booking.boardStopCode booking.dropStopCode booking.seats >>= \case
+        False -> pure (Left ClaimSeatsGone)
+        True -> Right <$> commit now
   where
-    commit now held = do
+    commit now = do
       offersMade <- readOffersMade booking.bookingId
       QFRFSTicketBooking.updateAllocatedVehicle (Just s.vehicleNumber) booking.bookingId Nothing
       -- the key's TTL is only a garbage-collection backstop and must outlive the stacked timers (allocKeyTtl)
       let st = AllocationState {vehicleNumber = s.vehicleNumber, timer = armedTimer cfg now offersMade cand.rcStance}
       writeAlloc (allocKeyTtl cfg) booking.bookingId st
       when cfg.driverAcceptEnabled $ writeOffersMade (allocKeyTtl cfg) booking.bookingId (offersMade + 1)
-      Seats.recordHold booking.bookingId held
       pure st
 
 claimFallbackPush :: (Redis.HedisFlow m r, MonadFlow m) => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> m Bool
@@ -142,7 +141,7 @@ offerDeadline st = case st.timer of
   OfferTimer d -> Just d
   _ -> Nothing
 
--- | The driver's allocation push; for an offer it carries what the accept sheet shows and when the offer lapses.
+-- | The driver's allocation push; every push carries the fare, and an offer adds what the accept sheet shows and when it lapses.
 notifyDriverOfAllocation ::
   AllocFlow m r =>
   FindingBooking ->
@@ -157,7 +156,10 @@ notifyDriverOfAllocation booking cand mbOfferDeadline =
     call = do
       let s = cand.rcSession
       merchant <- CQM.findById s.merchantId >>= fromMaybeM (MerchantNotFound s.merchantId.getId)
-      offerFare <- forM mbOfferDeadline $ \_ -> (>>= Just . (.totalPrice.amount)) <$> QFRFSTicketBooking.findById booking.bookingId
+      fullBooking <- QFRFSTicketBooking.findById booking.bookingId >>= fromMaybeM (InvalidRequest ("Shared cab booking not found: " <> booking.bookingId.getId))
+      -- the addresses only dress the card, so a failed lookup must not cost the driver the offer
+      offerAddresses <- forM mbOfferDeadline $ \_ ->
+        fromRight Map.empty <$> withTryCatch "sharedCabOfferAddresses" (stopAddresses s.merchantOperatingCityId [booking.boardStopCode, booking.dropStopCode])
       offerRider <- forM mbOfferDeadline $ \_ -> QPerson.findById booking.riderId
       void . CallBPPInternal.sharedCabAllocationFCM merchant.driverOfferApiKey merchant.driverOfferBaseUrl $
         CallBPPInternal.SharedCabAllocationReq
@@ -169,9 +171,13 @@ notifyDriverOfAllocation booking cand mbOfferDeadline =
             boardStopCode = Just booking.boardStopCode,
             etaSeconds = Just cand.rcEtaToBoardStopSec,
             offerExpiresAt = mbOfferDeadline,
-            fare = join offerFare,
+            fare = fullBooking.totalPrice.amount,
             firstName = join offerRider >>= (.firstName) >>= listToMaybe . T.words,
-            dropStopCode = booking.dropStopCode <$ mbOfferDeadline
+            dropStopCode = booking.dropStopCode <$ mbOfferDeadline,
+            boardStop = mbOfferDeadline >> fullBooking.fromStationName,
+            dropStop = mbOfferDeadline >> fullBooking.toStationName,
+            boardStopAddress = offerAddresses >>= Map.lookup booking.boardStopCode,
+            dropStopAddress = offerAddresses >>= Map.lookup booking.dropStopCode
           }
 
 claimFirst ::

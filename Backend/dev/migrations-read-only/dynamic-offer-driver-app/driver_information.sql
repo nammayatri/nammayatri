@@ -413,4 +413,3 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN docs_verificati
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN shared_cab_session_active boolean  default false;

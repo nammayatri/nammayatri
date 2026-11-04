@@ -4,18 +4,16 @@ module SharedLogic.SharedCab.WalkUp
     liveSharedCabByCode,
     CodeResolution (..),
     resolveCode,
-    WalkUpChoice (..),
-    cabRouteRequest,
     stopPairLegs,
     withoutCabRows,
     cabRouteServiceTier,
-    chooseWalkUp,
-    probeBus,
+    declaresSharedCab,
+    isSharedCabTier,
     cabRouteStations,
     isStickerCode,
     findSharedCabConfig,
     enabledCabConfig,
-    walkUpVehicleData,
+    walkUpCab,
     routeServiceability,
     cabVehicle,
     trackStopRoutes,
@@ -79,15 +77,10 @@ resolveCode code plates = case nub (filter ((== code) . T.takeEnd 4) plates) of
   [plate] -> OneCab plate
   _ -> ManyCabs
 
-cabRouteRequest :: Maybe [Text] -> [Text] -> Bool
-cabRouteRequest Nothing _ = False
-cabRouteRequest (Just feedRouteCodes) requested = not (null requested) && all (`elem` feedRouteCodes) requested
-
 stopEta :: UTCTime -> LT.UpcomingStop -> CQMMB.BusStopETA
 stopEta now u = CQMMB.BusStopETA u.stop.stopCode (Just u.stop.name) u.eta (floor (utcTimeToPOSIXSeconds u.eta)) (Just (max 0 (floor (diffUTCTime u.eta now))))
 
--- | A stop-search request names no route: the cab feed's routes between the two stops (or, with only a source stop, the routes
--- passing it) make it a cab request. No such route leaves it on the bus path.
+-- | A cab request that names no route: the cab feed's routes between its two stops (or, with only a source stop, the routes passing it).
 stopPairLegs :: Maybe Text -> [Text] -> Maybe [ApiTypes.RouteCodesWithLeg]
 stopPairLegs (Just _) routes@(_ : _) = Just [ApiTypes.RouteCodesWithLeg {legOrder = 0, routeCodes = routes}]
 stopPairLegs _ _ = Nothing
@@ -95,15 +88,19 @@ stopPairLegs _ _ = Nothing
 -- | The tier a route of this feed advertises in the public-transport data: a shared-cab route says SHARED_CAB, but only to a client
 -- that declared the tier (`newServiceTiers`), so every other client gets exactly the data it got before.
 cabRouteServiceTier :: Bool -> Maybe [Spec.ServiceTierType] -> Maybe Spec.ServiceTierType
-cabRouteServiceTier isCabFeed declared = Spec.SHARED_CAB <$ guard (isCabFeed && maybe False (Spec.SHARED_CAB `elem`) declared)
+cabRouteServiceTier isCabFeed declared = Spec.SHARED_CAB <$ guard (isCabFeed && declaresSharedCab declared)
+
+-- | The client asked for the shared-cab tier: the app's shared-cab entry does, no bus client does.
+declaresSharedCab :: Maybe [Spec.ServiceTierType] -> Bool
+declaresSharedCab = maybe False (Spec.SHARED_CAB `elem`)
+
+-- | Route serviceability and a stop's passing routes take the cab path only when the request names the SHARED_CAB tier.
+isSharedCabTier :: Maybe Spec.ServiceTierType -> Bool
+isSharedCabTier = (== Just Spec.SHARED_CAB)
 
 -- | The bus fleet's configs of a city: the shared-cab feed shares the BUS category but is never a bus.
 withoutCabRows :: (a -> Text) -> [a] -> [a]
 withoutCabRows agencyKeyOf = filter (not . isSharedCabAgency . agencyKeyOf)
-
--- | The bus fleet's lookup of a typed code, once. A failure counts as "the bus does not know it" (failing walk-ups on a transient error hurts riders more).
-probeBus :: (Monad m, TryException m) => m (Maybe a) -> m (Maybe a)
-probeBus lookupBus = either (const Nothing) identity <$> withTryCatch "walkUp:busProbe" lookupBus
 
 -- | A shared-cab route has no scheduled trip (frequency feed), so stops and shape come from the route's stop mapping, in stop order.
 cabRouteStations :: Id DIBC.IntegratedBPPConfig -> Text -> Maybe Text -> Text -> [(Text, Text, Int, LatLong)] -> [ApiFRFS.FRFSStationAPI]
@@ -128,22 +125,10 @@ cabRouteStations integratedBppConfigId routeCode color longName stops =
     | (code, name, sequenceNum, point) <- sortOn (\(_, _, sequenceNum, _) -> sequenceNum) stops
   ]
 
-data WalkUpChoice = UseBus | UseCab Text | PickRoute
-  deriving (Show, Eq)
-
--- | A typed four-digit code is a bus first: a cab is tried only when the bus lookup found no live vehicle. Ambiguity applies among cabs only.
-chooseWalkUp :: Bool -> CodeResolution -> WalkUpChoice
-chooseWalkUp busVehicleFound resolution
-  | busVehicleFound = UseBus
-  | otherwise = case resolution of
-    OneCab plate -> UseCab plate
-    ManyCabs -> PickRoute
-    NoCab -> UseBus
-
 liveSharedCabByCode :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow CodeResolution
 liveSharedCabByCode integratedBppConfig code = do
   routes <- OTPRest.getRoutesByGtfsId integratedBppConfig
-  plates <- concatMap (map (.session.vehicleNumber)) <$> mapM (RouteSnapshot.routeSnapshot . (.code)) routes
+  plates <- concatMap (map (.session.vehicleNumber)) <$> mapM (RouteSnapshot.routeSnapshot integratedBppConfig.merchantOperatingCityId . (.code)) routes
   pure (resolveCode code plates)
 
 -- | A live cab as the bus builder's live vehicle: its route on its feed, tagged SHARED_CAB. A cab has no waybill or schedule.
@@ -192,101 +177,69 @@ findSharedCabConfig mbPersonId = do
 enabledCabConfig :: Monad m => m Bool -> Maybe a -> m (Maybe a)
 enabledCabConfig isEnabled = maybe (pure Nothing) (\cabConfig -> (cabConfig <$) . guard <$> isEnabled)
 
--- | A plate with a live shared-cab session is a spot booking's first step, whatever vehicleType the app sent.
-walkUpVehicleData ::
-  Maybe (Id DP.Person) ->
-  Text ->
-  (Maybe (Maybe (DIBC.IntegratedBPPConfig, JLU.VehicleLiveRouteInfo)) -> Environment.Flow ApiTypes.PublicTransportData) ->
-  Environment.Flow ApiTypes.PublicTransportData
-walkUpVehicleData mbPersonId vehicleNumber busPathWith =
+-- | The shared-cab entry's lookup: a live cab by its plate, else by its sticker code (the plate's last four) among the city's live
+-- cabs. It never asks the bus system; a code no cab answers fails as an unknown bus number does, which the app reads as a wrong code.
+walkUpCab :: Maybe (Id DP.Person) -> Text -> Environment.Flow (DIBC.IntegratedBPPConfig, JLU.VehicleLiveRouteInfo)
+walkUpCab mbPersonId vehicleNumber =
   liveSharedCab vehicleNumber >>= \case
-    Just session -> requireSharedCabEnabled session.merchantOperatingCityId >> cabPath session
-    Nothing
-      | isStickerCode vehicleNumber -> do
-        mbBusVehicle <- probeBus busKnowsVehicle
-        let busVehicleFound = isJust mbBusVehicle
-        resolution <-
-          if busVehicleFound
-            then pure NoCab
-            else
-              findSharedCabConfig mbPersonId >>= \case
-                Nothing -> pure NoCab
-                Just ibc -> do
-                  whenJust mbPersonId (enforceStickerCodeLimit . getId)
-                  liveSharedCabByCode ibc vehicleNumber
-        case chooseWalkUp busVehicleFound resolution of
-          UseBus -> busPathWith (Just <$> mbBusVehicle) -- the found vehicle is passed on: one lookup
-          UseCab plate -> liveSharedCab plate >>= maybe busPath cabPath
-          PickRoute -> throwError CodeAmbiguous
-      | otherwise -> busPath
+    Just session -> requireSharedCabEnabled session.merchantOperatingCityId >> cabLiveRoute session
+    Nothing -> do
+      resolution <-
+        if isStickerCode vehicleNumber
+          then
+            findSharedCabConfig mbPersonId >>= \case
+              Nothing -> pure NoCab
+              Just ibc -> do
+                whenJust mbPersonId (enforceStickerCodeLimit . getId)
+                liveSharedCabByCode ibc vehicleNumber
+          else pure NoCab
+      case resolution of
+        OneCab plate -> liveSharedCab plate >>= maybe notFound cabLiveRoute
+        ManyCabs -> throwError CodeAmbiguous
+        NoCab -> notFound
   where
-    busKnowsVehicle = do
-      personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
-      person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      configs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-      JLU.getVehicleLiveRouteInfo configs vehicleNumber Nothing
-    busPath = busPathWith Nothing
-    cabPath s = cabLiveRoute s >>= busPathWith . Just . Just
+    notFound = throwError (InvalidVehicleNumber $ "Vehicle " <> vehicleNumber <> ", not found on any route")
 
-routeServiceability :: Maybe (Id DP.Person) -> ApiTypes.RouteServiceabilityReq -> Environment.Flow (Maybe ApiTypes.RouteServiceabilityResp)
-routeServiceability mbPersonId req =
-  findSharedCabRoutes >>= \case
-    Just (cabIbc, legReqs, feedRouteCodes)
-      | cabRouteRequest feedRouteCodes (concatMap (.routeCodes) legReqs) ->
-        authenticateRider >>= \person -> Just <$> sharedCabRouteServiceability person cabIbc req legReqs
-    _ -> pure Nothing
-  where
-    authenticateRider = do
-      personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
-      QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-    -- Only a city with a shared-cab feed pays for the route list; any failure leaves the request on the unchanged bus path.
-    findSharedCabRoutes = case req.routeCodes of
-      Just legReqs@(_ : _)
-        | not (null (concatMap (.routeCodes) legReqs)) ->
-          withTryCatch "routeServiceability:sharedCabFeed" (findSharedCabConfig mbPersonId) >>= \case
-            Right (Just cabIbc) -> do
-              feed <-
-                withTryCatch "routeServiceability:sharedCabFeedRoutes" $
-                  IM.withInMemCache ["SharedCabFeedRoutes:" <> cabIbc.id.getId] 300 (map (.code) <$> OTPRest.getRoutesByGtfsId cabIbc)
-              pure $ Just (cabIbc, legReqs, either (const Nothing) Just feed)
-            _ -> pure Nothing
-      _ -> stopPairRoutes
-    -- The app's stop search sends the two stop codes and no route.
-    stopPairRoutes = case (req.sourceStopCode, req.destinationStopCode) of
-      (Just src, Just dest) ->
-        withTryCatch "routeServiceability:sharedCabStopPair" (findSharedCabConfig mbPersonId >>= traverse (\cabIbc -> (,) cabIbc <$> JLU.getRouteCodesFromTo src dest cabIbc)) >>= \case
-          Right (Just (cabIbc, routes)) -> pure $ (\legs -> (cabIbc, legs, Just routes)) <$> stopPairLegs req.sourceStopCode routes
-          _ -> pure Nothing
-      -- the stop picked on its own: the routes of the cab feed that pass it
-      (Just src, Nothing) ->
-        withTryCatch "routeServiceability:sharedCabStop" (findSharedCabConfig mbPersonId >>= traverse (\cabIbc -> (,) cabIbc . nub . map (.routeCode) <$> OTPRest.getRouteStopMappingByStopCode src cabIbc)) >>= \case
-          Right (Just (cabIbc, routes)) -> pure $ (\legs -> (cabIbc, legs, Just routes)) <$> stopPairLegs req.sourceStopCode routes
-          _ -> pure Nothing
-      _ -> pure Nothing
+-- | The cabs on the requested routes, or, for a request that names no route, on the cab feed's routes at its stops.
+routeServiceability :: Maybe (Id DP.Person) -> ApiTypes.RouteServiceabilityReq -> Environment.Flow ApiTypes.RouteServiceabilityResp
+routeServiceability mbPersonId req = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  cabIbc <- cityCabConfig mbPersonId
+  legReqs <- case req.routeCodes of
+    Just legReqs@(_ : _) -> pure legReqs
+    _ ->
+      fmap (fromMaybe [] . stopPairLegs req.sourceStopCode) $ case (req.sourceStopCode, req.destinationStopCode) of
+        (Just src, Just dest) -> JLU.getRouteCodesFromTo src dest cabIbc
+        (Just src, Nothing) -> nub . map (.routeCode) <$> OTPRest.getRouteStopMappingByStopCode src cabIbc
+        _ -> pure []
+  sharedCabRouteServiceability person cabIbc req legReqs
+
+-- | The city's cab feed for a request that asked for cabs; a city without one, or with shared cab suspended, has none to answer from.
+cityCabConfig :: Maybe (Id DP.Person) -> Environment.Flow DIBC.IntegratedBPPConfig
+cityCabConfig mbPersonId = findSharedCabConfig mbPersonId >>= fromMaybeM (InvalidRequest "Shared cab is not available in your city")
 
 -- | The cab routes through a stop and the cabs approaching it, in the bus API's shape (the Home "Share Taxis" card reads it like the bus
--- stop view). Nothing when the city has no cab feed or the stop is not on it, so the bus path answers as before.
-trackStopRoutes :: Maybe (Id DP.Person) -> Text -> Maybe Text -> Environment.Flow (Maybe [ApiTypes.PassingRoutes])
-trackStopRoutes mbPersonId stopCode mbRouteCodes =
-  withTryCatch "trackStopRoutes:sharedCabFeed" (findSharedCabConfig mbPersonId) >>= \case
-    Right (Just cabIbc) -> do
-      mappings <- either (const []) identity <$> withTryCatch "trackStopRoutes:stopRoutes" (OTPRest.getRouteStopMappingByStopCode stopCode cabIbc)
-      let wanted = maybe (const True) (\codes -> (`elem` filter (not . T.null) (map T.strip (T.splitOn "," codes)))) mbRouteCodes
-      case nub (map (.routeCode) mappings) of
-        [] -> pure Nothing
-        codes -> do
-          now <- getCurrentTime
-          cfg <- Config.getTunables cabIbc.merchantOperatingCityId
-          let stopPoint = (.stopPoint) <$> listToMaybe mappings
-          -- the rider opening a stand's cab view counts as waiting on the routes through it, and a failure to note that never fails the view
-          whenJust mbPersonId $ \personId ->
-            void $ bestEffort (logError . ("shared-cab interest write failed: " <>)) (recordInterest cfg codes personId.getId >> Demand.recordSearch cabIbc.merchantOperatingCityId.getId personId.getId stopCode)
-          Just <$> forM (filter wanted codes) (passingRoute cabIbc now cfg stopPoint)
-    _ -> pure Nothing
+-- stop view). None when the stop is not on the city's cab feed.
+trackStopRoutes :: Maybe (Id DP.Person) -> Text -> Maybe Text -> Environment.Flow [ApiTypes.PassingRoutes]
+trackStopRoutes mbPersonId stopCode mbRouteCodes = do
+  cabIbc <- cityCabConfig mbPersonId
+  mappings <- OTPRest.getRouteStopMappingByStopCode stopCode cabIbc
+  let wanted = maybe (const True) (\codes -> (`elem` filter (not . T.null) (map T.strip (T.splitOn "," codes)))) mbRouteCodes
+  case nub (map (.routeCode) mappings) of
+    [] -> pure []
+    codes -> do
+      now <- getCurrentTime
+      cfg <- Config.getTunables cabIbc.merchantOperatingCityId
+      let stopPoint = (.stopPoint) <$> listToMaybe mappings
+      -- the rider opening a stand's cab view counts as waiting on the routes through it, and a failure to note that never fails the view
+      whenJust mbPersonId $ \personId ->
+        void $ bestEffort (logError . ("shared-cab interest write failed: " <>)) (recordInterest cfg codes personId.getId >> Demand.recordSearch cabIbc.merchantOperatingCityId.getId personId.getId stopCode)
+      forM (filter wanted codes) (passingRoute cabIbc now cfg stopPoint)
   where
     passingRoute cabIbc now cfg stopPoint code = do
       mbRoute <- OTPRest.getRouteByRouteId cabIbc code
-      snapshot <- RouteSnapshot.routeSnapshot code
+      snapshot <- RouteSnapshot.routeSnapshot cabIbc.merchantOperatingCityId code
       let cabs = flip mapMaybe snapshot $ \c -> do
             track <- c.track
             u <- Approach.cabStopEta now cfg stopCode (fromMaybe (LatLong track.vehicleInfo.latitude track.vehicleInfo.longitude) stopPoint) track
@@ -327,11 +280,11 @@ sharedCabRouteServiceability person cabIbc req legReqs = do
     routes <- forM (nub legReq.routeCodes) $ \code -> do
       mbRoute <- OTPRest.getRouteByRouteId cabIbc code
       stops <- sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode code cabIbc
-      snapshot <- RouteSnapshot.routeSnapshot code
+      snapshot <- RouteSnapshot.routeSnapshot cabIbc.merchantOperatingCityId code
       let wanted = filter (\c -> maybe True (\plate -> c.session.vehicleNumber == plate) req.vehicleNumber) snapshot
           boardStop = req.sourceStopCode >>= \stopCode -> (stopCode,) . (.stopPoint) <$> find ((== stopCode) . (.stopCode)) stops
           cabOf c =
-            let load = Seats.riderLoad (Seats.cabSeatsOn (map (.stopCode) stops) c.session) (RouteSnapshot.cabBitmapsOf c) req.sourceStopCode req.destinationStopCode ((.vehicleInfo) <$> c.track)
+            let load = Seats.riderLoad c.seats req.sourceStopCode req.destinationStopCode ((.vehicleInfo) <$> c.track)
              in cabVehicle now cfg (isJust req.vehicleNumber) boardStop load c.session c.track
           (scheduled, live) = partitionEithers (map cabOf wanted)
           boardEta v = (.arrivalTimeUnix) <$> (find (\e -> Just e.stopCode == req.sourceStopCode) =<< v.eta)
