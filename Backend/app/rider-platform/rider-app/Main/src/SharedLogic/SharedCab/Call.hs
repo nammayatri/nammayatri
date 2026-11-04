@@ -21,7 +21,6 @@ import Data.List (sortOn)
 import qualified Data.Text as T
 import Domain.Types.Exophone (Exophone)
 import qualified Domain.Types.FRFSTicketBooking as DFTB
-import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.External.Call.Types (CallService (Exotel))
@@ -121,8 +120,8 @@ type CallFlow m r =
 -- | The cab whose driver the rider reaches by dialling the ExoPhone: that of the rider's newest cab booking that is in the call window.
 liveSessionForRider :: CallFlow m r => Id DP.Person -> m (Maybe Session)
 liveSessionForRider riderId = do
-  bookings <- QFRFSTicketBooking.findAllByRiderId (Just 20) Nothing riderId Nothing Nothing
-  firstJustM liveSessionOfBooking [b | b <- bookings, isSharedCabBooking b, b.status == DFRFSBooking.CONFIRMED, isJust b.vehicleNumber]
+  bookings <- QFRFSTicketBooking.findConfirmedSharedCabByRiderId riderId
+  firstJustM liveSessionOfBooking [b | b <- bookings, isJust b.vehicleNumber]
   where
     liveSessionOfBooking booking = do
       cfg <- Config.getTunables booking.merchantOperatingCityId

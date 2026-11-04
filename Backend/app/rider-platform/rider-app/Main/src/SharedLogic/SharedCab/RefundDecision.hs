@@ -16,14 +16,14 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
-import SharedLogic.FRFSUtils (getServiceTierTypeFromRouteStationsJson)
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 
 data Refund = FullRefund | NoRefund | NothingPaid
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+-- | The tier stored when the booking was made, not a decode of its route JSON.
 isSharedCabBooking :: DFRFSTicketBooking.FRFSTicketBooking -> Bool
-isSharedCabBooking booking = getServiceTierTypeFromRouteStationsJson booking.routeStationsJson == Just Spec.SHARED_CAB
+isSharedCabBooking booking = booking.serviceTierType == Just Spec.SHARED_CAB
 
 refundAmounts :: HighPrecMoney -> Refund -> (HighPrecMoney, HighPrecMoney)
 refundAmounts baseFare = \case

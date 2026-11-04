@@ -101,7 +101,7 @@ cancel merchant merchantOperatingCity bapConfig cancellationType initiator enfor
         -- a shared-cab booking must never take this branch: the fork leaves the row CONFIRMED until the ASYNC on_cancel, so the
         -- no-double-refund guard cannot hold against a racing finding-timeout tick, and this branch never reads the policy's
         -- refund decision. Shared-cab providers are direct-integrated, so this is a config error: refuse loudly.
-        when (FRFSUtils.getServiceTierTypeFromRouteStationsJson booking.routeStationsJson == Just Spec.SHARED_CAB) $ do
+        when (isSharedCabBooking booking) $ do
           logError $ "shared-cab booking " <> booking.id.getId <> " reached the ONDC cancel dispatcher (integratedBPPConfig=" <> integratedBPPConfig.id.getId <> "): booking would sit CONFIRMED until on_cancel and the refund policy decision would be ignored; refusing"
           throwError CancellationNotSupported
         fork "FRFS ONDC Cancel Req" $ do
