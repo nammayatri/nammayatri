@@ -14,6 +14,7 @@ module SharedLogic.Finance.InvoiceDocument
     renderInvoicePdfBase64,
     storeInvoicePdf,
     getInvoicePdfBase64,
+    getStoredInvoicePdfBase64,
     materialiseInvoicePdf,
     generateAndStoreInvoicePdf,
     getInvoiceDocumentUrl,
@@ -33,7 +34,6 @@ import qualified Data.Text.Encoding as TE
 import qualified Data.Time as DT
 import qualified Domain.Types.Booking as DRB
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
-import qualified Domain.Types.Person as DP
 import Environment (Flow)
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
@@ -55,7 +55,6 @@ import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
-import qualified Storage.Queries.Person as QPerson
 import "beckn-services" Tools.InvoicePdf (generateFinanceInvoicePdf)
 import qualified Utils.QRCode.Encoder as QREncoder
 
@@ -85,7 +84,6 @@ mkInvoiceQrDataUri inv =
 --   invoice row — no auth context needed, so it works from a background trigger.
 renderInvoicePdfBase64 :: InvoicePdfFlow m r => FinanceInvoice.Invoice -> m Text
 renderInvoicePdfBase64 inv = do
-  mbDriver <- QPerson.findById (Id inv.issuedToId :: Id DP.Person)
   mbTransporterConfig <-
     getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = inv.merchantOperatingCityId}) Nothing
 
@@ -115,7 +113,7 @@ renderInvoicePdfBase64 inv = do
 
   mbQrDataUri <- mkInvoiceQrDataUri inv
 
-  let lang = fromMaybe ENGLISH (mbDriver >>= (.language))
+  let lang = ENGLISH
       tz = maybe DT.utc (\tc -> DT.minutesToTimeZone (fromIntegral tc.timeDiffFromUtc `div` 60)) mbTransporterConfig
       ctx =
         FRT.buildInvoiceContext
@@ -143,10 +141,7 @@ renderInvoicePdfBase64 inv = do
               cityState = mbTransporterConfig >>= (.invoiceConfig) >>= (.cityState),
               qrImageDataUri = mbQrDataUri
             }
-      mbInvType = case inv.invoiceType of
-        AggregatedCommission -> Just AggregatedCommission
-        _ -> Nothing
-  html <- RIFT.renderHtml (Id inv.merchantOperatingCityId) mbInvType lang tz ctx
+  html <- RIFT.renderHtml (Id inv.merchantOperatingCityId) (Just inv.invoiceType) lang tz ctx
   generateFinanceInvoicePdf inv.invoiceNumber html
 
 -- | Upload an already-rendered base64 PDF to S3 and stamp 'pdfS3Path' on the row.
@@ -166,24 +161,27 @@ storeInvoicePdf inv pdfBase64 = do
 --   (write-through) so later reads and presigned URLs are served from S3.
 getInvoicePdfBase64 :: Bool -> FinanceInvoice.Invoice -> Flow Text
 getInvoicePdfBase64 storeOnRender inv = do
-  mbStored <- case inv.pdfS3Path of
-    Nothing -> pure Nothing
-    Just path -> do
-      eBytes <- withTryCatch "getInvoicePdfBase64:s3Get" $ S3.getRaw (T.unpack path)
-      case eBytes of
-        Left err -> do
-          logError $ "Stored invoice PDF unreadable for " <> inv.id.getId <> " at " <> path <> ", re-rendering: " <> show err
-          pure Nothing
-        Right bytes
-          -- Objects written before the putRaw switch hold base64 text, not PDF bytes.
-          | "%PDF" `BS.isPrefixOf` bytes -> pure . Just . TE.decodeUtf8 $ B64.encode bytes
-          | otherwise -> pure . Just $ TE.decodeUtf8 bytes
+  mbStored <- getStoredInvoicePdfBase64 inv
   case mbStored of
     Just pdf -> pure pdf
     Nothing -> do
       pdf <- renderInvoicePdfBase64 inv
       when storeOnRender $ storeInvoicePdf inv pdf
       pure pdf
+
+getStoredInvoicePdfBase64 :: FinanceInvoice.Invoice -> Flow (Maybe Text)
+getStoredInvoicePdfBase64 inv = case inv.pdfS3Path of
+  Nothing -> pure Nothing
+  Just path -> do
+    eBytes <- withTryCatch "getStoredInvoicePdfBase64:s3Get" $ S3.getRaw (T.unpack path)
+    case eBytes of
+      Left err -> do
+        logError $ "Stored invoice PDF unreadable for " <> inv.id.getId <> " at " <> path <> ", re-rendering: " <> show err
+        pure Nothing
+      Right bytes
+        -- Objects written before the putRaw switch hold base64 text, not PDF bytes.
+        | "%PDF" `BS.isPrefixOf` bytes -> pure . Just . TE.decodeUtf8 $ B64.encode bytes
+        | otherwise -> pure . Just $ TE.decodeUtf8 bytes
 
 -- | Render + store, keyed on invoice id. Idempotent (skips if already stored);
 --   throws on render / upload failure so a scheduler job can retry.

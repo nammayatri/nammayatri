@@ -1851,38 +1851,39 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   -- If multiple invoices match the filters, the first (newest by issuedAt DESC) is rendered.
   let chosenPdfData = Kernel.Prelude.head pdfDatas
       chosenInv = chosenPdfData.financeInvoice
-  mbQrDataUri <- InvoiceDocument.mkInvoiceQrDataUri chosenInv
-  let ctx =
-        FRT.buildInvoiceContext
-          FRT.BuildInvoiceContextInput
-            { language = lang,
-              logoUrl = tmplLogoUrl,
-              sellerTradeName = tmplSellerTradeName,
-              appName = tmplAppName,
-              invoice = chosenInv,
-              lineItems = chosenPdfData.parsedLineItems,
-              mbTaxTxn = chosenPdfData.mbTaxTxn,
-              mbPaymentMode = chosenPdfData.mbPaymentMethodType,
-              mbCardBrand = chosenPdfData.mbCardBrand,
-              mbCardLastFour = chosenPdfData.mbCardLastFour,
-              mbRecipientBusinessId = chosenPdfData.mbRecipientBusinessId,
-              mbSellerBusinessId = chosenPdfData.mbSellerBusinessId,
-              mbSellerVatNumber = chosenPdfData.mbSellerVatNumber,
-              reverseCharge = transporterConfig.invoiceConfig >>= (.reverseCharge),
-              ecoName = transporterConfig.invoiceConfig >>= (.ecoName),
-              ecoAddress = transporterConfig.invoiceConfig >>= (.ecoAddress),
-              ecoGstin = transporterConfig.invoiceConfig >>= (.ecoGstin),
-              hsnSacCode = transporterConfig.invoiceConfig >>= (.hsnSacCode),
-              categoryOfServices = transporterConfig.invoiceConfig >>= (.categoryOfServices),
-              signatureImageUrl = transporterConfig.invoiceConfig >>= (.signatureImageUrl) <&> showBaseUrl,
-              cityState = transporterConfig.invoiceConfig >>= (.cityState),
-              qrImageDataUri = mbQrDataUri
-            }
-      mbInvType = case chosenInv.invoiceType of
-        AggregatedCommission -> Just AggregatedCommission
-        _ -> Nothing
-  html <- RIFT.renderHtml (Id chosenInv.merchantOperatingCityId) mbInvType lang tz ctx
-  pdfBase64 <- generateFinanceInvoicePdf chosenInv.invoiceNumber html
+  mbStoredPdf <- if lang == ENGLISH then InvoiceDocument.getStoredInvoicePdfBase64 chosenInv else pure Nothing
+  pdfBase64 <- case mbStoredPdf of
+    Just storedPdf -> pure storedPdf
+    Nothing -> do
+      mbQrDataUri <- InvoiceDocument.mkInvoiceQrDataUri chosenInv
+      let ctx =
+            FRT.buildInvoiceContext
+              FRT.BuildInvoiceContextInput
+                { language = lang,
+                  logoUrl = tmplLogoUrl,
+                  sellerTradeName = tmplSellerTradeName,
+                  appName = tmplAppName,
+                  invoice = chosenInv,
+                  lineItems = chosenPdfData.parsedLineItems,
+                  mbTaxTxn = chosenPdfData.mbTaxTxn,
+                  mbPaymentMode = chosenPdfData.mbPaymentMethodType,
+                  mbCardBrand = chosenPdfData.mbCardBrand,
+                  mbCardLastFour = chosenPdfData.mbCardLastFour,
+                  mbRecipientBusinessId = chosenPdfData.mbRecipientBusinessId,
+                  mbSellerBusinessId = chosenPdfData.mbSellerBusinessId,
+                  mbSellerVatNumber = chosenPdfData.mbSellerVatNumber,
+                  reverseCharge = transporterConfig.invoiceConfig >>= (.reverseCharge),
+                  ecoName = transporterConfig.invoiceConfig >>= (.ecoName),
+                  ecoAddress = transporterConfig.invoiceConfig >>= (.ecoAddress),
+                  ecoGstin = transporterConfig.invoiceConfig >>= (.ecoGstin),
+                  hsnSacCode = transporterConfig.invoiceConfig >>= (.hsnSacCode),
+                  categoryOfServices = transporterConfig.invoiceConfig >>= (.categoryOfServices),
+                  signatureImageUrl = transporterConfig.invoiceConfig >>= (.signatureImageUrl) <&> showBaseUrl,
+                  cityState = transporterConfig.invoiceConfig >>= (.cityState),
+                  qrImageDataUri = mbQrDataUri
+                }
+      html <- RIFT.renderHtml (Id chosenInv.merchantOperatingCityId) (Just chosenInv.invoiceType) lang tz ctx
+      generateFinanceInvoicePdf chosenInv.invoiceNumber html
 
   pure $
     API.FinanceInvoicePdfResp

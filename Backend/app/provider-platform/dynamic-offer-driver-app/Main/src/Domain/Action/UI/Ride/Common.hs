@@ -85,7 +85,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.FareCalculator (driverBorneAppFee, fareSum)
 import qualified SharedLogic.FarePolicy as SFP
-import SharedLogic.Finance.RideInvoice (rideFinanceInvoiceId)
+import SharedLogic.Finance.RideInvoice (isFinalRideOfBooking, rideFinanceInvoiceId)
 import SharedLogic.Finance.Wallet (splitGrossByVatPct)
 import SharedLogic.ManualTollCharge (isManualTollChargeEnabled)
 import qualified SharedLogic.RideFootnotes as RFN
@@ -97,6 +97,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FareParameters as SQFP
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Translations as QTranslations
 import Tools.DynamicLogic (getAppDynamicLogic)
@@ -583,6 +584,11 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
     _ -> pure booking.stops
   cancellationReason <- if ride.status == DRide.CANCELLED then runInReplica (QBCR.findByRideId (Just ride.id)) else pure Nothing
   mbRiderDetails <- maybe (pure Nothing) (runInReplica . QRiderDetails.findById) booking.riderId
+  mbInvoiceId <- case rideFinanceInvoiceId ride booking of
+    Just invoiceId | ride.status == DRide.CANCELLED -> do
+      bookingRides <- runInReplica (QRide.findRidesByBookingId [ride.bookingId])
+      pure $ if isFinalRideOfBooking ride.createdAt bookingRides then Just invoiceId else Nothing
+    mbEligibleInvoiceId -> pure mbEligibleInvoiceId
 
   -- Lookup pickup zone gate info for entry fee
   (mbGateInfo, mbSpecialLoc) <- case booking.pickupGateId of
@@ -795,7 +801,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
             DFPC.PerMinuteWaitingCharge _ -> Nothing,
         customerRating = mbRiderDetails >>= (.customerRating),
         showRoutePerRequest,
-        invoiceId = rideFinanceInvoiceId ride booking
+        invoiceId = mbInvoiceId
       }
 
 getWaitingChargeInfo :: Maybe Meters -> Maybe Months -> FarePolicyD.FullFarePolicy -> Maybe DFPC.WaitingChargeInfo

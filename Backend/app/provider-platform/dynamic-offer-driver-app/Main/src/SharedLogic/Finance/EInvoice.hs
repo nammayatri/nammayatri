@@ -144,6 +144,7 @@ generateEInvoiceForInvoice invoice = do
               logError $ "GSTEInvoice: IRN generated: " <> fromMaybe "<no IRN in response>" eInvResp.irn
               actorInfo <- asks (.actorInfo)
               QFInvoice.updateIrnAndSignedQRByInvoiceId eInvResp.irn eInvResp.signedQRCode (Just actorInfo.actorType) actorInfo.actorId invoice.id
+              QFInvoice.updatePdfS3Path Nothing (Just actorInfo.actorType) actorInfo.actorId invoice.id
               logInfo $ "GSTEInvoice: invoice row updated with IRN." <> ctx
           case eResult of
             Right _ -> logInfo $ "GSTEInvoice: e-invoice flow completed successfully." <> ctx
