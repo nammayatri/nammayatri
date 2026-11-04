@@ -602,6 +602,7 @@ library
       SharedLogic.External.Nandi.API.Nandi
       SharedLogic.External.Nandi.Flow
       SharedLogic.External.Nandi.Types
+      SharedLogic.FareBreakdown
       SharedLogic.FareBreakupInfo
       SharedLogic.FeedbackForm
       SharedLogic.Finance.CashbackPayout

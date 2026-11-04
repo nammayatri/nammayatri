@@ -15,6 +15,7 @@ module IssueManagement.Common (module IssueManagement.Common, module Domain.Type
 import qualified AWS.S3 as S3
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Data.Vector as V
@@ -202,8 +203,11 @@ data RideInfoRes = RideInfoRes
     estimatedFare :: HighPrecMoney,
     computedPrice :: Maybe HighPrecMoney,
     fareBreakup :: [FareBreakup],
+    fareBreakdown :: Maybe FareBreakdown,
+    fareLabels :: Map.Map Text Text,
     estimateFareBreakup :: [EstimateFareBreakup],
     rideCreatedAt :: UTCTime,
+    driverArrivalTime :: Maybe UTCTime,
     rideStartTime :: Maybe UTCTime,
     mobileCountryCode :: Maybe Text
   }
@@ -233,6 +237,23 @@ data FareBreakup = FareBreakup
     description :: Text,
     entityId :: Text,
     entityType :: FareBreakupEntityType
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data FareBreakdown = FareBreakdown
+  { items :: [FareBreakdownItem],
+    estimatedTotal :: HighPrecMoney,
+    finalTotal :: Maybe HighPrecMoney,
+    currency :: Currency,
+    estimatedDistance :: Maybe HighPrecMeters,
+    finalDistance :: Maybe HighPrecMeters
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data FareBreakdownItem = FareBreakdownItem
+  { code :: Text,
+    estimated :: Maybe HighPrecMoney,
+    final :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

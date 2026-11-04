@@ -56,6 +56,7 @@ import Servant hiding (throwError)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CallIGMBPP as CallBPP
 import SharedLogic.FRFSUtils
+import qualified SharedLogic.FareBreakdown as SFareBreakdown
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
@@ -353,9 +354,12 @@ castRideInfo merchantId _ rideId = do
     Redis.safeGet makeRideInfoCacheKey >>= \case
       Just res -> pure res
       Nothing -> cacheRideInfo /=<< DRide.rideInfo (cast merchantId) (cast rideId)
-  return $ castRideInfoRes rideInfoRes
+  mbBooking <- runInReplica $ QB.findById (Id rideInfoRes.bookingId.getId)
+  mbRide <- runInReplica $ QR.findById (cast rideId)
+  fareBreakdown <- forM mbBooking $ \booking -> SFareBreakdown.buildFareBreakdown booking mbRide >>= SFareBreakdown.withOfferTotals booking mbRide
+  return $ castRideInfoRes fareBreakdown rideInfoRes
   where
-    castRideInfoRes res =
+    castRideInfoRes fareBreakdown res =
       Common.RideInfoRes
         { customerName = res.customerName,
           customerPhoneNo = fromMaybe "" res.customerPhoneNo,
@@ -374,13 +378,26 @@ castRideInfo merchantId _ rideId = do
           estimatedFare = toHighPrecMoney res.estimatedFare,
           computedPrice = res.computedPrice,
           fareBreakup = transformFareBreakup <$> res.fareBreakup,
+          fareBreakdown = castFareBreakdown <$> fareBreakdown,
+          fareLabels = mempty,
           estimateFareBreakup = maybe [] ((\bp -> Common.EstimateFareBreakup {title = bp.title, amount = bp.price.value.amount}) <$>) res.estimateFareBP,
           rideCreatedAt = res.rideCreatedAt,
+          driverArrivalTime = res.actualDriverArrivalTime,
           rideStartTime = res.rideStartTime,
           rideStatus = castRideStatus res.rideStatus,
           -- "OneWay_OneWayOnDemandDynamicOffer" -> "OneWay"
           rideType = Just $ T.takeWhile (/= '_') (T.pack (show res.tripCategory)),
           mobileCountryCode = res.mobileCountryCode
+        }
+
+    castFareBreakdown breakdown =
+      Common.FareBreakdown
+        { items = (\item -> Common.FareBreakdownItem {code = item.code, estimated = item.estimated, final = item.final}) <$> breakdown.items,
+          estimatedTotal = breakdown.estimatedTotal,
+          finalTotal = breakdown.finalTotal,
+          currency = breakdown.currency,
+          estimatedDistance = breakdown.estimatedDistance,
+          finalDistance = breakdown.finalDistance
         }
 
     castLocationAPIEntity ent =
