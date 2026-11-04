@@ -18,6 +18,7 @@ module Domain.Action.UI.DriverWallet
   ( getWalletBalance,
     getWalletTransactions,
     getWalletTransactionHistory,
+    getWalletLedgerHistory,
     postWalletPayout,
     postWalletTopup,
     clearDuesByWalletTopup,
@@ -36,13 +37,17 @@ import qualified Data.Time
 import qualified Data.Time.Calendar as Cal
 import qualified Domain.Action.UI.Payout as UIPayout
 import Domain.Action.UI.Plan hiding (mkDriverFee)
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverFee as DDF
 import Domain.Types.DriverInformation as DI
+import Domain.Types.Extra.MerchantPaymentMethod (isOnlinePaymentInstrument)
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan (ServiceNames (YATRI_SUBSCRIPTION))
+import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideDetails as DRD
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.WalletTransaction as DWT
 import qualified Environment
@@ -74,6 +79,7 @@ import Lib.Finance
   )
 import Lib.Finance.Account.Interface (AccountInput (..))
 import qualified Lib.Finance.Account.Service as FAccountService
+import qualified Lib.Finance.AccountConfig as FinanceAccountConfig
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Finance.Domain.Types.LedgerEntry as FLedgerEntry
@@ -100,6 +106,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.LedgerEntry as CHLE
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPlan as QDPlan
@@ -107,6 +114,8 @@ import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Mandate as QMandate
 import qualified Storage.Queries.Notification as QNotification
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.WalletTransaction as QWalletTransaction
 import Tools.Error
@@ -225,24 +234,29 @@ getWalletTransactions ::
 getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAggBy = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  mbActiveFleetAssoc <- QFDA.findByDriverId driverId True
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
-  -- Per city: FLEET_ACCOUNT (default) shows the fleet owner's account filtered to this driver's rides,
-  -- OWN_ACCOUNT only the driver's own account, HIDDEN nothing.
-  let mbAssocFleetOwnerId = (.fleetOwnerId) <$> mbActiveFleetAssoc
-      walletView = fromMaybe DTConf.FLEET_ACCOUNT transporterConfig.driverWalletConfig.fleetLinkedDriverWalletView
-      ownAccount = (counterpartyFromRole person.role, driverId.getId, Nothing)
-      (counterparty, ownerId, mbConcernedIndividualId) =
-        case mbAssocFleetOwnerId of
-          Just fleetOwnerId | walletView == DTConf.FLEET_ACCOUNT -> (counterpartyFleetOwner, fleetOwnerId, Just driverId.getId)
-          _ -> ownAccount
+  mbOwner <- walletOwnerFor person transporterConfig
+  let (counterparty, ownerId, mbConcernedIndividualId) = fromMaybe (counterpartyFromRole person.role, driverId.getId, Nothing) mbOwner
   canWithdraw <- instantPayoutAllowedFor transporterConfig.merchantId mocId person.role
   -- Policy of the account being VIEWED (fleet owner's when FLEET_ACCOUNT), from the kernel.
   classCfg <- walletClassConfig transporterConfig.merchantId.getId mocId.getId counterparty
   now <- getCurrentTime
-  if isJust mbAssocFleetOwnerId && walletView == DTConf.HIDDEN
-    then pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig canWithdraw classCfg transporterConfig.driverWalletConfig 0}
-    else walletTransactionsFor canWithdraw classCfg counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy
+  case mbOwner of
+    Nothing -> pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig canWithdraw classCfg transporterConfig.driverWalletConfig 0}
+    Just _ -> walletTransactionsFor canWithdraw classCfg counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy
+
+-- | Whose wallet a person sees, and whose rides within it. Per city: FLEET_ACCOUNT (default) shows a
+--   linked driver the fleet owner's account filtered to their rides, OWN_ACCOUNT their own account,
+--   HIDDEN nothing (Nothing).
+walletOwnerFor :: DP.Person -> DTConf.TransporterConfig -> Environment.Flow (Maybe (FAccount.CounterpartyType, Text, Maybe Text))
+walletOwnerFor person transporterConfig = do
+  mbActiveFleetAssoc <- QFDA.findByDriverId person.id True
+  let walletView = fromMaybe DTConf.FLEET_ACCOUNT transporterConfig.driverWalletConfig.fleetLinkedDriverWalletView
+  pure $ case (.fleetOwnerId) <$> mbActiveFleetAssoc of
+    Just fleetOwnerId
+      | walletView == DTConf.FLEET_ACCOUNT -> Just (counterpartyFleetOwner, fleetOwnerId, Just person.id.getId)
+      | walletView == DTConf.HIDDEN -> Nothing
+    _ -> Just (counterpartyFromRole person.role, person.id.getId, Nothing)
 
 -- | The wallet read itself, once it has been decided whose account to read.
 walletTransactionsFor ::
@@ -346,9 +360,7 @@ fetchWalletRowsFromLedger ::
   UTCTime ->
   m [CHLE.WalletEntryRow]
 fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate = do
-  -- Payouts are a settlement of already-earned money, not a deduction from earnings,
-  -- so they are excluded from the transaction breakdown entirely.
-  let allRefs = walletCreditRefs ++ [walletReferenceAirportCashWithdrawal, walletReferenceGateDriverFee]
+  let allRefs = walletCreditRefs ++ [walletReferenceAirportCashWithdrawal, walletReferenceGateDriverFee, walletReferencePayout]
   entries <-
     QLedgerEntry.findByAccountsWithConcernedIndividual
       accountIds
@@ -358,15 +370,16 @@ fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate = d
       Nothing
       Nothing
       mbConcernedIndividualId
-  pure $ map toWalletRow entries
-  where
-    toWalletRow e =
-      CHLE.WalletEntryRow
-        { walletAmount = e.amount,
-          walletToAccountId = e.toAccountId,
-          walletReferenceType = e.referenceType,
-          walletTimestamp = e.timestamp
-        }
+  pure $ map ledgerEntryToWalletRow entries
+
+ledgerEntryToWalletRow :: FLedgerEntry.LedgerEntry -> CHLE.WalletEntryRow
+ledgerEntryToWalletRow e =
+  CHLE.WalletEntryRow
+    { walletAmount = e.amount,
+      walletToAccountId = e.toAccountId,
+      walletReferenceType = e.referenceType,
+      walletTimestamp = e.timestamp
+    }
 
 -- | Fetch the same wallet entries from ClickHouse. Used when the transporter
 --   config flag is on so the whole summary response is served from CH.
@@ -378,9 +391,7 @@ fetchWalletRowsFromCH ::
   UTCTime ->
   m [CHLE.WalletEntryRow]
 fetchWalletRowsFromCH accountIds mbConcernedIndividualId fromDate toDate = do
-  -- Payouts are a settlement of already-earned money, not a deduction from earnings,
-  -- so they are excluded from the transaction breakdown entirely.
-  let allRefs = walletCreditRefs ++ [walletReferenceAirportCashWithdrawal, walletReferenceGateDriverFee]
+  let allRefs = walletCreditRefs ++ [walletReferenceAirportCashWithdrawal, walletReferenceGateDriverFee, walletReferencePayout]
   CHLE.findWalletEntries accountIds mbConcernedIndividualId fromDate toDate allRefs
 
 -- | Per-reference additions/deductions groups and the net earnings for the window.
@@ -764,6 +775,172 @@ payoutStage = \case
   PR.CREDITED -> DriverWallet.SUCCESS
   PR.CASH_PAID -> DriverWallet.SUCCESS
   _ -> DriverWallet.FAILED
+
+--------------------------------------------------------------------------------
+-- getWalletLedgerHistory
+--------------------------------------------------------------------------------
+
+getWalletLedgerHistory ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Maybe Data.Time.UTCTime ->
+    Kernel.Prelude.Maybe Data.Time.UTCTime ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Environment.Flow DriverWallet.WalletLedgerEntriesResponse
+  )
+getWalletLedgerHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbLimit mbOffset = do
+  driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
+  now <- getCurrentTime
+  let fromDate = fromMaybe (Data.Time.UTCTime (Data.Time.utctDay now) 0) mbFromDate
+      toDate = fromMaybe now mbToDate
+  when (Data.Time.diffUTCTime toDate fromDate > fromIntegral (ledgerHistoryMaxDays * 24 * 3600)) $
+    throwError $ LedgerHistoryRangeTooLong ledgerHistoryMaxDays
+  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  mbOwner <- walletOwnerFor person transporterConfig
+  mbWalletAcc <- maybe (pure Nothing) (\(counterparty, ownerId, _) -> getWalletAccountByOwner counterparty ownerId) mbOwner
+  case (mbOwner, mbWalletAcc) of
+    (Just (_, _, mbConcernedIndividualId), Just walletAcc) -> do
+      let limit = min 100 (max 1 (fromMaybe 20 mbLimit))
+          offset = max 0 (fromMaybe 0 mbOffset)
+      entries <-
+        filter (\e -> e.status == FLedgerEntry.SETTLED)
+          <$> QLedgerEntry.findByAccountsWithConcernedIndividual [walletAcc.id] [] (Just fromDate) (Just toDate) Nothing Nothing mbConcernedIndividualId
+      accountConfig <- FinanceAccountConfig.getAccountConfigForAccount walletAcc
+      let isVat = isVatMerchant transporterConfig
+          cutoff = maybe now (`FinanceAccountConfig.cutoffTimeFor` now) accountConfig.redeemableCutoff
+          (additions, deductions, netAmount) =
+            aggregateWalletRows isVat [walletAcc.id] cutoff (map ledgerEntryToWalletRow entries)
+          groups = groupEntriesByReference entries
+      pageGroups <- buildLedgerEntryGroups isVat person walletAcc.id (take limit (drop offset groups))
+      pure
+        DriverWallet.WalletLedgerEntriesResponse
+          { additions = toLedgerTotal additions,
+            deductions = toLedgerTotal deductions,
+            netAmount,
+            totalGroups = length groups,
+            groups = pageGroups
+          }
+    _ -> pure emptyLedgerEntriesResponse
+
+ledgerHistoryMaxDays :: Int
+ledgerHistoryMaxDays = 7
+
+emptyLedgerEntriesResponse :: DriverWallet.WalletLedgerEntriesResponse
+emptyLedgerEntriesResponse =
+  DriverWallet.WalletLedgerEntriesResponse
+    { additions = emptyTotal,
+      deductions = emptyTotal,
+      netAmount = 0,
+      totalGroups = 0,
+      groups = []
+    }
+  where
+    emptyTotal = DriverWallet.WalletLedgerTotal {totalAmount = 0, redeemableAmount = 0, nonRedeemableAmount = 0}
+
+isWalletPayoutEntry :: FLedgerEntry.LedgerEntry -> Bool
+isWalletPayoutEntry e = e.referenceType == walletReferencePayout
+
+toLedgerTotal :: DriverWallet.WalletItemGroup -> DriverWallet.WalletLedgerTotal
+toLedgerTotal itemGroup =
+  DriverWallet.WalletLedgerTotal
+    { totalAmount = itemGroup.totalAmount,
+      redeemableAmount = sum (map (.redeemableBalance) itemGroup.items),
+      nonRedeemableAmount = sum (map (.nonRedeemableBalance) itemGroup.items)
+    }
+
+groupEntriesByReference :: [FLedgerEntry.LedgerEntry] -> [(Text, UTCTime, [FLedgerEntry.LedgerEntry])]
+groupEntriesByReference entries =
+  map (\(refId, (refEntries, latestAt)) -> (refId, latestAt, sortOn (.timestamp) refEntries)) $
+    reverse $
+      sortOn (\(_, (_, latestAt)) -> latestAt) $
+        Map.toList $
+          Map.fromListWith (\(es1, t1) (es2, t2) -> (es1 <> es2, max t1 t2)) [(e.referenceId, ([e], e.timestamp)) | e <- entries]
+
+buildLedgerEntryGroups ::
+  Bool ->
+  DP.Person ->
+  Id Account ->
+  [(Text, UTCTime, [FLedgerEntry.LedgerEntry])] ->
+  Environment.Flow [DriverWallet.WalletLedgerEntryGroup]
+buildLedgerEntryGroups isVat viewer walletAccId groups = do
+  bookings <- QBooking.findAllByIds [Id refId | (refId, _, _) <- groups]
+  rides <- if null bookings then pure [] else QRide.findRidesByBookingId (map (.id) bookings)
+  rideDetails <- QRideDetails.findAllByRideIds (map (.id) rides)
+  let otherDriverIds = filter (/= viewer.id) (map (.driverId) rides)
+  otherDrivers <- if null otherDriverIds then pure [] else QPerson.getDriversByIdIn otherDriverIds
+  let payoutRequestIds = [refId | (refId, _, refEntries) <- groups, any isWalletPayoutEntry refEntries]
+  payoutTransfers <- QTransferExtra.findByDirectionRefTypeAndRefIds DTransfer.OUTBOUND walletReferencePayout payoutRequestIds
+  payoutRequests <- QPayoutRequestExtra.findByIds payoutRequestIds
+  let bookingById = Map.fromList [(b.id.getId, b) | b <- bookings]
+      ridesByBookingId = Map.fromListWith (<>) [(r.bookingId.getId, [r]) | r <- rides]
+      vehicleNumberByRideId = vehicleNumbersByRideId rideDetails
+      driverNameById = Map.fromList [(d.id.getId, QRide.personFullName d) | d <- viewer : otherDrivers]
+      sources =
+        PaymentSources
+          { topupTransferByOrderId = Map.empty,
+            walletTxnByOrderId = Map.empty,
+            autopayFeeById = Map.empty,
+            executionAtByFeeId = Map.empty,
+            payoutTransferByRequestId = Map.fromList [(t.referenceId, t) | t <- payoutTransfers],
+            payoutRequestById = Map.fromList [(pr.id.getId, pr) | pr <- payoutRequests]
+          }
+      mkGroup (refId, latestAt, refEntries) =
+        let mbBooking = Map.lookup refId bookingById
+            mbRide = pickBookingRide =<< Map.lookup refId ridesByBookingId
+            groupType
+              | any isWalletPayoutEntry refEntries = DriverWallet.WALLET_PAYOUT
+              | Just booking <- mbBooking, booking.status == DRB.CANCELLED = DriverWallet.CANCELLED_BOOKING
+              | isJust mbBooking = DriverWallet.RIDE
+              | otherwise = DriverWallet.OTHER
+            signedAmount e = if e.toAccountId == walletAccId then e.amount else negate e.amount
+            payoutHolds = filter (\e -> isWalletPayoutEntry e && e.entryType /= FLedgerEntry.Reversal) refEntries
+            mbRideInfo = mkLedgerRideInfo driverNameById vehicleNumberByRideId <$> mbBooking <*> mbRide
+            mbPayoutInfo = Kernel.Prelude.listToMaybe (Kernel.Prelude.mapMaybe (paymentInfoFor sources) payoutHolds)
+         in DriverWallet.WalletLedgerEntryGroup
+              { referenceId = refId,
+                groupType,
+                date = latestAt,
+                netAmount = sum (map signedAmount refEntries),
+                groupData = (DriverWallet.RideWallet <$> mbRideInfo) <|> (DriverWallet.PayoutWallet <$> mbPayoutInfo),
+                entries = map (mkLedgerEntryItem isVat walletAccId) refEntries
+              }
+  pure (map mkGroup groups)
+
+pickBookingRide :: [DRide.Ride] -> Maybe DRide.Ride
+pickBookingRide rides = Kernel.Prelude.listToMaybe (reverse (sortOn rank rides))
+  where
+    rank r = (r.status /= DRide.CANCELLED, r.createdAt)
+
+vehicleNumbersByRideId :: [DRD.RideDetails] -> Map.Map Text Text
+vehicleNumbersByRideId rideDetails = Map.fromList [(rd.id.getId, rd.vehicleNumber) | rd <- rideDetails]
+
+mkLedgerRideInfo :: Map.Map Text Text -> Map.Map Text Text -> DRB.Booking -> DRide.Ride -> DriverWallet.WalletLedgerRideInfo
+mkLedgerRideInfo driverNameById vehicleNumberByRideId booking ride =
+  DriverWallet.WalletLedgerRideInfo
+    { rideId = ride.id,
+      rideShortId = ride.shortId.getShortId,
+      rideEndTime = ride.tripEndTime,
+      driverId = ride.driverId,
+      driverName = Map.lookup ride.driverId.getId driverNameById,
+      vehicleNumber = Map.lookup ride.id.getId vehicleNumberByRideId,
+      isOnline = booking.ledgerWriteMode <|> (isOnlinePaymentInstrument <$> booking.paymentInstrument)
+    }
+
+mkLedgerEntryItem :: Bool -> Id Account -> FLedgerEntry.LedgerEntry -> DriverWallet.WalletLedgerEntryItem
+mkLedgerEntryItem isVat walletAccId e =
+  DriverWallet.WalletLedgerEntryItem
+    { entryId = e.id,
+      itemReference = e.referenceType,
+      itemName = walletRowItemName isVat e.referenceType (e.metadataV2 >>= (.reason)),
+      itemValue = e.amount,
+      isCredit = e.toAccountId == walletAccId,
+      isReversal = e.entryType == FLedgerEntry.Reversal,
+      date = e.timestamp
+    }
 
 --------------------------------------------------------------------------------
 -- getWalletPayoutHistory

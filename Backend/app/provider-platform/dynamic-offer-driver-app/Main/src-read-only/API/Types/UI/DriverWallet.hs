@@ -6,6 +6,8 @@ import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Time
 import qualified Domain.Types.DriverInformation
+import qualified Domain.Types.Person
+import qualified Domain.Types.Ride
 import qualified Domain.Types.WalletTransaction
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
@@ -105,6 +107,69 @@ data WalletItem = WalletItem
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data WalletItemGroup = WalletItemGroup {items :: [WalletItem], totalAmount :: Kernel.Types.Common.HighPrecMoney}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalletLedgerEntriesResponse = WalletLedgerEntriesResponse
+  { additions :: WalletLedgerTotal,
+    deductions :: WalletLedgerTotal,
+    groups :: [WalletLedgerEntryGroup],
+    netAmount :: Kernel.Types.Common.HighPrecMoney,
+    totalGroups :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalletLedgerEntryGroup = WalletLedgerEntryGroup
+  { date :: Data.Time.UTCTime,
+    entries :: [WalletLedgerEntryItem],
+    groupData :: Kernel.Prelude.Maybe WalletLedgerGroupData,
+    groupType :: WalletLedgerEntryGroupType,
+    netAmount :: Kernel.Types.Common.HighPrecMoney,
+    referenceId :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalletLedgerEntryGroupType
+  = RIDE
+  | CANCELLED_BOOKING
+  | WALLET_PAYOUT
+  | OTHER
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalletLedgerEntryItem = WalletLedgerEntryItem
+  { date :: Data.Time.UTCTime,
+    entryId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry,
+    isCredit :: Kernel.Prelude.Bool,
+    isReversal :: Kernel.Prelude.Bool,
+    itemName :: Kernel.Prelude.Text,
+    itemReference :: Kernel.Prelude.Text,
+    itemValue :: Kernel.Types.Common.HighPrecMoney
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalletLedgerGroupData
+  = RideWallet WalletLedgerRideInfo
+  | PayoutWallet WalletPaymentInfo
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalletLedgerRideInfo = WalletLedgerRideInfo
+  { driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    isOnline :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    rideEndTime :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
+    rideShortId :: Kernel.Prelude.Text,
+    vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalletLedgerTotal = WalletLedgerTotal {nonRedeemableAmount :: Kernel.Types.Common.HighPrecMoney, redeemableAmount :: Kernel.Types.Common.HighPrecMoney, totalAmount :: Kernel.Types.Common.HighPrecMoney}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

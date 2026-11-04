@@ -3,6 +3,7 @@ imports:
   WalletBalanceResponse: API.Types.UI.DriverWallet
   WalletSummaryResponse: API.Types.UI.DriverWallet
   WalletTransactionHistoryResponse: API.Types.UI.DriverWallet
+  WalletLedgerEntriesResponse: API.Types.UI.DriverWallet
   TopUpRequest: API.Types.UI.DriverWallet
   PayoutHistoryResponse: API.Types.UI.DriverWallet
   AggregationLevel: API.Types.UI.DriverWallet
@@ -96,6 +97,20 @@ apis:
         - offset: Int
       response:
         type: WalletTransactionHistoryResponse
+  - GET:
+      endpoint: /wallet/{driverId}/ledgerHistory
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      query:
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - limit: Int
+        - offset: Int
+      response:
+        type: WalletLedgerEntriesResponse
+      migrate:
+        capability: city-operations.wallet.read
 
 types:
   AirportCashRechargeRequest:
