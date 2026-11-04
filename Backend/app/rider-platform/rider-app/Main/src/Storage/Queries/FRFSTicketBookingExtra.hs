@@ -213,31 +213,35 @@ findSharedCabFindingOnRoute ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id MerchantOperatingCity ->
   Text ->
+  UTCTime ->
   m [FRFSTicketBooking]
-findSharedCabFindingOnRoute merchantOperatingCityId routeCode =
+findSharedCabFindingOnRoute merchantOperatingCityId routeCode since =
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.vehicleNumber $ Se.Eq Nothing,
           Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED,
           Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB),
           Se.Is Beam.routeCode $ Se.Eq (Just routeCode),
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId,
+          Se.Is Beam.updatedAt $ Se.GreaterThanOrEq since
         ]
     ]
 
--- | A city's FINDING shared-cab bookings: CONFIRMED with no cab yet, on ddl 1587's partial index. No time bound: a booking still
--- waiting is exactly what it returns.
+-- | A city's FINDING shared-cab bookings touched since `since`: CONFIRMED with no cab yet. The window drops ended degraded rides,
+-- which stay CONFIRMED with no cab once their tickets are USED.
 findSharedCabFindingInCity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id MerchantOperatingCity ->
+  UTCTime ->
   m [FRFSTicketBooking]
-findSharedCabFindingInCity merchantOperatingCityId =
+findSharedCabFindingInCity merchantOperatingCityId since =
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.vehicleNumber $ Se.Eq Nothing,
           Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED,
           Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB),
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId,
+          Se.Is Beam.updatedAt $ Se.GreaterThanOrEq since
         ]
     ]
 

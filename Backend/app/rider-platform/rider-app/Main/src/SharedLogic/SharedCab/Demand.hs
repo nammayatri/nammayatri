@@ -1,7 +1,6 @@
 module SharedLogic.SharedCab.Demand
   ( searchWindowMin,
     recordSearch,
-    sharedCabBoardStops,
     StopDemand (..),
     demandByStop,
     waitingRiders,
@@ -23,7 +22,6 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Database.Redis as RawRedis
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.SharedCabSession as SCS
-import qualified Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.InMem as IM
@@ -31,11 +29,10 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Allocation.Select (groupByKey)
-import SharedLogic.SharedCab.Booking (findingOnRoute)
+import SharedLogic.SharedCab.Booking (cityLiveWindowSec, findingOnRoute, liveSince)
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Interest (interestedOnRoutes)
 import SharedLogic.SharedCab.Keys (demandKey)
-import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
 bucketSec, bucketCount, bucketTtlSec :: Int
@@ -54,16 +51,6 @@ recordSearch :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Text -> Text -> m 
 recordSearch cityId riderId stopCode = do
   now <- getCurrentTime
   Redis.withMasterRedis $ Redis.sAddExp (demandKey cityId stopCode (bucketOf now)) [riderId] bucketTtlSec
-
-sharedCabBoardStops :: [MultiModalTypes.MultiModalRoute] -> [Text]
-sharedCabBoardStops routes =
-  Set.toList . Set.fromList $
-    [ stopCode
-      | route <- routes,
-        leg <- route.legs,
-        maybe False isSharedCabAgency (leg.agency >>= (.gtfsId)),
-        Just stopCode <- [leg.fromStopDetails >>= (.stopCode)]
-    ]
 
 data StopDemand = StopDemand {waiting :: Int, searching :: Int}
   deriving (Show, Eq, Generic, ToJSON)
@@ -113,7 +100,7 @@ demandByStop cfg cityId routeCode stopCodes = IM.withInMemCache ["SharedCabDeman
 demandOnRoutes :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Redis.HedisFlow m r, CoreMetrics m) => Config.SharedCabTunables -> Text -> [(Text, [Text])] -> m [SCS.StopDemandCount]
 demandOnRoutes cfg cityId candidates = IM.withInMemCache ("SharedCabRoutesDemand" : cityId : map fst candidates) 3 $ do
   now <- getCurrentTime
-  finding <- findingByRoute . filter (isRecentFinding cfg.findingTimeoutSec now . (.createdAt)) <$> QFRFSTicketBooking.findSharedCabFindingInCity (Id cityId)
+  finding <- findingByRoute . filter (isRecentFinding cfg.findingTimeoutSec now . (.createdAt)) <$> QFRFSTicketBooking.findSharedCabFindingInCity (Id cityId) (liveSince cityLiveWindowSec now)
   interested <- interestedOnRoutes cfg (map fst candidates)
   searched <- searchedAtStops cityId now (nub (concatMap snd candidates))
   pure $ tallyAcrossStops (candidateRiders (Map.map (map (\b -> (b.fromStationCode, b.riderId.getId))) finding) (Map.fromList interested) candidates) searched
