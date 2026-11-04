@@ -31,8 +31,8 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as LQSL
-import qualified Lib.Types.GateInfo as GI
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified Lib.Types.GateInfo as GI
 import SharedLogic.Allocator (AllocatorJobType (..), CheckPickupZoneArrivalJobData (..))
 import qualified SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival as ArrivalCheck
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
