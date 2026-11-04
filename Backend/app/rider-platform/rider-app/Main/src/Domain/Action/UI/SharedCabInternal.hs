@@ -15,6 +15,7 @@ module Domain.Action.UI.SharedCabInternal
 where
 
 import qualified API.Types.UI.SharedCabInternal as API
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
@@ -152,7 +153,6 @@ postSharedCabRouteOperations mbToken req = do
 selectRoute :: API.SharedCabRouteOperationReq -> Environment.Flow API.SelectRouteResp
 selectRoute req = do
   agencyId <- required "agencyId" req.agencyId
-  serviceTierType <- required "serviceTierType" req.serviceTierType
   routeCode <- required "routeCode" req.routeCode
   walkupCount <- required "walkupCount" req.walkupCount
   integratedBppConfig <- getIntegratedBppConfigByAgency agencyId
@@ -168,7 +168,7 @@ selectRoute req = do
           merchantId = integratedBppConfig.merchantId,
           merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId,
           integratedBppConfigId = integratedBppConfig.id,
-          serviceTierType = serviceTierType,
+          serviceTierType = Spec.SHARED_CAB,
           capacity = fromMaybe defaultCapacity req.capacity,
           routeCode = routeCode
         }
