@@ -11,7 +11,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.TH
-import SharedLogic.Booking (getfareBreakups)
+import qualified SharedLogic.FareBreakdown as SFareBreakdown
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
@@ -49,7 +49,9 @@ getBookingFareBreakup _ entityId mbEntityType = do
       ride <- QRideLite.findByIdLite (Id entityId) >>= fromMaybeM (RideNotFound entityId)
       QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   mbRide <- QRide.findByRBId booking.id
-  (fareBreakups, estimatedFareBreakups) <- getfareBreakups booking mbRide
+  breakdown <- SFareBreakdown.buildFareBreakdown booking mbRide
+  let fareBreakups = breakdown.finalRows
+      estimatedFareBreakups = breakdown.estimateRows
   pure
     BookingFareBreakupRes
       { fareBreakup = filter (not . isProjectedFareParamTag . (.description)) (mkFareBreakupAPIEntity <$> fareBreakups),

@@ -5,6 +5,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -36,6 +37,7 @@ import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQMF
 import qualified IssueManagement.Storage.Queries.Issue.ChatMessage as QCM
 import qualified IssueManagement.Storage.Queries.Issue.IssueApiIntegration as QAI
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
+import qualified IssueManagement.Storage.Queries.Issue.IssueTranslation as QIT
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import qualified IssueManagement.Tools.ApiIntegrationExecutor as Executor
 import IssueManagement.Tools.Error
@@ -44,7 +46,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (DbHash, decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import qualified Kernel.External.Ticket.Types as TicketTypes
-import Kernel.External.Types (Language (ENGLISH))
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -236,14 +238,14 @@ getIssueOption ::
 getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOptionId issueReportId mbRideId mbLanguage issueHandle identifier = do
   category <- CQIC.findById issueCategoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist issueCategoryId.getId)
   mbIssueOption <- maybe (return Nothing) (`CQIO.findById` identifier) issueOptionId
-  mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) mbRideId
+  language <- getLanguage personId mbLanguage issueHandle
+  mbRideInfoRes <- mapM (getRideInfoWithFareLabels issueHandle language merchantId merchantOpCityId) mbRideId
   case (mbRideInfoRes, category.maxAllowedRideAge) of
     (Just rideInfo, Just maxAllowedRideAge) -> do
       now <- utctimeToSeconds <$> getCurrentTime
       unless (utctimeToSeconds rideInfo.rideCreatedAt > (now - maxAllowedRideAge)) $ throwError $ InvalidRequest "Invalid ride selected."
     _ -> return ()
   let adjMerchantOpCityId = maybe merchantOpCityId Id ((.merchantOperatingCityId) =<< mbRideInfoRes)
-  language <- getLanguage personId mbLanguage issueHandle
   issueConfig <- issueHandle.findIssueConfig adjMerchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound adjMerchantOpCityId.getId)
   let mbIssueReportType = mbIssueOption >>= (.label) >>= A.decode . A.encode
   processIssueReportTypeActions (personId, merchantId) mbIssueReportType Nothing Nothing False identifier issueHandle
@@ -882,7 +884,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
         | otherwise = []
   issueMessageTranslationList <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) onCreateIssueMsgs
   now <- getCurrentTime
-  mbRideInfoRes <- traverse (issueHandle.getRideInfo merchantId mocId) rideId
+  mbRideInfoRes <- traverse (getRideInfoWithFareLabels issueHandle language merchantId mocId) rideId
   let messages = mkIssueMessageList (Just $ catMaybes issueMessageTranslationList) language issueConfig mbRideInfoRes
       chats_ = fromMaybe [] chats
       -- Clients that pass 'categoryName' (instead of an option tree id) send no
@@ -1299,7 +1301,7 @@ issueInfo issueReportId (personId, merchantId, merchantOpCityId) mbLanguage issu
   unless (issueReport.personId == personId) $
     throwError (InvalidRequest "This issue does not belong to the caller.")
   mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId identifier
-  mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId
+  mbRideInfoRes <- mapM (getRideInfoWithFareLabels issueHandle language merchantId merchantOpCityId) issueReport.rideId
   let adjMerchantOpCityId = maybe merchantOpCityId Id ((.merchantOperatingCityId) =<< mbRideInfoRes)
   issueConfig <-
     issueHandle.findIssueConfig adjMerchantOpCityId identifier
@@ -1384,7 +1386,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
   Redis.withWaitAndLockRedis (makeIssueReportKey issueReportId) 60 50000 $ do
     language <- getLanguage personId mbLanguage issueHandle
     issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
-    mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId
+    mbRideInfoRes <- mapM (getRideInfoWithFareLabels issueHandle language merchantId merchantOpCityId) issueReport.rideId
     if issueReport.status == NOT_APPLICABLE
       then pure Common.IssueStatusUpdateRes {messages = []}
       else case (status, customerResponse) of
@@ -1723,9 +1725,11 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "BOOTH_CHARGE" -> show boothCharges
         "RETURN_FEE" -> show returnCharges
         "SCHEDULING_CHARGE" -> show schedulingCharges
-        "WAITING_CHARGES" -> show waitingCharges
+        "WAITING_CHARGES" -> formatMoney "" waitingCharges
         "FREE_WAITING_TIME_IN_MINUTES" -> show (round freeWaitingMinutes :: Int)
-        "WAITING_CHARGE_RATE_PER_MIN" -> show waitingChargeRatePerMin
+        "WAITING_CHARGE_RATE_PER_MIN" -> formatMoney "" waitingChargeRatePerMin
+        "WAITING_TIME" -> waitingTimeText freeWaitingMinutes waitingChargeRatePerMin waitingCharges mbRideInfoRes
+        "FARE_INVOICE" -> maybe "" fareInvoiceText mbRideInfoRes
         "HEADING" -> "{SUBPART}{HEADING}{!!!}"
         "BODY" -> "{SUBPART}{BODY}{!!!}"
         "VEHICLE_NUMBER" -> vehicleNo
@@ -1750,6 +1754,92 @@ getConfigValue language issueConfig mbRideInfoRes key = do
               let formatted = unwords [grp1, grp2] ++ (if null grp3 then "" else " " ++ grp3) ++ " " ++ grp4
                in T.pack formatted
             _ -> vehicleNo
+
+toCents :: HighPrecMoney -> Integer
+toCents money = round (money * 100)
+
+formatMoney :: Text -> HighPrecMoney -> Text
+formatMoney symbol money =
+  let cents = toCents money
+   in (if cents < 0 then "-" else "") <> symbol <> show (abs cents `div` 100) <> "." <> T.justifyRight 2 '0' (show (abs cents `mod` 100))
+
+waitingTimeText :: HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> Maybe RideInfoRes -> Text
+waitingTimeText freeMinutes ratePerMin charges mbRideInfoRes =
+  show minutes <> " " <> maybe (fareLabelFallback "MINUTES") (`fareLabel` "MINUTES") mbRideInfoRes
+  where
+    minutes :: Int
+    minutes = case (mbRideInfoRes >>= (.driverArrivalTime), mbRideInfoRes >>= (.rideStartTime)) of
+      (Just arrivedAt, Just startedAt) -> max 0 (floor (diffUTCTime startedAt arrivedAt / 60))
+      _ -> round (freeMinutes + if ratePerMin > 0 then charges / ratePerMin else 0)
+
+fareInvoiceText :: RideInfoRes -> Text
+fareInvoiceText rideInfo = maybe "" breakdownText rideInfo.fareBreakdown
+  where
+    label = fareLabel rideInfo
+    section labelCode body = label labelCode <> ":<br>" <> body
+    valueText labelCode value = label labelCode <> ": <b>" <> value <> "</b>"
+    compareText estimated final = valueText "ESTIMATED" estimated <> " → " <> valueText "FINAL" final
+    breakdownText breakdown =
+      T.intercalate "<br><br>" $ [totalText] <> distanceText <> [breakupText]
+      where
+        money = formatMoney $ case breakdown.currency of
+          EUR -> "€"
+          INR -> "₹"
+          USD -> "$"
+        moneyDiff amount = (if toCents amount > 0 then "+" else "") <> money amount
+        totalText = section "TOTAL_FARE" $ case breakdown.finalTotal of
+          Just finalTotal -> compareText (money breakdown.estimatedTotal) (money finalTotal) <> "<br>" <> valueText "DIFFERENCE" (moneyDiff (finalTotal - breakdown.estimatedTotal))
+          Nothing -> valueText "ESTIMATED" (money breakdown.estimatedTotal)
+        distanceText = case (breakdown.estimatedDistance, breakdown.finalDistance) of
+          (Just estimatedDistance, Just finalDistance) ->
+            let estimatedMeters = round estimatedDistance :: Integer
+                finalMeters = round finalDistance :: Integer
+                diffMeters = finalMeters - estimatedMeters
+             in [section "DISTANCE" $ compareText (show estimatedMeters <> " m") (show finalMeters <> " m") <> " (" <> (if diffMeters > 0 then "+" else "") <> show diffMeters <> " m)"]
+          _ -> []
+        breakupText = section "BREAKUP" $ T.intercalate "<br><br>" (map itemText (displayItems breakdown.items))
+        itemText item = section item.code $ case (item.estimated, item.final) of
+          (Just estimated, Just final) -> compareText (money estimated) (money final) <> " (" <> moneyDiff (final - estimated) <> ")"
+          (Nothing, Just final) -> valueText "FINAL" (money final)
+          (Just estimated, Nothing) -> valueText "ESTIMATED" (money estimated)
+          (Nothing, Nothing) -> ""
+
+displayItems :: [FareBreakdownItem] -> [FareBreakdownItem]
+displayItems breakdownItems =
+  itemsBeforeVat <> [FareBreakdownItem {code = "VAT", estimated = sumAmounts (.estimated), final = sumAmounts (.final)} | not (null vatItems)] <> filter (not . isVat) itemsFromVat
+  where
+    isVat item = item.code `elem` ["RIDE_VAT", "TOLL_VAT"]
+    (itemsBeforeVat, itemsFromVat) = DL.break isVat breakdownItems
+    vatItems = filter isVat breakdownItems
+    sumAmounts amountOf = case mapMaybe amountOf vatItems of
+      [] -> Nothing
+      amounts -> Just (sum amounts)
+
+fareLabelPrefix :: Text
+fareLabelPrefix = "FARE_INVOICE_"
+
+fareLabelHeadings :: [Text]
+fareLabelHeadings = ["TOTAL_FARE", "ESTIMATED", "FINAL", "DIFFERENCE", "BREAKUP", "DISTANCE", "MINUTES"]
+
+fareLabel :: RideInfoRes -> Text -> Text
+fareLabel rideInfo labelCode = fromMaybe (fareLabelFallback labelCode) (Map.lookup labelCode rideInfo.fareLabels)
+
+fareLabelFallback :: Text -> Text
+fareLabelFallback = T.toTitle . T.toLower . T.replace "_" " "
+
+withFareLabels :: BeamFlow m r => Language -> RideInfoRes -> m RideInfoRes
+withFareLabels language rideInfo = do
+  let labelCodes = DL.nub $ fareLabelHeadings <> maybe [] (map (.code) . displayItems . (.items)) rideInfo.fareBreakdown
+  translationsRes <- withTryCatch "withFareLabels" $ QIT.findAllByLanguagesAndSentences (DL.nub [language, ENGLISH]) (map (fareLabelPrefix <>) labelCodes)
+  pure $ case translationsRes of
+    Left _ -> rideInfo
+    Right translations ->
+      let labelsFor lang = Map.fromList [(T.drop (T.length fareLabelPrefix) translation.sentence, translation.translation) | translation <- translations, translation.language == lang]
+       in rideInfo {fareLabels = Map.union (labelsFor language) (labelsFor ENGLISH)}
+
+getRideInfoWithFareLabels :: BeamFlow m r => ServiceHandle m -> Language -> Id Merchant -> Id MerchantOperatingCity -> Id Ride -> m RideInfoRes
+getRideInfoWithFareLabels issueHandle language merchantId merchantOpCityId rideId =
+  issueHandle.getRideInfo merchantId merchantOpCityId rideId >>= withFareLabels language
 
 mkIssueOptionList ::
   D.IssueConfig -> Language -> Maybe RideInfoRes -> (D.IssueOption, Maybe D.IssueTranslation) -> Common.IssueOptionRes

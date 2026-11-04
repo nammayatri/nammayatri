@@ -47,6 +47,15 @@ findIssueTranslationByLanguageAndSentence language sentence =
         ]
     ]
 
+findAllByLanguagesAndSentences :: BeamFlow m r => [Language] -> [Text] -> m [IssueTranslation]
+findAllByLanguagesAndSentences languages sentences =
+  findAllWithKV
+    [ And
+        [ Is BeamIT.language $ In languages,
+          Is BeamIT.sentence $ In sentences
+        ]
+    ]
+
 findAllBySentence :: BeamFlow m r => Text -> m [IssueTranslation]
 findAllBySentence sentence =
   findAllWithKV [Is BeamIT.sentence $ Eq sentence]
