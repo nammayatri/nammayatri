@@ -2,6 +2,7 @@ imports:
   Text: Data.Text
   UTCTime: Kernel.Prelude
   ConditionalChargesCategories: Domain.Types.Extra.ConditionalCharges
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
 
 ConditionalCharges:
   tableName: conditional_charges
@@ -12,6 +13,7 @@ ConditionalCharges:
     sgstPercentage: HighPrecMoney
     cgstPercentage: HighPrecMoney
     farePolicyId: Text
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity) # only city the charge applies in; Nothing = every city using the fare policy
 
 
   constraints:
@@ -38,6 +40,6 @@ ConditionalCharges:
       where:
         and: [farePolicyId, chargeCategory]
 
-  excludedFields: [ merchantId, merchantOperatingCityId ]
+  excludedFields: [ merchantId ]
   extraOperations:
   - EXTRA_DOMAIN_TYPE_FILE

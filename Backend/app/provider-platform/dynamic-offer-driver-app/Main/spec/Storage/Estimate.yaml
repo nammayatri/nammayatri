@@ -116,7 +116,7 @@ Estimate:
       updatedAt: Kernel.Prelude.fromMaybe createdAt|I
       isScheduled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
       tripCategory: Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer)|I
-      farePolicy: maybe (pure Nothing) ((Storage.Cac.FarePolicy.findById Nothing) . Kernel.Types.Id.Id)|IM
+      farePolicy: maybe (pure Nothing) (Storage.Cac.FarePolicy.findByIdForCity Nothing (Kernel.Types.Id.Id <$> merchantOperatingCityId) . Kernel.Types.Id.Id) farePolicyId|EM
       driverExtraFeeBounds: Storage.Queries.Transformers.Estimate.mkDriverExtraFeeBounds driverExtraFeeStartDistance driverExtraFeeDistanceUnit driverExtraFeeStepFee driverExtraFeeDefaultStepFee driverExtraFeeMinFee driverExtraFeeMaxFee|E
       minFare: Kernel.Types.Common.mkAmountWithDefault minFareAmount minFare|E
       maxFare: Kernel.Types.Common.mkAmountWithDefault maxFareAmount maxFare|E

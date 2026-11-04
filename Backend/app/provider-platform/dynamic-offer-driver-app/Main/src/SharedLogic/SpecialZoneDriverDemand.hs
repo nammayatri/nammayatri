@@ -216,7 +216,7 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
           possibleFares <-
             mapMaybeM
               ( \fp -> do
-                  mbFarePolicy <- CQFP.findById Nothing fp.farePolicyId
+                  mbFarePolicy <- CQFP.findByIdForCity Nothing (Just merchantOpCityId) fp.farePolicyId
                   case mbFarePolicy of
                     Nothing -> pure Nothing
                     Just farePolicy -> Just <$> computePerKmFromPolicy fp farePolicy

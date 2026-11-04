@@ -132,7 +132,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
 
 instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   fromTType' (Beam.EstimateT {..}) = do
-    farePolicy' <- maybe (pure Nothing) (Storage.Cac.FarePolicy.findById Nothing . Kernel.Types.Id.Id) farePolicyId
+    farePolicy' <- maybe (pure Nothing) (Storage.Cac.FarePolicy.findByIdForCity Nothing (Kernel.Types.Id.Id <$> merchantOperatingCityId) . Kernel.Types.Id.Id) farePolicyId
     fareParams' <- maybe (pure Nothing) (Storage.Queries.FareParameters.findById . Kernel.Types.Id.Id) fareParamsId
     pure $
       Just

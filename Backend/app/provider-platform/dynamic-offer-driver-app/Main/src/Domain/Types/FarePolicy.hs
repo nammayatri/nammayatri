@@ -507,6 +507,15 @@ fullFarePolicyToFarePolicy ffp@FullFarePolicy {..} =
           ..
         }
 
+-- | A conditional charge without a city applies in every city that uses the policy;
+-- one with a city applies only in that city.
+conditionalChargesForCity :: Id DMOC.MerchantOperatingCity -> [DTAC.ConditionalCharges] -> [DTAC.ConditionalCharges]
+conditionalChargesForCity cityId = KP.filter (\cc -> KP.maybe True (== cityId) cc.merchantOperatingCityId)
+
+-- | The policy as one city prices with it; fare products of several cities can share a policy.
+farePolicyForCity :: Id DMOC.MerchantOperatingCity -> FarePolicy -> FarePolicy
+farePolicyForCity cityId FarePolicy {..} = FarePolicy {conditionalCharges = conditionalChargesForCity cityId conditionalCharges, ..}
+
 getFarePolicyType :: FarePolicy -> FarePolicyType
 getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
   ProgressiveDetails _ -> Progressive

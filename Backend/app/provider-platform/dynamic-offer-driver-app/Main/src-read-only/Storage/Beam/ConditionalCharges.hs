@@ -18,6 +18,7 @@ data ConditionalChargesT f = ConditionalChargesT
     charge :: B.C f Kernel.Types.Common.HighPrecMoney,
     chargeCategory :: B.C f Domain.Types.Extra.ConditionalCharges.ConditionalChargesCategories,
     farePolicyId :: B.C f Data.Text.Text,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     sgstPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

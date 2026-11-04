@@ -8,3 +8,9 @@ ALTER TABLE atlas_driver_offer_bpp.conditional_charges ADD COLUMN sgst_percentag
 ALTER TABLE atlas_driver_offer_bpp.conditional_charges ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.conditional_charges ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.conditional_charges ADD PRIMARY KEY ( charge_category, fare_policy_id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.conditional_charges ADD COLUMN merchant_operating_city_id character varying(36) ;
