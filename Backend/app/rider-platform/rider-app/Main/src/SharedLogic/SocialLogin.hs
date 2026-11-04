@@ -8,6 +8,7 @@ module SharedLogic.SocialLogin
     hasTrustedEmail,
     normalizeEmail,
     isWellFormedEmail,
+    findPersonByEmail,
     findAccountByTrustedEmail,
     findIdentity,
     recordLogin,
@@ -162,13 +163,15 @@ enforceEmailOtpLimit merchantConfigs email =
       ]
       email
 
-findPersonByEmail :: SocialLoginFlowM m r => Id DM.Merchant -> Text -> m (Maybe DP.Person)
+findPersonByEmail :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id DM.Merchant -> Text -> m (Maybe DP.Person)
 findPersonByEmail merchantId email =
-  QPerson.findByEmailAndMerchantId merchantId email >>= \case
+  QPerson.findByEmailAndMerchantId merchantId normalized >>= \case
     Just person -> pure (Just person)
     Nothing
-      | normalizeEmail email /= email -> QPerson.findByEmailAndMerchantId merchantId (normalizeEmail email)
+      | normalized /= email -> QPerson.findByEmailAndMerchantId merchantId email
       | otherwise -> pure Nothing
+  where
+    normalized = normalizeEmail email
 
 findAccountByTrustedEmail :: SocialLoginFlowM m r => Id DM.Merchant -> Maybe Text -> m (Maybe DP.Person)
 findAccountByTrustedEmail merchantId mbEmail =
