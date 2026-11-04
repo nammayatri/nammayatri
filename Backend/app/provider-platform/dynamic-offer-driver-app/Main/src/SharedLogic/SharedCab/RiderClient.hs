@@ -57,7 +57,6 @@ data BAPRouteOperationReq = BAPRouteOperationReq
     -- the SHARED_CAB config's agency_key (GTFS agency gtfsId like "<feed>:SHARED_CAB"), the one identity both
     -- integrated_bpp_config rows share; rider-app looks its own row up by it
     agencyId :: Maybe Text,
-    serviceTierType :: Maybe Text,
     capacity :: Maybe Int,
     routeCode :: Maybe Text,
     walkupCount :: Maybe Int,

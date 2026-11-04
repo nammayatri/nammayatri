@@ -92,14 +92,8 @@ requireDriver (mbPersonId, merchantId, merchantOpCityId) = do
   personId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
   pure (personId, merchantId, merchantOpCityId)
 
-sharedCabDefaultCapacity :: Int
-sharedCabDefaultCapacity = 6
-
 sharedCabVehicleCategory :: Text
 sharedCabVehicleCategory = "SHARED_CAB"
-
-sharedCabServiceTierType :: Text
-sharedCabServiceTierType = show DCommon.SHARED_CAB
 
 validateSharedCabDriver :: Id SP.Person -> Flow DVehicle.Vehicle
 validateSharedCabDriver personId = do
@@ -168,8 +162,7 @@ selectSharedCabRoute (personId, _merchantId, merchantOpCityId) req routeCode wal
         SharedCabBAP.driverId = personId.getId,
         SharedCabBAP.vehicleNumber = vehicle.registrationNo,
         SharedCabBAP.agencyId = Just integratedBPPConfig.agencyKey,
-        SharedCabBAP.serviceTierType = Just sharedCabServiceTierType,
-        SharedCabBAP.capacity = Just (fromMaybe sharedCabDefaultCapacity vehicle.capacity),
+        SharedCabBAP.capacity = vehicle.capacity,
         SharedCabBAP.routeCode = Just routeCode,
         SharedCabBAP.walkupCount = Just walkupCount,
         SharedCabBAP.mode = req.mode,
@@ -195,7 +188,6 @@ endSharedCabRoute (personId, _merchantId, _merchantOpCityId) req = do
         SharedCabBAP.driverId = personId.getId,
         SharedCabBAP.vehicleNumber = vehicle.registrationNo,
         SharedCabBAP.agencyId = Nothing,
-        SharedCabBAP.serviceTierType = Nothing,
         SharedCabBAP.capacity = Nothing,
         SharedCabBAP.routeCode = Nothing,
         SharedCabBAP.walkupCount = Nothing,

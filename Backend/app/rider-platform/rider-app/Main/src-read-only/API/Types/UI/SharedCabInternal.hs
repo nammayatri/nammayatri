@@ -2,7 +2,6 @@
 
 module API.Types.UI.SharedCabInternal where
 
-import qualified BecknV2.FRFS.Enums
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.VehicleTrip
 import EulerHS.Prelude hiding (id)
@@ -64,7 +63,6 @@ data SharedCabRouteOperationReq = SharedCabRouteOperationReq
     mode :: Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionState.SelectRouteMode,
     operation :: SharedCabRouteOperation,
     routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
     walkupCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int
