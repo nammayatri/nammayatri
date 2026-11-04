@@ -64,7 +64,7 @@ attach s = bounded "sharedCab:ltsAttach" $ do
   ibc <- CQIBC.findById s.integratedBppConfigId >>= fromMaybeM IntegratedBPPConfigNotFound
   stops <- OTPRest.getRouteStopMappingByRouteCode s.routeCode ibc
   lastStop <- fromMaybeM (RouteNotFound s.routeCode) $ listToMaybe (sortOn (Down . (.sequenceNum)) stops)
-  LTS.rideStart s.vehicleTripId.getId $
+  LTS.rideStart s.vehicleTripId $
     RideStartReq {merchantId, driverId = s.driverId, rideInfo = Just (busRideInfo s lastStop.stopPoint)}
 
 detach :: (LtsFlow m r c, MonadThrow m) => Session -> m ()
@@ -75,7 +75,7 @@ detach s =
   where
     nowhere = LatLong 0 0
     end merchantId =
-      LTS.rideEnd s.vehicleTripId.getId $
+      LTS.rideEnd s.vehicleTripId $
         RideEndReq {lat = 0, lon = 0, merchantId, driverId = s.driverId, rideInfo = Just (busRideInfo s nowhere)}
 
 -- | Attach `new` (after detaching `old`: rideEnd clears LTS's per-driver ride record, so it must come first), then

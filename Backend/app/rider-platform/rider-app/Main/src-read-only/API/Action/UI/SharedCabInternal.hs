@@ -8,7 +8,6 @@ module API.Action.UI.SharedCabInternal
 where
 
 import qualified API.Types.UI.SharedCabInternal
-import qualified Data.Time
 import qualified Domain.Action.UI.SharedCabInternal
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Environment
@@ -55,6 +54,9 @@ type API =
       :<|> "sharedCab"
       :> "session"
       :> MandatoryQueryParam
+           "agencyId"
+           Kernel.Prelude.Text
+      :> MandatoryQueryParam
            "driverId"
            Kernel.Prelude.Text
       :> MandatoryQueryParam
@@ -78,20 +80,6 @@ type API =
       :> Post
            '[JSON]
            SharedLogic.SharedCab.SessionView.SharedCabSession
-      :<|> "sharedCab"
-      :> "trips"
-      :> MandatoryQueryParam
-           "date"
-           Data.Time.Day
-      :> MandatoryQueryParam
-           "driverId"
-           Kernel.Prelude.Text
-      :> Header
-           "token"
-           Kernel.Prelude.Text
-      :> Get
-           '[JSON]
-           API.Types.UI.SharedCabInternal.SharedCabTripsResp
       :<|> "sharedCab"
       :> "booking"
       :> Capture
@@ -143,7 +131,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getSharedCabRoutesData :<|> postSharedCabRoutesDemand :<|> postSharedCabRouteOperations :<|> getSharedCabSession :<|> postSharedCabSessionOperations :<|> getSharedCabTrips :<|> postSharedCabBookingOperations :<|> getSharedCabBookingCallNumber :<|> postSharedCabBookingMessage
+handler = getSharedCabRoutesData :<|> postSharedCabRoutesDemand :<|> postSharedCabRouteOperations :<|> getSharedCabSession :<|> postSharedCabSessionOperations :<|> postSharedCabBookingOperations :<|> getSharedCabBookingCallNumber :<|> postSharedCabBookingMessage
 
 getSharedCabRoutesData :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabRouteDataResp)
 getSharedCabRoutesData a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabRoutesData a2 a1
@@ -154,14 +142,11 @@ postSharedCabRoutesDemand a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withReque
 postSharedCabRouteOperations :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.SharedCabInternal.SharedCabRouteOperationReq -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SelectRouteResp)
 postSharedCabRouteOperations a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabRouteOperations a2 a1
 
-getSharedCabSession :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
-getSharedCabSession a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabSession a3 a2 a1
+getSharedCabSession :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
+getSharedCabSession a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabSession a4 a3 a2 a1
 
 postSharedCabSessionOperations :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.SharedCabInternal.SharedCabSessionOperationReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
 postSharedCabSessionOperations a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabSessionOperations a2 a1
-
-getSharedCabTrips :: (Data.Time.Day -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SharedCabTripsResp)
-getSharedCabTrips a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabTrips a3 a2 a1
 
 postSharedCabBookingOperations :: (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.SharedCabInternal.SharedCabBookingOperationReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
 postSharedCabBookingOperations a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabBookingOperations a3 a2 a1

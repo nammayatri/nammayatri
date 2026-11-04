@@ -38,6 +38,7 @@ import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as SP
 import Domain.Types.SharedCabSession
 import qualified Domain.Types.Vehicle as DVehicle
+import qualified Domain.Types.VehicleTrip as DVT
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -50,6 +51,7 @@ import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.DriverPool as DP
 import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
 import qualified SharedLogic.SharedCab.RiderClient as SharedCabBAP
+import qualified SharedLogic.SharedCab.Trip as Trip
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -150,66 +152,94 @@ routeOperation auth req = case req.operation of
     selectSharedCabRoute auth req routeCode walkupCount
   _ -> endSharedCabRoute auth req
 
+-- | Runs a rider-app call that answers with the cab's session, then brings the plate's vehicle_trip in line with that answer, both under
+-- the plate's trip lock. `sessionOf` is Nothing for an answer that says nothing about the session (a select refused for riders on
+-- board), Just Nothing when rider-app has no live session (the run then closes with `endReason`). A failed call writes nothing: the
+-- next poll converges.
+withTripSync :: DriverAuthInfo -> DIBC.IntegratedBPPConfig -> DVehicle.Vehicle -> DVT.VehicleTripEndReason -> (a -> Maybe (Maybe SharedCabSession)) -> Flow a -> Flow a
+withTripSync (personId, merchantId, merchantOpCityId) integratedBPPConfig vehicle endReason sessionOf call =
+  Trip.withTripLock vehicle.registrationNo $ do
+    resp <- call
+    whenJust (sessionOf resp) $ Trip.syncTrip personId merchantId merchantOpCityId integratedBPPConfig vehicle endReason . (>>= Trip.riderRun)
+    pure resp
+
+-- | Every select names a fresh run; rider-app takes it when it opens or switches, and keeps its own run otherwise.
 selectSharedCabRoute :: DriverAuthInfo -> SharedCabRouteOperationReq -> Text -> Int -> Flow SelectRouteResp
-selectSharedCabRoute (personId, _merchantId, merchantOpCityId) req routeCode walkupCount = do
+selectSharedCabRoute auth@(personId, _merchantId, merchantOpCityId) req routeCode walkupCount = do
   vehicle <- validateSharedCabDriver personId
   driver <- QPerson.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
   integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
   bap <- bapInternal
-  SharedCabBAP.postRouteOperation bap.apiKey bap.url $
-    SharedCabBAP.BAPRouteOperationReq
-      { SharedCabBAP.operation = req.operation,
-        SharedCabBAP.driverId = personId.getId,
-        SharedCabBAP.vehicleNumber = vehicle.registrationNo,
-        SharedCabBAP.agencyId = Just integratedBPPConfig.agencyKey,
-        SharedCabBAP.capacity = vehicle.capacity,
-        SharedCabBAP.routeCode = Just routeCode,
-        SharedCabBAP.walkupCount = Just walkupCount,
-        SharedCabBAP.mode = req.mode,
-        SharedCabBAP.driverName = Just (unwords (catMaybes [Just driver.firstName, driver.lastName])),
-        SharedCabBAP.vehicleModel = Just vehicle.model,
-        SharedCabBAP.atLastStop = Nothing,
-        SharedCabBAP.forceEnd = Nothing
-      }
+  tripId <- generateGUIDText
+  withTripSync auth integratedBPPConfig vehicle DVT.SESSION_TIMEOUT routeSession $
+    SharedCabBAP.postRouteOperation bap.apiKey bap.url $
+      SharedCabBAP.BAPRouteOperationReq
+        { SharedCabBAP.operation = req.operation,
+          SharedCabBAP.driverId = personId.getId,
+          SharedCabBAP.vehicleNumber = vehicle.registrationNo,
+          SharedCabBAP.agencyId = Just integratedBPPConfig.agencyKey,
+          SharedCabBAP.capacity = vehicle.capacity,
+          SharedCabBAP.routeCode = Just routeCode,
+          SharedCabBAP.walkupCount = Just walkupCount,
+          SharedCabBAP.mode = req.mode,
+          SharedCabBAP.driverName = Just (unwords (catMaybes [Just driver.firstName, driver.lastName])),
+          SharedCabBAP.vehicleModel = Just vehicle.model,
+          SharedCabBAP.atLastStop = Nothing,
+          SharedCabBAP.forceEnd = Nothing,
+          SharedCabBAP.vehicleTripId = Just tripId
+        }
+
+-- | A select refused for riders on board answers with them instead of the session, which is unchanged.
+routeSession :: SelectRouteResp -> Maybe (Maybe SharedCabSession)
+routeSession resp = if isJust resp.affectedRiders then Nothing else Just resp.session
 
 currentSession :: DriverAuthInfo -> Flow (Maybe SharedCabSession)
-currentSession (personId, _merchantId, _merchantOpCityId) = do
+currentSession auth@(personId, _merchantId, merchantOpCityId) = do
   vehicle <- validateSharedCabDriver personId
+  integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
   bap <- bapInternal
-  SharedCabBAP.getSharedCabSession bap.apiKey bap.url personId.getId vehicle.registrationNo
+  withTripSync auth integratedBPPConfig vehicle DVT.SESSION_TIMEOUT Just $
+    SharedCabBAP.getSharedCabSession bap.apiKey bap.url personId.getId vehicle.registrationNo integratedBPPConfig.agencyKey
 
 endSharedCabRoute :: DriverAuthInfo -> SharedCabRouteOperationReq -> Flow SelectRouteResp
-endSharedCabRoute (personId, _merchantId, _merchantOpCityId) req = do
+endSharedCabRoute auth@(personId, _merchantId, merchantOpCityId) req = do
   vehicle <- validateSharedCabDriver personId
+  integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
   bap <- bapInternal
-  SharedCabBAP.postRouteOperation bap.apiKey bap.url $
-    SharedCabBAP.BAPRouteOperationReq
-      { SharedCabBAP.operation = req.operation,
-        SharedCabBAP.driverId = personId.getId,
-        SharedCabBAP.vehicleNumber = vehicle.registrationNo,
-        SharedCabBAP.agencyId = Nothing,
-        SharedCabBAP.capacity = Nothing,
-        SharedCabBAP.routeCode = Nothing,
-        SharedCabBAP.walkupCount = Nothing,
-        SharedCabBAP.mode = Nothing,
-        SharedCabBAP.driverName = Nothing,
-        SharedCabBAP.vehicleModel = Nothing,
-        SharedCabBAP.atLastStop = req.atLastStop,
-        SharedCabBAP.forceEnd = req.forceEnd
-      }
+  returnTripId <- if req.operation == RETURN_TRIP then Just <$> generateGUIDText else pure Nothing
+  let endReason = if req.operation == END_ROUTE && req.atLastStop == Just True then DVT.END_ROUTE else DVT.END_FOR_NOW
+  withTripSync auth integratedBPPConfig vehicle endReason routeSession $
+    SharedCabBAP.postRouteOperation bap.apiKey bap.url $
+      SharedCabBAP.BAPRouteOperationReq
+        { SharedCabBAP.operation = req.operation,
+          SharedCabBAP.driverId = personId.getId,
+          SharedCabBAP.vehicleNumber = vehicle.registrationNo,
+          SharedCabBAP.agencyId = Just integratedBPPConfig.agencyKey,
+          SharedCabBAP.capacity = Nothing,
+          SharedCabBAP.routeCode = Nothing,
+          SharedCabBAP.walkupCount = Nothing,
+          SharedCabBAP.mode = Nothing,
+          SharedCabBAP.driverName = Nothing,
+          SharedCabBAP.vehicleModel = Nothing,
+          SharedCabBAP.atLastStop = req.atLastStop,
+          SharedCabBAP.forceEnd = req.forceEnd,
+          SharedCabBAP.vehicleTripId = returnTripId
+        }
 
 sessionOperation :: DriverAuthInfo -> SharedCabSessionOperationReq -> Flow SharedCabSession
-sessionOperation (personId, _merchantId, _merchantOpCityId) req = do
+sessionOperation auth@(personId, _merchantId, merchantOpCityId) req = do
   vehicle <- validateSharedCabDriver personId
+  integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
   bap <- bapInternal
-  SharedCabBAP.postSessionOperation bap.apiKey bap.url $
-    SharedCabBAP.BAPSessionOperationReq
-      { SharedCabBAP.operation = req.operation,
-        SharedCabBAP.driverId = personId.getId,
-        SharedCabBAP.vehicleNumber = vehicle.registrationNo,
-        SharedCabBAP.version = req.version,
-        SharedCabBAP.walkupCount = req.walkupCount
-      }
+  withTripSync auth integratedBPPConfig vehicle DVT.SESSION_TIMEOUT (Just . Just) $
+    SharedCabBAP.postSessionOperation bap.apiKey bap.url $
+      SharedCabBAP.BAPSessionOperationReq
+        { SharedCabBAP.operation = req.operation,
+          SharedCabBAP.driverId = personId.getId,
+          SharedCabBAP.vehicleNumber = vehicle.registrationNo,
+          SharedCabBAP.version = req.version,
+          SharedCabBAP.walkupCount = req.walkupCount
+        }
 
 data BookingAction = Cancel Text | BoardedWithoutCode | Dropped | Accept | Decline
   deriving (Show, Eq)
@@ -223,13 +253,15 @@ bookingActionOf req = case req.operation of
   CANCEL -> Cancel <$> req.reason
 
 bookingOperation :: DriverAuthInfo -> Text -> SharedCabBookingOperationReq -> Flow SharedCabSession
-bookingOperation (personId, _merchantId, merchantOpCityId) bookingId req = do
+bookingOperation auth@(personId, _merchantId, merchantOpCityId) bookingId req = do
   action <- fromMaybeM (InvalidRequest "reason is required to cancel a booking") (bookingActionOf req)
   vehicle <- validateSharedCabDriver personId
+  integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
   bap <- bapInternal
   session <-
-    SharedCabBAP.postBookingOperation bap.apiKey bap.url bookingId $
-      SharedCabBAP.BAPBookingOperationReq {operation = req.operation, driverId = personId.getId, vehicleNumber = vehicle.registrationNo, reason = actionReason action}
+    withTripSync auth integratedBPPConfig vehicle DVT.SESSION_TIMEOUT (Just . Just) $
+      SharedCabBAP.postBookingOperation bap.apiKey bap.url bookingId $
+        SharedCabBAP.BAPBookingOperationReq {operation = req.operation, driverId = personId.getId, vehicleNumber = vehicle.registrationNo, reason = actionReason action}
   -- the offer's answer goes into the driver's quote-response counters, like a ride request's
   whenJust (offerResponse action) $ DP.recordQuoteResponseCounters merchantOpCityId personId
   pure session

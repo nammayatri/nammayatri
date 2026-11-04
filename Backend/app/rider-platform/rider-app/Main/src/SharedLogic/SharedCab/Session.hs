@@ -14,6 +14,7 @@ module SharedLogic.SharedCab.Session
     readCabDriverInfo,
     withPlateLock,
     activeSessionsOnRoute,
+    liveSessionsInCity,
     setWalkupCount,
     markCabFull,
     expire,
@@ -23,32 +24,35 @@ where
 
 import qualified Data.Aeson as A
 import Data.List (nub)
+import qualified Data.Vector as V
 import qualified Database.Redis as RawRedis
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DBookingStatus
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.VehicleTrip as DVT
 import qualified Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.InMem as IM
-import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import Lib.Scheduler (JobCreator)
+import SharedLogic.IntegratedBPPConfig (findSharedCabConfig)
 import SharedLogic.SharedCab.Booking (ridersOnBoard, shared)
 import qualified SharedLogic.SharedCab.Booking as Booking
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
-import SharedLogic.SharedCab.Keys (driverInfoKey, legacyRouteKey, plateLockKey, routeKey, sessionKey)
+import SharedLogic.SharedCab.Keys (driverInfoKey, legacyRouteKey, livePlatesKey, plateLockKey, routeKey, sessionKey)
 import SharedLogic.SharedCab.Lock (withOwnedLock)
 import SharedLogic.SharedCab.LtsAttach
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Schedule (ensureDegradedSweep, ensureExpiryJob)
 import qualified SharedLogic.SharedCab.Seats as Seats
 import SharedLogic.SharedCab.SessionState
+import SharedLogic.SharedCab.TripClient (TripClientFlow)
+import qualified SharedLogic.SharedCab.TripClient as TripClient
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QBooking
-import qualified Storage.Queries.VehicleTrip as QVT
 import Tools.Error (SharedCabSessionError (..))
 
 data CabDriverInfo = CabDriverInfo {driverName :: Maybe Text, vehicleModel :: Maybe Text}
@@ -75,34 +79,34 @@ withPlateLock plate = withOwnedLock "plateLock" (plateLockKey plate) lockTtlSec 
 readSession :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe Session)
 readSession = shared . Redis.safeGet . sessionKey
 
--- | After a Redis flush the live vehicle_trip restores the session (ACTIVE or PAUSED recovers, absent means the run ended). An idle
--- driver's poll finds no trip without taking the plate lock, and that answer is kept 10 s per plate.
-getSession :: (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m, JobCreator r m, CoreMetrics m) => Text -> m (Maybe Session)
+type GetSessionFlow m r = (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m, JobCreator r m, TripClientFlow m r)
+
+-- | After a Redis flush driver-app's ACTIVE trip restores the session (absent means the run ended); `merchantId` is the rider-app
+-- merchant to ask it through. An idle driver's poll finds no trip without taking the plate lock, and that answer is kept 10 s per plate.
+getSession :: GetSessionFlow m r => Id DM.Merchant -> Text -> m (Maybe Session)
 getSession = getSessionWith True
 
 -- | For a select: a cached answer must never hide the trip of a plate that is starting a run.
-getSessionFresh :: (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m, JobCreator r m, CoreMetrics m) => Text -> m (Maybe Session)
+getSessionFresh :: GetSessionFlow m r => Id DM.Merchant -> Text -> m (Maybe Session)
 getSessionFresh = getSessionWith False
 
-getSessionWith :: (Seats.SeatFlow m r, Redis.HedisLTSFlowEnv r, MonadMask m, JobCreator r m, CoreMetrics m) => Bool -> Text -> m (Maybe Session)
-getSessionWith cached plate =
+getSessionWith :: GetSessionFlow m r => Bool -> Id DM.Merchant -> Text -> m (Maybe Session)
+getSessionWith cached merchantId plate =
   readSession plate >>= \case
     Just s -> pure (Just s)
     Nothing -> do
-      hasLiveTrip <- if cached then IM.withInMemCache ["SharedCabPlateHasTrip", plate] 10 liveTrip else liveTrip
-      case sessionMissAction hasLiveTrip of
-        NoLiveTrip -> pure Nothing
-        RestoreUnderLock -> withPlateLock plate $ readSession plate >>= maybe recover (pure . Just)
+      let fetch = TripClient.activeTrip merchantId plate
+      mbTrip <- if cached then IM.withInMemCache ["SharedCabPlateTrip", plate] 10 fetch else fetch
+      forM mbTrip $ \trip -> withPlateLock plate $ readSession plate >>= maybe (rebuild trip) pure
   where
-    liveTrip = isJust <$> QVT.findActiveByVehicleNumber plate
-    recover = QVT.findActiveByVehicleNumber plate >>= traverse rebuild
     rebuild trip = do
-      s <- sessionFromTrip trip <$> getCurrentTime
+      integratedBppConfig <- findSharedCabConfig trip.agencyId DIBC.APPLICATION
+      s <- sessionFromTrip integratedBppConfig.merchantId integratedBppConfig.merchantOperatingCityId integratedBppConfig.id trip <$> getCurrentTime
       bookings <- Booking.liveBookingsForVehicle plate
       -- the flush took the plate's assignment index: re-seed it from the rows read, so the next seat count sees them through KV
       forM_ bookings $ \b -> Booking.noteOnPlate plate b.id
       logInfo $
-        "sharedCab: rebuilt session for " <> plate <> " from vehicle_trip " <> trip.id.getId
+        "sharedCab: rebuilt session for " <> plate <> " from driver-app trip " <> trip.id
           <> " (route "
           <> s.routeCode
           <> ", "
@@ -113,26 +117,41 @@ getSessionWith cached plate =
       ensureExpiryJob s.merchantId s.merchantOperatingCityId
       pure rebuilt
 
--- | The route set is an index, the session key is truth: a stale member is repaired lazily under the plate lock (not re-entrant, so
--- no caller may hold it), and the SREM is skipped if the plate flapped back onto this route, so an A->B->A move isn't undone.
+-- | The route set is an index, the session key is truth. The legacy set is shared by every city: another city's cab on the same route
+-- code is live, not stale.
 activeSessionsOnRoute :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Id DMOC.MerchantOperatingCity -> Text -> m [Session]
 activeSessionsOnRoute cityId route = do
   plates <- shared $ Redis.sMembers (routeKey cityId route)
   legacyPlates <- shared $ Redis.sMembers (legacyRouteKey route)
-  catMaybes <$> mapM keepOrRepair (nub (plates <> legacyPlates))
+  filter ((== cityId) . (.merchantOperatingCityId))
+    <$> indexedSessions (routeMember route) (\plate -> void $ Redis.srem (routeKey cityId route) [plate] >> Redis.srem (legacyRouteKey route) [plate]) (nub (plates <> legacyPlates))
+
+liveSessionsInCity :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Id DMOC.MerchantOperatingCity -> m [Session]
+liveSessionsInCity cityId = do
+  plates <- shared $ Redis.sMembers (livePlatesKey cityId)
+  indexedSessions (cityMember cityId) (\plate -> void $ Redis.srem (livePlatesKey cityId) [plate]) plates
+
+-- | The live sessions of a set of plates kept as an index, in one MGET. A member that doesn't read as live is re-read strictly and
+-- dropped (`dropMember`) only on a positive answer, re-checked under the plate lock (not re-entrant, so no caller may hold it): a
+-- failed read keeps it, and a plate that flapped back in isn't dropped.
+indexedSessions :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => (SessionRead -> RouteMember) -> (Text -> m ()) -> [Text] -> m [Session]
+indexedSessions classify dropMember plates = do
+  raws <- shared $ Redis.mGetClusterRaw (map sessionKey plates)
+  catMaybes <$> zipWithM keep plates (V.toList raws)
   where
-    keepOrRepair plate =
-      routeMember route <$> readSessionStrict plate >>= \case
-        -- the legacy set is shared by every city: another city's cab on the same route code is live, not stale
-        LiveMember s -> pure $ if s.merchantOperatingCityId == cityId then Just s else Nothing
-        StaleMember -> repair plate >> pure Nothing
-        UnknownMember -> Nothing <$ logWarning ("sharedCab: session of " <> plate <> " on " <> route <> " unreadable, route-set repair skipped")
+    keep plate raw = case classify . SessionAt <$> (raw >>= A.decodeStrict) of
+      Just (LiveMember s) -> pure (Just s)
+      _ ->
+        classify <$> readSessionStrict plate >>= \case
+          LiveMember s -> pure (Just s)
+          StaleMember -> Nothing <$ repair plate
+          UnknownMember -> Nothing <$ logWarning ("sharedCab: session of " <> plate <> " unreadable, plate-set repair skipped")
     repair plate =
-      withTryCatch "sharedCab:repairRouteSet" (withPlateLock plate (reread plate))
-        >>= either (\e -> logWarning $ "sharedCab: route-set repair of " <> plate <> " on " <> route <> " skipped: " <> show e) pure
+      withTryCatch "sharedCab:repairPlateSet" (withPlateLock plate (reread plate))
+        >>= either (\e -> logWarning $ "sharedCab: plate-set repair of " <> plate <> " skipped: " <> show e) pure
     reread plate =
-      routeMember route <$> readSessionStrict plate >>= \case
-        StaleMember -> void $ shared $ Redis.srem (routeKey cityId route) [plate] >> Redis.srem (legacyRouteKey route) [plate]
+      classify <$> readSessionStrict plate >>= \case
+        StaleMember -> shared (dropMember plate)
         _ -> pure ()
 
 -- | 'readSession' answers Nothing for a missing key, a failed read and an undecodable value alike (and deletes the last); the route-set
@@ -153,60 +172,46 @@ saveSession old new = shared $ do
   let moves = routeSetMoves old new
   forM_ moves.removeFrom $ \route -> void $ Redis.srem (routeKey (maybe new.merchantOperatingCityId (.merchantOperatingCityId) old) route) [new.vehicleNumber]
   forM_ moves.addTo $ \route -> Redis.sAddExp (routeKey new.merchantOperatingCityId route) [new.vehicleNumber] sessionTtlSec
+  if new.status /= ENDED
+    then Redis.sAddExp (livePlatesKey new.merchantOperatingCityId) [new.vehicleNumber] sessionTtlSec
+    else void $ Redis.srem (livePlatesKey new.merchantOperatingCityId) [new.vehicleNumber]
   pure new
 
-closeLiveTrip :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> DVT.VehicleTripEndReason -> UTCTime -> m ()
-closeLiveTrip plate reason now =
-  QVT.findActiveByVehicleNumber plate
-    >>= traverse_ (\trip -> QVT.closeTrip (closedTripStatus reason) (Just reason) (Just now) trip.id)
+-- | A run rider-app expired, told to driver-app, which owns the trip row. A failure is only logged: the driver's next call converges
+-- driver-app's row on the session anyway.
+expireDriverTrip :: TripClientFlow m r => Session -> m ()
+expireDriverTrip s =
+  withTryCatch "sharedCab:expireDriverTrip" (TripClient.expireTrip s.merchantId s.vehicleTripId)
+    >>= either (\e -> logError $ "sharedCab: couldn't expire driver-app trip " <> s.vehicleTripId <> " of " <> s.vehicleNumber <> ": " <> show e) pure
 
-switchTo :: (LtsFlow m r c, MonadMask m) => DVT.VehicleTripEndReason -> Text -> Session -> m Session
-switchTo reason newRoute s = do
+switchTo :: (LtsFlow m r c, MonadMask m) => Text -> Text -> Session -> m Session
+switchTo tripId newRoute s = do
   now <- getCurrentTime
-  tripId <- generateGUID
-  let s' = switchRoute newRoute tripId s
-  switched <- withAttach (Just s) s' (replaceLiveTrip reason now (Just s) s')
+  let s' = switchRoute newRoute tripId now s
+  switched <- withAttach (Just s) s' (saveSession (Just s) s')
   walkups <- Seats.carryOver switched
-  when (walkups /= switched.walkupCount) $ logError $ "sharedCab: " <> show walkups <> " of " <> show switched.walkupCount <> " walk-ups carried onto " <> switched.vehicleTripId.getId
+  when (walkups /= switched.walkupCount) $ logError $ "sharedCab: " <> show walkups <> " of " <> show switched.walkupCount <> " walk-ups carried onto " <> switched.vehicleTripId
   pure switched
-
--- | One ACTIVE/PAUSED trip per plate: every trip write runs under the plate lock (vehicle_trip is on KV, so no DB constraint could
--- hold it), and the old run closes before the new one is created; if creating or saving then fails, it is reopened.
-replaceLiveTrip :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadCatch m) => DVT.VehicleTripEndReason -> UTCTime -> Maybe Session -> Session -> m Session
-replaceLiveTrip reason now prior s' = do
-  mbOld <- QVT.findActiveByVehicleNumber s'.vehicleNumber
-  whenJust mbOld $ \old -> QVT.closeTrip (closedTripStatus reason) (Just reason) (Just now) old.id
-  (QVT.create (tripFor s' now) >> saveSession prior s') `onException` undo mbOld
-  where
-    undo mbOld =
-      withTryCatch
-        "sharedCab:undoTripSwitch"
-        ( do
-            QVT.findById s'.vehicleTripId >>= traverse_ (\new -> QVT.closeTrip DVT.ABANDONED (Just DVT.ROUTE_CHANGED) (Just now) new.id)
-            whenJust mbOld $ \old -> QVT.closeTrip old.status Nothing Nothing old.id
-        )
-        >>= either (\e -> logError $ "sharedCab: couldn't undo the trip switch for " <> s'.vehicleNumber <> ": " <> show e) pure
 
 stranded :: [(b, Either e ())] -> [b]
 stranded results = [b | (b, Left _) <- results]
 
 -- | Every end path. Each rider drop is caught on its own: one lock timeout must not strand the others or stop the end itself.
-finish :: (LtsFlow m r c, MonadMask m) => DVT.VehicleTripEndReason -> Session -> m Session
-finish reason s = do
+finish :: (LtsFlow m r c, MonadMask m) => Session -> m Session
+finish s = do
   onBoard <- ridersOnBoard s.vehicleNumber
   results <- forM onBoard $ \b -> (b,) <$> withTryCatch "sharedCab:dropOnFinish" (Seats.markDropped b)
   forM_ (stranded results) $ \b -> logError $ "sharedCab: rider still on board after the session ended, booking=" <> b.id.getId <> " plate=" <> s.vehicleNumber
-  now <- getCurrentTime
   -- ENDED first, since the tick claims onto ACTIVE sessions only: a crash between the steps never leaves a phantom ACTIVE cab.
   ended <- saveSession (Just s) (endSession s)
-  closeLiveTrip s.vehicleNumber reason now
   clearCabDriverInfo s.vehicleNumber
   detach s
   pure ended
 
--- | Open a session, or change route if this driver already has one. A change with riders on board needs a mode.
-selectRoute :: Maybe SelectRouteMode -> OpenSessionReq -> Environment.Flow (Either [DFRFSTicketBooking.FRFSTicketBooking] Session)
-selectRoute mode req = withPlateLock plate $ do
+-- | Open a session, or change route if this driver already has one, onto driver-app's run `tripId`. A change with riders on board
+-- needs a mode.
+selectRoute :: Maybe SelectRouteMode -> Text -> OpenSessionReq -> Environment.Flow (Either [DFRFSTicketBooking.FRFSTicketBooking] Session)
+selectRoute mode tripId req = withPlateLock plate $ do
   requireSharedCabEnabled req.merchantOperatingCityId
   prior <- readSession plate
   liftSession (planSelect req.driverId req.routeCode prior) >>= \case
@@ -214,18 +219,17 @@ selectRoute mode req = withPlateLock plate $ do
     ChangeRoute s -> do
       onBoard <- ridersOnBoard plate
       case mode of
-        _ | null onBoard -> Right <$> switchTo DVT.ROUTE_CHANGED req.routeCode s
+        _ | null onBoard -> Right <$> switchTo tripId req.routeCode s
         -- TODO: re-drop forced riders at the nearest common stop and notify them.
         Just Force -> do
-          s' <- switchTo DVT.ROUTE_CHANGED req.routeCode s
+          s' <- switchTo tripId req.routeCode s
           Right s' <$ mapM_ (Notify.notifyRouteChange req.routeCode) onBoard
         Just AfterLastDrop -> Right <$> saveSession (Just s) (queueRoute req.routeCode s)
         Nothing -> pure (Left onBoard)
     OpenSession -> do
       now <- getCurrentTime
-      tripId <- generateGUID
       let s = newSession req tripId now prior
-      opened <- withAttach Nothing s $ replaceLiveTrip DVT.SESSION_TIMEOUT now prior s
+      opened <- withAttach Nothing s $ saveSession prior s
       ensureExpiryJob s.merchantId s.merchantOperatingCityId
       -- Seeded here rather than in `finish` (which runs from the expiry job with no scheduler constraint); a failure must not fail the open.
       withTryCatch "sharedCabSeedSweep" (ensureDegradedSweep s.merchantId s.merchantOperatingCityId) >>= \case
@@ -236,6 +240,7 @@ selectRoute mode req = withPlateLock plate $ do
     plate = req.vehicleNumber
 
 -- | Applies an `afterLastDrop` route change once no rider is left; True when it switched (the caller then releases the old route's allocations, outside this lock).
+-- rider-app names this run itself; driver-app adopts it from the next session it sees.
 applyQueuedRoute :: (LtsFlow m r c, MonadMask m) => Text -> m Bool
 applyQueuedRoute plate = withPlateLock plate $ do
   mbSession <- readSession plate
@@ -243,7 +248,7 @@ applyQueuedRoute plate = withPlateLock plate $ do
     Just s | Just queued <- s.queuedRouteCode,
              s.status /= ENDED -> do
       onBoard <- ridersOnBoard plate
-      if null onBoard then True <$ switchTo DVT.ROUTE_CHANGED queued s else pure False
+      if null onBoard then generateGUIDText >>= \tripId -> True <$ switchTo tripId queued s else pure False
     _ -> pure False
 
 endRoute :: Text -> Text -> Bool -> EndRouteAction -> Environment.Flow Session
@@ -252,26 +257,27 @@ endRoute driver plate forced action = withPlateLock plate $ do
   onBoard <- ridersOnBoard plate
   unless (forced || null onBoard) $ throwError (RidersOnBoard (length onBoard))
   case action of
-    StartReturn -> do
+    StartReturn tripId -> do
       returnRoute <- liftSession (returnRouteOf s.routeCode)
-      s' <- switchTo DVT.RETURN returnRoute s
+      s' <- switchTo tripId returnRoute s
       s' <$ mapM_ (Notify.notifyRouteChange returnRoute) onBoard
-    _ -> do
-      finish (endActionReason action) s
+    _ -> finish s
 
-expire :: (LtsFlow m r c, MonadMask m) => Text -> m Session
-expire plate =
-  withPlateLock plate $
-    readSession plate >>= \case
-      Just s | s.status /= ENDED -> finish DVT.SESSION_TIMEOUT s
-      _ -> throwError SessionNotFound
+-- | The silent cab's run ends here, not by the driver: driver-app hears of it after the plate lock.
+expire :: (LtsFlow m r c, MonadMask m, TripClientFlow m r) => Text -> m Session
+expire plate = do
+  (prior, ended) <-
+    withPlateLock plate $
+      readSession plate >>= \case
+        Just s | s.status /= ENDED -> (s,) <$> finish s
+        _ -> throwError SessionNotFound
+  ended <$ expireDriverTrip prior
 
--- | System-initiated: no driver check. Mirrored to the trip row so flush recovery restores PAUSED.
+-- | System-initiated: no driver check. Pause is session state only; a flush brings the run back ACTIVE.
 pause :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => Text -> PauseReason -> m Session
 pause plate reason = withPlateLock plate $ do
   prior <- readSession plate
   s <- liftSession $ maybe (Left SessionNotFound) (pauseSession reason) prior
-  QVT.updateStatus DVT.PAUSED s.vehicleTripId
   saveSession prior s
 
 resume :: Text -> Text -> Environment.Flow Session
@@ -281,7 +287,6 @@ resume driver plate = do
     owned <- liftSession $ ownedSession driver prior
     requireSharedCabEnabled owned.merchantOperatingCityId
     s <- liftSession $ resumeSession owned
-    QVT.updateStatus DVT.ACTIVE s.vehicleTripId
     saveSession prior s
   resumed <$ ensureExpiryJob resumed.merchantId resumed.merchantOperatingCityId
 
@@ -292,7 +297,7 @@ setWalkupCount driver plate expectedVersion count = withPlateLock plate $ do
   requireSharedCabEnabled s.merchantOperatingCityId
   s' <- liftSession $ setWalkup expectedVersion count s
   held <- Seats.setWalkups s count
-  saveWalkups DriverCounted prior s s' {walkupCount = held}
+  saveSession prior s' {walkupCount = held}
 
 -- | Cab full: `releaseUnboarded` (the unboarded allocations going) runs under the plate lock, then walk-ups take every seat left,
 -- so no claim lands in between. Its result comes back for the caller to send the releases' effects outside the lock.
@@ -303,19 +308,11 @@ markCabFull driver plate releaseUnboarded = do
     s <- liftSession $ ownedSession driver prior
     released <- releaseUnboarded
     held <- Seats.setWalkups s s.capacity
-    (,released) <$> saveWalkups CabFullFill prior s (fillCab held s)
+    (,released) <$> saveSession prior (fillCab held s)
   pure (full, released)
 
-saveWalkups :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => WalkupSource -> Maybe Session -> Session -> Session -> m Session
-saveWalkups source prior s s' = do
-  let added = walkupsToCount source s s'
-  when (added > 0) $
-    QVT.findById s.vehicleTripId
-      >>= traverse_ (\trip -> QVT.updateOfflineBoardings (trip.offlineBoardings + added) trip.id)
-  saveSession prior s'
-
 -- | End a rider `finish` couldn't drop. Plate lock serialises with `finish` and re-open; plate -> booking lock order.
-dropStrandedRider :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => DFRFSTicketBooking.FRFSTicketBooking -> m Bool
+dropStrandedRider :: (TripClientFlow m r, MonadMask m) => DFRFSTicketBooking.FRFSTicketBooking -> m Bool
 dropStrandedRider booking = case booking.vehicleNumber of
   Nothing -> pure False
   Just plate ->
@@ -326,10 +323,13 @@ dropStrandedRider booking = case booking.vehicleNumber of
         _ -> pure False
   where
     ifStranded cond act = cond >>= \c -> if c then act else pure False
-    isStranded plate b
-      | b.status /= DBookingStatus.CONFIRMED = pure False
-      | otherwise = do
-        mbSession <- readSession plate
-        hasLiveTrip <- if isNothing mbSession then isJust <$> QVT.findActiveByVehicleNumber plate else pure False
-        statuses <- map (.status) <$> QTicket.findAllByTicketBookingId b.id
-        pure $ shouldDropOnDeadSession ((.status) <$> mbSession) hasLiveTrip statuses
+
+isStranded :: TripClientFlow m r => Text -> DFRFSTicketBooking.FRFSTicketBooking -> m Bool
+isStranded plate b
+  | b.status /= DBookingStatus.CONFIRMED = pure False
+  | otherwise = do
+    mbSession <- readSession plate
+    -- an unreachable driver-app counts as a live trip: riders are never dropped for it
+    hasLiveTrip <- if isNothing mbSession then either (const True) isJust <$> withTryCatch "sharedCab:strandedTripCheck" (TripClient.activeTrip b.merchantId plate) else pure False
+    statuses <- map (.status) <$> QTicket.findAllByTicketBookingId b.id
+    pure $ shouldDropOnDeadSession ((.status) <$> mbSession) hasLiveTrip statuses

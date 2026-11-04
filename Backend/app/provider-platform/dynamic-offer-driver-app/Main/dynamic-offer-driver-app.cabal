@@ -372,6 +372,7 @@ library
       Domain.Action.Internal.SendSMS
       Domain.Action.Internal.SharedCabAllocation
       Domain.Action.Internal.SharedCabCallNumber
+      Domain.Action.Internal.SharedCabTrip
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.TollUpsert
@@ -837,6 +838,7 @@ library
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
       SharedLogic.SharedCab.RiderClient
+      SharedLogic.SharedCab.Trip
       SharedLogic.SocialLogin
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand
@@ -1823,6 +1825,7 @@ library
       Domain.Types.VehicleRegistrationCertificate
       Domain.Types.VehicleRouteMapping
       Domain.Types.VehicleServiceTier
+      Domain.Types.VehicleTrip
       Domain.Types.VendorFee
       Domain.Types.VendorSplitDetails
       Domain.Types.Volunteer
@@ -2032,6 +2035,7 @@ library
       Storage.Beam.VehicleRegistrationCertificate
       Storage.Beam.VehicleRouteMapping
       Storage.Beam.VehicleServiceTier
+      Storage.Beam.VehicleTrip
       Storage.Beam.VendorFee
       Storage.Beam.VendorSplitDetails
       Storage.Beam.Volunteer
@@ -2354,6 +2358,7 @@ library
       Storage.Queries.VehicleRegistrationCertificate
       Storage.Queries.VehicleRouteMapping
       Storage.Queries.VehicleServiceTier
+      Storage.Queries.VehicleTrip
       Storage.Queries.VendorFee
       Storage.Queries.VendorSplitDetails
       Storage.Queries.Volunteer

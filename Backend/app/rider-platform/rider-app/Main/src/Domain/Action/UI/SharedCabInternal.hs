@@ -5,9 +5,6 @@ module Domain.Action.UI.SharedCabInternal
     postSharedCabSessionOperations,
     postSharedCabBookingOperations,
     getSharedCabSession,
-    getSharedCabTrips,
-    tripDayWindow,
-    onCityDay,
     getSharedCabBookingCallNumber,
     postSharedCabBookingMessage,
     chatMessageBody,
@@ -19,14 +16,13 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
-import Data.Time (Day, UTCTime (..))
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.RouteStopMapping as DRSM
-import qualified Domain.Types.VehicleTrip as DVT
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
@@ -36,7 +32,6 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Types as AllocTypes
@@ -58,18 +53,13 @@ import SharedLogic.SharedCab.SessionState
 import qualified SharedLogic.SharedCab.SessionView as View
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
-import qualified Storage.Queries.VehicleTrip as QVT
 import Tools.Error
 import Tools.Notifications (SharedCabChatEntityData (..), notifyChatMessage)
-
-defaultCapacity :: Int
-defaultCapacity = 6
 
 checkToken :: Maybe Text -> Environment.Flow ()
 checkToken mbToken = do
@@ -141,8 +131,12 @@ postSharedCabRouteOperations mbToken req = do
   checkToken mbToken
   case req.operation of
     API.SELECT_ROUTE -> selectRoute req
-    API.RETURN_TRIP -> ended . Just =<< (Session.endRoute req.driverId req.vehicleNumber forced StartReturn >>= releasing AllocTypes.RouteChanged >>= mkSessionResp)
-    API.CHANGE_ROUTE -> ended . Just =<< (ownSession req.driverId req.vehicleNumber >>= mkSessionResp)
+    API.RETURN_TRIP -> do
+      tripId <- required "vehicleTripId" req.vehicleTripId
+      ended . Just =<< (Session.endRoute req.driverId req.vehicleNumber forced (StartReturn tripId) >>= releasing AllocTypes.RouteChanged >>= mkSessionResp)
+    API.CHANGE_ROUTE -> do
+      merchantId <- agencyMerchant =<< required "agencyId" req.agencyId
+      ended . Just =<< (ownSession merchantId req.driverId req.vehicleNumber >>= mkSessionResp)
     API.END_ROUTE -> do
       void $ Session.endRoute req.driverId req.vehicleNumber forced (if req.atLastStop == Just True then EndRoute else EndForNow) >>= releasing AllocTypes.SessionClosed
       ended Nothing
@@ -155,13 +149,15 @@ selectRoute req = do
   agencyId <- required "agencyId" req.agencyId
   routeCode <- required "routeCode" req.routeCode
   walkupCount <- required "walkupCount" req.walkupCount
+  tripId <- required "vehicleTripId" req.vehicleTripId
   integratedBppConfig <- getIntegratedBppConfigByAgency agencyId
   -- opening or changing a route attaches it, which fails on an unknown one; a route queued for after the last drop is only saved
   void $ OTPRest.getRouteByRouteId integratedBppConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)
-  priorRoute <- fmap (.routeCode) . mfilter ((/= ENDED) . (.status)) <$> Session.getSessionFresh req.vehicleNumber
+  priorRoute <- fmap (.routeCode) . mfilter ((/= ENDED) . (.status)) <$> Session.getSessionFresh integratedBppConfig.merchantId req.vehicleNumber
   selected <-
     Session.selectRoute
       req.mode
+      tripId
       OpenSessionReq
         { driverId = req.driverId,
           vehicleNumber = req.vehicleNumber,
@@ -202,12 +198,19 @@ seeded s = s <$ ensureAllocationTick s.merchantId s.merchantOperatingCityId
 releasing :: AllocTypes.AllocationOutcome -> Session -> Environment.Flow Session
 releasing outcome s = s <$ Allocation.releaseUnboarded s.vehicleNumber outcome
 
-ownSession :: Text -> Text -> Environment.Flow Session
-ownSession driver plate = Session.getSession plate >>= either throwError pure . ownedSession driver
+-- | `merchantId` is the rider-app merchant through which a session lost from Redis is rebuilt from driver-app's trip.
+ownSession :: Id DM.Merchant -> Text -> Text -> Environment.Flow Session
+ownSession merchantId driver plate = Session.getSession merchantId plate >>= either throwError pure . ownedSession driver
+
+agencyMerchant :: Text -> Environment.Flow (Id DM.Merchant)
+agencyMerchant agencyId = (.merchantId) <$> getIntegratedBppConfigByAgency agencyId
 
 -- | The driver's session poll reads the cab's fix and seats from the route snapshot; an action's reply reads them fresh.
-getSharedCabSession :: Text -> Text -> Maybe Text -> Environment.Flow View.SharedCabSession
-getSharedCabSession driver plate mbToken = checkToken mbToken >> ownSession driver plate >>= mkSessionRespFrom CachedCab
+getSharedCabSession :: Text -> Text -> Text -> Maybe Text -> Environment.Flow View.SharedCabSession
+getSharedCabSession agencyId driver plate mbToken = do
+  checkToken mbToken
+  merchantId <- agencyMerchant agencyId
+  ownSession merchantId driver plate >>= mkSessionRespFrom CachedCab
 
 -- | Cab full: every unboarded allocation goes as SEAT_LOST, then walk-ups take the seats left, both under the plate lock; the releases'
 -- pushes and re-ticks go out after it.
@@ -233,43 +236,14 @@ postSharedCabBookingOperations :: Id DFTB.FRFSTicketBooking -> Maybe Text -> API
 postSharedCabBookingOperations bookingId mbToken req = do
   checkToken mbToken
   case req.operation of
-    API.ACCEPT -> Offer.acceptOffer req.driverId req.vehicleNumber bookingId >> getSharedCabSession' req.driverId req.vehicleNumber
-    API.DECLINE -> Offer.declineOffer req.driverId req.vehicleNumber bookingId >> getSharedCabSession' req.driverId req.vehicleNumber
+    API.ACCEPT -> Offer.acceptOffer req.driverId req.vehicleNumber bookingId >>= owned >>= mkSessionResp
+    API.DECLINE -> Offer.declineOffer req.driverId req.vehicleNumber bookingId >>= owned >>= mkSessionResp
     API.CANCEL -> driverAction DriverCancel
     API.BOARDED_WITHOUT_CODE -> driverAction DriverBoarded
     API.DROPPED -> driverAction DriverDropped
   where
     driverAction action = runDriverAction action req.driverId req.vehicleNumber req.reason bookingId >>= mkSessionResp
-
-getSharedCabSession' :: Text -> Text -> Environment.Flow View.SharedCabSession
-getSharedCabSession' driver plate = ownSession driver plate >>= mkSessionResp
-
-getSharedCabTrips :: Day -> Text -> Maybe Text -> Environment.Flow API.SharedCabTripsResp
-getSharedCabTrips date driver mbToken = do
-  checkToken mbToken
-  let (from, to) = tripDayWindow date
-  candidates <- QVT.findAllByDriverIdAndStartedAtRange Nothing Nothing driver from to
-  trips <- filterM (\trip -> (\offset -> onCityDay date offset trip.startedAt) <$> cityUtcOffset trip.merchantOperatingCityId) candidates
-  pure API.SharedCabTripsResp {trips = map mkTrip trips}
-  where
-    cityUtcOffset cityId = maybe (Seconds 19800) (.timeDiffFromUtc) <$> getConfig (RiderConfigDimensions {merchantOperatingCityId = cityId.getId}) Nothing
-    mkTrip (trip :: DVT.VehicleTrip) =
-      API.SharedCabTrip
-        { id = trip.id,
-          routeCode = trip.routeCode,
-          status = trip.status,
-          startedAt = trip.startedAt,
-          endedAt = trip.endedAt,
-          endReason = trip.endReason,
-          offlineBoardings = trip.offlineBoardings
-        }
-
--- | A trip's calendar day is its city's local day. Every UTC offset is under a day, so the day lies inside the UTC day either side.
-tripDayWindow :: Day -> (UTCTime, UTCTime)
-tripDayWindow date = (addUTCTime (-86400) (UTCTime date 0), addUTCTime (2 * 86400 - 1) (UTCTime date 0))
-
-onCityDay :: Day -> Seconds -> UTCTime -> Bool
-onCityDay date utcOffset startedAt = utctDay (addUTCTime (secondsToNominalDiffTime utcOffset) startedAt) == date
+    owned = either throwError pure . ownedSession req.driverId . Just
 
 sessionRoute :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow View.SessionRoute
 sessionRoute integratedBppConfig code = do
@@ -296,7 +270,7 @@ liveRiderRows cfg sessionTrip stopPoints polyline addresses plate = do
       let pointsByCode = Map.fromList stopPoints
           nameOf b = fromMaybe "Rider" $ listToMaybe [w | p <- persons, p.id == b.riderId, Just n <- [p.firstName], w <- T.words n]
           statusesOf b = [t.status | t <- tickets, t.frfsTicketBookingId == b.id]
-          onThisTrip b = LegState.tripMatches (getId <$> b.vehicleTripId) sessionTrip
+          onThisTrip b = LegState.tripMatches b.vehicleTripId sessionTrip
       parties <- Booking.partySizes bookings
       allocs <- BookingState.readAllocs (map (.id) bookings)
       fixes <- Booking.readRiderFixes (map (.id) bookings)
@@ -374,10 +348,11 @@ mkSessionRespFrom cabReads s = do
       mbTrack <- Lts.readRoutePosition s.routeCode s.vehicleNumber
       (mbTrack,) <$> Seats.freeAhead s ((.vehicleInfo) <$> mbTrack)
   let vehicle = (\v -> LatLong v.vehicleInfo.latitude v.vehicleInfo.longitude) <$> mbTrack
-  riderRows <- liveRiderRows cfg s.vehicleTripId.getId [(stop.stopCode, stop.stopPoint) | stop <- stops] polyline addresses s.vehicleNumber
+  riderRows <- liveRiderRows cfg s.vehicleTripId [(stop.stopCode, stop.stopPoint) | stop <- stops] polyline addresses s.vehicleNumber
   pure
     View.SharedCabSession
       { route,
+        tripId = s.vehicleTripId,
         queuedRoute,
         status = s.status,
         pauseReason = s.pauseReason,

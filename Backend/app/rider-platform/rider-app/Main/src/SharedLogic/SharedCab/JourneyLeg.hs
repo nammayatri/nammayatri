@@ -78,7 +78,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
       attempts = bookingState.attemptCount
       preference = (T.takeEnd 4 <$> bookingState.preferredPlate, bookingState.preferenceLost)
   -- the cab's position, driver and contact only while the plate runs the trip the rider boarded on
-  let tripSession = sessionOnTrip (getId <$> booking.vehicleTripId) mbSession
+  let tripSession = sessionOnTrip booking.vehicleTripId mbSession
   cabTrack <- readCabTrack now cfg booking tripSession
   mbDriverInfo <- readLiveDriverInfo tripSession
   let hasLiveSession = maybe False ((/= SharedCabSessionState.ENDED) . (.status)) mbSession
@@ -127,7 +127,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
                 Just etaSec <- [Approach.plausibleEtaFrom now cfg booking.fromStationCode =<< c.track]
             ]
       pure
-        [ SharedCabLeg.UpcomingCab {cabId = c.session.vehicleTripId.getId, etaSec, freeSeats}
+        [ SharedCabLeg.UpcomingCab {cabId = c.session.vehicleTripId, etaSec, freeSeats}
           | (c, etaSec) <- SharedCabLeg.nearestAfter snd assignedEtaSec approachingCabs,
             let freeSeats = maybe 0 (SharedCabSeats.freeOver c.seats) (SharedCabSeats.bookingRange c.seats booking.fromStationCode booking.toStationCode)
         ]
@@ -154,7 +154,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
 
 -- | The plate's session while it is not ENDED and runs the booking's trip (any trip before boarding).
 sessionOnTrip :: Maybe Text -> Maybe SharedCabSessionState.Session -> Maybe SharedCabSessionState.Session
-sessionOnTrip bookingTrip = mfilter (\s -> s.status /= SharedCabSessionState.ENDED && SharedCabLeg.tripMatches bookingTrip s.vehicleTripId.getId)
+sessionOnTrip bookingTrip = mfilter (\s -> s.status /= SharedCabSessionState.ENDED && SharedCabLeg.tripMatches bookingTrip s.vehicleTripId)
 
 -- | The live session's cab fix and ETAs, from one read of the route's LTS hash (what the allocator reads); any miss is Nothing.
 readCabTrack :: LegFlow m r => UTCTime -> Config.SharedCabTunables -> DFRFSTicketBooking.FRFSTicketBooking -> Maybe SharedCabSessionState.Session -> m (Maybe CabTrack)

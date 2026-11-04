@@ -76,13 +76,13 @@ runDriverAction action driver plate mbReason bookingId = do
   mbCancelReason <- case action of
     DriverCancel -> Just <$> either throwError pure (requireReason mbReason)
     _ -> pure Nothing
-  (mbDropped, mbCancel) <- Session.withPlateLock plate $ do
+  (merchantId, (mbDropped, mbCancel)) <- Session.withPlateLock plate $ do
     s <- Session.readSession plate >>= either throwError pure . ownedSession driver
     booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM BookingNotOnThisCab
     unless (isSharedCabBooking booking && booking.status == DFRFSTicketBookingStatus.CONFIRMED) $ throwError BookingNotLive
     -- markDropped and the allocation release take the booking lock themselves; it isn't re-entrant. Holding the
     -- plate lock keeps a boarding onto this cab from landing between the decision and the write.
-    case action of
+    (s.merchantId,) <$> case action of
       DriverDropped -> do
         decide booking
         markDropped booking
@@ -99,7 +99,7 @@ runDriverAction action driver plate mbReason bookingId = do
   whenJust mbDropped $ \_ -> do
     switched <- Session.applyQueuedRoute plate
     when switched $ Allocation.releaseUnboarded plate RouteChanged
-  Session.getSession plate >>= fromMaybeM SessionNotFound
+  Session.getSession merchantId plate >>= fromMaybeM SessionNotFound
   where
     -- the booking lock inside re-decides (a boarding since the plate lock flips a ticket, and the cancel is refused)
     cancelByDriver reason booking = do

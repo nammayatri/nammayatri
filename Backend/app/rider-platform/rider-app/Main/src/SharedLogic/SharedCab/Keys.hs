@@ -5,6 +5,7 @@ module SharedLogic.SharedCab.Keys
     sessionKey,
     routeKey,
     legacyRouteKey,
+    livePlatesKey,
     driverInfoKey,
     plateLockKey,
     offRouteKey,
@@ -60,6 +61,10 @@ routeKey cityId routeCode = "sharedcab:route:" <> cityId.getId <> ":" <> routeCo
 -- longer written, so it lapses with its 16 h TTL). TODO: drop with its read in activeSessionsOnRoute.
 legacyRouteKey :: Text -> Text
 legacyRouteKey routeCode = "sharedcab:route:" <> routeCode
+
+-- | Per city: the plates whose session isn't ENDED, for the tick and the expiry pass.
+livePlatesKey :: CityId -> Text
+livePlatesKey cityId = "sharedcab:live:" <> cityId.getId
 
 driverInfoKey :: Text -> Text
 driverInfoKey plate = "sharedcab:driverinfo:" <> plate

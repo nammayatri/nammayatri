@@ -9,11 +9,9 @@ import qualified Data.ByteString.Lazy.Char8 as BLC
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
-import "rider-app" Domain.Action.UI.SharedCabInternal (chatMessageBody, onCityDay, tripDayWindow)
+import "rider-app" Domain.Action.UI.SharedCabInternal (chatMessageBody)
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
-import qualified "rider-app" Domain.Types.VehicleTrip as DVT
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
-import "mobility-core" Kernel.Types.Common (Seconds (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import "rider-app" SharedLogic.SharedCab.JourneyLeg (sessionOnTrip)
 import "rider-app" SharedLogic.SharedCab.Keys (routeKey)
@@ -27,6 +25,9 @@ import Prelude
 
 t0 :: UTCTime
 t0 = UTCTime (fromGregorian 2026 9 25) 0
+
+t1 :: UTCTime
+t1 = addUTCTime 600 t0
 
 active :: Session
 active =
@@ -45,16 +46,14 @@ active =
       pauseReason = Nothing,
       version = 3,
       startedAt = t0,
-      vehicleTripId = Id "trip1"
+      vehicleTripId = "trip1"
     }
 
 tests :: TestTree
 tests =
   testGroup
     "SharedCab session state"
-    [ testCase "a plate with no session key takes the plate lock only when it has a live trip to restore" $
-        map sessionMissAction [False, True] @?= [NoLiveTrip, RestoreUnderLock],
-      testCase "a route-set member is dropped only when its session is gone or off the route, never on a failed read" $
+    [ testCase "a route-set member is dropped only when its session is gone or off the route, never on a failed read" $
         map
           (routeMember "R1")
           [SessionAt active, SessionAt active {routeCode = "R2"}, SessionAt active {status = PAUSED}, SessionAbsent, SessionUnreadable]
@@ -69,18 +68,6 @@ tests =
           (either (const Nothing) (Just . T.length) . chatMessageBody)
           ["  on my way  ", T.replicate 500 "a", T.replicate 501 "a", "   "]
           @?= [Just 9, Just 500, Nothing, Nothing],
-      testCase "a trip's day is its city's local day, found inside the window" $ do
-        let date = fromGregorian 2026 9 25
-            lateUtc = UTCTime (fromGregorian 2026 9 24) (20 * 3600) -- 01:30 on the 25th at +05:30
-            (from, to) = tripDayWindow date
-        [onCityDay date (Seconds 19800) lateUtc, onCityDay date (Seconds 0) lateUtc, onCityDay date (Seconds (-18000)) (UTCTime date (23 * 3600))] @?= [True, False, True]
-        (from <= lateUtc && lateUtc <= to) @?= True,
-      testCase "a cab-full fill counts no offline boardings, a driver count does" $ do
-        let full = fillCab 3 active
-        walkupsToCount CabFullFill active full @?= 0
-        walkupsToCount DriverCounted active full @?= 3,
-      testCase "the driver's count never goes negative" $
-        walkupsToCount DriverCounted active {walkupCount = 3} active @?= 0,
       testCase "INPROGRESS on an ENDED session is stranded" $
         shouldDropOnDeadSession (Just ENDED) False [TS.INPROGRESS] @?= True,
       testCase "INPROGRESS with no session and no live trip is stranded; a live trip means a flush, not an end" $ do
@@ -102,24 +89,22 @@ tests =
         planSelect "d1" "R1" (Just active) @?= Right (KeepRoute active),
       testCase "same driver, other route is a route change" $
         planSelect "d1" "R2" (Just active) @?= Right (ChangeRoute active),
-      testCase "route change points the session at the new trip" $
-        switchRoute "R2" (Id "trip2") active
-          @?= active {routeCode = "R2", vehicleTripId = Id "trip2", version = 4},
+      testCase "route change points the session at the new trip, started now" $
+        switchRoute "R2" "trip2" t1 active
+          @?= active {routeCode = "R2", vehicleTripId = "trip2", startedAt = t1, version = 4},
       testCase "two cities whose feeds share a route code keep separate route sets" $
         (routeKey (Id "shillong") "R1" == routeKey (Id "tura") "R1", routeKey (Id "shillong") "R1") @?= (False, "sharedcab:route:shillong:R1"),
       testCase "route change leaves the old route set and joins the new one" $
-        routeSetMoves (Just active) (switchRoute "R2" (Id "trip2") active) @?= RouteSetMoves ["R1"] ["R2"],
-      testCase "route change closes the old trip as COMPLETED" $
-        closedTripStatus DVT.ROUTE_CHANGED @?= DVT.COMPLETED,
-      testCase "the opened trip is ACTIVE on the new route" $
-        let trip = tripFor (switchRoute "R2" (Id "trip2") active) t0
-         in (DVT.routeCode trip, DVT.status trip, DVT.endedAt trip) @?= ("R2", DVT.ACTIVE, Nothing),
+        routeSetMoves (Just active) (switchRoute "R2" "trip2" t1 active) @?= RouteSetMoves ["R1"] ["R2"],
+      testCase "a city's live-plate member stays while its session is live in that city, and goes only on a positive answer" $
+        map
+          (cityMember (Id "moc"))
+          [SessionAt active, SessionAt active {status = PAUSED}, SessionAt (endSession active), SessionAt active {merchantOperatingCityId = Id "tura"}, SessionAbsent, SessionUnreadable]
+          @?= [LiveMember active, LiveMember active {status = PAUSED}, StaleMember, StaleMember, StaleMember, UnknownMember],
       testCase "afterLastDrop queues the change and stays on the current route" $
         queueRoute "R2" active @?= active {queuedRouteCode = Just "R2", version = 4},
       testCase "applying the queued route clears it" $
-        queuedRouteCode (switchRoute "R2" (Id "trip2") (queueRoute "R2" active)) @?= Nothing,
-      testCase "END_ROUTE closes the trip as COMPLETED with its own reason" $
-        (endActionReason EndRoute, closedTripStatus (endActionReason EndRoute)) @?= (DVT.END_ROUTE, DVT.COMPLETED),
+        queuedRouteCode (switchRoute "R2" "trip2" t1 (queueRoute "R2" active)) @?= Nothing,
       testCase "walk-up with a stale version is rejected" $
         setWalkup 2 1 active @?= Left SessionVersionMismatch,
       testCase "walk-up with the current version bumps it" $
@@ -130,14 +115,12 @@ tests =
         fillCab 3 active {walkupCount = 1} @?= active {walkupCount = 3, version = 4},
       testCase "END_FOR_NOW leaves the route set" $
         routeSetMoves (Just active) (endSession active) @?= RouteSetMoves ["R1"] [],
-      testCase "END_FOR_NOW closes the trip with its own reason" $
-        endActionReason EndForNow @?= DVT.END_FOR_NOW,
       testCase "pause leaves the route set, resume rejoins" $
         let paused = either (error . show) id (pauseSession NO_LOCATION active)
          in (routeSetMoves (Just active) paused, routeSetMoves (Just paused) <$> resumeSession paused)
               @?= (RouteSetMoves ["R1"] [], Right (RouteSetMoves [] ["R1"])),
       testCase "a new session on a reused plate outranks the old version" $
-        version (newSession (OpenSessionReq "d2" "ml 05-a 1234" (Id "m") (Id "moc") (Id "ibc") AC 4 "R1") (Id "trip3") t0 (Just active))
+        version (newSession (OpenSessionReq "d2" "ml 05-a 1234" (Id "m") (Id "moc") (Id "ibc") AC 4 "R1") "trip3" t0 (Just active))
           @?= 4,
       testCase "forward route returns on its reverse" $
         returnRouteOf "SC-MAWLAI-F" @?= Right "SC-MAWLAI-R",

@@ -9,8 +9,6 @@ module SharedLogic.SharedCab.SessionState
     SelectPlan (..),
     RouteSetMoves (..),
     planSelect,
-    WalkupSource (..),
-    walkupsToCount,
     shouldDropOnDeadSession,
     ownedSession,
     newSession,
@@ -21,11 +19,9 @@ module SharedLogic.SharedCab.SessionState
     resumeSession,
     setWalkup,
     fillCab,
-    endActionReason,
-    closedTripStatus,
     routeSetMoves,
-    tripFor,
     returnRouteOf,
+    defaultCapacity,
     sessionFromTrip,
     ExpiryAction (..),
     expiryAction,
@@ -36,12 +32,11 @@ module SharedLogic.SharedCab.SessionState
     SessionRead (..),
     RouteMember (..),
     routeMember,
-    SessionMiss (..),
-    sessionMissAction,
+    cityMember,
   )
 where
 
-import BecknV2.FRFS.Enums (ServiceTierType)
+import BecknV2.FRFS.Enums (ServiceTierType (SHARED_CAB))
 import Data.Aeson (Options (..), defaultOptions)
 import qualified Data.Char as Char
 import Data.OpenApi (ToSchema (..), fromAesonOptions, genericDeclareNamedSchema)
@@ -53,9 +48,9 @@ import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.SharedCabSession (PauseReason (..), SessionMovement (..), SessionStatus (..))
-import qualified Domain.Types.VehicleTrip as DVT
 import Kernel.Prelude
 import Kernel.Types.Id
+import SharedLogic.SharedCab.TripClient (DriverTrip (..))
 import Tools.Error (SharedCabSessionError (..))
 
 -- | How long a session lives without a write; a plate's bookings are written during its session.
@@ -78,13 +73,14 @@ routeMember route = \case
   SessionAbsent -> StaleMember
   SessionUnreadable -> UnknownMember
 
--- | A plate with no session key: with no live trip there is nothing to restore and no lock to take; a live trip is restored under
--- the plate lock.
-data SessionMiss = NoLiveTrip | RestoreUnderLock
-  deriving (Show, Eq)
-
-sessionMissAction :: Bool -> SessionMiss
-sessionMissAction hasLiveTrip = if hasLiveTrip then RestoreUnderLock else NoLiveTrip
+-- | The same rule for the city's set of live plates: a member stays while its session is live in this city.
+cityMember :: Id DMOC.MerchantOperatingCity -> SessionRead -> RouteMember
+cityMember cityId = \case
+  SessionAt s
+    | s.status /= ENDED && s.merchantOperatingCityId == cityId -> LiveMember s
+    | otherwise -> StaleMember
+  SessionAbsent -> StaleMember
+  SessionUnreadable -> UnknownMember
 
 data SelectRouteMode = AfterLastDrop | Force
   deriving (Show, Eq, Generic)
@@ -116,7 +112,7 @@ data Session = Session
     pauseReason :: Maybe PauseReason,
     version :: Int,
     startedAt :: UTCTime,
-    vehicleTripId :: Id DVT.VehicleTrip
+    vehicleTripId :: Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -132,7 +128,8 @@ data OpenSessionReq = OpenSessionReq
   }
   deriving (Show, Eq, Generic)
 
-data EndRouteAction = StartReturn | EndRoute | EndForNow
+-- | StartReturn carries driver-app's id for the return run.
+data EndRouteAction = StartReturn Text | EndRoute | EndForNow
   deriving (Show, Eq)
 
 data SelectPlan = OpenSession | ChangeRoute Session | KeepRoute Session
@@ -164,7 +161,7 @@ ownedSession driver = \case
     | otherwise -> Right s
   Nothing -> Left SessionNotFound
 
-newSession :: OpenSessionReq -> Id DVT.VehicleTrip -> UTCTime -> Maybe Session -> Session
+newSession :: OpenSessionReq -> Text -> UTCTime -> Maybe Session -> Session
 newSession req tripId now prior =
   Session
     { driverId = req.driverId,
@@ -187,9 +184,10 @@ newSession req tripId now prior =
 bump :: Session -> Session
 bump s = s {version = s.version + 1}
 
-switchRoute :: Text -> Id DVT.VehicleTrip -> Session -> Session
-switchRoute newRoute tripId s =
-  bump s {routeCode = newRoute, vehicleTripId = tripId, queuedRouteCode = Nothing, status = ACTIVE, pauseReason = Nothing}
+-- | A new run on the new route: startedAt is the run's start, as the expiry pass reads it.
+switchRoute :: Text -> Text -> UTCTime -> Session -> Session
+switchRoute newRoute tripId now s =
+  bump s {routeCode = newRoute, vehicleTripId = tripId, startedAt = now, queuedRouteCode = Nothing, status = ACTIVE, pauseReason = Nothing}
 
 queueRoute :: Text -> Session -> Session
 queueRoute route s = bump s {queuedRouteCode = Just route}
@@ -217,35 +215,12 @@ setWalkup expectedVersion count s
 fillCab :: Int -> Session -> Session
 fillCab walkups s = bump s {walkupCount = walkups}
 
-data WalkupSource = DriverCounted | CabFullFill
-  deriving (Show, Eq)
-
-walkupsToCount :: WalkupSource -> Session -> Session -> Int
-walkupsToCount source before after = case source of
-  DriverCounted -> max 0 (after.walkupCount - before.walkupCount)
-  CabFullFill -> 0
-
 shouldDropOnDeadSession :: Maybe SessionStatus -> Bool -> [TicketStatus.FRFSTicketStatus] -> Bool
 shouldDropOnDeadSession mbStatus hasLiveTrip statuses =
   TicketStatus.INPROGRESS `elem` statuses && case mbStatus of
     Just ENDED -> True
     Just _ -> False
     Nothing -> not hasLiveTrip
-
-endActionReason :: EndRouteAction -> DVT.VehicleTripEndReason
-endActionReason = \case
-  StartReturn -> DVT.RETURN
-  EndRoute -> DVT.END_ROUTE
-  EndForNow -> DVT.END_FOR_NOW
-
-closedTripStatus :: DVT.VehicleTripEndReason -> DVT.VehicleTripStatus
-closedTripStatus = \case
-  DVT.END_ROUTE -> DVT.COMPLETED
-  DVT.RETURN -> DVT.COMPLETED
-  DVT.ROUTE_CHANGED -> DVT.COMPLETED
-  DVT.END_FOR_NOW -> DVT.COMPLETED
-  DVT.SESSION_TIMEOUT -> DVT.ABANDONED
-  DVT.OPS_FORCED -> DVT.ABANDONED
 
 routeSetMoves :: Maybe Session -> Session -> RouteSetMoves
 routeSetMoves old new =
@@ -257,57 +232,39 @@ routeSetMoves old new =
     newRoutes = allocatableOn new
     allocatableOn s = [s.routeCode | s.status == ACTIVE]
 
-tripFor :: Session -> UTCTime -> DVT.VehicleTrip
-tripFor s now =
-  DVT.VehicleTrip
-    { id = s.vehicleTripId,
-      serviceTierType = s.serviceTierType,
-      driverId = s.driverId,
-      vehicleNumber = s.vehicleNumber,
-      capacity = s.capacity,
-      merchantId = s.merchantId,
-      merchantOperatingCityId = s.merchantOperatingCityId,
-      integratedBppConfigId = s.integratedBppConfigId,
-      routeCode = s.routeCode,
-      status = DVT.ACTIVE,
-      startedAt = now,
-      endedAt = Nothing,
-      endReason = Nothing,
-      offlineBoardings = 0,
-      createdAt = now,
-      updatedAt = now
-    }
-
 returnRouteOf :: Text -> Either SharedCabSessionError Text
 returnRouteOf code
   | Just corridor <- T.stripSuffix "-F" code = Right (corridor <> "-R")
   | Just corridor <- T.stripSuffix "-R" code = Right (corridor <> "-F")
   | otherwise = Left NoReturnRoute
 
--- | Flush recovery from the live trip row: a PAUSED trip stays paused, a miss means ENDED. Walk-ups seed high from `offlineBoardings`
--- (so allocation won't claim seats walk-ups may fill) and the driver corrects them; the version restarts above any pre-flush counter.
-sessionFromTrip :: DVT.VehicleTrip -> UTCTime -> Session
-sessionFromTrip trip now =
+defaultCapacity :: Int
+defaultCapacity = 6
+
+-- | Flush recovery from driver-app's ACTIVE trip, under rider-app's config of its feed (merchant, city, config ids). Pause lived only in the lost session, so the
+-- run comes back ACTIVE (the expiry pass pauses a silent cab again). Walk-ups seed from the count the driver last set, capped at
+-- capacity, and the driver corrects them; the version restarts above any pre-flush counter.
+sessionFromTrip :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DIBC.IntegratedBPPConfig -> DriverTrip -> UTCTime -> Session
+sessionFromTrip merchantId merchantOperatingCityId integratedBppConfigId trip now =
   Session
     { driverId = trip.driverId,
       vehicleNumber = trip.vehicleNumber,
-      merchantId = trip.merchantId,
-      merchantOperatingCityId = trip.merchantOperatingCityId,
-      integratedBppConfigId = trip.integratedBppConfigId,
-      serviceTierType = trip.serviceTierType,
+      merchantId,
+      merchantOperatingCityId,
+      integratedBppConfigId,
+      serviceTierType = SHARED_CAB,
       routeCode = trip.routeCode,
       queuedRouteCode = Nothing,
-      capacity = trip.capacity,
-      walkupCount = min trip.capacity trip.offlineBoardings,
-      status = case trip.status of
-        DVT.ACTIVE -> ACTIVE
-        DVT.PAUSED -> PAUSED
-        _ -> ACTIVE,
+      capacity = seats,
+      walkupCount = min seats trip.walkupCount,
+      status = ACTIVE,
       pauseReason = Nothing,
       version = floor (utcTimeToPOSIXSeconds now),
       startedAt = trip.startedAt,
       vehicleTripId = trip.id
     }
+  where
+    seats = fromMaybe defaultCapacity trip.capacity
 
 -- | A cab's LTS ping as the expiry job sees it: a readable time, or one it can't trust (missing, unparseable, or >5 min ahead, which would keep it alive forever).
 data Ping = SeenAt UTCTime | Unreadable

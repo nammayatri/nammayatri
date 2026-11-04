@@ -27,7 +27,7 @@ import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), Allocatio
 import SharedLogic.SharedCab.Booking (boardedTouchDue, readRiderFix, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.Config as Config
-import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, offRouteKey, sessionKey)
+import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, livePlatesKey, offRouteKey, sessionKey)
 import SharedLogic.SharedCab.Lts (readRoutePositions)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import qualified SharedLogic.SharedCab.Notify as Notify
@@ -37,7 +37,6 @@ import SharedLogic.SharedCab.SessionState (PauseReason (OFF_ROUTE), Session (..)
 import SharedLogic.SharedCab.StopProgress.Rules
 import qualified Storage.CachedQueries.RoutePolylines as QRoutePolylines
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
-import qualified Storage.Queries.VehicleTrip as QVT
 
 type StopProgressFlow m r c =
   ( LtsFlow m r c,
@@ -63,9 +62,9 @@ runStopProgress ::
   m ()
 runStopProgress cityId live positionsByRoute = do
   cfg <- Config.getTunables cityId
-  trips <- QVT.findAllLiveByMerchantOperatingCityId cityId
-  -- one pipelined MGET (grouped by slot) for every live cab's session
-  sessions <- filter ((/= ENDED) . (.status)) <$> shared (Redis.mGetCluster (map (sessionKey . (.vehicleNumber)) trips))
+  plates <- shared $ Redis.sMembers (livePlatesKey cityId)
+  -- one pipelined MGET (grouped by slot) for every live cab's session; stale members are the expiry pass's to repair
+  sessions <- filter (\s -> s.status /= ENDED && s.merchantOperatingCityId == cityId) <$> shared (Redis.mGetCluster (map sessionKey plates))
   now <- getCurrentTime
   let byPlate = bookingsByPlate live
   forM_ (M.toList $ M.fromListWith (<>) [(s.routeCode, [s]) | s <- sessions]) $ \(routeCode, cabs) -> do

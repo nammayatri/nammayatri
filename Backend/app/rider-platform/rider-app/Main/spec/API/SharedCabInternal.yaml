@@ -1,9 +1,4 @@
 imports:
-  UTCTime: Kernel.Prelude
-  Day: Data.Time
-  VehicleTrip: Domain.Types.VehicleTrip
-  VehicleTripStatus: Domain.Types.VehicleTrip
-  VehicleTripEndReason: Domain.Types.VehicleTrip
   ServiceTierType: BecknV2.FRFS.Enums
   SelectRouteMode: SharedLogic.SharedCab.SessionState
   SharedCabRouteDataResp: SharedLogic.SharedCab.SessionView
@@ -47,6 +42,8 @@ types:
     vehicleModel: Maybe Text
     atLastStop: Maybe Bool
     forceEnd: Maybe Bool
+    # driver-app's id for the run a SELECT_ROUTE or RETURN_TRIP opens
+    vehicleTripId: Maybe Text
 
   SharedCabSessionOperation:
     enum: "SET_SEATS,RESUME,CAB_FULL"
@@ -74,18 +71,6 @@ types:
     driverId: Text
     vehicleNumber: Text
     message: Text
-
-  SharedCabTrip:
-    id: Id VehicleTrip
-    routeCode: Text
-    status: VehicleTripStatus
-    startedAt: UTCTime
-    endedAt: Maybe UTCTime
-    endReason: Maybe VehicleTripEndReason
-    offlineBoardings: Int
-
-  SharedCabTripsResp:
-    trips: "[SharedCabTrip]"
 
 apis:
   - GET:
@@ -123,6 +108,7 @@ apis:
       mandatoryQuery:
         driverId: Text
         vehicleNumber: Text
+        agencyId: Text
       response:
         type: SharedCabSession
   - POST:
@@ -134,16 +120,6 @@ apis:
         type: SharedCabSessionOperationReq
       response:
         type: SharedCabSession
-  - GET:
-      endpoint: /sharedCab/trips
-      auth: NoAuth
-      headers:
-        token: Text
-      mandatoryQuery:
-        driverId: Text
-        date: Day
-      response:
-        type: SharedCabTripsResp
   - POST:
       endpoint: /sharedCab/booking/{bookingId}/operations
       auth: NoAuth

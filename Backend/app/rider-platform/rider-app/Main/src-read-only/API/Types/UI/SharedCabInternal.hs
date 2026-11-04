@@ -3,10 +3,8 @@
 module API.Types.UI.SharedCabInternal where
 
 import Data.OpenApi (ToSchema)
-import qualified Domain.Types.VehicleTrip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Servant
 import qualified SharedLogic.SharedCab.SessionState
 import qualified SharedLogic.SharedCab.SessionView
@@ -65,6 +63,7 @@ data SharedCabRouteOperationReq = SharedCabRouteOperationReq
     routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
+    vehicleTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     walkupCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
@@ -84,21 +83,5 @@ data SharedCabSessionOperationReq = SharedCabSessionOperationReq
     version :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     walkupCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data SharedCabTrip = SharedCabTrip
-  { endReason :: Kernel.Prelude.Maybe Domain.Types.VehicleTrip.VehicleTripEndReason,
-    endedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    id :: Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip,
-    offlineBoardings :: Kernel.Prelude.Int,
-    routeCode :: Kernel.Prelude.Text,
-    startedAt :: Kernel.Prelude.UTCTime,
-    status :: Domain.Types.VehicleTrip.VehicleTripStatus
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data SharedCabTripsResp = SharedCabTripsResp {trips :: [SharedCabTrip]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

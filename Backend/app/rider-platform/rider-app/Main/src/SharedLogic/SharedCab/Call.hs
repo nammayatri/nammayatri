@@ -62,7 +62,7 @@ liveSession enabled booking
     if LegState.callWindow booking.status (map (.status) tickets) booking.vehicleNumber && not (offerPending mbAlloc)
       then do
         mbSession <- maybe (pure Nothing) Session.readSession booking.vehicleNumber
-        pure $ mbSession >>= \s -> if s.status /= ENDED && LegState.tripMatches (getId <$> booking.vehicleTripId) s.vehicleTripId.getId then Just s else Nothing
+        pure $ mbSession >>= \s -> if s.status /= ENDED && LegState.tripMatches booking.vehicleTripId s.vehicleTripId then Just s else Nothing
       else pure Nothing
 
 -- | Exotel reports the dialled ExoPhone with or without its leading zero, and the exophone row stores whichever the city was seeded with

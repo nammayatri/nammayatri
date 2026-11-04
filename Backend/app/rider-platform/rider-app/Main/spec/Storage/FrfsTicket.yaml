@@ -51,7 +51,6 @@ imports:
   SeatLayout: Domain.Types.SeatLayout
   Seat: Domain.Types.Seat
   SeatSelectionType: Domain.Types.VehicleSeatLayoutMapping
-  VehicleTrip: Domain.Types.VehicleTrip
 
 FRFSSearch:
   tableName: frfs_search
@@ -480,7 +479,7 @@ FRFSTicketBooking:
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version
     isSpotBooking: Maybe Bool
-    vehicleTripId: Maybe (Id VehicleTrip)
+    vehicleTripId: Maybe Text
     sharedCabNoShows: Int
 
   default:
@@ -544,6 +543,7 @@ FRFSTicketBooking:
     toStationLat: double precision
     toStationLon: double precision
     overrideType: text
+    vehicleTripId: character varying(36)
 
   constraints:
     id: PrimaryKey

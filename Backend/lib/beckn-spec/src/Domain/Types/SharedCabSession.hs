@@ -126,6 +126,8 @@ data DemandAtStop = DemandAtStop
 
 data SharedCabSession = SharedCabSession
   { route :: SessionRoute,
+    -- | The driver-app run (vehicle_trip id) the session is on.
+    tripId :: Text,
     queuedRoute :: Maybe SessionRoute,
     status :: SessionStatus,
     pauseReason :: Maybe PauseReason,

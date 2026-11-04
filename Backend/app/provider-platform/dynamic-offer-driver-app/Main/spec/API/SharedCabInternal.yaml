@@ -1,6 +1,8 @@
 imports:
   APISuccess: Kernel.Types.APISuccess
   SharedCabAllocationEntityData: Tools.Notifications
+  UTCTime: Kernel.Prelude
+  Merchant: Domain.Types.Merchant
 
 module: SharedCabInternal
 
@@ -9,6 +11,18 @@ types:
   SharedCabDriverCallNumberResp:
     driverNumber: Text
     derive: "Show"
+
+  # What rider-app needs to rebuild a session lost from Redis; agencyId (integrated_bpp_config.agency_key) is the city config both
+  # databases share.
+  SharedCabTrip:
+    id: Text
+    driverId: Text
+    vehicleNumber: Text
+    agencyId: Text
+    routeCode: Text
+    capacity: Maybe Int
+    walkupCount: Int
+    startedAt: UTCTime
 
 apis:
   - POST:
@@ -29,3 +43,24 @@ apis:
         token: Text
       response:
         type: SharedCabDriverCallNumberResp
+  - GET:
+      endpoint: /sharedCab/{merchantId}/trip/active
+      auth: NoAuth
+      params:
+        merchantId: Id Merchant
+      mandatoryQuery:
+        vehicleNumber: Text
+      headers:
+        token: Text
+      response:
+        type: "(Kernel.Prelude.Maybe API.Types.UI.SharedCabInternal.SharedCabTrip)"
+  - POST:
+      endpoint: /sharedCab/{merchantId}/trip/{tripId}/expire
+      auth: NoAuth
+      params:
+        merchantId: Id Merchant
+        tripId: Text
+      headers:
+        token: Text
+      response:
+        type: APISuccess

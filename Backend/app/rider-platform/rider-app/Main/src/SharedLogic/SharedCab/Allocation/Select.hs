@@ -255,7 +255,7 @@ preferenceVerdict cfg now findingSince skipped sessions freeSeats seats plate
 
 -- | The plate of the active cab a rider's `cabId` (its trip id, which the list shows instead of the plate) names; an unknown or ended cab is none.
 cabForId :: Text -> [Session] -> Maybe Text
-cabForId cabId sessions = listToMaybe [s.vehicleNumber | s <- sessions, s.status == ACTIVE, s.vehicleTripId.getId == cabId]
+cabForId cabId sessions = listToMaybe [s.vehicleNumber | s <- sessions, s.status == ACTIVE, s.vehicleTripId == cabId]
 
 -- | While the preference holds, no other cab is a candidate.
 onlyPreferred :: Text -> [RankedCandidate] -> [RankedCandidate]
