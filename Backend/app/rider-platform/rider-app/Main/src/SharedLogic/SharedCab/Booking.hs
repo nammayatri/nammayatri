@@ -140,7 +140,7 @@ readCancelReason :: (Redis.HedisFlow m r, MonadFlow m) => Id DFRFSTicketBooking.
 readCancelReason = shared . Redis.safeGet . cancelReasonKey
 
 findingOnRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
-findingOnRoute = QFRFSTicketBooking.findSharedCabFindingOnRoute
+findingOnRoute cityId routeCode = getCurrentTime >>= QFRFSTicketBooking.findSharedCabFindingOnRoute cityId routeCode . liveSince cityLiveWindowSec
 
 -- | Statuses that still hold a seat or can come to; terminal: FAILED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, RESCHEDULED.
 nonTerminalStatuses :: [DFRFSTicketBookingStatus.FRFSTicketBookingStatus]
