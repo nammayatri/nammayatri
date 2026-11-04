@@ -93,10 +93,28 @@ type API =
       :> Get
            '[JSON]
            API.Types.UI.DriverWallet.WalletTransactionHistoryResponse
+      :<|> TokenAuth
+      :> "wallet"
+      :> "ledgerHistory"
+      :> QueryParam
+           "fromDate"
+           Data.Time.UTCTime
+      :> QueryParam
+           "toDate"
+           Data.Time.UTCTime
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> Get
+           '[JSON]
+           API.Types.UI.DriverWallet.WalletLedgerEntriesResponse
   )
 
 handler :: Environment.FlowServer API
-handler = getWalletBalance :<|> getWalletTransactions :<|> postWalletPayout :<|> postWalletTopup :<|> getWalletPayoutHistory :<|> getWalletTransactionHistory
+handler = getWalletBalance :<|> getWalletTransactions :<|> postWalletPayout :<|> postWalletTopup :<|> getWalletPayoutHistory :<|> getWalletTransactionHistory :<|> getWalletLedgerHistory
 
 getWalletBalance ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -164,3 +182,16 @@ getWalletTransactionHistory ::
     Environment.FlowHandler API.Types.UI.DriverWallet.WalletTransactionHistoryResponse
   )
 getWalletTransactionHistory a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.DriverWallet.getWalletTransactionHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+
+getWalletLedgerHistory ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Maybe Data.Time.UTCTime ->
+    Kernel.Prelude.Maybe Data.Time.UTCTime ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Environment.FlowHandler API.Types.UI.DriverWallet.WalletLedgerEntriesResponse
+  )
+getWalletLedgerHistory a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.DriverWallet.getWalletLedgerHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1

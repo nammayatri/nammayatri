@@ -54,3 +54,7 @@ findByCreatedAtAndVehicleNumber' fromDate vehicleNumber = do
     ]
     (Just 1)
     Nothing
+
+findAllByRideIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Kernel.Types.Id.Id Domain.Types.Ride.Ride] -> m [Domain.Types.RideDetails.RideDetails]
+findAllByRideIds [] = pure []
+findAllByRideIds rideIds = findAllWithKV [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> rideIds)]

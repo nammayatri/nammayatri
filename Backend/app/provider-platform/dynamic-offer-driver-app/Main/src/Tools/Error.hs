@@ -395,6 +395,7 @@ data DriverWalletError
   | WalletAccountNotFound Text
   | WalletBalanceUpdateFailed Text
   | InstantPayoutNotAllowed
+  | LedgerHistoryRangeTooLong Int
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverWalletError
@@ -408,6 +409,7 @@ instance IsBaseError DriverWalletError where
     WalletAccountNotFound msg -> Just $ "Wallet account not found: " <> msg
     WalletBalanceUpdateFailed msg -> Just $ "Wallet balance update failed: " <> msg
     InstantPayoutNotAllowed -> Just "Instant payouts are not available for your account in this city."
+    LedgerHistoryRangeTooLong maxDays -> Just $ "Date range cannot exceed " <> show maxDays <> " days."
 
 instance IsHTTPError DriverWalletError where
   toErrorCode = \case
@@ -418,9 +420,11 @@ instance IsHTTPError DriverWalletError where
     WalletAccountNotFound _ -> "WALLET_ACCOUNT_NOT_FOUND"
     WalletBalanceUpdateFailed _ -> "WALLET_BALANCE_UPDATE_FAILED"
     InstantPayoutNotAllowed -> "INSTANT_PAYOUT_NOT_ALLOWED"
+    LedgerHistoryRangeTooLong _ -> "LEDGER_HISTORY_RANGE_TOO_LONG"
   toHttpCode = \case
     WalletTopupLockFailed -> E429
     InstantPayoutNotAllowed -> E400
+    LedgerHistoryRangeTooLong _ -> E400
     _ -> E500
 
 instance IsAPIError DriverWalletError

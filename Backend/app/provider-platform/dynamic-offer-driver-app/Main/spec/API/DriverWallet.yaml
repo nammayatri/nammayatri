@@ -7,6 +7,7 @@ imports:
   Location: Domain.Types.Location
   HighPrecMoney: Kernel.Types.Common
   Ride: Domain.Types.Ride
+  Person: Domain.Types.Person
   PlanSubscribeRes: Domain.Action.UI.Plan
   PayoutRequestStatus: Lib.Payment.Domain.Types.PayoutRequest
   PayoutType: Lib.Payment.Domain.Types.PayoutRequest
@@ -122,6 +123,44 @@ types:
   WalletTransactionHistoryResponse:
     items: "[WalletTransactionHistoryItem]"
 
+  WalletLedgerEntryGroupType:
+    enum: "RIDE,CANCELLED_BOOKING,WALLET_PAYOUT,OTHER"
+  WalletLedgerTotal:
+    totalAmount: HighPrecMoney
+    redeemableAmount: HighPrecMoney
+    nonRedeemableAmount: HighPrecMoney
+  WalletLedgerEntryItem:
+    entryId: Id LedgerEntry
+    itemReference: Text
+    itemName: Text
+    itemValue: HighPrecMoney
+    isCredit: Bool
+    isReversal: Bool
+    date: UTCTime
+  WalletLedgerRideInfo:
+    rideId: Id Ride
+    rideShortId: Text
+    rideEndTime: Maybe UTCTime
+    driverId: Id Person
+    driverName: Maybe Text
+    vehicleNumber: Maybe Text
+    isOnline: Maybe Bool
+  WalletLedgerGroupData:
+    enum: "RideWallet WalletLedgerRideInfo, PayoutWallet WalletPaymentInfo"
+  WalletLedgerEntryGroup:
+    referenceId: Text
+    groupType: WalletLedgerEntryGroupType
+    date: UTCTime
+    netAmount: HighPrecMoney
+    groupData: Maybe WalletLedgerGroupData
+    entries: "[WalletLedgerEntryItem]"
+  WalletLedgerEntriesResponse:
+    additions: WalletLedgerTotal
+    deductions: WalletLedgerTotal
+    netAmount: HighPrecMoney
+    totalGroups: Int
+    groups: "[WalletLedgerEntryGroup]"
+
 apis:
   - GET:
       endpoint: /wallet/balance
@@ -170,3 +209,13 @@ apis:
         - offset: Int
       response:
         type: WalletTransactionHistoryResponse
+  - GET:
+      endpoint: /wallet/ledgerHistory
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - limit: Int
+        - offset: Int
+      response:
+        type: WalletLedgerEntriesResponse
