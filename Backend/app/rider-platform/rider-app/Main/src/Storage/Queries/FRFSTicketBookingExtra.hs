@@ -161,6 +161,20 @@ findAllByRiderId limit offset riderId mbVehicleCategory mbOverrideEntityId = do
     limit
     offset
 
+-- | A rider's live shared-cab bookings, newest first: filtered in the query so other FRFS bookings can't page them out.
+findConfirmedSharedCabByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> m [FRFSTicketBooking]
+findConfirmedSharedCabByRiderId riderId =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId),
+          Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED,
+          Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB)
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just 5)
+    Nothing
+
 findAllByProviderNameAndCreatedAtAfterAndStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> UTCTime -> DFRFSTicketBookingStatus.FRFSTicketBookingStatus -> m [FRFSTicketBooking]
 findAllByProviderNameAndCreatedAtAfterAndStatus providerName createdAtAfter status = do
   findAllWithKV
