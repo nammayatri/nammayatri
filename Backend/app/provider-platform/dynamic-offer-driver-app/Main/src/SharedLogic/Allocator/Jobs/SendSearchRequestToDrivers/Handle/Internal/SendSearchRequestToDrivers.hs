@@ -80,7 +80,7 @@ import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Types
 import qualified SharedLogic.AddOn as SAddOn
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum, incrementDriverRequestCount)
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNumFor, incrementDriverRequestCount)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified as UI
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
@@ -161,6 +161,7 @@ sendSearchRequestToDrivers ::
     ServiceFlow m r,
     C.MonadCatch m
   ) =>
+  SDP.DispatchMode ->
   Bool ->
   Bool ->
   [SDP.TripQuoteDetail] ->
@@ -172,7 +173,7 @@ sendSearchRequestToDrivers ::
   [Id Driver] ->
   GoHomeConfig ->
   m ()
-sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails oldSearchReq searchTry driverPoolConfig mbRiderDetails driverPool prevBatchDrivers goHomeConfig = do
+sendSearchRequestToDrivers dispatchMode isAllocatorBatch isTopUpDispatch tripQuoteDetails oldSearchReq searchTry driverPoolConfig mbRiderDetails driverPool prevBatchDrivers goHomeConfig = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
 
   -- We update few things during 1st batch in searchReq table which is not being passed in above Search request, hence fetch search request again if it is first batch
@@ -182,7 +183,7 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
 
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id searchReq.bapId) Domain.MOBILITY
   validTill <- getSearchRequestValidTill
-  batchNumber <- getPoolBatchNum searchTry.id
+  batchNumber <- getPoolBatchNumFor dispatchMode searchTry.id
   let tripQuoteDetailsHashMap = HashMap.fromList $ (\tqd -> (tqd.vehicleServiceTier, tqd)) <$> tripQuoteDetails
   -- DS.driverScoreEventHandler
   --   searchReq.merchantOperatingCityId

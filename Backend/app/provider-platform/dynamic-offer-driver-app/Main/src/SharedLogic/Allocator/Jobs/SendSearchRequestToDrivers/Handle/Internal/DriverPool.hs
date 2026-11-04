@@ -15,8 +15,11 @@
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool
   ( isBatchNumExceedLimit,
     isDispatchBudgetExhausted,
-    incrementBatchNum,
+    incrementBatchNumFor,
+    resetBatchNumFor,
+    isTopDriversBatchLimitReached,
     getPoolBatchNum,
+    getPoolBatchNumFor,
     module Reexport,
     PrepareDriverPoolBatchEntity (..),
     incrementDriverRequestCount,
@@ -488,23 +491,58 @@ isBatchChainSuperseded driverPoolCfg searchTryId mbJobEpoch
 poolBatchNumKey :: Id DST.SearchTry -> Text
 poolBatchNumKey searchTryId = "Driver-Offer:Allocator:PoolBatchNum:SearchTryId-" <> searchTryId.getId
 
+-- The top-drivers round counts its batches on its own key, apart from the regular round's.
+topDriversPoolBatchNumKey :: Id DST.SearchTry -> Text
+topDriversPoolBatchNumKey searchTryId = "Driver-Offer:Allocator:TopDriversPoolBatchNum:SearchTryId-" <> searchTryId.getId
+
+poolBatchNumKeyFor :: DispatchMode -> Id DST.SearchTry -> Text
+poolBatchNumKeyFor RegularDispatch = poolBatchNumKey
+poolBatchNumKeyFor ScheduledTopDriversDispatch = topDriversPoolBatchNumKey
+
 getPoolBatchNum :: (Redis.HedisFlow m r) => Id DST.SearchTry -> m PoolBatchNum
-getPoolBatchNum searchTryId = do
-  res <- Redis.withCrossAppRedis $ Redis.get (poolBatchNumKey searchTryId)
+getPoolBatchNum = getPoolBatchNumFor RegularDispatch
+
+getPoolBatchNumFor :: (Redis.HedisFlow m r) => DispatchMode -> Id DST.SearchTry -> m PoolBatchNum
+getPoolBatchNumFor dispatchMode searchTryId = do
+  res <- Redis.withCrossAppRedis $ Redis.get (poolBatchNumKeyFor dispatchMode searchTryId)
   case res of
     Just i -> return i
     Nothing -> do
       let expTime = 600
-      Redis.withCrossAppRedis $ Redis.setExp (poolBatchNumKey searchTryId) (-1 :: Integer) expTime
+      Redis.withCrossAppRedis $ Redis.setExp (poolBatchNumKeyFor dispatchMode searchTryId) (-1 :: Integer) expTime
       return (-1)
 
-incrementBatchNum ::
+resetBatchNumFor ::
   ( Redis.HedisFlow m r
   ) =>
+  DispatchMode ->
   Id DST.SearchTry ->
   m ()
-incrementBatchNum searchTryId = do
-  res <- Redis.withCrossAppRedis $ Redis.incr (poolBatchNumKey searchTryId)
+resetBatchNumFor dispatchMode searchTryId = void $ Redis.withCrossAppRedis $ Redis.del (poolBatchNumKeyFor dispatchMode searchTryId)
+
+-- The counter is read before it is incremented, so n batches leave it at n - 1.
+isTopDriversBatchLimitReached ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Int ->
+  Maybe UTCTime ->
+  Id DST.SearchTry ->
+  m Bool
+isTopDriversBatchLimitReached batchLimit mbCutoff searchTryId = do
+  now <- getCurrentTime
+  if maybe False (now >=) mbCutoff
+    then pure True
+    else (>= batchLimit - 1) <$> getPoolBatchNumFor ScheduledTopDriversDispatch searchTryId
+
+incrementBatchNumFor ::
+  ( Redis.HedisFlow m r
+  ) =>
+  DispatchMode ->
+  Id DST.SearchTry ->
+  m ()
+incrementBatchNumFor dispatchMode searchTryId = do
+  res <- Redis.withCrossAppRedis $ Redis.incr (poolBatchNumKeyFor dispatchMode searchTryId)
   logInfo $ "Increment batch num to " <> show res <> "."
   return ()
 

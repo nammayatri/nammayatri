@@ -294,6 +294,7 @@ let registryMap =
 let AllocatorJobType =
       < SendSearchRequestToDriver
       | SendScheduledSearchRequestToDriver
+      | SendScheduledSearchRequestToTopDrivers
       | UnblockDriver
       | UnblockAirportDriver
       | UnblockSoftBlockedDriver
@@ -365,6 +366,9 @@ let jobRetryOnExceptionMapx =
 let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
       , { mapKey = AllocatorJobType.SendScheduledSearchRequestToDriver
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.SendScheduledSearchRequestToTopDrivers
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }

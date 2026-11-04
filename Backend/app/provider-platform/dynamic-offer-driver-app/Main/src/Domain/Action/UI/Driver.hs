@@ -2144,7 +2144,9 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       batchRejectCount <- DP.incrementBatchRejectCount searchTry.id sReqFD.batchNumber
       -- Forked for the same reason as the queue-skip below: nothing here should add latency to
       -- the driver-respond hot path, and an early advance is fire-and-forget.
-      fork "continuousTopUpOrEarlyBatchAdvance" $ tryTopUpOrAdvanceBatchEarly searchTry sReqFD batchRejectCount
+      -- Scheduled tries dispatch on their own timers; an early advance or top-up would send an unfiltered batch.
+      unless searchTry.isScheduled $
+        fork "continuousTopUpOrEarlyBatchAdvance" $ tryTopUpOrAdvanceBatchEarly searchTry sReqFD batchRejectCount
       fork "releaseOfferHoldsOnDriverReject" $ releaseOfferHoldsOnReject merchantId transporterConfig sReqFD searchTry.id
       -- Handle queue skip for special zone rides — forked so a slow Redis/LTS hop
       -- can't add latency to the driver-respond hot path.
