@@ -31,6 +31,7 @@ import Passetto.Client.Bulk
     EncryptedRaw (..),
   )
 import Passetto.Client.Error (PassettoClientError (..))
+import Passetto.Kms (decryptKmsTexts)
 import System.Environment (getEnv, lookupEnv)
 import System.IO.Error (userError)
 import System.Random (randomRIO)
@@ -74,7 +75,9 @@ loadKeypairs = do
   cfg <- case Aeson.eitherDecodeStrict (TE.encodeUtf8 $ T.pack raw) of
     Left err -> ioError . userError $ "[passetto-lib] PASSETTO_KEYS parse error: " <> err
     Right c -> return (c :: KeysConfig)
-  let sorted = sortOn keyId (kcKeys cfg)
+  -- secretKey may be stored as "kms:<ciphertext>"; plain values are used as they are.
+  secretKeys <- decryptKmsTexts (map keySecretKey (kcKeys cfg))
+  let sorted = sortOn keyId (zipWith (\k sk -> k {keySecretKey = sk}) (kcKeys cfg) secretKeys)
   when (null sorted) $ ioError (userError "[passetto-lib] PASSETTO_KEYS contains no keys")
   case mapM parseKeypair sorted of
     Left err -> ioError . userError $ "[passetto-lib] Invalid keypair in PASSETTO_KEYS: " <> err

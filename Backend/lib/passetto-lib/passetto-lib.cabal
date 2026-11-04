@@ -26,6 +26,7 @@ flag Local
 
 library
   exposed-modules:
+      Passetto.Kms
       Passetto.Lib
   other-modules:
       Paths_passetto_lib
@@ -51,12 +52,16 @@ library
       TypeFamilies
   build-depends:
       aeson
+    , amazonka
+    , amazonka-kms
     , base >=4.7 && <5
     , base64-bytestring
     , bytestring
+    , lens
     , mtl
     , passetto-client
     , random
+    , resourcet
     , saltine
     , text
     , vector
