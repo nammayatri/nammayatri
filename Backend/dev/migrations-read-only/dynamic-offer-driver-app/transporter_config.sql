@@ -1288,3 +1288,5 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN ride_evidence_c
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN show_route_per_request boolean  default false;
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_config json ;

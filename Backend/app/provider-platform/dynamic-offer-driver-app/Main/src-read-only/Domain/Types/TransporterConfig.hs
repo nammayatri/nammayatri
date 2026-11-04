@@ -353,6 +353,7 @@ data TransporterConfig = TransporterConfig
     thresholdCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tripConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.TripConfig,
     tripEndGeofenceRadius :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     tripStartGeofenceRadius :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     tripStartLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
@@ -516,6 +517,9 @@ data GstBreakup = GstBreakup
     igstPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     sgstPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data InterCityConfig = InterCityConfig {minDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data InvoiceConfig = InvoiceConfig
@@ -685,6 +689,9 @@ data TaxConfig = TaxConfig
     subscriptionGst :: Domain.Types.TransporterConfig.GstBreakup,
     subscriptionTdsRate :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig
   }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data TripConfig = TripConfig {interCity :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.InterCityConfig}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallingOption)
