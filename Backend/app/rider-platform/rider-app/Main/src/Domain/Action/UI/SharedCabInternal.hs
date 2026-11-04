@@ -36,6 +36,7 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Types as AllocTypes
 import qualified SharedLogic.SharedCab.Booking as Booking
@@ -59,7 +60,6 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
-import qualified Storage.Queries.IntegratedBPPConfigExtra as QIBCExtra
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
@@ -83,8 +83,7 @@ getIntegratedBppConfig ibcId = CQIBC.findById ibcId >>= fromMaybeM IntegratedBPP
 -- integrated_bpp_config.agency_key, the GTFS agency gtfsId of the shared-cab feed ("<feed>:SHARED_CAB").
 getIntegratedBppConfigByAgency :: Text -> Environment.Flow DIBC.IntegratedBPPConfig
 getIntegratedBppConfigByAgency agencyId =
-  CQIBC.findByAgencyId agencyId DIBC.APPLICATION
-    >>= fromMaybeM (IntegratedBPPConfigNotFoundForAgency agencyId (show DIBC.APPLICATION)) . QIBCExtra.onlyOfPlatform DIBC.APPLICATION (.platformType)
+  SIBC.findSharedCabConfig agencyId DIBC.APPLICATION
 
 routeStops :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow [DRSM.RouteStopMapping]
 routeStops integratedBppConfig code = sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode code integratedBppConfig
