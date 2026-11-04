@@ -1040,3 +1040,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_max_demand_routes integ
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_call_mode text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_skip_cancel_count_ttl_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_max_skips_and_cancels integer ;

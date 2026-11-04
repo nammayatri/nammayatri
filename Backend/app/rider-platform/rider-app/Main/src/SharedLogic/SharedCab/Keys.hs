@@ -23,6 +23,8 @@ module SharedLogic.SharedCab.Keys
     chatAttemptsKey,
     callAttemptsKey,
     stickerCodeAttemptsKey,
+    searchSkipsKey,
+    searchCancelsKey,
     allocLeaseKey,
     refundRetryCityKey,
     demandKey,
@@ -121,6 +123,13 @@ callAttemptsKey bookingId driverId = "sharedcab:rate:call:" <> bookingId.getId <
 -- | Per rider: bounds a sweep of the four-digit sticker codes.
 stickerCodeAttemptsKey :: Text -> Text
 stickerCodeAttemptsKey personId = "sharedcab:rate:code:" <> personId
+
+-- | Per search: how many cabs the rider skipped, and how many bookings they cancelled.
+searchSkipsKey :: Text -> Text
+searchSkipsKey searchId = "sharedcab:rate:skips:" <> searchId
+
+searchCancelsKey :: Text -> Text
+searchCancelsKey searchId = "sharedcab:rate:cancels:" <> searchId
 
 allocLeaseKey :: CityId -> Text
 allocLeaseKey cityId = "sharedcab:alloc:lease:" <> cityId.getId

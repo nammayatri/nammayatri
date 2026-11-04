@@ -1566,6 +1566,8 @@ data SharedCabCancelError
     TalkToDriver
   | -- | a seat has boarded (or the ride is over): no self-cancel, no self-refund
     RideStarted
+  | -- | the search has used up its rider cancels (maxSkipsAndCancels)
+    CancelLimitReached
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''SharedCabCancelError
@@ -1574,14 +1576,17 @@ instance IsBaseError SharedCabCancelError where
   toMessage = \case
     TalkToDriver -> Just "Your cab is waiting at the stop. Please talk to your driver."
     RideStarted -> Just "This shared cab ride has started and can't be cancelled."
+    CancelLimitReached -> Just "You have cancelled too many shared cab bookings. Please try again later."
 
 instance IsHTTPError SharedCabCancelError where
   toErrorCode = \case
     TalkToDriver -> "SHARED_CAB_TALK_TO_DRIVER"
     RideStarted -> "SHARED_CAB_RIDE_STARTED"
+    CancelLimitReached -> "SHARED_CAB_CANCEL_LIMIT_REACHED"
   toHttpCode = \case
     TalkToDriver -> E409
     RideStarted -> E409
+    CancelLimitReached -> E400
 
 instance IsAPIError SharedCabCancelError
 
@@ -1636,7 +1641,7 @@ instanceExceptionWithParent 'HTTPException ''SharedCabSkipError
 
 instance IsBaseError SharedCabSkipError where
   toMessage = \case
-    SharedCabSkipUsed -> Just "You have already skipped a cab for this booking."
+    SharedCabSkipUsed -> Just "You have skipped too many cabs. Please try again later."
     SharedCabSkipTooLate -> Just "This cab is too close to skip."
 
 instance IsHTTPError SharedCabSkipError where

@@ -189,9 +189,9 @@ tests =
             nearestAfter snd (Just 100) [("late", 400), ("same", 100), ("early", 60), ("b", 150), ("c", 200), ("d", 300 :: Int)]
               @?= [("b", 150), ("c", 200), ("d", 300)],
           testCase "the booking hash read once gives each field, or its single-field default when missing or undecodable" $
-            let st = bookingStateFrom [("attempts", A.Number 2), ("preferred", A.String "ML05A1234"), ("riderSkipUsed", A.String "yes")]
-             in (isNothing st.allocState, st.attemptCount, st.findingStintSince, st.preferredPlate, st.preferenceLost, st.skipUsed)
-                  @?= (True, 2, Nothing, Just "ML05A1234", False, False),
+            let st = bookingStateFrom [("attempts", A.Number 2), ("preferred", A.String "ML05A1234"), ("preferredDropped", A.String "yes")]
+             in (isNothing st.allocState, st.attemptCount, st.findingStintSince, st.preferredPlate, st.preferenceLost)
+                  @?= (True, 2, Nothing, Just "ML05A1234", False),
           testCase "when the assigned cab's own ETA is unknown every other cab counts" $
             map (.cabId) (upcomingCabsOf Nothing [cab "x" 90, cab "y" 30]) @?= ["y", "x"],
           testCase "an upcoming cab ships its opaque id, ETA and seats, and nothing else" $

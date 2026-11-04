@@ -6,6 +6,9 @@ module SharedLogic.SharedCab.RateLimit
     enforceCallLimit,
     enforceStickerCodeLimit,
     recordNoLocationBoarding,
+    RiderAction (..),
+    riderActionsLeft,
+    recordRiderAction,
   )
 where
 
@@ -16,7 +19,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import SharedLogic.SharedCab.Booking (shared)
-import SharedLogic.SharedCab.Keys (boardAttemptsKey, callAttemptsKey, chatAttemptsKey, noLocationKey, stickerCodeAttemptsKey)
+import SharedLogic.SharedCab.Keys (boardAttemptsKey, callAttemptsKey, chatAttemptsKey, noLocationKey, searchCancelsKey, searchSkipsKey, stickerCodeAttemptsKey)
 import Tools.Error
 
 -- | <= boardAttemptsPer10Min. Over the limit is the SAME generic BoardingFailed: the client must not be able to tell a
@@ -70,3 +73,24 @@ recordNoLocationBoarding noLocationSpotBookingsPerVehiclePerDay plate = do
   unless belowThreshold $
     logWarning $
       "sharedcab:ops-flag: vehicle " <> plate <> " has at least " <> show noLocationSpotBookingsPerVehiclePerDay <> " no-location boardings in the last day"
+
+-- | A rider's own skip of an allocated cab, or cancel of a booking: each counted per search.
+data RiderAction = RiderSkip | RiderCancel
+  deriving (Eq, Show)
+
+riderActionKey :: RiderAction -> Text -> Text
+riderActionKey = \case
+  RiderSkip -> searchSkipsKey
+  RiderCancel -> searchCancelsKey
+
+-- | Whether the search has used fewer than maxSkipsAndCancels of the action.
+riderActionsLeft :: (Redis.HedisFlow m r, MonadFlow m) => Int -> RiderAction -> Text -> m Bool
+riderActionsLeft maxSkipsAndCancels action searchId =
+  (< toInteger maxSkipsAndCancels) . fromMaybe 0 <$> shared (Redis.get (riderActionKey action searchId))
+
+-- | Counts one more of the action against the search; the count lapses skipCancelCountTtlSec after the first.
+recordRiderAction :: (Redis.HedisFlow m r, MonadFlow m) => Int -> RiderAction -> Text -> m ()
+recordRiderAction skipCancelCountTtlSec action searchId = shared $ do
+  let key = riderActionKey action searchId
+  count <- Redis.incr key
+  when (count == 1) $ Redis.expire key skipCancelCountTtlSec

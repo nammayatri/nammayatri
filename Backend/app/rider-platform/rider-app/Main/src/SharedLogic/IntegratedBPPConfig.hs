@@ -258,13 +258,5 @@ findByAgencyIdCP agencyKey =
 -- of the platform, or an error, never a guess.
 findSharedCabConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> PlatformType -> m IntegratedBPPConfig
 findSharedCabConfig agencyKey platformType =
-  onlyRowOf platformType (.platformType) <$> CQIBC.findAllByAgencyKey agencyKey >>= \case
-    Right config -> pure config
-    Left 0 -> throwError $ IntegratedBPPConfigNotFoundForAgency agencyKey (show platformType)
-    Left n -> throwError $ InternalError (show n <> " " <> show platformType <> " integrated BPP configs for agency " <> agencyKey)
-
--- | The one row of the platform, or how many there were instead.
-onlyRowOf :: Eq p => p -> (a -> p) -> [a] -> Either Int a
-onlyRowOf platform platformOf rows = case filter ((== platform) . platformOf) rows of
-  [row] -> Right row
-  matched -> Left (length matched)
+  getOneConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Nothing, agencyKey = Just agencyKey, domain = Nothing, vehicleCategory = Nothing, platformType = Just platformType}) (Just (maybeToList <$> CQIBC.findByAgencyKeyAndPlatformType agencyKey platformType))
+    >>= fromMaybeM (IntegratedBPPConfigNotFoundForAgency agencyKey (show platformType))

@@ -9,7 +9,6 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus
-import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleTrip
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -30,32 +29,8 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ())
 createMany = traverse_ create
 
-findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType -> [Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus] -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
-findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus merchantOperatingCityId serviceTierType status = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.serviceTierType $ Se.Eq serviceTierType,
-          Se.Is Beam.status $ Se.In status
-        ]
-    ]
-
 findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
-
-findAllByVehicleNumberAndServiceTierTypeAndStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType -> [Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus] -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
-findAllByVehicleNumberAndServiceTierTypeAndStatus vehicleNumber serviceTierType status = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.vehicleNumber $ Se.Eq vehicleNumber,
-          Se.Is Beam.serviceTierType $ Se.Eq serviceTierType,
-          Se.Is Beam.status $ Se.In status
-        ]
-    ]
 
 findByBppOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
 findByBppOrderId bppOrderId = do findOneWithKV [Se.Is Beam.bppOrderId $ Se.Eq bppOrderId]

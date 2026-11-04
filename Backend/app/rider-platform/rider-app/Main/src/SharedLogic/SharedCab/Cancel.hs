@@ -25,12 +25,14 @@ import SharedLogic.SharedCab.BookingState (readAlloc)
 import qualified SharedLogic.SharedCab.BookingState as BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.LegState (CancelReason (DRIVER, RIDER))
+import SharedLogic.SharedCab.RateLimit (RiderAction (RiderCancel), recordRiderAction, riderActionsLeft)
 import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, isSharedCabBooking)
 import SharedLogic.SharedCab.RefundPolicy
 import SharedLogic.SharedCab.Seats (markDropped)
 import qualified SharedLogic.SharedCab.Session as Session
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import Tools.Error (SharedCabCancelError (CancelLimitReached))
 
 data CancelStage = SoftCancel | ConfirmCancel
   deriving (Eq)
@@ -56,8 +58,16 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
       >>= either (\err -> logError $ "shared-cab cancel-reason not recorded for booking " <> booking.id.getId <> ": " <> show err) pure
     whenJust mbReason $ \reason -> logInfo $ "shared-cab booking " <> booking.id.getId <> " cancelled by " <> byText by <> ": " <> T.take 200 reason
 
+-- | The rider's own cancel: up to maxSkipsAndCancels per search; the preview (SoftCancel) refuses past it too.
 guardRiderCancel :: CancelStage -> DFTB.FRFSTicketBooking -> (Maybe Refund -> Flow ()) -> Flow ()
-guardRiderCancel stage booking = routeCancel (isSharedCabBooking booking) (withSharedCabCancel ByRider stage Nothing (const $ pure ()) booking)
+guardRiderCancel stage booking = routeCancel (isSharedCabBooking booking) $ \cancelAction -> do
+  cfg <- Config.getTunables booking.merchantOperatingCityId
+  let searchId = booking.searchId.getId
+  unlessM (riderActionsLeft cfg.maxSkipsAndCancels RiderCancel searchId) $ throwError CancelLimitReached
+  withSharedCabCancel ByRider stage Nothing (const $ pure ()) booking cancelAction
+  when (stage == ConfirmCancel) $
+    withTryCatch "sharedCab:cancel:recordRiderCancel" (recordRiderAction cfg.skipCancelCountTtlSec RiderCancel searchId)
+      >>= either (\err -> logError $ "shared-cab rider cancel not counted for search " <> searchId <> ": " <> show err) pure
 
 -- | The cancel gets the shared-cab guard's refund; Nothing for any other tier, which keeps its tier table.
 routeCancel :: Bool -> ((Refund -> m ()) -> m ()) -> (Maybe Refund -> m ()) -> m ()
@@ -74,7 +84,7 @@ dropRider cancelLeg journeyLeg = do
     Just booking | isSharedCabBooking booking -> do
       tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
       case routeRiderDrop (map (.status) tickets) of
-        CancelInstead -> True <$ guardRiderCancel ConfirmCancel booking cancelLeg
+        CancelInstead -> True <$ withSharedCabCancel ByRider ConfirmCancel Nothing (const $ pure ()) booking (cancelLeg . Just)
         NothingToDrop -> pure False
         MarkDropped -> do
           markDropped booking

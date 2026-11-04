@@ -56,7 +56,10 @@ data SharedCabTunables = SharedCabTunables
     driverAcceptEnabled :: Bool,
     -- | Seconds the driver has to answer the first offer to a booking, and each later one (after a decline or a timeout).
     offerTimeoutSec :: Int,
-    offerRetryTimeoutSec :: Int
+    offerRetryTimeoutSec :: Int,
+    -- | Rider skips, and separately rider cancels, allowed per search while its counts last (skipCancelCountTtlSec).
+    maxSkipsAndCancels :: Int,
+    skipCancelCountTtlSec :: Int
   }
   deriving (Show, Eq, Generic)
 
@@ -91,7 +94,9 @@ defaultTunables =
       maxDemandRoutes = 50,
       driverAcceptEnabled = False,
       offerTimeoutSec = 30,
-      offerRetryTimeoutSec = 15
+      offerRetryTimeoutSec = 15,
+      maxSkipsAndCancels = 15,
+      skipCancelCountTtlSec = 5 * 60 * 60
     }
 
 tunablesFrom :: Maybe DRC.RiderConfig -> SharedCabTunables
@@ -126,7 +131,9 @@ tunablesFrom (Just rc) =
       maxDemandRoutes = pickPositive rc.sharedCabMaxDemandRoutes (.maxDemandRoutes),
       driverAcceptEnabled = pick rc.sharedCabDriverAcceptEnabled (.driverAcceptEnabled),
       offerTimeoutSec = pick rc.sharedCabOfferTimeoutSec (.offerTimeoutSec),
-      offerRetryTimeoutSec = pick rc.sharedCabOfferRetryTimeoutSec (.offerRetryTimeoutSec)
+      offerRetryTimeoutSec = pick rc.sharedCabOfferRetryTimeoutSec (.offerRetryTimeoutSec),
+      maxSkipsAndCancels = pick rc.sharedCabMaxSkipsAndCancels (.maxSkipsAndCancels),
+      skipCancelCountTtlSec = pickPositive rc.sharedCabSkipCancelCountTtlSec (.skipCancelCountTtlSec)
     }
   where
     pick mbValue field = fromMaybe (field defaultTunables) mbValue

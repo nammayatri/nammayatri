@@ -78,17 +78,16 @@ findByAgencyId agencyKey = do
                 pure dataToBeCached
           )
 
--- | Every row of an agency key, cached like 'findByAgencyId'. The shared-cab feed keeps one row per platform type under one key.
-findAllByAgencyKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [IntegratedBPPConfig]
-findAllByAgencyKey agencyKey = do
-  let cacheKey = buildAgencyCacheKey agencyKey <> ":all"
+findByAgencyKeyAndPlatformType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> PlatformType -> m (Maybe IntegratedBPPConfig)
+findByAgencyKeyAndPlatformType agencyKey platformType = do
+  let cacheKey = buildAgencyCacheKey agencyKey <> ":PlatformType-" <> show platformType
   IM.withInMemCache [cacheKey] 3600 $ do
     Hedis.safeGet cacheKey
       >>= ( \case
               Just a -> pure a
               Nothing -> do
-                dataToBeCached <- Queries.findAllByAgencyKey agencyKey
-                unless (null dataToBeCached) $ do
+                dataToBeCached <- Queries.findByAgencyKeyAndPlatformType agencyKey platformType
+                when (isJust dataToBeCached) $ do
                   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
                   Hedis.setExp cacheKey dataToBeCached expTime
                 pure dataToBeCached

@@ -6,9 +6,8 @@ module SharedCabConfigTests (tests) where
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import "rider-app" Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import "rider-app" Domain.Types.RiderConfig (SharedCabCallMode (..))
-import "rider-app" SharedLogic.IntegratedBPPConfig (newestNonCab, onlyRowOf)
+import "rider-app" SharedLogic.IntegratedBPPConfig (newestNonCab)
 import "rider-app" SharedLogic.SharedCab.Config
 import "rider-app" SharedLogic.SharedCab.Enabled (cabItineraryShown, sharedCabEnabledDecision, tickChainContinues)
 import "rider-app" SharedLogic.SharedCab.LegState (SharedCabState (..), legNeedsChains)
@@ -97,21 +96,11 @@ tests =
               maxDemandRoutes = 50,
               driverAcceptEnabled = False,
               offerTimeoutSec = 30,
-              offerRetryTimeoutSec = 15
-            },
-      testGroup
-        "agency key shared by several integrated configs: the shared-cab lookup takes exactly one row of its platform"
-        [ testCase "a journey (MULTIMODAL) and the driver proxy (APPLICATION) each get their own row, whatever order the DB lists them in" $
-            [map (fmap snd . onlyRowOf MULTIMODAL (fst . fst)) rows, map (fmap snd . onlyRowOf APPLICATION (fst . fst)) rows] @?= [[Right "multi", Right "multi"], [Right "app", Right "app"]],
-          testCase "two rows of the platform is an error, not a guess" $
-            fmap snd (onlyRowOf MULTIMODAL (fst . fst) ([((MULTIMODAL, "a"), "chennai"), ((MULTIMODAL, "b"), "delhi"), ((APPLICATION, "c"), "app")] :: [((PlatformType, Text), String)])) @?= Left 2,
-          testCase "no row of the platform is not found, even when the key has another platform's row" $
-            [fmap snd (onlyRowOf APPLICATION (fst . fst) [((MULTIMODAL, "a9" :: Text), "multi" :: String)]), fmap snd (onlyRowOf APPLICATION (fst . fst) ([] :: [((PlatformType, Text), String)]))] @?= [Left 0, Left 0]
-        ]
+              offerRetryTimeoutSec = 15,
+              maxSkipsAndCancels = 15,
+              skipCancelCountTtlSec = 18000
+            }
     ]
-  where
-    rows :: [[((PlatformType, Text), String)]]
-    rows = [[((MULTIMODAL, "a9"), "multi"), ((APPLICATION, "52"), "app")], [((APPLICATION, "52"), "app"), ((MULTIMODAL, "a9"), "multi")]]
 
 t :: Int -> UTCTime
 t = posixSecondsToUTCTime . fromIntegral

@@ -20,9 +20,9 @@ import qualified SharedLogic.SharedCab.Allocation.Select as Select
 import SharedLogic.SharedCab.Allocation.Types (SkipReason (..), usesRiderSkip)
 import qualified SharedLogic.SharedCab.Approach as Approach
 import SharedLogic.SharedCab.Booking (isSharedCabBooking)
-import SharedLogic.SharedCab.BookingState (readRiderSkipUsed)
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.LegState (SkipVerdict (..), decideRiderSkip)
+import SharedLogic.SharedCab.RateLimit (RiderAction (RiderSkip), riderActionsLeft)
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Error
@@ -32,8 +32,8 @@ skipReason = \case
   API.FULL -> SkipFull
   API.OTHER -> SkipOther
 
--- | "Skip this cab": once per booking, only while the allocated cab is still coming and further than skipMinEtaSec from the board stop
--- (never after boarding). The booking goes back to FINDING, that cab isn't offered to it again, and nobody is charged.
+-- | "Skip this cab": up to maxSkipsAndCancels per search, only while the allocated cab is still coming and further than skipMinEtaSec
+-- from the board stop (never after boarding). The booking goes back to FINDING, that cab isn't offered to it again, and nobody is charged.
 postSharedCabBookingSkip :: (Maybe (Id DP.Person), Id DM.Merchant) -> Id DFTB.FRFSTicketBooking -> API.SharedCabSkipReq -> Environment.Flow APISuccess
 postSharedCabBookingSkip (mbPersonId, _) bookingId req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
@@ -42,17 +42,16 @@ postSharedCabBookingSkip (mbPersonId, _) bookingId req = do
     throwError $ InvalidRequest "Booking not found"
   tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
   let reason = skipReason req.reason
-  used <- readRiderSkipUsed booking.id
-  -- the one-skip and distance rules are for the rider's own choice; "it arrived full" is the cab's fault and is never limited
+  cfg <- Config.getTunables booking.merchantOperatingCityId
+  -- the skip limit and distance rules are for the rider's own choice; "it arrived full" is the cab's fault and is never limited
   when (usesRiderSkip reason) $ do
-    when used $ throwError SharedCabSkipUsed
+    unlessM (riderActionsLeft cfg.maxSkipsAndCancels RiderSkip booking.searchId.getId) $ throwError SharedCabSkipUsed
     when (DFRFSTicket.INPROGRESS `elem` map (.status) tickets) $ throwError SharedCabSkipTooLate
   plate <- Select.allocatedPlate (Select.LiveBooking booking (map (.status) tickets)) & fromMaybeM (InvalidRequest "This booking has no cab to skip")
-  cfg <- Config.getTunables booking.merchantOperatingCityId
   when (usesRiderSkip reason) $ do
     now <- getCurrentTime
     mbEta <- maybe (pure Nothing) (\routeCode -> Approach.etaToStopSec now cfg routeCode plate booking.fromStationCode) booking.routeCode
     when (decideRiderSkip False False mbEta /= SkipOk) $ throwError SharedCabSkipTooLate
-  skipped <- Allocation.skipSharedCabAllocation cfg booking.id plate reason
+  skipped <- Allocation.skipSharedCabAllocation cfg booking.id booking.searchId.getId plate reason
   unless skipped $ throwError $ InvalidRequest "This booking has no cab to skip"
   pure Success

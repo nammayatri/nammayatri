@@ -687,22 +687,6 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [updatedAt]
       where: id
-    # A city's live bookings of one tier: the allocation tick's FINDING + ALLOCATED scan; partial index in ddl 1589.
-    findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus:
-      kvFunction: findAllWithKV
-      where:
-        and:
-          - merchantOperatingCityId
-          - serviceTierType
-          - in: [status]
-    # A cab's live bookings by canonical plate (recovery, on-board guard); partial index in ddl 1588.
-    findAllByVehicleNumberAndServiceTierTypeAndStatus:
-      kvFunction: findAllWithKV
-      where:
-        and:
-          - vehicleNumber
-          - serviceTierType
-          - in: [status]
 
   extraIndexes:
     - columns: [tripId]

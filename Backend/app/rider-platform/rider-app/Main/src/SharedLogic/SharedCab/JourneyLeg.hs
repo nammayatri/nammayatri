@@ -40,6 +40,7 @@ import qualified SharedLogic.SharedCab.Degraded as SharedCabDegraded
 import SharedLogic.SharedCab.Interest (bestEffort)
 import qualified SharedLogic.SharedCab.LegState as SharedCabLeg
 import qualified SharedLogic.SharedCab.Lts as Lts
+import SharedLogic.SharedCab.RateLimit (RiderAction (RiderSkip), riderActionsLeft)
 import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
 import qualified SharedLogic.SharedCab.Seats as SharedCabSeats
 import qualified SharedLogic.SharedCab.Session as SharedCabSession
@@ -121,8 +122,8 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
       then SharedCabBooking.readCancelReason booking.id
       else pure Nothing
   -- the assigned cab's own ETA (from the track already read) decides the skip button and which other cabs come after it
-  let skipUsed = bookingState.skipUsed
-      assignedEtaSec = cabTrack >>= \(_, boardEta, _) -> boardEta
+  skipUsed <- not <$> riderActionsLeft cfg.maxSkipsAndCancels RiderSkip booking.searchId.getId
+  let assignedEtaSec = cabTrack >>= \(_, boardEta, _) -> boardEta
       approaching = mbState == Just SharedCabLeg.ALLOCATED
       skipAvailable = maybe False (\st -> SharedCabLeg.skipAvailableFor st skipUsed assignedEtaSec) mbState
   upcomingCabs <- case (shown, mbRouteCode) of

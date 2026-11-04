@@ -38,6 +38,7 @@ import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
 import SharedLogic.SharedCab.LegState (fallbackTimeElapsed)
 import SharedLogic.SharedCab.Lts (readRoutePositions)
 import qualified SharedLogic.SharedCab.Notify as Notify
+import SharedLogic.SharedCab.RateLimit (RiderAction (RiderSkip), recordRiderAction)
 import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
 import SharedLogic.SharedCab.Schedule (withCityTickLease)
 import qualified SharedLogic.SharedCab.Seats as Seats
@@ -79,11 +80,11 @@ releaseSharedCabAllocation cfg bookingId expectedPlate outcome = do
   whenJust closed (triggerSharedCabAllocation . (.closedCity))
   pure (isJust closed)
 
--- | Rider skip: the plate joins the skipped set, and the booking's one skip is marked used, in the same booking-lock hold, so no claim can re-offer it first.
-skipSharedCabAllocation :: AllocFlow m r => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> Text -> SkipReason -> m Bool
-skipSharedCabAllocation cfg bookingId plate reason = do
+-- | Rider skip: the plate joins the skipped set, and the rider's own skip is counted against the search, in the same booking-lock hold, so no claim can re-offer it first.
+skipSharedCabAllocation :: AllocFlow m r => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> Text -> Text -> SkipReason -> m Bool
+skipSharedCabAllocation cfg bookingId searchId plate reason = do
   let outcome = RiderSkipped reason
-  closed <- closeAllocation cfg bookingId plate outcome (addSkipped (allocKeyTtl cfg) bookingId plate >> when (usesRiderSkip reason) (writeRiderSkipUsed (allocKeyTtl cfg) bookingId))
+  closed <- closeAllocation cfg bookingId plate outcome (addSkipped (allocKeyTtl cfg) bookingId plate >> when (usesRiderSkip reason) (recordRiderAction cfg.skipCancelCountTtlSec RiderSkip searchId))
   whenJust closed (triggerSharedCabAllocation . (.closedCity))
   pure (isJust closed)
 

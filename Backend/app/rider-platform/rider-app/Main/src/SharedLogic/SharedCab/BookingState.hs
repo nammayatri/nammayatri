@@ -12,8 +12,6 @@ module SharedLogic.SharedCab.BookingState
     writeFindingSince,
     readSkipped,
     addSkipped,
-    readRiderSkipUsed,
-    writeRiderSkipUsed,
     readOffersMade,
     writeOffersMade,
     readPreferred,
@@ -90,12 +88,6 @@ addSkipped ttl bookingId plate = do
   writeField ttl bookingId "skipped" (nub (plate : skipped))
 
 -- | The rider has used the one skip this booking allows.
-readRiderSkipUsed :: StateFlow m r => BookingId -> m Bool
-readRiderSkipUsed bookingId = fromMaybe False <$> readField bookingId "riderSkipUsed"
-
-writeRiderSkipUsed :: StateFlow m r => Int -> BookingId -> m ()
-writeRiderSkipUsed ttl bookingId = writeField ttl bookingId "riderSkipUsed" True
-
 -- | How many offers this booking has had (the next one's length depends on it).
 readOffersMade :: StateFlow m r => BookingId -> m Int
 readOffersMade bookingId = fromMaybe 0 <$> readField bookingId "offers"
@@ -122,8 +114,7 @@ data BookingStateView = BookingStateView
     attemptCount :: Int,
     findingStintSince :: Maybe UTCTime,
     preferredPlate :: Maybe Text,
-    preferenceLost :: Bool,
-    skipUsed :: Bool
+    preferenceLost :: Bool
   }
 
 -- | A missing or undecodable field reads as its single-field reader's default.
@@ -134,8 +125,7 @@ bookingStateFrom fields =
       attemptCount = fromMaybe 0 (field "attempts"),
       findingStintSince = field "findingSince",
       preferredPlate = field "preferred",
-      preferenceLost = fromMaybe False (field "preferredDropped"),
-      skipUsed = fromMaybe False (field "riderSkipUsed")
+      preferenceLost = fromMaybe False (field "preferredDropped")
     }
   where
     field :: FromJSON a => Text -> Maybe a
