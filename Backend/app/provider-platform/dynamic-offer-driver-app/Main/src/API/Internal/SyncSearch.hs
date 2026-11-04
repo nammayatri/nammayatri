@@ -76,8 +76,11 @@ syncSearch merchantIdRaw mbToken mbIsShadowSearch mbParentTransactionId reqV2 = 
       -- A shadow search arrives under its own transaction id (the BAP creates a separate
       -- search request for it), so it never collides with the search it shadows here.
       isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
-      unless isFirst $
-        throwError $ InternalError $ "Search already processed by beckn for txn " <> transactionId
-      (_, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country (bool "sync_search" "sync_search_shadow" isShadowSearch) (toJSON reqV2)
-      logTagInfo "SyncSearchV2 Internal Flow" $ "Returning OnSearch inline:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
-      pure onSearchReq
+      if not isFirst
+        then do
+          logTagInfo "SyncSearchV2 Internal Flow" $ "Duplicate search transaction, returning empty OnSearch: " <> transactionId
+          pure $ Spec.OnSearchReq context Nothing Nothing
+        else do
+          (_, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country (bool "sync_search" "sync_search_shadow" isShadowSearch) (toJSON reqV2)
+          logTagInfo "SyncSearchV2 Internal Flow" $ "Returning OnSearch inline:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
+          pure onSearchReq
