@@ -185,6 +185,7 @@ endRideTransaction ::
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasField "rideEventsPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    HasKafkaProducer r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     CoreMetrics m
@@ -295,10 +296,10 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   -- RideEndedEvent published below -- not here. See that module for the full design.
 
   let validRide = isValidRide ride
-  -- Publish RideEndedEvent to Redis Stream "ride.events.shard<N>". kafka-consumers
+  -- Publish RideEndedEvent to the configured sinks (Redis Stream and/or Kafka topic). kafka-consumers
   -- RIDE_EVENTS_CONSUMER fans this out to: analytics Kafka events, ride-interpolation,
   -- namma tags, fleet/operator stats, GPS-toll-behavior, RC stats reminders, ride-end
-  -- notifications, and leaderboard updates. Best-effort publish (direct xAdd); failures
+  -- notifications, and leaderboard updates. Best-effort publish; failures
   -- here never affect ride completion.
   -- Referral FCM and driver-to-driver referral reward moved to kafka-consumers
   -- RIDE_EVENTS_CONSUMER (handleReferral). See SharedLogic.RideEvents.Handlers.

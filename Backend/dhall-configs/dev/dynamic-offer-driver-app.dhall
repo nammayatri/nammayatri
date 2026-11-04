@@ -558,23 +558,25 @@ let storagePublicServiceConfig =
       , gcsConfig = None GCSGcpConfig
       }
 
-let rideEventsStream =
-      { streamPrefix = "ride_events_stream_"
-      , shardCount = +10
-      , consumerGroupName = "ride-events-consumers"
-      , readBatchSize = +50
-      , readBlockMilliseconds = +5000
-      , claimMinIdleMs = +60000
-      , claimIntervalSeconds = +30
-      , maxDeliveries = +5
-      , pauseFlagKey = "ride_events_stream_paused"
-      , pauseSleepSeconds = +5
-      }
+let rideEventsRedisEnabled = env:RIDE_EVENTS_REDIS_PUBLISH_ENABLED ? True
+
+let rideEventsKafkaEnabled = env:RIDE_EVENTS_KAFKA_PUBLISH_ENABLED ? False
+
+let rideEventsRedisCfg =
+      { streamPrefix = "ride_events_stream_", shardCount = +10 }
+
+let rideEventsKafkaCfg = { kafkaTopic = "ride-events" }
 
 let rideEventsPublisherCfg =
       Some
-        { streamPrefix = rideEventsStream.streamPrefix
-        , shardCount = rideEventsStream.shardCount
+        { redisConfig =
+            if    rideEventsRedisEnabled
+            then  Some rideEventsRedisCfg
+            else  None { streamPrefix : Text, shardCount : Integer }
+        , kafkaConfig =
+            if    rideEventsKafkaEnabled
+            then  Some rideEventsKafkaCfg
+            else  None { kafkaTopic : Text }
         }
 
 let dashboardLoginRateLimitOptions =

@@ -80,12 +80,20 @@ import Tools.Metrics
 import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
 
--- | Publisher-side config for the Redis-Stream ride-events pipeline.
--- shardCount MUST match the consumer-side shardCount and is effectively
--- immutable post-launch (raising N strands in-flight entries on old shards).
-data RideEventsPublisherCfg = RideEventsPublisherCfg
+data RideEventsRedisCfg = RideEventsRedisCfg
   { streamPrefix :: Text,
     shardCount :: Int
+  }
+  deriving (Generic, FromDhall, Show)
+
+data RideEventsKafkaCfg = RideEventsKafkaCfg
+  { kafkaTopic :: Text
+  }
+  deriving (Generic, FromDhall, Show)
+
+data RideEventsPublisherCfg = RideEventsPublisherCfg
+  { redisConfig :: Maybe RideEventsRedisCfg,
+    kafkaConfig :: Maybe RideEventsKafkaCfg
   }
   deriving (Generic, FromDhall, Show)
 

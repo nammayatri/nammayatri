@@ -19,10 +19,20 @@ let rideEventsStream =
       , pauseSleepSeconds = +5
       }
 
+let useKafka = env:RIDE_EVENTS_CONSUMER_USE_KAFKA ? False
+
 in      base
-    //  { transport = common.transportKind.RedisStream
+    //  { transport =
+            if    useKafka
+            then  common.transportKind.Kafka
+            else  common.transportKind.RedisStream
         , kafkaConsumerCfg =
-            base.kafkaConsumerCfg // { topicNames = [ "ride-events" ] }
+                base.kafkaConsumerCfg
+            //  { topicNames = [ "ride-events" ]
+                , consumerProperties =
+                        base.kafkaConsumerCfg.consumerProperties
+                    //  { groupId = "ride-events-consumers" }
+                }
         , redisStreamCfg = Some rideEventsStream
         , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9995)
         , loggerConfig =

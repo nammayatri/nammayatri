@@ -28,6 +28,29 @@ The publisher in `EndRide/Internal.hs` emits these log lines:
 | --- | --- |
 | `ride-events.published rideId=<R> stream=<S>` | xAdd succeeded |
 | `ride-events.publish-failed rideId=<R> err=<...>` | xAdd failed (event lost — direct-publish risk) |
+| `ride-events.kafka-published rideId=<R> topic=<T>` | Kafka produce succeeded |
+| `ride-events.kafka-publish-failed rideId=<R> err=<...>` | Kafka produce failed (event lost on that sink) |
+
+Metrics: `ride_events_published`, `ride_events_publish_failed` (Redis) and
+`ride_events_kafka_published`, `ride_events_kafka_publish_failed` (Kafka).
+
+## Publisher / consumer configuration
+
+`rideEventsPublisherCfg` in the driver-app dhall has two independent, optional sinks:
+
+```dhall
+Some { redisConfig = Some { streamPrefix = "ride_events_stream_", shardCount = +10 }
+     , kafkaConfig = Some { kafkaTopic = "ride-events" } }
+```
+
+`None` on a sink disables it. Dev toggles: `RIDE_EVENTS_REDIS_PUBLISH_ENABLED` (default True),
+`RIDE_EVENTS_KAFKA_PUBLISH_ENABLED` (default False), and on the consumer
+`RIDE_EVENTS_CONSUMER_USE_KAFKA` (default False). Kafka messages are keyed by `rideId`.
+
+Redis to Kafka rollout: enable both publisher sinks, run a Kafka-transport consumer
+(group `ride-events-consumers`) alongside the Redis one (handler idempotency keys prevent
+double side-effects), then drain the Redis streams, disable `redisConfig` and stop the
+Redis consumer. Roll back by re-enabling `redisConfig`.
 
 ## Recommended dashboards
 
