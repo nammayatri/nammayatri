@@ -30,11 +30,13 @@ import qualified Storage.Queries.RsfReconLedgerEntry as QLedger
 -- Mounted beside the other Beckn callbacks: the registry advertises this BPP as
 -- <bpp_uri>/beckn/<merchantId>, and collectors append the action to it. SignatureAuth
 -- reads the action from that last path segment (RECEIVER_RECON, shared-kernel #1468).
+-- The signer is looked up under ONDC:NTS10 (Domain.RSF), so subscriber_url is the collector's RSF
+-- endpoint, where on_receiver_recon is sent; its ONDC:TRV10 (ride-hailing) URL has no RSF routes.
 type API =
   "beckn"
     :> Capture "merchantId" (Id DM.Merchant)
     :> "receiver_recon"
-    :> SignatureAuth 'Domain.MOBILITY "Authorization"
+    :> SignatureAuth 'Domain.RSF "Authorization"
     :> ReqBody '[JSON] A.Value -- Specifically done to throw NACK instead of JSON error even before reaching handler function
     :> Post '[JSON] Spec.RSFAckResponse
 
