@@ -77,7 +77,7 @@ import qualified Tools.Metrics.BAPMetrics as Metrics
 
 -- getState and other functions from the original file...
 
-getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], Redis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> Maybe Text -> DJourneyLeg.JourneyLeg -> Maybe Text -> m JT.JourneyLegState
+getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType, "internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasRequestId r, Redis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> Maybe Text -> DJourneyLeg.JourneyLeg -> Maybe Text -> m JT.JourneyLegState
 getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTracking journeyLeg mbFleetNo = do
   logDebug $ "CFRFS getState: searchId: " <> searchId.getId <> ", mode: " <> show mode
   mbBooking <- QTBooking.findBySearchId searchId
@@ -433,7 +433,7 @@ getInfo searchId journeyLeg journeyLegs mbPassCandidates = do
 search :: (JT.SearchRequestFlow m r c, HasMasterCloudForwarder r) => Spec.VehicleCategory -> Id DPerson.Person -> Id DMerchant.Merchant -> Int -> Context.City -> DJourneyLeg.JourneyLeg -> Maybe (Id DRL.RecentLocation) -> Maybe Text -> Maybe Spec.ServiceTierType -> (Text -> m ()) -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Bool -> Maybe Bool -> m JT.SearchResponse
 search vehicleCategory personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId mbServiceTier upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbHasPasses mbEnforceFRFSPass = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency (journeyLeg.agency >>= (.gtfsId)) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency (SharedCab.searchAgencyKey journeyLeg.agency) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
   frfsSearchReq <- buildFRFSSearchReq frfsRouteDetails
   let mbFare = journeyLeg.estimatedMinFare <|> journeyLeg.estimatedMaxFare
@@ -476,14 +476,18 @@ confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse v
         void $ postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId Nothing mbVehicleNumber Nothing mbPurchasedPassPaymentId True
 
 cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> m ()
-cancel searchId cancellationType = do
+cancel = cancelWithRefund Nothing
+
+-- | `cancel` carrying a shared-cab cancel's refund, as its policy guard decided it.
+cancelWithRefund :: JT.CancelFlow m r c => Maybe SharedCab.Refund -> Id FRFSSearch -> Spec.CancellationType -> m ()
+cancelWithRefund mbRefund searchId cancellationType = do
   mbBooking <- QTBooking.findBySearchId searchId
   whenJust mbBooking $ \booking -> do
     merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantDoesNotExist booking.merchantId.getId)
     merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
     bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
     mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision booking
-    mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType CallExternalBPP.UserInitiated False mbLiveDecision booking
+    mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType CallExternalBPP.UserInitiated False mbLiveDecision mbRefund booking
     whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, fareParameters, updatedBooking) -> do
       FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode fareParameters
       FRFSCancelJourney.cancelJourney updatedBooking

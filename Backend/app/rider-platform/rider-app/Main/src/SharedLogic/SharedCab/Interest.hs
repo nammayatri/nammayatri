@@ -4,7 +4,7 @@
 -- the time are kept; what leaves the rider app is the count.
 module SharedLogic.SharedCab.Interest
   ( recordInterest,
-    interestedRiders,
+    interestedOnRoutes,
     windowStart,
     interestKeyTtlSec,
     bestEffort,
@@ -13,6 +13,7 @@ where
 
 import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Database.Redis as RawRedis
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
@@ -32,16 +33,22 @@ interestKeyTtlSec cfg = max (15 * 60) cfg.interestWindowSec
 recordInterest :: (Redis.HedisFlow m r, MonadFlow m) => Config.SharedCabTunables -> [Text] -> Text -> m ()
 recordInterest cfg routeCodes personId = do
   now <- getCurrentTime
-  forM_ routeCodes $ \routeCode -> shared $ Redis.zAddExp (interestKey routeCode) personId (floor (utcTimeToPOSIXSeconds now)) (interestKeyTtlSec cfg)
+  forM_ routeCodes $ \routeCode -> shared $ do
+    Redis.zAddExp (interestKey routeCode) personId (floor (utcTimeToPOSIXSeconds now)) (interestKeyTtlSec cfg)
+    void $ Redis.zRemRangeByScore (interestKey routeCode) 0 (windowStart now cfg.interestWindowSec - 0.001)
 
--- | Persons interested within the window; older entries are dropped on the way.
-interestedRiders :: (Redis.HedisFlow m r, MonadFlow m) => Config.SharedCabTunables -> Text -> m [Text]
-interestedRiders cfg routeCode = do
+-- | Persons interested within the window, per route, in one pipelined round trip; a failed read counts no one.
+interestedOnRoutes :: (Redis.HedisFlow m r, MonadFlow m) => Config.SharedCabTunables -> [Text] -> m [(Text, [Text])]
+interestedOnRoutes cfg routeCodes = do
   now <- getCurrentTime
   let start = windowStart now cfg.interestWindowSec
-  shared $ do
-    void $ Redis.zRemRangeByScore (interestKey routeCode) 0 (start - 0.001)
-    map TE.decodeUtf8 <$> Redis.zRangeByScore (interestKey routeCode) start (realToFrac (utcTimeToPOSIXSeconds now))
+      end = realToFrac (utcTimeToPOSIXSeconds now)
+  replies <- shared $ do
+    keys <- traverse (Redis.buildKey . interestKey) routeCodes
+    Redis.runPipelined "sharedCabInterest" (\key -> RawRedis.zrangebyscore key start end) keys
+  case replies of
+    Right rows -> pure $ zip routeCodes (map (either (const []) (map TE.decodeUtf8)) rows)
+    Left err -> [] <$ logError ("shared-cab interest read failed: " <> show err)
 
 -- | A failure here is logged, never raised: the request that asked for it must still be answered.
 bestEffort :: MonadCatch m => (Text -> m ()) -> m a -> m (Maybe a)

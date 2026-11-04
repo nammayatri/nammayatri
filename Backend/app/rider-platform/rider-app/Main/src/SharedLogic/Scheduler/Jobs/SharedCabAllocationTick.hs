@@ -55,8 +55,9 @@ sharedCabAllocationTick Job {jobInfo} = do
     let scheduleNext = do
           keepGoing <- liftIO (readIORef keepGoingRef)
           gotLease <- liftIO (readIORef gotLeaseRef)
-          liftIO (writeIORef scheduledRef True)
           when keepGoing (scheduleNextTick merchantId merchantOperatingCityId chainId gotLease leaseMisses)
+          -- only once the enqueue returned, so a failed one is retried by the finalizer (a duplicate successor loses the run claim)
+          liftIO (writeIORef scheduledRef True)
     claimedTick
       (claimTickRun merchantOperatingCityId leaseMisses)
       ( do

@@ -569,8 +569,8 @@ postMultimodalRiderLocation ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   ApiTypes.RiderLocationReq ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalRiderLocation (_, merchantId) journeyId mbFleetNo req = do
-  (journeyStatus, legs) <- getMultimodalJourneyStatusAndLegs journeyId mbFleetNo
+postMultimodalRiderLocation (mbPersonId, merchantId) journeyId mbFleetNo req = do
+  (journeyStatus, legs) <- getMultimodalJourneyStatusAndLegs mbPersonId journeyId mbFleetNo
   let concatLegs =
         concatMap
           ( \leg -> case leg of
@@ -663,24 +663,27 @@ getMultimodalJourneyStatus ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatusResp
 getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
-  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
-  (journeyStatusResp, legs) <- getMultimodalJourneyStatusAndLegs journeyId Nothing
+  (journeyStatusResp, legs) <- getMultimodalJourneyStatusAndLegs mbPersonId journeyId Nothing
   -- a rider polling a live cab leg keeps the city's job chains alive (see SharedCab.keepChainsAlive)
   mapM_ (SharedCab.keepChainsAlive merchantId) (SharedCab.liveCabLegCities legs)
   return journeyStatusResp
 
+-- | Both callers are rider endpoints, so the caller is checked against the journey this loads anyway.
 getMultimodalJourneyStatusAndLegs ::
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow (ApiTypes.JourneyStatusResp, [JMTypes.JourneyLegState])
-getMultimodalJourneyStatusAndLegs journeyId mbFleetNo = do
+getMultimodalJourneyStatusAndLegs mbPersonId journeyId mbFleetNo = do
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   legs <- JM.getAllLegsStatus journey mbFleetNo
   (,legs) <$> generateJourneyStatusResponse journey legs
 
 postMultimodalJourneyFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> API.Types.UI.MultimodalConfirm.JourneyFeedBackForm -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalJourneyFeedback (mbPersonId, merchantId) journeyId journeyFeedbackForm = do
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   riderId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   now <- getCurrentTime
   whenJust journeyFeedbackForm.rating $ \rating -> do
@@ -868,9 +871,11 @@ getPublicTransportVehicleData ::
     Kernel.Prelude.Maybe [ServiceTierType] ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber mbNewServiceTiers =
-  SharedCab.walkUpVehicleData mbPersonId vehicleNumber $ \precomputed -> case vehicleType of
-    BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers precomputed
+getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber mbNewServiceTiers = do
+  -- only the app's shared-cab entry asks for the tier, so a bus lookup never pays for a cab one
+  cabLive <- if SharedCab.declaresSharedCab mbNewServiceTiers then Just <$> SharedCab.walkUpCab mbPersonId vehicleNumber else pure Nothing
+  case vehicleType of
+    BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers cabLive
     _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
 
 -- Bus block/unblock helpers (Redis-backed, TTL'd). Bus-only, so kept local to this module.
@@ -1154,10 +1159,10 @@ getPublicTransportDataImpl ::
     Kernel.Prelude.Maybe VehicleCategory ->
     Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe [ServiceTierType] ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Maybe (DIBC.IntegratedBPPConfig, JLU.VehicleLiveRouteInfo)) ->
+    Kernel.Prelude.Maybe (DIBC.IntegratedBPPConfig, JLU.VehicleLiveRouteInfo) ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData mbNewServiceTiers precomputedLive = do
+getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData mbNewServiceTiers cabLive = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -1184,23 +1189,21 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
     blocked <- isVehicleBlocked integratedBPPConfigs vehicleNumber
     when blocked $ throwError (BusBlocked vehicleNumber)
   mbVehicleLiveRouteInfo <-
-    case precomputedLive of
-      Just known -> pure known
-      Nothing ->
-        case mbVehicleNumber of
-          Just vehicleNumber -> do
-            mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo vehicleNumber
-            case mbVehicleOverrideInfo of
-              Just (overrideScope, (sourceVehicleNumber, overrideWaybillNo)) -> do
-                mbSourceRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs sourceVehicleNumber Nothing
-                case JLU.classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
-                  JLU.FleetOverrideUsable -> pure mbSourceRouteInfo
-                  JLU.FleetOverrideFinished -> do
-                    Dispatcher.delFleetOverrideInfo overrideScope vehicleNumber
-                    getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
-                  JLU.FleetOverrideNotYetUsable -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
-              Nothing -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
-          Nothing -> return Nothing
+    case mbVehicleNumber of
+      _ | isJust cabLive -> pure cabLive
+      Just vehicleNumber -> do
+        mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo vehicleNumber
+        case mbVehicleOverrideInfo of
+          Just (overrideScope, (sourceVehicleNumber, overrideWaybillNo)) -> do
+            mbSourceRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs sourceVehicleNumber Nothing
+            case JLU.classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
+              JLU.FleetOverrideUsable -> pure mbSourceRouteInfo
+              JLU.FleetOverrideFinished -> do
+                Dispatcher.delFleetOverrideInfo overrideScope vehicleNumber
+                getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
+              JLU.FleetOverrideNotYetUsable -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
+          Nothing -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
+      Nothing -> return Nothing
 
   -- Increment metrics for vehicle data fields
   fork "incrementVehicleDataMetrics" $
@@ -1540,8 +1543,9 @@ postMultimodalComplete (mbPersonId, _) journeyId = do
   journey <- JM.getJourney journeyId
   checkJourneyOwner mbPersonId journey
   legs <- QJourneyLeg.getJourneyLegs journeyId
-  mapM_ dropSharedCabRider legs
-  updatedLegStatus <- JM.markJourneyComplete journey legs
+  -- a never-boarded cab leg is cancelled instead, so it must not be marked completed after
+  cancelledLegIds <- map (.id) <$> filterM dropSharedCabRider legs
+  updatedLegStatus <- JM.markJourneyComplete journey (filter ((`Kernel.Prelude.notElem` cancelledLegIds) . (.id)) legs)
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse updatedJourney updatedLegStatus
 
@@ -1559,8 +1563,8 @@ postMultimodalOrderSoftCancel (mbPersonId, _) journeyId legOrder = do
   checkIfAnyTaxiLegOngoing legs -- check for any ongoing taxi legs, remove this once handled properly from UI
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   mbLegBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId
-  maybe identity (SharedCab.guardRiderCancel SharedCab.SoftCancel) mbLegBooking $
-    JM.softCancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
+  maybe ($ Nothing) (SharedCab.guardRiderCancel SharedCab.SoftCancel) mbLegBooking $ \mbRefund ->
+    JM.cancelLegWithRefund mbRefund Spec.SOFT_CANCEL journeyLeg
   return Kernel.Types.APISuccess.Success
 
 getMultimodalOrderCancelStatus ::
@@ -1599,9 +1603,9 @@ postMultimodalOrderCancel (mbPersonId, _) journeyId legOrder = do
   mbLegBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId
   whenJust mbLegBooking FRFSUtils.checkCancellationQuota
   legs <- QJourneyLeg.getJourneyLegs journeyId
-  maybe identity (SharedCab.guardRiderCancel SharedCab.ConfirmCancel) mbLegBooking $ do
+  maybe ($ Nothing) (SharedCab.guardRiderCancel SharedCab.ConfirmCancel) mbLegBooking $ \mbRefund -> do
     cancelOngoingTaxiLegs legs -- shouldn't be there once we have leg wise cancellation
-    JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
+    JM.cancelLegWithRefund mbRefund Spec.CONFIRM_CANCEL journeyLeg
   return Kernel.Types.APISuccess.Success
 
 -- | Journey-keyed endpoints act only on the caller's own journey.
@@ -1610,7 +1614,7 @@ checkJourneyOwner mbPersonId journey =
   unless (mbPersonId == Just journey.riderId) $ throwError (InvalidRequest "journey does not belong to the caller")
 
 dropSharedCabRider :: DJourneyLeg.JourneyLeg -> Environment.Flow Bool
-dropSharedCabRider journeyLeg = SharedCab.dropRider (JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing) journeyLeg
+dropSharedCabRider journeyLeg = SharedCab.dropRider (\mbRefund -> JM.cancelLegWithRefund mbRefund Spec.CONFIRM_CANCEL journeyLeg) journeyLeg
 
 postMultimodalOrderReschedule ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -2111,18 +2115,9 @@ postMultimodalRouteServiceability ::
     API.Types.UI.MultimodalConfirm.RouteServiceabilityReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
   )
+postMultimodalRouteServiceability (mbPersonId, _) _ req
+  | SharedCab.isSharedCabTier req.serviceTier = SharedCab.routeServiceability mbPersonId req
 postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes req =
-  SharedCab.routeServiceability mbPersonId req >>= maybe (postMultimodalRouteServiceabilityBus (mbPersonId, merchantId) mbAllPassingRoutes req) pure
-
-postMultimodalRouteServiceabilityBus ::
-  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-    API.Types.UI.MultimodalConfirm.RouteServiceabilityReq ->
-    Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
-  )
-postMultimodalRouteServiceabilityBus (mbPersonId, merchantId) mbAllPassingRoutes req =
   BAPMetrics.withTimeFRFSMerchant "routeServiceability" "total" merchantId.getId $ do
     person <- authenticate mbPersonId
     -- Piggyback rider-location recording onto this already-frequent poll (the shuttle screen's ETA
@@ -3026,10 +3021,9 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
   legSearchId <- journeyLeg.legSearchId & fromMaybeM (InvalidRequest $ "Leg search ID not found for journey: " <> journeyLeg.id.getId)
   booking <- QFRFSTicketBooking.findBySearchId (Id legSearchId) >>= fromMaybeM (BookingNotFound $ "FRFS booking with search ID:" <> legSearchId)
-  ticketsBefore <- map (.status) <$> QFRFSTicket.findAllByTicketBookingId booking.id
   SharedCab.tryBoardSharedCab journey journeyLeg booking mbPersonId req >>= \case
-    Just outcome -> do
-      when (SharedCab.firstUse ticketsBefore outcome) $
+    Just (outcome, firstUse) -> do
+      when firstUse $
         fork "event_tracking: pt_booking_used" $ trackPTBookingUsed journey booking
       SharedCab.boardingResponse outcome <$> (generateJourneyInfoResponse journey =<< JM.getAllLegsInfo journey.riderId journeyId)
     Nothing -> onboardBusOrMetro (mbPersonId, merchantId) journeyId req journey journeyLeg booking
@@ -3076,7 +3070,6 @@ onboardBusOrMetro (mbPersonId, merchantId) journeyId req journey journeyLeg book
   vehicleType <-
     case journeyLeg.mode of
       DTrip.Bus -> return Enums.BUS
-      DTrip.SharedCab -> return Enums.BUS
       DTrip.Metro -> return Enums.METRO
       DTrip.Subway -> return Enums.SUBWAY
       _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
@@ -3154,7 +3147,6 @@ onboardBusOrMetro (mbPersonId, merchantId) journeyId req journey journeyLeg book
       let frfsVehicleCategory =
             case journeyLeg.mode of
               DTrip.Bus -> Spec.BUS
-              DTrip.SharedCab -> Spec.BUS
               DTrip.Metro -> Spec.METRO
               DTrip.Subway -> Spec.SUBWAY
               _ -> Spec.BUS
@@ -3433,19 +3425,11 @@ getMultimodalTrackStopRoutes ::
   Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe ServiceTierType ->
   Environment.Flow [ApiTypes.PassingRoutes]
-getMultimodalTrackStopRoutes (mbPersonId, merchantId) stopCode mbAllowClusters mbRouteCodes =
-  SharedCab.trackStopRoutes mbPersonId stopCode mbRouteCodes >>= maybe (getMultimodalTrackStopRoutesBus (mbPersonId, merchantId) stopCode mbAllowClusters mbRouteCodes) pure
-
-getMultimodalTrackStopRoutesBus ::
-  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-  ) ->
-  Kernel.Prelude.Text ->
-  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-  Environment.Flow [ApiTypes.PassingRoutes]
-getMultimodalTrackStopRoutesBus (mbPersonId, _merchantId) stopCode mbAllowClusters mbRouteCodes = do
+getMultimodalTrackStopRoutes (mbPersonId, _) stopCode _ mbRouteCodes mbServiceTier
+  | SharedCab.isSharedCabTier mbServiceTier = SharedCab.trackStopRoutes mbPersonId stopCode mbRouteCodes
+getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbAllowClusters mbRouteCodes _ = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <-

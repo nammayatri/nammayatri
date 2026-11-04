@@ -25,7 +25,7 @@ import qualified SharedLogic.FRFSLiveTrip as FRFSLiveTrip
 import qualified SharedLogic.FRFSReschedule as FRFSReschedule
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import SharedLogic.SharedCab (cancelRefund, isSharedCabBooking, readRefundDecision)
+import SharedLogic.SharedCab (Refund, cancelRefund, isSharedCabBooking)
 import Storage.CachedQueries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -35,20 +35,6 @@ import qualified UrlShortner.Common as UrlShortner
 
 data CancellationInitiator = UserInitiated | Technical
   deriving (Eq, Show)
-
--- | What the ONDC branch's guard decides for a booking, as a total pure decide (unit-tested one level in from the forked
--- dispatcher in `cancel`). The booking side is its service tier out of routeStationsJson.
-data CancelDispatchRefusal
-  = -- | shared-cab through the ONDC dispatcher: the branch refuses with CancellationNotSupported
-    RefuseSharedCabOndc
-  | -- | anything else dispatches: the direct/EBIX path applies the refund-policy decision
-    DispatchProceeds
-  deriving (Eq, Show)
-
-decideCancelDispatchRefusal :: ProviderConfig -> Maybe Spec.ServiceTierType -> CancelDispatchRefusal
-decideCancelDispatchRefusal providerConfig mbServiceTierType = case providerConfig of
-  ONDC _ | mbServiceTierType == Just Spec.SHARED_CAB -> RefuseSharedCabOndc
-  _ -> DispatchProceeds
 
 -- Caller should handle sideEffectData and call cancelJourney based on the cancellationType
 cancel ::
@@ -79,9 +65,11 @@ cancel ::
   -- | Enforce the per-rider cancellation cap. False for journey-driven cancellations.
   Bool ->
   Maybe FRFSLiveTrip.LiveTripDecision ->
+  -- | A shared-cab cancel's refund, as its policy guard decided it; ignored for any other tier.
+  Maybe Refund ->
   DBooking.FRFSTicketBooking ->
   m (Maybe (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters, DBooking.FRFSTicketBooking))
-cancel merchant merchantOperatingCity bapConfig cancellationType initiator enforceCap mbLiveDecision inputBooking =
+cancel merchant merchantOperatingCity bapConfig cancellationType initiator enforceCap mbLiveDecision mbDecision inputBooking =
   FRFSReschedule.withRescheduleLock inputBooking.id $ do
     booking <- QFRFSTicketBooking.findById inputBooking.id >>= fromMaybeM (InvalidRequest "Booking not found for cancellation")
     when (booking.status == DFRFSTicketBooking.RESCHEDULED) $
@@ -113,7 +101,7 @@ cancel merchant merchantOperatingCity bapConfig cancellationType initiator enfor
         -- a shared-cab booking must never take this branch: the fork leaves the row CONFIRMED until the ASYNC on_cancel, so the
         -- no-double-refund guard cannot hold against a racing finding-timeout tick, and this branch never reads the policy's
         -- refund decision. Shared-cab providers are direct-integrated, so this is a config error: refuse loudly.
-        when (decideCancelDispatchRefusal integratedBPPConfig.providerConfig (FRFSUtils.getServiceTierTypeFromRouteStationsJson booking.routeStationsJson) == RefuseSharedCabOndc) $ do
+        when (FRFSUtils.getServiceTierTypeFromRouteStationsJson booking.routeStationsJson == Just Spec.SHARED_CAB) $ do
           logError $ "shared-cab booking " <> booking.id.getId <> " reached the ONDC cancel dispatcher (integratedBPPConfig=" <> integratedBPPConfig.id.getId <> "): booking would sit CONFIRMED until on_cancel and the refund policy decision would be ignored; refusing"
           throwError CancellationNotSupported
         fork "FRFS ONDC Cancel Req" $ do
@@ -128,7 +116,6 @@ cancel merchant merchantOperatingCity bapConfig cancellationType initiator enfor
         return Nothing
       _ -> do
         -- a shared-cab cancel runs on the policy's decision, and never without one (no fall-through to the tier table)
-        mbDecision <- if isSharedCabBooking booking then readRefundDecision booking.id else pure Nothing
         mbSharedCabRefund <- either (const $ throwError $ InternalError "Shared-cab cancel did not pass the refund policy") pure $ cancelRefund (isSharedCabBooking booking) (initiator == UserInitiated) mbDecision
         onCancelReq <- Flow.cancel merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType mbLiveDecision booking mbSharedCabRefund
         mbSideEffectData <- OnCancelCore.onCancelCore merchant booking onCancelReq

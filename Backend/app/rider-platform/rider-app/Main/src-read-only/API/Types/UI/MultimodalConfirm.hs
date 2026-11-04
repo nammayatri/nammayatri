@@ -382,6 +382,7 @@ data RouteServiceabilityReq = RouteServiceabilityReq
     journeyId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     latLong :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     routeCodes :: Kernel.Prelude.Maybe [RouteCodesWithLeg],
+    serviceTier :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     timestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
