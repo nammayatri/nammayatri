@@ -25,8 +25,10 @@ import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtr
 import Lib.Finance.Utils.GstBreakdown (mkComponentRateFromTxn)
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified SharedLogic.Finance.InvoiceDocument as InvoiceDocument
+import SharedLogic.Finance.RideInvoice (isFinalRideOfBooking, rideFinanceInvoiceId)
 import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
@@ -210,7 +212,7 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
 
 -- | Resolve a short-lived presigned S3 GET URL for a single invoice's PDF, keyed by
 --   invoice id. Authorises that the invoice belongs to the requesting driver (as the
---   supplier or the issued-to party) before handing back a link. When PDF storage is
+--   supplier, the issued-to party, or the driver of the invoiced ride) before handing back a link. When PDF storage is
 --   enabled and the object is not yet materialised, it is rendered + stored on demand
 --   (write-through). @pdfUrl@ is Nothing when storage is disabled — clients then fall
 --   back to the base64 /finance/invoice/pdf endpoint.
@@ -225,7 +227,19 @@ getFinanceInvoicePdfUrl (mbDriverId, _, _) invoiceId = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   inv <- QFinanceInvoice.findById (Id invoiceId) >>= fromMaybeM (InvalidRequest $ "Invoice not found: " <> invoiceId)
   let driverIdText = driverId.getId
-  unless (inv.supplierId == Just driverIdText || inv.issuedToId == driverIdText) $
-    throwError AccessDenied
+      isPartyToInvoice = inv.supplierId == Just driverIdText || inv.issuedToId == driverIdText
+  isAllowed <- if isPartyToInvoice then pure True else isDriverOfInvoicedRide driverId inv
+  unless isAllowed $ throwError AccessDenied
   mbPdfUrl <- InvoiceDocument.getInvoicePdfPresignedUrl InvoiceDocument.interactivePresignTtl (Id invoiceId)
   pure $ API.FinanceInvoicePdfUrlResp {invoiceId = invoiceId, pdfUrl = mbPdfUrl}
+
+isDriverOfInvoicedRide :: Id Person -> FinanceInvoice.Invoice -> Flow Bool
+isDriverOfInvoicedRide driverId inv = case inv.referenceId of
+  Nothing -> pure False
+  Just bookingId -> do
+    mbBooking <- QBooking.findById (Id bookingId)
+    rides <- QRide.findRidesByBookingId [Id bookingId]
+    pure $
+      any
+        (\ride -> ride.driverId == driverId && isFinalRideOfBooking ride.createdAt rides && (mbBooking >>= rideFinanceInvoiceId ride) == Just inv.id.getId)
+        rides

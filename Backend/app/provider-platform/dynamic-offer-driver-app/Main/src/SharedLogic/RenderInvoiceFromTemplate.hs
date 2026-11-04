@@ -30,8 +30,8 @@ import Tools.DynamicLogic (getAppDynamicLogic)
 -- | Look up the per-(mocId,scope,language) HTML template + INVOICE_TEMPLATE JL
 -- rule, run the rule on the 'InvoiceContext', then substitute the cleaned
 -- result into the template. Returns the final HTML; callers pipe through
--- wkhtmltopdf to produce the PDF. Throws 'InvalidRequest' if either the
--- template row or the JL rule is missing.
+-- wkhtmltopdf to produce the PDF. Throws 'InvalidRequest' if the template row
+-- is missing, or if the JL rule is missing and no generic fallback applies.
 renderHtml ::
   ( MonadFlow m,
     CacheFlow m r,
@@ -57,29 +57,38 @@ renderHtml mocId mbInvoiceType language tz ctx = do
   let scope = maybe LYT.InvoiceTypeGeneric LYT.InvoiceTypeSpecific tmpl.invoiceType
   now <- getCurrentTime
   (allLogics, _) <- getAppDynamicLogic (cast mocId) (LYT.INVOICE_TEMPLATE scope) now Nothing Nothing
-  when (null allLogics) $
-    throwError $ InvalidRequest $ "No INVOICE_TEMPLATE JL rule for scope=" <> show scope
+  let fallBackToGeneric =
+        null allLogics
+          && isJust mbInvoiceType
+          && maybe False (/= Domain.Types.Invoice.AggregatedCommission) tmpl.invoiceType
+  if fallBackToGeneric
+    then do
+      logWarning $ "INVOICE_TEMPLATE: no JL rule for scope=" <> show scope <> ", falling back to generic template and rule"
+      renderHtml mocId Nothing language tz ctx
+    else do
+      when (null allLogics) $
+        throwError $ InvalidRequest $ "No INVOICE_TEMPLATE JL rule for scope=" <> show scope
 
-  jlResp <- LYDL.runLogicsWithDebugLog LYDL.Driver (cast mocId) (LYT.INVOICE_TEMPLATE scope) Nothing allLogics ctx
-  unless (null jlResp.errors) $
-    logWarning $ "INVOICE_TEMPLATE JL non-fatal errors: " <> show jlResp.errors
-  let cleaned = RT.cleanJson tz jlResp.result
+      jlResp <- LYDL.runLogicsWithDebugLog LYDL.Driver (cast mocId) (LYT.INVOICE_TEMPLATE scope) Nothing allLogics ctx
+      unless (null jlResp.errors) $
+        logWarning $ "INVOICE_TEMPLATE JL non-fatal errors: " <> show jlResp.errors
+      let cleaned = RT.cleanJson tz jlResp.result
 
-  let mainItemsHtml = RT.renderLineItemsHtml tmpl.lineItemRowTemplate (extractArray "mainTableItems" cleaned)
-      externalsHtml = RT.renderLineItemsHtml tmpl.totalsLineRowTemplate (extractArray "externalItems" cleaned)
-      adjustmentsHtml = RT.renderLineItemsHtml tmpl.totalsLineRowTemplate (extractArray "adjustmentItems" cleaned)
-      vars =
-        RT.flatten cleaned
-          <> [ ("mainTableItemsHtml", mainItemsHtml),
-               ("externalItemsHtml", externalsHtml),
-               ("adjustmentItemsHtml", adjustmentsHtml)
-             ]
-      (rendered, missing) = RT.buildTemplateChecked vars tmpl.template
+      let mainItemsHtml = RT.renderLineItemsHtml tmpl.lineItemRowTemplate (extractArray "mainTableItems" cleaned)
+          externalsHtml = RT.renderLineItemsHtml tmpl.totalsLineRowTemplate (extractArray "externalItems" cleaned)
+          adjustmentsHtml = RT.renderLineItemsHtml tmpl.totalsLineRowTemplate (extractArray "adjustmentItems" cleaned)
+          vars =
+            RT.flatten cleaned
+              <> [ ("mainTableItemsHtml", mainItemsHtml),
+                   ("externalItemsHtml", externalsHtml),
+                   ("adjustmentItemsHtml", adjustmentsHtml)
+                 ]
+          (rendered, missing) = RT.buildTemplateChecked vars tmpl.template
 
-  unless (null missing) $
-    logWarning $ "INVOICE_TEMPLATE: unresolved placeholders: " <> show missing
+      unless (null missing) $
+        logWarning $ "INVOICE_TEMPLATE: unresolved placeholders: " <> show missing
 
-  pure rendered
+      pure rendered
   where
     extractArray :: Text -> A.Value -> [A.Value]
     extractArray field (A.Object o) = case KM.lookup (AK.fromText field) o of

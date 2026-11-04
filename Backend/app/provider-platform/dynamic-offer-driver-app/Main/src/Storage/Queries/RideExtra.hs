@@ -59,7 +59,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Safety.Domain.Types.Sos as SafetySos
 import qualified Sequelize as Se
-import SharedLogic.Finance.RideInvoice (rideFinanceInvoiceId)
+import SharedLogic.Finance.RideInvoice (isFinalRideOfBooking, rideFinanceInvoiceId)
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
@@ -688,6 +688,15 @@ findFleetOwnerDetails fleetOwnerIds = do
       HMS.fromList [(p.id, p) | p <- fleetOwnerPersons]
     )
 
+clearNonFinalRideInvoices :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [RideItem] -> m [RideItem]
+clearNonFinalRideInvoices items = do
+  let bookingIdsWithInvoice = mapMaybe (\item -> if isJust item.financeInvoiceId then item.rideBookingId else Nothing) items
+  bookingRides <- if null bookingIdsWithInvoice then pure [] else findRidesByBookingId bookingIdsWithInvoice
+  let ridesByBooking = HMS.fromListWith (<>) [(ride.bookingId, [ride]) | ride <- bookingRides]
+      isFinalRide item = maybe True (\bookingId -> isFinalRideOfBooking item.rideCreatedAt (HMS.lookupDefault [] bookingId ridesByBooking)) item.rideBookingId
+      clearInvoice RideItem {..} = RideItem {financeInvoiceId = Nothing, ..}
+  pure $ map (\item -> if isFinalRide item then item else clearInvoice item) items
+
 findAllRideItems ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Maybe Bool ->
@@ -716,185 +725,186 @@ findAllRideItems ::
   m [RideItem]
 findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now mbFrom mbTo mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount mbPaymentMethodIds mbHasSos
   | mbPaymentMethodIds == Just [] = pure []
-  | otherwise = case mbRideShortId of
-    Just rideShortId -> do
-      ride <- findOneWithKV [Se.Is BeamR.shortId $ Se.Eq $ getShortId rideShortId] >>= fromMaybeM (RideNotFound $ "for ride shortId: " <> rideShortId.getShortId)
-      case mbFleetOwnerId of
-        Just foid | ride.fleetOwnerId /= Just (Id foid) -> throwError $ InvalidRequest "Ride not found under fleet"
-        _ -> pure ()
-      booking <- findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId ride.bookingId] >>= fromMaybeM (BookingNotFound $ "for ride id: " <> ride.id.getId)
-      rideDetails <- findOneWithKV [Se.Is BeamRD.id $ Se.Eq $ getId ride.id] >>= fromMaybeM (RideNotFound $ "for ride id: " <> ride.id.getId)
-      riderDetails <- findOneWithKV [Se.Is BeamRDR.id $ Se.Eq $ getId $ fromJust booking.riderId | isJust booking.riderId] >>= fromMaybeM (RiderDetailsNotFound $ "for booking id: " <> booking.id.getId)
-      let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
-          fare = mkPrice (Just ride.currency) <$> ride.fare
-          estimatedFare = Just $ mkPrice (Just booking.currency) booking.estimatedFare
-      (fleetOwnerMap, fleetOwnerPersonMap) <- findFleetOwnerDetails (maybeToList ride.fleetOwnerId)
-      vrcs <- findAllWithKV [Se.Is BeamVRC.unencryptedCertificateNumber $ Se.In [Just rideDetails.vehicleNumber]]
+  | otherwise =
+    clearNonFinalRideInvoices =<< case mbRideShortId of
+      Just rideShortId -> do
+        ride <- findOneWithKV [Se.Is BeamR.shortId $ Se.Eq $ getShortId rideShortId] >>= fromMaybeM (RideNotFound $ "for ride shortId: " <> rideShortId.getShortId)
+        case mbFleetOwnerId of
+          Just foid | ride.fleetOwnerId /= Just (Id foid) -> throwError $ InvalidRequest "Ride not found under fleet"
+          _ -> pure ()
+        booking <- findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId ride.bookingId] >>= fromMaybeM (BookingNotFound $ "for ride id: " <> ride.id.getId)
+        rideDetails <- findOneWithKV [Se.Is BeamRD.id $ Se.Eq $ getId ride.id] >>= fromMaybeM (RideNotFound $ "for ride id: " <> ride.id.getId)
+        riderDetails <- findOneWithKV [Se.Is BeamRDR.id $ Se.Eq $ getId $ fromJust booking.riderId | isJust booking.riderId] >>= fromMaybeM (RiderDetailsNotFound $ "for booking id: " <> booking.id.getId)
+        let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
+            fare = mkPrice (Just ride.currency) <$> ride.fare
+            estimatedFare = Just $ mkPrice (Just booking.currency) booking.estimatedFare
+        (fleetOwnerMap, fleetOwnerPersonMap) <- findFleetOwnerDetails (maybeToList ride.fleetOwnerId)
+        vrcs <- findAllWithKV [Se.Is BeamVRC.unencryptedCertificateNumber $ Se.In [Just rideDetails.vehicleNumber]]
 
-      let vrcMap = HMS.fromList [(fromMaybe "" vrc.unencryptedCertificateNumber, vrc) | vrc <- vrcs, isJust vrc.unencryptedCertificateNumber]
+        let vrcMap = HMS.fromList [(fromMaybe "" vrc.unencryptedCertificateNumber, vrc) | vrc <- vrcs, isJust vrc.unencryptedCertificateNumber]
 
-      payoutRequest <- QPR.findByEntity (getId ride.id) Nothing
-      let item = (mkRideItem fleetOwnerMap fleetOwnerPersonMap vrcMap (ride, rideDetails, riderDetails, booking, fareDiff, fare, estimatedFare, booking.paymentInstrument, mkBookingStatus now ride)) {payoutRequestId = (.id) <$> payoutRequest}
-      pure [item | matchesPaymentMethod booking, matchesSos ride]
-    Nothing -> do
-      zippedRides <- case mbTo of
-        Just toDate | roundToMidnightUTCToDate toDate >= now -> do
-          case (mbDriverPhoneDBHash, mbVehicleNo, mbCustomerPhoneDBHash) of
-            (Just driverPhoneDBHash, _, _) -> do
-              rideDetails <-
-                findAllFromKvRedis
-                  [ Se.And
-                      ( [Se.Is BeamRD.driverNumberHash $ Se.Eq $ Just driverPhoneDBHash, Se.Is BeamRD.merchantId $ Se.Eq $ Just $ getId merchant.id]
-                          <> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC <$> mbFrom]
-                          <> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate <$> mbTo]
-                          <> [Se.Is BeamRD.vehicleNumber $ Se.Eq (fromJust mbVehicleNo) | isJust mbVehicleNo]
-                          <> [Se.Is BeamRD.driverCountryCode $ Se.Eq mbDriverMobileCountryCode | isJust mbDriverMobileCountryCode]
-                      )
-                  ]
-                  Nothing
-              rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.And ([Se.Is BeamR.id $ Se.In $ getId . RideDetails.id <$> rideDetails] <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq $ Just foid]) mbFleetOwnerId)] Nothing
-              let rideDetails' = filter (\rd -> rd.id `elem` map (.id) rides) rideDetails
-              bookings <- findAllFromKvRedis [Se.Is BeamB.id $ Se.In (getId . Ride.bookingId <$> rides)] Nothing
-              riderDetails <- findAllWithKV [Se.Is BeamRDR.id $ Se.In $ mapMaybe (fmap getId . Booking.riderId) bookings]
-              pure $ mkRideItemUsingMaps rides rideDetails' bookings riderDetails
-            (_, Just vehicleNo, _) -> do
-              rideDetails <-
-                findAllFromKvRedis
-                  [ Se.And
-                      ( [Se.Is BeamRD.merchantId $ Se.Eq $ Just $ getId merchant.id]
-                          <> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC <$> mbFrom]
-                          <> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate <$> mbTo]
-                          <> [Se.Is BeamRD.vehicleNumber $ Se.Eq vehicleNo]
-                      )
-                  ]
-                  Nothing
-              rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.And ([Se.Is BeamR.id $ Se.In $ getId . RideDetails.id <$> rideDetails] <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq $ Just foid]) mbFleetOwnerId)] Nothing
-              let rideDetails' = filter (\rd -> rd.id `elem` map (.id) rides) rideDetails
-              bookings <-
-                findAllFromKvRedis
-                  [ Se.And
-                      ( [Se.Is BeamB.id $ Se.In (getId . Ride.bookingId <$> rides)]
-                          <> [Se.Is BeamB.isDashboardRequest $ Se.Eq isDashboardRequest | isJust isDashboardRequest]
-                      )
-                  ]
-                  Nothing
-              riderDetails <- findAllWithKV [Se.Is BeamRDR.id $ Se.In $ mapMaybe (fmap getId . Booking.riderId) bookings]
-              pure $ mkRideItemUsingMaps rides rideDetails' bookings riderDetails
-            (_, _, Just customerPhoneDBHash) -> do
-              riderDetails <- findAllWithKV ([Se.Is BeamRDR.mobileNumberHash $ Se.Eq customerPhoneDBHash, Se.Is BeamRDR.merchantId $ Se.Eq $ getId merchant.id] <> [Se.Is BeamRDR.mobileCountryCode $ Se.Eq (fromJust mbCustomerMobileCountryCode) | isJust mbCustomerMobileCountryCode])
-              bookings <-
-                findAllFromKvRedis
-                  [ Se.And
-                      ( [Se.Is BeamB.riderId $ Se.In (Just . getId . RiderDetails.id <$> riderDetails)]
-                          <> [Se.Is BeamB.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC $ fromJust mbFrom | isJust mbFrom]
-                          <> [Se.Is BeamB.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate $ fromJust mbTo | isJust mbTo]
-                          <> [Se.Is BeamB.isDashboardRequest $ Se.Eq isDashboardRequest | isJust isDashboardRequest]
-                      )
-                  ]
-                  Nothing
-              rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.And ([Se.Is BeamR.bookingId $ Se.In (getId . Booking.id <$> bookings)] <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq $ Just foid]) mbFleetOwnerId)] Nothing
-              rideDetails <- findAllFromKvRedis [Se.Is BeamRD.id $ Se.In $ getId . Ride.id <$> rides] Nothing
-              pure $ mkRideItemUsingMaps rides rideDetails bookings riderDetails
-            _ -> pure []
-        _ -> pure []
+        payoutRequest <- QPR.findByEntity (getId ride.id) Nothing
+        let item = (mkRideItem fleetOwnerMap fleetOwnerPersonMap vrcMap (ride, rideDetails, riderDetails, booking, fareDiff, fare, estimatedFare, booking.paymentInstrument, mkBookingStatus now ride)) {payoutRequestId = (.id) <$> payoutRequest}
+        pure [item | matchesPaymentMethod booking, matchesSos ride]
+      Nothing -> do
+        zippedRides <- case mbTo of
+          Just toDate | roundToMidnightUTCToDate toDate >= now -> do
+            case (mbDriverPhoneDBHash, mbVehicleNo, mbCustomerPhoneDBHash) of
+              (Just driverPhoneDBHash, _, _) -> do
+                rideDetails <-
+                  findAllFromKvRedis
+                    [ Se.And
+                        ( [Se.Is BeamRD.driverNumberHash $ Se.Eq $ Just driverPhoneDBHash, Se.Is BeamRD.merchantId $ Se.Eq $ Just $ getId merchant.id]
+                            <> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC <$> mbFrom]
+                            <> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate <$> mbTo]
+                            <> [Se.Is BeamRD.vehicleNumber $ Se.Eq (fromJust mbVehicleNo) | isJust mbVehicleNo]
+                            <> [Se.Is BeamRD.driverCountryCode $ Se.Eq mbDriverMobileCountryCode | isJust mbDriverMobileCountryCode]
+                        )
+                    ]
+                    Nothing
+                rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.And ([Se.Is BeamR.id $ Se.In $ getId . RideDetails.id <$> rideDetails] <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq $ Just foid]) mbFleetOwnerId)] Nothing
+                let rideDetails' = filter (\rd -> rd.id `elem` map (.id) rides) rideDetails
+                bookings <- findAllFromKvRedis [Se.Is BeamB.id $ Se.In (getId . Ride.bookingId <$> rides)] Nothing
+                riderDetails <- findAllWithKV [Se.Is BeamRDR.id $ Se.In $ mapMaybe (fmap getId . Booking.riderId) bookings]
+                pure $ mkRideItemUsingMaps rides rideDetails' bookings riderDetails
+              (_, Just vehicleNo, _) -> do
+                rideDetails <-
+                  findAllFromKvRedis
+                    [ Se.And
+                        ( [Se.Is BeamRD.merchantId $ Se.Eq $ Just $ getId merchant.id]
+                            <> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC <$> mbFrom]
+                            <> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate <$> mbTo]
+                            <> [Se.Is BeamRD.vehicleNumber $ Se.Eq vehicleNo]
+                        )
+                    ]
+                    Nothing
+                rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.And ([Se.Is BeamR.id $ Se.In $ getId . RideDetails.id <$> rideDetails] <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq $ Just foid]) mbFleetOwnerId)] Nothing
+                let rideDetails' = filter (\rd -> rd.id `elem` map (.id) rides) rideDetails
+                bookings <-
+                  findAllFromKvRedis
+                    [ Se.And
+                        ( [Se.Is BeamB.id $ Se.In (getId . Ride.bookingId <$> rides)]
+                            <> [Se.Is BeamB.isDashboardRequest $ Se.Eq isDashboardRequest | isJust isDashboardRequest]
+                        )
+                    ]
+                    Nothing
+                riderDetails <- findAllWithKV [Se.Is BeamRDR.id $ Se.In $ mapMaybe (fmap getId . Booking.riderId) bookings]
+                pure $ mkRideItemUsingMaps rides rideDetails' bookings riderDetails
+              (_, _, Just customerPhoneDBHash) -> do
+                riderDetails <- findAllWithKV ([Se.Is BeamRDR.mobileNumberHash $ Se.Eq customerPhoneDBHash, Se.Is BeamRDR.merchantId $ Se.Eq $ getId merchant.id] <> [Se.Is BeamRDR.mobileCountryCode $ Se.Eq (fromJust mbCustomerMobileCountryCode) | isJust mbCustomerMobileCountryCode])
+                bookings <-
+                  findAllFromKvRedis
+                    [ Se.And
+                        ( [Se.Is BeamB.riderId $ Se.In (Just . getId . RiderDetails.id <$> riderDetails)]
+                            <> [Se.Is BeamB.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC $ fromJust mbFrom | isJust mbFrom]
+                            <> [Se.Is BeamB.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate $ fromJust mbTo | isJust mbTo]
+                            <> [Se.Is BeamB.isDashboardRequest $ Se.Eq isDashboardRequest | isJust isDashboardRequest]
+                        )
+                    ]
+                    Nothing
+                rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.And ([Se.Is BeamR.bookingId $ Se.In (getId . Booking.id <$> bookings)] <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq $ Just foid]) mbFleetOwnerId)] Nothing
+                rideDetails <- findAllFromKvRedis [Se.Is BeamRD.id $ Se.In $ getId . Ride.id <$> rides] Nothing
+                pure $ mkRideItemUsingMaps rides rideDetails bookings riderDetails
+              _ -> pure []
+          _ -> pure []
 
-      dbConf <- getReplicaBeamConfig
-      res <- L.runDB dbConf $
-        L.findRows $
-          B.select $
-            B.limit_ (fromIntegral limitVal) $
-              B.offset_ (fromIntegral offsetVal) $
-                B.filter_'
-                  ( \(booking, ride, rideDetails, riderDetails) ->
-                      booking.providerId B.==?. B.val_ (getId merchant.id)
-                        B.&&?. (booking.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ booking.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\dr -> booking.isDashboardRequest B.==?. B.val_ (Just dr)) isDashboardRequest
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cc -> riderDetails.mobileCountryCode B.==?. B.val_ cc) mbCustomerMobileCountryCode
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cc -> rideDetails.driverCountryCode B.==?. B.val_ (Just cc)) mbDriverMobileCountryCode
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehicleNo -> rideDetails.vehicleNumber B.==?. B.val_ vehicleNo) mbVehicleNo
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fleetOwnerId -> ride.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)) mbFleetOwnerId
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rid -> ride.id B.==?. B.val_ (getId rid)) mbRideId
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\did -> ride.driverId B.==?. B.val_ did) mbDriverId
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\pm -> mkPaymentModeCond booking pm) mbPaymentMode
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ids -> B.sqlBool_ (booking.paymentMethodId `B.in_` (B.val_ . Just <$> ids))) mbPaymentMethodIds
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hasSos -> B.sqlBool_ (if hasSos then B.isJust_ ride.sosId else B.isNothing_ ride.sosId)) mbHasSos
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fa -> B.sqlBool_ $ ride.fareAmount B.>=. B.val_ (Just fa)) mbFromAmount
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ta -> B.sqlBool_ $ ride.fareAmount B.<=. B.val_ (Just ta)) mbToAmount
-                  )
-                  do
-                    booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
-                    ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
-                    rideDetails' <- B.join_' (BeamCommon.rideDetails BeamCommon.atlasDB) (\rideDetails'' -> ride'.id B.==?. BeamRD.id rideDetails'')
-                    riderDetails' <- B.join_' (BeamCommon.rDetails BeamCommon.atlasDB) (\riderDetails'' -> B.just_ (BeamRDR.id riderDetails'') B.==?. BeamB.riderId booking')
-                    pure (booking', ride', rideDetails', riderDetails')
-      res' <- case res of
-        Right x -> do
-          let bookings = fst' <$> x
-              rides = snd' <$> x
-              rideDetails = thd' <$> x
-              riderDetails = fth' <$> x
-          b <- catMaybes <$> mapM fromTType' bookings
-          r <- catMaybes <$> mapM fromTType' rides
-          rd <- catMaybes <$> mapM fromTType' rideDetails
-          rdr <- catMaybes <$> mapM fromTType' riderDetails
-          let fareDiffs = zipWith (\ride booking -> mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare) r b
-          let fares = map (\ride -> mkPrice (Just ride.currency) <$> ride.fare) r
-          let estimatedFares = map (\booking -> Just $ mkPrice (Just booking.currency) booking.estimatedFare) b
-          let paymentInstruments = map (.paymentInstrument) b
-          let z8 = zip (zip6 r rd rdr b fareDiffs (mkBookingStatus now <$> r)) (zip estimatedFares paymentInstruments)
-          pure $ map (\(((ride, rd', rdr', b', fareDiff, bookingStatus), (estimatedFare, paymentInstrument)), fare) -> (ride, rd', rdr', b', fareDiff, fare, estimatedFare, paymentInstrument, bookingStatus)) (zip z8 fares)
-        Left err -> do
-          logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
-          pure []
+        dbConf <- getReplicaBeamConfig
+        res <- L.runDB dbConf $
+          L.findRows $
+            B.select $
+              B.limit_ (fromIntegral limitVal) $
+                B.offset_ (fromIntegral offsetVal) $
+                  B.filter_'
+                    ( \(booking, ride, rideDetails, riderDetails) ->
+                        booking.providerId B.==?. B.val_ (getId merchant.id)
+                          B.&&?. (booking.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ booking.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\dr -> booking.isDashboardRequest B.==?. B.val_ (Just dr)) isDashboardRequest
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cc -> riderDetails.mobileCountryCode B.==?. B.val_ cc) mbCustomerMobileCountryCode
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cc -> rideDetails.driverCountryCode B.==?. B.val_ (Just cc)) mbDriverMobileCountryCode
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehicleNo -> rideDetails.vehicleNumber B.==?. B.val_ vehicleNo) mbVehicleNo
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fleetOwnerId -> ride.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)) mbFleetOwnerId
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rid -> ride.id B.==?. B.val_ (getId rid)) mbRideId
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\did -> ride.driverId B.==?. B.val_ did) mbDriverId
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\pm -> mkPaymentModeCond booking pm) mbPaymentMode
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ids -> B.sqlBool_ (booking.paymentMethodId `B.in_` (B.val_ . Just <$> ids))) mbPaymentMethodIds
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hasSos -> B.sqlBool_ (if hasSos then B.isJust_ ride.sosId else B.isNothing_ ride.sosId)) mbHasSos
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fa -> B.sqlBool_ $ ride.fareAmount B.>=. B.val_ (Just fa)) mbFromAmount
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ta -> B.sqlBool_ $ ride.fareAmount B.<=. B.val_ (Just ta)) mbToAmount
+                    )
+                    do
+                      booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+                      ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
+                      rideDetails' <- B.join_' (BeamCommon.rideDetails BeamCommon.atlasDB) (\rideDetails'' -> ride'.id B.==?. BeamRD.id rideDetails'')
+                      riderDetails' <- B.join_' (BeamCommon.rDetails BeamCommon.atlasDB) (\riderDetails'' -> B.just_ (BeamRDR.id riderDetails'') B.==?. BeamB.riderId booking')
+                      pure (booking', ride', rideDetails', riderDetails')
+        res' <- case res of
+          Right x -> do
+            let bookings = fst' <$> x
+                rides = snd' <$> x
+                rideDetails = thd' <$> x
+                riderDetails = fth' <$> x
+            b <- catMaybes <$> mapM fromTType' bookings
+            r <- catMaybes <$> mapM fromTType' rides
+            rd <- catMaybes <$> mapM fromTType' rideDetails
+            rdr <- catMaybes <$> mapM fromTType' riderDetails
+            let fareDiffs = zipWith (\ride booking -> mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare) r b
+            let fares = map (\ride -> mkPrice (Just ride.currency) <$> ride.fare) r
+            let estimatedFares = map (\booking -> Just $ mkPrice (Just booking.currency) booking.estimatedFare) b
+            let paymentInstruments = map (.paymentInstrument) b
+            let z8 = zip (zip6 r rd rdr b fareDiffs (mkBookingStatus now <$> r)) (zip estimatedFares paymentInstruments)
+            pure $ map (\(((ride, rd', rdr', b', fareDiff, bookingStatus), (estimatedFare, paymentInstrument)), fare) -> (ride, rd', rdr', b', fareDiff, fare, estimatedFare, paymentInstrument, bookingStatus)) (zip z8 fares)
+          Left err -> do
+            logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
+            pure []
 
-      let zippedRidesFiltered =
-            filter
-              ( \item ->
-                  maybe True (\cc -> item.riderDetails.mobileCountryCode == cc) mbCustomerMobileCountryCode
-                    && maybe True (\cc -> item.rideDetails.driverCountryCode == Just cc) mbDriverMobileCountryCode
-              )
-              zippedRides
+        let zippedRidesFiltered =
+              filter
+                ( \item ->
+                    maybe True (\cc -> item.riderDetails.mobileCountryCode == cc) mbCustomerMobileCountryCode
+                      && maybe True (\cc -> item.rideDetails.driverCountryCode == Just cc) mbDriverMobileCountryCode
+                )
+                zippedRides
 
-      let rideIds = HS.fromList $ map getRideId zippedRidesFiltered
+        let rideIds = HS.fromList $ map getRideId zippedRidesFiltered
 
-      let results = mkRideItem HMS.empty HMS.empty HMS.empty <$> res'
-          uniqueResults = filter (\item -> not $ HS.member (getRideId item) rideIds) results
-          allRidesBeforeExtra = zippedRidesFiltered <> uniqueResults
+        let results = mkRideItem HMS.empty HMS.empty HMS.empty <$> res'
+            uniqueResults = filter (\item -> not $ HS.member (getRideId item) rideIds) results
+            allRidesBeforeExtra = zippedRidesFiltered <> uniqueResults
 
-      let fleetOwnerIds = mapMaybe (.fleetOwnerId) allRidesBeforeExtra
-          vehicleNos = map (.rideDetails.vehicleNumber) allRidesBeforeExtra
+        let fleetOwnerIds = mapMaybe (.fleetOwnerId) allRidesBeforeExtra
+            vehicleNos = map (.rideDetails.vehicleNumber) allRidesBeforeExtra
 
-      (fleetOwnerMap, fleetOwnerPersonMap) <- findFleetOwnerDetails fleetOwnerIds
-      vrcs <- findAllWithKV [Se.Is BeamVRC.unencryptedCertificateNumber $ Se.In (map Just vehicleNos)]
+        (fleetOwnerMap, fleetOwnerPersonMap) <- findFleetOwnerDetails fleetOwnerIds
+        vrcs <- findAllWithKV [Se.Is BeamVRC.unencryptedCertificateNumber $ Se.In (map Just vehicleNos)]
 
-      let vrcMap = HMS.fromList [(fromMaybe "" vrc.unencryptedCertificateNumber, vrc) | vrc <- vrcs, isJust vrc.unencryptedCertificateNumber]
+        let vrcMap = HMS.fromList [(fromMaybe "" vrc.unencryptedCertificateNumber, vrc) | vrc <- vrcs, isJust vrc.unencryptedCertificateNumber]
 
-      let allRides =
-            map
-              ( \item ->
-                  let mbFo = item.fleetOwnerId >>= (\foid -> HMS.lookup foid fleetOwnerMap)
-                      mbPerson = item.fleetOwnerId >>= (\foid -> HMS.lookup foid fleetOwnerPersonMap)
-                      mbVrc = HMS.lookup item.rideDetails.vehicleNumber vrcMap
-                   in item
-                        { fleetName = mbFo >>= (.fleetName),
-                          fleetOwnerName = personFullName <$> mbPerson,
-                          fleetNumber = mbPerson >>= (.mobileNumber),
-                          vehicleManufacturer = mbVrc >>= (.vehicleManufacturer),
-                          vehicleModel = mbVrc >>= (.vehicleModel)
-                        }
-              )
-              allRidesBeforeExtra
+        let allRides =
+              map
+                ( \item ->
+                    let mbFo = item.fleetOwnerId >>= (\foid -> HMS.lookup foid fleetOwnerMap)
+                        mbPerson = item.fleetOwnerId >>= (\foid -> HMS.lookup foid fleetOwnerPersonMap)
+                        mbVrc = HMS.lookup item.rideDetails.vehicleNumber vrcMap
+                     in item
+                          { fleetName = mbFo >>= (.fleetName),
+                            fleetOwnerName = personFullName <$> mbPerson,
+                            fleetNumber = mbPerson >>= (.mobileNumber),
+                            vehicleManufacturer = mbVrc >>= (.vehicleManufacturer),
+                            vehicleModel = mbVrc >>= (.vehicleModel)
+                          }
+                )
+                allRidesBeforeExtra
 
-      payoutRequests <- QPR.findManyByEntityIds (map (getId . getRideId) allRides)
-      let payoutRequestMap = HMS.fromList [(pr.entityId, pr.id) | pr <- payoutRequests]
+        payoutRequests <- QPR.findManyByEntityIds (map (getId . getRideId) allRides)
+        let payoutRequestMap = HMS.fromList [(pr.entityId, pr.id) | pr <- payoutRequests]
 
-      pure $ map (\item -> item {payoutRequestId = HMS.lookup (getId $ getRideId item) payoutRequestMap}) allRides
+        pure $ map (\item -> item {payoutRequestId = HMS.lookup (getId $ getRideId item) payoutRequestMap}) allRides
   where
     mkBookingStatusVal ride =
       B.ifThenElse_ (ride.status B.==. B.val_ Ride.COMPLETED) (B.val_ Common.COMPLETED) $
