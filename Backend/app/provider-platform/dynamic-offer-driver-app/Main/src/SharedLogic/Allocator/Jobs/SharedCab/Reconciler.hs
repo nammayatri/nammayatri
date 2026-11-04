@@ -78,6 +78,7 @@ type ReconcileFlow m r =
     Redis.HedisLTSFlowEnv r,
     MonadFlow m,
     MonadIO m,
+    MonadMask m,
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
   )
@@ -101,8 +102,7 @@ runSharedCabReconcilerJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
   let jobData :: SharedCabReconcilerJobData = jobInfo.jobData
       merchantOpCityId = jobData.merchantOperatingCityId
   -- Heartbeat BEFORE the enabled check, so even a disabled fire refreshes the seed marker. Best-effort: must not kill the chain.
-  withTryCatch "sharedCabReconciler:refreshSeedMarker" (SharedCabSeed.refreshSharedCabReconcilerSeedMarker merchantOpCityId)
-    >>= either (\err -> logError $ "SharedCabReconciler: seed marker refresh failed for city " <> merchantOpCityId.getId <> ": " <> show err) pure
+  refreshSeedMarker merchantOpCityId
   mbTc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   let reconcilerOn = maybe False (fromMaybe False . (.sharedCabReconcilerEnabled)) mbTc
   if reconcilerOn
@@ -135,6 +135,11 @@ sweepAndReenqueue jobData = do
       logError $ "SharedCabReconciler city=" <> merchantOpCityId.getId <> " sweep aborted: " <> show err <> "; re-enqueueing, un-reconciled flags stay as they were"
   JC.createJobIn @_ @'SharedCabReconciler (Just jobData.merchantId) (Just merchantOpCityId) SharedCabSeed.sharedCabReconcilerInterval jobData
 
+refreshSeedMarker :: ReconcileFlow m r => Id DMOC.MerchantOperatingCity -> m ()
+refreshSeedMarker merchantOpCityId =
+  withTryCatch "sharedCabReconciler:refreshSeedMarker" (SharedCabSeed.refreshSharedCabReconcilerSeedMarker merchantOpCityId)
+    >>= either (\err -> logError $ "SharedCabReconciler: seed marker refresh failed for city " <> merchantOpCityId.getId <> ": " <> show err) pure
+
 -- | The chain is intentionally ending: release the seed marker. Best-effort: a DEL failure must not throw; the key is logged for manual cleanup.
 dropChain :: ReconcileFlow m r => Id DMOC.MerchantOperatingCity -> m ()
 dropChain merchantOpCityId = do
@@ -149,7 +154,7 @@ reconcileAll merchantOpCity apiKey internalUrl mbLastSeen (checked, cleared, lef
   case flagged of
     [] -> pure (checked, cleared, leftFlag)
     batch -> do
-      (cleared', leftFlag') <- foldM (reconcileDriver apiKey internalUrl) (0 :: Int, 0 :: Int) batch
+      (cleared', leftFlag') <- foldM (\acc driverInfo -> reconcileDriver apiKey internalUrl acc driverInfo <* refreshSeedMarker merchantOpCity) (0 :: Int, 0 :: Int) batch
       reconcileAll merchantOpCity apiKey internalUrl ((.driverId) <$> lastMay batch) (checked + length batch, cleared + cleared', leftFlag + leftFlag')
 
 reconcileDriver :: ReconcileFlow m r => Text -> BaseUrl -> (Int, Int) -> DDI.DriverInformation -> m (Int, Int)
@@ -161,12 +166,20 @@ reconcileDriver apiKey internalUrl (cleared, leftFlag) driverInfo = do
       logError $ "SharedCabReconciler: driver " <> driverId.getId <> " flagged but has no vehicle; leaving flag set"
       pure (cleared, leftFlag + 1)
     Just vehicle -> do
-      eProbe <- withTryCatch "sharedCabReconciler:probe" $ probeSharedCabSession apiKey internalUrl driverId.getId vehicle.registrationNo
+      let probe = withTryCatch "sharedCabReconciler:probe" $ probeSharedCabSession apiKey internalUrl driverId.getId vehicle.registrationNo
+      eProbe <- probe
       case eProbe of
-        Right (SessionGone signal) -> do
-          logWarning $ "SharedCabReconciler: clearing flag for driver " <> driverId.getId <> " on decoded signal " <> signal
-          SharedCabFlag.clearSharedCabSessionActive driverId
-          pure (cleared + 1, leftFlag)
+        Right (SessionGone _) -> do
+          -- re-probe under the driver's flag lock: a route select holds it from its flag write until rider-app saved the session
+          clearedNow <-
+            SharedCabFlag.withSharedCabFlagLock driverId $
+              probe >>= \case
+                Right (SessionGone signal) -> do
+                  logWarning $ "SharedCabReconciler: clearing flag for driver " <> driverId.getId <> " on decoded signal " <> signal
+                  SharedCabFlag.clearSharedCabSessionActive driverId
+                  pure True
+                _ -> pure False
+          pure $ if clearedNow then (cleared + 1, leftFlag) else (cleared, leftFlag + 1)
         Right SessionUnknown -> do
           logDebug $ "SharedCabReconciler: no clear signal for driver " <> driverId.getId <> "; leaving flag"
           pure (cleared, leftFlag + 1)

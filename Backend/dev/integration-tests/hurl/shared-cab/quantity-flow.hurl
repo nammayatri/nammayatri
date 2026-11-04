@@ -67,6 +67,9 @@ jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{p
 POST {{base_url}}/v2/multimodal/routeServiceability
 token: {{token}}
 Content-Type: application/json
+[Options]
+retry: 5
+retry-interval: 1000ms
 {"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]

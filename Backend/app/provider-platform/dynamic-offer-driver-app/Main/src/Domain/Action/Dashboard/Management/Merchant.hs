@@ -671,8 +671,11 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
           let jobData' = decodeFromText jobDataRaw :: Maybe SharedCabReconcilerJobData
           case jobData' of
             Just jobData -> do
-              merchant <- CQM.findById jobData.merchantId >>= fromMaybeM (MerchantNotFound jobData.merchantId.getId)
-              merchantOpCityId <- CQMOC.getMerchantOpCityId (Just jobData.merchantOperatingCityId) merchant Nothing
+              merchant <- findMerchantByShortId merchantShortId
+              merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+              let merchantOpCityId = merchantOpCity.id
+              unless (jobData.merchantId == merchant.id && jobData.merchantOperatingCityId == merchantOpCityId) $
+                throwError $ InvalidRequest "jobData merchant and city must match the route's merchant and city"
               -- the seed is idempotent, so a second trigger or a redeploy can not start a second reconciler chain for the city.
               -- A SKIPPED seed is NOT a success: surface it.
               seedResult <- seedSharedCabReconcilerChain (Just merchant.id) merchantOpCityId diffTimeS jobData

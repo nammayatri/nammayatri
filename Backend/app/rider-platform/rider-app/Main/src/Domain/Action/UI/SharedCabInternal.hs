@@ -46,7 +46,7 @@ import SharedLogic.SharedCab.DriverAction (DriverAction (..), runDriverAction)
 import qualified SharedLogic.SharedCab.LegState as LegState
 import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Offer as Offer
-import SharedLogic.SharedCab.RateLimit (enforceChatMessageLimit)
+import SharedLogic.SharedCab.RateLimit (enforceCallLimit, enforceChatMessageLimit)
 import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
 import SharedLogic.SharedCab.Schedule (ensureAllocationTick)
 import qualified SharedLogic.SharedCab.Seats as Seats
@@ -396,7 +396,10 @@ getSharedCabBookingCallNumber bookingId driverId vehicleNumber mbToken = do
   unless cfg.callEnabled $ throwError SharedCabCallDisabled
   mbSession <- SharedCabCall.liveSession cfg.callEnabled booking
   case mbSession of
-    Just s | s.driverId == driverId, s.vehicleNumber == vehicleNumber -> API.RiderCallNumberResp <$> SharedCabCall.riderCallNumber booking
+    Just s | s.driverId == driverId,
+             s.vehicleNumber == vehicleNumber -> do
+      enforceCallLimit bookingId driverId
+      API.RiderCallNumberResp <$> SharedCabCall.riderCallNumber booking
     _ -> throwError SharedCabCallNotAvailable
 
 -- | A driver's chat message to a rider's cab chat as a push. Same authorisation as the call (the city's chat switch instead), so

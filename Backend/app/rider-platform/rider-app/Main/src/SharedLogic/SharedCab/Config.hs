@@ -118,14 +118,15 @@ tunablesFrom (Just rc) =
       chatEnabled = pick rc.sharedCabChatEnabled (.chatEnabled),
       pickEnabled = pick rc.sharedCabPickEnabled (.pickEnabled),
       interestWindowSec = pick rc.sharedCabInterestWindowSec (.interestWindowSec),
-      demandStopsPerRoute = pick rc.sharedCabDemandStopsPerRoute (.demandStopsPerRoute),
-      maxDemandRoutes = pick rc.sharedCabMaxDemandRoutes (.maxDemandRoutes),
+      demandStopsPerRoute = pickPositive rc.sharedCabDemandStopsPerRoute (.demandStopsPerRoute),
+      maxDemandRoutes = pickPositive rc.sharedCabMaxDemandRoutes (.maxDemandRoutes),
       driverAcceptEnabled = pick rc.sharedCabDriverAcceptEnabled (.driverAcceptEnabled),
       offerTimeoutSec = pick rc.sharedCabOfferTimeoutSec (.offerTimeoutSec),
       offerRetryTimeoutSec = pick rc.sharedCabOfferRetryTimeoutSec (.offerRetryTimeoutSec)
     }
   where
     pick mbValue field = fromMaybe (field defaultTunables) mbValue
+    pickPositive mbValue = pick (mfilter (> 0) mbValue)
 
 getTunables :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m SharedCabTunables
 getTunables cityId = tunablesFrom <$> getConfig (RiderConfigDimensions {merchantOperatingCityId = cityId.getId}) Nothing

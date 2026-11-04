@@ -43,6 +43,7 @@ import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
@@ -51,11 +52,11 @@ import SharedLogic.Allocator (SharedCabReconcilerJobData (..))
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.DriverPool as DP
 import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
+import SharedLogic.Ride (offerQuoteLockKeyWithCoolDown)
 import qualified SharedLogic.SharedCab.Flag as SharedCabFlag
 import qualified SharedLogic.SharedCab.ReconcilerSeed as SharedCabSeed
 import qualified SharedLogic.SharedCab.RiderClient as SharedCabBAP
 import qualified Storage.Queries.CallStatus as QCallStatus
-import qualified Storage.Queries.DriverInformationExtra as QDriverInformationExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Call as TCall
@@ -153,16 +154,16 @@ routesDemand (personId, _merchantId, merchantOpCityId) req = do
   bap <- bapInternal
   SharedCabBAP.postSharedCabRoutesDemand bap.apiKey bap.url SharedCabBAP.BAPDemandReq {SharedCabBAP.agencyId = integratedBPPConfig.agencyKey, SharedCabBAP.routeCodes = req.routeCodes}
 
--- set the exclusion flag BEFORE the BAP call (fail-closed: a failed call leaves the driver excluded until the reconciler clears it)
+-- set the exclusion flag BEFORE the BAP call (fail-closed: a failed call leaves the driver excluded until the reconciler clears it),
+-- under the offer-quote lock so a silent assign cannot read the pool data between the two
 setSharedCabSessionActiveBeforeSelect :: Id SP.Person -> Flow ()
 setSharedCabSessionActiveBeforeSelect driverId = do
-  mbDriverInfo <- QDriverInformationExtra.findById (cast driverId)
-  case mbDriverInfo of
-    Just driverInfo | driverInfo.sharedCabSessionActive -> pure ()
-    _ -> SharedCabFlag.setSharedCabSessionActive driverId
+  quoteRespondCoolDown <- asks (.quoteRespondCoolDown)
+  Redis.whenWithLockRedisAndReturnValue (offerQuoteLockKeyWithCoolDown driverId) quoteRespondCoolDown (SharedCabFlag.setSharedCabSessionActive driverId)
+    >>= either (const $ throwError (InvalidRequest "A ride is being assigned to you; try again shortly")) pure
 
 routeOperation :: DriverAuthInfo -> SharedCabRouteOperationReq -> Flow SelectRouteResp
-routeOperation auth req = case req.operation of
+routeOperation auth@(personId, _, _) req = SharedCabFlag.withSharedCabFlagLock personId $ case req.operation of
   SELECT_ROUTE -> do
     routeCode <- fromMaybeM (InvalidRequest "routeCode is required to select a route") req.routeCode
     walkupCount <- fromMaybeM (InvalidRequest "walkupCount is required to select a route") req.walkupCount

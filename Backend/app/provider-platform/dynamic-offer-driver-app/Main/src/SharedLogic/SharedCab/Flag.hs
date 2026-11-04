@@ -5,6 +5,7 @@
 module SharedLogic.SharedCab.Flag
   ( setSharedCabSessionActive,
     clearSharedCabSessionActive,
+    withSharedCabFlagLock,
   )
 where
 
@@ -28,6 +29,11 @@ clearSharedCabSessionActive ::
   Id DP.Person ->
   m ()
 clearSharedCabSessionActive = writeSharedCabSessionActive False
+
+-- | Serializes a driver's route select/end and the reconciler's clear, so a clear cannot land between a select's flag write and its session.
+withSharedCabFlagLock :: (FlagFlow m r, MonadMask m) => Id DP.Person -> m a -> m a
+withSharedCabFlagLock driverId =
+  Redis.withWaitAndLockMasterCloudCrossAppRedis "sharedCab" "flagLock" ("sharedcab:flag-lock:" <> driverId.getId) 15 100000
 
 writeSharedCabSessionActive ::
   FlagFlow m r =>
