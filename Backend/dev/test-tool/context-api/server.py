@@ -150,15 +150,37 @@ sys.stdout.reconfigure(line_buffering=True)
 sys.stderr.reconfigure(line_buffering=True)
 
 
+def _redis_cluster_port():
+    """This workspace's Redis cluster entry node. On a devbox every stack gets
+    its own remapped ports (e.g. 30061 instead of 30001), so the base port
+    would hit nothing, or another workspace's Redis."""
+    return _svc_port("redis-cluster-n1", 30001)
+
+
+def _redis_single_port():
+    """This workspace's standalone Redis (base 6379, remapped on a devbox)."""
+    return _svc_port("redis", 6379)
+
+
+def _redis_cluster_node_ports():
+    """Every cluster node port of this workspace (redis-cluster-n1..nN)."""
+    try:
+        ports = _read_ports_table().get("ports", {})
+    except Exception:
+        ports = {}
+    nodes = sorted(v for k, v in ports.items() if k.startswith("redis-cluster-n"))
+    return nodes or [_redis_cluster_port()]
+
+
 def redis_cmd(*args):
     """Run a redis-cli command against the cluster, fallback to single-node."""
     cluster_cmd = ["redis-cli", "--cluster",
-                   "call", "localhost:30001"] + list(args)
+                   "call", f"localhost:{_redis_cluster_port()}"] + list(args)
     r = subprocess.run(cluster_cmd, capture_output=True, text=True, timeout=10)
     if r.returncode == 0:
         return True, r.stdout
     # fallback single-node
-    r2 = subprocess.run(["redis-cli"] + list(args),
+    r2 = subprocess.run(["redis-cli", "-p", str(_redis_single_port())] + list(args),
                         capture_output=True, text=True, timeout=10)
     return r2.returncode == 0, r2.stdout
 
@@ -587,6 +609,51 @@ def _restart_haskell_services():
     time.sleep(3)
 
 
+# Redis keys that hold copies of DB config. ConfigPilot keeps a hash per config
+# type (e.g. dynamic-offer-driver-app:ConfigPilot:MerchantServiceConfigDriver,
+# TTL ~4h) and CachedQueries keys cache single rows. If an app cached a value
+# before config-sync / local-testing-data rewrote the DB, a restart alone keeps
+# serving the stale copy. Only these patterns are deleted: a FLUSHALL would
+# also drop KV-mode rows that the drainer has not written to Postgres yet.
+_CONFIG_CACHE_PATTERNS = ("*ConfigPilot:*", "*CachedQueries:*", "CacheHash:*")
+
+
+def _redis_quote(key):
+    """Quote a key for redis-cli's stdin parser (keys may contain spaces)."""
+    return '"' + key.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _clear_config_caches():
+    """Delete cached config keys from this workspace's Redis (every cluster
+    node, plus the standalone instance). Returns the number of keys deleted."""
+    targets = [(p, True) for p in _redis_cluster_node_ports()]
+    targets.append((_redis_single_port(), False))
+    total = 0
+    for port, cluster in targets:
+        base = ["redis-cli", "-h", "localhost", "-p", str(port)]
+        keys = set()
+        for pattern in _CONFIG_CACHE_PATTERNS:
+            try:
+                r = subprocess.run(base + ["--scan", "--pattern", pattern],
+                                   capture_output=True, text=True, timeout=30)
+            except Exception as e:
+                print(f"  \033[96m[config-sync]\033[0m redis :{port} scan failed: {e}")
+                continue
+            keys.update(k for k in r.stdout.splitlines() if k)
+        if not keys:
+            continue
+        # -c follows MOVED redirects (a node can list keys it only replicates).
+        cmds = "".join(f"DEL {_redis_quote(k)}\n" for k in keys)
+        try:
+            r = subprocess.run(base[:1] + (["-c"] if cluster else []) + base[1:],
+                               input=cmds, capture_output=True, text=True, timeout=60)
+            total += sum(int(x) for x in r.stdout.split() if x.isdigit())
+        except Exception as e:
+            print(f"  \033[96m[config-sync]\033[0m redis :{port} DEL failed: {e}")
+    print(f"  \033[96m[config-sync]\033[0m cleared {total} cached config keys from Redis")
+    return total
+
+
 def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: bool = False,
                     version: str | None = None):
     """Run `config_transfer.py import --from <env> --to local --fetch`.
@@ -693,8 +760,12 @@ def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: b
                 _config_sync_state["error"] = f"feature-migrations exited with {rc}"
             return
 
-        # Step 4: restart so haskell services see the new config.
+        # Step 4: restart so haskell services see the new config. Clear the
+        # Redis config caches first, otherwise the restarted apps can keep
+        # reading values cached before the sync (ConfigPilot TTL is hours).
         if restart_services:
+            n = _clear_config_caches()
+            _append_log(f"Cleared {n} cached config keys from Redis.")
             _restart_haskell_services()
             _append_log("Restarted rider/driver/mock-registry to pick up synced config.")
 
@@ -1899,7 +1970,7 @@ def _tca_del_kv_key_all_shards(table_camel, pk_col_camel, pk_value):
     keys = _tca_kv_keys_for_all_shards(table_camel, pk_col_camel, pk_value)
     cmds = "".join(f"DEL {k}\n" for k in keys)
     r = subprocess.run(
-        ["redis-cli", "-c", "-h", "localhost", "-p", "30001"],
+        ["redis-cli", "-c", "-h", "localhost", "-p", str(_redis_cluster_port())],
         input=cmds, capture_output=True, text=True, timeout=15,
     )
     if r.returncode != 0:
@@ -4561,7 +4632,7 @@ class ContextHandler(BaseHTTPRequestHandler):
                 # metro-log, etc.) with UnboundLocalError.
                 result = subprocess.run(
                     ["redis-cli", "--cluster", "call",
-                        "localhost:30001", "flushall"],
+                        f"localhost:{_redis_cluster_port()}", "flushall"],
                     capture_output=True, text=True, timeout=10
                 )
                 if result.returncode == 0:
@@ -4570,7 +4641,7 @@ class ContextHandler(BaseHTTPRequestHandler):
                 else:
                     # Fallback to single-node flush (non-cluster local setup)
                     result2 = subprocess.run(
-                        ["redis-cli", "-p", "6379", "flushall"],
+                        ["redis-cli", "-p", str(_redis_single_port()), "flushall"],
                         capture_output=True, text=True, timeout=10
                     )
                     if result2.returncode == 0:
