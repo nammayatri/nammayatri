@@ -374,6 +374,13 @@ in
                     { ${prev}.condition = prevChainCondition prev; }
                 );
               shutdown.signal = 9;
+              # Come back after a crash, or after test-context-api kills it post-config-sync
+              # (rider-app / driver-app build their signing managers only at startup).
+              availability = {
+                restart = "on_failure";
+                backoff_seconds = 5;
+                max_restarts = 10;
+              };
             };
           })
           cabalExecutables);
