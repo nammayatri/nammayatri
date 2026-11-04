@@ -53,7 +53,7 @@ findMaybeIntegratedBPPConfigFromAgency ::
   m (Maybe IntegratedBPPConfig)
 findMaybeIntegratedBPPConfigFromAgency agencyId merchantOperatingCityId vehicleCategory platformType =
   let fallback = findByDomainAndCityCP (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
-   in maybe fallback (\agencyId' -> findByAgencyIdCP agencyId' platformType |<|>| fallback) agencyId
+   in maybe fallback (\agencyId' -> if isSharedCabAgency agencyId' then Just <$> findSharedCabConfig agencyId' platformType else findByAgencyIdCP agencyId' |<|>| fallback) agencyId
 
 findIntegratedBPPConfigById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -112,8 +112,8 @@ findIntegratedBPPConfigFromAgency ::
   Enums.VehicleCategory ->
   PlatformType ->
   m IntegratedBPPConfig
-findIntegratedBPPConfigFromAgency agencyId merchantOperatingCityId vehicleCategory platformType =
-  findMaybeIntegratedBPPConfigFromAgency agencyId merchantOperatingCityId vehicleCategory platformType
+findIntegratedBPPConfigFromAgency agencyName merchantOperatingCityId vehicleCategory platformType =
+  findMaybeIntegratedBPPConfigFromAgency agencyName merchantOperatingCityId vehicleCategory platformType
     >>= fromMaybeM IntegratedBPPConfigNotFound
 
 findAllIntegratedBPPConfig ::
@@ -250,6 +250,21 @@ findByDomainAndCityCP domain mocId vc pt = do
   configs <- getConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = mocId.getId, configId = Nothing, agencyKey = Nothing, domain = Just domain, vehicleCategory = Just vc, platformType = Just pt}) (Just (CQIBC.findAllByDomainAndCityAndVehicleCategory domain mocId vc pt))
   pure $ listToMaybe $ sortBy (\a b -> compare b.createdAt a.createdAt) configs
 
-findByAgencyIdCP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> PlatformType -> m (Maybe IntegratedBPPConfig)
-findByAgencyIdCP agencyKey platformType =
-  getOneConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Nothing, agencyKey = Just agencyKey, domain = Nothing, vehicleCategory = Nothing, platformType = Just platformType}) (Just (maybeToList <$> CQIBC.findByAgencyId agencyKey platformType))
+findByAgencyIdCP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m (Maybe IntegratedBPPConfig)
+findByAgencyIdCP agencyKey =
+  getOneConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Nothing, agencyKey = Just agencyKey, domain = Nothing, vehicleCategory = Nothing, platformType = Nothing}) (Just (maybeToList <$> CQIBC.findByAgencyId agencyKey))
+
+-- | The shared-cab feed keeps a MULTIMODAL row (journeys) and an APPLICATION row (driver proxy) under one agency key: exactly one row
+-- of the platform, or an error, never a guess.
+findSharedCabConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> PlatformType -> m IntegratedBPPConfig
+findSharedCabConfig agencyKey platformType =
+  onlyRowOf platformType (.platformType) <$> CQIBC.findAllByAgencyKey agencyKey >>= \case
+    Right config -> pure config
+    Left 0 -> throwError $ IntegratedBPPConfigNotFoundForAgency agencyKey (show platformType)
+    Left n -> throwError $ InternalError (show n <> " " <> show platformType <> " integrated BPP configs for agency " <> agencyKey)
+
+-- | The one row of the platform, or how many there were instead.
+onlyRowOf :: Eq p => p -> (a -> p) -> [a] -> Either Int a
+onlyRowOf platform platformOf rows = case filter ((== platform) . platformOf) rows of
+  [row] -> Right row
+  matched -> Left (length matched)
