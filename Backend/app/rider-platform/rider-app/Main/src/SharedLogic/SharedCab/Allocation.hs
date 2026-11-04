@@ -49,8 +49,8 @@ cityLiveBookings ::
   Id DMOC.MerchantOperatingCity ->
   m [LiveBooking]
 cityLiveBookings cityId = do
-  finding <- QFRFSTicketBooking.findSharedCabFindingInCity cityId
   now <- getCurrentTime
+  finding <- QFRFSTicketBooking.findSharedCabFindingInCity cityId (liveSince cityLiveWindowSec now)
   plated <- QFRFSTicketBooking.findSharedCabPlatedCityUpdatedSince cityId (liveSince cityLiveWindowSec now)
   liveBookingsOf (mergeLive (.id) finding plated)
 
@@ -59,7 +59,7 @@ cityLiveBookings cityId = do
 eachIsolated :: Monad m => (m () -> m (Either e ())) -> (a -> e -> m ()) -> (a -> m ()) -> [a] -> m ()
 eachIsolated tryAct onError act = mapM_ (\x -> tryAct (act x) >>= either (onError x) pure)
 
--- | The tick's two reads: riders still waiting (no window) and bookings with a cab (recent ones). A booking claimed between the two
+-- | The tick's two reads, both over the city's live window: riders still waiting and bookings with a cab. A booking claimed between the two
 -- reads comes back from both; its plated row is the newer.
 mergeLive :: Eq k => (a -> k) -> [a] -> [a] -> [a]
 mergeLive key finding plated = plated <> filter ((`notElem` platedKeys) . key) finding

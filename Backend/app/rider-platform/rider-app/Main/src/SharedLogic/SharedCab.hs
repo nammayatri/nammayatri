@@ -10,7 +10,6 @@ module SharedLogic.SharedCab
     requireSharedCabEnabled,
     sharedCabFareTiers,
     recordSearch,
-    sharedCabBoardStops,
     walkUpCab,
     declaresSharedCab,
     isSharedCabTier,
@@ -44,7 +43,7 @@ where
 import SharedLogic.SharedCab.Boarding (SharedCabBoardOutcome (..), boardingResponse, tryBoardSharedCab)
 import SharedLogic.SharedCab.Cancel (CancelStage (..), dropRider, guardRiderCancel)
 import SharedLogic.SharedCab.ConfirmHook (SharedCabConfirmFlow, confirmHook, onBookingCreated, recordPreferredCab, stagePickedCab)
-import SharedLogic.SharedCab.Demand (recordSearch, sharedCabBoardStops)
+import SharedLogic.SharedCab.Demand (recordSearch)
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
 import SharedLogic.SharedCab.JourneyLeg (getSharedCabLegState, liveCabLegCities, noBookingLegState)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency, legAgencyGtfsId, searchAgencyKey, sharedCabFareTiers)
