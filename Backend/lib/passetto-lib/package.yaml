@@ -54,12 +54,16 @@ library:
           - -j4
   dependencies:
     - aeson
+    - amazonka
+    - amazonka-kms
     - base64-bytestring
     - base >= 4.7 && < 5
     - bytestring
+    - lens
     - mtl
     - passetto-client
     - random
+    - resourcet
     - saltine
     - text
     - vector
