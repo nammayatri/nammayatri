@@ -7,8 +7,8 @@ module SharedLogic.SharedCab.DriverAction
   )
 where
 
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Text as T
-import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
@@ -20,7 +20,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Base as JM
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (RouteChanged), AllocationState, isOffered)
-import SharedLogic.SharedCab.Booking (isSharedCabBooking, withBookingLock)
+import SharedLogic.SharedCab.Booking (isSharedCabBooking, noteOnPlate, withBookingLock)
 import SharedLogic.SharedCab.BookingState (clearAlloc, readAlloc)
 import SharedLogic.SharedCab.Cancel (CancelStage (ConfirmCancel), withSharedCabCancel)
 import SharedLogic.SharedCab.LegState (isDroppable)
@@ -104,8 +104,8 @@ runDriverAction action driver plate mbReason bookingId = do
     -- the booking lock inside re-decides (a boarding since the plate lock flips a ticket, and the cancel is refused)
     cancelByDriver reason booking = do
       leg <- QJourneyLeg.findByLegSearchId (Just booking.searchId.getId) >>= fromMaybeM (InvalidRequest "No journey leg for this booking")
-      withSharedCabCancel ByDriver ConfirmCancel (Just reason) stillOnThisCab booking $
-        JM.cancelLeg leg (SCR.CancellationReasonCode "") False Nothing
+      withSharedCabCancel ByDriver ConfirmCancel (Just reason) stillOnThisCab booking $ \refund ->
+        JM.cancelLegWithRefund (Just refund) Spec.CONFIRM_CANCEL leg
     stillOnThisCab fresh = do
       unless (fresh.status == DFRFSTicketBookingStatus.CONFIRMED) $ throwError BookingNotLive
       unless (fresh.vehicleNumber == Just plate) $ throwError BookingNotOnThisCab
@@ -121,4 +121,6 @@ runDriverAction action driver plate mbReason bookingId = do
       forM_ (filter ((== DFRFSTicket.ACTIVE) . (.status)) tickets) $ \ticket ->
         QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.INPROGRESS (Just plate) booking.id ticket.ticketNumber
       QFRFSTicketBooking.updateVehicleTripId (Just s.vehicleTripId) booking.id
+      -- already on this plate, so already counted; a spot booking born in the cab may not be indexed yet
+      noteOnPlate plate booking.id
       clearAlloc booking.id

@@ -64,11 +64,14 @@ data SharedCabBoardOutcome
   deriving (Show, Generic)
 
 -- | A rider types the code: the one place a plate is compared with human input, so both sides drop case, spaces and punctuation.
+-- The four-character sticker code is the shortest that names a cab; anything shorter (a blank code included) would match many plates.
 boardingCodeMatches :: Text -> Text -> Bool
 boardingCodeMatches code plate
-  | T.length code <= 4 = normCode code `T.isSuffixOf` normCode plate
-  | otherwise = normCode code == normCode plate
+  | T.length typed < 4 = False
+  | T.length typed == 4 = typed `T.isSuffixOf` normCode plate
+  | otherwise = typed == normCode plate
   where
+    typed = normCode code
     normCode = T.toUpper . T.filter Char.isAlphaNum
 
 -- | An unknown code never boards on its own (a typo would consume the ticket); the rider confirms an unlisted cab via forceCheckIn.
@@ -101,7 +104,7 @@ candidateRoutes booking =
 
 resolveCabByCode :: DBooking.FRFSTicketBooking -> Text -> Environment.Flow [Session]
 resolveCabByCode booking code = do
-  sessions <- concat <$> mapM Session.activeSessionsOnRoute (candidateRoutes booking)
+  sessions <- concat <$> mapM (Session.activeSessionsOnRoute booking.merchantOperatingCityId) (candidateRoutes booking)
   let candidates = filter (\s -> boardingCodeMatches code s.vehicleNumber) sessions
   catMaybes <$> mapM serveCheck candidates
   where
@@ -174,7 +177,6 @@ degradedBoarding degradedTimeoutSec booking typedCode = do
     whenJust mbAllocatedPlate $ \plate -> do
       QBooking.updateAllocatedVehicle Nothing booking.id (Just plate)
       clearAlloc booking.id
-      Seats.releaseBooking booking.id
     forM_ (filter ((== TicketStatus.ACTIVE) . (.status)) tickets) $ \t ->
       QTicket.updateStatusByTBookingIdAndTicketNumber TicketStatus.INPROGRESS t.scannedByVehicleNumber booking.id t.ticketNumber
     Degraded.markDegradedBoarding degradedTimeoutSec booking.id typedCode
@@ -187,7 +189,7 @@ degradedBoarding degradedTimeoutSec booking typedCode = do
 -- Lock order when two locks are needed: target-cab plate lock first, then the booking lock.
 
 -- | The boarding's decision under both locks, pure: the cab is still running, the booking is still live and the cab is still the one
--- it was resolved against. The tickets to flip are the booking's ACTIVE or INPROGRESS ones. The seats are the seat engine's call.
+-- it was resolved against. The tickets to flip are the booking's ACTIVE or INPROGRESS ones. The seats are the seat count's call.
 boardingGate :: Text -> Session -> [TicketStatus.FRFSTicketStatus] -> Maybe Text -> DBooking.FRFSTicketBooking -> Either SharedCabBoardingError ()
 boardingGate plate fresh eligible resolvedAgainst freshBooking
   | fresh.status /= ACTIVE = Left BoardingFailed
@@ -216,17 +218,12 @@ commitBoarding journeyLeg booking target =
           let eligible = boardableTickets myTickets
           -- a rider who types the cab's code is in the cab: boarding an offered booking accepts it (applyBoarding clears the offer)
           either throwError pure $ boardingGate plate fresh (map (.status) eligible) booking.vehicleNumber freshBooking
-          -- SEAT GUARD: the party's seats on this cab for its ride, held in the seat engine (CabFull if they aren't free). Seats it
-          -- already holds here are kept; seats held on another cab are given back once the boarding has landed.
-          prior <- Seats.bookingHold booking.id
-          if Seats.heldOn fresh prior
-            then applyBoarding journeyLeg booking freshBooking fresh eligible
-            else do
-              parties <- partySizes [freshBooking]
-              held <- Seats.holdForStops fresh freshBooking.fromStationCode freshBooking.toStationCode (partyOf parties freshBooking) >>= fromMaybeM CabFull
-              applyBoarding journeyLeg booking freshBooking fresh eligible `onException` Seats.releaseHeld held
-              Seats.recordHold booking.id held
-              traverse_ Seats.releaseHeld prior
+          -- SEAT GUARD: the party fits on this cab for its ride beside everyone else on it (CabFull if not). Its seats on another cab
+          -- end with the CAS below, which moves the booking here.
+          parties <- partySizes [freshBooking]
+          room <- Seats.takeSeats fresh booking.id freshBooking.fromStationCode freshBooking.toStationCode (partyOf parties freshBooking)
+          unless room $ throwError CabFull
+          applyBoarding journeyLeg booking freshBooking fresh eligible
 
 -- | The writes of a boarding the gate allowed, in order: tickets, then the booking's cab (CAS), the old cab's keys, the leg, the event.
 applyBoarding :: DJourneyLeg.JourneyLeg -> DBooking.FRFSTicketBooking -> DBooking.FRFSTicketBooking -> Session -> [DTicket.FRFSTicket] -> Environment.Flow ()
@@ -261,18 +258,21 @@ applyBoarding journeyLeg booking freshBooking fresh eligible = do
         DJourneyLeg.finalBoardedBusServiceTierType = booking.serviceTierType
       }
 
--- | The SHARED_CAB branch; `Nothing` means "not our tier" and the caller falls through to the bus/metro body.
+-- | The SHARED_CAB branch; `Nothing` means "not our tier" and the caller falls through to the bus/metro body. With the outcome, whether
+-- it put the booking's tickets in use for the first time (see 'firstUse'), so only a cab boarding reads the tickets beforehand.
 tryBoardSharedCab ::
   DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
   DBooking.FRFSTicketBooking ->
   Maybe (Id DPerson.Person) ->
   API.OnboardedVehicleDetailsReq ->
-  Environment.Flow (Maybe SharedCabBoardOutcome)
+  Environment.Flow (Maybe (SharedCabBoardOutcome, Bool))
 tryBoardSharedCab _ _ booking _ _
   | not (isSharedCabBooking booking) = pure Nothing
-tryBoardSharedCab journey journeyLeg booking mbPersonId req =
-  requireSharedCabEnabled booking.merchantOperatingCityId >> boardSharedCab journey journeyLeg booking mbPersonId req
+tryBoardSharedCab journey journeyLeg booking mbPersonId req = do
+  requireSharedCabEnabled booking.merchantOperatingCityId
+  ticketsBefore <- map (.status) <$> QTicket.findAllByTicketBookingId booking.id
+  fmap (\outcome -> (outcome, firstUse ticketsBefore outcome)) <$> boardSharedCab journey journeyLeg booking mbPersonId req
 
 -- | A boarding that puts a booking's tickets in use for the first time (the bus counts its booking used at check-in, so a cab does at boarding).
 firstUse :: [TicketStatus.FRFSTicketStatus] -> SharedCabBoardOutcome -> Bool

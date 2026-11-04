@@ -3,6 +3,7 @@
 module SharedLogic.SharedCab.RateLimit
   ( enforceBoardingAttemptLimit,
     enforceChatMessageLimit,
+    enforceCallLimit,
     enforceStickerCodeLimit,
     recordNoLocationBoarding,
   )
@@ -15,7 +16,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import SharedLogic.SharedCab.Booking (shared)
-import SharedLogic.SharedCab.Keys (boardAttemptsKey, chatAttemptsKey, noLocationKey, stickerCodeAttemptsKey)
+import SharedLogic.SharedCab.Keys (boardAttemptsKey, callAttemptsKey, chatAttemptsKey, noLocationKey, stickerCodeAttemptsKey)
 import Tools.Error
 
 -- | <= boardAttemptsPer10Min. Over the limit is the SAME generic BoardingFailed: the client must not be able to tell a
@@ -36,6 +37,18 @@ enforceChatMessageLimit :: (Redis.HedisFlow m r, MonadFlow m) => Id DBooking.FRF
 enforceChatMessageLimit bookingId driverId =
   unlessM (shared $ slidingWindowLimiter (chatAttemptsKey bookingId driverId) chatMessagesPerWindow chatWindowSec) $
     throwError (HitsLimitError chatWindowSec)
+
+callsPerWindow :: Int
+callsPerWindow = 5
+
+callWindowSec :: Int
+callWindowSec = 10 * 60
+
+-- | <= callsPerWindow masked calls per callWindowSec from one driver to one booking.
+enforceCallLimit :: (Redis.HedisFlow m r, MonadFlow m) => Id DBooking.FRFSTicketBooking -> Text -> m ()
+enforceCallLimit bookingId driverId =
+  unlessM (shared $ slidingWindowLimiter (callAttemptsKey bookingId driverId) callsPerWindow callWindowSec) $
+    throwError (HitsLimitError callWindowSec)
 
 stickerCodesPerWindow :: Int
 stickerCodesPerWindow = 10

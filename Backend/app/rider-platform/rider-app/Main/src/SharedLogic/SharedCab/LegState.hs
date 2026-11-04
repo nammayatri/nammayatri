@@ -12,8 +12,11 @@ module SharedLogic.SharedCab.LegState
     fallbackReached,
     fallbackTimeElapsed,
     isSharedCabAgency,
+    legAgencyGtfsId,
+    searchAgencyKey,
     legNeedsChains,
     sharedCabLegMode,
+    waybillMovesBooking,
     sharedCabFareTiers,
     deriveSharedCabState,
     isDroppable,
@@ -35,6 +38,7 @@ import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.Trip as DTrip
+import Kernel.External.MultiModal.Interface.Types (MultiModalAgency)
 import Kernel.Prelude
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -92,10 +96,25 @@ data SharedCabLegStatus = SharedCabLegStatus
 isSharedCabAgency :: Text -> Bool
 isSharedCabAgency agencyGtfsId = gtfsIdtoDomainCode agencyGtfsId == "SHARED_CAB"
 
+-- | The agency gtfsId a standalone or interchange leg stores. A shared-cab feed's legs carry its agency key, as OTP legs do and as the cab
+-- paths look the config up by; every other feed keeps main's value, the feed key.
+legAgencyGtfsId :: Text -> Text -> Text
+legAgencyGtfsId agencyKey feedKey = if isSharedCabAgency agencyKey then agencyKey else feedKey
+
+-- | The key the FRFS search looks a leg's config up by: a shared-cab leg's agency gtfsId; every other leg main's, the agency name.
+searchAgencyKey :: Maybe MultiModalAgency -> Maybe Text
+searchAgencyKey = \case
+  Just agency | maybe False isSharedCabAgency agency.gtfsId -> agency.gtfsId
+  mbAgency -> (.name) <$> mbAgency
+
 -- | A booking on the SHARED_CAB tier has the last word on the leg's mode, whatever the search stamped.
 sharedCabLegMode :: Maybe ServiceTierType -> DTrip.MultimodalTravelMode -> DTrip.MultimodalTravelMode
 sharedCabLegMode (Just SHARED_CAB) _ = DTrip.SharedCab
 sharedCabLegMode _ mode = mode
+
+-- | A waybill names the bus running a service; a shared cab's plate comes only from a claim or a boarding under its plate lock.
+waybillMovesBooking :: DTrip.MultimodalTravelMode -> Bool
+waybillMovesBooking = (/= DTrip.SharedCab)
 
 -- | Shared cabs are frequency-based GTFS, so the bus-schedule availability filter returns nothing for them; their fares resolve under the SHARED_CAB tier.
 sharedCabFareTiers :: Maybe Text -> Maybe [ServiceTierType]

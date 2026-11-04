@@ -1,9 +1,10 @@
--- | Every rider-app shared-cab Redis key and lock name (the driver app's one key, the reconciler seed marker, lives in its ReconcilerSeed). They are unprefixed and live in the cross-app master cell
+-- | Every rider-app shared-cab Redis key and lock name. They are unprefixed and live in the cross-app master cell
 -- (`Booking.shared`), because the API and the scheduler use different key prefixes and must see the same keys.
 module SharedLogic.SharedCab.Keys
   ( -- * Session (per plate / route)
     sessionKey,
     routeKey,
+    legacyRouteKey,
     driverInfoKey,
     plateLockKey,
     offRouteKey,
@@ -17,10 +18,10 @@ module SharedLogic.SharedCab.Keys
     cancelReasonKey,
     degradedKey,
     dropClockKey,
-    refundKey,
     refundRetryKey,
     boardAttemptsKey,
     chatAttemptsKey,
+    callAttemptsKey,
     stickerCodeAttemptsKey,
     allocLeaseKey,
     refundRetryCityKey,
@@ -33,8 +34,7 @@ module SharedLogic.SharedCab.Keys
     sweepRunKey,
     sweepLeaseKey,
     refundRetryRunKey,
-    seatHoldKey,
-    walkupSeatsKey,
+    cabBookingsKey,
   )
 where
 
@@ -50,8 +50,14 @@ type CityId = Id DMOC.MerchantOperatingCity
 sessionKey :: Text -> Text
 sessionKey plate = "sharedcab:session:" <> plate
 
-routeKey :: Text -> Text
-routeKey routeCode = "sharedcab:route:" <> routeCode
+-- | Per city: two cities' feeds may share a route code.
+routeKey :: CityId -> Text -> Text
+routeKey cityId routeCode = "sharedcab:route:" <> cityId.getId <> ":" <> routeCode
+
+-- | The route set before it was per city, read for one release so cabs whose sessions predate the deploy stay visible (it is no
+-- longer written, so it lapses with its 16 h TTL). TODO: drop with its read in activeSessionsOnRoute.
+legacyRouteKey :: Text -> Text
+legacyRouteKey routeCode = "sharedcab:route:" <> routeCode
 
 driverInfoKey :: Text -> Text
 driverInfoKey plate = "sharedcab:driverinfo:" <> plate
@@ -97,9 +103,6 @@ degradedKey bookingId = "sharedcab:degraded:" <> bookingId.getId
 dropClockKey :: BookingId -> Text
 dropClockKey bookingId = "sharedcab:dropclock:" <> bookingId.getId
 
-refundKey :: BookingId -> Text
-refundKey bookingId = "sharedcab:refund:" <> bookingId.getId
-
 refundRetryKey :: BookingId -> Text
 refundRetryKey bookingId = "sharedcab:refundretry:" <> bookingId.getId
 
@@ -110,6 +113,10 @@ boardAttemptsKey bookingId = "sharedcab:rate:board:" <> bookingId.getId
 -- | Per booking and driver: bounds how many chat pushes one driver can send one rider.
 chatAttemptsKey :: BookingId -> Text -> Text
 chatAttemptsKey bookingId driverId = "sharedcab:rate:chat:" <> bookingId.getId <> ":" <> driverId
+
+-- | Per booking and driver: bounds how many masked calls one driver can place to one rider.
+callAttemptsKey :: BookingId -> Text -> Text
+callAttemptsKey bookingId driverId = "sharedcab:rate:call:" <> bookingId.getId <> ":" <> driverId
 
 -- | Per rider: bounds a sweep of the four-digit sticker codes.
 stickerCodeAttemptsKey :: Text -> Text
@@ -148,10 +155,6 @@ sweepLeaseKey cityId = "sharedcab:degradedSweepLease:" <> cityId.getId
 refundRetryRunKey :: CityId -> Text
 refundRetryRunKey cityId = "sharedcab:refundretryRun:" <> cityId.getId
 
--- | The seats a booking's party holds in the seat engine (a SeatHoldMeta), so a release gives back exactly those.
-seatHoldKey :: BookingId -> Text
-seatHoldKey bookingId = "sharedcab:seats:" <> bookingId.getId
-
--- | A trip's walk-up seats, one hold per walk-up.
-walkupSeatsKey :: Text -> Text
-walkupSeatsKey tripId = "sharedcab:walkups:" <> tripId
+-- | The bookings assigned to a plate, each added under its plate lock: what a seat count reads beside the DB, which lags KV.
+cabBookingsKey :: Text -> Text
+cabBookingsKey plate = "sharedcab:cab:bookings:" <> plate

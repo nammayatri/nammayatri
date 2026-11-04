@@ -38,7 +38,6 @@ import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, owesRefund, refundAmounts)
 import SharedLogic.SharedCab.RefundPolicy (CancelBy (..), CancelDecision (..), decideCancel)
 import qualified SharedLogic.SharedCab.RefundRetry as RefundRetry
-import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -117,11 +116,15 @@ cancelOne findingTimeoutSec stale = do
           if claimable b.status b.vehicleNumber statuses markerAlive && findingTimeoutAction now findingTimeoutSec since b.createdAt == CancelNoCab
             then do
               refund <- gateByPayment b (findingTimeoutRefund b.sharedCabNoShows statuses)
+              -- queued before the flip: once CANCELLED lands no tick sees the booking again, so a later throw must not lose the refund
+              when (owesRefund refund) $ RefundRetry.markRefundRetry b.merchantId b.merchantOperatingCityId b.id
               Just (b, refund) <$ flipToCancelled refund b
             else pure Nothing
   whenJust cancelled $ \(b, decision) -> do
     -- each step is its own try: the booking is CANCELLED by now, so one failure must not skip the rest or the rider's push
     refunded <- if owesRefund decision then startRefund b else pure True
+    when (owesRefund decision && refunded) . void . withTryCatch "sharedCab:findingTimeout:unmarkRefund" $
+      RefundRetry.clearRefundRetry b.merchantOperatingCityId b.id
     withTryCatch "sharedCab:findingTimeout:releaseCancelledBooking" (releaseCancelledBooking b)
       >>= either (\e -> logError $ "shared-cab finding-timeout release effects failed for booking " <> b.id.getId <> ": " <> show e) pure
     void . withTryCatch "sharedCab:findingTimeout:cancelJourney" $ cancelJourneyIfOnlyTransitLeg b.searchId.getId
@@ -143,7 +146,6 @@ flipToCancelled decision b = do
   let (charges, refundAmount) = refundAmounts (fromMaybe b.totalPrice.amount b.overriddenAmount) decision
   void $ QFRFSTicketBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just charges) (Just True) b.id
   clearBookingState b.id
-  Seats.releaseBooking b.id
 
 -- | Starts the refund of the payment; a free (pass-covered) booking has none. A failure is logged and left for ops since the
 -- booking is already CANCELLED and no later tick sees it, but ALSO marks it for the retry sweep (RefundRetry).

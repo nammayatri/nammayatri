@@ -4,12 +4,16 @@ module SharedLogic.SharedCab
   ( -- * Tier predicates
     isSharedCabBooking,
     isSharedCabAgency,
+    legAgencyGtfsId,
+    searchAgencyKey,
     filterCabLegs,
     requireSharedCabEnabled,
     sharedCabFareTiers,
     recordSearch,
     sharedCabBoardStops,
-    walkUpVehicleData,
+    walkUpCab,
+    declaresSharedCab,
+    isSharedCabTier,
     routeServiceability,
     trackStopRoutes,
     withoutCabRows,
@@ -27,26 +31,24 @@ module SharedLogic.SharedCab
     SharedCabBoardOutcome (..),
     tryBoardSharedCab,
     boardingResponse,
-    firstUse,
     CancelStage (..),
     guardRiderCancel,
     dropRider,
     Refund,
     cancelRefund,
-    readRefundDecision,
     refundAmounts,
     refundWithheld,
   )
 where
 
-import SharedLogic.SharedCab.Boarding (SharedCabBoardOutcome (..), boardingResponse, firstUse, tryBoardSharedCab)
+import SharedLogic.SharedCab.Boarding (SharedCabBoardOutcome (..), boardingResponse, tryBoardSharedCab)
 import SharedLogic.SharedCab.Cancel (CancelStage (..), dropRider, guardRiderCancel)
 import SharedLogic.SharedCab.ConfirmHook (SharedCabConfirmFlow, confirmHook, onBookingCreated, recordPreferredCab, stagePickedCab)
 import SharedLogic.SharedCab.Demand (recordSearch, sharedCabBoardStops)
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
 import SharedLogic.SharedCab.JourneyLeg (getSharedCabLegState, liveCabLegCities, noBookingLegState)
-import SharedLogic.SharedCab.LegState (isSharedCabAgency, sharedCabFareTiers)
-import SharedLogic.SharedCab.RefundDecision (Refund, cancelRefund, isSharedCabBooking, readRefundDecision, refundAmounts, refundWithheld)
+import SharedLogic.SharedCab.LegState (isSharedCabAgency, legAgencyGtfsId, searchAgencyKey, sharedCabFareTiers)
+import SharedLogic.SharedCab.RefundDecision (Refund, cancelRefund, isSharedCabBooking, refundAmounts, refundWithheld)
 import SharedLogic.SharedCab.RouteSnapshot (filterCabLegs)
 import SharedLogic.SharedCab.Schedule (keepChainsAlive)
-import SharedLogic.SharedCab.WalkUp (cabRouteServiceTier, cabRouteStations, routeServiceability, trackStopRoutes, walkUpVehicleData, withoutCabRows)
+import SharedLogic.SharedCab.WalkUp (cabRouteServiceTier, cabRouteStations, declaresSharedCab, isSharedCabTier, routeServiceability, trackStopRoutes, walkUpCab, withoutCabRows)

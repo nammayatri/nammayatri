@@ -76,7 +76,14 @@ setNx key ttl = shared $ Redis.setNxExpire key ttl ()
 ensureChain :: (Redis.HedisFlow m r, MonadFlow m) => Chain m -> m ()
 ensureChain (Chain guardKey guardTtlSec enqueue) = do
   chainId <- generateGUIDText
-  whenM (shared $ Redis.setNxExpire guardKey guardTtlSec chainId) (enqueue chainId)
+  whenM (shared $ Redis.setNxExpire guardKey guardTtlSec chainId) $
+    withTryCatch "sharedCab:ensureChain" (enqueue chainId) >>= \case
+      Right () -> pure ()
+      Left err -> do
+        -- no job carries this id: free the guard, unless a newer chain already holds it, so the next seed is not blocked for its TTL
+        live <- shared $ Redis.safeGet guardKey
+        when (live == Just chainId) $ shared $ Redis.del guardKey
+        throwM err
 
 scheduleNext :: (Redis.HedisFlow m r, MonadFlow m) => Chain m -> Text -> m ()
 scheduleNext = scheduleNextWith True
