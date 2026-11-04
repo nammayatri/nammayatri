@@ -6,43 +6,6 @@
   },
   "item": [
     {
-      "name": "Switch to Merchant City (Dashboard)",
-      "_group": "Setup",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "",
-              "var d = pm.response.json();",
-              "pm.environment.set('city_dashboard_token', d.authToken);",
-              "console.log('Dashboard token for', d.merchantId, d.city);"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "token",
-            "value": "{{dashboard_token}}"
-          }
-        ],
-        "url": "{{dashboard_base_url}}/user/switchMerchantAndCity",
-        "body": {
-          "mode": "raw",
-          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{dashboard_city}}\"}"
-        }
-      }
-    },
-    {
       "name": "Route Search via Google Maps Mock (Dashboard)",
       "_group": "Setup",
       "event": [

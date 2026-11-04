@@ -123,51 +123,6 @@
       }
     },
     {
-      "name": "Switch City (Dashboard)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "var d = pm.response.json();",
-              "pm.environment.set('dashboard_token', d.authToken);",
-              "console.log('Switched to', d.merchantId, d.city);",
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "token",
-            "value": "{{dashboard_token}}"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
-        },
-        "url": {
-          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
-          "host": [
-            "{{dashboard_base_url}}"
-          ],
-          "path": [
-            "user",
-            "switchMerchantAndCity"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
       "name": "D1 Add Vehicle",
       "event": [
         {
