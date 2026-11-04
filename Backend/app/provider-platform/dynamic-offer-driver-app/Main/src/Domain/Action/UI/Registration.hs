@@ -1165,7 +1165,8 @@ getToken req = do
   mbPersonId <- TempAppCode.redeemTempAppCode operatorLinkTempAppCodeCfg req.appSecretCode
   personId <- Id <$> mbPersonId & fromMaybeM (InvalidRequest "Invalid or expired code")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbToken <- listToMaybe <$> QR.findAllByPersonId personId.getId
+  -- An unverified token (a pending or failed OTP login) is refused by every authenticated API.
+  mbToken <- List.find (.verified) <$> QR.findAllByPersonId personId.getId
   case mbToken of
     Just regToken -> do
       decPerson <- decrypt person
