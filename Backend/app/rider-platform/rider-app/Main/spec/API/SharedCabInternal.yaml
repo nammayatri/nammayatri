@@ -39,7 +39,6 @@ types:
     driverId: Text
     vehicleNumber: Text
     agencyId: Maybe Text
-    serviceTierType: Maybe ServiceTierType
     capacity: Maybe Int
     routeCode: Maybe Text
     walkupCount: Maybe Int
