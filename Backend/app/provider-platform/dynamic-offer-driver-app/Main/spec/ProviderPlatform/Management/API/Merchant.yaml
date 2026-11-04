@@ -750,7 +750,6 @@ types:
     - driverCoolOffPeriod: Maybe Seconds
     - rideEvidenceConfig: Maybe RideEvidenceConfigItem
     - manualTollChargeConfig: Maybe ManualTollChargeConfigItem
-    - sharedCabReconcilerEnabled: Maybe Bool
     - createdAt: UTCTime
     - updatedAt: UTCTime
   MerchantCommonConfigUpdateReq:
@@ -804,7 +803,6 @@ types:
     - driverCoolOffPeriod: Maybe (OptionalValue Seconds)
     - rideEvidenceConfig: Maybe (OptionalValue RideEvidenceConfigItem)
     - manualTollChargeConfig: Maybe (OptionalValue ManualTollChargeConfigItem)
-    - sharedCabReconcilerEnabled: Maybe (OptionalValue Bool)
     - derive: "'HideSecrets"
   DriverPoolConfigRes:
     - recordType: Type
@@ -1148,7 +1146,7 @@ types:
     - jobData: Text
     - derive: "'HideSecrets"
   JobName:
-    - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation, CongestionChargeCalculation, ReconciliationTrigger, ScheduledBatchPayoutTrigger, IffcoTokioInsuranceTrigger, AggregatedCommissionInvoiceCreationTrigger, RetryAutopayCollectionTrigger, SendLegalPolicyNotificationTrigger, SharedCabReconcilerTrigger"
+    - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation, CongestionChargeCalculation, ReconciliationTrigger, ScheduledBatchPayoutTrigger, IffcoTokioInsuranceTrigger, AggregatedCommissionInvoiceCreationTrigger, RetryAutopayCollectionTrigger, SendLegalPolicyNotificationTrigger"
   ReviveSchedulerJobsReq:
     - recordType: NewType
     - jobIds: [Text]

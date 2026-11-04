@@ -1962,7 +1962,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           preferredMapProvider = driverInfo.preferredMapProvider,
           behaviourWarnings = if null activeProfileWarnings then Nothing else Just activeProfileWarnings,
           -- module-qualified: VehicleVariant's SHARED_CAB is also in scope
-          activeRideType = if driverInfo.sharedCabSessionActive then Just Domain.Action.UI.Driver.SHARED_CAB else Nothing,
+          activeRideType = if ((.variant) <$> mbVehicle) == Just DV.SHARED_CAB then Just Domain.Action.UI.Driver.SHARED_CAB else Nothing,
           publicTransportVersion = Nothing,
           ..
         }
@@ -2069,7 +2069,6 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
             driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
             throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo sReqFD.isForwardRequest
-            throwErrorSharedCabSession driverInfo
             when (sReqFD.response == Just Reject) $ do
               throwError QuoteAlreadyRejected
             whenM thereAreActiveQuotes (throwError FoundActiveQuotes)

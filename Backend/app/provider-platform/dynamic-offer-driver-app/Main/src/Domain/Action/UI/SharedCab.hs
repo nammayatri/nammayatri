@@ -9,8 +9,7 @@
 
 -- | Shared-cab driver-facing actions: a pass-through that rejects unless the variant is SHARED_CAB and forwards to rider-app, which
 -- checks under the plate lock that the driver owns the cab's live session and (for booking actions) that the booking is on that plate.
--- selectSharedCabRoute sets sharedCabSessionActive True BEFORE the BAP call (fail-closed); endSharedCabRoute clears it only after a
--- successful route END. Both go through SharedLogic.SharedCab.Flag; the reconciler is otherwise the only clearer.
+-- Taxi dispatch never sees these drivers: no taxi service tier allows the SHARED_CAB variant.
 module Domain.Action.UI.SharedCab
   ( getPublicTransportData,
     postSharedCabRoutesDemand,
@@ -43,18 +42,13 @@ import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
-import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.Allocator (SharedCabReconcilerJobData (..))
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.DriverPool as DP
 import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
-import SharedLogic.Ride (offerQuoteLockKeyWithCoolDown)
-import qualified SharedLogic.SharedCab.Flag as SharedCabFlag
-import qualified SharedLogic.SharedCab.ReconcilerSeed as SharedCabSeed
 import qualified SharedLogic.SharedCab.RiderClient as SharedCabBAP
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
@@ -154,16 +148,8 @@ routesDemand (personId, _merchantId, merchantOpCityId) req = do
   bap <- bapInternal
   SharedCabBAP.postSharedCabRoutesDemand bap.apiKey bap.url SharedCabBAP.BAPDemandReq {SharedCabBAP.agencyId = integratedBPPConfig.agencyKey, SharedCabBAP.routeCodes = req.routeCodes}
 
--- set the exclusion flag BEFORE the BAP call (fail-closed: a failed call leaves the driver excluded until the reconciler clears it),
--- under the offer-quote lock so a silent assign cannot read the pool data between the two
-setSharedCabSessionActiveBeforeSelect :: Id SP.Person -> Flow ()
-setSharedCabSessionActiveBeforeSelect driverId = do
-  quoteRespondCoolDown <- asks (.quoteRespondCoolDown)
-  Redis.whenWithLockRedisAndReturnValue (offerQuoteLockKeyWithCoolDown driverId) quoteRespondCoolDown (SharedCabFlag.setSharedCabSessionActive driverId)
-    >>= either (const $ throwError (InvalidRequest "A ride is being assigned to you; try again shortly")) pure
-
 routeOperation :: DriverAuthInfo -> SharedCabRouteOperationReq -> Flow SelectRouteResp
-routeOperation auth@(personId, _, _) req = SharedCabFlag.withSharedCabFlagLock personId $ case req.operation of
+routeOperation auth req = case req.operation of
   SELECT_ROUTE -> do
     routeCode <- fromMaybeM (InvalidRequest "routeCode is required to select a route") req.routeCode
     walkupCount <- fromMaybeM (InvalidRequest "walkupCount is required to select a route") req.walkupCount
@@ -171,15 +157,11 @@ routeOperation auth@(personId, _, _) req = SharedCabFlag.withSharedCabFlagLock p
   _ -> endSharedCabRoute auth req
 
 selectSharedCabRoute :: DriverAuthInfo -> SharedCabRouteOperationReq -> Text -> Int -> Flow SelectRouteResp
-selectSharedCabRoute (personId, merchantId, merchantOpCityId) req routeCode walkupCount = do
+selectSharedCabRoute (personId, _merchantId, merchantOpCityId) req routeCode walkupCount = do
   vehicle <- validateSharedCabDriver personId
   driver <- QPerson.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
   integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
   bap <- bapInternal
-  setSharedCabSessionActiveBeforeSelect personId
-  -- dead-chain recovery: a select is the city's hottest driver action, so re-run the idempotent chain seeder (a cheap no-op
-  -- while the marker is alive). Fire-and-forget: a seed failure is logged, never propagated into the driver's select.
-  SharedCabSeed.trySeedSharedCabReconcilerChain (Just merchantId) merchantOpCityId (SharedCabReconcilerJobData merchantId merchantOpCityId)
   SharedCabBAP.postRouteOperation bap.apiKey bap.url $
     SharedCabBAP.BAPRouteOperationReq
       { SharedCabBAP.operation = req.operation,
@@ -207,28 +189,22 @@ endSharedCabRoute :: DriverAuthInfo -> SharedCabRouteOperationReq -> Flow Select
 endSharedCabRoute (personId, _merchantId, _merchantOpCityId) req = do
   vehicle <- validateSharedCabDriver personId
   bap <- bapInternal
-  resp <-
-    SharedCabBAP.postRouteOperation bap.apiKey bap.url $
-      SharedCabBAP.BAPRouteOperationReq
-        { SharedCabBAP.operation = req.operation,
-          SharedCabBAP.driverId = personId.getId,
-          SharedCabBAP.vehicleNumber = vehicle.registrationNo,
-          SharedCabBAP.agencyId = Nothing,
-          SharedCabBAP.serviceTierType = Nothing,
-          SharedCabBAP.capacity = Nothing,
-          SharedCabBAP.routeCode = Nothing,
-          SharedCabBAP.walkupCount = Nothing,
-          SharedCabBAP.mode = Nothing,
-          SharedCabBAP.driverName = Nothing,
-          SharedCabBAP.vehicleModel = Nothing,
-          SharedCabBAP.atLastStop = req.atLastStop,
-          SharedCabBAP.forceEnd = req.forceEnd
-        }
-  -- the flag clears ONLY after a successful route END whose response carries no session; a session payload (RETURN/CHANGE) keeps
-  -- the driver excluded
-  when (isNothing resp.session) $
-    SharedCabFlag.clearSharedCabSessionActive personId
-  pure resp
+  SharedCabBAP.postRouteOperation bap.apiKey bap.url $
+    SharedCabBAP.BAPRouteOperationReq
+      { SharedCabBAP.operation = req.operation,
+        SharedCabBAP.driverId = personId.getId,
+        SharedCabBAP.vehicleNumber = vehicle.registrationNo,
+        SharedCabBAP.agencyId = Nothing,
+        SharedCabBAP.serviceTierType = Nothing,
+        SharedCabBAP.capacity = Nothing,
+        SharedCabBAP.routeCode = Nothing,
+        SharedCabBAP.walkupCount = Nothing,
+        SharedCabBAP.mode = Nothing,
+        SharedCabBAP.driverName = Nothing,
+        SharedCabBAP.vehicleModel = Nothing,
+        SharedCabBAP.atLastStop = req.atLastStop,
+        SharedCabBAP.forceEnd = req.forceEnd
+      }
 
 sessionOperation :: DriverAuthInfo -> SharedCabSessionOperationReq -> Flow SharedCabSession
 sessionOperation (personId, _merchantId, _merchantOpCityId) req = do

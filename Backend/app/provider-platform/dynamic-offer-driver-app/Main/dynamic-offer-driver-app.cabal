@@ -650,7 +650,6 @@ library
       SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch
       SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion
       SharedLogic.Allocator.Jobs.Settlement.SubscriptionTotals
-      SharedLogic.Allocator.Jobs.SharedCab.Reconciler
       SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival
       SharedLogic.Allocator.Jobs.SpecialZoneQueue.TriggerSpecialZoneNotify
       SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase
@@ -837,8 +836,6 @@ library
       SharedLogic.SearchRequestProcessing
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
-      SharedLogic.SharedCab.Flag
-      SharedLogic.SharedCab.ReconcilerSeed
       SharedLogic.SharedCab.RiderClient
       SharedLogic.SocialLogin
       SharedLogic.SpecialLocationUpsert

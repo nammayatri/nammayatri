@@ -127,7 +127,6 @@ data AllocatorJobType
   | DeleteUnreferencedFarePolicies
   | GenerateInvoicePdf
   | SendLegalPolicyNotification
-  | SharedCabReconciler
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 -- | Environment constraints required to enqueue any SchedulerJob via 'createJobIn'.
@@ -213,7 +212,6 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SDeleteUnreferencedFarePolicies jobData = AnyJobInfo <$> restoreJobInfo SDeleteUnreferencedFarePolicies jobData
   restoreAnyJobInfo SGenerateInvoicePdf jobData = AnyJobInfo <$> restoreJobInfo SGenerateInvoicePdf jobData
   restoreAnyJobInfo SSendLegalPolicyNotification jobData = AnyJobInfo <$> restoreJobInfo SSendLegalPolicyNotification jobData
-  restoreAnyJobInfo SSharedCabReconciler jobData = AnyJobInfo <$> restoreJobInfo SSharedCabReconciler jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -761,18 +759,6 @@ data ConnectAccountChargeDeductionJobData = ConnectAccountChargeDeductionJobData
 instance JobInfoProcessor 'ConnectAccountChargeDeduction
 
 type instance JobContent 'ConnectAccountChargeDeduction = ConnectAccountChargeDeductionJobData
-
--- | Periodic shared-cab "stuck flag" reconciler: one job per (merchant, city), gated per city by
--- TransporterConfig.sharedCabReconcilerEnabled (Nothing/false = skip, fail-closed).
-data SharedCabReconcilerJobData = SharedCabReconcilerJobData
-  { merchantId :: Id DM.Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
-  }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
-
-instance JobInfoProcessor 'SharedCabReconciler
-
-type instance JobContent 'SharedCabReconciler = SharedCabReconcilerJobData
 
 data SettlementReportIngestionJobData = SettlementReportIngestionJobData
   { merchantId :: Id DM.Merchant,
