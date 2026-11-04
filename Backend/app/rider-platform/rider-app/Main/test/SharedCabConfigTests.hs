@@ -3,19 +3,16 @@
 
 module SharedCabConfigTests (tests) where
 
-import Control.Applicative ((<|>))
-import Control.Monad (mfilter)
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import "rider-app" Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import "rider-app" Domain.Types.RiderConfig (SharedCabCallMode (..))
-import "rider-app" SharedLogic.IntegratedBPPConfig (newestNonCab)
+import "rider-app" SharedLogic.IntegratedBPPConfig (newestNonCab, onlyRowOf)
 import "rider-app" SharedLogic.SharedCab.Config
 import "rider-app" SharedLogic.SharedCab.Enabled (cabItineraryShown, sharedCabEnabledDecision, tickChainContinues)
 import "rider-app" SharedLogic.SharedCab.LegState (SharedCabState (..), legNeedsChains)
 import "rider-app" SharedLogic.SharedCab.Schedule (ChainVerdict (..), SeedSource (..), WatchPlan (..), allocationSeedWanted, chainVerdict, watchPlan)
-import "rider-app" Storage.Queries.IntegratedBPPConfigExtra (onlyOfPlatform, pickAgencyRow)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -103,32 +100,18 @@ tests =
               offerRetryTimeoutSec = 15
             },
       testGroup
-        "agency key shared by several integrated configs: each caller gets the row of its own platform"
-        [ testCase "a journey caller (MULTIMODAL) gets the MULTIMODAL row, whatever order the DB lists them in" $
-            map (fmap snd . pickAgencyRow MULTIMODAL fst) rows @?= [Just "multi", Just "multi"],
-          testCase "the driver proxy (APPLICATION) gets the APPLICATION row, whatever order" $
-            map (fmap snd . pickAgencyRow APPLICATION fst) rows @?= [Just "app", Just "app"],
-          testCase "a key shared by several rows of the caller's platform (one per city) names no row: the caller falls back to its city lookup" $
-            fmap snd (pickAgencyRow MULTIMODAL fst ([((MULTIMODAL, "a"), "chennai"), ((MULTIMODAL, "b"), "delhi"), ((APPLICATION, "c"), "app")] :: [((PlatformType, Text), String)])) @?= Nothing,
-          testCase "a caller whose platform has no row gets the key's only row, and Nothing when several rows are left to choose from" $
-            [fmap snd (pickAgencyRow PARTNERORG fst [((APPLICATION, "52"), "app")]), fmap snd (pickAgencyRow PARTNERORG fst rowsOfTwo)] @?= [Just "app", Nothing],
-          testCase "an agency with only an APPLICATION row, asked by a journey caller: the pick still names it, ConfigPilot's platform filter drops it, and the caller falls back to the city lookup" $
-            let onlyApp = [((APPLICATION, "52"), "app")] :: [((PlatformType, Text), String)]
-                picked = pickAgencyRow MULTIMODAL fst onlyApp
-                afterConfigPilotFilter = mfilter ((== MULTIMODAL) . fst . fst) picked
-                cityFallback = Just (((MULTIMODAL, "b7"), "city lookup") :: ((PlatformType, Text), String))
-             in (fmap snd picked, fmap snd (afterConfigPilotFilter <|> cityFallback)) @?= (Just "app", Just "city lookup"),
-          testCase "the driver proxy takes only an APPLICATION row: a key with only a MULTIMODAL row names none" $
-            [onlyOfPlatform APPLICATION (fst . fst) (pickAgencyRow APPLICATION fst [((MULTIMODAL, "a9" :: Text), "multi" :: String)]), onlyOfPlatform APPLICATION (fst . fst) (pickAgencyRow APPLICATION fst [((APPLICATION, "52"), "app"), ((MULTIMODAL, "a9"), "multi")])] @?= [Nothing, Just ((APPLICATION, "52"), "app")],
-          testCase "no rows is Nothing" $
-            fmap snd (pickAgencyRow APPLICATION fst ([] :: [((PlatformType, Text), String)])) @?= Nothing
+        "agency key shared by several integrated configs: the shared-cab lookup takes exactly one row of its platform"
+        [ testCase "a journey (MULTIMODAL) and the driver proxy (APPLICATION) each get their own row, whatever order the DB lists them in" $
+            [map (fmap snd . onlyRowOf MULTIMODAL (fst . fst)) rows, map (fmap snd . onlyRowOf APPLICATION (fst . fst)) rows] @?= [[Right "multi", Right "multi"], [Right "app", Right "app"]],
+          testCase "two rows of the platform is an error, not a guess" $
+            fmap snd (onlyRowOf MULTIMODAL (fst . fst) ([((MULTIMODAL, "a"), "chennai"), ((MULTIMODAL, "b"), "delhi"), ((APPLICATION, "c"), "app")] :: [((PlatformType, Text), String)])) @?= Left 2,
+          testCase "no row of the platform is not found, even when the key has another platform's row" $
+            [fmap snd (onlyRowOf APPLICATION (fst . fst) [((MULTIMODAL, "a9" :: Text), "multi" :: String)]), fmap snd (onlyRowOf APPLICATION (fst . fst) ([] :: [((PlatformType, Text), String)]))] @?= [Left 0, Left 0]
         ]
     ]
   where
     rows :: [[((PlatformType, Text), String)]]
     rows = [[((MULTIMODAL, "a9"), "multi"), ((APPLICATION, "52"), "app")], [((APPLICATION, "52"), "app"), ((MULTIMODAL, "a9"), "multi")]]
-    rowsOfTwo :: [((PlatformType, Text), String)]
-    rowsOfTwo = head rows
 
 t :: Int -> UTCTime
 t = posixSecondsToUTCTime . fromIntegral
