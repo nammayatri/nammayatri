@@ -153,6 +153,6 @@ INSERT INTO atlas_app.route_stop_fare (amount,currency,end_stop_code,fare_policy
 --    reads retry for the drainer's lag, so the rider drainer must run (THREAD_PER_POD_COUNT above 1 keeps that lag to a few seconds).
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════════════
 -- shared cab on for the test city (NULL would follow the SHARED_CAB IntegratedBPPConfig alone, false turns it off)
-UPDATE atlas_app.rider_config SET shared_cab_enabled = true, shared_cab_call_enabled = true, shared_cab_chat_enabled = true WHERE merchant_operating_city_id = 'c7e3c3eb-cc15-46d4-ba04-5af55ac87874';
+UPDATE atlas_app.rider_config SET shared_cab_config = '{"enabled":true,"callEnabled":true,"chatEnabled":true}' WHERE merchant_operating_city_id = 'c7e3c3eb-cc15-46d4-ba04-5af55ac87874';
 -- optional, for the finding-timeout scenario: 25 s instead of 20 min
--- UPDATE atlas_app.rider_config SET shared_cab_finding_timeout_sec = 25 WHERE merchant_operating_city_id = 'c7e3c3eb-cc15-46d4-ba04-5af55ac87874';
+-- UPDATE atlas_app.rider_config SET shared_cab_config = (COALESCE(shared_cab_config::jsonb, '{}') || '{"findingTimeoutSec":25}')::json WHERE merchant_operating_city_id = 'c7e3c3eb-cc15-46d4-ba04-5af55ac87874';

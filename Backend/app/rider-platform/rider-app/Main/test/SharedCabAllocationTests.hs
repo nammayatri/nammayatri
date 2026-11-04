@@ -40,7 +40,7 @@ import "rider-app" SharedLogic.SharedCab.Offer (AcceptDecision (..), DeclineDeci
 import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..))
 import "rider-app" SharedLogic.SharedCab.RefundPolicy (cancellableStatus)
 import "rider-app" SharedLogic.SharedCab.RouteSnapshot (SnapshotRead (..), snapshotRead)
-import "rider-app" SharedLogic.SharedCab.Schedule (chainsAliveDue, claimedTick, nextTickAfter)
+import "rider-app" SharedLogic.SharedCab.Schedule (claimedTick, nextTickAfter)
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE, PAUSED))
 import "rider-app" SharedLogic.SharedCab.WalkUp (cabVehicle)
 import Test.Tasty (TestTree, testGroup)
@@ -132,8 +132,6 @@ tests =
       testCase "a tick that found the city lease held comes back in 1 s, three times at most, then on the normal schedule" $
         map (uncurry (nextTickAfter 3)) [(True, Nothing), (True, Just 2), (False, Nothing), (False, Just 1), (False, Just 2), (False, Just 3)]
           @?= [(3, Nothing), (3, Nothing), (1, Just 1), (1, Just 2), (1, Just 3), (3, Nothing)],
-      testCase "a rider poll reseeds the city's chains only when it opened the 30 s window" $
-        (chainsAliveDue t0 t0, chainsAliveDue (addUTCTime 5 t0) t0) @?= (True, False),
       testCase "route snapshot: nothing built yet is rebuilt inline" $
         snapshotRead t0 Nothing False @?= Rebuild,
       testCase "route snapshot: under 2 s old is served, rebuild running or not" $

@@ -61,3 +61,8 @@ ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN ondc_encryption_private_k
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN auto_enforce_frfs_pass boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.integrated_bpp_config ADD CONSTRAINT integrated_bpp_config_unique_idx_agency_key_platform_type UNIQUE (agency_key, platform_type);

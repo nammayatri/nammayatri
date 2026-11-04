@@ -3,14 +3,16 @@
 
 module SharedCabConfigTests (tests) where
 
+import qualified Data.Aeson as A
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import "rider-app" Domain.Types.RiderConfig (SharedCabCallMode (..))
+import qualified "rider-app" Domain.Types.RiderConfig as DRC
 import "rider-app" SharedLogic.IntegratedBPPConfig (newestNonCab)
 import "rider-app" SharedLogic.SharedCab.Config
 import "rider-app" SharedLogic.SharedCab.Enabled (cabItineraryShown, sharedCabEnabledDecision, tickChainContinues)
-import "rider-app" SharedLogic.SharedCab.LegState (SharedCabState (..), legNeedsChains)
+import "rider-app" SharedLogic.SharedCab.LegState (SharedCabState (..))
 import "rider-app" SharedLogic.SharedCab.Schedule (ChainVerdict (..), SeedSource (..), WatchPlan (..), allocationSeedWanted, chainVerdict, watchPlan)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -22,6 +24,44 @@ tests =
     "SharedCab tunables"
     [ testCase "no rider_config row takes the defaults" $
         tunablesFrom Nothing @?= defaultTunables,
+      testCase "a city's sharedCabConfig JSON sets only the fields it names" $
+        fmap (\DRC.SharedCabConfig {DRC.enabled = e, DRC.findingTimeoutSec = f, DRC.tickSec = t} -> (e, f, t)) (A.decode "{\"enabled\":false,\"findingTimeoutSec\":25}" :: Maybe DRC.SharedCabConfig)
+          @?= Just (Just False, Just 25, Nothing),
+      testCase "every sharedCabConfig field lands on its own tunable" $
+        tunablesOf (Just 7.5) (A.decode "{\"allocationWindowSec\":101,\"atStopRadiusM\":102,\"standTimerSec\":103,\"movingTimerSec\":104,\"maxAttempts\":105,\"maxNoShows\":106,\"fallbackAfterSec\":107,\"findingTimeoutSec\":108,\"tickSec\":109,\"ltsMaxAgeSec\":110,\"autoEndAfterDropSec\":111,\"degradedTimeoutSec\":112,\"offRouteMeters\":113,\"offRouteSec\":114,\"boardProximityM\":115,\"boardAttemptsPer10Min\":116,\"noLocationSpotBookingsPerVehiclePerDay\":117,\"maxCabSpeedMps\":118,\"interestWindowSec\":119,\"demandStopsPerRoute\":120,\"maxDemandRoutes\":121,\"offerTimeoutSec\":122,\"offerRetryTimeoutSec\":123,\"maxSkipsAndCancels\":124,\"skipCancelCountTtlSec\":125,\"callEnabled\":true,\"chatEnabled\":true,\"pickEnabled\":true,\"driverAcceptEnabled\":true,\"callMode\":\"DIRECT\"}")
+          @?= SharedCabTunables
+            { allocationWindowSec = 101,
+              atStopRadiusM = 102,
+              standTimerSec = 103,
+              movingTimerSec = 104,
+              maxAttempts = 105,
+              maxNoShows = 106,
+              fallbackAfterSec = 107,
+              findingTimeoutSec = 108,
+              tickSec = 109,
+              ltsMaxAgeSec = 110,
+              autoEndAfterDropSec = 111,
+              degradedTimeoutSec = 112,
+              offRouteMeters = 113,
+              offRouteSec = 114,
+              boardProximityM = 115,
+              boardPingMaxAgeSec = 7.5,
+              boardAttemptsPer10Min = 116,
+              noLocationSpotBookingsPerVehiclePerDay = 117,
+              maxCabSpeedMps = 118,
+              callEnabled = True,
+              callMode = DIRECT,
+              chatEnabled = True,
+              pickEnabled = True,
+              interestWindowSec = 119,
+              demandStopsPerRoute = 120,
+              maxDemandRoutes = 121,
+              driverAcceptEnabled = True,
+              offerTimeoutSec = 122,
+              offerRetryTimeoutSec = 123,
+              maxSkipsAndCancels = 124,
+              skipCancelCountTtlSec = 125
+            },
       testCase "per-city switch: SHARED_CAB config and not Just False" $
         [sharedCabEnabledDecision c s | c <- [True, False], s <- [Nothing, Just True, Just False]]
           @?= [True, True, False, False, False, False],
@@ -51,9 +91,6 @@ tests =
           newestNonCab fst snd [("shillong_shared_cab:SHARED_CAB", t 9), ("shillong_bus", t 1)]
         )
           @?= (Nothing, Just ("shillong_bus", t 1)),
-      testCase "a rider polling a leg that is not over keeps the city's chains alive; a finished or cancelled leg does not" $
-        map legNeedsChains [FINDING, ALLOCATED, FALLBACK, BOARDED, DEGRADED, DROPPED, CANCELLED]
-          @?= [True, True, True, True, True, False, False],
       testCase "a suspended city with live bookings still gets its allocation chain re-seeded; new demand needs the city on" $
         ( [allocationSeedWanted Watchdog e n | e <- [True, False], n <- [0, 3]],
           [allocationSeedWanted OnDemand e n | e <- [True, False], n <- [0, 3]],

@@ -76,6 +76,39 @@ RiderConfig:
       enum: "ERSS,GJ112,Trinity"
     SharedCabCallMode:
       enum: "MASKED,DIRECT"
+    SharedCabConfig:
+      derive: "Eq"
+      enabled: Maybe Bool # ops off switch: Just False turns shared cab off for the city; null follows the SHARED_CAB IntegratedBPPConfig
+      allocationWindowSec: Maybe Int
+      atStopRadiusM: Maybe Int
+      standTimerSec: Maybe Int
+      movingTimerSec: Maybe Int
+      maxAttempts: Maybe Int
+      maxNoShows: Maybe Int
+      fallbackAfterSec: Maybe Int
+      findingTimeoutSec: Maybe Int
+      tickSec: Maybe Int
+      ltsMaxAgeSec: Maybe Int
+      autoEndAfterDropSec: Maybe Int
+      degradedTimeoutSec: Maybe Int
+      offRouteMeters: Maybe Int
+      offRouteSec: Maybe Int
+      boardProximityM: Maybe Int
+      boardAttemptsPer10Min: Maybe Int
+      noLocationSpotBookingsPerVehiclePerDay: Maybe Int
+      maxCabSpeedMps: Maybe Int
+      callEnabled: Maybe Bool # masked rider/driver call; null or Just False is off
+      callMode: Maybe SharedCabCallMode # with calls on, MASKED dials the ExoPhone, DIRECT each other's own number; null = MASKED
+      chatEnabled: Maybe Bool # per-booking rider/driver chat; null or Just False is off
+      driverAcceptEnabled: Maybe Bool # a driver accepts or declines each newly allocated rider; null or Just False is off
+      offerTimeoutSec: Maybe Int
+      offerRetryTimeoutSec: Maybe Int
+      interestWindowSec: Maybe Int
+      demandStopsPerRoute: Maybe Int
+      maxDemandRoutes: Maybe Int
+      pickEnabled: Maybe Bool # the rider picks a specific cab; null or Just False is off
+      maxSkipsAndCancels: Maybe Int # rider skips, and separately rider cancels, allowed per search; null = 15
+      skipCancelCountTtlSec: Maybe Int # seconds a search's skip and cancel counts last; null = 18000 (5 h)
     ExternalSOSTriggerSource:
       enum: "FRONTEND,DASHBOARD"
     ExternalSOSConfig:
@@ -181,37 +214,7 @@ RiderConfig:
     busTrackingNotificationTiers: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     busApproachingNotificationTiers: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     frfsDriverDetailsLeadTimeSeconds: Maybe Seconds
-    sharedCabAllocationWindowSec: Maybe Int
-    sharedCabAtStopRadiusM: Maybe Int
-    sharedCabStandTimerSec: Maybe Int
-    sharedCabMovingTimerSec: Maybe Int
-    sharedCabMaxAttempts: Maybe Int
-    sharedCabMaxNoShows: Maybe Int
-    sharedCabFallbackAfterSec: Maybe Int
-    sharedCabFindingTimeoutSec: Maybe Int
-    sharedCabTickSec: Maybe Int
-    sharedCabLtsMaxAgeSec: Maybe Int
-    sharedCabAutoEndAfterDropSec: Maybe Int
-    sharedCabDegradedTimeoutSec: Maybe Int
-    sharedCabOffRouteMeters: Maybe Int
-    sharedCabOffRouteSec: Maybe Int
-    sharedCabBoardProximityM: Maybe Int
-    sharedCabBoardAttemptsPer10Min: Maybe Int
-    sharedCabNoLocationSpotBookingsPerVehiclePerDay: Maybe Int
-    sharedCabMaxCabSpeedMps: Maybe Int
-    sharedCabCallEnabled: Maybe Bool # masked rider/driver call; null or Just False is off
-    sharedCabCallMode: Maybe SharedCabCallMode # with calls on, MASKED dials the ExoPhone, DIRECT each other's own number; null = MASKED
-    sharedCabChatEnabled: Maybe Bool # per-booking rider/driver chat; null or Just False is off
-    sharedCabDriverAcceptEnabled: Maybe Bool # a driver accepts or declines each newly allocated rider; null or Just False is off
-    sharedCabOfferTimeoutSec: Maybe Int # seconds to answer the first offer to a booking; null = 30
-    sharedCabOfferRetryTimeoutSec: Maybe Int # seconds to answer each later offer to the same booking; null = 15
-    sharedCabInterestWindowSec: Maybe Int # seconds a rider who opened a stand's cab view counts as waiting; null = 600
-    sharedCabDemandStopsPerRoute: Maybe Int # stops from the start of each route that count towards its demand; null = 5
-    sharedCabMaxDemandRoutes: Maybe Int # most routes one demand read may ask for; null = 50
-    sharedCabPickEnabled: Maybe Bool # the rider picks a specific cab; null or Just False is off
-    sharedCabMaxSkipsAndCancels: Maybe Int # rider skips, and separately rider cancels, allowed per search; null = 15
-    sharedCabSkipCancelCountTtlSec: Maybe Int # seconds a search's skip and cancel counts last; null = 18000 (5 h)
-    sharedCabEnabled: Maybe Bool # ops off switch: Just False turns shared cab off for the city; null follows the SHARED_CAB IntegratedBPPConfig
+    sharedCabConfig: "Maybe SharedCabConfig" # shared-cab per-city settings; a missing field takes the code default
     journeyOptionsSortingType: Maybe JourneyOptionsSortingType
     maxAllowedPublicTransportLegs: Int
     driverReferredSearchReqExpiry: Maybe Seconds
@@ -423,6 +426,7 @@ RiderConfig:
     nearByDriverRingBucketCfg: Maybe Value
     studentPassVerifyConfig: Maybe Value
     passExtraConfig: Maybe Value
+    sharedCabConfig: Maybe Value
     fareCacheRentalsConfig : Maybe Value
     fareCacheInterCitySearchLocations : Maybe Value
     userServiceTierOrderConfig: Maybe Value
@@ -493,6 +497,7 @@ RiderConfig:
     nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Kernel.Utils.JSON.valueToMaybe|E
     studentPassVerifyConfig: studentPassVerifyConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     passExtraConfig: passExtraConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    sharedCabConfig: sharedCabConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
     userServiceTierOrderConfig: fromMaybe [] (userServiceTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
@@ -555,6 +560,7 @@ RiderConfig:
     nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Just . Data.Aeson.toJSON|E
     studentPassVerifyConfig: studentPassVerifyConfig >>= Just . Data.Aeson.toJSON|E
     passExtraConfig: passExtraConfig >>= Just . Data.Aeson.toJSON|E
+    sharedCabConfig: sharedCabConfig >>= Just . Data.Aeson.toJSON|E
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
     userServiceTierOrderConfig: (Just . Data.Aeson.toJSON)|I
@@ -681,6 +687,7 @@ RiderConfig:
     nearByDriverRingBucketCfg: "json"
     studentPassVerifyConfig: "json"
     passExtraConfig: "json"
+    sharedCabConfig: "json"
     fareCacheRentalsConfig : "json"
     fareCacheInterCitySearchLocations : "json"
     userServiceTierOrderConfig : "json"

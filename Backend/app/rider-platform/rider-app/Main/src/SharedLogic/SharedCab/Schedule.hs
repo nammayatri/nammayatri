@@ -20,8 +20,6 @@ module SharedLogic.SharedCab.Schedule
     allocationSeedWanted,
     watchPlan,
     reseedAllocationTick,
-    keepChainsAlive,
-    chainsAliveDue,
     ownExpiryChain,
     claimExpiryRun,
     scheduleNextExpiry,
@@ -41,8 +39,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import qualified Kernel.Storage.InMem as IM
-import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -146,28 +142,6 @@ reseedAllocationTick :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id 
 reseedAllocationTick merchantId mocId = do
   tickSec <- tickSecOf mocId
   ensureChain (allocChain tickSec merchantId mocId)
-
--- | A rider polling a live shared-cab leg is proof the city needs its chains: a scheduler killed and restarted, or a lost job, would
--- otherwise leave them dead until new demand. Both seeds are set-if-absent on the chain guards, so a live chain costs one cheap
--- read; a failure here never touches the caller's response.
--- | At most once per city per pod every 'chainsAliveEverySec': a live chain refreshes its own guard every tick, so this only matters
--- for a chain that lapsed, which a rider's poll then reseeds within that window; every poll of every rider wrote both guards.
-keepChainsAlive :: (JobCreator r m, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
-keepChainsAlive merchantId mocId = do
-  now <- getCurrentTime
-  -- the first poll of a window stores its time; the polls after it in the window find that time and skip
-  windowStart <- IM.withInMemCache ["SharedCabChainsAlive", mocId.getId] (fromIntegral chainsAliveEverySec) (pure now)
-  when (chainsAliveDue now windowStart) $
-    withTryCatch "sharedCab:keepChainsAlive" (reseedAllocationTick merchantId mocId >> ensureExpiryJob merchantId mocId) >>= \case
-      Left err -> logError $ "sharedCab: could not keep the chains alive for " <> mocId.getId <> ": " <> show err
-      Right () -> pure ()
-
-chainsAliveEverySec :: Int
-chainsAliveEverySec = 30
-
--- | Only the poll that opened the window (it stored `now`) reseeds.
-chainsAliveDue :: UTCTime -> UTCTime -> Bool
-chainsAliveDue now windowStart = windowStart >= now
 
 -- | A lease retry claims its own run: the run it retries still holds the plain key.
 claimTickRun :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Int -> m Bool

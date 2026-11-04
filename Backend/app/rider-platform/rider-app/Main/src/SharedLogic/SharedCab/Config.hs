@@ -2,6 +2,7 @@ module SharedLogic.SharedCab.Config
   ( SharedCabTunables (..),
     defaultTunables,
     tunablesFrom,
+    tunablesOf,
     getTunables,
     activeCallMode,
   )
@@ -15,8 +16,8 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 
--- | The tunables, all in seconds or metres. Each has a nullable rider_config column
--- `sharedCab<Field>`; NULL (or no row) takes the default.
+-- | The tunables, all in seconds or metres. Each can be set in the city's rider_config.sharedCabConfig JSON under the same name;
+-- a missing field (or no row) takes the default.
 data SharedCabTunables = SharedCabTunables
   { allocationWindowSec :: Int,
     atStopRadiusM :: Int,
@@ -100,44 +101,49 @@ defaultTunables =
     }
 
 tunablesFrom :: Maybe DRC.RiderConfig -> SharedCabTunables
-tunablesFrom Nothing = defaultTunables
-tunablesFrom (Just rc) =
+tunablesFrom mbRc = tunablesOf (mbRc >>= (.boardingBusPingMaxAgeSeconds)) (mbRc >>= (.sharedCabConfig))
+
+-- | The city's sharedCabConfig over the defaults; the board ping bar reuses the bus boarding's rider_config column.
+tunablesOf :: Maybe Double -> Maybe DRC.SharedCabConfig -> SharedCabTunables
+tunablesOf busPingMaxAgeSec mbConfig =
   SharedCabTunables
-    { allocationWindowSec = pick rc.sharedCabAllocationWindowSec (.allocationWindowSec),
-      atStopRadiusM = pick rc.sharedCabAtStopRadiusM (.atStopRadiusM),
-      standTimerSec = pick rc.sharedCabStandTimerSec (.standTimerSec),
-      movingTimerSec = pick rc.sharedCabMovingTimerSec (.movingTimerSec),
-      maxAttempts = pick rc.sharedCabMaxAttempts (.maxAttempts),
-      maxNoShows = pick rc.sharedCabMaxNoShows (.maxNoShows),
-      fallbackAfterSec = pick rc.sharedCabFallbackAfterSec (.fallbackAfterSec),
-      findingTimeoutSec = pick rc.sharedCabFindingTimeoutSec (.findingTimeoutSec),
-      tickSec = pick rc.sharedCabTickSec (.tickSec),
-      ltsMaxAgeSec = pick rc.sharedCabLtsMaxAgeSec (.ltsMaxAgeSec),
-      autoEndAfterDropSec = pick rc.sharedCabAutoEndAfterDropSec (.autoEndAfterDropSec),
-      degradedTimeoutSec = pick rc.sharedCabDegradedTimeoutSec (.degradedTimeoutSec),
-      offRouteMeters = pick rc.sharedCabOffRouteMeters (.offRouteMeters),
-      offRouteSec = pick rc.sharedCabOffRouteSec (.offRouteSec),
-      boardProximityM = pick rc.sharedCabBoardProximityM (.boardProximityM),
-      boardPingMaxAgeSec = pick rc.boardingBusPingMaxAgeSeconds (.boardPingMaxAgeSec),
-      boardAttemptsPer10Min = pick rc.sharedCabBoardAttemptsPer10Min (.boardAttemptsPer10Min),
-      noLocationSpotBookingsPerVehiclePerDay = pick rc.sharedCabNoLocationSpotBookingsPerVehiclePerDay (.noLocationSpotBookingsPerVehiclePerDay),
-      maxCabSpeedMps = pick rc.sharedCabMaxCabSpeedMps (.maxCabSpeedMps),
-      callEnabled = pick rc.sharedCabCallEnabled (.callEnabled),
-      callMode = pick rc.sharedCabCallMode (.callMode),
-      chatEnabled = pick rc.sharedCabChatEnabled (.chatEnabled),
-      pickEnabled = pick rc.sharedCabPickEnabled (.pickEnabled),
-      interestWindowSec = pick rc.sharedCabInterestWindowSec (.interestWindowSec),
-      demandStopsPerRoute = pickPositive rc.sharedCabDemandStopsPerRoute (.demandStopsPerRoute),
-      maxDemandRoutes = pickPositive rc.sharedCabMaxDemandRoutes (.maxDemandRoutes),
-      driverAcceptEnabled = pick rc.sharedCabDriverAcceptEnabled (.driverAcceptEnabled),
-      offerTimeoutSec = pick rc.sharedCabOfferTimeoutSec (.offerTimeoutSec),
-      offerRetryTimeoutSec = pick rc.sharedCabOfferRetryTimeoutSec (.offerRetryTimeoutSec),
-      maxSkipsAndCancels = pick rc.sharedCabMaxSkipsAndCancels (.maxSkipsAndCancels),
-      skipCancelCountTtlSec = pickPositive rc.sharedCabSkipCancelCountTtlSec (.skipCancelCountTtlSec)
+    { allocationWindowSec = pick (.allocationWindowSec) (.allocationWindowSec),
+      atStopRadiusM = pick (.atStopRadiusM) (.atStopRadiusM),
+      standTimerSec = pick (.standTimerSec) (.standTimerSec),
+      movingTimerSec = pick (.movingTimerSec) (.movingTimerSec),
+      maxAttempts = pick (.maxAttempts) (.maxAttempts),
+      maxNoShows = pick (.maxNoShows) (.maxNoShows),
+      fallbackAfterSec = pick (.fallbackAfterSec) (.fallbackAfterSec),
+      findingTimeoutSec = pick (.findingTimeoutSec) (.findingTimeoutSec),
+      tickSec = pick (.tickSec) (.tickSec),
+      ltsMaxAgeSec = pick (.ltsMaxAgeSec) (.ltsMaxAgeSec),
+      autoEndAfterDropSec = pick (.autoEndAfterDropSec) (.autoEndAfterDropSec),
+      degradedTimeoutSec = pick (.degradedTimeoutSec) (.degradedTimeoutSec),
+      offRouteMeters = pick (.offRouteMeters) (.offRouteMeters),
+      offRouteSec = pick (.offRouteSec) (.offRouteSec),
+      boardProximityM = pick (.boardProximityM) (.boardProximityM),
+      boardPingMaxAgeSec = fromMaybe defaultTunables.boardPingMaxAgeSec busPingMaxAgeSec,
+      boardAttemptsPer10Min = pick (.boardAttemptsPer10Min) (.boardAttemptsPer10Min),
+      noLocationSpotBookingsPerVehiclePerDay = pick (.noLocationSpotBookingsPerVehiclePerDay) (.noLocationSpotBookingsPerVehiclePerDay),
+      maxCabSpeedMps = pick (.maxCabSpeedMps) (.maxCabSpeedMps),
+      callEnabled = pick (.callEnabled) (.callEnabled),
+      callMode = pick (.callMode) (.callMode),
+      chatEnabled = pick (.chatEnabled) (.chatEnabled),
+      pickEnabled = pick (.pickEnabled) (.pickEnabled),
+      interestWindowSec = pick (.interestWindowSec) (.interestWindowSec),
+      demandStopsPerRoute = pickPositive (.demandStopsPerRoute) (.demandStopsPerRoute),
+      maxDemandRoutes = pickPositive (.maxDemandRoutes) (.maxDemandRoutes),
+      driverAcceptEnabled = pick (.driverAcceptEnabled) (.driverAcceptEnabled),
+      offerTimeoutSec = pick (.offerTimeoutSec) (.offerTimeoutSec),
+      offerRetryTimeoutSec = pick (.offerRetryTimeoutSec) (.offerRetryTimeoutSec),
+      maxSkipsAndCancels = pick (.maxSkipsAndCancels) (.maxSkipsAndCancels),
+      skipCancelCountTtlSec = pickPositive (.skipCancelCountTtlSec) (.skipCancelCountTtlSec)
     }
   where
-    pick mbValue field = fromMaybe (field defaultTunables) mbValue
-    pickPositive mbValue = pick (mfilter (> 0) mbValue)
+    pick :: (DRC.SharedCabConfig -> Maybe a) -> (SharedCabTunables -> a) -> a
+    pick get field = fromMaybe (field defaultTunables) (mbConfig >>= get)
+    pickPositive :: (DRC.SharedCabConfig -> Maybe Int) -> (SharedCabTunables -> Int) -> Int
+    pickPositive get = pick (mfilter (> 0) . get)
 
 getTunables :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m SharedCabTunables
 getTunables cityId = tunablesFrom <$> getConfig (RiderConfigDimensions {merchantOperatingCityId = cityId.getId}) Nothing

@@ -1,5 +1,5 @@
 -- | The per-city shared-cab switch: on iff the city has a SHARED_CAB IntegratedBPPConfig and ops have not
--- turned it off with rider_config.shared_cab_enabled = false (NULL follows the data).
+-- turned it off with rider_config.shared_cab_config.enabled = false (missing follows the data).
 module SharedLogic.SharedCab.Enabled
   ( sharedCabEnabled,
     sharedCabEnabledDecision,
@@ -41,4 +41,4 @@ sharedCabEnabled :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.Merch
 sharedCabEnabled cityId = do
   configs <- SIBC.findAllIntegratedBPPConfig cityId Enums.BUS DIBC.APPLICATION
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = cityId.getId}) Nothing
-  pure $ sharedCabEnabledDecision (any (isSharedCabAgency . (.agencyKey)) configs) (riderConfig >>= (.sharedCabEnabled))
+  pure $ sharedCabEnabledDecision (any (isSharedCabAgency . (.agencyKey)) configs) (riderConfig >>= (.sharedCabConfig) >>= (.enabled))

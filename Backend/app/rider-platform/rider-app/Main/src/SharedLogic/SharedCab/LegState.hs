@@ -14,7 +14,6 @@ module SharedLogic.SharedCab.LegState
     isSharedCabAgency,
     legAgencyGtfsId,
     searchAgencyKey,
-    legNeedsChains,
     sharedCabLegMode,
     waybillMovesBooking,
     sharedCabFareTiers,
@@ -129,10 +128,6 @@ fallbackDue now g = fallbackReached now g.maxAttempts g.attempts g.findingSince 
 fallbackReached :: UTCTime -> Int -> Int -> UTCTime -> Int -> Bool
 fallbackReached now maxAttempts attempts findingSince fallbackAfterSec = attempts >= maxAttempts || fallbackTimeElapsed now findingSince fallbackAfterSec
 
--- | A leg that is not over still depends on the city's allocation and expiry chains.
-legNeedsChains :: SharedCabState -> Bool
-legNeedsChains = (`notElem` [DROPPED, CANCELLED])
-
 -- | A cab at (or passing) the stop is ALLOCATED with the leg's boardDeadlineSec set; there is no separate state for it.
 deriveSharedCabState :: UTCTime -> JMState.JourneyBookingStatus -> Maybe Text -> Bool -> Maybe FallbackGate -> Maybe SharedCabState
 deriveSharedCabState now bookingStatus mbVehicleNumber hasLiveSession fallbackGate = case bookingStatus of
@@ -142,7 +137,7 @@ deriveSharedCabState now bookingStatus mbVehicleNumber hasLiveSession fallbackGa
   JMState.FRFSTicket DFRFSTicket.USED -> Just DROPPED
   JMState.FRFSTicket DFRFSTicket.EXPIRED -> Just DROPPED
   JMState.Feedback _ -> Just DROPPED
-  JMState.FRFSTicket _ -> Just CANCELLED
+  JMState.FRFSTicket DFRFSTicket.CANCELLED -> Just CANCELLED
   JMState.FRFSBooking status
     | status `elem` [DFRFSBooking.CANCELLED, DFRFSBooking.COUNTER_CANCELLED, DFRFSBooking.CANCEL_INITIATED, DFRFSBooking.RESCHEDULED, DFRFSBooking.FAILED] -> Just CANCELLED
   _ -> Nothing
