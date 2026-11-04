@@ -53,7 +53,7 @@ import qualified Lib.BmsBackend.Types as BmsTypes
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.GtfsDataServer.Flow as NandiFlow
 import Lib.GtfsDataServer.Types
-import SharedLogic.CallBAPInternal (getFrfsTripManifest, notifyFrfsTripStarted)
+import SharedLogic.CallBAPInternal (getFrfsTripManifest, notifyFrfsTripEnded, notifyFrfsTripStarted)
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, findIntegratedBPPConfig, getGimsBaseUrl)
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
@@ -405,6 +405,9 @@ postFrfsFleetOperatorTripAction' (mbPersonId, merchantId, merchantOpCityId) isDa
                 vehicleNumber = vn
               }
         logInfo $ "FRFSFleetOperator: Trip end successful - trip " <> show currentTrip
+        fork "NotifyRiderFrfsTripEnded" $ do
+          bapInternal <- asks (.appBackendBapInternal)
+          void $ notifyFrfsTripEnded bapInternal.apiKey bapInternal.url (makeTripIdFromWaybillNoAndTripNo wbNo currentTrip)
         return $
           FleetOperatorTripActionResp
             { currentTripNumber = currentTrip,

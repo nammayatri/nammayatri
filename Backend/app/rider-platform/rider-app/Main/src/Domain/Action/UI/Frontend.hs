@@ -23,6 +23,7 @@ module Domain.Action.UI.Frontend
 where
 
 import Data.List (partition)
+import qualified Data.Time as DT
 import Domain.Action.UI.Booking
 import qualified Domain.Action.UI.MultimodalConfirm as DMultimodal
 import Domain.Action.UI.Quote
@@ -33,6 +34,7 @@ import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
+import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Trip as DTrip
 import Environment
 import qualified Kernel.Beam.Functions as B
@@ -41,15 +43,18 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyLeg.Types as JL
 import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified SharedLogic.SilentReallocation as SilentRealloc
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 
 data GetPersonFlowStatusRes = GetPersonFlowStatusRes
@@ -73,8 +78,18 @@ type NotifyEventResp = APISuccess
 getPersonFlowStatus :: Id DP.Person -> Id DM.Merchant -> Maybe Bool -> Maybe Bool -> Flow GetPersonFlowStatusRes
 getPersonFlowStatus personId merchantId _ pollActiveBooking = do
   now <- getCurrentTime
+  mbRiderConfig <- findRiderConfig personId
+  -- Floors guard against a misconfigured low value; they apply only when a window is set (Nothing keeps the deployed behaviour).
+  -- Unpaid >= 24h: an unpaid CONFIRMED journey is marked FAILED, and a payment that succeeds later cannot move it back
+  -- (markJourneyPaidForBooking only moves status forward), so closing it while payment can still land loses a paid ticket.
+  -- Feedback >= 2 days: FEEDBACK_PENDING is auto-completed after this window, so a shorter one would close it before the rider sees the prompt.
+  -- Live >= 0: a negative window would put the live cutoff in the future and hide in-progress trips.
+  let mbLiveJourneyWindow = max 0 <$> toWindow (mbRiderConfig >>= (.flowStatusLiveJourneyWindowSec))
+      mbFeedbackWindow = max 172800 <$> toWindow (mbRiderConfig >>= (.flowStatusFeedbackWindowSec))
+      mbUnpaidJourneyWindow = max 86400 <$> toWindow (mbRiderConfig >>= (.flowStatusUnpaidJourneyWindowSec))
+      mbStaleJourneyLookback = toWindow (mbRiderConfig >>= (.flowStatusStaleJourneyLookbackSec))
   activeJourneys <- QJourney.findAllActiveByRiderId personId
-  processedActiveJourneys <- processJourneys now activeJourneys
+  processedActiveJourneys <- processJourneys now mbFeedbackWindow activeJourneys
   let (normalActiveRideJourneys, updatedActiveJourneys) = partition isNormalRideJourney processedActiveJourneys
   when (not (null normalActiveRideJourneys)) $ do
     fork "normalRideJourneys - Auto Fix" $ do
@@ -96,10 +111,29 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
                 -- TODO :: Maybe Required to handle, please fix me !
                 pure ()
               _ -> pure ()
-  let activeJourneysMode = not (null updatedActiveJourneys) && null normalActiveRideJourneys
+  whenJust ((,,) <$> mbUnpaidJourneyWindow <*> mbFeedbackWindow <*> mbStaleJourneyLookback) $ \(unpaidJourneyWindow, feedbackWindow, staleJourneyLookback) ->
+    fork "flowStatus - close stale journeys" $ do
+      staleJourneys <- QJourney.findStaleActiveByRiderId personId now (DT.addUTCTime (negate staleJourneyLookback) now) (DT.addUTCTime (negate unpaidJourneyWindow) now) (DT.addUTCTime (negate feedbackWindow) now) 5
+      forM_ staleJourneys $ \journey -> JM.updateJourneyStatus journey (staleJourneyStatus journey)
+  todaysJourneys <- case (,) <$> mbLiveJourneyWindow <*> mbRiderConfig of
+    Just (liveJourneyWindow, riderConfig) -> do
+      let utcOffset = fromIntegral . getSeconds $ riderConfig.timeDiffFromUtc
+          dayStart = DT.addUTCTime (negate utcOffset) (DT.UTCTime (DT.utctDay (DT.addUTCTime utcOffset now)) 0)
+      QJourney.findTodaysPublicTransportByRiderId personId (DT.addUTCTime (negate liveJourneyWindow) now) dayStart (DT.addUTCTime DT.nominalDay dayStart)
+    Nothing -> pure []
+  mbFeedbackJourney <- case mbFeedbackWindow of
+    Just feedbackWindow -> QJourney.findLatestFeedbackPendingByRiderId personId (DT.addUTCTime (negate feedbackWindow) now)
+    Nothing -> pure Nothing
+  scheduledJourneys <- processJourneys now mbFeedbackWindow (todaysJourneys <> maybeToList mbFeedbackJourney)
+  let extraJourneys = filter (\journey -> journey.id `notElem` map (.id) updatedActiveJourneys) scheduledJourneys
+      publicTransportJourneys = updatedActiveJourneys <> extraJourneys
+      activeJourneysMode = not (null updatedActiveJourneys) && null normalActiveRideJourneys
   if activeJourneysMode
-    then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = updatedActiveJourneys}) Nothing
-    else do
+    then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = publicTransportJourneys}) Nothing
+    else showJourneysWhenIdle extraJourneys publicTransportJourneys <$> getRideFlowStatus now
+  where
+    getRideFlowStatus :: UTCTime -> Flow GetPersonFlowStatusRes
+    getRideFlowStatus now = do
       personStatus' <- QPFS.getStatus personId
       case personStatus' of
         Just personStatus -> do
@@ -131,12 +165,18 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
                 _ -> checkForActiveBooking
             _ -> checkForActiveBooking
         Nothing -> checkForActiveBooking
-  where
-    isNormalRideJourney :: DJ.Journey -> Bool
-    isNormalRideJourney journey =
-      case listToMaybe journey.modes of
-        Just firstMode -> length journey.modes == 1 && (firstMode == DTrip.Taxi)
-        Nothing -> False
+
+    showJourneysWhenIdle :: [DJ.Journey] -> [DJ.Journey] -> GetPersonFlowStatusRes -> GetPersonFlowStatusRes
+    showJourneysWhenIdle extraJourneys ptJourneys res = case res.currentStatus of
+      DPFS.IDLE | not (null extraJourneys) -> GetPersonFlowStatusRes res.oldStatus (DPFS.ACTIVE_JOURNEYS {journeys = ptJourneys}) res.isValueAddNP
+      _ -> res
+
+    staleJourneyStatus :: DJ.Journey -> DJ.JourneyStatus
+    staleJourneyStatus journey = case journey.status of
+      DJ.FEEDBACK_PENDING -> DJ.COMPLETED
+      DJ.CONFIRMED | journey.isPaymentSuccess /= Just True && journey.isPublicTransportIncluded == Just True -> DJ.FAILED
+      _ -> DJ.EXPIRED
+
     checkForActiveBooking :: Flow GetPersonFlowStatusRes
     checkForActiveBooking = do
       if isJust pollActiveBooking
@@ -178,44 +218,78 @@ notifyEvent personId merchantId req = do
           let mbRideId = booking.rideList & listToMaybe <&> (.id)
           whenJust mbRideId $ \rideId -> QR.updateFeedbackSkipped True rideId
         _ -> pure ()
+      mbRiderConfig <- findRiderConfig personId
+      -- Same 2-day floor as getPersonFlowStatus, so skip and flowStatus agree on which FEEDBACK_PENDING journey is current.
+      let mbFeedbackWindow = max 172800 <$> toWindow (mbRiderConfig >>= (.flowStatusFeedbackWindowSec))
       case req.journeyId of
         Just journeyId -> do
           QJourney.updateStatus DJ.COMPLETED journeyId
           fork "processOtherActiveJourneys" $ do
             now <- getCurrentTime
             activeJourneys <- QJourney.findAllActiveByRiderId personId
-            processedActiveJourneys <- processJourneys now activeJourneys
-            markJourneysComplete processedActiveJourneys
+            processedActiveJourneys <- processJourneys now mbFeedbackWindow activeJourneys
+            markJourneysComplete mbFeedbackWindow processedActiveJourneys
         -- TODO: For backward compatibility
         Nothing -> do
           activeJourneys <- QJourney.findAllActiveByRiderId personId
-          markJourneysComplete activeJourneys
+          markJourneysComplete mbFeedbackWindow activeJourneys
+          whenJust mbFeedbackWindow $ \feedbackWindow -> do
+            now <- getCurrentTime
+            QJourney.findLatestFeedbackPendingByRiderId personId (DT.addUTCTime (negate feedbackWindow) now)
+              >>= mapM_ (\journey -> JM.updateJourneyStatus journey DJ.COMPLETED)
     SEARCH_CANCELLED -> do
       activeBooking <- B.runInReplica $ QB.findLatestSelfAndPartyBookingByRiderId personId
       whenJust activeBooking $ \booking -> processActiveBooking booking Nothing OnSearch
       QPFS.updateStatus personId DPFS.IDLE
   pure APISuccess.Success
   where
-    markJourneysComplete =
+    markJourneysComplete mbFeedbackWindow =
       mapM_
         ( \journey ->
-            when (journey.status `notElem` [DJ.COMPLETED, DJ.EXPIRED, DJ.CANCELLED, DJ.FAILED]) $
+            when (closesOnSkip mbFeedbackWindow journey) $
               JM.updateJourneyStatus journey DJ.COMPLETED
         )
+    closesOnSkip :: Maybe DT.NominalDiffTime -> DJ.Journey -> Bool
+    closesOnSkip mbFeedbackWindow journey = case mbFeedbackWindow of
+      Just _ -> journey.status == DJ.FEEDBACK_PENDING || (isNormalRideJourney journey && isOpen)
+      Nothing -> isOpen
+      where
+        isOpen = journey.status `notElem` [DJ.COMPLETED, DJ.EXPIRED, DJ.CANCELLED, DJ.FAILED]
+
+isNormalRideJourney :: DJ.Journey -> Bool
+isNormalRideJourney journey =
+  case listToMaybe journey.modes of
+    Just firstMode -> length journey.modes == 1 && (firstMode == DTrip.Taxi)
+    Nothing -> False
+
+findRiderConfig :: Id DP.Person -> Flow (Maybe DRC.RiderConfig)
+findRiderConfig personId = do
+  mbPerson <- QPerson.findById personId
+  maybe (pure Nothing) (\person -> getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing) mbPerson
+
+toWindow :: Maybe Seconds -> Maybe DT.NominalDiffTime
+toWindow = fmap (fromIntegral . getSeconds)
 
 -- filter payment success journeys and update journey status if expired
-processJourneys :: UTCTime -> [DJ.Journey] -> Flow [DJ.Journey]
-processJourneys _ [] = return []
-processJourneys now journeys = do
+processJourneys :: UTCTime -> Maybe DT.NominalDiffTime -> [DJ.Journey] -> Flow [DJ.Journey]
+processJourneys _ _ [] = return []
+processJourneys now mbFeedbackWindow journeys = do
   updatedJourneys <- mapM updateJourneyStatus journeys
-  return $ filter (\j -> j.status /= DJ.EXPIRED) updatedJourneys
+  return $ filter (\j -> j.status `notElem` [DJ.EXPIRED, DJ.COMPLETED]) updatedJourneys
   where
-    updateJourneyStatus j = do
-      case j.journeyExpiryTime of
-        Just expiryTime ->
-          if now > expiryTime
-            then do
-              _ <- JM.updateJourneyStatus j DJ.EXPIRED
-              return j {DJ.status = DJ.EXPIRED}
-            else return j
-        Nothing -> return j
+    updateJourneyStatus j
+      | j.status == DJ.FEEDBACK_PENDING,
+        Just feedbackWindow <- mbFeedbackWindow =
+        if maybe False (< DT.addUTCTime (negate feedbackWindow) now) j.endTime
+          then moveTo j DJ.COMPLETED
+          else return j
+      | otherwise =
+        case j.journeyExpiryTime of
+          Just expiryTime ->
+            if now > expiryTime
+              then moveTo j DJ.EXPIRED
+              else return j
+          Nothing -> return j
+    moveTo j newStatus = do
+      _ <- JM.updateJourneyStatus j newStatus
+      return j {DJ.status = newStatus}
