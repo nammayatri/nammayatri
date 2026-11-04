@@ -254,8 +254,8 @@ findByAgencyIdCP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m (Ma
 findByAgencyIdCP agencyKey =
   getOneConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Nothing, agencyKey = Just agencyKey, domain = Nothing, vehicleCategory = Nothing, platformType = Nothing}) (Just (maybeToList <$> CQIBC.findByAgencyId agencyKey))
 
--- | The shared-cab feed keeps a MULTIMODAL row (journeys) and an APPLICATION row (driver proxy) under one agency key; the table's
--- unique (agency_key, platform_type) constraint means each platform has at most one.
+-- | The shared-cab feed keeps a MULTIMODAL row (journeys) and an APPLICATION row (driver proxy) under one agency key: exactly one row
+-- of the platform, or an error, never a guess.
 findSharedCabConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> PlatformType -> m IntegratedBPPConfig
 findSharedCabConfig agencyKey platformType =
   getOneConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Nothing, agencyKey = Just agencyKey, domain = Nothing, vehicleCategory = Nothing, platformType = Just platformType}) (Just (maybeToList <$> CQIBC.findByAgencyKeyAndPlatformType agencyKey platformType))
