@@ -435,6 +435,7 @@ library
       Domain.Action.UI.FleetEngineToken
       Domain.Action.UI.FleetOwnerList
       Domain.Action.UI.FRFSFleetOperator
+      Domain.Action.UI.GridDecision
       Domain.Action.UI.IncentiveJourney
       Domain.Action.UI.Insurance
       Domain.Action.UI.Invoice
@@ -849,6 +850,7 @@ library
       SharedLogic.TollDashboard
       SharedLogic.TollUpsert
       SharedLogic.Type
+      SharedLogic.VehiclePhotoVerification
       SharedLogic.VehicleServiceTier
       SharedLogic.VehicleServiceTierAreaRestriction
       SharedLogic.WMB

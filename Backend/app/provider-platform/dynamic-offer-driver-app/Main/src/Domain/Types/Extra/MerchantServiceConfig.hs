@@ -19,6 +19,7 @@ import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingI
 import Kernel.External.FleetEngine.Config (FleetEngineCfg)
 import qualified Kernel.External.GSTEInvoice.Interface.Types as GSTEInvoice
 import qualified Kernel.External.GSTEInvoice.Types as GSTEInvoice
+import qualified Kernel.External.Grid as Grid
 import qualified Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
@@ -87,6 +88,7 @@ data FleetEngineProvider = GoogleFleetEngine
   deriving anyclass (FromJSON, ToJSON)
 
 data BmsProvider = DtcBms
+data GridProvider = JuspayGrid
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -125,6 +127,7 @@ data ServiceName
   | FleetEngineService FleetEngineProvider
   | BmsService BmsProvider
   | EventTrackingService EventTracking.EventTrackingService
+  | GridService GridProvider
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -165,6 +168,7 @@ instance Show ServiceName where
   show (FleetEngineService s) = "FleetEngine_" <> show s
   show (BmsService s) = "Bms_" <> show s
   show (EventTrackingService s) = "EventTracking_" <> show s
+  show (GridService s) = "Grid_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -307,6 +311,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "EventTracking_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (GridService v1, r2)
+                 | r1 <- stripPrefix "Grid_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -347,6 +355,7 @@ data ServiceConfigD (s :: UsageSafety)
   | FleetEngineServiceConfig !FleetEngineCfg
   | BmsServiceConfig !BmsBackendConfig
   | EventTrackingServiceConfig !EventTrackingInterface.EventTrackingServiceConfig
+  | GridServiceConfig !Grid.GridCfg
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe

@@ -1,0 +1,30 @@
+imports:
+  Text: Data.Text
+
+module: GridDecision
+
+types:
+  # Client sends only the raw inputs. The question set and prompt text are built server-side in
+  # SharedLogic.VehiclePhotoVerification, so a caller cannot steer the model or run arbitrary prompts.
+  VehiclePhotoDecisionReq:
+    rcNumber: Text # RC number as entered by the driver; normalized to [A-Z0-9], 6-12 chars
+    imageBase64: Text # JPEG/PNG/WebP as base64, with or without a data:...;base64, prefix
+
+  VehiclePhotoDecisionResp:
+    gridEnabled: Bool # False when Grid is not configured for the driver's city (all other fields Nothing)
+    acceptable: Maybe Bool # Result of isVehiclePhotoAcceptable
+    vehicleType: Maybe Text # auto | cab | bike | other | no_vehicle
+    plateVisible: Maybe Double # P(yes) in [0, 1]
+    plateMatchesRc: Maybe Double # P(yes) in [0, 1]
+    isRealPhoto: Maybe Double # P(yes) in [0, 1]
+    photoQuality: Maybe Double # expected score in [0, 3]
+    model: Maybe Text # resolved Grid model, for auditing
+
+apis:
+  - POST:
+      endpoint: /driver/grid/vehiclePhoto/decision
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: VehiclePhotoDecisionReq
+      response:
+        type: VehiclePhotoDecisionResp

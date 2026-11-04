@@ -43,6 +43,7 @@ import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.File as File
 import qualified API.Action.UI.FinanceInvoice as FinanceInvoice
 import qualified API.Action.UI.FleetOwnerList as FleetOwnerList
+import qualified API.Action.UI.GridDecision as GridDecision
 import qualified API.Action.UI.Insurance as Insurance
 import qualified API.Action.UI.Invoice as Invoice
 import qualified API.Action.UI.LmsModule as LmsModule
@@ -181,6 +182,7 @@ type API =
            :<|> EditBooking.API
            :<|> SocialLogin.API
            :<|> VehicleDetails.API
+           :<|> GridDecision.API
            :<|> PriceBreakup.API
            :<|> MeterRide.API
            :<|> Tokenization.API
@@ -277,6 +279,7 @@ handler =
     :<|> EditBooking.handler
     :<|> SocialLogin.handler
     :<|> VehicleDetails.handler
+    :<|> GridDecision.handler
     :<|> PriceBreakup.handler
     :<|> MeterRide.handler
     :<|> Tokenization.handler
