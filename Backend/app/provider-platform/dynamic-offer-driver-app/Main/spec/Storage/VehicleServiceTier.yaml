@@ -62,6 +62,8 @@ VehicleServiceTier:
     availabilityCheckConfig: Maybe AvailabilityCheckConfig
     autoAcceptanceConfig: Maybe AutoAcceptanceConfig
     regionCondition: Maybe RegionCondition
+    minWalletBalanceToGoOnline: Maybe HighPrecMoney
+    autopayTriggerBalance: Maybe HighPrecMoney
   sqlType:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]

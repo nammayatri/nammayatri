@@ -238,7 +238,7 @@ import Lib.Finance.TempBalanceHold (addOfferHoldAtKey, getOfferHoldTotalAtKey, r
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid (tdsReimbursementReferenceType)
-import SharedLogic.Finance.WalletAccount (buildDriverChargeCtx, cashWalletCheckEnabled, computeTdsRateReason, estimateBufferedStatutoryDeductions, estimateOfferDeductions, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getPrepaidOfferHoldTotalExcluding, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletAvailableBalanceByOwner, getWalletBalanceByOwner, getWalletHoldBalanceByOwner, getWalletOfferHoldTotalExcluding, hasMinWalletBalance, makePrepaidOfferHoldsKey, makeWalletOfferHoldsKey, shouldCheckCashWallet, validateWalletDebitAmount, walletReferenceStatutoryHold)
+import SharedLogic.Finance.WalletAccount (buildDriverChargeCtx, cashWalletCheckEnabled, computeTdsRateReason, estimateBufferedStatutoryDeductions, estimateOfferDeductions, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getPrepaidOfferHoldTotalExcluding, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletAvailableBalanceByOwner, getWalletBalanceByOwner, getWalletHoldBalanceByOwner, getWalletOfferHoldTotalExcluding, hasMinWalletBalance, makePrepaidOfferHoldsKey, makeWalletOfferHoldsKey, shouldCheckCashWallet, validateWalletDebitAmount, walletClassConfig, walletReferenceStatutoryHold)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -531,26 +531,6 @@ splitGrossByVatPct mbPct gross = case mbPct of
 -- | Convert a UTC time to a local Day given a timezone offset (seconds from UTC)
 utcToLocalDay :: NominalDiffTime -> UTCTime -> Time.Day
 utcToLocalDay timeDiff utcTime = Time.utctDay (Time.addUTCTime timeDiff utcTime)
-
--- | The kernel class config for a wallet owner — the single policy source for payout
---   enablement, instant eligibility, minimums, per-day cap and the redeemable cutoff.
---   A wallet is the (Liability, counterparty) class; FLEET_BUSINESS folds into
---   FLEET_OWNER via 'counterpartyFromRole' before this is called.
-walletClassConfig ::
-  (BeamFlow m r) =>
-  Text -> -- merchant id
-  Text -> -- merchant operating city id
-  CounterpartyType ->
-  m ResolvedAccountConfig
-walletClassConfig merchantId merchantOperatingCityId counterparty =
-  getAccountConfig
-    AccountClass
-      { merchantId,
-        merchantOperatingCityId,
-        accountType = Liability,
-        counterpartyType = Just counterparty,
-        subLedger = Nothing
-      }
 
 -- | The redeemable-cutoff instant per the class config. Nothing = no cutoff configured:
 --   everything is redeemable (callers that need a concrete bound use 'now', under which

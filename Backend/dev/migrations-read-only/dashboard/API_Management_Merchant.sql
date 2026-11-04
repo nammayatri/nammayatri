@@ -278,3 +278,12 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"GetMerchantToll","migration":"capability","param":"city-config.geo.read","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-config.geo.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_TOLL' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetMerchantConfigDriverWallet","migration":"capability","param":"system-config.driver_wallet.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.driver_wallet.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_DRIVER_WALLET' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostMerchantConfigDriverWalletMigratePendingDues","migration":"capability","param":"system-config.driver_wallet.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.driver_wallet.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_DRIVER_WALLET_MIGRATE_PENDING_DUES' ) ON CONFLICT DO NOTHING;

@@ -102,3 +102,14 @@ ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN account_number_h
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN account_number_hash DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN account_number_encrypted SET DEFAULT NULL;
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN account_number_encrypted DROP NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN is_approved_fee_override boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN price_per_share integer ;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN membership_fee integer ;

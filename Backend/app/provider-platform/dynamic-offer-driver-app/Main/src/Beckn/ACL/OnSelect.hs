@@ -160,7 +160,7 @@ mkPriceV2 quote =
 
 mkItemTagsV2 :: HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FullFarePolicy -> Tags.Taggings -> Bool -> Maybe [Spec.TagGroup]
 mkItemTagsV2 estimatedFare mbCancellationCharge congestionChargeViaDp mbFarePolicy taggings hasStops = do
-  let farePolicyTag = Utils.mkRateCardTag Nothing mbCancellationCharge Nothing estimatedFare congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing hasStops
+  let farePolicyTag = Utils.mkRateCardTag Nothing mbCancellationCharge Nothing estimatedFare congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing Nothing hasStops
   Tags.convertToTagGroup taggings.itemTags <> farePolicyTag
 
 mkQuoteV2 :: Bool -> DQuote.DriverQuote -> UTCTime -> Spec.Quotation

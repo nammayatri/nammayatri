@@ -36,12 +36,24 @@ module SharedLogic.Finance.WalletAccount
     getPrepaidOfferHoldTotalExcluding,
     getWalletAvailableBalanceByOwner,
     buildDriverChargeCtx,
+    isWalletSubscriptionCity,
+    isMinBalanceEnforced,
+    walletClassConfig,
+    driverWalletConfigErrors,
+    walletMinBalanceExemptTagName,
+    isWalletMinBalanceExempt,
+    tierMinimum,
+    autopayTriggerBalance,
+    findWalletAccountsByOwners,
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Documents as Documents
@@ -49,7 +61,24 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.Account as QFAccount
 import Lib.Finance.TempBalanceHold (getOfferHoldTotalExcludingAtKey)
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
+
+-- | Wallet (Liability, pooled) accounts of one owner type for many owners, in one query. The query is
+--   scoped by owner type, so a person holding both a DRIVER and a FLEET_OWNER wallet gets only the
+--   one asked for and one can't overwrite the other.
+--   Statutory holds are not subtracted: they only exist with the cash-ride gate on, which
+--   wallet-subscription cities keep off.
+findWalletAccountsByOwners ::
+  (BeamFlow m r) =>
+  CounterpartyType ->
+  [Text] ->
+  m [Account]
+findWalletAccountsByOwners counterpartyType ownerIds
+  | null ownerIds = pure []
+  | otherwise = QFAccount.findAllByCounterpartyIdsAndType (Just <$> ownerIds) (Just counterpartyType) Liability Nothing
 
 getWalletAccountByOwner ::
   (BeamFlow m r) =>
@@ -162,6 +191,92 @@ walletReferenceStatutoryHold = "StatutoryDeductionHold"
 
 cashWalletCheckEnabled :: DTC.DriverWalletConfig -> Bool
 cashWalletCheckEnabled dwc = dwc.enableDriverWallet && isJust dwc.minWalletAmountForCashRides
+
+-- | The kernel class config for a wallet owner — the single policy source for payout
+--   enablement, instant eligibility, minimums, per-day cap and the redeemable cutoff.
+--   A wallet is the (Liability, counterparty) class; FLEET_BUSINESS folds into
+--   FLEET_OWNER via 'counterpartyFromRole' before this is called. The driver wallet class
+--   (DRIVER) also holds subscriptionFromBalance and enforceMinBalance, read by
+--   'isWalletSubscriptionCity' and 'isMinBalanceEnforced'.
+walletClassConfig ::
+  (BeamFlow m r) =>
+  Text -> -- merchant id
+  Text -> -- merchant operating city id
+  CounterpartyType ->
+  m ResolvedAccountConfig
+walletClassConfig merchantId merchantOperatingCityId counterparty =
+  getAccountConfig
+    AccountClass
+      { merchantId,
+        merchantOperatingCityId,
+        accountType = Liability,
+        counterpartyType = Just counterparty,
+        subLedger = Nothing
+      }
+
+-- | The subscription is paid from the driver wallet: the wallet is on and the driver wallet class has
+--   subscriptionFromBalance.
+isWalletSubscriptionCity :: (BeamFlow m r) => DTC.TransporterConfig -> m Bool
+isWalletSubscriptionCity config = (config.driverWalletConfig.enableDriverWallet &&) . (.subscriptionFromBalance) <$> walletClassConfig config.merchantId.getId config.merchantOperatingCityId.getId DRIVER
+
+-- | The go-online minimum (the service tier's minWalletBalanceToGoOnline) blocks drivers: in any city
+--   with the wallet on and enforceMinBalance on the driver wallet class, whether or not the
+--   subscription is paid from the wallet. It is the only wallet block; a wallet-subscription city must
+--   have it on (see 'driverWalletConfigErrors').
+isMinBalanceEnforced :: (BeamFlow m r) => DTC.TransporterConfig -> m Bool
+isMinBalanceEnforced config = (config.driverWalletConfig.enableDriverWallet &&) . (.enforceMinBalance) <$> walletClassConfig config.merchantId.getId config.merchantOperatingCityId.getId DRIVER
+
+-- | What is wrong with a city's wallet settings (the driver wallet config and the ride GST rates),
+--   given the driver wallet's kernel class config (finance_account_config) and its service tiers;
+--   empty when they are consistent. ConfigPilot runs it on the patched TransporterConfig before a
+--   change to these settings is saved.
+driverWalletConfigErrors :: DTC.TransporterConfig -> ResolvedAccountConfig -> [DVST.VehicleServiceTier] -> [Text]
+driverWalletConfigErrors config driverWalletClass tiers =
+  [msg | (True, msg) <- checks]
+  where
+    dwc = config.driverWalletConfig
+    rideGst = config.taxConfig.rideGst
+    -- The stored rates are fractions (0.025 means 2.5%), as seeded and as FareCalculator uses them.
+    rates = catMaybes [rideGst.cgstPercentage, rideGst.sgstPercentage, rideGst.igstPercentage]
+    gstRateMessage = "GST rates are fractions between 0 and 1 (for example 0.025 for 2.5%)"
+    enforcing = driverWalletClass.enforceMinBalance
+    walletSubscription = driverWalletClass.subscriptionFromBalance
+    checks =
+      [ (any (\rate -> rate < 0 || rate > 1) rates || sum rates > 1, gstRateMessage),
+        (walletSubscription && not dwc.enableDriverWallet, "subscriptionFromBalance (finance_account_config) needs enableDriverWallet"),
+        -- The minimum is the only wallet block: without it a wallet-subscription city never blocks.
+        (walletSubscription && not enforcing, "subscriptionFromBalance needs enforceMinBalance on the driver wallet class (finance_account_config)"),
+        -- Dues are cleared by topping the wallet up, which the kernel gates per account class.
+        (walletSubscription && not driverWalletClass.transferInEnabled, "subscriptionFromBalance needs top-ups on for the driver wallet class (finance_account_config.transfer_in_enabled)"),
+        -- The nightly fee is debited even into negative; the kernel refuses that unless the class allows it.
+        (walletSubscription && not driverWalletClass.allowNegativeBalance, "subscriptionFromBalance needs negative balances allowed for the driver wallet class (finance_account_config.allow_negative_balance)"),
+        (walletSubscription && dwc.forceOnlineLedger == Just True, "subscriptionFromBalance needs forceOnlineLedger = false, or cash-ride GST is never debited"),
+        (enforcing && not dwc.enableDriverWallet, "enforceMinBalance (finance_account_config) needs enableDriverWallet"),
+        (enforcing && all (isNothing . (.minWalletBalanceToGoOnline)) tiers, "Set minWalletBalanceToGoOnline on at least one service tier before enforcing it")
+      ]
+
+walletMinBalanceExemptTagName :: Text
+walletMinBalanceExemptTagName = "WalletMinBalanceExempt"
+
+isWalletMinBalanceExempt :: UTCTime -> Maybe [LYT.TagNameValueExpiry] -> Bool
+isWalletMinBalanceExempt now mbTags =
+  any ((== Just (LYT.TagName walletMinBalanceExemptTagName)) . Yudhishthira.parseTagName) $
+    Yudhishthira.filterExpiredTags' now (fromMaybe [] mbTags)
+
+-- | Balance at or below which an Autopay recharge is scheduled: the driver's default service tier's
+--   trigger value, else that tier's blocking minimum, else the city's minWalletAmountForCashRides,
+--   else 0. Normally higher than the minimum, so the driver is topped up before they reach the level
+--   at which they are blocked from going online.
+autopayTriggerBalance :: DTC.DriverWalletConfig -> [DVST.VehicleServiceTier] -> Maybe DV.VehicleVariant -> HighPrecMoney
+autopayTriggerBalance dwc cityServiceTiers mbVariant =
+  fromMaybe 0 $ (mbVariant >>= tierTrigger) <|> dwc.minWalletAmountForCashRides
+  where
+    tierTrigger variant =
+      find (\vst -> variant `elem` vst.defaultForVehicleVariant) cityServiceTiers >>= \vst -> vst.autopayTriggerBalance <|> vst.minWalletBalanceToGoOnline
+
+tierMinimum :: [DVST.VehicleServiceTier] -> DV.VehicleVariant -> Maybe HighPrecMoney
+tierMinimum cityServiceTiers variant =
+  find (\vst -> variant `elem` vst.defaultForVehicleVariant) cityServiceTiers >>= (.minWalletBalanceToGoOnline)
 
 -- | Statutory deductions (GST + TDS) the driver would owe if the fare grew to
 --   its ceiling. 'mbBufferedFare' is 'FareParameters.bufferedFare', computed

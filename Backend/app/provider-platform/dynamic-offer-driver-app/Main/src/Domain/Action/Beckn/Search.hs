@@ -245,6 +245,7 @@ data DSearchRes = DSearchRes
     stops :: [LatLong],
     now :: UTCTime,
     startTime :: UTCTime, -- scheduled pickup time (= now for immediate rides)
+    reservedTime :: Maybe Seconds, -- trip time the fare covers, see 'interCityReservedTime'
     quotes :: [(DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl)],
     estimates :: [(DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl)],
     transporterConfig :: DTMT.TransporterConfig,
@@ -456,7 +457,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
 
   driverInfoQuotes <- withTimeAPI "search" "addNearestDriverInfoQuotes" $ addNearestDriverInfo merchantOpCityId driverPool quotes configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
   driverInfoEstimates <- withTimeAPI "search" "addNearestDriverInfoEstimates" $ addNearestDriverInfo merchantOpCityId driverPool estimates configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
-  buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber allFarePoliciesProduct.fareSettlementType now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch
+  buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber allFarePoliciesProduct.fareSettlementType now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch mbDuration
   where
     stopsLatLong = map (.gps)
     --   Check if the pickup gate supports queueing and get default driver extra.
@@ -530,13 +531,14 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
           logError $ "Vehicle service tier not found for " <> show fp'.vehicleServiceTier
           pure (estimates, quotes)
 
-    buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName specialLocationSupportNumber fareSettlementType now startTime fareParametersInRateCard isMultimodalSearch = do
+    buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName specialLocationSupportNumber fareSettlementType now startTime fareParametersInRateCard isMultimodalSearch mbEstimatedDuration = do
       merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       return $
         DSearchRes
           { provider = merchant,
             bapId = sReq.bapId,
+            reservedTime = interCityReservedTime startTime sReq.returnTime <$> mbEstimatedDuration,
             ..
           }
 

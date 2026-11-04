@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS atlas_driver_offer_bpp.policy_and_compliance_document_idx_created_at_enabled_merchant_id_policy_type;

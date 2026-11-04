@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS atlas_driver_offer_bpp.finance_ledger_entry_idx_to_account_id_timestamp;

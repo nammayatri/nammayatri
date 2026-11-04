@@ -293,6 +293,7 @@ import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidAvailableBalanceByOwner, hasPrepaidCreditsValidAt)
 import qualified SharedLogic.Finance.Wallet as FWallet
+import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -1128,6 +1129,8 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
           unless (driverInfo.enabled) $ throwError DriverAccountDisabled
           unless isPrepaidDriver $
             unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
+          unless isPrepaidDriver $
+            WalletFloor.checkWalletGoOnlineEligibility transporterConfig person (mbVehicle <&> (.variant))
           when isPrepaidEnabled $ do
             unless (isJust mbVehicle) $
               throwError $ InvalidRequest "Cannot go online: no active vehicle linked"
@@ -2953,7 +2956,8 @@ clearDriverDues ::
   Maybe ClearManualSelectedDues ->
   Maybe SPayment.DeepLinkData ->
   m ClearDuesRes
-clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq mbDeepLinkData = do
+-- Locked per driver so a concurrent call cannot read a half-written invoice and order only part of its fees.
+clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq mbDeepLinkData = Redis.withWaitAndLockRedis (DDF.clearDuesLockKey personId.getId) 60 100000 $ do
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
@@ -3029,7 +3033,7 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
           QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE invoice.id
           return (Nothing, driverFeeIds, [])
         else
-          if length currentDueDriverFee <= length invoices
+          if length currentDueDriverFee == length invoices
             then do
               return (Just (invoice.id, invoice.invoiceShortId), currentDueDriverFee, (driverFees <&> getId . (.id)) \\ (invoices <&> getId . (.driverFeeId)))
             else do

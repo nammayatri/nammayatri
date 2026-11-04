@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Ride.EndRide.Internal
   ( endRideTransaction,
+    processEndRideFinance,
     putDiffMetric,
     getRouteAndDistanceBetweenPoints,
     safeMod,
@@ -123,6 +124,7 @@ import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Finance.Wallet
+import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.RideEvents.Publisher as RideEventsPublisher
@@ -271,7 +273,22 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
                 (CallBAPInternal.UpdateCancellationFeeStatusReq {bppRideIds = bppRideIds})
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
 
-  fork "processEndRideFinance" $ processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig
+  -- A wallet-subscription city runs the end-ride finance (fee accrual, wallet postings incl. GST) as an
+  -- allocator job instead of a fork. Every other city keeps the fork.
+  walletSubscriptionCity <- isWalletSubscriptionCity thresholdConfig
+  if walletSubscriptionCity
+    then
+      createJobIn @_ @'ProcessEndRideFinance (Just booking.providerId) (Just booking.merchantOperatingCityId) 0 $
+        ProcessEndRideFinanceJobData {rideId = ride.id, bookingId = booking.id}
+    else fork "processEndRideFinance" $ processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig
+  -- The daily wallet integrity check (pool balance drift): a wallet-subscription city schedules it after
+  -- the nightly fee run, any other city with the wallet on from here.
+  when (thresholdConfig.driverWalletConfig.enableDriverWallet && not walletSubscriptionCity) $ do
+    firstToday <- Redis.setNxExpire ("WalletIntegrityDaily:" <> booking.merchantOperatingCityId.getId) (24 * 3600) True
+    when firstToday $ do
+      now <- getCurrentTime
+      createJobIn @_ @'WalletIntegrityCheck (Just booking.providerId) (Just booking.merchantOperatingCityId) 3600 $
+        WalletIntegrityCheckJobData {merchantId = booking.providerId, merchantOperatingCityId = booking.merchantOperatingCityId, startTime = addUTCTime (-24 * 3600) now, endTime = now}
 
   -- Driver operating-city migration on relocation is handled by kafka-consumers'
   -- RIDE_EVENTS_CONSUMER (Processor.RideEvents.Handlers.handleDriverCityMigration), off the

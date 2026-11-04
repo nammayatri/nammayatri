@@ -116,6 +116,7 @@ import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.Finance.Rails as Rails
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.Wallet
+import qualified SharedLogic.Finance.WalletSubscription as SWalletSubscription
 import SharedLogic.Merchant
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
@@ -149,7 +150,7 @@ import qualified Tools.PaymentNudge as PaymentNudge
 
 -- create order -----------------------------------------------------
 createOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id INV.Invoice -> Flow Payment.CreateOrderResp
-createOrder (driverId, merchantId, opCityId) invoiceId = do
+createOrder (driverId, merchantId, opCityId) invoiceId = Redis.withWaitAndLockRedis (clearDuesLockKey driverId.getId) 60 100000 $ do
   invoices <- B.runInReplica $ QIN.findAllByInvoiceId invoiceId
   driverFees <- (B.runInReplica . QDF.findById . (.driverFeeId)) `mapM` invoices
   let mbServiceName = listToMaybe invoices <&> (.serviceName)
@@ -687,6 +688,7 @@ processPayment merchantId driver orderId sendNotification (serviceName, subsConf
       Redis.runInMasterCloudRedisCell $
         forM_ driverFeeIds $ \driverFeeId -> Redis.del (manualPaymentInProgressKey driverFeeId.getId)
       mapM_ (processNonClearedDriverFees merchantId driver) nonClearedDriverFees
+      SWalletSubscription.creditWalletForPaidDriverFees transporterConfig driver orderId.getId driverFees
     case innerLockRes of
       Left () -> logError $ "processPayment: payout lock held, skipped clearing driver fees for order " <> orderId.getId <> " driverFeeIds " <> show (driverFeeIds <&> (.getId)) <> "; invoice will still be marked SUCCESS and the fees stay uncleared until reconciled (clearDriverDues)"
       Right () -> pure ()

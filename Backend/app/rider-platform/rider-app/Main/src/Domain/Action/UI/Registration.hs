@@ -117,6 +117,7 @@ import qualified SharedLogic.OTP as SOTP
 import qualified SharedLogic.PassRestore as PassRestore
 import qualified SharedLogic.Person as SLP
 import qualified SharedLogic.SocialLogin as SSL
+import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -124,12 +125,15 @@ import qualified Storage.CachedQueries.Person as CQP
 import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.DeletedPerson as QDeletedPerson
 import qualified Storage.Queries.DepotManager as QDepotManager
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonExtra as PersonExtra
+import qualified Storage.Queries.PersonPTStats as QPersonPTStats
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
+import qualified Storage.Queries.Ride as QRide
 import qualified System.Environment as SE
 import qualified TempAppCode.Flow as TempAppCode
 import TempAppCode.Types
@@ -1083,7 +1087,28 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
   createPersonStats <- makePersonStats person
   Person.create person
   QPS.create createPersonStats
-  addNammaTags person (Y.LoginTagData {id = person.id, gender = req.gender, clientSdkVersion = mbClientVersion, clientBundleVersion = mbBundleVersion, clientReactNativeVersion = mbRnVersion, clientConfigVersion = mbClientConfigVersion, clientDevice = mbDevice})
+  hasPreviousBookings <- case req.mobileNumber of
+    Just mobileNumber -> do
+      let staticPersonId = SLUtils.getPureStaticCustomerId person mobileNumber
+      hasPTBookings <-
+        withTryCatch "createPerson:findPTStats" (QPersonPTStats.findAllByStaticPersonId staticPersonId)
+          >>= \case
+            Left err -> do
+              logError $ "createPerson: person_pt_stats lookup failed for personId=" <> person.id.getId <> " error=" <> show err
+              pure False
+            Right rows -> pure (not $ null rows)
+      if hasPTBookings
+        then pure True
+        else -- Taxi rides don't write person_pt_stats; a re-registered rider's rides sit on the deleted account's personId.
+
+          withTryCatch "createPerson:findPrevTaxiRides" (hasCompletedRidesOnDeletedAccounts staticPersonId)
+            >>= \case
+              Left err -> do
+                logError $ "createPerson: previous taxi rides lookup failed for personId=" <> person.id.getId <> " error=" <> show err
+                pure False
+              Right hasRides -> pure hasRides
+    Nothing -> pure False
+  addNammaTags hasPreviousBookings person (Y.LoginTagData {id = person.id, gender = req.gender, clientSdkVersion = mbClientVersion, clientBundleVersion = mbBundleVersion, clientReactNativeVersion = mbRnVersion, clientConfigVersion = mbClientConfigVersion, clientDevice = mbDevice})
   fork "event_tracking: user_onboarded" $
     ET.trackEvent merchant.id merchantOperatingCityId (ET.UserOnboarded person.id.getId (show identifierType) (show currentCity))
   fork "event_tracking: mark_onboarded_city_pending" $
@@ -1097,13 +1122,19 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
         CacheFlow m r,
         ClickhouseFlow m r
       ) =>
+      Bool ->
       SP.Person ->
       Y.LoginTagData ->
       m ()
-    addNammaTags person tagData = do
+    addNammaTags hasPreviousBookings person tagData = do
       newPersonTags <- withTryCatch "computeNammaTagsWithExpiry:Login" (LYDL.computeNammaTagsWithExpiryAndDebugLog LYDL.Rider (cast person.merchantOperatingCityId) Yudhishthira.Login Nothing tagData)
-      let tags = nub (fromMaybe [] person.customerNammaTags <> fromMaybe [] (eitherToMaybe newPersonTags))
+      let tags = nub (fromMaybe [] person.customerNammaTags <> fromMaybe [] (eitherToMaybe newPersonTags) <> [CQP.newUserTag | not hasPreviousBookings])
       CQP.updateCustomerTags (Just tags) tagData.id
+
+    hasCompletedRidesOnDeletedAccounts :: (EsqDBFlow m r, CacheFlow m r) => Text -> m Bool
+    hasCompletedRidesOnDeletedAccounts staticPersonId = do
+      deletedPersons <- QDeletedPerson.findAllByStaticPersonId Nothing Nothing (Just staticPersonId)
+      anyM (\dp -> (> 0) <$> QRide.countRidesByRiderId dp.personId) deletedPersons
 
     makePersonStats :: MonadTime m => SP.Person -> m DPS.PersonStats
     makePersonStats person = do
