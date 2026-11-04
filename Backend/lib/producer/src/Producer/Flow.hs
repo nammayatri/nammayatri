@@ -55,10 +55,12 @@ getShardedKey key shardId = key <> "{" <> shardId <> "}"
 
 runProducer :: Flow ()
 runProducer = do
-  myShardId <- getMyShardKey
-  Hedis.whenWithLockRedis (getShardedKey producerLockKey myShardId) 10 $ do
-    someErr <-
-      withTryCatch "produceMessages:producerFlow" $ do
+  -- The shard counter and lock calls must be inside withTryCatch too: an exception escaping
+  -- runProducer ends this looper thread for good, since loopGracefully does not restart it.
+  someErr <-
+    withTryCatch "produceMessages:producerFlow" $ do
+      myShardId <- getMyShardKey
+      Hedis.whenWithLockRedis (getShardedKey producerLockKey myShardId) 10 $ do
         (_, diff) <- withTimeGeneric "producer" $ do
           producerTimestampKeyPrefix <- asks (.producerTimestampKey)
           let producerTimestampKey = getShardedKey producerTimestampKeyPrefix myShardId
@@ -75,9 +77,13 @@ runProducer = do
           Hedis.withNonCriticalCrossAppRedis $ Hedis.zRemRangeByScore myShardSetKey startTime endTime
         waitTimeMilliSec <- asks (.waitTimeMilliSec)
         threadDelayMilliSec . Milliseconds $ max 0 (fromEnum (waitTimeMilliSec - fromIntegral diff) :: Int)
-    case someErr of
-      Left err -> logError $ show err
-      Right _ -> pure ()
+  case someErr of
+    Left err -> do
+      logError $ show err
+      -- back off before retrying so a Redis outage does not turn every looper into a hot loop
+      waitTimeMilliSec <- asks (.waitTimeMilliSec)
+      threadDelayMilliSec . Milliseconds $ fromEnum waitTimeMilliSec
+    Right _ -> pure ()
 
 runReviver :: ProducerType -> Flow ()
 runReviver producerType = do
