@@ -31,6 +31,7 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.DatastoreLatencyCalculator (withTime)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -698,10 +699,14 @@ offerListWithBasket ::
   Maybe SSR.SearchRequest ->
   m [(Text, Payment.OfferListResp)]
 offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType products mbRide mbBooking mbSearchReq = do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  personOfferStats <- QOfferStats.findAllByEntityIdAndEntityType personId.getId DOfferStats.Person
-  mbPersonStats <- QPersonStats.findByPersonId personId
-  isMultipleOrNoDeviceIdExist <- mkIsMultipleOrNoDeviceIdExist person
+  -- Confirm also passes a search request, so a booking marks it as not being the quote flow.
+  let isQuoteFlow = isJust mbSearchReq && isNothing mbBooking && isNothing (mbSearchReq >>= (.parentSearchRequestId))
+  (person, personOfferStats, mbPersonStats, isMultipleOrNoDeviceIdExist) <- timeQuoteOfferStep isQuoteFlow "quotesOfferSetupReads" $ do
+    person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+    personOfferStats <- QOfferStats.findAllByEntityIdAndEntityType personId.getId DOfferStats.Person
+    mbPersonStats <- QPersonStats.findByPersonId personId
+    isMultipleOrNoDeviceIdExist <- mkIsMultipleOrNoDeviceIdExist person
+    pure (person, personOfferStats, mbPersonStats, isMultipleOrNoDeviceIdExist)
   let isDriverNumberSameAsCustomer = mkIsDriverNumberSameAsCustomer person mbRide
   useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing paymentServiceType
   autoApplyOfferCodes <- getAutoApplyOfferCodes person.customerNammaTags
@@ -710,23 +715,25 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
     if useDomainOffers
       then do
         let productsWithAmount = map (\(pid, p) -> (pid, p.amount)) products
-        mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
-        when (isNothing mbRiderConfig) $ logWarning $ "No rider config for city " <> merchantOperatingCityId.getId <> ": offers with a maxApplyCount are withheld"
-        let mbRider = mbRiderConfig <&> \riderConfig -> Counters.OfferRiderContext {personId = personId.getId, deviceId = person.deviceId, timeDiffFromUtc = riderConfig.timeDiffFromUtc}
-        staticPersonOfferStats <- do
-          personPhone <- mapM decrypt person.mobileNumber
-          case personPhone of
-            Just phone -> do
-              staticId <- SLUtils.getStaticCustomerId person phone
-              if staticId /= personId.getId
-                then QOfferStats.findAllByEntityIdAndEntityType staticId DOfferStats.StaticPerson
-                else pure []
-            Nothing -> pure []
-        deviceOfferStats <- case person.deviceId of
-          Just did | not (T.null did) -> QOfferStats.findAllByEntityIdAndEntityType did DOfferStats.Device
-          _ -> pure []
-        today <- utctDay <$> getCurrentTime
-        mbPersonDailyOfferStats <- QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today
+        (mbRider, staticPersonOfferStats, deviceOfferStats, mbPersonDailyOfferStats) <- timeQuoteOfferStep isQuoteFlow "quotesOfferDomainReads" $ do
+          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+          when (isNothing mbRiderConfig) $ logWarning $ "No rider config for city " <> merchantOperatingCityId.getId <> ": offers with a maxApplyCount are withheld"
+          let mbRider = mbRiderConfig <&> \riderConfig -> Counters.OfferRiderContext {personId = personId.getId, deviceId = person.deviceId, timeDiffFromUtc = riderConfig.timeDiffFromUtc}
+          staticPersonOfferStats <- do
+            personPhone <- mapM decrypt person.mobileNumber
+            case personPhone of
+              Just phone -> do
+                staticId <- SLUtils.getStaticCustomerId person phone
+                if staticId /= personId.getId
+                  then QOfferStats.findAllByEntityIdAndEntityType staticId DOfferStats.StaticPerson
+                  else pure []
+              Nothing -> pure []
+          deviceOfferStats <- case person.deviceId of
+            Just did | not (T.null did) -> QOfferStats.findAllByEntityIdAndEntityType did DOfferStats.Device
+            _ -> pure []
+          today <- utctDay <$> getCurrentTime
+          mbPersonDailyOfferStats <- QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today
+          pure (mbRider, staticPersonOfferStats, deviceOfferStats, mbPersonDailyOfferStats)
         -- RideHailing product ids are service tiers (show vehicleServiceTierType), so each
         -- product's eligibility runs with its own serviceTierType for tier-specific offer rules.
         let domainContextFor productId =
@@ -745,7 +752,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
                       personTags = offerEligibilityTags person.customerNammaTags
                     }
             currency = maybe INR ((.currency) . snd) (listToMaybe products)
-        offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContextFor mbRider
+        offersByProduct <- timeQuoteOfferStep isQuoteFlow "quotesOfferEligibility" $ DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContextFor mbRider
         let mbRideData = mkRideData <$> mbRide
             mbBookingData = mkBookingData <$> mbBooking
             language = fromMaybe ENGLISH person.language
@@ -767,6 +774,14 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
           filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
           pure (productId, filteredOffers)
   pure $ map (\(productId, resp) -> (productId, overrideOfferListRespAutoApply autoApplyOfferCodes resp)) productOffers
+
+-- | Records a step only for the ride search quote flow, so other offer callers don't skew it.
+--   Calls 'withTime' directly because 'withTimeAPI' would add its flag fields to the constraints
+--   of every offer caller, including all of Confirm; the metric is always on and the log always off.
+timeQuoteOfferStep :: (MonadFlow m, CacheFlow m r) => Bool -> Text -> m a -> m a
+timeQuoteOfferStep isQuoteFlow operationName action
+  | isQuoteFlow = withTime "rideSearch" operationName False True action
+  | otherwise = action
 
 applyOffersFraudChecks :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> Maybe DRide.Ride -> Maybe DRB.Booking -> Maybe SSR.SearchRequest -> Maybe Y.RideData -> Maybe Y.BookingData -> Maybe Y.SearchRequestData -> Maybe Bool -> Bool -> [DOfferStats.OfferStats] -> Maybe DPS.PersonStats -> Bool -> Maybe Int -> m Payment.OfferListResp
 applyOffersFraudChecks merchantOperatingCityId offerListResp mbRideEntity mbBookingEntity mbSearchReqEntity mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats hasTakenValidRide totalRidesCount = do
