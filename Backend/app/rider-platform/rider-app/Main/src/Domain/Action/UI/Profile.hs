@@ -483,9 +483,10 @@ marketingEvents req = do
 
 updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EventStreamFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], SSL.SocialLoginFlowM m r) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> m APISuccess.APISuccess
 updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId = do
-  mPerson <- join <$> QPerson.findByEmailAndMerchantId merchantId `mapM` req.email
+  let mbNormalizedEmail = SSL.normalizeEmail <$> req.email
+  mPerson <- join <$> SSL.findPersonByEmail merchantId `mapM` mbNormalizedEmail
   whenJust mPerson (\person -> when (person.id /= personId) $ throwError PersonEmailExists)
-  mbEncEmail <- encrypt `mapM` req.email
+  mbEncEmail <- encrypt `mapM` mbNormalizedEmail
   mbEncBusinessEmail <- encrypt `mapM` req.businessEmail
   deploymentVersion <- asks (.version)
   cloudType <- asks (.cloudType)
@@ -539,7 +540,7 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       Nothing
       Nothing
       cloudType
-  whenJust req.email $ \newEmail ->
+  whenJust mbNormalizedEmail $ \newEmail ->
     when isEmailChange $
       SSL.unlinkIdentitiesWithOtherEmail personId (Just newEmail)
   whenJust req.firebaseAppInstanceId $ \appInstanceId ->
@@ -910,8 +911,8 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
 
       storeAndSendOTP generatedOtpCode identifierType personId person smsCfg useFakeOtpM otpChannel riderConfig req (Just mobileNumber) (Just countryCode) Nothing
     SP.EMAIL -> do
-      receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL identifier")
-      existingPerson <- QPerson.findByEmailAndMerchantId person.merchantId receiverEmail
+      receiverEmail <- SSL.normalizeEmail <$> (req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL identifier"))
+      existingPerson <- SSL.findPersonByEmail person.merchantId receiverEmail
       whenJust existingPerson $ \existing ->
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
       checkSlidingWindowLimit ("BAP:Profile:updateAuthEmailOtp:" <> personId.getId <> ":hitsCount")
@@ -1014,9 +1015,9 @@ verifyUpdateAuthDataOtp (personId, merchantId) req = do
       QPersonExtra.updateMobileNumberByPersonId personId encMobileNumber mobileNumberHash storedCountryCode
     SP.EMAIL -> do
       storedEmail <- case storedAuthData of
-        AuthData {email = Just em} -> pure em
+        AuthData {email = Just em} -> pure (SSL.normalizeEmail em)
         _ -> throwError $ InvalidRequest "AUTH_EMAIL_NOT_FOUND: Email not found in auth data"
-      existingPerson <- QPerson.findByEmailAndMerchantId merchantId storedEmail
+      existingPerson <- SSL.findPersonByEmail merchantId storedEmail
       whenJust existingPerson $ \existing ->
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
       encryptedValue <- encrypt storedEmail
