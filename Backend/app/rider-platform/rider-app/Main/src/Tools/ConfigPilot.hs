@@ -7,6 +7,7 @@ import qualified Data.Aeson as A
 import Data.List (sortOn)
 import Data.String.Conversions (cs)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.UiRiderConfig as DTU
 import qualified IssueManagement.Storage.Queries.Issue.IssueConfig as SQIC
 import Kernel.Prelude
@@ -57,6 +58,7 @@ import qualified Storage.Queries.MerchantPaymentMethod as SQMPM
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
 import qualified Storage.Queries.MerchantServiceUsageConfig as SQMSUC
 import qualified Storage.Queries.PassCategory as SQPC
+import qualified Storage.Queries.Transformers.MerchantServiceConfig as TRMSC
 import qualified Storage.Queries.Translations as SQTL
 import qualified Storage.Queries.UiRiderConfig as SQU
 import Storage.Queries.UiRiderConfigExtra ()
@@ -82,7 +84,7 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList msucCfg)}
     LYTU.RIDER_CONFIG LYTU.MerchantServiceConfig -> do
       mscCfgs <- getConfigList (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Nothing})
-      return LYTU.TableDataResp {configs = map A.toJSON mscCfgs}
+      return LYTU.TableDataResp {configs = map mscWithServiceName mscCfgs}
     LYTU.RIDER_CONFIG LYTU.BecknConfig -> do
       bcCfgs <- getConfigList (BecknConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, domain = Nothing, vehicleCategory = Nothing, becknProtocol = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON bcCfgs}
@@ -145,7 +147,7 @@ returnDBConfigs cfgType merchantOpCityId merchantId opCity = do
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList msucCfg)}
     LYTU.RIDER_CONFIG LYTU.MerchantServiceConfig -> do
       mscCfgs <- getConfigFromDB (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Nothing})
-      return LYTU.TableDataResp {configs = map A.toJSON mscCfgs}
+      return LYTU.TableDataResp {configs = map mscWithServiceName mscCfgs}
     LYTU.RIDER_CONFIG LYTU.BecknConfig -> do
       bcCfgs <- getConfigFromDB (BecknConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, domain = Nothing, vehicleCategory = Nothing, becknProtocol = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON bcCfgs}
@@ -369,3 +371,9 @@ toCacheConfigType cfgType = case cfgType of
   LYTU.MerchantServiceUsageConfig -> LYTU.MerchantServiceUsageConfigRider
   LYTU.Exophone -> LYTU.ExophoneRider
   other -> other
+
+mscWithServiceName :: DMSC.MerchantServiceConfig -> A.Value
+mscWithServiceName cfg =
+  case (A.toJSON cfg, A.object ["serviceName" A..= (show (fst (TRMSC.getServiceNameConfigJson cfg.serviceConfig)) :: Text)]) of
+    (A.Object o, A.Object nameObj) -> A.Object (nameObj <> o)
+    (other, _) -> other

@@ -6,6 +6,7 @@ import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.Aeson as A
 import Data.List (sortOn)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.UiDriverConfig as DTU
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -58,12 +59,14 @@ import qualified Storage.Queries.GoHomeConfig as SQGHC
 import qualified Storage.Queries.LeaderBoardConfigs as SQLBC
 import qualified Storage.Queries.MerchantMessage as SQM
 import qualified Storage.Queries.MerchantPushNotification as SQMPN
+import qualified Storage.Queries.MerchantServiceConfigExtra as SQMSC
 import qualified Storage.Queries.MerchantServiceUsageConfig as SQMSUC
 import qualified Storage.Queries.PayoutConfig as SCP
 import qualified Storage.Queries.ReminderConfig as SQRMC
 import qualified Storage.Queries.RideFeedbackConfig as SQRFC
 import qualified Storage.Queries.RideRelatedNotificationConfig as SQR
 import qualified Storage.Queries.ScheduledPayoutConfig as SQSPC
+import qualified Storage.Queries.Transformers.MerchantServiceConfig as TRMSC
 import qualified Storage.Queries.TransporterConfig as SCMT
 import qualified Storage.Queries.UiDriverConfig as SQU
 import qualified Tools.DynamicLogic as DynamicLogic
@@ -125,7 +128,7 @@ returnConfigs logicDomain merchantOpCityId merchantId opCity = do
       return LYT.TableDataResp {configs = map A.toJSON coinsCfg}
     LYT.DRIVER_CONFIG LYT.MerchantServiceConfig -> do
       mscCfg <- getConfigList (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Nothing})
-      return LYT.TableDataResp {configs = map A.toJSON mscCfg}
+      return LYT.TableDataResp {configs = map mscWithServiceName mscCfg}
     LYT.DRIVER_CONFIG LYT.Exophone -> do
       exoCfg <- getConfigList (ExophoneDimensions {merchantOperatingCityId = merchantOpCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON exoCfg}
@@ -200,7 +203,7 @@ returnDBConfigs logicDomain merchantOpCityId merchantId opCity = do
       return LYT.TableDataResp {configs = map A.toJSON coinsCfg}
     LYT.DRIVER_CONFIG LYT.MerchantServiceConfig -> do
       mscCfg <- getConfigFromDB (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Nothing})
-      return LYT.TableDataResp {configs = map A.toJSON mscCfg}
+      return LYT.TableDataResp {configs = map mscWithServiceName mscCfg}
     LYT.DRIVER_CONFIG LYT.Exophone -> do
       exoCfg <- getConfigFromDB (ExophoneDimensions {merchantOperatingCityId = merchantOpCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON exoCfg}
@@ -236,6 +239,8 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       handleConfigUpdate SQMPN.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.MerchantPushNotification)) SQMPN.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.MerchantServiceUsageConfigDriver -> do
       handleConfigUpdateViaJson (\mocId' -> maybeToList <$> SQMSUC.findByMerchantOpCityId mocId') (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.MerchantServiceUsageConfigDriver)) SQMSUC.updateByPrimaryKey (cast merchantOpCityId)
+    LYT.DRIVER_CONFIG LYT.MerchantServiceConfig -> do
+      handleConfigUpdateViaJson SQMSC.findAllMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.MerchantServiceConfig)) (\cfg -> SQMSC.upsertMerchantServiceConfig cfg (cast merchantOpCityId)) (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.DocumentVerificationConfig -> do
       handleConfigUpdateViaJson (\mocId' -> SQDVC.findAllByMerchantOpCityId Nothing Nothing mocId') (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.DocumentVerificationConfig)) SQDVC.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.DocumentVerificationStagesConfig -> do
@@ -404,3 +409,9 @@ toCacheConfigType cfgType = case cfgType of
   LYT.MerchantServiceUsageConfig -> LYT.MerchantServiceUsageConfigDriver
   LYT.MerchantServiceConfig -> LYT.MerchantServiceConfigDriver
   other -> other
+
+mscWithServiceName :: DMSC.MerchantServiceConfig -> A.Value
+mscWithServiceName cfg =
+  case (A.toJSON cfg, A.object ["serviceName" A..= (show (TRMSC.getServiceName cfg.serviceConfig) :: Text)]) of
+    (A.Object o, A.Object nameObj) -> A.Object (nameObj <> o)
+    (other, _) -> other
