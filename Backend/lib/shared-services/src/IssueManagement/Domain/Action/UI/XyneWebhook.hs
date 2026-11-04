@@ -570,8 +570,8 @@ fetchXyneIssues bearerToken lookupXyneCfg issueHandle identifier mbSince mbEndDa
           case mbIssueConfig of
             Nothing -> pure []
             Just issueConfig -> do
-              mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId mocId) issue.rideId
               language <- DUI.getLanguage issue.personId Nothing issueHandle
+              mbRideInfoRes <- mapM (DUI.getRideInfoWithFareLabels issueHandle language merchantId mocId) issue.rideId
               customerName <- resolvePersonName issue.personId
               let historicalChats = filter (\c -> c.chatType `elem` [Common.IssueMessage, Common.IssueOption, Common.IssueDescription]) issue.chats
                   issueForHistory = issue {DIR.chats = historicalChats}

@@ -89,7 +89,7 @@ import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
+import qualified SharedLogic.FareBreakdown as SFareBreakdown
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Offer as SOffer
@@ -386,7 +386,8 @@ rideInfo merchantId reqRideId = do
   mbSearchRequest <- case mbQuote of
     Just q -> B.runInReplica $ QSearchRequest.findById q.requestId
     Nothing -> pure Nothing
-  fareBreakup <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId DFareBreakup.RIDE (B.runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE)
+  breakdown <- SFareBreakdown.buildFareBreakdown booking (Just ride)
+  fareBreakup <- SFareBreakdown.getRideFareRows breakdown ride
   unless (merchantId == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
   person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
   mbOfferInfo <- getRideOfferInfo booking ride person

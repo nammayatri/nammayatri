@@ -78,7 +78,7 @@ import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
-import SharedLogic.Booking (getfareBreakups)
+import qualified SharedLogic.FareBreakdown as SFareBreakdown
 import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Sos ()
@@ -675,7 +675,7 @@ buildBookingAPIEntity booking personId dontNeedFareBreakup = do
   mbRide <- runInReplica $ QRide.findOneByBookingId booking.id
   let mbActiveRide = (\r -> if r.status == DRide.CANCELLED then Nothing else Just r) =<< mbRide
   -- nightIssue <- runInReplica $ QIssue.findNightIssueByBookingId booking.id
-  (fareBreakups, estimatedFareBreakups) <- if dontNeedFareBreakup then pure ([], []) else getfareBreakups booking mbRide
+  (fareBreakups, estimatedFareBreakups) <- if dontNeedFareBreakup then pure ([], []) else (\breakdown -> (breakdown.finalRows, breakdown.estimateRows)) <$> SFareBreakdown.buildFareBreakdown booking mbRide
   mbExoPhone <- getOneConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   mbSosStatus <- getActiveSos mbActiveRide personId
