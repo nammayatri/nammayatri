@@ -1870,6 +1870,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     disableDownwardRecompute :: Text,
     fareRecomputeCapConfig :: Text,
     stateEntryPermitCharges :: Text,
+    stateEntryPermitChargesByState :: Text,
     conditionalCharges :: Text,
     driverCancellationNotAllowed :: Text,
     perLuggageCharge :: Text,
@@ -1987,6 +1988,7 @@ instance ToNamedRecord FarePolicyCSVRow where
           "disable_downward_recompute" .= disableDownwardRecompute,
           "fare_recompute_cap_config" .= fareRecomputeCapConfig,
           "state_entry_permit_charges" .= stateEntryPermitCharges,
+          "state_entry_permit_charges_by_state" .= stateEntryPermitChargesByState,
           "additional_charges" .= conditionalCharges,
           "driver_cancellation_not_allowed" .= driverCancellationNotAllowed,
           "per_luggage_charge" .= perLuggageCharge,
@@ -2100,6 +2102,7 @@ farePolicyCSVHeader =
       "disable_downward_recompute",
       "fare_recompute_cap_config",
       "state_entry_permit_charges",
+      "state_entry_permit_charges_by_state",
       "additional_charges",
       "driver_cancellation_not_allowed",
       "per_luggage_charge",
@@ -2215,6 +2218,8 @@ instance FromNamedRecord FarePolicyCSVRow where
           <*> r .: "disable_downward_recompute"
           <*> (r .: "fare_recompute_cap_config" <|> pure "")
           <*> r .: "state_entry_permit_charges"
+          -- optional column: old fare-policy CSV templates don't have it
+          <*> (r .: "state_entry_permit_charges_by_state" <|> pure "")
           <*> r .: "additional_charges"
           -- optional column: old fare-policy CSV templates don't have it
           <*> (r .: "driver_cancellation_not_allowed" <|> pure "")
@@ -2647,7 +2652,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
               _ -> []
 
           -- InterCity details
-          (perKmOneWay, perKmRoundTrip, kmPerExtraHour, perDayMaxHour, perDayMaxMins, defaultWaitDest, stateEntryPermit) =
+          (perKmOneWay, perKmRoundTrip, kmPerExtraHour, perDayMaxHour, perDayMaxMins, defaultWaitDest, stateEntryPermitByState) =
             case farePolicy.farePolicyDetails of
               FarePolicy.InterCityDetails details ->
                 ( showT details.perKmRateOneWay,
@@ -2656,7 +2661,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                   showT details.perDayMaxHourAllowance,
                   maybe "" showT details.perDayMaxAllowanceInMins,
                   showT details.defaultWaitTimeAtDestination,
-                  maybe "" showT details.stateEntryPermitCharges
+                  maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) details.stateEntryPermitChargesByState
                 )
               _ -> ("", "", "", "", "", "", "")
 
@@ -2889,7 +2894,8 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     disableRecompute = maybe "" showT fp.disableRecompute,
                     disableDownwardRecompute = maybe "" showT fp.disableDownwardRecompute,
                     fareRecomputeCapConfig = fareRecomputeCapConfigJson,
-                    stateEntryPermitCharges = stateEntryPermit,
+                    stateEntryPermitCharges = "", -- no longer read, see state_entry_permit_charges_by_state
+                    stateEntryPermitChargesByState = stateEntryPermitByState,
                     conditionalCharges = conditionalChargesJson,
                     driverCancellationNotAllowed = maybe "" showT farePolicy.driverCancellationNotAllowed,
                     perLuggageCharge = maybe "" showT farePolicy.perLuggageCharge,
@@ -3541,7 +3547,16 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             perDayMaxAllowanceInMins :: Minutes <- readCSVField idx row.perDayMaxAllowanceInMins "Per Day Max Allowance In Mins"
             perKmRateRoundTrip :: HighPrecMoney <- readCSVField idx row.perKmRateRoundTrip "Per Km Rate Round Trip"
             defaultWaitTimeAtDestination :: Minutes <- readCSVField idx row.defaultWaitTimeAtDestination "Default Wait Time At Destination"
-            let stateEntryPermitCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.stateEntryPermitCharges "State Entry Permit Charges"
+            whenJust (cleanMaybeCSVField idx row.stateEntryPermitCharges "State Entry Permit Charges") $ \_ ->
+              throwError $ InvalidRequest ("State Entry Permit Charges is no longer used, set State Entry Permit Charges By State instead, at row: " <> show idx)
+            let stateEntryPermitChargesByStateText = cleanMaybeCSVField idx row.stateEntryPermitChargesByState "State Entry Permit Charges By State"
+            stateEntryPermitChargesByState <- case stateEntryPermitChargesByStateText of
+              Nothing -> return Nothing
+              Just text -> case A.eitherDecode (LBS.fromStrict $ TEnc.encodeUtf8 text) of
+                Left err -> throwError $ InvalidRequest ("State Entry Permit Charges By State parsing failed :: " <> T.pack err)
+                Right charges
+                  | any (< 0) charges -> throwError $ InvalidRequest ("State Entry Permit Charges By State must not be negative, at row: " <> show idx)
+                  | otherwise -> return (Just charges)
             let mbPerDayMaxAllowanceInMins = Just perDayMaxAllowanceInMins
             -- InterCityPricingSlabs
             timePercentage :: Int <- readCSVField idx row.timePercentage "Time Percentage"
@@ -3558,7 +3573,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                       }
 
             let pricingSlabs = NE.fromList [FPIDPS.FPInterCityDetailsPricingSlabs {..}]
-            return $ FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {nightShiftCharge = mbNightCharges, perDayMaxAllowanceInMins = mbPerDayMaxAllowanceInMins, ..}
+            return $ FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {nightShiftCharge = mbNightCharges, perDayMaxAllowanceInMins = mbPerDayMaxAllowanceInMins, stateEntryPermitCharges = Nothing, ..}
           FarePolicy.Ambulance -> do
             baseDistance :: Meters <- readCSVField idx row.baseDistance "Base Distance"
             baseFare :: HighPrecMoney <- readCSVField idx row.baseFare "Base Fare"

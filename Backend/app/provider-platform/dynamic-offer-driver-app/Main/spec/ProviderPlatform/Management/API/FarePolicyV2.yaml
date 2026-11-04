@@ -11,6 +11,7 @@ imports:
   Months: Kernel.Types.Time
   TimeBound: Kernel.Types.TimeBound
   Area: Lib.Types.SpecialLocation
+  IndianState: Kernel.Types.Beckn.Context
   TripCategory: Dashboard.Common
   ServiceTierType: Dashboard.Common
   FarePolicy: Dashboard.Common
@@ -281,6 +282,9 @@ types:
     - pricingSlabs: "[FPV2PricingSlab]"
     - waitingChargeInfo: Maybe FPV2WaitingChargeInfo
     - nightShiftCharge: Maybe FPV2NightShiftCharge
+  FPV2StateEntryPermitCharge:
+    - state: IndianState
+    - charge: HighPrecMoney
   FPV2InterCityDetails:
     - baseFare: HighPrecMoney
     - perHourCharge: HighPrecMoney
@@ -293,7 +297,7 @@ types:
     - perDayMaxHourAllowance: Hours
     - perDayMaxAllowanceInMins: Maybe Minutes
     - defaultWaitTimeAtDestination: Minutes
-    - stateEntryPermitCharges: Maybe HighPrecMoney
+    - stateEntryPermitChargesByState: "Maybe [FPV2StateEntryPermitCharge]"
     - pricingSlabs: "[FPV2PricingSlab]"
     - waitingChargeInfo: Maybe FPV2WaitingChargeInfo
     - nightShiftCharge: Maybe FPV2NightShiftCharge

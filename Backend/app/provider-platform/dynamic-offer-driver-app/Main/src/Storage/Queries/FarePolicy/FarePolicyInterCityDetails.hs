@@ -17,6 +17,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as KTI
 import Kernel.Utils.Common
+import Kernel.Utils.JSON (valueToMaybe)
 import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyInterCityDetails as BeamFPRD
 import qualified Storage.Beam.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as BeamFPICDPS
@@ -39,25 +40,32 @@ instance FromTType' BeamFPRD.FarePolicyInterCityDetails Domain.FullFarePolicyInt
   fromTType' farePolicyInterCityDetails = do
     fullFPICDPS <- QueriesFPICDPS.findAll' (KTI.Id farePolicyInterCityDetails.farePolicyId)
     fPICDPS <- fromMaybeM (InternalError "No pricing slab found for intercity") (NE.nonEmpty fullFPICDPS) -- check it
-    pure . Just $ fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS
+    Just <$> fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS
 
 fromTTypeFarePolicyInterCityDetails ::
+  MonadFlow m =>
   BeamFPRD.FarePolicyInterCityDetails ->
   NonEmpty BeamFPICDPS.FullFarePolicyInterCityDetailsPricingSlabs ->
-  Domain.FullFarePolicyInterCityDetails
-fromTTypeFarePolicyInterCityDetails BeamFPRD.FarePolicyInterCityDetailsT {..} fPICDPS =
-  ( KTI.Id farePolicyId,
-    Domain.FPInterCityDetails
-      { pricingSlabs = snd <$> fPICDPS,
-        waitingChargeInfo =
-          ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
-            Domain.WaitingChargeInfo
-              { waitingCharge = waitingCharge',
-                freeWaitingTime = freeWaitingTime'
-              },
-        ..
-      }
-  )
+  m Domain.FullFarePolicyInterCityDetails
+fromTTypeFarePolicyInterCityDetails BeamFPRD.FarePolicyInterCityDetailsT {..} fPICDPS = do
+  let permitChargesByState = valueToMaybe =<< stateEntryPermitChargesByState
+  when (isJust stateEntryPermitChargesByState && isNothing permitChargesByState) $
+    logError $ "Invalid state_entry_permit_charges_by_state, no permit will be charged for farePolicyId: " <> farePolicyId
+  pure
+    ( KTI.Id farePolicyId,
+      Domain.FPInterCityDetails
+        { pricingSlabs = snd <$> fPICDPS,
+          waitingChargeInfo =
+            ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
+              Domain.WaitingChargeInfo
+                { waitingCharge = waitingCharge',
+                  freeWaitingTime = freeWaitingTime'
+                },
+          stateEntryPermitCharges = Nothing, -- column kept for older pods, search sets this per trip
+          stateEntryPermitChargesByState = permitChargesByState,
+          ..
+        }
+    )
 
 instance ToTType' BeamFPRD.FarePolicyInterCityDetails Domain.FullFarePolicyInterCityDetails where
   toTType' (KTI.Id farePolicyId, Domain.FPInterCityDetails {..}) =
@@ -65,5 +73,7 @@ instance ToTType' BeamFPRD.FarePolicyInterCityDetails Domain.FullFarePolicyInter
       { farePolicyId = farePolicyId,
         freeWatingTime = (.freeWaitingTime) <$> waitingChargeInfo,
         waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
+        stateEntryPermitCharges = Nothing,
+        stateEntryPermitChargesByState = toJSON <$> stateEntryPermitChargesByState,
         ..
       }

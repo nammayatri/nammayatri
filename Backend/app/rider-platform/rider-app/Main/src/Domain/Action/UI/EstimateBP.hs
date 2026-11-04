@@ -60,7 +60,7 @@ getEstimateBreakupFromQuote mbEstimatedDistance mbEstimatedDuration quote =
     DQuote.MeterRideDetails _ -> pure []
     DQuote.DeliveryDetails driverOfferDetails ->
       findEstimateBreakupCH (Id.cast driverOfferDetails.estimateId) quote.createdAt
-    DQuote.InterCityDetails interCityDetails -> pure $ transformInterCityDetails interCityDetails
+    DQuote.InterCityDetails interCityDetails -> pure $ transformInterCityDetails interCityDetails quote.quoteBreakupList
     DQuote.RentalDetails rentalDetails -> pure $ transformRentalDetails rentalDetails
     DQuote.DriverOfferDetails driverOfferDetails ->
       findEstimateBreakupCH (Id.cast driverOfferDetails.estimateId) quote.createdAt
@@ -73,13 +73,12 @@ getEstimateBreakupFromQuote mbEstimatedDistance mbEstimatedDuration quote =
 transformOneWayRateCard :: Kernel.Prelude.Maybe KTC.Meters -> Kernel.Prelude.Maybe KTC.Seconds -> [DQB.QuoteBreakup] -> [API.Types.UI.EstimateBP.EstimateBreakup]
 transformOneWayRateCard mbEstimatedDistance mbEstimatedDuration breakups =
   catMaybes
-    [ toItem "Base Fare" <$> find ((== "BASE_FARE") . (.title)) breakups,
-      toItem "Dead Km Fare" <$> find ((== "DEAD_KILOMETER_FARE") . (.title)) breakups,
-      toItem "Per Extra Km Rate" <$> bandFor "EXTRA_PER_KM_STEP_FARE_" ((.getMeters) <$> mbEstimatedDistance),
-      toItem "Per Extra Min Rate" <$> bandFor "PER_MINUTE_STEP_FARE_" ((`div` 60) . (.getSeconds) <$> mbEstimatedDuration)
+    [ quoteBreakupItem "Base Fare" <$> find ((== "BASE_FARE") . (.title)) breakups,
+      quoteBreakupItem "Dead Km Fare" <$> find ((== "DEAD_KILOMETER_FARE") . (.title)) breakups,
+      quoteBreakupItem "Per Extra Km Rate" <$> bandFor "EXTRA_PER_KM_STEP_FARE_" ((.getMeters) <$> mbEstimatedDistance),
+      quoteBreakupItem "Per Extra Min Rate" <$> bandFor "PER_MINUTE_STEP_FARE_" ((`div` 60) . (.getSeconds) <$> mbEstimatedDuration)
     ]
   where
-    toItem itemTitle breakup = createEstimateBreakup breakup.price itemTitle
     bandFor prefix mbTarget =
       let bands = [(T.splitOn "_" bandRange, breakup) | breakup <- breakups, Just bandRange <- [T.stripPrefix prefix breakup.title]]
           contains target ([startTxt, endTxt], _) = maybe False (<= target) (readMaybe $ T.unpack startTxt) && maybe True (target <) (readMaybe $ T.unpack endTxt)
@@ -173,8 +172,13 @@ createEstimateBreakup price title =
       title = title
     }
 
-transformInterCityDetails :: Domain.Types.InterCityDetails.InterCityDetails -> [API.Types.UI.EstimateBP.EstimateBreakup]
-transformInterCityDetails interCityDetails =
+quoteBreakupItem :: Text -> DQB.QuoteBreakup -> API.Types.UI.EstimateBP.EstimateBreakup
+quoteBreakupItem itemTitle breakup = createEstimateBreakup breakup.price itemTitle
+
+-- | The 'InterCityDetails' rates, then the lines only the quote's rate card tags carry; those are left out when the
+-- quote doesn't charge them. The planned trip's distance and duration aren't prices, so they go in its fare's title.
+transformInterCityDetails :: Domain.Types.InterCityDetails.InterCityDetails -> [DQB.QuoteBreakup] -> [API.Types.UI.EstimateBP.EstimateBreakup]
+transformInterCityDetails interCityDetails breakups =
   [ createEstimateBreakup interCityDetails.baseFare "Base Fare",
     createEstimateBreakup interCityDetails.deadKmFare "Dead Km Fare",
     createEstimateBreakup interCityDetails.perExtraKmRate "Per Extra Km Rate",
@@ -183,6 +187,28 @@ transformInterCityDetails interCityDetails =
     createEstimateBreakup interCityDetails.plannedPerKmRateOneWay "Planned Per Km Rate One Way",
     createEstimateBreakup interCityDetails.plannedPerKmRateRoundTrip "Planned Per Km Rate Round Trip"
   ]
+    <> catMaybes
+      [ quoteBreakupItem plannedTripFareTitle <$> chargedBreakup "PLANNED_TRIP_FARE",
+        quoteBreakupItem "State Permit Charge" <$> chargedBreakup "STATE_ENTRY_PERMIT_CHARGES",
+        quoteBreakupItem "Tolls" <$> chargedBreakup "TOLL_CHARGES",
+        quoteBreakupItem "Per Extra Hour Rate" <$> chargedBreakup "UNPLANNED_PER_HOUR_CHARGE",
+        quoteBreakupItem "Night Charge Allowance" <$> chargedBreakup "CONSTANT_NIGHT_SHIFT_CHARGE"
+      ]
+  where
+    chargedBreakup code = find (\breakup -> breakup.title == code && breakup.price.amount > 0) breakups
+    plannedTrip =
+      catMaybes
+        [ (\distanceKm -> show distanceKm <> " km") . wholeAmount <$> chargedBreakup "PLANNED_TRIP_DISTANCE_KM",
+          formatMinutes . wholeAmount <$> chargedBreakup "PLANNED_TRIP_DURATION_IN_MINS"
+        ]
+    plannedTripFareTitle
+      | null plannedTrip = "Distance Fare"
+      | otherwise = "Distance Fare for " <> T.intercalate " / " plannedTrip
+    wholeAmount breakup = round (getHighPrecMoney breakup.price.amount) :: Int
+    formatMinutes minutes = case minutes `divMod` 60 of
+      (0, mins) -> show mins <> " min"
+      (hours, 0) -> show hours <> " hr"
+      (hours, mins) -> show hours <> " hr " <> show mins <> " min"
 
 transformRentalDetails :: Domain.Types.RentalDetails.RentalDetails -> [API.Types.UI.EstimateBP.EstimateBreakup]
 transformRentalDetails rentalDetails =

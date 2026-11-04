@@ -268,7 +268,7 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
   -- One-shot builds the winning quote directly in its terminal state: no Active -> Inactive flip
   driverQuote <- buildDriverQuote (if isJust mbLocalAssignAction then DDrQuote.Inactive else DDrQuote.Active) clientId driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice'
   void $
-    if searchTry.isScheduled
+    if keepFarePolicyForWholeTrip searchTry.isScheduled searchTry.tripCategory
       then cacheFarePolicyByScheduledEstOrQuoteId driverQuote.id.getId searchReq.startTime searchReq.returnTime farePolicy
       else cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
   triggerQuoteEvent QuoteEventData {quote = driverQuote}

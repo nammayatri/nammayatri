@@ -153,6 +153,6 @@ promoteEditFarePolicyToQuote ::
 promoteEditFarePolicyToQuote booking bookingUpdateReq =
   SFP.getFarePolicyByBookingUpdateRequestId bookingUpdateReq.id.getId >>= \case
     Just farePolicy
-      | booking.isScheduled -> SFP.cacheFarePolicyByScheduledEstOrQuoteId booking.quoteId booking.startTime booking.returnTime farePolicy
+      | SFP.keepFarePolicyForWholeTrip booking.isScheduled booking.tripCategory -> SFP.cacheFarePolicyByScheduledEstOrQuoteId booking.quoteId booking.startTime booking.returnTime farePolicy
       | otherwise -> SFP.cacheFarePolicyByQuoteId booking.quoteId farePolicy
     Nothing -> logError $ "Edit destination fare policy not found for bookingUpdateRequestId: " <> bookingUpdateReq.id.getId <> ", quote fare policy left unchanged for bookingId: " <> booking.id.getId

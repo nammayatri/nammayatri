@@ -277,13 +277,15 @@ prepareReplace ::
   Id FarePolicyD.FarePolicy ->
   Common.FPV2Policy ->
   Flow ([Common.FPV2ValidationIssue], [Common.FPV2FieldDiff], Flow ())
-prepareReplace merchantOpCity transporterConfig farePolicyId apiPolicy = do
+prepareReplace merchantOpCity transporterConfig farePolicyId requestedPolicy = do
   old <- CQFP.findById Nothing farePolicyId >>= fromMaybeM (InvalidRequest $ "Fare policy not found: " <> farePolicyId.getId)
   checkCityScope merchantOpCity.id old
   oldCancellation <- maybe (pure Nothing) CQCFP.findById old.cancellationFarePolicyId
   now <- getCurrentTime
-  let issues = validatePolicy transporterConfig apiPolicy
-      diff = computeDiff (toApiPolicy old oldCancellation) apiPolicy
+  let storedPolicy = toApiPolicy old oldCancellation
+      apiPolicy = keepStateEntryPermitCharges storedPolicy requestedPolicy
+      issues = validatePolicy transporterConfig apiPolicy
+      diff = computeDiff storedPolicy apiPolicy
   pure
     ( issues,
       diff,
@@ -296,6 +298,15 @@ prepareReplace merchantOpCity transporterConfig farePolicyId apiPolicy = do
         replaceConditionalCharges newPolicy now apiPolicy
         SpecialZoneDriverDemand.clearAirportPerKmFareCacheForPolicy old.id
     )
+
+-- | Clients that predate per-state permit charges don't send them; keep the stored ones instead of
+-- wiping them on replace. Sending an empty list clears them.
+keepStateEntryPermitCharges :: Common.FPV2Policy -> Common.FPV2Policy -> Common.FPV2Policy
+keepStateEntryPermitCharges stored requested = case (stored.farePolicyDetails, requested.farePolicyDetails) of
+  (Common.FPV2InterCity storedDetails, Common.FPV2InterCity requestedDetails)
+    | isNothing requestedDetails.stateEntryPermitChargesByState ->
+      (requested {Common.farePolicyDetails = Common.FPV2InterCity requestedDetails {Common.stateEntryPermitChargesByState = storedDetails.stateEntryPermitChargesByState}} :: Common.FPV2Policy)
+  _ -> requested
 
 -- inline cancellation policy: always mint a NEW row and re-point the policy;
 -- the old row stays (rides may still reference it), which keeps this write safe
@@ -839,6 +850,10 @@ validatePolicy transporterConfig p =
     sortedUnique field label keys =
       let sorted = sort keys
        in if length (nub sorted) /= length sorted then issue field ("duplicate " <> label) else []
+    stateEntryPermitChargeIssues :: [Common.FPV2StateEntryPermitCharge] -> [Common.FPV2ValidationIssue]
+    stateEntryPermitChargeIssues permits =
+      sortedUnique "farePolicyDetails.stateEntryPermitChargesByState" "state" (map (.state) permits)
+        <> concatMap (nonNegativeMaybe "farePolicyDetails.stateEntryPermitChargesByState" . Just . (.charge)) permits
     -- Rental/InterCity pricing-slab invariants (upstream commit 03c947988:
     -- "added slab checks for intercity and rentals"): slab resolution at
     -- end-ride errors out without a 0/0 base row, and a completed ride is
@@ -899,7 +914,8 @@ validatePolicy transporterConfig p =
         concat
           [ if null d.pricingSlabs then issue "farePolicyDetails.pricingSlabs" "at least one pricing slab is required" else [],
             pricingSlabIssues d.pricingSlabs,
-            minBaseFareIssue d.baseFare
+            minBaseFareIssue d.baseFare,
+            stateEntryPermitChargeIssues (fromMaybe [] d.stateEntryPermitChargesByState)
           ]
       Common.FPV2Ambulance d ->
         concat
@@ -1076,7 +1092,7 @@ toApiDetails = \case
           perDayMaxHourAllowance = d.perDayMaxHourAllowance,
           perDayMaxAllowanceInMins = d.perDayMaxAllowanceInMins,
           defaultWaitTimeAtDestination = d.defaultWaitTimeAtDestination,
-          stateEntryPermitCharges = d.stateEntryPermitCharges,
+          stateEntryPermitChargesByState = map (uncurry Common.FPV2StateEntryPermitCharge) . Map.toList <$> d.stateEntryPermitChargesByState,
           pricingSlabs = map (\s -> Common.FPV2PricingSlab {timePercentage = s.timePercentage, distancePercentage = s.distancePercentage, farePercentage = s.farePercentage, includeActualTimePercentage = s.includeActualTimePercentage, includeActualDistPercentage = s.includeActualDistPercentage}) (NE.toList d.pricingSlabs),
           waitingChargeInfo = toApiWaitingChargeInfo <$> d.waitingChargeInfo,
           nightShiftCharge = toApiNightShiftCharge <$> d.nightShiftCharge
@@ -1258,7 +1274,8 @@ fromApiDetails currency distanceUnit = \case
             pricingSlabs = fmap (\s -> FarePolicyD.FPInterCityDetailsPricingSlabs {timePercentage = s.timePercentage, distancePercentage = s.distancePercentage, farePercentage = s.farePercentage, includeActualTimePercentage = s.includeActualTimePercentage, includeActualDistPercentage = s.includeActualDistPercentage}) pricingSlabs,
             defaultWaitTimeAtDestination = d.defaultWaitTimeAtDestination,
             currency,
-            stateEntryPermitCharges = d.stateEntryPermitCharges,
+            stateEntryPermitCharges = Nothing,
+            stateEntryPermitChargesByState = Map.fromList . map (\permit -> (permit.state, permit.charge)) <$> d.stateEntryPermitChargesByState,
             nightShiftCharge = fromApiNightShiftCharge <$> d.nightShiftCharge,
             waitingChargeInfo = fromApiWaitingChargeInfo <$> d.waitingChargeInfo
           }

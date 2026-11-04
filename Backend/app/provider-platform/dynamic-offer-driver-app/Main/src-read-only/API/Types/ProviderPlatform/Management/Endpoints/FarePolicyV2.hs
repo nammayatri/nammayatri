@@ -11,6 +11,7 @@ import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
@@ -255,7 +256,7 @@ data FPV2InterCityDetails = FPV2InterCityDetails
     perDayMaxHourAllowance :: Kernel.Types.Common.Hours,
     perDayMaxAllowanceInMins :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
     defaultWaitTimeAtDestination :: Kernel.Types.Common.Minutes,
-    stateEntryPermitCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    stateEntryPermitChargesByState :: Kernel.Prelude.Maybe [FPV2StateEntryPermitCharge],
     pricingSlabs :: [FPV2PricingSlab],
     waitingChargeInfo :: Kernel.Prelude.Maybe FPV2WaitingChargeInfo,
     nightShiftCharge :: Kernel.Prelude.Maybe FPV2NightShiftCharge
@@ -522,6 +523,10 @@ data FPV2Slab = FPV2Slab
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FPV2SlabsDetails = FPV2SlabsDetails {slabs :: [FPV2Slab]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FPV2StateEntryPermitCharge = FPV2StateEntryPermitCharge {state :: Kernel.Types.Beckn.Context.IndianState, charge :: Kernel.Types.Common.HighPrecMoney}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
