@@ -3,6 +3,7 @@
 module Domain.Types.SharedCabSession where
 
 import Data.Aeson (object, withObject, withText, (.:), (.=))
+import qualified Data.Text as T
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
@@ -169,3 +170,77 @@ data SharedCabRouteDataResp = SharedCabRouteDataResp
     routes :: [SharedCabRoute]
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | A shared cab's live trip as driver-app, which owns it (vehicle_trip and the session), tells rider-app. Rider-app keeps a read
+-- copy for allocation, seats and the rider's map, and ignores a copy older than its own (by `version`). `agencyId` is the feed's
+-- integrated_bpp_config.agency_key, the one identity the two apps' config rows share.
+data CabState = CabState
+  { agencyId :: Text,
+    driverId :: Text,
+    vehicleNumber :: Text,
+    vehicleTripId :: Text,
+    routeCode :: Text,
+    queuedRouteCode :: Maybe Text,
+    capacity :: Int,
+    status :: SessionStatus,
+    pauseReason :: Maybe PauseReason,
+    version :: Int,
+    startedAt :: UTCTime,
+    offlineBoardings :: Int,
+    driverName :: Maybe Text,
+    vehicleModel :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | What happened to the cab, for rider-app's side effects: a route change or an end releases the unboarded riders, an end drops
+-- the boarded ones, an open or a resume seeds the city's allocation chains.
+data CabChange = CAB_OPENED | CAB_ROUTE_CHANGED | CAB_ROUTE_QUEUED | CAB_PAUSED | CAB_RESUMED | CAB_ENDED
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Driver-app -> rider-app on every trip change and session poll. `notifyOnBoard` tells the riders on board of a route change.
+data CabUpdate = CabUpdate
+  { cab :: CabState,
+    change :: Maybe CabChange,
+    notifyOnBoard :: Bool
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data CabRider = CabRider
+  { bookingId :: Text,
+    firstName :: Text,
+    dropStop :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | The driver's session view (absent once the cab has ended) and the riders on board, which gate a route change or an end.
+data CabSyncResp = CabSyncResp
+  { session :: Maybe SharedCabSession,
+    ridersOnBoard :: [CabRider]
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Rider-app -> driver-app: what rider-app saw that changes the trip (no LTS ping for a while, the cab off its route, the last rider
+-- dropped). The answer is the update to apply, if the trip changed.
+data CabEvent = CAB_SILENT_PAUSE | CAB_SILENT_END | CAB_OFF_ROUTE | CAB_EMPTIED
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+newtype CabEventReq = CabEventReq {event :: CabEvent}
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+newtype CabEventResp = CabEventResp {update :: Maybe CabUpdate}
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Walk-ups and cab full are seat inventory, decided by rider-app against the bookings; `walkupsAdded` goes onto the trip's
+-- offline boardings in driver-app.
+data SharedCabSeatsResp = SharedCabSeatsResp
+  { session :: SharedCabSession,
+    walkupsAdded :: Int
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | A corridor's other direction: "<corridor>-F" and "<corridor>-R" run the same road both ways.
+returnRouteCode :: Text -> Maybe Text
+returnRouteCode code
+  | Just corridor <- T.stripSuffix "-F" code = Just (corridor <> "-R")
+  | Just corridor <- T.stripSuffix "-R" code = Just (corridor <> "-F")
+  | otherwise = Nothing

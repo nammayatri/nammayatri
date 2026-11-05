@@ -62,9 +62,9 @@ decideDecline plate bookingPlate mbAlloc
 
 acceptOffer :: Text -> Text -> Id DFTB.FRFSTicketBooking -> Environment.Flow Session
 acceptOffer driver plate bookingId = do
-  (merchantId, accepted) <- Session.withPlateLock plate $ do
+  accepted <- Session.withPlateLock plate $ do
     s <- Session.readSession plate >>= either throwError pure . ownedSession driver
-    fmap (s.merchantId,) . withBookingLock bookingId $ do
+    withBookingLock bookingId $ do
       booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM OfferExpired
       mbAlloc <- readAlloc bookingId
       now <- getCurrentTime
@@ -79,7 +79,7 @@ acceptOffer driver plate bookingId = do
   forM_ accepted $ \(booking, stance, cfg) -> case pushForStance stance of
     PushArriving -> Notify.notifyArriving plate cfg.standTimerSec booking
     PushAssigned -> Notify.notifyAssigned plate booking
-  Session.getSession merchantId plate >>= fromMaybeM SessionNotFound
+  Session.getSession plate >>= fromMaybeM SessionNotFound
   where
     -- where the cab stands now decides the timer; without a fresh fix the wait is bounded like an away cab's
     cabStanceNow cfg now routeCode boardStopCode = do
@@ -102,5 +102,5 @@ declineOffer driver plate bookingId = do
     -- closed under the plate lock acceptOffer also takes (plate -> booking order; the close takes no plate lock), so an accept
     -- cannot land between the check and the close
     when (decision == DeclineNow) . void $ Allocation.releaseSharedCabAllocation cfg bookingId plate DriverDeclined
-  Session.getSession booking.merchantId plate >>= fromMaybeM SessionNotFound
+  Session.getSession plate >>= fromMaybeM SessionNotFound
   where

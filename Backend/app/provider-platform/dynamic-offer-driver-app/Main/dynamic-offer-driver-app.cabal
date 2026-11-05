@@ -369,8 +369,8 @@ library
       Domain.Action.Internal.SendEmailOTP
       Domain.Action.Internal.SendSMS
       Domain.Action.Internal.SharedCabAllocation
+      Domain.Action.Internal.SharedCabCabEvent
       Domain.Action.Internal.SharedCabCallNumber
-      Domain.Action.Internal.SharedCabTrip
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.TollUpsert
@@ -844,7 +844,7 @@ library
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
       SharedLogic.SharedCab.RiderClient
-      SharedLogic.SharedCab.Trip
+      SharedLogic.SharedCab.Session
       SharedLogic.SocialLogin
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand

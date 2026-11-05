@@ -18,10 +18,10 @@ import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Base as JM
-import qualified SharedLogic.SharedCab.Allocation as Allocation
-import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (RouteChanged), AllocationState, isOffered)
+import SharedLogic.SharedCab.Allocation.Types (AllocationState, isOffered)
 import SharedLogic.SharedCab.Booking (isSharedCabBooking, noteOnPlate, withBookingLock)
 import SharedLogic.SharedCab.BookingState (clearAlloc, readAlloc)
+import SharedLogic.SharedCab.CabSync (cabEmptied)
 import SharedLogic.SharedCab.Cancel (CancelStage (ConfirmCancel), withSharedCabCancel)
 import SharedLogic.SharedCab.LegState (isDroppable)
 import SharedLogic.SharedCab.RefundPolicy (CancelBy (ByDriver))
@@ -76,13 +76,13 @@ runDriverAction action driver plate mbReason bookingId = do
   mbCancelReason <- case action of
     DriverCancel -> Just <$> either throwError pure (requireReason mbReason)
     _ -> pure Nothing
-  (merchantId, (mbDropped, mbCancel)) <- Session.withPlateLock plate $ do
+  (mbDropped, mbCancel) <- Session.withPlateLock plate $ do
     s <- Session.readSession plate >>= either throwError pure . ownedSession driver
     booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM BookingNotOnThisCab
     unless (isSharedCabBooking booking && booking.status == DFRFSTicketBookingStatus.CONFIRMED) $ throwError BookingNotLive
     -- markDropped and the allocation release take the booking lock themselves; it isn't re-entrant. Holding the
     -- plate lock keeps a boarding onto this cab from landing between the decision and the write.
-    (s.merchantId,) <$> case action of
+    case action of
       DriverDropped -> do
         decide booking
         markDropped booking
@@ -96,10 +96,8 @@ runDriverAction action driver plate mbReason bookingId = do
         board s booking
         pure (Nothing, Nothing)
   forM_ ((,) <$> mbCancelReason <*> mbCancel) $ uncurry cancelByDriver
-  whenJust mbDropped $ \_ -> do
-    switched <- Session.applyQueuedRoute plate
-    when switched $ Allocation.releaseUnboarded plate RouteChanged
-  Session.getSession merchantId plate >>= fromMaybeM SessionNotFound
+  whenJust mbDropped $ \_ -> void $ cabEmptied plate
+  Session.getSession plate >>= fromMaybeM SessionNotFound
   where
     -- the booking lock inside re-decides (a boarding since the plate lock flips a ticket, and the cancel is refused)
     cancelByDriver reason booking = do

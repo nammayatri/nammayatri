@@ -2733,3 +2733,42 @@ instance FromResponse BapProxyError where
   fromResponse (Response status _ _ body) = do
     APIError code message payload <- decode body
     pure $ BapProxyResponseError (codeToHttpCodeWith500Default (HTTP.statusCode status)) code message payload
+
+-- | The shared-cab session, which driver-app owns. The codes are the ones the driver app already handles (they were rider-app's).
+data SharedCabSessionError
+  = SessionHeldByAnotherDriver
+  | SessionNotFound
+  | SessionNotActive
+  | SessionNotPaused
+  | NoReturnRoute
+  | RidersOnBoard Int
+  deriving (Eq, Show, IsBecknAPIError)
+
+instance IsAPIError SharedCabSessionError
+
+instanceExceptionWithParent 'HTTPException ''SharedCabSessionError
+
+instance IsBaseError SharedCabSessionError where
+  toMessage = \case
+    SessionHeldByAnotherDriver -> Just "Another driver has a live shared-cab session on this vehicle."
+    SessionNotFound -> Just "No live shared-cab session for this vehicle."
+    SessionNotActive -> Just "Shared-cab session is not active."
+    SessionNotPaused -> Just "Shared-cab session is not paused."
+    NoReturnRoute -> Just "This route has no return route."
+    RidersOnBoard n -> Just $ show n <> " rider(s) still on board; drop them first or end with force."
+
+instance IsHTTPError SharedCabSessionError where
+  toErrorCode = \case
+    SessionHeldByAnotherDriver -> "SHARED_CAB_SESSION_HELD_BY_ANOTHER_DRIVER"
+    SessionNotFound -> "SHARED_CAB_SESSION_NOT_FOUND"
+    SessionNotActive -> "SHARED_CAB_SESSION_NOT_ACTIVE"
+    SessionNotPaused -> "SHARED_CAB_SESSION_NOT_PAUSED"
+    NoReturnRoute -> "SHARED_CAB_NO_RETURN_ROUTE"
+    RidersOnBoard _ -> "SHARED_CAB_RIDERS_ON_BOARD"
+  toHttpCode = \case
+    SessionHeldByAnotherDriver -> E409
+    SessionNotFound -> E404
+    SessionNotActive -> E400
+    SessionNotPaused -> E400
+    NoReturnRoute -> E400
+    RidersOnBoard _ -> E409

@@ -1,10 +1,8 @@
 module Domain.Action.UI.SharedCabInternal
-  ( getSharedCabRoutesData,
-    postSharedCabRoutesDemand,
-    postSharedCabRouteOperations,
+  ( postSharedCabRoutesDemand,
+    postSharedCabCabSync,
     postSharedCabSessionOperations,
     postSharedCabBookingOperations,
-    getSharedCabSession,
     getSharedCabBookingCallNumber,
     postSharedCabBookingMessage,
     chatMessageBody,
@@ -12,17 +10,15 @@ module Domain.Action.UI.SharedCabInternal
 where
 
 import qualified API.Types.UI.SharedCabInternal as API
-import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
-import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderConfig as DRC
-import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.RouteStopMapping as DRSM
+import Domain.Types.SharedCabSession (CabChange (..), CabSyncResp (..), CabUpdate, SharedCabSeatsResp (..))
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
@@ -37,16 +33,18 @@ import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Types as AllocTypes
 import qualified SharedLogic.SharedCab.Booking as Booking
 import qualified SharedLogic.SharedCab.BookingState as BookingState
+import qualified SharedLogic.SharedCab.CabSync as CabSync
 import qualified SharedLogic.SharedCab.Call as SharedCabCall
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Demand as Demand
 import SharedLogic.SharedCab.DriverAction (DriverAction (..), runDriverAction)
+import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
 import qualified SharedLogic.SharedCab.LegState as LegState
 import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Offer as Offer
 import SharedLogic.SharedCab.RateLimit (enforceCallLimit, enforceChatMessageLimit)
 import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
-import SharedLogic.SharedCab.Schedule (ensureAllocationTick)
+import SharedLogic.SharedCab.Schedule (ensureAllocationTick, ensureDegradedSweep, ensureExpiryJob)
 import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
@@ -56,7 +54,6 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
-import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import Tools.Error
 import Tools.Notifications (SharedCabChatEntityData (..), notifyChatMessage)
@@ -79,11 +76,6 @@ getIntegratedBppConfigByAgency agencyId =
 routeStops :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow [DRSM.RouteStopMapping]
 routeStops integratedBppConfig code = sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode code integratedBppConfig
 
-feedRoutes :: DIBC.IntegratedBPPConfig -> Environment.Flow [(DRoute.Route, [DRSM.RouteStopMapping])]
-feedRoutes integratedBppConfig = do
-  routes <- OTPRest.getRoutesByGtfsIdWithPolyline integratedBppConfig
-  forM routes $ \route -> (route,) <$> routeStops integratedBppConfig route.code
-
 routeDirection :: [DRSM.RouteStopMapping] -> Text
 routeDirection = maybe "" (.stopName) . listToMaybe . reverse
 
@@ -92,24 +84,6 @@ feedVersion :: DIBC.IntegratedBPPConfig -> Environment.Flow (Maybe Text)
 feedVersion integratedBppConfig =
   IM.withInMemCache ["SharedCabFeedVersion", integratedBppConfig.feedKey] 300 $
     either (const Nothing) Just <$> withTryCatch "getGtfsVersion:sharedCab" (OTPRest.getGtfsVersion integratedBppConfig)
-
-getSharedCabRoutesData :: Text -> Maybe Text -> Environment.Flow View.SharedCabRouteDataResp
-getSharedCabRoutesData agencyId mbToken = do
-  checkToken mbToken
-  integratedBppConfig <- getIntegratedBppConfigByAgency agencyId
-  routes <- feedRoutes integratedBppConfig
-  publicTransportVersion <- feedVersion integratedBppConfig
-  let toResp (route, stops) =
-        View.SharedCabRoute
-          { code = route.code,
-            name = route.longName,
-            direction = routeDirection stops,
-            fromStop = maybe "" (.stopName) (listToMaybe stops),
-            toStop = routeDirection stops,
-            stops = [View.sessionStopOf s.stopCode s.stopName s.stopPoint | s <- stops],
-            shapePolyline = route.polyline
-          }
-  pure View.SharedCabRouteDataResp {publicTransportVersion, routes = map toResp routes}
 
 postSharedCabRoutesDemand :: Maybe Text -> API.SharedCabDemandReq -> Environment.Flow View.SharedCabDemandResp
 postSharedCabRoutesDemand mbToken req = do
@@ -126,107 +100,48 @@ postSharedCabRoutesDemand mbToken req = do
 required :: Text -> Maybe a -> Environment.Flow a
 required field = fromMaybeM (InvalidRequest (field <> " is required for this operation"))
 
-postSharedCabRouteOperations :: Maybe Text -> API.SharedCabRouteOperationReq -> Environment.Flow API.SelectRouteResp
-postSharedCabRouteOperations mbToken req = do
+-- | Driver-app's run of the cab: every change, and every session poll (which brings the copy back after a flush). An open or a
+-- resume needs the city on, and seeds the city's chains; the reply is the driver's view and the riders on board.
+postSharedCabCabSync :: Maybe Text -> CabUpdate -> Environment.Flow CabSyncResp
+postSharedCabCabSync mbToken update = do
   checkToken mbToken
-  case req.operation of
-    API.SELECT_ROUTE -> selectRoute req
-    API.RETURN_TRIP -> do
-      tripId <- required "vehicleTripId" req.vehicleTripId
-      ended . Just =<< (Session.endRoute req.driverId req.vehicleNumber forced (StartReturn tripId) >>= releasing AllocTypes.RouteChanged >>= mkSessionResp)
-    API.CHANGE_ROUTE -> do
-      merchantId <- agencyMerchant =<< required "agencyId" req.agencyId
-      ended . Just =<< (ownSession merchantId req.driverId req.vehicleNumber >>= mkSessionResp)
-    API.END_ROUTE -> do
-      void $ Session.endRoute req.driverId req.vehicleNumber forced (if req.atLastStop == Just True then EndRoute else EndForNow) >>= releasing AllocTypes.SessionClosed
-      ended Nothing
-  where
-    forced = req.forceEnd == Just True
-    ended session = pure API.SelectRouteResp {session, affectedRiders = Nothing}
+  let opening = update.change `elem` [Just CAB_OPENED, Just CAB_RESUMED]
+  when opening $ getIntegratedBppConfigByAgency update.cab.agencyId >>= requireSharedCabEnabled . (.merchantOperatingCityId)
+  s <- CabSync.applyCabUpdate update
+  when (opening || isNothing update.change) $ seed s
+  onBoard <- Booking.ridersOnBoard s.vehicleNumber >>= mapM CabSync.cabRiderOf
+  session <-
+    if s.status == ENDED
+      then pure Nothing
+      else Just <$> mkSessionRespFrom (if isNothing update.change then CachedCab else FreshCab) s
+  pure CabSyncResp {session, ridersOnBoard = onBoard}
 
-selectRoute :: API.SharedCabRouteOperationReq -> Environment.Flow API.SelectRouteResp
-selectRoute req = do
-  agencyId <- required "agencyId" req.agencyId
-  routeCode <- required "routeCode" req.routeCode
-  walkupCount <- required "walkupCount" req.walkupCount
-  tripId <- required "vehicleTripId" req.vehicleTripId
-  integratedBppConfig <- getIntegratedBppConfigByAgency agencyId
-  -- opening or changing a route attaches it, which fails on an unknown one; a route queued for after the last drop is only saved
-  void $ OTPRest.getRouteByRouteId integratedBppConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)
-  priorRoute <- fmap (.routeCode) . mfilter ((/= ENDED) . (.status)) <$> Session.getSessionFresh integratedBppConfig.merchantId req.vehicleNumber
-  selected <-
-    Session.selectRoute
-      req.mode
-      tripId
-      OpenSessionReq
-        { driverId = req.driverId,
-          vehicleNumber = req.vehicleNumber,
-          merchantId = integratedBppConfig.merchantId,
-          merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId,
-          integratedBppConfigId = integratedBppConfig.id,
-          serviceTierType = Spec.SHARED_CAB,
-          capacity = fromMaybe defaultCapacity req.capacity,
-          routeCode = routeCode
-        }
-  case selected of
-    Left onBoard -> do
-      affected <- mapM affectedRider onBoard
-      pure API.SelectRouteResp {session = Nothing, affectedRiders = Just affected}
-    Right session -> do
-      void $ seeded session
-      Session.setCabDriverInfo req.vehicleNumber Session.CabDriverInfo {driverName = req.driverName, vehicleModel = req.vehicleModel}
-      when (maybe False (/= session.routeCode) priorRoute) $ void $ releasing AllocTypes.RouteChanged session
-      session' <-
-        if walkupCount == session.walkupCount
-          then pure session
-          else Session.setWalkupCount req.driverId req.vehicleNumber session.version walkupCount
-      resp <- mkSessionResp session'
-      pure API.SelectRouteResp {session = Just resp, affectedRiders = Nothing}
-  where
-    affectedRider (booking :: DFTB.FRFSTicketBooking) = do
-      mbRider <- QPerson.findById booking.riderId
-      pure
-        API.AffectedRider
-          { bookingId = booking.id.getId,
-            firstName = fromMaybe "" (mbRider >>= (.firstName)),
-            dropStop = fromMaybe booking.toStationCode booking.toStationName
-          }
+-- | The city's allocation tick, expiry check and degraded sweep run while a cab is live; each guard makes a re-seed a no-op.
+seed :: Session -> Environment.Flow ()
+seed s = when (s.status /= ENDED) $ do
+  ensureAllocationTick s.merchantId s.merchantOperatingCityId
+  ensureExpiryJob s.merchantId s.merchantOperatingCityId
+  withTryCatch "sharedCabSeedSweep" (ensureDegradedSweep s.merchantId s.merchantOperatingCityId) >>= \case
+    Left e -> logError $ "sharedCab: couldn't seed the degraded sweep for " <> s.vehicleNumber <> ": " <> show e
+    Right () -> pure ()
 
-seeded :: Session -> Environment.Flow Session
-seeded s = s <$ ensureAllocationTick s.merchantId s.merchantOperatingCityId
-
-releasing :: AllocTypes.AllocationOutcome -> Session -> Environment.Flow Session
-releasing outcome s = s <$ Allocation.releaseUnboarded s.vehicleNumber outcome
-
--- | `merchantId` is the rider-app merchant through which a session lost from Redis is rebuilt from driver-app's trip.
-ownSession :: Id DM.Merchant -> Text -> Text -> Environment.Flow Session
-ownSession merchantId driver plate = Session.getSession merchantId plate >>= either throwError pure . ownedSession driver
-
-agencyMerchant :: Text -> Environment.Flow (Id DM.Merchant)
-agencyMerchant agencyId = (.merchantId) <$> getIntegratedBppConfigByAgency agencyId
-
--- | The driver's session poll reads the cab's fix and seats from the route snapshot; an action's reply reads them fresh.
-getSharedCabSession :: Text -> Text -> Text -> Maybe Text -> Environment.Flow View.SharedCabSession
-getSharedCabSession agencyId driver plate mbToken = do
-  checkToken mbToken
-  merchantId <- agencyMerchant agencyId
-  ownSession merchantId driver plate >>= mkSessionRespFrom CachedCab
-
--- | Cab full: every unboarded allocation goes as SEAT_LOST, then walk-ups take the seats left, both under the plate lock; the releases'
--- pushes and re-ticks go out after it.
-postSharedCabSessionOperations :: Maybe Text -> API.SharedCabSessionOperationReq -> Environment.Flow View.SharedCabSession
+-- | Walk-ups and cab full are seats, decided against the bookings. Cab full: every unboarded allocation goes as SEAT_LOST, then
+-- walk-ups take the seats left, both under the plate lock; the releases' pushes and re-ticks go out after it.
+postSharedCabSessionOperations :: Maybe Text -> API.SharedCabSessionOperationReq -> Environment.Flow SharedCabSeatsResp
 postSharedCabSessionOperations mbToken req = do
   checkToken mbToken
   case req.operation of
     API.SET_SEATS -> do
       version <- required "version" req.version
       walkupCount <- required "walkupCount" req.walkupCount
-      Session.setWalkupCount req.driverId req.vehicleNumber version walkupCount >>= mkSessionResp
-    API.RESUME -> Session.resume req.driverId req.vehicleNumber >>= seeded >>= mkSessionResp
+      (s, walkupsAdded) <- Session.setWalkupCount req.driverId req.vehicleNumber version walkupCount
+      session <- mkSessionResp s
+      pure SharedCabSeatsResp {session, walkupsAdded}
     API.CAB_FULL -> do
       (full, released) <- Session.markCabFull req.driverId req.vehicleNumber (Allocation.closeUnboarded plate AllocTypes.SeatLost)
       Allocation.afterUnboarded plate AllocTypes.SeatLost released
-      mkSessionResp full
+      session <- mkSessionResp full
+      pure SharedCabSeatsResp {session, walkupsAdded = 0}
   where
     plate = req.vehicleNumber
 

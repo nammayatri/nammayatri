@@ -1,52 +1,24 @@
 imports:
-  ServiceTierType: BecknV2.FRFS.Enums
-  SelectRouteMode: SharedLogic.SharedCab.SessionState
-  SharedCabRouteDataResp: SharedLogic.SharedCab.SessionView
   SharedCabDemandResp: SharedLogic.SharedCab.SessionView
   SharedCabSession: SharedLogic.SharedCab.SessionView
+  CabUpdate: Domain.Types.SharedCabSession
+  CabSyncResp: Domain.Types.SharedCabSession
+  SharedCabSeatsResp: Domain.Types.SharedCabSession
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
   APISuccess: Kernel.Types.APISuccess
 
 module: SharedCabInternal
 
 # SharedCabSession lives in SharedLogic.SharedCab.SessionView because its `route` field clashes with Servant.route.
+# Driver-app owns the cab's trip (vehicle_trip, the session, the route feed and the LTS attach) and tells rider-app through
+# /sharedCab/cab/sync; rider-app owns the bookings and the seats they take.
 types:
   SharedCabDemandReq:
     agencyId: Text
     routeCodes: "[Text]"
 
-  AffectedRider:
-    bookingId: Text
-    firstName: Text
-    dropStop: Text
-
-  SelectRouteResp:
-    session: Maybe SharedCabSession
-    affectedRiders: Maybe [AffectedRider]
-
-  SharedCabRouteOperation:
-    enum: "SELECT_ROUTE,RETURN_TRIP,CHANGE_ROUTE,END_ROUTE"
-
-  # agencyId is the shared-cab provider's business key across the two DBs: the GTFS agency gtfsId of the feed
-  # (integrated_bpp_config.agency_key). The caller's own row id never leaves its database.
-  SharedCabRouteOperationReq:
-    operation: SharedCabRouteOperation
-    driverId: Text
-    vehicleNumber: Text
-    agencyId: Maybe Text
-    capacity: Maybe Int
-    routeCode: Maybe Text
-    walkupCount: Maybe Int
-    mode: Maybe SelectRouteMode
-    driverName: Maybe Text
-    vehicleModel: Maybe Text
-    atLastStop: Maybe Bool
-    forceEnd: Maybe Bool
-    # driver-app's id for the run a SELECT_ROUTE or RETURN_TRIP opens
-    vehicleTripId: Maybe Text
-
   SharedCabSessionOperation:
-    enum: "SET_SEATS,RESUME,CAB_FULL"
+    enum: "SET_SEATS,CAB_FULL"
 
   SharedCabSessionOperationReq:
     operation: SharedCabSessionOperation
@@ -73,15 +45,6 @@ types:
     message: Text
 
 apis:
-  - GET:
-      endpoint: /sharedCab/routes/data
-      auth: NoAuth
-      headers:
-        token: Text
-      mandatoryQuery:
-        agencyId: Text
-      response:
-        type: SharedCabRouteDataResp
   - POST:
       endpoint: /sharedCab/routes/demand
       auth: NoAuth
@@ -92,25 +55,14 @@ apis:
       response:
         type: SharedCabDemandResp
   - POST:
-      endpoint: /sharedCab/route/operations
+      endpoint: /sharedCab/cab/sync
       auth: NoAuth
       headers:
         token: Text
       request:
-        type: SharedCabRouteOperationReq
+        type: CabUpdate
       response:
-        type: SelectRouteResp
-  - GET:
-      endpoint: /sharedCab/session
-      auth: NoAuth
-      headers:
-        token: Text
-      mandatoryQuery:
-        driverId: Text
-        vehicleNumber: Text
-        agencyId: Text
-      response:
-        type: SharedCabSession
+        type: CabSyncResp
   - POST:
       endpoint: /sharedCab/session/operations
       auth: NoAuth
@@ -119,7 +71,7 @@ apis:
       request:
         type: SharedCabSessionOperationReq
       response:
-        type: SharedCabSession
+        type: SharedCabSeatsResp
   - POST:
       endpoint: /sharedCab/booking/{bookingId}/operations
       auth: NoAuth

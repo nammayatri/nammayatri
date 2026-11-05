@@ -54,6 +54,7 @@ sessionKey :: Text -> Text
 sessionKey plate = "sharedcab:session:" <> plate
 
 -- | Per city: two cities' feeds may share a route code.
+-- | The city's live cabs (ACTIVE or PAUSED copies), for the city-wide passes; the session key is truth, a stale member is skipped.
 routeKey :: CityId -> Text -> Text
 routeKey cityId routeCode = "sharedcab:route:" <> cityId.getId <> ":" <> routeCode
 

@@ -27,6 +27,7 @@ import qualified Domain.Types.FRFSTicketStatus as TicketStatus
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Person as DPerson
+import Domain.Types.SharedCabSession (returnRouteCode)
 import qualified Environment
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
@@ -100,7 +101,7 @@ candidateRoutes :: DBooking.FRFSTicketBooking -> [Text]
 candidateRoutes booking =
   nub $
     maybeToList booking.routeCode
-      ++ foldMap (either (const []) (: []) . returnRouteOf) booking.routeCode
+      ++ foldMap (maybeToList . returnRouteCode) booking.routeCode
 
 resolveCabByCode :: DBooking.FRFSTicketBooking -> Text -> Environment.Flow [Session]
 resolveCabByCode booking code = do
