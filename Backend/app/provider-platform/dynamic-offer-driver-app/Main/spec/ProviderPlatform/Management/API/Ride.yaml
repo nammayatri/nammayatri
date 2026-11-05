@@ -601,20 +601,21 @@ types:
   RideEstimatedRouteRes:
     - transactionId: Text
     - estimatedDistance: Maybe Meters
-    - calls: [EstimatedRouteCall]
+    - calls: [MapsRouteCall]
     - derive: "'HideSecrets"
-  EstimatedRouteCall:
+  MapsRouteCall:
     - apiName: Text
     - provider: Text
     - calledAt: UTCTime
-    - routes: [EstimatedRouteOption]
-  EstimatedRouteOption:
+    - routes: [MapsRouteOption]
+  MapsRouteOption:
     - distanceMeters: Maybe Int
     - durationSec: Maybe Int
     - points: [LatLong]
   RideSnappedRouteRes:
     - batches: [SnapBatch]
     - distanceFailures: [SnapDistanceFailure]
+    - approxRoute: Maybe MapsRouteCall
     - derive: "'HideSecrets"
   SnapBatch:
     - rideStatus: Status
