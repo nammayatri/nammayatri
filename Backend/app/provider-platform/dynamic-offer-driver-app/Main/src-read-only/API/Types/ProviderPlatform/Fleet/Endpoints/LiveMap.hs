@@ -124,7 +124,7 @@ type GetLiveMapDriversHelper =
 
 data LiveMapAPIs = LiveMapAPIs
   { getLiveMapDrivers :: Kernel.Types.Common.Meters -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Kernel.Prelude.Maybe (Kernel.Prelude.Maybe [Kernel.Types.Id.Id Dashboard.Common.Driver]) -> EulerHS.Types.EulerClient [MapDriverInfoRes],
-    getLiveMapDemandHotspots :: EulerHS.Types.EulerClient DemandHotspotsResp
+    getDemandHotspots :: EulerHS.Types.EulerClient DemandHotspotsResp
   }
 
 mkLiveMapAPIs :: (Client EulerHS.Types.EulerClient API -> LiveMapAPIs)
