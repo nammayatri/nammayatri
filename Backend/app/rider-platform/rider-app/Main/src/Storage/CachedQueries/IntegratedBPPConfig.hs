@@ -78,6 +78,21 @@ findByAgencyId agencyKey = do
                 pure dataToBeCached
           )
 
+findByAgencyKeyAndPlatformType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> PlatformType -> m (Maybe IntegratedBPPConfig)
+findByAgencyKeyAndPlatformType agencyKey platformType = do
+  let cacheKey = buildAgencyCacheKey agencyKey <> ":PlatformType-" <> show platformType
+  IM.withInMemCache [cacheKey] 3600 $ do
+    Hedis.safeGet cacheKey
+      >>= ( \case
+              Just a -> pure a
+              Nothing -> do
+                dataToBeCached <- Queries.findByAgencyKeyAndPlatformType agencyKey platformType
+                when (isJust dataToBeCached) $ do
+                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+                  Hedis.setExp cacheKey dataToBeCached expTime
+                pure dataToBeCached
+          )
+
 findAllByPlatformAndVehicleCategory :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> VehicleCategory -> PlatformType -> m [IntegratedBPPConfig]
 findAllByPlatformAndVehicleCategory domain vehicleCategory platformType = do
   let cacheKey = buildPlatformCacheKey domain vehicleCategory platformType

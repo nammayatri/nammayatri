@@ -43,6 +43,31 @@ findByQuoteId quoteId = do findOneWithKV [Se.Is Beam.quoteId $ Se.Eq (Kernel.Typ
 findBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m (Maybe Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
 findBySearchId searchId = do findOneWithKV [Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId)]
 
+releaseAllocatedVehicle ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
+releaseAllocatedVehicle vehicleNumber sharedCabNoShows id expectedVehicleNumber = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.vehicleNumber vehicleNumber,
+      Se.Set Beam.sharedCabNoShows (Kernel.Prelude.Just sharedCabNoShows),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.vehicleNumber $ Se.Eq expectedVehicleNumber]]
+
+updateAllocatedVehicle ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
+updateAllocatedVehicle vehicleNumber id expectedVehicleNumber = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.vehicleNumber vehicleNumber, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id),
+          Se.Is Beam.vehicleNumber $ Se.Eq expectedVehicleNumber
+        ]
+    ]
+
 updateBPPOrderIdAndStatusById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
@@ -200,8 +225,16 @@ updateTotalPriceById totalPrice id = do
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateUpdatedAtById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateUpdatedAtById id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateValidTillById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateValidTillById validTill id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.validTill validTill, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateVehicleTripId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateVehicleTripId vehicleTripId id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.vehicleTripId vehicleTripId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m (Maybe Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -286,6 +319,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
       Se.Set Beam.seatSelectionType seatSelectionType,
       Se.Set Beam.serviceTierType serviceTierType,
+      Se.Set Beam.sharedCabNoShows (Kernel.Prelude.Just sharedCabNoShows),
       Se.Set Beam.startTime startTime,
       Se.Set Beam.stationsJson stationsJson,
       Se.Set Beam.status status,
@@ -300,6 +334,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.tripId tripId,
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleNumber vehicleNumber,
+      Se.Set Beam.vehicleTripId vehicleTripId,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.waybillNo waybillNo,
       Se.Set Beam.updatedAt _now
