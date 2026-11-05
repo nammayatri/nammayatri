@@ -137,6 +137,10 @@ data RecomputeConfig = RecomputeConfig
     -- downward fare effect on city rides, and flooring would wrongly inflate
     -- rental (actual-duration) billing.
     cfgFloorTimeAtEstimateWithinThreshold :: Bool,
+    -- | The same floor for rides ending outside the pickup/drop threshold.
+    -- Default False (outside the threshold a shorter ride bills its actual
+    -- duration).
+    cfgFloorTimeAtEstimateOutsideThreshold :: Bool,
     -- | Re-run the congestion model at end ride. Default False.
     cfgRecomputeCongestionOnEndRide :: Bool,
     -- | Estimated-toll fallback when GPS was dark at the gates. Default False.
@@ -297,6 +301,7 @@ mkRecomputeConfig tc = do
           (Nothing, Nothing) -> defaultTimeForgivenessBands,
       cfgGateExtraTimeChargeByRecompute = fromMaybe False (tim >>= (.gateExtraTimeOnEstimateBilled)),
       cfgFloorTimeAtEstimateWithinThreshold = fromMaybe True (tim >>= (.floorAtEstimateWithinThreshold)),
+      cfgFloorTimeAtEstimateOutsideThreshold = fromMaybe False (tim >>= (.floorAtEstimateOutsideThreshold)),
       cfgRecomputeCongestionOnEndRide = fromMaybe False (pol >>= (.recomputeCongestionOnEndRide)),
       cfgEstimatedTollFallback = fromMaybe False (pol >>= (.estimatedTollFallback)),
       cfgNotifyDriverOnBudgetExceeded = fromMaybe True (up >>= (.notifyDriverOnBudgetExceeded))
@@ -586,17 +591,17 @@ applyFareStepAdjustments RecomputeInput {cfg = RecomputeConfig {..}, ..} base = 
               && withFloor.durationSource == UseActualDuration
               then forgivenessAdjustedDuration cfgTimeForgivenessBands estimatedDuration actualDuration
               else Nothing
-          -- Within the pickup/drop threshold, never bill below the estimated
-          -- duration. Default-on, but binds only when perMinRateSections
-          -- actually bill the chargeable minutes — i.e. sections present and
-          -- no extra-time charge configured (a configured extra-time charge
-          -- pins sections to the estimated minutes, and below-estimate
-          -- durations have no fare effect on city rides anyway).
+          -- Never bill below the estimated duration: within the pickup/drop
+          -- threshold by default, outside it only when configured. Binds only
+          -- when perMinRateSections actually bill the chargeable minutes —
+          -- i.e. sections present and no extra-time charge configured (a
+          -- configured extra-time charge pins sections to the estimated
+          -- minutes, and below-estimate durations have no fare effect on city
+          -- rides anyway).
           timeFloored =
-            cfgFloorTimeAtEstimateWithinThreshold
+            (if dropOutsideOfThreshold then cfgFloorTimeAtEstimateOutsideThreshold else cfgFloorTimeAtEstimateWithinThreshold)
               && productFlags.hasPerMinRateSections
               && not productFlags.extraTimeChargeConfigured
-              && not dropOutsideOfThreshold
               && withFloor.durationSource == UseActualDuration
               && maybe False (\act -> maybe False (act <) estimatedDuration) actualDuration
           withDuration
