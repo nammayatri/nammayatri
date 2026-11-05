@@ -20,6 +20,7 @@ module Lib.LocationUpdates
     buildRidePickupInterpolationHandler,
     pickupSnapEntityIdSuffix,
     editDestinationSnapEntityIdSuffix,
+    approxRouteEntityIdSuffix,
     snapToRoadReqPoints,
   )
 where
@@ -388,6 +389,9 @@ snapToRoadReqPoints = 98
 
 pickupSnapEntityIdSuffix :: Text
 pickupSnapEntityIdSuffix = ":pickup"
+
+approxRouteEntityIdSuffix :: Text
+approxRouteEntityIdSuffix = ":approxRoute"
 
 editDestinationSnapEntityIdSuffix :: Text
 editDestinationSnapEntityIdSuffix = ":editDestination"
