@@ -10,6 +10,7 @@ module SharedLogic.DriverFleetOperatorAssociation
     checkFleetDriverAssociationIgnoringActive,
     checkFleetOperatorAssociation,
     checkDriverOperatorAssociation,
+    checkFleetDriverAndDriverOperatorAssociation,
     ensureDriverNotActiveElsewhere,
     resolveOperatorByCode,
     associateDriverWithOperator,
@@ -279,9 +280,9 @@ checkFleetDriverAndDriverOperatorAssociation driverId operatorId = do
   if isDriverOperatorAssociated
     then return True
     else do
-      QFDA.findByDriverId driverId True >>= \case
-        Just fleetDriverAssoc -> checkFleetOperatorAssociation (Id fleetDriverAssoc.fleetOwnerId) operatorId
-        Nothing -> return False
+      -- A driver can hold more than one active fleet link, so check them all.
+      fleetDriverAssocs <- QFDA.findAllByDriverId driverId True
+      or <$> mapM (\fleetDriverAssoc -> checkFleetOperatorAssociation (Id fleetDriverAssoc.fleetOwnerId) operatorId) fleetDriverAssocs
 
 associateDriverWithOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DP.Person -> Bool -> Text -> Maybe DVC.VehicleCategory -> Flow ()
 associateDriverWithOperator merchant moc person operator isNew driverMobile mbVehicleCategory = do
