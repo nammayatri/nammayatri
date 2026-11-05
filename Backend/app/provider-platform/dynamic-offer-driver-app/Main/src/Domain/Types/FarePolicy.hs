@@ -415,7 +415,9 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     fareSettlementType :: Maybe SL.FareSettlementType,
     parkingFeeExemptionEnabled :: Maybe Bool,
     negotiationFareMinTolerancePct :: Maybe Double,
-    negotiationFareMaxTolerancePct :: Maybe Double
+    negotiationFareMaxTolerancePct :: Maybe Double,
+    -- Not stored: Just True only on the spot-ride copies made by addSpotRidePolicies.
+    isDerived :: Maybe Bool
   }
   deriving (Generic, Show)
 
@@ -496,6 +498,7 @@ farePolicyToFullFarePolicy merchantId' vehicleServiceTier tripCategory cancellat
       fareSettlementType = Nothing,
       parkingFeeExemptionEnabled = Nothing,
       disableDownwardRecompute = Nothing,
+      isDerived = Nothing,
       ..
     }
 
