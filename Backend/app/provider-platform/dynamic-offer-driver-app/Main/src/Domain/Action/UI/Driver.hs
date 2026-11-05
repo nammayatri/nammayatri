@@ -2363,6 +2363,7 @@ assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver trans
     -- after initializeRide: a pre-ride failure then leaves the searchTry dispatchable, so the allocator's
     -- cancelBookingIfApplies still rescues the reused booking instead of stranding it NEW with no ride.
     QST.updateStatus DST.COMPLETED searchTry.id
+    QST.markReallocationOutcome searchTry
     void $ deactivateExistingQuotes reusedBooking.merchantOperatingCityId merchant.id driver.id searchTry.id (mkPrice (Just driverQuote'.currency) driverQuote'.estimatedFare) (Just transporterConfig)
     uBooking <- QBooking.findById reusedBooking.id >>= fromMaybeM (BookingNotFound reusedBooking.id.getId)
     handle (reallocErrHandler uBooking) $ sendRideAssignedUpdateToBAP uBooking ride driver vehicle
@@ -2402,6 +2403,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   mFleetAssociation <- QFDA.findByDriverId driver.id True
   whenJust mbSearchTry $ \searchTry -> do
     QST.updateStatus DST.COMPLETED searchTry.id
+    QST.markReallocationOutcome searchTry
     mSReqFD <- QSRD.findByDriverAndSearchTryId driver.id searchTry.id
     whenJust mSReqFD $ \sReqFD -> QBooking.updateDqDurationToPickup booking.id sReqFD.durationToPickup
   (ride, rideDetails, vehicle) <-

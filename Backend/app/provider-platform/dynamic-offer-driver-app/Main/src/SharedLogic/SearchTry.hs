@@ -442,6 +442,16 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
         driverPreference = driverPreference,
         businessEmailDomain = businessEmailDomain,
         paymentInstrument = mbPaymentInstrument,
+        -- Cohort marker for the silent reallocation A/B: only a REALLOCATION try can sit inside the
+        -- rider-side window, so every other repeat type stays Nothing rather than a misleading False.
+        isSilentReallocation = if searchRepeatType == DST.REALLOCATION then Just (searchReq.isSilentReallocationEnabled == Just True) else Nothing,
+        -- The rider app hides this reallocation until this instant; a driver assigned before it is a
+        -- silent-window hit, one assigned after it is an ordinary reallocation the rider saw on screen.
+        silentReallocationWindowEndsAt =
+          if searchRepeatType == DST.REALLOCATION && searchReq.isSilentReallocationEnabled == Just True
+            then (\secs -> fromIntegral secs.getSeconds `addUTCTime` now) <$> searchReq.silentReallocationWindowSeconds
+            else Nothing,
+        reallocationOutcome = Nothing,
         ..
       }
 

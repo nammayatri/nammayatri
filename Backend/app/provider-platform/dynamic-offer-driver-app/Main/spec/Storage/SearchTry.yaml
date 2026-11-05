@@ -23,6 +23,10 @@ SearchTry:
       enum: "INITIAL, RETRIED, REALLOCATION, CANCELLED_AND_RETRIED, BETTER_DRIVER_SEARCH"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
 
+    ReallocationOutcome:
+      enum: "SILENT_REALLOCATION_ACCEPTED, REALLOCATION_ACCEPTED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
   fields:
     id : Id SearchTry
     batchingMode : Maybe Domain.Types.DriverPoolConfig.BatchingMode
@@ -46,6 +50,9 @@ SearchTry:
     billingCategory: BillingCategory
     searchRepeatCounter: Int
     searchRepeatType: SearchRepeatType
+    isSilentReallocation: Maybe Bool
+    silentReallocationWindowEndsAt: Maybe UTCTime
+    reallocationOutcome: Maybe ReallocationOutcome
     tripCategory: TripCategory
     isAdvancedBookingEnabled: Bool
     isScheduled: Bool
@@ -98,6 +105,7 @@ SearchTry:
   - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SearchTryStatus>
   - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SearchTryStatus>
   - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SearchRepeatType>
+  - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ReallocationOutcome>
 
   fromTType:
     estimateIds: fromMaybe [estimateId] estimateIds|E
@@ -163,6 +171,7 @@ SearchTry:
     vehicleVariant: character varying (255)
     estimateId: character (36)
     searchRepeatType: character varying (255)
+    reallocationOutcome: character varying (255)
     addOnData: "json"
 
   excludedFields: [ merchantOperatingCityId, merchantId, createdAt, updatedAt ]
