@@ -34,6 +34,7 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 
 -- | Build a BaseUrl with the request host (nwAddress) and the path from the given URL.
 -- Used so BAP context/callbacks hit the current instance (multicloud).
@@ -363,14 +364,24 @@ wireTicketStatus = \case
 
 castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> Bool -> Spec.VehicleCategory -> m Ticket.FRFSTicketStatus
 castTicketStatus "UNCLAIMED" _ False _ = return Ticket.ACTIVE -- False means solicited on_status or on_confirm call
-castTicketStatus "UNCLAIMED" _ True Spec.BUS = return Ticket.USED -- In case of bus, ticket is scanned only once to validate the booking
-castTicketStatus "UNCLAIMED" _ True _ = return Ticket.INPROGRESS -- True means unsolicited on_status received
+-- True means unsolicited on_status received, or an on_confirm spot booking:
+castTicketStatus "UNCLAIMED" booking True vehicleCategory = return $ checkedInStatus (FRFSUtils.getServiceTierTypeFromRouteStationsJson booking.routeStationsJson) vehicleCategory
 castTicketStatus "CLAIMED" _ _ Spec.METRO = return Ticket.USED
 castTicketStatus "CANCELLED" booking _ _
   | booking.customerCancelled = return Ticket.CANCELLED
   | otherwise = return Ticket.COUNTER_CANCELLED
 castTicketStatus "EXPIRED" _ _ _ = return Ticket.EXPIRED
 castTicketStatus _ _ _ _ = throwError $ InternalError "Invalid ticket status"
+
+checkedInStatus :: Maybe Spec.ServiceTierType -> Spec.VehicleCategory -> Ticket.FRFSTicketStatus
+checkedInStatus (Just Spec.SHARED_CAB) Spec.BUS =
+  -- a shared-cab walk-up is not a conductor scan, so its ticket starts ACTIVE: the rider boards by typing the sticker code
+  -- (SharedLogic.SharedCab.Boarding), which drives ACTIVE -> INPROGRESS itself.
+  Ticket.ACTIVE
+checkedInStatus _ Spec.BUS =
+  -- In case of bus, ticket is scanned only once to validate the booking
+  Ticket.USED
+checkedInStatus _ _ = Ticket.INPROGRESS
 
 data BppData = BppData
   { bppId :: Text,

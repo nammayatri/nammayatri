@@ -42,6 +42,7 @@ import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.DriverWallet as DDriverWallet
 import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Action.UI.Registration as DRegistration
+import qualified Domain.Action.UI.SharedCab as SharedCab
 import Domain.Types
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.Common as DI
@@ -317,7 +318,12 @@ handler =
     :<|> marketingEventsPostLogin
 
 getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> Maybe Bool -> FlowHandler DDriver.DriverInformationRes
-getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName Nothing mbFleetInfo
+getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName Nothing mbFleetInfo >>= withPublicTransportVersion merchantOpCityId
+
+withPublicTransportVersion :: Id DMOC.MerchantOperatingCity -> DDriver.DriverInformationRes -> Flow DDriver.DriverInformationRes
+withPublicTransportVersion merchantOpCityId res = do
+  version <- SharedCab.sharedCabFeedVersion merchantOpCityId ((.variant) <$> res.linkedVehicle)
+  pure res {DDriver.publicTransportVersion = version}
 
 marketingEventsPostLogin :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DRegistration.MarketEventReq -> FlowHandler APISuccess
 marketingEventsPostLogin auth req = withFlowHandlerAPI $ DRegistration.marketingEventsPostLogin auth req
@@ -440,7 +446,7 @@ acceptScheduledBooking :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantO
 acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId = withFlowHandlerAPI $ DDriver.acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId Nothing
 
 getInformationV2 :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> Maybe Bool -> DDriver.UpdateProfileInfoPoints -> FlowHandler DDriver.DriverInformationRes
-getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req
+getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req >>= withPublicTransportVersion merchantOpCityId
 
 getEarnings :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> DCommon.EarningType -> FlowHandler DCommon.EarningPeriodStatsRes
 getEarnings (personId, merchantId, merchantOpCityId) from to earningType = withFlowHandlerAPI $ DDriver.getEarnings (personId, merchantId, merchantOpCityId) from to earningType
