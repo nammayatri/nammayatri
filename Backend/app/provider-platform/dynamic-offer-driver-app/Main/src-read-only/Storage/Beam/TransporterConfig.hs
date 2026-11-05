@@ -87,6 +87,7 @@ data TransporterConfigT f = TransporterConfigT
     bulkWaiveOffLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cacheOfferListByDriverId :: B.C f Kernel.Prelude.Bool,
     cachedDevicesOSForSearchRequest :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    callingMode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     canAddCancellationFee :: B.C f Kernel.Prelude.Bool,
     canDowngradeToHatchback :: B.C f Kernel.Prelude.Bool,
     canDowngradeToSedan :: B.C f Kernel.Prelude.Bool,

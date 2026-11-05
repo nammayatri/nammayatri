@@ -1056,7 +1056,7 @@ TransporterConfig:
       erickshaw: Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     CallingOption:
-      enum: "AnonymousCall, DirectCall, DualCall"
+      enum: "AnonymousCall, DirectCall, DualCall, ForceDirectCall"
     AnalyticsConfig:
       weekStartMode: Int
       earningsWindowSize: Int
@@ -1641,6 +1641,7 @@ TransporterConfig:
     overrideOperatorDriverJoiningWithDeepLink: Maybe Bool
     mandateEmailVerification: Maybe Bool
     forceDirectCalling: Maybe Bool
+    callingMode: Maybe Text # A CallingOption name. When set and recognised it wins over driverCallingOption and forceDirectCalling; plain text so an unrecognised value falls back instead of failing the row.
     showRoutePerRequest: Maybe Bool # When True, the driver app shows the route on the ride request popup and the ride-assigned screen
     allowNonFleetDriverLiveMap: Maybe Bool
     allowInvalidRcDeletionOnReplacement: Maybe Bool # When True, allows deleting an invalid RC and its driver/fleet associations when a replacement RC is submitted

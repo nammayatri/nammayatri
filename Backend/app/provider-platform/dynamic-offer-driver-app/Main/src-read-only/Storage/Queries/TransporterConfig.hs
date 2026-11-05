@@ -177,6 +177,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.bulkWaiveOffLimit (Just bulkWaiveOffLimit),
       Se.Set Beam.cacheOfferListByDriverId cacheOfferListByDriverId,
       Se.Set Beam.cachedDevicesOSForSearchRequest (Just (Data.Text.pack . Kernel.Prelude.show <$> cachedDevicesOSForSearchRequest)),
+      Se.Set Beam.callingMode callingMode,
       Se.Set Beam.canAddCancellationFee canAddCancellationFee,
       Se.Set Beam.canDowngradeToHatchback canDowngradeToHatchback,
       Se.Set Beam.canDowngradeToSedan canDowngradeToSedan,
