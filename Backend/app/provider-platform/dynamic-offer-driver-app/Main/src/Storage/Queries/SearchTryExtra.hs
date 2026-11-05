@@ -133,3 +133,14 @@ promoteBetterDriverSearchToReallocation (Id searchTryId) = do
       Se.Set BeamST.updatedAt now
     ]
     [Se.Is BeamST.id $ Se.Eq searchTryId]
+
+-- | Record how a reallocation try was won, for the silent-reallocation A/B. Call right after the
+-- try is marked COMPLETED. Non-reallocation tries are left untouched.
+markReallocationOutcome :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchTry -> m ()
+markReallocationOutcome searchTry =
+  when (searchTry.searchRepeatType == REALLOCATION) $ do
+    now <- getCurrentTime
+    let outcome = case searchTry.silentReallocationWindowEndsAt of
+          Just windowEnd | now <= windowEnd -> SILENT_REALLOCATION_ACCEPTED
+          _ -> REALLOCATION_ACCEPTED
+    updateOneWithKV [Se.Set BeamST.reallocationOutcome (Just outcome), Se.Set BeamST.updatedAt now] [Se.Is BeamST.id $ Se.Eq searchTry.id.getId]

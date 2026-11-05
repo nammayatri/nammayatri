@@ -111,6 +111,7 @@ betterDriverSwapAssign BetterDriverSwapReq {..} = do
     Metrics.incrementBookingCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel metricsDistanceBucketEdges booking.estimatedDistance) pickupZone dropZone
     -- Assignment gate: any other driver responding after this gets RideRequestAlreadyAccepted.
     QST.updateStatus DST.COMPLETED searchTry.id
+    QST.markReallocationOutcome searchTry
     postBookingResult <- withTryCatch "betterDriverSwapAssign:postBooking" $ do
       mFleetAssociation <- QFDA.findByDriverId driver.id True
       (ride, rideDetails, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) True True Nothing

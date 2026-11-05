@@ -94,3 +94,14 @@ ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN negative_fare_adjustmen
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN stand_in_for_booking_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN is_silent_reallocation boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN silent_reallocation_window_ends_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN reallocation_outcome character varying (255) ;

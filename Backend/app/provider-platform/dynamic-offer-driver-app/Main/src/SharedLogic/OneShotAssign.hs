@@ -129,6 +129,7 @@ oneShotAssign OneShotAssignReq {..} = do
     -- Assignment gate, same transition Beckn init performs: any driver responding after
     -- this gets RideRequestAlreadyAccepted from respondQuote.
     QST.updateStatus DST.COMPLETED searchTry.id
+    QST.markReallocationOutcome searchTry
     -- From here the booking row exists: any failure must cancel it (silently — the BAP
     -- never learned of it) and expire the customer's search, mirroring the Beckn
     -- confirm errHandler, or we'd strand an orphaned TRIP_ASSIGNED booking.

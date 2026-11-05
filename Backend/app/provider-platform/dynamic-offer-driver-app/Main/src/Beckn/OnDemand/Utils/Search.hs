@@ -226,6 +226,21 @@ getIsReallocationEnabled req = do
       tagValue = Utils.getTag Tag.IS_REALLOCATION_ENABLED tagGroups
   readMaybe . T.unpack =<< tagValue
 
+-- | Whether the rider app opted into the silent reallocation window at search time.
+-- Carried only so reallocation search tries can be attributed to that cohort.
+getIsSilentReallocationEnabled :: Spec.SearchReqMessage -> Maybe Bool
+getIsSilentReallocationEnabled req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
+      tagValue = Utils.getTag Tag.IS_SILENT_REALLOCATION_ENABLED tagGroups
+  readMaybe . T.unpack =<< tagValue
+
+-- | Length of the rider-side silent window, sent only when the rider is in the silent cohort.
+getSilentReallocationWindowSeconds :: Spec.SearchReqMessage -> Maybe Seconds
+getSilentReallocationWindowSeconds req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
+      tagValue = Utils.getTag Tag.SILENT_REALLOCATION_WINDOW_SECONDS tagGroups
+  Seconds <$> (readMaybe . T.unpack =<< tagValue)
+
 fareParametersInRateCard :: Spec.SearchReqMessage -> Maybe Bool
 fareParametersInRateCard req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
