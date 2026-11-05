@@ -3,7 +3,6 @@
 module Lib.JourneyLeg.Bus where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import Domain.Types.Trip as DTrip
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -30,7 +29,7 @@ instance JT.JourneyLeg BusLegRequest m where
   cancel (BusLegRequestCancel legData) = CFRFS.cancel legData.searchId legData.cancellationType
   cancel _ = throwError (InternalError "Not supported")
 
-  getState (BusLegRequestGetState req) = CFRFS.getState DTrip.Bus req.searchId req.riderLastPoints req.movementDetected req.routeCodeForDetailedTracking req.journeyLeg req.mbFleetNo
+  getState (BusLegRequestGetState req) = CFRFS.getState req.journeyLeg.mode req.searchId req.riderLastPoints req.movementDetected req.routeCodeForDetailedTracking req.journeyLeg req.mbFleetNo
   getState _ = throwError (InternalError "Not supported")
 
   getInfo (BusLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.journeyLeg req.journeyLegs req.passCandidates

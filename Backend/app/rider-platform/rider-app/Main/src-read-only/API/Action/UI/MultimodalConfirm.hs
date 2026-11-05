@@ -621,6 +621,9 @@ type API =
       :> QueryParam
            "routeCodes"
            Kernel.Prelude.Text
+      :> QueryParam
+           "serviceTier"
+           BecknV2.FRFS.Enums.ServiceTierType
       :> Get
            '[JSON]
            [API.Types.UI.MultimodalConfirm.PassingRoutes]
@@ -1076,6 +1079,7 @@ getMultimodalTrackStopRoutes ::
     Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType ->
     Environment.FlowHandler [API.Types.UI.MultimodalConfirm.PassingRoutes]
   )
-getMultimodalTrackStopRoutes a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.MultimodalConfirm.getMultimodalTrackStopRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getMultimodalTrackStopRoutes a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.MultimodalConfirm.getMultimodalTrackStopRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1

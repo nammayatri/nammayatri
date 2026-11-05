@@ -10,6 +10,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import Storage.ConfigPilot.Config.IntegratedBPPConfig (IntegratedBPPConfigDimensions (..))
 import Tools.Error
@@ -52,7 +53,7 @@ findMaybeIntegratedBPPConfigFromAgency ::
   m (Maybe IntegratedBPPConfig)
 findMaybeIntegratedBPPConfigFromAgency agencyId merchantOperatingCityId vehicleCategory platformType =
   let fallback = findByDomainAndCityCP (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
-   in maybe fallback (\agencyId' -> findByAgencyIdCP agencyId' |<|>| fallback) agencyId
+   in maybe fallback (\agencyId' -> if isSharedCabAgency agencyId' then Just <$> findSharedCabConfig agencyId' platformType else findByAgencyIdCP agencyId' |<|>| fallback) agencyId
 
 findIntegratedBPPConfigById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -70,6 +71,32 @@ findIntegratedBPPConfig ::
 findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleCategory platformType =
   findMaybeIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleCategory platformType
     >>= fromMaybeM IntegratedBPPConfigNotFound
+
+-- | The bus fleet's single config of a city: the newest row that is not the shared-cab feed, which shares the BUS category. A city with
+-- no shared-cab row gets exactly what 'findIntegratedBPPConfig' with no id gives (the newest row).
+findBusIntegratedBPPConfig ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Enums.VehicleCategory ->
+  PlatformType ->
+  m IntegratedBPPConfig
+findBusIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType =
+  (newestNonCab (.agencyKey) (.createdAt) <$> findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType)
+    >>= fromMaybeM IntegratedBPPConfigNotFound
+
+-- | 'findBusIntegratedBPPConfig' for callers that have nothing to do in a city without a bus fleet (a cab-only city has only the shared-cab row).
+findMaybeBusIntegratedBPPConfig ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Enums.VehicleCategory ->
+  PlatformType ->
+  m (Maybe IntegratedBPPConfig)
+findMaybeBusIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType =
+  newestNonCab (.agencyKey) (.createdAt) <$> findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType
+
+newestNonCab :: (a -> Text) -> (a -> UTCTime) -> [a] -> Maybe a
+newestNonCab agencyKeyOf createdAtOf rows =
+  listToMaybe (sortBy (\a b -> compare (createdAtOf b) (createdAtOf a)) (filter (not . isSharedCabAgency . agencyKeyOf) rows))
 
 findIntegratedBPPConfigFromEntity ::
   (HasField "integratedBppConfigId" a (Id IntegratedBPPConfig), EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -226,3 +253,10 @@ findByDomainAndCityCP domain mocId vc pt = do
 findByAgencyIdCP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m (Maybe IntegratedBPPConfig)
 findByAgencyIdCP agencyKey =
   getOneConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Nothing, agencyKey = Just agencyKey, domain = Nothing, vehicleCategory = Nothing, platformType = Nothing}) (Just (maybeToList <$> CQIBC.findByAgencyId agencyKey))
+
+-- | The shared-cab feed keeps a MULTIMODAL row (journeys) and an APPLICATION row (driver proxy) under one agency key: exactly one row
+-- of the platform, or an error, never a guess.
+findSharedCabConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> PlatformType -> m IntegratedBPPConfig
+findSharedCabConfig agencyKey platformType =
+  getOneConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Nothing, agencyKey = Just agencyKey, domain = Nothing, vehicleCategory = Nothing, platformType = Just platformType}) (Just (maybeToList <$> CQIBC.findByAgencyKeyAndPlatformType agencyKey platformType))
+    >>= fromMaybeM (IntegratedBPPConfigNotFoundForAgency agencyKey (show platformType))

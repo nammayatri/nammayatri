@@ -48,6 +48,7 @@ import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.RiderLocation as RiderLocation
 import qualified API.Action.UI.RiderPreferences as RiderPreferences
 import qualified API.Action.UI.SVP as SVP
+import qualified API.Action.UI.SharedCab as SharedCab
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.SupportBot as SupportBot
@@ -185,6 +186,7 @@ type API =
            :<|> Miscellaneous.API
            :<|> NearbyDrivers.API
            :<|> NearbyBuses.API
+           :<|> SharedCab.API
            :<|> Places.API
            :<|> CRIS.API
            :<|> SupportBot.API
@@ -328,6 +330,7 @@ handler =
     :<|> Miscellaneous.handler
     :<|> NearbyDrivers.handler
     :<|> NearbyBuses.handler
+    :<|> SharedCab.handler
     :<|> Places.handler
     :<|> CRIS.handler
     :<|> SupportBot.handler

@@ -1,0 +1,76 @@
+imports:
+  UTCTime: Kernel.Prelude
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+
+# One shared-cab run of a plate on a route. driver-app opens and closes it around its rider-app call; rider-app keeps only the id.
+VehicleTrip:
+  tableName: vehicle_trip
+
+  fields:
+    id: Id VehicleTrip
+    driverId: Id Person
+    vehicleNumber: Text
+    capacity: Maybe Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    integratedBppConfigId: Id IntegratedBPPConfig
+    routeCode: Text
+    status: VehicleTripStatus
+    startedAt: UTCTime
+    endedAt: Maybe UTCTime
+    endReason: Maybe VehicleTripEndReason
+    walkupCount: Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    VehicleTripStatus:
+      enum: "ACTIVE, COMPLETED, ABANDONED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    VehicleTripEndReason:
+      enum: "END_ROUTE, ROUTE_CHANGED, END_FOR_NOW, SESSION_TIMEOUT"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VehicleTripStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VehicleTripEndReason>
+
+  sqlType:
+    status: text
+    endReason: text
+
+  # On KV: the plate's live trip is found through its SecondaryKey while the row is still in Redis. One ACTIVE trip per plate is held
+  # by the plate lock around every write (SharedCab), not by a DB constraint, which would only fire at drain time.
+  constraints:
+    id: PrimaryKey
+    vehicleNumber: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findActiveByVehicleNumber:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - vehicleNumber
+          - status: "Domain.Types.VehicleTrip.ACTIVE|CIM"
+
+    closeTrip:
+      kvFunction: updateOneWithKV
+      params: [status, endReason, endedAt]
+      where: id
+
+    updateWalkupCount:
+      kvFunction: updateOneWithKV
+      params: [walkupCount]
+      where: id
+
+  default:
+    walkupCount: "0"
+    createdAt: "CURRENT_TIMESTAMP"
+    updatedAt: "CURRENT_TIMESTAMP"

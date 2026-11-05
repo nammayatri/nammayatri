@@ -208,6 +208,7 @@ data RiderConfig = RiderConfig
     sensitiveWordsForExactMatch :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     serviceTierRelationshipCfg :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.ServiceTierRelationshipCfg],
     settleCancellationFeeBeforeNextRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    sharedCabConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.SharedCabConfig,
     silentReallocationWindowSeconds :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     singleModeWalkSpeed :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     sosTrackingLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -301,6 +302,42 @@ data ServiceTierRelationshipCfg = ServiceTierRelationshipCfg {canBoardIn :: [Bec
 
 data ServiceTierSource = NANDI | QUOTES deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data SharedCabCallMode = MASKED | DIRECT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data SharedCabConfig = SharedCabConfig
+  { allocationWindowSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    atStopRadiusM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    autoEndAfterDropSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    boardAttemptsPer10Min :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    boardProximityM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    callEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    callMode :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.SharedCabCallMode,
+    chatEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    degradedTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    demandStopsPerRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    driverAcceptEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    fallbackAfterSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    findingTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    interestWindowSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    ltsMaxAgeSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxAttempts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxCabSpeedMps :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxDemandRoutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxNoShows :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxSkipsAndCancels :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    movingTimerSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    noLocationSpotBookingsPerVehiclePerDay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    offRouteSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    offerRetryTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    offerTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    pickEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    skipCancelCountTtlSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    standTimerSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    tickSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
 data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notificationMessage :: Kernel.Prelude.Text, notificationTitle :: Kernel.Prelude.Text, vehicleNo :: Kernel.Prelude.Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
@@ -314,3 +351,5 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSTriggerSource)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SharedCabCallMode)

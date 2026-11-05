@@ -1,0 +1,156 @@
+imports:
+  ServiceTierType: BecknV2.FRFS.Enums
+  SelectRouteMode: SharedLogic.SharedCab.SessionState
+  SharedCabRouteDataResp: SharedLogic.SharedCab.SessionView
+  SharedCabDemandResp: SharedLogic.SharedCab.SessionView
+  SharedCabSession: SharedLogic.SharedCab.SessionView
+  FRFSTicketBooking: Domain.Types.FRFSTicketBooking
+  APISuccess: Kernel.Types.APISuccess
+
+module: SharedCabInternal
+
+# SharedCabSession lives in SharedLogic.SharedCab.SessionView because its `route` field clashes with Servant.route.
+types:
+  SharedCabDemandReq:
+    agencyId: Text
+    routeCodes: "[Text]"
+
+  AffectedRider:
+    bookingId: Text
+    firstName: Text
+    dropStop: Text
+
+  SelectRouteResp:
+    session: Maybe SharedCabSession
+    affectedRiders: Maybe [AffectedRider]
+
+  SharedCabRouteOperation:
+    enum: "SELECT_ROUTE,RETURN_TRIP,CHANGE_ROUTE,END_ROUTE"
+
+  # agencyId is the shared-cab provider's business key across the two DBs: the GTFS agency gtfsId of the feed
+  # (integrated_bpp_config.agency_key). The caller's own row id never leaves its database.
+  SharedCabRouteOperationReq:
+    operation: SharedCabRouteOperation
+    driverId: Text
+    vehicleNumber: Text
+    agencyId: Maybe Text
+    capacity: Maybe Int
+    routeCode: Maybe Text
+    walkupCount: Maybe Int
+    mode: Maybe SelectRouteMode
+    driverName: Maybe Text
+    vehicleModel: Maybe Text
+    atLastStop: Maybe Bool
+    forceEnd: Maybe Bool
+    # driver-app's id for the run a SELECT_ROUTE or RETURN_TRIP opens
+    vehicleTripId: Maybe Text
+
+  SharedCabSessionOperation:
+    enum: "SET_SEATS,RESUME,CAB_FULL"
+
+  SharedCabSessionOperationReq:
+    operation: SharedCabSessionOperation
+    driverId: Text
+    vehicleNumber: Text
+    version: Maybe Int
+    walkupCount: Maybe Int
+
+  SharedCabBookingOperation:
+    enum: "ACCEPT,DECLINE,CANCEL,BOARDED_WITHOUT_CODE,DROPPED"
+
+  SharedCabBookingOperationReq:
+    operation: SharedCabBookingOperation
+    driverId: Text
+    vehicleNumber: Text
+    reason: Maybe Text
+
+  RiderCallNumberResp:
+    riderNumber: Text
+
+  SharedCabMessageReq:
+    driverId: Text
+    vehicleNumber: Text
+    message: Text
+
+apis:
+  - GET:
+      endpoint: /sharedCab/routes/data
+      auth: NoAuth
+      headers:
+        token: Text
+      mandatoryQuery:
+        agencyId: Text
+      response:
+        type: SharedCabRouteDataResp
+  - POST:
+      endpoint: /sharedCab/routes/demand
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabDemandReq
+      response:
+        type: SharedCabDemandResp
+  - POST:
+      endpoint: /sharedCab/route/operations
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabRouteOperationReq
+      response:
+        type: SelectRouteResp
+  - GET:
+      endpoint: /sharedCab/session
+      auth: NoAuth
+      headers:
+        token: Text
+      mandatoryQuery:
+        driverId: Text
+        vehicleNumber: Text
+        agencyId: Text
+      response:
+        type: SharedCabSession
+  - POST:
+      endpoint: /sharedCab/session/operations
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabSessionOperationReq
+      response:
+        type: SharedCabSession
+  - POST:
+      endpoint: /sharedCab/booking/{bookingId}/operations
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        bookingId: Id FRFSTicketBooking
+      request:
+        type: SharedCabBookingOperationReq
+      response:
+        type: SharedCabSession
+  - GET:
+      endpoint: /sharedCab/booking/{bookingId}/callNumber
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        bookingId: Id FRFSTicketBooking
+      mandatoryQuery:
+        driverId: Text
+        vehicleNumber: Text
+      response:
+        type: RiderCallNumberResp
+  - POST:
+      endpoint: /sharedCab/booking/{bookingId}/message
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        bookingId: Id FRFSTicketBooking
+      request:
+        type: SharedCabMessageReq
+      response:
+        type: APISuccess

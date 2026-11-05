@@ -11,6 +11,7 @@ import Domain.Types.JourneyLeg as DJourneyLeg
 import Domain.Types.Ride as DRide
 import Domain.Types.RideStatus as DTaxiRide
 import Domain.Types.RouteDetails as DRouteDetails
+import qualified Domain.Types.Trip as DTrip
 import Kernel.Prelude
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JLTypes
@@ -19,6 +20,10 @@ import Storage.Queries.FRFSTicket as QFRFSTicket
 import Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import Storage.Queries.RouteDetails as QRouteDetails
 import Storage.Queries.RouteDetailsExtra as QRouteDetailsExtra
+
+-- | Only a journey with exactly one non-walk leg ends when that leg is cancelled.
+onlyTransitLeg :: [DTrip.MultimodalTravelMode] -> Bool
+onlyTransitLeg modes = length (filter (/= DTrip.Walk) modes) == 1
 
 getFRFSAllStatuses :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe DFRFSBooking.FRFSTicketBooking -> m (JLTypes.JourneyLegStatus, JourneyBookingStatus, [(Int, TrackingStatus, UTCTime)])
 getFRFSAllStatuses journeyLeg mbBooking = do
