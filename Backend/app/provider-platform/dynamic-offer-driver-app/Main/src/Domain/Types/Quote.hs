@@ -52,6 +52,8 @@ data Quote = Quote
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
-    addOnData :: [AddOnData]
+    addOnData :: [AddOnData],
+    -- Not stored: True only for a spot-ride quote built from a derived fare policy; False when read from DB.
+    isDerived :: Bool
   }
   deriving (Generic, Show)
