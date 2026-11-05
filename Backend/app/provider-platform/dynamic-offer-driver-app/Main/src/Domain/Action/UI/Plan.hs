@@ -28,6 +28,7 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
+import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Mandate as DM
@@ -36,12 +37,15 @@ import qualified Domain.Types.MerchantMessage as MessageKey
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as P
+import qualified Domain.Types.PlanTranslation as Fields
 import Domain.Types.SubscriptionConfig
 import qualified Domain.Types.SubscriptionConfig as SubsConfig
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Domain.Types.TransporterConfig (TransporterConfig)
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Vehicle
+import qualified Domain.Types.VendorFee as Fields
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Beam.Functions as B
@@ -85,6 +89,7 @@ import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VendorFee as QVF
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Notifications
 import Tools.Payment as Payment
 

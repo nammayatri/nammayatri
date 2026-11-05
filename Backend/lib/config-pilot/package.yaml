@@ -43,6 +43,7 @@ default-extensions:
   - UndecidableInstances
   - StandaloneDeriving
   - PackageImports
+  - OverloadedRecordDot
 
 dependencies:
   - aeson
@@ -54,7 +55,6 @@ dependencies:
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs: src

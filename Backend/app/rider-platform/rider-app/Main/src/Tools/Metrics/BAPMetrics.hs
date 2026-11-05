@@ -19,11 +19,10 @@ module Tools.Metrics.BAPMetrics
 where
 
 import Data.Time (diffUTCTime)
-import GHC.Records.Extra
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.AppMetrics (shouldPushLatencyMetrics)
-import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion)
+import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion (..))
 import Kernel.Types.Common
 import Prometheus as P hiding (counter)
 import Tools.Metrics.BAPMetrics.Types as Reexport

@@ -31,7 +31,7 @@ module Tools.Auth.DashboardUserAuth
     EndpointId,
     verifyDashboardUserAction,
     auditDashboardAction,
-    DashboardUser,
+    DashboardUser (..), -- is it correct?
     resolveRequestorTopic,
     -- Handler-entry merchant/city authorization (one-token-per-person). The
     -- generated handler calls this first, passing the verified operator and its

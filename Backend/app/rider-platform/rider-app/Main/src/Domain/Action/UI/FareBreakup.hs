@@ -2,6 +2,7 @@ module Domain.Action.UI.FareBreakup where
 
 import Data.Aeson
 import Domain.SharedLogic.RideDiscount (isProjectedFareParamTag)
+import qualified Domain.Types.Booking as Fields
 import Domain.Types.FareBreakup
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP

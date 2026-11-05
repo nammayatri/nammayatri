@@ -30,7 +30,7 @@ import Data.Time (nominalDay)
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Kernel.Prelude
 import Kernel.Utils.Common
-import Lib.Finance.Domain.Types.PgPaymentSettlementReport (PgPaymentSettlementReport)
+import Lib.Finance.Domain.Types.PgPaymentSettlementReport (PgPaymentSettlementReport (..))
 import Lib.Finance.Reconciliation.Recipe (Recipe (..), defaultClassify)
 import qualified Lib.Finance.Reconciliation.Types as ReconT
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
@@ -38,6 +38,7 @@ import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReportExtra as Q
 import qualified SharedLogic.Finance.Reconciliation.EntitySync as EntitySync
 import SharedLogic.Finance.Reconciliation.SubscriptionMeta (subscriptionMetaPairs)
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubPurchaseExtra
+import qualified Tools.Fields as Fields
 
 recipe ::
   ( BeamFlow m r,

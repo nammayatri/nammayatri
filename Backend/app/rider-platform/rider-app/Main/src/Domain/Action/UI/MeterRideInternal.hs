@@ -8,10 +8,11 @@ import Domain.Types.LocationAddress
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person as Fields
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (getDbHash)
-import Kernel.External.Maps.Types (LatLong)
+import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id

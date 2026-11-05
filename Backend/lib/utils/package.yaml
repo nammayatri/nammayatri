@@ -56,6 +56,7 @@ default-extensions:
   - StandaloneDeriving
   - PackageImports
   - TemplateHaskell
+  - OverloadedRecordDot
 
 dependencies:
   - aeson
@@ -85,8 +86,6 @@ dependencies:
   - resource-pool
   - uuid
   - prometheus-client
-  - record-hasfield
-  - record-dot-preprocessor
   - servant-openapi3
   - openapi3
   - string-conversions
@@ -127,7 +126,6 @@ dependencies:
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs: src

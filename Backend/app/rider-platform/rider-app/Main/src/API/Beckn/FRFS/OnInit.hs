@@ -22,6 +22,7 @@ import qualified BecknV2.FRFS.Utils as Utils
 import Data.Aeson (eitherDecodeStrict')
 import qualified Domain.Action.Beckn.FRFS.OnInit as DOnInit
 import qualified Domain.Types.Extra.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.FRFSTicketBooking as Fields
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
@@ -31,6 +32,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
+import qualified Kernel.Types.Registry.Subscriber as Fields
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.FRFSUtils as FRFSUtils

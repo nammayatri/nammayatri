@@ -40,6 +40,7 @@ import qualified Data.Text as Text
 import Data.Time (utctDay)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
+import qualified Domain.Action.UI.DriverGoHomeRequest as Fields
 import qualified Domain.Action.UI.Ride.Common as DUIRideCommon
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import qualified Domain.Action.UI.Ride.EndRide.RecomputeDecision as RD
@@ -48,15 +49,19 @@ import Domain.Action.UI.Route as DMaps
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.ConditionalCharges as Fields
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.GoHomeConfig as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideDetails as Fields
 import qualified Domain.Types.RiderDetails as RD
+import qualified Domain.Types.StopInformation as Fields
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.Yudhishthira as Y
 import qualified EulerHS.Language as L
@@ -64,6 +69,7 @@ import EulerHS.Prelude hiding (id, pi)
 import Kernel.Beam.Functions (runInMasterDbAndRedis)
 import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Encryption as Fields
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
@@ -540,7 +546,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
 
                 -- Ride-interpolation Kafka push moved to kafka-consumers RIDE_EVENTS_CONSUMER.
 
-                let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollIds = tollIds, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed, rideTags = updRide.rideTags <> manualTollChargeTags}
+                let ride = updRide{DRide.tollCharges = tollCharges, DRide.tollNames = tollNames, DRide.tollIds = tollIds, DRide.tollConfidence = tollConfidence, DRide.distanceCalculationFailed = Just distanceCalculationFailed, DRide.rideTags = updRide.rideTags <> manualTollChargeTags}
 
                 (chargeableDistance, finalFare, mbUpdatedFareParams, mbApproxUsed) <-
                   if shouldRectifyDistantPointsSnapToRoadFailure
@@ -594,25 +600,25 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     clearEditDestinationWayAndSnappedPointsFork <- awaitableFork "endRide->clearEditDestinationWayAndSnappedPoints" $ withTimeAPI "endRide" "clearEditDestinationWayAndSnappedPoints" $ clearEditDestinationWayAndSnappedPoints driverId
     clearReachedStopLocationsFork <- awaitableFork "endRide->clearReachedStopLocations" $ withTimeAPI "endRide" "clearReachedStopLocations" $ clearReachedStopLocations rideOld.id
     let updRide' =
-          ride{tripEndTime = Just now,
-               chargeableDistance = Just chargeableDistance,
-               fare = Just finalFareWithPaymentCharge,
-               status = DRide.COMPLETED,
-               tripEndPos = Just tripEndPoint,
-               rideEndedBy = Just rideEndedBy',
-               fareParametersId = Just rideFareParams.id,
-               tollCharges = mbUpdatedFareParams >>= (.tollCharges),
-               distanceCalculationFailed = distanceCalculationFailed,
-               pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
-               endOdometerReading = mbOdometer,
-               driverGoHomeRequestId = ghInfo.driverGoHomeRequestId,
-               hasStops = Just (not $ null ride.stops),
-               commission = finalCommission,
-               cancellationCommission = finalCancellationCommission,
-               paymentCharge = mbPaymentCharge,
-               paymentChargeBearer = mbPaymentChargeBearer,
-               discountAmount = discountAmount,
-               recomputeReason = (\d -> RD.mkShadowRecordText d chargeableDistance) <$> mbRecomputeDecision
+          ride{DRide.tripEndTime = Just now,
+               DRide.chargeableDistance = Just chargeableDistance,
+               DRide.fare = Just finalFareWithPaymentCharge,
+               DRide.status = DRide.COMPLETED,
+               DRide.tripEndPos = Just tripEndPoint,
+               DRide.rideEndedBy = Just rideEndedBy',
+               DRide.fareParametersId = Just rideFareParams.id,
+               DRide.tollCharges = mbUpdatedFareParams >>= (.tollCharges),
+               DRide.distanceCalculationFailed = distanceCalculationFailed,
+               DRide.pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+               DRide.endOdometerReading = mbOdometer,
+               DRide.driverGoHomeRequestId = ghInfo.driverGoHomeRequestId,
+               DRide.hasStops = Just (not $ null ride.stops),
+               DRide.commission = finalCommission,
+               DRide.cancellationCommission = finalCancellationCommission,
+               DRide.paymentCharge = mbPaymentCharge,
+               DRide.paymentChargeBearer = mbPaymentChargeBearer,
+               DRide.discountAmount = discountAmount,
+               DRide.recomputeReason = (\d -> RD.mkShadowRecordText d chargeableDistance) <$> mbRecomputeDecision
               }
     let mbDriverFromReq = case req of
           DriverReq driverReq -> Just driverReq.requestor

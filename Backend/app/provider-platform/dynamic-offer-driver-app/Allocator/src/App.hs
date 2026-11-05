@@ -20,7 +20,9 @@ import qualified Control.Concurrent.MVar as MVar
 import qualified Data.Bool as B
 import Data.Singletons (SingI)
 import qualified Data.Text as T
+import qualified Domain.Types.Merchant as Fields
 import Environment (Flow, HandlerCfg, HandlerEnv, buildHandlerEnv)
+import qualified Environment as Fields
 import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
@@ -39,6 +41,7 @@ import Kernel.Storage.Queries.SystemConfigs as QSC
 import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Types.Error
 import Kernel.Types.Flow (runFlowR)
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.App (getPodName, handleLeft)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall

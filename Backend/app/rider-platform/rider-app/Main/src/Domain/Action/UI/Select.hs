@@ -38,6 +38,7 @@ import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Registration as Reg
 import Domain.Types.Booking
 import Domain.Types.BookingStatus
+import qualified Domain.Types.BppDetails as Fields
 import Domain.Types.Common
 import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.DriverOffer as DDO
@@ -54,6 +55,7 @@ import qualified Domain.Types.ParcelDetails as DParcel
 import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
+import qualified Domain.Types.Quote as Fields
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequestPartiesLink as DSRPL
@@ -108,6 +110,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 

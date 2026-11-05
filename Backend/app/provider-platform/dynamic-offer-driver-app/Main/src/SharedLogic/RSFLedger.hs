@@ -46,6 +46,7 @@ import Data.Time (Day, UTCTime (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RsfOrderState as Fields
 import qualified Domain.Types.RsfReconLedgerEntry as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis

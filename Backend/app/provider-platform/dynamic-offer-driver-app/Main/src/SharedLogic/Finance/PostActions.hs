@@ -32,6 +32,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.Finance.WalletBalanceCache (syncWalletBalanceToPool)
 import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Tools.Fields as Fields
 
 -- | Same shape as the kernel's own runFinance -- call sites don't change their call pattern.
 --   Reads ctx.enableWalletGatedTierCheck (caller-resolved) to gate the recheck below.

@@ -14,12 +14,18 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
+import qualified Domain.Types.Estimate as Fields
+import qualified Domain.Types.FRFSConfig as Fields
+import qualified Domain.Types.FRFSQuote as Fields
+import qualified Domain.Types.FRFSQuoteCategory as Fields
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSSearch as FRFSSR
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
+import qualified Domain.Types.FRFSTicketBookingPayment as Fields
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBookingStatus
+import qualified Domain.Types.FRFSVehicleServiceTier as Fields
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.IntegratedBPPConfig as DTBC
@@ -36,6 +42,7 @@ import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.PurchasedPassPayment as DPPP
 import qualified Domain.Types.RecentLocation as DRL
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.Route as Fields
 import Domain.Types.RouteDetails
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.Station as DTS
@@ -74,6 +81,7 @@ import Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import Lib.JourneyModule.Utils
+import qualified Lib.Payment.Domain.Types.PaymentOrder as Fields
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
@@ -103,6 +111,7 @@ import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.Transformers.Booking as QTB
+import qualified Tools.Fields as Fields
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics.Types
 import qualified Tools.SharedRedisKeys as SharedRedisKeys

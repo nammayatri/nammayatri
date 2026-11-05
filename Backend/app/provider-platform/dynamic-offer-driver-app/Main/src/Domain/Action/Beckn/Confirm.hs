@@ -21,6 +21,8 @@ import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import Domain.Types
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverQuote as DDQ
+import qualified Domain.Types.DriverReferral as Fields
+import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
@@ -29,6 +31,8 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DRD
+import qualified Domain.Types.SearchRequest as Fields
+import qualified Domain.Types.SearchTry as Fields
 import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleVariant as DV
@@ -72,6 +76,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
 import Storage.Queries.RiderDriverCorrelation as SQR
 import qualified Storage.Queries.SearchRequest as QSR
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
 

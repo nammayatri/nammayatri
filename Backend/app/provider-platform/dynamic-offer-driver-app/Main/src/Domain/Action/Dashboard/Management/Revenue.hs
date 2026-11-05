@@ -24,6 +24,7 @@ import Data.Maybe
 import Data.Text hiding (drop, elem, filter, length, map)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Volunteer as Fields
 import Environment
 import EulerHS.Prelude hiding (drop, id, take, unpack)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -37,6 +38,7 @@ import qualified Storage.Clickhouse.DriverFee as CHDriverFee
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Volunteer (findAllByPlace)
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getRevenueAllFeeHistory :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe UTCTime -> Flow [Common.AllFees]
 getRevenueAllFeeHistory merchantShortId opCity mbFrom mbTo = do

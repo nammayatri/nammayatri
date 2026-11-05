@@ -48,6 +48,7 @@ import Kernel.External.Verification.SafetyPortal.Config (prepareSafetyPortalHttp
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Kernel.Storage.Queries.SystemConfigs
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Fields
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App
 import Kernel.Types.Beckn.City (initCityMaps)
@@ -75,6 +76,7 @@ import qualified Storage.CachedQueries.Merchant as Storage
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import System.Environment (lookupEnv)
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
+import qualified Tools.Fields as Fields
 import "utils" Utils.Common.Events as UE
 
 instance HasSchemaName Beam.MerchantOperatingCityT where

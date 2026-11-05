@@ -10,6 +10,7 @@ import qualified Domain.Types.NyRegularSubscription as NySub
 import Kernel.External.Encryption (DbHash, EncFlow, getDbHash)
 import Kernel.Prelude
 import Kernel.Types.App (MonadFlow)
+import qualified Kernel.Types.Id as Fields
 
 -- | Calculates a DbHash representing the scheduling-critical state of a NyRegularSubscription.
 -- This hash is used to detect if a subscription's scheduling parameters have changed

@@ -19,7 +19,8 @@ import Kernel.Utils.Common (getLocalCurrentTime, logDebug)
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig as CTBC
 import qualified Lib.Yudhishthira.Types as LYT
-import Lib.Yudhishthira.Types.AppDynamicLogicRollout (AppDynamicLogicRollout)
+import Lib.Yudhishthira.Types.AppDynamicLogicRollout (AppDynamicLogicRollout (..))
+import qualified Lib.Yudhishthira.Types.TimeBoundConfig as Fields
 
 unboundedTimeBound :: Text
 unboundedTimeBound = "Unbounded"

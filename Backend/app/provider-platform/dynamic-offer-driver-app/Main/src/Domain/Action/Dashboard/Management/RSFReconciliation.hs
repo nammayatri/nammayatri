@@ -22,6 +22,7 @@ import qualified Data.Time
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as M
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RsfOrderState as Fields
 import qualified Domain.Types.RsfReconLedgerEntry as L
 import qualified Domain.Types.RsfUtrState as DUtrState
 import qualified Environment

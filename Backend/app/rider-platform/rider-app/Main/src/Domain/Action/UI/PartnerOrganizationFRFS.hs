@@ -55,6 +55,9 @@ import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFTB
+import qualified Domain.Types.FRFSTicketBookingPayment as Fields
+import qualified Domain.Types.FRFSTicketBookingPaymentCategory as Fields
+import qualified Domain.Types.FRFSTicketCategoryMetadataConfig as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity
@@ -62,7 +65,10 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.PersonStats as Fields
+import qualified Domain.Types.PurchasedPassPayment as Fields
 import qualified Domain.Types.RegistrationToken as SR
+import qualified Domain.Types.Route as Fields
 import Domain.Types.Station
 import Environment
 import qualified EulerHS.Language as L
@@ -112,6 +118,7 @@ import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import qualified Storage.Queries.Transformers.FRFSQuoteCategory as TFQC
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.SMS as Sms
 
 data GetFareReq = GetFareReq
@@ -892,7 +899,7 @@ partnerOrgAuth ticketBookingId = do
           scfg = smsCfg.sessionConfig
       newOtp <- generateOTPCode
       let updatedSessionConfig = regPOCfg.sessionConfig{authExpiry = scfg.authExpiry}
-      (regToken, isTokenNew) <- getRegToken entityId partnerOrgId regPOCfg{fakeOtp = newOtp, sessionConfig = updatedSessionConfig} ticketBooking.merchantId isApiKeyAuth
+      (regToken, isTokenNew) <- getRegToken entityId partnerOrgId regPOCfg{DPOC.fakeOtp = newOtp, DPOC.sessionConfig = updatedSessionConfig} ticketBooking.merchantId isApiKeyAuth
       unless isTokenNew $ RegistrationToken.updateOtpByIdForPartnerOrgId regToken.id partnerOrgId newOtp scfg.authExpiry
       let mRiderMobileCountryCode = person.mobileCountryCode
       mobileNumber <- mapM decrypt person.mobileNumber

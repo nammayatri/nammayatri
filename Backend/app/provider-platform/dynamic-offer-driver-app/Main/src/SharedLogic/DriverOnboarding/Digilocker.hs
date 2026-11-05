@@ -33,6 +33,7 @@ import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDi
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DigilockerVerification as QDV
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getDigiLockerConfig :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> m DigilockerTypes.DigiLockerCfg
 getDigiLockerConfig merchantOpCityId = do

@@ -20,6 +20,7 @@ import qualified SharedLogic.Type
 import qualified Storage.Beam.Ride as Beam
 import Storage.Queries.Transformers.Ride
 import qualified Storage.Queries.Transformers.Ride
+import qualified Tools.Fields as Fields
 
 instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
   fromTType' (Beam.RideT {..}) = do

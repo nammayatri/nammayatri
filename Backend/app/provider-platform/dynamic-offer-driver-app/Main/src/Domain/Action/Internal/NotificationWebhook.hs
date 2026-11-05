@@ -13,7 +13,9 @@ import Environment
 import EulerHS.Prelude hiding (id, map)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
+import qualified Kernel.External.Notification.FCM.Types as Fields
 import Kernel.Prelude
+import qualified Kernel.Sms.Config as Fields
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -25,6 +27,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import qualified Storage.Queries.MerchantMessage as QMM
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp

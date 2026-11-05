@@ -4,6 +4,7 @@ import qualified API.Types.UI.Insurance
 import qualified Domain.Types.Insurance
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
+import qualified Domain.Types.Ride as Fields
 import qualified Domain.Types.RideStatus as DRide
 import qualified Environment
 import EulerHS.Prelude hiding (elem, id)

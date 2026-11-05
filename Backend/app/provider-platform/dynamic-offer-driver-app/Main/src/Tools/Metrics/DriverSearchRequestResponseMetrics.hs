@@ -20,7 +20,6 @@ where
 
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import GHC.Records.Extra
 import Prometheus as P
 import Tools.Metrics.DriverSearchRequestResponseMetrics.Types as Reexport
 

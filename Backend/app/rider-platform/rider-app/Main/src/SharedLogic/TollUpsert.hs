@@ -36,6 +36,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.TollDashboard
 import Storage.Beam.Toll ()
+import qualified Toll.Domain.Types.Toll as Fields
 import qualified Toll.Storage.Queries.Toll as QToll
 import Tools.Error
 

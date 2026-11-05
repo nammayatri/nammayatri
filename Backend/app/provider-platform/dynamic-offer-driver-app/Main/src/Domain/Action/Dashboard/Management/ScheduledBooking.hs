@@ -38,12 +38,16 @@ import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.DriverLocation as DDL
 import qualified Domain.Types.DriverStats as DDS
 import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRideStatus
 import qualified Domain.Types.RiderDetails as DRD
+import qualified Domain.Types.RiderDriverCorrelation as Fields
+import qualified Domain.Types.Vehicle as Fields
+import qualified Domain.Types.VehicleServiceTier as Fields
 import Environment
 import qualified IssueManagement.Common as Issue
 import qualified IssueManagement.Common.UI.Issue as IssueUI
@@ -92,6 +96,7 @@ import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.RiderDriverCorrelation as QRDC
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Maps as Maps
 
 -- | Live list keeps a started booking until it completes or is cancelled, at most a day past its start time.

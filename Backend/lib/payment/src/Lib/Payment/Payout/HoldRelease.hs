@@ -27,6 +27,7 @@ import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (MonadFlow, fromMaybeM, throwError)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.Account as Fields
 import qualified Lib.Finance.Domain.Types.Transfer as DT
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Finance.Storage.Queries.Account as QFAccount

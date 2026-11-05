@@ -28,10 +28,12 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import Domain.Types.EmptyDynamicParam
+import qualified Domain.Types.FleetDriverAssociation as Fields
 import Domain.Types.Location
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantClientConfig as DMCC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.Message as Message
 import qualified Domain.Types.Overlay as DTMO
@@ -71,6 +73,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.MerchantClientConfig as QMCC
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 
 clearDeviceToken :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) => Id Person -> m ()
 clearDeviceToken = QPerson.clearDeviceTokenByPersonId

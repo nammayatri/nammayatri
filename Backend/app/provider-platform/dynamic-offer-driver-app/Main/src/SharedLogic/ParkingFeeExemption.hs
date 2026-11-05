@@ -23,6 +23,7 @@ module SharedLogic.ParkingFeeExemption
 where
 
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Vehicle as Fields
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common

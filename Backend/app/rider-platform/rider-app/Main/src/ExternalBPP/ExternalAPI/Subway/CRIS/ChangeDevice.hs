@@ -3,7 +3,7 @@ module ExternalBPP.ExternalAPI.Subway.CRIS.ChangeDevice where
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 import Data.Text
-import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
+import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig (..))
 import EulerHS.Prelude hiding (find, readMaybe)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)

@@ -18,6 +18,7 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy, nub, nubBy, sortOn)
 import qualified Domain.Types.Booking as DBooking
 import Domain.Types.FeedbackForm
+import qualified Domain.Types.Merchant as Fields
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment

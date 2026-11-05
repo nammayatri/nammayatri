@@ -5,10 +5,12 @@
 module Storage.Queries.Journey (module Storage.Queries.Journey, module ReExport) where
 
 import qualified Domain.Types.Journey
+import qualified Domain.Types.Location as Fields
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Distance as Fields
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)

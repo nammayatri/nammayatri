@@ -4,6 +4,7 @@ import qualified Data.Map as M
 import qualified Data.Map.Strict as Map
 import Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverPlan as Fields
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Person as P
 import qualified Domain.Types.Plan as Plan
@@ -25,6 +26,7 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Notification as QNTF
+import qualified Tools.Fields as Fields
 
 retryLogTag :: Text
 retryLogTag = "[RETRY_AUTOPAY_COLLECTION]"

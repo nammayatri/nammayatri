@@ -67,6 +67,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.DriverInformationExtra as QDIE
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 import qualified Tools.Payout as TPayout
 
 sendScheduledBatchPayout ::

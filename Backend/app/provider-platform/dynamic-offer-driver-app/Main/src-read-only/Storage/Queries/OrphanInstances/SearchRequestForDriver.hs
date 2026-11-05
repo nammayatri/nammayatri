@@ -19,6 +19,7 @@ import qualified Kernel.Utils.Version
 import qualified Storage.Beam.SearchRequestForDriver as Beam
 import Storage.Queries.Transformers.SearchRequestForDriver
 import qualified Storage.Queries.Transformers.SearchRequestForDriver
+import qualified Tools.Fields as Fields
 
 instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDriver.SearchRequestForDriver where
   fromTType' (Beam.SearchRequestForDriverT {..}) = do

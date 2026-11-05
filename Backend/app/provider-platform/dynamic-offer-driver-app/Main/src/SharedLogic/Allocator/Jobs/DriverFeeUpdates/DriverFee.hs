@@ -34,8 +34,9 @@ import qualified Domain.Action.UI.Driver as DDriver
 import Domain.Action.UI.Ride.EndRide.Internal (getDriverFeeBillNumberKey, getDriverFeeCalcJobCache, getPlan, mkDriverFee, mkDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverPlan as DPlan
+import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.Invoice as INV
-import Domain.Types.Mandate (Mandate)
+import Domain.Types.Mandate (Mandate (..))
 import Domain.Types.Merchant
 import Domain.Types.MerchantMessage (MessageKey (..))
 import Domain.Types.MerchantOperatingCity
@@ -45,10 +46,12 @@ import Domain.Types.Plan (BasedOnEntity (..), PaymentMode (AUTOPAY, MANUAL), Pla
 import Domain.Types.SubscriptionConfig
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VendorFee as DVF
+import qualified Domain.Types.VendorSplitDetails as Fields
 import Kernel.Beam.Functions (runInMasterDbAndRedis)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as PaymentInterface
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payment.Juspay.Types.CreateOrder as Fields
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import qualified Kernel.Storage.Clickhouse.Config as CH
@@ -87,6 +90,7 @@ import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QMD
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.VendorFee as QVF
+import qualified Tools.Fields as Fields
 import qualified Tools.Payment as TPayment
 
 calculateDriverFeeForDrivers ::

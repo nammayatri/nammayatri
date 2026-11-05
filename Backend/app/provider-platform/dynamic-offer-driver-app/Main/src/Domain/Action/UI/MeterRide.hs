@@ -1,8 +1,10 @@
 module Domain.Action.UI.MeterRide (postMeterRideAddDestination, postMeterRideShareReceipt) where
 
+import qualified API.Types.UI.FareCalculator as Fields
 import qualified API.Types.UI.MeterRide
 import qualified Domain.Action.UI.FareCalculator as AUF
 import Domain.Types
+import qualified Domain.Types.DriverReferral as Fields
 import Domain.Types.Location (Location (..), LocationAddress)
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant
@@ -14,6 +16,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Prelude
+import qualified Kernel.Sms.Config as Fields
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common

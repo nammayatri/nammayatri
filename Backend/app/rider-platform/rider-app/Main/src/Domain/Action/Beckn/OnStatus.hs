@@ -48,12 +48,14 @@ import Kernel.Types.Id (Id, cast)
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
+import qualified Safety.Domain.Types.SafetySettings as Fields
 import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.Fields as Fields
 import Tools.Metrics (HasBAPMetrics)
 
 data DOnStatusReq = DOnStatusReq
@@ -225,7 +227,7 @@ onStatus req = withDynamicLogLevel "rider-onstatus-domain" $ do
       where
         bookingNewStatus = DB.AWAITING_REASSIGNMENT
         rideNewStatus = DRide.CANCELLED
-        updateReallocatedRide newRide = newRide{status = rideNewStatus}
+        updateReallocatedRide newRide = newRide{DRide.status = rideNewStatus}
 
 validateRequest ::
   ( MonadFlow m,

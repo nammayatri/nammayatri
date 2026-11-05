@@ -44,16 +44,21 @@ import Data.Text.Lazy.Builder (fromString, toLazyText)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.CallEvent as DCE
 import qualified Domain.Types.Booking as BT
+import qualified Domain.Types.BookingPartiesLink as Fields
 import qualified Domain.Types.BookingStatus as DBookingStatus
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as DCS
 import qualified Domain.Types.CallStatus as DCallStatus
+import qualified Domain.Types.Exophone as Fields
+import qualified Domain.Types.Merchant as Fields
+import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideStatus as DRideStatus
 import qualified Domain.Types.RiderConfig as DRC
 import Environment (Flow)
+import qualified Environment as Fields
 import EulerHS.Prelude (Alternative ((<|>)))
 import Kernel.Beam.Functions
 import qualified Kernel.External.Call.Exotel.Types as Call
@@ -66,6 +71,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Fields
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Common
 import Kernel.Types.Id as ID

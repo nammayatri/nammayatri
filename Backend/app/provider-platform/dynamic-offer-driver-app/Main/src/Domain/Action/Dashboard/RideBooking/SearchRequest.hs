@@ -11,6 +11,7 @@ import Data.Time.Clock (UTCTime (..))
 import qualified Domain.Types.Common as Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
+import qualified Domain.Types.SearchRequest as Fields
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude

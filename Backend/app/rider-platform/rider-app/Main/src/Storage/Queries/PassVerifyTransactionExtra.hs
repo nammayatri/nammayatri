@@ -2,6 +2,7 @@
 
 module Storage.Queries.PassVerifyTransactionExtra where
 
+import qualified Domain.Types.PassVerifyTransaction as Fields
 import qualified Domain.Types.PurchasedPass as PurchasedPass
 import Kernel.Beam.Functions
 import Kernel.Prelude

@@ -11,6 +11,7 @@ import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types as Fields
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common

@@ -14,6 +14,7 @@ import qualified Domain.Action.Rewards.LiveReward as LiveReward
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RewardCampaign as DRCmp
+import qualified Domain.Types.RewardCohort as Fields
 import qualified Domain.Types.RewardContext as DRewardCtx
 import qualified Domain.Types.RewardUnlock as DRU
 import Environment
@@ -30,6 +31,7 @@ import qualified Storage.Queries.RewardCohort as QRC
 import qualified Storage.Queries.RewardUnlock as QRU
 import qualified Storage.Queries.RewardUnlockExtra as QRUE
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Rewards.RedisPool as Pool
 import qualified Tools.Rewards.RiderContextReader as Ctx
 

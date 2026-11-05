@@ -14,6 +14,8 @@ import Domain.Types.Alert
 import qualified Domain.Types.Alert.AlertCategory as DAlertCategory
 import qualified Domain.Types.Alert.AlertEntityType as DAlertEntity
 import Domain.Types.Common
+import qualified Domain.Types.DriverLocation as Fields
+import qualified Domain.Types.DriverRCAssociation as Fields
 import Domain.Types.EmptyDynamicParam
 import Domain.Types.FleetBadge
 import Domain.Types.FleetBadgeAssociation
@@ -24,9 +26,11 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Route
+import qualified Domain.Types.RouteTripStopMapping as Fields
 import Domain.Types.TripAlertRequest
 import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
+import qualified Domain.Types.Vehicle as Fields
 import Domain.Types.VehicleRegistrationCertificate
 import Domain.Types.VehicleRouteMapping
 import qualified Domain.Types.VehicleVariant as DVehVariant
@@ -67,6 +71,7 @@ import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRouteMapping as VRM
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as TN
 
 data StopData = StopData

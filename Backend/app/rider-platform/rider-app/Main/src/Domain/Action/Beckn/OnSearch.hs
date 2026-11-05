@@ -37,6 +37,7 @@ module Domain.Action.Beckn.OnSearch
     buildQuoteBreakUp,
     BusinessDiscountInfo (..),
     PersonalDiscountInfo (..),
+    ValidatedOnSearchReq (..),
   )
 where
 
@@ -53,6 +54,7 @@ import qualified Domain.Types as DT
 import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEstimate
+import qualified Domain.Types.InsuranceConfig as Fields
 import qualified Domain.Types.InterCityDetails as DInterCityDetails
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
@@ -103,6 +105,7 @@ import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
 import Tools.Event
 import qualified Tools.EventTracking as ET
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 
 data DOnSearchReq = DOnSearchReq
@@ -624,7 +627,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
   quoteBreakupList' <- buildQuoteBreakUp quoteBreakupList uid searchRequest.merchantId searchRequest.merchantOperatingCityId
   quoteDetails' <- case quoteDetails of
     OneWayDetails oneWayDetails ->
-      pure.DQuote.OneWayDetails $ mkOneWayQuoteDetails searchRequest.distanceUnit oneWayDetails
+      pure . DQuote.OneWayDetails $ mkOneWayQuoteDetails searchRequest.distanceUnit oneWayDetails
     RentalDetails rentalDetails -> do
       DQuote.RentalDetails <$> buildRentalDetails searchRequest.distanceUnit rentalDetails
     OneWaySpecialZoneDetails details -> do

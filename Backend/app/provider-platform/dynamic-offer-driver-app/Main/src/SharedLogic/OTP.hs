@@ -37,6 +37,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp
 

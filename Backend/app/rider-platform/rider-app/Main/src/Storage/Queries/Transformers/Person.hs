@@ -1,6 +1,7 @@
 module Storage.Queries.Transformers.Person where
 
 import Data.Text
+import qualified Domain.Types.Merchant as Fields
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context

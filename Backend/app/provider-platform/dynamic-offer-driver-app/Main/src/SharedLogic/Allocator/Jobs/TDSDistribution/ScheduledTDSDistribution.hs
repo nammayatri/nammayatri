@@ -19,7 +19,7 @@ import Data.List.Split (chunksOf)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Domain.Types.TDSDistributionBatch (TDSDistributionBatch)
-import Domain.Types.TDSDistributionPdfFile (TDSDistributionPdfFile)
+import Domain.Types.TDSDistributionPdfFile (TDSDistributionPdfFile (..))
 import Domain.Types.TDSDistributionRecord
 import Domain.Utils (mapConcurrently)
 import qualified Email.Flow as Email
@@ -37,6 +37,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.TDSDistributionPdfFile as QPdfFile
 import qualified Storage.Queries.TDSDistributionRecord as QTDS
 import qualified Storage.Queries.TDSDistributionRecordExtra as QTDSExtra
+import qualified Tools.Fields as Fields
 
 -- | Reschedule interval: 24 hours
 tdsRescheduleInterval :: NominalDiffTime

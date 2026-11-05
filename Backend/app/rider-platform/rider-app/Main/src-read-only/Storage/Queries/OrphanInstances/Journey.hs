@@ -3,7 +3,10 @@
 
 module Storage.Queries.OrphanInstances.Journey where
 
+-- TODO generate src-read-only via DSL or use reexport for fields?
+
 import qualified Domain.Types.Journey
+import qualified Domain.Types.Location as Fields
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude

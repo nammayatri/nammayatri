@@ -23,6 +23,8 @@ import Data.Either.Extra (mapRight)
 import Data.Fixed (div')
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
+import qualified Domain.Types.Merchant as Fields
+import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonStats as DPS
 import qualified Domain.Types.RefereeLink as DReferral
@@ -30,6 +32,7 @@ import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import SharedLogic.CallBPPInternal as CallBPPInternal

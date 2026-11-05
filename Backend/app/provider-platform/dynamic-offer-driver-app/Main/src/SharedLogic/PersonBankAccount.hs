@@ -5,6 +5,7 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.DriverBankAccount as DDBA
+import qualified Domain.Types.DriverSSN as Fields
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.InitiatedBy as DIB
 import qualified Domain.Types.MerchantOperatingCity as DMOC

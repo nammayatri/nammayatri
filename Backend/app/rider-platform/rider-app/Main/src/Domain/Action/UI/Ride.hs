@@ -38,13 +38,14 @@ import qualified Domain.Action.UI.Person as UPerson
 import qualified Domain.Types.Booking as DB
 import Domain.Types.Booking.API (buildRideAPIEntity)
 import qualified Domain.Types.BookingUpdateRequest as DBUR
-import Domain.Types.Extra.Ride (EditLocation, RideAPIEntity (..))
+import Domain.Types.Extra.Ride (EditLocation (..), RideAPIEntity (..))
 import Domain.Types.Location (LocationAPIEntity)
-import qualified Domain.Types.Location as DL
+import qualified Domain.Types.Location as DL (Location (..))
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SPerson
+import qualified Domain.Types.PersonDisability as Fields
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.RideStatus
 import qualified Domain.Types.RideStatus as SRide
@@ -216,7 +217,7 @@ editLocation rideId (personId, merchantId) req = do
       QLM.create pickupMapForRide
       pickupMapForSearchReq <- SLM.buildPickUpLocationMapping startLocation.id booking.transactionId DLM.SEARCH_REQUEST (Just merchantId) ride.merchantOperatingCityId
       QLM.create pickupMapForSearchReq
-      let origin = Just $ startLocation{id = "0"}
+      let origin = Just $ startLocation{DL.id = "0"}
       bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
       uuid <- generateGUID
       let dUpdateReq =
@@ -265,7 +266,7 @@ editLocation rideId (personId, merchantId) req = do
       newDropLocationMap <- SLM.buildDropLocationMapping newDropLocation.id bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
       QLM.create newDropLocationMap
       prevOrder <- QLM.maxOrderByEntity booking.id.getId
-      let destination' = Just $ newDropLocation{id = show prevOrder}
+      let destination' = Just $ newDropLocation{DL.id = show prevOrder}
       bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
       let dUpdateReq =
             ACL.UpdateBuildReq

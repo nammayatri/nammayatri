@@ -21,6 +21,7 @@ import Kernel.Prelude
 import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.IncentiveJourney.Assignment as Fields
 import qualified Lib.IncentiveJourney.Convert as Convert
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as Common

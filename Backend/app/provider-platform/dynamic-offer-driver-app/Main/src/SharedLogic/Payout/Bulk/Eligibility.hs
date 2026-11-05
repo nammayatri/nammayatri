@@ -36,6 +36,7 @@ import qualified Lib.Payment.Payout.Bulk.Types as Bulk
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import SharedLogic.Finance.Wallet
 import qualified Storage.Queries.DriverBankAccount as QDBA
+import qualified Tools.Fields as Fields
 
 -- | A driver or fleet owner that passed the read-only eligibility pass.
 type BulkCandidate = Bulk.BulkCandidate DP.Person

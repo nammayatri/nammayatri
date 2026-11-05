@@ -13,6 +13,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Environment
+import qualified IssueManagement.Domain.Types.MediaFile as Fields
 import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context

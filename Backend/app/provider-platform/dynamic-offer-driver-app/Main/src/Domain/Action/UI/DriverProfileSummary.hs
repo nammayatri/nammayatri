@@ -15,13 +15,16 @@ module Domain.Action.UI.DriverProfileSummary where
 
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.DriverInformation as DriverInfo
-import Domain.Types.FeedbackBadge (FeedbackBadge)
+import qualified Domain.Types.DriverStats as Fields
+import Domain.Types.FeedbackBadge (FeedbackBadge (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DR
 import Domain.Types.Vehicle (VehicleAPIEntity)
+import qualified Domain.Types.Vehicle as Fields
+import qualified Domain.Types.VehicleServiceTier as Fields
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
@@ -45,6 +48,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as RQ
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Tools.Fields as Fields
 
 data DriverProfleSummaryRes = DriverProfleSummaryRes
   { id :: Id Person,

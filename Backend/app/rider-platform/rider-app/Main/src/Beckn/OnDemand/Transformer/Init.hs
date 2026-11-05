@@ -12,14 +12,17 @@ import qualified Data.List
 import qualified Data.Text
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.DeliveryDetails as DTDD
+import qualified Domain.Types.OfferEntity as Fields
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Trip as Trip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context
+import qualified Kernel.Types.Price as Fields
 import qualified Kernel.Utils.Text
 import qualified SharedLogic.Confirm
+import qualified Tools.Fields as Fields
 
 buildInitReq :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Bool -> DBC.BecknConfig -> DRC.RiderConfig -> Text -> m BecknV2.OnDemand.Types.InitReq
 buildInitReq uiConfirm bapUrl action domain isValueAddNP bapConfig riderConfig initTtl = do

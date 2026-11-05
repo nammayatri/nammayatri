@@ -7,12 +7,15 @@ import qualified Domain.Action.UI.Registration as PR
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.PersonSocialIdentity as Fields
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (DbHash, decrypt, getDbHash)
+import qualified Kernel.External.Encryption as Fields
 import qualified Kernel.Prelude
+import qualified Kernel.Sms.Config as Fields
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -33,6 +36,7 @@ import qualified Storage.Queries.Person as PQ
 import qualified Storage.Queries.PersonSocialIdentity as QPSI
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 googleTokenInfoUrl :: Text -> String -- TODO: change this to local validation as mentioned in this doc: https://developers.google.com/identity/sign-in/web/backend-auth#verify-the-integrity-of-the-id-token
 googleTokenInfoUrl token = "https://oauth2.googleapis.com/tokeninfo?id_token=" <> T.unpack token

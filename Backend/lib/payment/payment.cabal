@@ -167,7 +167,8 @@ library
       TypeSynonymInstances
       UndecidableInstances
       DerivingStrategies
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -188,8 +189,6 @@ library
     , mtl
     , openapi3
     , postgresql-simple
-    , record-dot-preprocessor
-    , record-hasfield
     , scheduler
     , sequelize
     , servant
@@ -255,7 +254,8 @@ test-suite payment-tests
       TypeSynonymInstances
       UndecidableInstances
       DerivingStrategies
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -277,8 +277,6 @@ test-suite payment-tests
     , openapi3
     , payment
     , postgresql-simple
-    , record-dot-preprocessor
-    , record-hasfield
     , scheduler
     , sequelize
     , servant

@@ -22,6 +22,7 @@ where
 
 import qualified Data.Map as M
 import Domain.Action.UI.Ride.EndRide.Internal (processEndRideFinance)
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH

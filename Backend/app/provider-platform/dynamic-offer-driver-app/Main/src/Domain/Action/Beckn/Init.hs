@@ -25,6 +25,7 @@ import qualified Domain.Types.DeliveryPersonDetails as DTDPD
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
+import qualified Domain.Types.FarePolicy as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
@@ -33,6 +34,7 @@ import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Trip as DTrip
+import qualified Domain.Types.VehicleServiceTier as Fields
 import qualified Domain.Types.VehicleVariant as Veh
 import Kernel.Beam.Functions
 import Kernel.External.Types (ServiceFlow)
@@ -74,6 +76,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
+import qualified Tools.Fields as Fields
 -- import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as BPPMetrics
 

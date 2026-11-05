@@ -6,6 +6,7 @@ import qualified Control.Exception as E
 import qualified Dashboard.Common as Common
 import qualified Data.Aeson as A
 import qualified Data.Text as T
+import qualified Domain.Types.FleetOwnerInformation as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PolicyAndComplianceDocument as DPCD
 import qualified Email.Flow as Email
@@ -34,6 +35,7 @@ import Storage.Queries.OrphanInstances.Person ()
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PolicyAndComplianceDocument as QPCD
 import Tools.DynamicLogic (getAppDynamicLogic)
+import qualified Tools.Fields as Fields
 
 defaultBatchSize :: Int
 defaultBatchSize = 1000

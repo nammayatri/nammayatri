@@ -5,8 +5,8 @@ import Domain.Types.Person (Person)
 import qualified Kernel.External.Verification as KEV
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Id (Id)
+import Kernel.Utils.Common (CacheConfig (..), CacheFlow)
 
 getVerificationPriorityList :: CacheFlow m r => Id Person -> m (Maybe [KEV.VerificationService])
 getVerificationPriorityList driverId = Hedis.withCrossAppRedis $ Hedis.safeGet (makeVerificationPriorityListKey driverId)

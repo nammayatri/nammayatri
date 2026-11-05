@@ -21,13 +21,14 @@ import qualified Domain.Types.BookingStatus as DB
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonStats as DPS
+import qualified Domain.Types.RiderConfig as Fields
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto (EsqDBFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, fork, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, Seconds (..), fork, fromMaybeM, getCurrentTime)
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Safety.Domain.Types.SafetySettings as DSafety
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib

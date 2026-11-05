@@ -5,6 +5,7 @@ module Storage.Queries.OrphanInstances.Booking where
 
 import qualified Data.Text
 import qualified Domain.Types.Booking
+import qualified Domain.Types.Location as Fields
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -12,6 +13,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version as Fields
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.JSON

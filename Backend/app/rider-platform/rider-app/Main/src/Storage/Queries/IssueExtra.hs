@@ -1,10 +1,12 @@
 module Storage.Queries.IssueExtra where
 
 -- Extra code goes here --
+
 import Domain.Types.Booking as Booking
 import Domain.Types.Issue as Issue
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
+import qualified Domain.Types.Person as Fields
 import qualified IssueManagement.Common as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude

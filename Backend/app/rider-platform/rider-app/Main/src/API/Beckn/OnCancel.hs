@@ -18,6 +18,7 @@ import qualified Beckn.ACL.OnCancel as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnCancel as OnCancel
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Types as Fields
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnCancel as DOnCancel
@@ -32,6 +33,7 @@ import qualified SharedLogic.DummySignatureAuth as DummySig
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
+import qualified Tools.Fields as Fields
 import TransactionLogs.PushLogs
 
 type API = OnCancel.OnCancelAPIV2

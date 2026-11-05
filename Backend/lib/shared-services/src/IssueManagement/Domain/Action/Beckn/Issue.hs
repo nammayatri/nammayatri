@@ -21,6 +21,9 @@ import IssueManagement.Domain.Action.UI.Issue
 import qualified IssueManagement.Domain.Action.UI.Issue as Common
 import IssueManagement.Domain.Types.Issue.IGMConfig
 import qualified IssueManagement.Domain.Types.Issue.IGMIssue as DIGM
+import qualified IssueManagement.Domain.Types.Issue.IssueCategory as Fields
+import qualified IssueManagement.Domain.Types.Issue.IssueOption as Fields
+import qualified IssueManagement.Domain.Types.Issue.IssueReport as Fields
 import IssueManagement.Storage.BeamFlow
 import qualified IssueManagement.Storage.Queries.Issue.IGMConfig as QIGMConfig
 import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM

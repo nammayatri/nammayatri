@@ -60,19 +60,28 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
 import qualified Domain.Types.AadhaarCard as DAadhaarCard
+import qualified Domain.Types.BackgroundVerification as Fields
 import Domain.Types.CommonDocumentData (renderCommonDocumentData)
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCDOD
+import qualified Domain.Types.DigilockerVerification as Fields
 import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverBankAccount as Fields
 import qualified Domain.Types.DriverGstin as DGstin
+import qualified Domain.Types.DriverIdentityInfo as Fields
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as DL
 import qualified Domain.Types.DriverPanCard as DPan
+import qualified Domain.Types.DriverProfileQuestions as Fields
+import qualified Domain.Types.DriverRCAssociation as Fields
+import qualified Domain.Types.DriverSSN as Fields
 import qualified Domain.Types.DriverUdyam as DUdyam
 import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
 import qualified Domain.Types.FleetOwnerInformation as DFOI
+import qualified Domain.Types.HyperVergeVerification as Fields
+import qualified Domain.Types.Image as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OperationHubRequests as DOHR
@@ -80,8 +89,8 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
-import GHC.Records.Extra (HasField)
 import Kernel.Beam.Functions
+import qualified Kernel.External.BackgroundVerification.Checkr.Types as Fields
 import Kernel.External.Encryption
 import Kernel.External.Types (Language, ServiceFlow)
 import qualified Kernel.External.Verification as KEV
@@ -135,6 +144,7 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Tools.BackgroundVerification as BackgroundVerification
 import Tools.Error (DocumentVerificationConfigError (..))
+import qualified Tools.Fields as Fields
 import qualified Tools.Plasma as TPlasma
 import qualified Tools.Verification as Verification
 

@@ -30,6 +30,7 @@ import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.OrphanInstances.Booking ()
+import qualified Tools.Fields as Fields
 
 createBooking' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> m ()
 createBooking' = createWithKV

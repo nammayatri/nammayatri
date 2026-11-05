@@ -23,6 +23,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
+import qualified Domain.Types.Booking as Fields
 import Domain.Types.Common
 import qualified Domain.Types.CommonDocumentData as DCommonDocData
 import qualified Domain.Types.CommonDriverOnboardingDocuments
@@ -34,11 +35,17 @@ import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DocumentVerificationStagesConfig
 import qualified Domain.Types.DriverGstin as DGST
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverLicense as Fields
+import qualified Domain.Types.DriverLocation as Fields
 import qualified Domain.Types.DriverPanCard as DPC
+import qualified Domain.Types.DriverRCAssociation as Fields
 import Domain.Types.DriverSSN
 import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import Domain.Types.FarePolicy
+import qualified Domain.Types.FleetConfig as Fields
+import qualified Domain.Types.FleetRCAssociation as Fields
 import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
+import qualified Domain.Types.HyperVergeVerification as Fields
 import qualified Domain.Types.IdfyVerification as DIV
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.InitiatedBy as DIB
@@ -46,6 +53,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person
+import qualified Domain.Types.Translations as Fields
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleCategory as DVC
@@ -59,6 +67,7 @@ import qualified Kernel.External.BackgroundVerification.Interface as BackgroundV
 import Kernel.External.Encryption
 import Kernel.External.Maps (LatLong (..))
 import Kernel.External.Types (Language (..), ServiceFlow)
+import qualified Kernel.External.Verification.Idfy.Types.Response as Fields
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.External.Verification.Interface.Types as Verification
 import qualified Kernel.External.Verification.Types as VerificationTypes
@@ -71,9 +80,12 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as Fields
+import qualified Lib.Finance.Domain.Types.Invoice as Fields
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified Lib.Types.SpecialLocation as Fields
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.DriverOnboarding
@@ -134,8 +146,10 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCE
 import qualified TempAppCode.Flow as TempAppCode
 import TempAppCode.Types (TempAppCodeCfg (..))
+import qualified TempAppCode.Types as Fields
 import qualified Tools.BackgroundVerification as BackgroundVerificationT
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Verification as Verification
 import qualified UrlShortner.Common as UrlShortner
 

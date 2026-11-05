@@ -128,6 +128,7 @@ import qualified Lib.Queries.SpecialLocationGeom as QSLG
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (AnyJob (..))
+import qualified Lib.Scheduler.Types as Fields
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.GateInfo as DGI
 import qualified Lib.Types.SpecialLocation as DSL
@@ -190,6 +191,7 @@ import qualified Toll.Storage.CachedQueries.Toll as CQToll
 import qualified Toll.Storage.Queries.Toll as QToll
 import qualified Toll.Storage.Queries.TollExtra as QTollExtra
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Payment as Payment
 
 ---------------------------------------------------------------------
@@ -348,12 +350,12 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId city req = do
     CQMSUC.findByMerchantOperatingCityId merchantOperatingCity.id
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
   let updMerchantServiceUsageConfig =
-        merchantServiceUsageConfig{getDistances = fromMaybe merchantServiceUsageConfig.getDistances req.getDistances,
-                                   getRoutes = fromMaybe merchantServiceUsageConfig.getRoutes req.getRoutes,
-                                   snapToRoad = fromMaybe merchantServiceUsageConfig.snapToRoad req.snapToRoad,
-                                   getPlaceName = fromMaybe merchantServiceUsageConfig.getPlaceName req.getPlaceName,
-                                   getPlaceDetails = fromMaybe merchantServiceUsageConfig.getPlaceDetails req.getPlaceDetails,
-                                   autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete
+        merchantServiceUsageConfig{DMSUC.getDistances = fromMaybe merchantServiceUsageConfig.getDistances req.getDistances,
+                                   DMSUC.getRoutes = fromMaybe merchantServiceUsageConfig.getRoutes req.getRoutes,
+                                   DMSUC.snapToRoad = fromMaybe merchantServiceUsageConfig.snapToRoad req.snapToRoad,
+                                   DMSUC.getPlaceName = fromMaybe merchantServiceUsageConfig.getPlaceName req.getPlaceName,
+                                   DMSUC.getPlaceDetails = fromMaybe merchantServiceUsageConfig.getPlaceDetails req.getPlaceDetails,
+                                   DMSUC.autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete
                                   }
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchantOperatingCity.id
@@ -381,7 +383,7 @@ postMerchantServiceUsageConfigSmsUpdate merchantShortId city req = do
     CQMSUC.findByMerchantOperatingCityId merchantOperatingCity.id
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
   let updMerchantServiceUsageConfig =
-        merchantServiceUsageConfig{smsProvidersPriorityList = req.smsProvidersPriorityList
+        merchantServiceUsageConfig{DMSUC.smsProvidersPriorityList = req.smsProvidersPriorityList
                                   }
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchantOperatingCity.id

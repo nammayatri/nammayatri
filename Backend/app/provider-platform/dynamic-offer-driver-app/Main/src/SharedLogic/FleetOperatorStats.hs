@@ -15,6 +15,7 @@ import qualified Storage.Queries.FareParameters as QFareParameters
 import qualified Storage.Queries.FleetOperatorDailyStats as QFleetOpsDaily
 import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFleetOpsDailyExtra
 import qualified Storage.Queries.FleetOperatorStats as QFleetOps
+import qualified Tools.Fields as Fields
 
 -- Helper: Separate fleet and driver records from a list
 -- Returns (Maybe FleetOperatorDailyStats, Maybe FleetOperatorDailyStats)

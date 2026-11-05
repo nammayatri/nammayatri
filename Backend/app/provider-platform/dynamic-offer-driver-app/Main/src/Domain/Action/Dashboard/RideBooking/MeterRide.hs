@@ -1,5 +1,6 @@
 module Domain.Action.Dashboard.RideBooking.MeterRide (getMeterRidePrice) where
 
+import qualified API.Types.UI.FareCalculator as Fields
 import qualified API.Types.UI.PriceBreakup
 import qualified Domain.Action.UI.FareCalculator as FC
 import Domain.Types
@@ -17,6 +18,7 @@ import Kernel.Utils.Common
 import qualified Lib.LocationUpdates.Internal as LU
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.Fields as Fields
 
 getMeterRidePrice :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> Environment.Flow API.Types.UI.PriceBreakup.MeterRidePriceRes)
 getMeterRidePrice _merchantShortId _opCity rideId = do

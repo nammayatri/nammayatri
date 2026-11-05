@@ -56,6 +56,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Tools.ActorInfo as ActorInfo
+import qualified Tools.Fields as Fields
 
 type API =
   Capture "merchantId" (Id DM.Merchant)

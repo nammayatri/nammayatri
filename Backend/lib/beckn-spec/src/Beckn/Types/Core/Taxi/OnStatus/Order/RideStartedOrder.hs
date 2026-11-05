@@ -24,7 +24,6 @@ import Beckn.Types.Core.Taxi.OnStatus.Order.OrderState (RideStartedOrderCode (RI
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example)
 import EulerHS.Prelude hiding (id, state)
-import Kernel.Prelude
 
 data RideStartedOrder = RideStartedOrder
   { id :: Text,

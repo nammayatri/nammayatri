@@ -18,6 +18,7 @@ import qualified Data.Time as DT
 import qualified Domain.Types.CrisRdsBalanceHistory as DCRBH
 import Domain.Types.IntegratedBPPConfig
 import ExternalBPP.ExternalAPI.Subway.CRIS.UpdateRDSBalance (getRDSBalance)
+import qualified ExternalBPP.ExternalAPI.Subway.CRIS.UpdateRDSBalance as Fields
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis

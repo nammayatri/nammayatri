@@ -21,7 +21,9 @@ import qualified Data.Map as M
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.Plan as Plan
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.DriverPlan as Fields
 import Domain.Types.Extra.Plan
+import qualified Domain.Types.Plan as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.TransporterConfig as DTC
@@ -45,6 +47,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 type ConsumptionFlow m r =
   ( BeamFlow m r,

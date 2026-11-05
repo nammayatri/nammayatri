@@ -25,6 +25,7 @@ import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.DriverPoolConfig as Fields
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverStats as DStats
 import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DYNAMIC_PRICING))
@@ -41,7 +42,6 @@ import qualified Domain.Types.SearchTry as DST
 import Domain.Types.TransporterConfig
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (decodeUtf8, id, state)
-import GHC.Records.Extra
 import Kernel.Beam.Functions
 import Kernel.Beam.Types (TxnIdKey (..))
 import qualified Kernel.External.Maps as Maps
@@ -86,6 +86,7 @@ import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
+import qualified Tools.Fields as Fields
 import TransactionLogs.Types (KeyConfig, TokenConfig)
 import Utils.Common.Cac.KeyNameConstants
 

@@ -1,5 +1,6 @@
 module Domain.Action.UI.FRFSTicketService where
 
+import qualified API.Types.UI.CRIS as Fields
 import qualified API.Types.UI.FRFSInternal as FRFSInternal
 import API.Types.UI.FRFSTicketService
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
@@ -17,19 +18,24 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Domain.Action.UI.Person as Fields
 import Domain.Types.BecknConfig
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.FRFSConfig
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
+import qualified Domain.Types.FRFSQuoteCategory as Fields
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
+import qualified Domain.Types.FRFSTicket as Fields
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingFeedback as DFRFSTicketBookingFeedback
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.FRFSTicketBookingPaymentCategory as Fields
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
+import qualified Domain.Types.FRFSVehicleServiceTier as Fields
 import qualified Domain.Types.FleetOperatorTripAction as FOTripAction
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as DJourney
@@ -38,10 +44,14 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrganization as DPO
+import qualified Domain.Types.Pass as Fields
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.PersonStats as Fields
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
+import qualified Domain.Types.PurchasedPassPayment as Fields
 import qualified Domain.Types.Route as Route
+import qualified Domain.Types.RouteDetails as Fields
 import Domain.Types.RouteDetailsAPI (mkRouteDetail)
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import Domain.Types.Station
@@ -60,6 +70,7 @@ import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 as RouteFareV3
 import ExternalBPP.ExternalAPI.Subway.CRIS.SDKData
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Google.MapsClient.Types as Fields
 import Kernel.External.Maps.Interface.Types
 import qualified Kernel.External.Maps.Types
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
@@ -144,6 +155,7 @@ import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import qualified Storage.Queries.RouteDetails as QRouteDetails
 import qualified Storage.Queries.SeatLayout as QSeatLayout
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 import qualified Tools.Metrics.BAPMetrics as Metrics

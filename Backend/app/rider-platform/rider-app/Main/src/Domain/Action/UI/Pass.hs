@@ -46,6 +46,7 @@ import qualified Data.Map.Strict as Map
 import Data.Ord (Down (..))
 import qualified Data.Text as T
 import qualified Data.Time as DT
+import qualified Domain.Types.FRFSPassTicketStatistics as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -60,6 +61,8 @@ import qualified Domain.Types.PersonPTStats as DPUS
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.PurchasedPassPayment as DPurchasedPassPayment
 import qualified Domain.Types.RiderConfig
+import qualified Domain.Types.Station as Fields
+import qualified Domain.Types.Translations as Fields
 import qualified Environment
 import qualified EulerHS.Prelude as EHS
 import qualified IssueManagement.Common.UI.Issue as IssueCommon
@@ -116,6 +119,7 @@ import Storage.Beam.Payment ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MultiModalBus as Fields
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Pass as CQPass

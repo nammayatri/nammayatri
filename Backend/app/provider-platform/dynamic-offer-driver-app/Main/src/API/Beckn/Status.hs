@@ -24,6 +24,7 @@ import qualified Beckn.Types.Core.Taxi.API.Status as Status
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.Status as DStatus
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified EulerHS.Language as L
@@ -41,6 +42,7 @@ import Storage.Beam.SystemConfigs ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
+import qualified Tools.Fields as Fields
 import TransactionLogs.PushLogs
 
 type API =

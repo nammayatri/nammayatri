@@ -38,12 +38,16 @@ import qualified Domain.Action.UI.Payout as UIPayout
 import Domain.Action.UI.Plan hiding (mkDriverFee)
 import qualified Domain.Types.DriverFee as DDF
 import Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverPlan as Fields
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
+import qualified Domain.Types.Mandate as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Notification as Fields
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan (ServiceNames (YATRI_SUBSCRIPTION))
 import qualified Domain.Types.TransporterConfig as DTConf
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.WalletTransaction as DWT
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -72,6 +76,7 @@ import Lib.Finance
     markEntriesAsClaimed,
     transfer,
   )
+import qualified Lib.Finance as Fields
 import Lib.Finance.Account.Interface (AccountInput (..))
 import qualified Lib.Finance.Account.Service as FAccountService
 import qualified Lib.Finance.Core.Types as Finance
@@ -110,6 +115,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.WalletTransaction as QWalletTransaction
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 instance Kernel.Types.HideSecrets.HideSecrets DriverWallet.TopUpRequest where
   hideSecrets = Kernel.Prelude.identity

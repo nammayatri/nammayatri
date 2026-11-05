@@ -6,7 +6,7 @@ import Domain.Types.Estimate as DE
 import qualified Domain.Types.Estimate
 import Kernel.Prelude
 import qualified Kernel.Types.Common
-import Kernel.Types.Id (Id (Id))
+import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, HighPrecMoney, MonadFlow, Money, mkPrice, mkPriceWithDefault)
 import qualified Storage.Queries.EstimateBreakup as QEB
 

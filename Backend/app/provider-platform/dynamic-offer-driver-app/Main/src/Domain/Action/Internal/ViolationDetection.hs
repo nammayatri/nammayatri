@@ -14,8 +14,10 @@ import qualified Data.Text as T
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types.Alert
 import Domain.Types.Alert.DetectionData as DTD
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.TripTransaction as Fields
 import Environment
 import EulerHS.Prelude
 import Kernel.External.Encryption

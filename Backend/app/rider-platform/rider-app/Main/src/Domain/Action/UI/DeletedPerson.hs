@@ -3,6 +3,7 @@
 module Domain.Action.UI.DeletedPerson (postDeletedPerson) where
 
 import qualified API.Types.UI.DeletedPerson
+import qualified API.Types.UI.RidePayment as Fields
 import Data.OpenApi (ToSchema)
 import Domain.Types.DeletedPerson
 import qualified Domain.Types.Merchant
@@ -25,6 +26,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SavedReqLocation as QSRL
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Notifications (notifyAboutDeletedPerson)
 
 postDeletedPerson ::

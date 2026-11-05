@@ -12,7 +12,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, Price (..), fromMaybeM, getCurrentTime)
 import qualified Lib.Payment.Domain.Types.PayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutOrder
 import qualified Lib.Payment.Storage.Beam.BeamFlow

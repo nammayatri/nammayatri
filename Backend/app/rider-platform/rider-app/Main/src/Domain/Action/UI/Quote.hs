@@ -52,6 +52,7 @@ import Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.BppDetails (BppDetails)
 import Domain.Types.CancellationReason
+import qualified Domain.Types.DriverOffer as Fields
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
@@ -63,14 +64,18 @@ import qualified Domain.Types.RideStatus as DRide
 import Domain.Types.RiderConfig (VehicleServiceTierOrderConfig)
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RiderPreferredOption as DRPO
+import qualified Domain.Types.RouteDetails as Fields
 import Domain.Types.RouteDetailsAPI (RouteDetail, mkRouteDetail)
 import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.Translations as Fields
 import qualified Domain.Types.Trip as DTrip
 import Environment
 import EulerHS.Prelude hiding (find, group, id, length, map, maximumBy, null, sum)
 import Kernel.Beam.Functions
+import qualified Kernel.External.Maps.Google.MapsClient.Types as Fields
 import Kernel.External.Maps.Types
+import qualified Kernel.External.MultiModal.Interface.Types as Fields
 import qualified Kernel.External.Types as Lang
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
@@ -86,6 +91,7 @@ import Kernel.Utils.JSON (objectWithSingleFieldParsing)
 import qualified Kernel.Utils.Schema as S
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Base as JM
+import qualified Lib.JourneyModule.Types as Fields
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified SharedLogic.BetterRoutePoint as BRP
 import qualified SharedLogic.BetterRoutePointCache as BRPC
@@ -108,6 +114,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
+import qualified Tools.Fields as Fields
 import TransactionLogs.Types
 
 data GetQuotesRes = GetQuotesRes

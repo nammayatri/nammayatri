@@ -13,6 +13,7 @@ module Storage.Queries.NyRegularSubscriptionExtra where
 -- import qualified Environment
 
 import qualified Data.Time as Time
+import qualified Domain.Types.Location as Fields
 import qualified Domain.Types.MerchantOperatingCity as MerchantOperatingCity
 import Domain.Types.NyRegularSubscription
   ( NyRegularSubscription,
@@ -21,6 +22,7 @@ import Domain.Types.NyRegularSubscription
 import qualified Domain.Types.NyRegularSubscription as NySub
 import Domain.Types.Person (Person)
 import Environment (Flow)
+import qualified Environment as Fields
 import EulerHS.Prelude (whenNothingM_, (<|>))
 import Kernel.Beam.Functions
 import Kernel.Prelude

@@ -19,7 +19,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common (logDebug)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
-import Lib.Yudhishthira.Types.AppDynamicLogicRollout (AppDynamicLogicRollout)
+import Lib.Yudhishthira.Types.AppDynamicLogicRollout (AppDynamicLogicRollout (..))
 
 --   * 'GroupIn'   -- this group was chosen; its domains reuse its rollout.
 --   * 'GroupOut'  -- this group lost to a /sibling/ group (some other group in

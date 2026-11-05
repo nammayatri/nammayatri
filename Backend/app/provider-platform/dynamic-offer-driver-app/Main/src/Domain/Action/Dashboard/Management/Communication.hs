@@ -28,6 +28,7 @@ import qualified Data.Text.Encoding as TEnc
 import Data.Time (Day)
 import qualified Domain.Types.Communication as DComm
 import qualified Domain.Types.CommunicationDelivery as DDelivery
+import qualified Domain.Types.FleetOperatorAssociation as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -40,7 +41,7 @@ import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Notification.FCM.Types as FCM
-import Kernel.Sms.Config (SmsConfig)
+import Kernel.Sms.Config (SmsConfig (..))
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -68,6 +69,7 @@ import qualified Storage.Queries.OnboardingList.DriverList as QDriverList
 import qualified Storage.Queries.OnboardingList.FleetList as QFleetList
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp

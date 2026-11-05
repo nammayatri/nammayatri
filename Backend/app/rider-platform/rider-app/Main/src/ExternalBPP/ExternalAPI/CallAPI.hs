@@ -50,6 +50,7 @@ import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 as CRISRouteFar
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.Types as CRISTypes
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types as Fields
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude

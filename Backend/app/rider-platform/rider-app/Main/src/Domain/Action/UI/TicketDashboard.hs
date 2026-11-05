@@ -16,10 +16,12 @@ import qualified Domain.Types.ServiceCategory as DServiceCategory
 import qualified Domain.Types.ServicePeopleCategory as DServicePeopleCategory
 import qualified Domain.Types.SpecialOccasion as DSpecialOccasion
 import Domain.Types.TicketDashboard
+import qualified Domain.Types.TicketMerchantDetails as Fields
 import qualified Domain.Types.TicketPlace as DTicketPlace
 import qualified Domain.Types.TicketService as DTicketService
 import qualified Domain.Types.TicketSubPlace as DTicketSubPlace
 import Environment
+import qualified IssueManagement.Domain.Types.MediaFile as Fields
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -38,6 +40,7 @@ import qualified Storage.Queries.TicketPlace as QTicketPlace
 import qualified Storage.Queries.TicketService as QTicketService
 import qualified Storage.Queries.TicketSubPlace as QTicketSubPlace
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getTicketDashboardUserInfo :: Text -> MO.RequestorRole -> Environment.Flow Tickets.TicketDashboardUserInfo
 getTicketDashboardUserInfo userId userRole = do

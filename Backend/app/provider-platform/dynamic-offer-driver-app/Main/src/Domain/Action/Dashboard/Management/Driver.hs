@@ -113,13 +113,17 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Action.UI.StclMembership as DMembership
+import qualified Domain.Types.AadhaarCard as Fields
 import qualified Domain.Types.Common as DI
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
 import qualified Domain.Types.DriverBlockReason as DBR
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverFee as DDF
+import qualified Domain.Types.DriverFyEarnings as Fields
 import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverLicense
+import qualified Domain.Types.DriverLocation as Fields
+import qualified Domain.Types.DriverPanCard as Fields
 import qualified Domain.Types.DriverPlan as DDPlan
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.FleetDriverAssociation as FDA
@@ -132,11 +136,13 @@ import Domain.Types.MerchantMessage (MediaChannel (..), MessageKey (..))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
+import qualified Domain.Types.RegistrationToken as Fields
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
+import qualified Domain.Types.VehicleServiceTier as Fields
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions as B
@@ -152,10 +158,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Queries.SpecialLocation as Fields
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Lib.Yudhishthira.Types.NammaTagV2 as Fields
 import SharedLogic.Allocator
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DeleteDriver as DeleteDriver
@@ -218,6 +226,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as RCQueryExtra
 import qualified Tools.Auth as Auth
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getDriverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverDocumentsInfoRes
 getDriverDocumentsInfo merchantShortId opCity = do
@@ -956,9 +965,9 @@ postDriverUpdateName merchantShortId opCity reqDriverId req = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   -- empty string in request condsidered as Nothing in db, Nothing in request is not affect db value
   let updDriver =
-        driver{firstName = req.firstName,
-               middleName = if req.middleName == Just "" then Nothing else req.middleName <|> driver.middleName,
-               lastName = if req.lastName == Just "" then Nothing else req.lastName <|> driver.lastName
+        driver{DP.firstName = req.firstName,
+               DP.middleName = if req.middleName == Just "" then Nothing else req.middleName <|> driver.middleName,
+               DP.lastName = if req.lastName == Just "" then Nothing else req.lastName <|> driver.lastName
               }
 
   QPerson.updatePersonRec personId updDriver

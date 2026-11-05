@@ -150,15 +150,20 @@ import qualified Domain.Types.Booking as DRB
 import Domain.Types.Common
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.ConditionalCharges as DCC
+import qualified Domain.Types.DailyStats as Fields
 import qualified Domain.Types.DriverBankAccount as DOBA
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.DriverGstin as Fields
 import qualified Domain.Types.DriverHomeLocation as DDHL
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
+import qualified Domain.Types.DriverLocation as Fields
+import qualified Domain.Types.DriverOperatorAssociation as Fields
 import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.DriverPlan as DPlan
+import qualified Domain.Types.DriverPoolConfig as Fields
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
 import Domain.Types.DriverStats
@@ -166,7 +171,11 @@ import qualified Domain.Types.DriverStats as DStats
 import Domain.Types.Estimate
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.FareParameters
+import qualified Domain.Types.FarePolicy as Fields
+import qualified Domain.Types.FleetConfig as Fields
 import qualified Domain.Types.FleetDriverAssociation as FDA
+import qualified Domain.Types.Geometry as Fields
+import qualified Domain.Types.GoHomeConfig as Fields
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.Invoice as INV
@@ -175,26 +184,33 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DTM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.PayoutConfig as Fields
 import Domain.Types.Person (Person)
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as Plan
+import qualified Domain.Types.PolicyAndComplianceDocument as Fields
+import qualified Domain.Types.Quote as Fields
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.SearchRequest as Fields
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.StclMembership as DStclMembership
+import qualified Domain.Types.SubscriptionConfig as Fields
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Domain.Types.TransporterConfig
 import Domain.Types.Vehicle (Vehicle (..), VehicleAPIEntity)
 import Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
+import qualified Domain.Types.VehicleServiceTier as Fields
 import Domain.Types.VehicleVariant
 import qualified Domain.Types.VehicleVariant as DV
+import qualified Domain.Types.VendorFee as Fields
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (decodeUtf8, id, state)
 import qualified EulerHS.Prelude as Prelude
-import GHC.Records.Extra
 import qualified IssueManagement.Common.UI.Issue as Issue
 import qualified IssueManagement.Domain.Action.UI.Issue as Issue
 import qualified IssueManagement.Domain.Types.MediaFile as Domain
@@ -204,9 +220,10 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types (LatLong (..))
-import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
+import Kernel.External.Notification.FCM.Types (FCMRecipientToken (..))
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payment.Juspay.Types.CreateOrder as Fields
 import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.External.Types (SchedulerFlow)
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
@@ -238,6 +255,7 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
 import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
+import qualified Lib.BehaviorEngine.Types as Fields
 import qualified Lib.BehaviorTracker.BlockTracker as BT
 import qualified Lib.BehaviorTracker.Types as BTT
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
@@ -262,6 +280,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import qualified Lib.Yudhishthira.Types.NammaTagV2 as Fields
 import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..), SendSearchRequestToDriverJobData (..))
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers as SSRD
 import qualified SharedLogic.Analytics as Analytics
@@ -366,6 +385,7 @@ import qualified Storage.Queries.VendorFee as QVF
 import qualified Tools.Auth as Auth
 import qualified Tools.DynamicLogic as TDL
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Maps as TMaps
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Payment as TPayment
@@ -1562,22 +1582,22 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   deploymentVersion <- asks (.version)
   cloudType <- asks (.cloudType)
   let updPerson =
-        person{firstName = fromMaybe person.firstName req.firstName,
-               middleName = req.middleName <|> person.middleName,
-               lastName = req.lastName <|> person.lastName,
-               deviceToken = req.deviceToken <|> person.deviceToken,
-               language = req.language <|> person.language,
-               clientSdkVersion = mbClientVersion <|> person.clientSdkVersion,
-               clientBundleVersion = mbBundleVersion <|> person.clientBundleVersion,
-               reactBundleVersion = mbReactBundleVersion <|> person.reactBundleVersion,
-               clientConfigVersion = mbConfigVersion <|> person.clientConfigVersion,
-               clientDevice = getDeviceFromText mbDevice <|> person.clientDevice,
-               backendConfigVersion = person.backendConfigVersion,
-               backendAppVersion = Just deploymentVersion.getDeploymentVersion,
-               gender = fromMaybe person.gender req.gender,
-               hometown = req.hometown <|> person.hometown,
-               languagesSpoken = req.languagesSpoken <|> person.languagesSpoken,
-               cloudType = cloudType
+        person{DP.firstName = fromMaybe person.firstName req.firstName,
+               DP.middleName = req.middleName <|> person.middleName,
+               DP.lastName = req.lastName <|> person.lastName,
+               DP.deviceToken = req.deviceToken <|> person.deviceToken,
+               DP.language = req.language <|> person.language,
+               DP.clientSdkVersion = mbClientVersion <|> person.clientSdkVersion,
+               DP.clientBundleVersion = mbBundleVersion <|> person.clientBundleVersion,
+               DP.reactBundleVersion = mbReactBundleVersion <|> person.reactBundleVersion,
+               DP.clientConfigVersion = mbConfigVersion <|> person.clientConfigVersion,
+               DP.clientDevice = getDeviceFromText mbDevice <|> person.clientDevice,
+               DP.backendConfigVersion = person.backendConfigVersion,
+               DP.backendAppVersion = Just deploymentVersion.getDeploymentVersion,
+               DP.gender = fromMaybe person.gender req.gender,
+               DP.hometown = req.hometown <|> person.hometown,
+               DP.languagesSpoken = req.languagesSpoken <|> person.languagesSpoken,
+               DP.cloudType = cloudType
               }
   mVehicle <- QVehicle.findById personId
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound

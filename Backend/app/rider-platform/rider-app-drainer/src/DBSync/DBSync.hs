@@ -24,6 +24,8 @@ import qualified EulerHS.Types as ET
 import GHC.Float (int2Double)
 import Kafka.Producer as KafkaProd
 import qualified Kernel.Beam.Types as KBT
+import qualified Kernel.Storage.Esqueleto.Config as Fields
+import qualified Kernel.Streaming.Kafka.Producer.Types as Fields
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Text

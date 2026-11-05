@@ -33,6 +33,7 @@ module API.UI.Search
 where
 
 import qualified API.Beckn.OnSearch as BeckOnSearch
+import qualified API.Types.UI.CRIS as Fields
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified API.Types.UI.RiderLocation as RL
 import qualified API.UI.CancelSearch as CancelSearch
@@ -56,6 +57,7 @@ import qualified Domain.Types.Booking as Booking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Client as DC
+import qualified Domain.Types.Estimate as Fields
 import qualified Domain.Types.EstimateStatus as Estimate
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -84,6 +86,7 @@ import qualified Kernel.External.Maps.Types as MapsTypes
 import qualified Kernel.External.MultiModal.Interface as MInterface
 import qualified Kernel.External.MultiModal.Interface as MultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
+import qualified Kernel.External.MultiModal.Interface.Types as MultiModalLeg (MultiModalLeg (..))
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
@@ -126,6 +129,7 @@ import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import qualified Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
@@ -950,7 +954,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 Left err -> do
                   logError $ "OSRM/Maps.getMultimodalWalkDistance failed: " <> show err <> ", falling back to proportional duration and distance" <> "latlong: " <> show (leg.startLocation.latLng.latitude, leg.startLocation.latLng.longitude) <> " " <> show (leg.endLocation.latLng.latitude, leg.endLocation.latLng.longitude)
                   return $ updateDuration totalEstimatedDuration totalEstimatedDistance leg
-            else return leg{duration = JM.calculateWalkDuration leg.distance}
+            else return leg{MultiModalLeg.duration = JM.calculateWalkDuration leg.distance}
         MultiModalTypes.Unspecified -> return $ updateDuration totalEstimatedDuration totalEstimatedDistance leg
         _ -> return leg -- Skip other modes
       where

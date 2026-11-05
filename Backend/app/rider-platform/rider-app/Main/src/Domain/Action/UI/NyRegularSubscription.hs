@@ -21,11 +21,13 @@ import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Action.UI.Quote as Domain.Action.UI.Quote
 import qualified Domain.Action.UI.Search as Search
+import qualified Domain.Types.Estimate as Fields
 import qualified Domain.Types.Merchant as Domain.Types.Merchant
 import qualified Domain.Types.NyRegularInstanceLog as NyRegularInstanceLog
 import qualified Domain.Types.NyRegularSubscription
 import qualified Domain.Types.NyRegularSubscription as NySub
 import qualified Domain.Types.Person as Domain.Types.Person
+import qualified Domain.Types.SearchRequest as Fields
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps (LatLong (..))
@@ -55,6 +57,7 @@ import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.NyRegularSubscriptionExtra as NyRegularSubscriptionExtra
 import qualified Storage.Queries.PersonExtra as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 postNyRegularSubscriptionsCreate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

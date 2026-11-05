@@ -52,7 +52,9 @@ import qualified Domain.Types.AddOnConfig as DAddOnConfig
 import qualified Domain.Types.BapMetadata as DBapMetadata
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Estimate as Fields
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Quote as Fields
 import qualified Domain.Types.RideRoute as RI
 import Domain.Types.VehicleVariant (castServiceTierToVariant)
 import qualified Kernel.External.Maps.Google.PolyLinePoints as PolyLine
@@ -67,6 +69,7 @@ import SharedLogic.Ride (searchRequestKey)
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- | Append a tag group to an existing (possibly absent) tag-group list,
 -- if there is one to add.

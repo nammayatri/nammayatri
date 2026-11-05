@@ -2,6 +2,7 @@ module Storage.Queries.ServicePeopleCategoryExtra where
 
 import Control.Applicative ((<|>))
 import Data.Time hiding (getCurrentTime)
+import qualified Domain.Types.RiderConfig as Fields
 import Domain.Types.ServicePeopleCategory
 import Kernel.Beam.Functions
 import Kernel.Prelude

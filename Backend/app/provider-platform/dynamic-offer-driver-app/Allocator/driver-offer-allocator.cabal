@@ -67,7 +67,8 @@ library
       UndecidableInstances
       StandaloneDeriving
       PackageImports
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   extra-libraries:
       cac_client
   build-depends:
@@ -93,8 +94,6 @@ library
     , passetto-client
     , passetto-lib
     , prometheus-client
-    , record-dot-preprocessor
-    , record-hasfield
     , resource-pool
     , safe
     , scheduler
@@ -160,7 +159,8 @@ executable driver-offer-allocator-exe
       UndecidableInstances
       StandaloneDeriving
       PackageImports
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
   extra-libraries:
       cac_client
   build-depends:
@@ -185,8 +185,6 @@ executable driver-offer-allocator-exe
     , passetto-client
     , passetto-lib
     , prometheus-client
-    , record-dot-preprocessor
-    , record-hasfield
     , resource-pool
     , safe
     , scheduler

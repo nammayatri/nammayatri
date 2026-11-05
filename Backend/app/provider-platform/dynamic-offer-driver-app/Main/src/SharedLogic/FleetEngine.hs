@@ -43,6 +43,7 @@ where
 
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Location as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DOSC

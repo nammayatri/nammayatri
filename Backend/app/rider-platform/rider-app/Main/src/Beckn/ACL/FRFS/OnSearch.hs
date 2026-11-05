@@ -24,6 +24,7 @@ import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import qualified Domain.Types.Extra.IntegratedBPPConfig as DIBCExtra
 import qualified Domain.Types.FRFSQuote as DQuote
 import Domain.Types.FRFSQuoteCategoryType
+import qualified Domain.Types.FRFSSearch as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.StationType as Station
 import qualified Kernel.External.Maps as Maps

@@ -18,7 +18,6 @@ module Beckn.ACL.Init (buildInitReqV2) where
 import qualified Beckn.OnDemand.Transformer.Init as TF
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
-import Control.Lens ((%~))
 import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Types.App
@@ -33,6 +32,7 @@ import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 buildInitReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>

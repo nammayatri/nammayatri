@@ -13,6 +13,7 @@ module Processor.RideEvents.Processor
 where
 
 import "dynamic-offer-driver-app" Domain.Types.Event.RideEndedEvent (RideEndedEvent)
+import qualified "dynamic-offer-driver-app" Domain.Types.Event.RideEndedEvent as Fields
 import "dynamic-offer-driver-app" Domain.Types.Extra.LeanFlow (LeanFlowFeature (..))
 import Environment
 import qualified EulerHS.Language as L

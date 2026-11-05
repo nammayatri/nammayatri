@@ -12,7 +12,7 @@ import Kernel.Prelude
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common (HighPrecMoney)
 import Lib.Finance.Core.Types (HasActorInfo)
-import Lib.Finance.Domain.Types.LedgerEntry (EntryType (Reversal), LedgerEntry, LedgerEntryMetadata)
+import Lib.Finance.Domain.Types.LedgerEntry (EntryType (Reversal), LedgerEntry (..), LedgerEntryMetadata)
 import Lib.Finance.Error.Types (FinanceError)
 import Lib.Finance.FinanceM (AccountRole (..), FinanceCtx (..), FinanceM, transfer, transferInProcessing)
 import Lib.Finance.Ledger.Service (createReversal, getEntriesByReference, markEntriesAsClaimed)

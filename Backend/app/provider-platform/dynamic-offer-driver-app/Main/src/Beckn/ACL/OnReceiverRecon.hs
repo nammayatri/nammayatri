@@ -7,6 +7,7 @@ where
 import qualified BecknV2.RSF.Enums as Enums
 import qualified BecknV2.RSF.Types as Spec
 import qualified Data.Text as T
+import qualified Domain.Types.RsfReconLedgerEntry as Fields
 import Kernel.Prelude
 import Kernel.Types.TimeRFC339 (UTCTimeRFC3339 (..))
 import Kernel.Utils.Common

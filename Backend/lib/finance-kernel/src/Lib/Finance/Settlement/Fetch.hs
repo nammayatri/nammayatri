@@ -10,6 +10,7 @@ import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.External.Settlement.Types (SettlementService (..), SettlementServiceConfig (..), SettlementSourceConfig (..), SplitSettlementCustomerType)
+import qualified Kernel.External.Settlement.Types as Fields
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Utils.Servant.Client (HasRequestId)

@@ -21,6 +21,7 @@ where
 import qualified Data.Text as T
 import qualified Domain.Action.UI.ExotelEndRide as DExotelEndRide
 import qualified Domain.Action.UI.Ride.EndRide as EndRide
+import qualified Domain.Types.Exophone as Fields
 import Environment
 import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude

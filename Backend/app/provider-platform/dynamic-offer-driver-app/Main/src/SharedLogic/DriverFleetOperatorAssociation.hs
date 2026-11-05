@@ -28,9 +28,11 @@ import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverOperatorAssociation as DDOA
+import qualified Domain.Types.DriverReferral as Fields
 import qualified Domain.Types.FleetOperatorAssociation as DFOA
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Domain.Types.TransporterConfig
@@ -41,6 +43,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
+import qualified Kernel.Sms.Config as Fields
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
@@ -63,6 +66,7 @@ import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as TN
 import Tools.SMS as Sms hiding (Success)
 

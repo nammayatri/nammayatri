@@ -29,6 +29,7 @@ import Kernel.ServantMultipart
 import Kernel.Types.Common
 import Kernel.Types.Predicate
 import qualified Kernel.Types.SlidingWindowCounters as SWC
+import qualified Kernel.Types.Value as Fields
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 

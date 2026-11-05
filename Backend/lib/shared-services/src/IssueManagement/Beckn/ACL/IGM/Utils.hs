@@ -15,7 +15,6 @@
 
 module IssueManagement.Beckn.ACL.IGM.Utils where
 
-import Control.Lens ((%~))
 import Data.Aeson as A
 import Data.Text as T
 import qualified IGM.Enums as Spec

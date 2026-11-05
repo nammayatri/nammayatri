@@ -28,6 +28,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as SQB
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 postBookingStatus ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

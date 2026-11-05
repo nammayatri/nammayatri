@@ -40,6 +40,7 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator (AllocatorJobType (..), SAPPGSettlementDispatchJobData (..), SAPSubscriptionPurchaseDispatchJobData (..))
 import SharedLogic.Allocator.Jobs.Settlement.SAPDispatchCommon
 import SharedLogic.Allocator.Jobs.Settlement.SubscriptionTotals (PGSettlementTransactionRow (..), SubscriptionTotals (..), SubscriptionTransactionRow (..), fetchPGSettlementTotals, fetchSubscriptionTotals)
+import qualified SharedLogic.Allocator.Jobs.Settlement.SubscriptionTotals as Fields
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error

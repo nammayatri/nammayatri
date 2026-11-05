@@ -46,18 +46,28 @@ import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
 import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types as DTC
+import qualified Domain.Types.BapMetadata as Fields
 import Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.CancellationReason as DCReason
+import qualified Domain.Types.DriverLocation as Fields
+import qualified Domain.Types.DriverQuote as Fields
+import qualified Domain.Types.DriverRCAssociation as Fields
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FareParameters as DFP
+import qualified Domain.Types.Feedback as Fields
 import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideDetails as Fields
 import qualified Domain.Types.StopInformation as DSI
+import qualified Domain.Types.Vehicle as Fields
+import qualified Domain.Types.VehicleRegistrationCertificate as Fields
 import Environment
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -78,6 +88,7 @@ import qualified Lib.Finance.Domain.Types.Account
 import Lib.Finance.Domain.Types.DirectTaxTransaction ()
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as FinanceDirectTax
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as FinanceIndirectTax
+import qualified Lib.Finance.Domain.Types.LedgerEntry as Fields
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTax
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTaxExtra
@@ -87,6 +98,7 @@ import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
 import Lib.GateInfo.Geometry (pointInPolygon)
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Safety.Domain.Types.Sos as Fields
 import qualified Safety.Storage.Queries.Sos as QSafetySos
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -124,6 +136,7 @@ import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified System.Environment as Se
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 ---------------------------------------------------------------------
 getRideList ::

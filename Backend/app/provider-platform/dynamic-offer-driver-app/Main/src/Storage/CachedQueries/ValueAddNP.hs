@@ -19,6 +19,7 @@ module Storage.CachedQueries.ValueAddNP
   )
 where
 
+import qualified Domain.Types.ValueAddNP as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM

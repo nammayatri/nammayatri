@@ -35,6 +35,7 @@ import qualified SharedLogic.Payment as SPayment
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- | Charge a customer's cancellation fee via Stripe and reconcile the finance ledger.
 --   Used by the immediate-charge path (Beckn.Common.cancellationTransaction, Card):

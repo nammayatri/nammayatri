@@ -7,7 +7,13 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time (Day, utctDay)
 import Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
+import qualified Domain.Types.AadhaarCard as Fields
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverIdentityInfo as Fields
+import qualified Domain.Types.DriverInformation as Fields
+import qualified Domain.Types.DriverLicense as Fields
+import qualified Domain.Types.HyperVergeVerification as Fields
+import qualified Domain.Types.IdfyVerification as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
