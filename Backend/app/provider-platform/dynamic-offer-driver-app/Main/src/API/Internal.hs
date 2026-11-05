@@ -4,6 +4,7 @@ module API.Internal
   )
 where
 
+import qualified API.Action.UI.SharedCabInternal as SharedCabInternal
 import qualified API.Internal.Auth as Auth
 import qualified API.Internal.BlackListedDrivers as BlackListedDrivers
 import qualified API.Internal.BulkLocPickupUpdate as BulkLocPickupUpdate
@@ -112,6 +113,7 @@ type API =
            :<|> NotificationWebhook.API
            :<|> SearchTryPoolStats.API
            :<|> VehicleServiceTierList.API
+           :<|> SharedCabInternal.API
        )
 
 handler :: AppEnv -> FlowServer API
@@ -168,3 +170,4 @@ handler env =
     :<|> NotificationWebhook.handler
     :<|> SearchTryPoolStats.handler
     :<|> VehicleServiceTierList.handler
+    :<|> SharedCabInternal.handler

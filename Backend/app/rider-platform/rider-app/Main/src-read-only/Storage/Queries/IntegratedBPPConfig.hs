@@ -27,6 +27,11 @@ createMany = traverse_ create
 findByAgencyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
 findByAgencyId agencyKey = do findOneWithKV [Se.And [Se.Is Beam.agencyKey $ Se.Eq agencyKey]]
 
+findByAgencyKeyAndPlatformType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Domain.Types.IntegratedBPPConfig.PlatformType -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
+findByAgencyKeyAndPlatformType agencyKey platformType = do findOneWithKV [Se.And [Se.Is Beam.agencyKey $ Se.Eq agencyKey, Se.Is Beam.platformType $ Se.Eq platformType]]
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 

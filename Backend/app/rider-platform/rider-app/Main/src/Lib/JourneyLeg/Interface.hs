@@ -54,6 +54,9 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
   DTrip.Bus -> do
     getFareReq :: Maybe BusLegRequest <- mkBusGetFareReq
     maybe (return (True, Nothing)) JL.getFare getFareReq
+  DTrip.SharedCab -> do
+    getFareReq :: Maybe BusLegRequest <- mkBusGetFareReq
+    maybe (return (True, Nothing)) JL.getFare getFareReq
   DTrip.Metro -> do
     getFareReq :: Maybe MetroLegRequest <- mkMetroGetFareReq
     maybe (return (True, Nothing)) JL.getFare getFareReq
@@ -165,6 +168,9 @@ confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelection
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
       JL.confirm confirmReq
     DTrip.Bus -> do
+      confirmReq :: BusLegRequest <- mkBusLegConfirmReq
+      JL.confirm confirmReq
+    DTrip.SharedCab -> do
       confirmReq :: BusLegRequest <- mkBusLegConfirmReq
       JL.confirm confirmReq
     DTrip.Metro -> do

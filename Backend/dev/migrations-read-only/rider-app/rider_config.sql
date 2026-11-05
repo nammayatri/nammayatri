@@ -938,3 +938,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_dynamic_pickup_eta boolean 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_xyne_support_bot boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_config json ;

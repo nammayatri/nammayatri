@@ -183,6 +183,7 @@ castVehicleVariant = \case
   VehVar.EV_HATCHBACK -> (show Enums.CAB, "EV_HATCHBACK")
   VehVar.EV_SEDAN -> (show Enums.CAB, "EV_SEDAN")
   VehVar.EV_SUV -> (show Enums.CAB, "EV_SUV")
+  VehVar.SHARED_CAB -> (show Enums.CAB, "SHARED_CAB")
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
 parseVehicleVariant mbCategory mbVariant =

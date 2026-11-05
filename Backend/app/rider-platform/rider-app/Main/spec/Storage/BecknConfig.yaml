@@ -199,4 +199,8 @@ IntegratedBPPConfig:
       kvFunction: findOneWithKV
       where:
         and: [agencyKey]
+    findByAgencyKeyAndPlatformType:
+      kvFunction: findOneWithKV
+      where:
+        and: [agencyKey, platformType]
 

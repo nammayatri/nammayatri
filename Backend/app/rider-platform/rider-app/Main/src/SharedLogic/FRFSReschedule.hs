@@ -29,6 +29,7 @@ import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSPassTicketStatistics as FRFSPassTicketStatistics
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import qualified SharedLogic.FRFSUtils as FRFSUtils
+import SharedLogic.SharedCab (isSharedCabBooking)
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
 import Storage.CachedQueries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.JourneyLeg as CQJourneyLeg
@@ -73,6 +74,9 @@ validateRescheduleEligibility oldBooking newTripId newFromCode newToCode newRout
   serviceTierType <-
     FRFSUtils.getServiceTierTypeFromRouteStationsJson oldBooking.routeStationsJson
       & fromMaybeM (InvalidRequest "Cannot determine service tier for this booking, reschedule not supported")
+  -- A shared cab has no trip to move to; its cab comes from allocation, not a schedule.
+  when (isSharedCabBooking oldBooking) $
+    throwError $ InvalidRequest "Reschedule is not supported for shared cab bookings"
   vst <-
     QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType oldBooking.merchantOperatingCityId integratedBppConfig.id
       >>= fromMaybeM (InvalidRequest "Reschedule is not enabled for this route/vehicle/service tier")

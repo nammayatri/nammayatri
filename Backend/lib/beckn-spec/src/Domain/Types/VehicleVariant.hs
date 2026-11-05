@@ -72,6 +72,7 @@ data VehicleVariant
   | EV_HATCHBACK
   | EV_SEDAN
   | EV_SUV
+  | SHARED_CAB
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded, EP.Hashable)
 
 instance CH.ClickhouseValue VehicleVariant
@@ -137,6 +138,7 @@ castServiceTierToVariant = \case
   DVST.EV_SEDAN -> EV_SEDAN
   DVST.EV_SUV -> EV_SUV
   DVST.INSTANT_AUTO -> AUTO_RICKSHAW
+  DVST.SHARED_CAB -> SHARED_CAB
 
 castVariantToServiceTier :: VehicleVariant -> DVST.ServiceTierType
 castVariantToServiceTier = \case
@@ -179,6 +181,7 @@ castVariantToServiceTier = \case
   EV_HATCHBACK -> DVST.EV_HATCHBACK
   EV_SEDAN -> DVST.EV_SEDAN
   EV_SUV -> DVST.EV_SUV
+  SHARED_CAB -> DVST.SHARED_CAB
 
 castVehicleVariantToVehicleCategory :: VehicleVariant -> DVC.VehicleCategory
 castVehicleVariantToVehicleCategory = \case
@@ -221,6 +224,7 @@ castVehicleVariantToVehicleCategory = \case
   EV_HATCHBACK -> DVC.CAR
   EV_SEDAN -> DVC.CAR
   EV_SUV -> DVC.CAR
+  SHARED_CAB -> DVC.CAR
 
 castServiceTierToVehicleCategory :: DVST.ServiceTierType -> DVC.VehicleCategory
 castServiceTierToVehicleCategory = \case
@@ -268,6 +272,7 @@ castServiceTierToVehicleCategory = \case
   DVST.EV_SEDAN -> DVC.CAR
   DVST.EV_SUV -> DVC.CAR
   DVST.INSTANT_AUTO -> DVC.AUTO_CATEGORY
+  DVST.SHARED_CAB -> DVC.CAR
 
 getVehicleCategory :: Maybe DVC.VehicleCategory -> VehicleVariant -> Maybe DVC.VehicleCategory
 getVehicleCategory mbVehicleCategory variant = mbVehicleCategory <|> (Just $ castVehicleVariantToVehicleCategory variant)
