@@ -1404,9 +1404,27 @@ sendSearchRequestToDriverNotification ::
   Id Person ->
   Notification.NotificationReq SearchRequestForDriverAPIEntity EmptyDynamicParam ->
   m ()
-sendSearchRequestToDriverNotification _merchantId merchantOpCityId driverId req = do
-  --logDebug $ "DFCM - NEW_RIDE_AVAILABLE  Title -> " <> show req.title <> " body - " <> show req.body
+sendSearchRequestToDriverNotification merchantId merchantOpCityId driverId req = do
   driver <- QPerson.findById driverId
+  sendSearchRequestToDriverNotificationWithPerson merchantId merchantOpCityId driverId driver req
+
+-- | Same as 'sendSearchRequestToDriverNotification' for a caller that already loaded the person
+-- (the batch fan-out loads all of a batch's drivers in one query).
+sendSearchRequestToDriverNotificationWithPerson ::
+  ( ServiceFlow m r,
+    ToJSON SearchRequestForDriverAPIEntity,
+    ToJSON EmptyDynamicParam,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe Person ->
+  Notification.NotificationReq SearchRequestForDriverAPIEntity EmptyDynamicParam ->
+  m ()
+sendSearchRequestToDriverNotificationWithPerson _merchantId merchantOpCityId driverId driver req =
   runWithServiceConfigForProviders merchantOpCityId (driver >>= (.clientId)) (driver >>= (.clientDevice)) req iosModifier (clearDeviceToken driverId)
   where
     iosModifier iosFCMdata = case fromJSON @SearchRequestForDriverAPIEntity iosFCMdata.fcmEntityData of
