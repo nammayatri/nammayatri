@@ -65,6 +65,11 @@ type API =
              :> "resetMerchantCityAccess"
              :> ReqBody '[JSON] DPerson.MerchantCityAccessReq
              :> Post '[JSON] APISuccess
+           :<|> DashboardAuth 'DASHBOARD_ADMIN
+             :> Capture "personId" (Id DP.Person)
+             :> "updateMerchantCityAccess"
+             :> ReqBody '[JSON] DPerson.UpdateMerchantCityAccessReq
+             :> Post '[JSON] DPerson.UpdateMerchantCityAccessRes
            :<|> "create"
              :> DashboardAuth 'DASHBOARD_ADMIN
              :> ReqBody '[JSON] DPerson.CreatePersonReq
@@ -140,6 +145,7 @@ handler =
       :<|> assignMerchantCityAccess
       :<|> resetMerchantAccess
       :<|> resetMerchantCityAccess
+      :<|> updateMerchantCityAccess
       :<|> createPerson
       :<|> deletePerson
       :<|> changeEnabledStatus
@@ -186,6 +192,10 @@ resetMerchantAccess tokenInfo personId =
 resetMerchantCityAccess :: DashboardLoginFlow r => TokenInfo -> Id DP.Person -> DPerson.MerchantCityAccessReq -> FlowHandlerR r APISuccess
 resetMerchantCityAccess tokenInfo personId =
   withDashboardDbFlowHandlerAPI . DPerson.resetMerchantCityAccess tokenInfo personId
+
+updateMerchantCityAccess :: DashboardLoginFlow r => TokenInfo -> Id DP.Person -> DPerson.UpdateMerchantCityAccessReq -> FlowHandlerR r DPerson.UpdateMerchantCityAccessRes
+updateMerchantCityAccess tokenInfo personId =
+  withDashboardDbFlowHandlerAPI . DPerson.updateMerchantCityAccess tokenInfo personId
 
 profile :: DashboardLoginFlow r => TokenInfo -> FlowHandlerR r DP.PersonAPIEntity
 profile =
