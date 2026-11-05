@@ -19,7 +19,7 @@ where
 
 import qualified "this" API.Types.ProviderPlatform.Management.Ride as Common
 import Data.Either (isRight)
-import Data.List (partition)
+import Data.List (elemIndex, groupBy, partition, sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Ride as DRide
 import Environment
@@ -36,6 +36,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.LocationUpdates (pickupSnapEntityIdSuffix, snapToRoadReqPoints)
 import Storage.Clickhouse.ExternalApiCallLogs (decodePayload)
 import qualified Storage.Clickhouse.ExternalApiCallLogs as CHExternalApiCallLogs
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 googleSnapApiName, osrmSnapApiName :: Text
@@ -82,6 +83,7 @@ getRideSnappedRoute ride = do
       ride.createdAt
       (addUTCTime endLookahead (fromMaybe now ride.tripEndTime))
       maxCalls
+  serviceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound ride.merchantOperatingCityId.getId)
   mbConfidenceThreshold <-
     if rideDistanceFailed
       then do
@@ -89,16 +91,16 @@ getRideSnappedRoute ride = do
         pure $ if transporterConfig.useWithSnapToRoadFallback then Just transporterConfig.snapToRoadConfidenceThreshold else Nothing
       else pure Nothing
   let (pickupRows, rideRows) = partition (\row -> row.entityId == Just pickupEntityId) rows
-  (pickupBatches, pickupFailure) <- legBatches Nothing Common.ON_PICKUP (ride.pickupDistanceCalculationFailed == Just True) (mapMaybe toSnapCall pickupRows)
-  (rideBatches, rideFailure) <- legBatches mbConfidenceThreshold Common.ON_RIDE rideDistanceFailed (mapMaybe toSnapCall rideRows)
+  (pickupBatches, pickupFailure) <- legBatches [Maps.OSRM] Nothing Common.ON_PICKUP (ride.pickupDistanceCalculationFailed == Just True) (mapMaybe toSnapCall pickupRows)
+  (rideBatches, rideFailure) <- legBatches serviceUsageConfig.snapToRoadProvidersList mbConfidenceThreshold Common.ON_RIDE rideDistanceFailed (mapMaybe toSnapCall rideRows)
   pure
     Common.RideSnappedRouteRes
       { batches = pickupBatches <> rideBatches,
         distanceFailures = catMaybes [pickupFailure, rideFailure]
       }
 
-legBatches :: Maybe Double -> Common.Status -> Bool -> [SnapCall] -> Flow ([Common.SnapBatch], Maybe Common.SnapDistanceFailure)
-legBatches mbConfidenceThreshold rideStatus distanceFailed calls = do
+legBatches :: [Maps.MapsService] -> Maybe Double -> Common.Status -> Bool -> [SnapCall] -> Flow ([Common.SnapBatch], Maybe Common.SnapDistanceFailure)
+legBatches providers mbConfidenceThreshold rideStatus distanceFailed calls = do
   droppedPointsThreshold <- asks (.droppedPointsThreshold)
   let batches =
         reverse $
@@ -108,7 +110,7 @@ legBatches mbConfidenceThreshold rideStatus distanceFailed calls = do
                 _ -> Batch {startedAt = call.calledAt, attempts = [call], sections = []} : acc
             )
             []
-            calls
+            (orderCalls providers calls)
       toSnapBatch batch snapped = Common.SnapBatch {rideStatus, calledAt = batch.startedAt, inputPoints = batchInput batch, snapped}
       untilFailure = \case
         [] -> pure ([], Nothing)
@@ -123,6 +125,24 @@ legBatches mbConfidenceThreshold rideStatus distanceFailed calls = do
       mbFailed <&> \(batch, reasons) -> Common.SnapDistanceFailure {rideStatus, calledAt = batch.startedAt, attempts = reasons}
     )
 
+orderCalls :: [Maps.MapsService] -> [SnapCall] -> [SnapCall]
+orderCalls providers calls = concat (go Nothing groups)
+  where
+    groups = map (sortOn (\call -> (call.calledAt, providerRank call))) . groupBy ((==) `on` (.request.points)) $ sortOn (.request.points) calls
+    providerRank call = fromMaybe (length providers) (elemIndex call.provider providers)
+    groupPoints group = maybe [] (.request.points) (listToMaybe group)
+    groupTime group = minimum (map (.calledAt) group)
+    go _ [] = []
+    go mbEnd remaining =
+      let earliest = minimum (map groupTime remaining)
+          candidates = filter ((== earliest) . groupTime) remaining
+          ranked = case mbEnd of
+            Just end -> sortOn (\group -> maybe (1 :: Int, 0) ((0,) . distanceBetweenInMeters end) (listToMaybe (groupPoints group))) candidates
+            Nothing -> sortOn (\group -> listToMaybe (groupPoints group) `elem` map (lastMay . groupPoints) remaining) candidates
+       in case ranked of
+            next : _ -> next : go (lastMay (groupPoints next)) (filter ((/= groupPoints next) . groupPoints) remaining)
+            [] -> []
+
 batchInput :: Batch -> [LatLong]
 batchInput batch = case batch.attempts of
   attempt : _ -> attempt.request.points
@@ -131,6 +151,11 @@ batchInput batch = case batch.attempts of
 joinBatch :: HighPrecMeters -> Batch -> SnapCall -> Maybe Batch
 joinBatch droppedPointsThreshold batch call
   | diffUTCTime call.calledAt batch.startedAt > rectificationWindow = Nothing
+  | call.request.points == batchInput batch && all (\section -> section.request.points == batchInput batch) batch.sections =
+    Just $
+      if call.provider `notElem` map (.provider) batch.attempts
+        then batch {attempts = batch.attempts <> [call]}
+        else batch {sections = if any (isRight . (.response)) batch.sections then batch.sections else [call]}
   | not (null batch.sections) && listToMaybe call.request.points == listToMaybe (batchInput batch) =
     Just batch {sections = [call]}
   | continuesAfterGap =
@@ -138,11 +163,6 @@ joinBatch droppedPointsThreshold batch call
       if null batch.sections
         then batch {attempts = [], sections = maybeToList (lastMay batch.attempts) <> [call]}
         else batch {sections = batch.sections <> [call]}
-  | null batch.sections && call.request.points == batchInput batch =
-    Just $
-      if call.provider `elem` map (.provider) batch.attempts
-        then batch {sections = [call]} -- Every provider rejected it: rectification re-snaps the whole batch.
-        else batch {attempts = batch.attempts <> [call]} -- The next provider in the fallback chain.
   | otherwise = Nothing
   where
     continuesAfterGap =
