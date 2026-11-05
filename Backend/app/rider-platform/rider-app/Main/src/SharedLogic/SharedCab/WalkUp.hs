@@ -329,7 +329,7 @@ cabVehicle now cfg namedByPlate mbBoardStop (freeSeats, ridersOnBoard) s = \case
         ApiTypes.LiveVehicleInfo
           { number = shownPlate,
             vehicleTagNumber = Nothing,
-            currentTripId = Just s.vehicleTripId.getId,
+            currentTripId = Just s.vehicleTripId,
             serviceTierType = Spec.SHARED_CAB,
             vehicleVariant = Nothing,
             serviceTierName = Nothing,
@@ -350,7 +350,7 @@ cabVehicle now cfg namedByPlate mbBoardStop (freeSeats, ridersOnBoard) s = \case
         { vehicleNumber = shownPlate,
           vehicleTagNumber = Nothing,
           vehicleVariant = Nothing,
-          tripId = Just s.vehicleTripId.getId,
+          tripId = Just s.vehicleTripId,
           isActiveTrip = Nothing,
           serviceTierType = Spec.SHARED_CAB,
           serviceTierName = Nothing,

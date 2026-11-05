@@ -44,6 +44,23 @@ getRouteStopMappingByRouteCode routeCode integratedBPPConfig = IM.withInMemCache
   logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
   return routeStopMapping
 
+-- | The feed's routes with GIMS's encoded polyline, kept 5 min.
+getRoutesByGtfsId ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  m [RouteInfoNandi]
+getRoutesByGtfsId integratedBPPConfig = IM.withInMemCache ["RoutesByGtfsId", integratedBPPConfig.id.getId] 300 $ do
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  Flow.getRoutesByGtfsId baseUrl integratedBPPConfig.feedKey
+
+getGtfsVersion ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  m Text
+getGtfsVersion integratedBPPConfig = do
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  Flow.getGtfsVersion baseUrl integratedBPPConfig.feedKey
+
 getExampleTrip ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   IntegratedBPPConfig ->

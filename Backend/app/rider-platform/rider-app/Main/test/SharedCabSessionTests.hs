@@ -9,11 +9,10 @@ import qualified Data.ByteString.Lazy.Char8 as BLC
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
-import "rider-app" Domain.Action.UI.SharedCabInternal (chatMessageBody, onCityDay, tripDayWindow)
+import "rider-app" Domain.Action.UI.SharedCabInternal (chatMessageBody)
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
-import qualified "rider-app" Domain.Types.VehicleTrip as DVT
+import qualified "beckn-spec" Domain.Types.SharedCabSession as SCS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
-import "mobility-core" Kernel.Types.Common (Seconds (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import "rider-app" SharedLogic.SharedCab.JourneyLeg (sessionOnTrip)
 import "rider-app" SharedLogic.SharedCab.Keys (routeKey)
@@ -44,17 +43,39 @@ active =
       status = ACTIVE,
       pauseReason = Nothing,
       version = 3,
+      tripVersion = 3,
       startedAt = t0,
-      vehicleTripId = Id "trip1"
+      vehicleTripId = "trip1"
     }
+
+-- | Driver-app's copy of `active`'s run.
+cabOf :: Session -> SCS.CabState
+cabOf s =
+  SCS.CabState
+    { SCS.agencyId = "feed:SHARED_CAB",
+      SCS.driverId = s.driverId,
+      SCS.vehicleNumber = s.vehicleNumber,
+      SCS.vehicleTripId = s.vehicleTripId,
+      SCS.routeCode = s.routeCode,
+      SCS.queuedRouteCode = s.queuedRouteCode,
+      SCS.capacity = s.capacity,
+      SCS.status = s.status,
+      SCS.pauseReason = s.pauseReason,
+      SCS.version = s.tripVersion,
+      SCS.startedAt = s.startedAt,
+      SCS.offlineBoardings = 0,
+      SCS.driverName = Nothing,
+      SCS.vehicleModel = Nothing
+    }
+
+copy :: SCS.CabState -> Maybe Session -> Session
+copy = copyFrom (Id "m") (Id "moc") (Id "ibc")
 
 tests :: TestTree
 tests =
   testGroup
     "SharedCab session state"
-    [ testCase "a plate with no session key takes the plate lock only when it has a live trip to restore" $
-        map sessionMissAction [False, True] @?= [NoLiveTrip, RestoreUnderLock],
-      testCase "a route-set member is dropped only when its session is gone or off the route, never on a failed read" $
+    [ testCase "a route-set member is dropped only when its session is gone or off the route, never on a failed read" $
         map
           (routeMember "R1")
           [SessionAt active, SessionAt active {routeCode = "R2"}, SessionAt active {status = PAUSED}, SessionAbsent, SessionUnreadable]
@@ -69,12 +90,6 @@ tests =
           (either (const Nothing) (Just . T.length) . chatMessageBody)
           ["  on my way  ", T.replicate 500 "a", T.replicate 501 "a", "   "]
           @?= [Just 9, Just 500, Nothing, Nothing],
-      testCase "a trip's day is its city's local day, found inside the window" $ do
-        let date = fromGregorian 2026 9 25
-            lateUtc = UTCTime (fromGregorian 2026 9 24) (20 * 3600) -- 01:30 on the 25th at +05:30
-            (from, to) = tripDayWindow date
-        [onCityDay date (Seconds 19800) lateUtc, onCityDay date (Seconds 0) lateUtc, onCityDay date (Seconds (-18000)) (UTCTime date (23 * 3600))] @?= [True, False, True]
-        (from <= lateUtc && lateUtc <= to) @?= True,
       testCase "a cab-full fill counts no offline boardings, a driver count does" $ do
         let full = fillCab 3 active
         walkupsToCount CabFullFill active full @?= 0
@@ -92,34 +107,29 @@ tests =
       testCase "an unboarded or already dropped ticket is left alone" $ do
         shouldDropOnDeadSession (Just ENDED) False [TS.ACTIVE] @?= False
         shouldDropOnDeadSession (Just ENDED) False [TS.USED] @?= False,
-      testCase "second driver on the same plate is rejected" $
-        planSelect "d2" "R1" (Just active) @?= Left SessionHeldByAnotherDriver,
-      testCase "second driver can't drive another's session either" $
+      testCase "second driver can't drive another's session" $
         ownedSession "d2" (Just active) @?= Left SessionHeldByAnotherDriver,
-      testCase "an ENDED session frees the plate for another driver" $
-        planSelect "d2" "R1" (Just (endSession active)) @?= Right OpenSession,
-      testCase "same driver, same route is a no-op" $
-        planSelect "d1" "R1" (Just active) @?= Right (KeepRoute active),
-      testCase "same driver, other route is a route change" $
-        planSelect "d1" "R2" (Just active) @?= Right (ChangeRoute active),
-      testCase "route change points the session at the new trip" $
-        switchRoute "R2" (Id "trip2") active
-          @?= active {routeCode = "R2", vehicleTripId = Id "trip2", version = 4},
+      testCase "an ENDED copy is no session to act on" $
+        ownedSession "d1" (Just active {status = ENDED}) @?= Left SessionNotFound,
       testCase "two cities whose feeds share a route code keep separate route sets" $
         (routeKey (Id "shillong") "R1" == routeKey (Id "tura") "R1", routeKey (Id "shillong") "R1") @?= (False, "sharedcab:route:shillong:R1"),
+      testCase "a late copy of the same run is ignored; a copy of a new run always lands" $
+        let cab = cabOf active
+         in [isStale cab {SCS.version = 2} active, isStale cab active, isStale cab {SCS.version = 2, SCS.vehicleTripId = "trip2"} active] @?= [True, False, False],
+      testCase "the copy's version moves only on a change the driver sees" $
+        let cab = cabOf active
+         in (version (copy cab {SCS.version = 9} (Just active)), version (copy cab {SCS.routeCode = "R2", SCS.vehicleTripId = "trip2"} (Just active)))
+              @?= (3, 4),
+      testCase "walk-ups ride on across a route change; a cab first seen seeds them from its offline boardings, capped at capacity" $
+        let cab = cabOf active
+         in ( walkupCount (copy cab {SCS.routeCode = "R2", SCS.vehicleTripId = "trip2"} (Just active {walkupCount = 2})),
+              walkupCount (copy cab {SCS.offlineBoardings = 3} Nothing),
+              walkupCount (copy cab {SCS.offlineBoardings = 9} Nothing),
+              walkupCount (copy cab {SCS.vehicleTripId = "trip2"} (Just active {status = ENDED, walkupCount = 2}))
+            )
+              @?= (2, 3, 4, 0),
       testCase "route change leaves the old route set and joins the new one" $
-        routeSetMoves (Just active) (switchRoute "R2" (Id "trip2") active) @?= RouteSetMoves ["R1"] ["R2"],
-      testCase "route change closes the old trip as COMPLETED" $
-        closedTripStatus DVT.ROUTE_CHANGED @?= DVT.COMPLETED,
-      testCase "the opened trip is ACTIVE on the new route" $
-        let trip = tripFor (switchRoute "R2" (Id "trip2") active) t0
-         in (DVT.routeCode trip, DVT.status trip, DVT.endedAt trip) @?= ("R2", DVT.ACTIVE, Nothing),
-      testCase "afterLastDrop queues the change and stays on the current route" $
-        queueRoute "R2" active @?= active {queuedRouteCode = Just "R2", version = 4},
-      testCase "applying the queued route clears it" $
-        queuedRouteCode (switchRoute "R2" (Id "trip2") (queueRoute "R2" active)) @?= Nothing,
-      testCase "END_ROUTE closes the trip as COMPLETED with its own reason" $
-        (endActionReason EndRoute, closedTripStatus (endActionReason EndRoute)) @?= (DVT.END_ROUTE, DVT.COMPLETED),
+        routeSetMoves (Just active) active {routeCode = "R2", vehicleTripId = "trip2"} @?= RouteSetMoves ["R1"] ["R2"],
       testCase "walk-up with a stale version is rejected" $
         setWalkup 2 1 active @?= Left SessionVersionMismatch,
       testCase "walk-up with the current version bumps it" $
@@ -128,23 +138,14 @@ tests =
         setWalkup 3 5 active @?= Left InvalidWalkupCount,
       testCase "cab full: the walk-ups are the seats they now hold" $
         fillCab 3 active {walkupCount = 1} @?= active {walkupCount = 3, version = 4},
-      testCase "END_FOR_NOW leaves the route set" $
-        routeSetMoves (Just active) (endSession active) @?= RouteSetMoves ["R1"] [],
-      testCase "END_FOR_NOW closes the trip with its own reason" $
-        endActionReason EndForNow @?= DVT.END_FOR_NOW,
+      testCase "an end leaves the route set" $
+        routeSetMoves (Just active) active {status = ENDED} @?= RouteSetMoves ["R1"] [],
       testCase "pause leaves the route set, resume rejoins" $
-        let paused = either (error . show) id (pauseSession NO_LOCATION active)
-         in (routeSetMoves (Just active) paused, routeSetMoves (Just paused) <$> resumeSession paused)
-              @?= (RouteSetMoves ["R1"] [], Right (RouteSetMoves [] ["R1"])),
-      testCase "a new session on a reused plate outranks the old version" $
-        version (newSession (OpenSessionReq "d2" "ml 05-a 1234" (Id "m") (Id "moc") (Id "ibc") AC 4 "R1") (Id "trip3") t0 (Just active))
-          @?= 4,
-      testCase "forward route returns on its reverse" $
-        returnRouteOf "SC-MAWLAI-F" @?= Right "SC-MAWLAI-R",
-      testCase "reverse route returns on its forward" $
-        returnRouteOf "SC-MAWLAI-R" @?= Right "SC-MAWLAI-F",
-      testCase "a route without a direction suffix has no return" $
-        returnRouteOf "SC-MAWLAI" @?= Left NoReturnRoute,
+        let paused = active {status = PAUSED, pauseReason = Just NO_LOCATION}
+         in (routeSetMoves (Just active) paused, routeSetMoves (Just paused) active)
+              @?= (RouteSetMoves ["R1"] [], RouteSetMoves [] ["R1"]),
+      testCase "a corridor returns on its other direction; a route without a direction has none" $
+        map SCS.returnRouteCode ["SC-MAWLAI-F", "SC-MAWLAI-R", "SC-MAWLAI"] @?= [Just "SC-MAWLAI-R", Just "SC-MAWLAI-F", Nothing],
       testCase "riders: every held rider once, boarded or not, with both stops by name" $
         View.ridersOf
           routeStops

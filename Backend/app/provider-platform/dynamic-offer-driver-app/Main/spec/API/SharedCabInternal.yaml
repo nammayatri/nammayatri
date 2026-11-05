@@ -1,6 +1,8 @@
 imports:
   APISuccess: Kernel.Types.APISuccess
   SharedCabAllocationEntityData: Tools.Notifications
+  CabEventReq: Domain.Types.SharedCabSession
+  CabEventResp: Domain.Types.SharedCabSession
 
 module: SharedCabInternal
 
@@ -29,3 +31,15 @@ apis:
         token: Text
       response:
         type: SharedCabDriverCallNumberResp
+  # rider-app's silence check and a cab emptied of riders change the trip, which driver-app owns; the answer is the update to apply.
+  - POST:
+      endpoint: /sharedCab/cab/{vehicleNumber}/event
+      auth: NoAuth
+      params:
+        vehicleNumber: Text
+      headers:
+        token: Text
+      request:
+        type: CabEventReq
+      response:
+        type: CabEventResp

@@ -3,11 +3,11 @@
 
 module Domain.Types.VehicleTrip where
 
-import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -16,7 +16,7 @@ import qualified Tools.Beam.UtilsTH
 data VehicleTrip = VehicleTrip
   { capacity :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
-    driverId :: Kernel.Prelude.Text,
+    driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     endReason :: Kernel.Prelude.Maybe Domain.Types.VehicleTrip.VehicleTripEndReason,
     endedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip,
@@ -25,7 +25,6 @@ data VehicleTrip = VehicleTrip
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     offlineBoardings :: Kernel.Prelude.Int,
     routeCode :: Kernel.Prelude.Text,
-    serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
     startedAt :: Kernel.Prelude.UTCTime,
     status :: Domain.Types.VehicleTrip.VehicleTripStatus,
     updatedAt :: Kernel.Prelude.UTCTime,

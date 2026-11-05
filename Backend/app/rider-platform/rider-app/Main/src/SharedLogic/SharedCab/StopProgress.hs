@@ -11,6 +11,7 @@ import qualified Data.Map.Strict as M
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.SharedCabSession (CabEvent (CAB_OFF_ROUTE))
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types (ServiceFlow)
@@ -21,26 +22,25 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, eachIsolated, releaseSharedCabAllocation, releaseUnboarded)
+import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, eachIsolated, releaseSharedCabAllocation)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), groupByKey, isFreshPosition)
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, passedStopBlame, runningTimerDeadline, seatIsRiders)
 import SharedLogic.SharedCab.Booking (boardedTouchDue, readRiderFix, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
+import SharedLogic.SharedCab.CabSync (CabSyncFlow, cabEmptied, cabEvent)
 import qualified SharedLogic.SharedCab.Config as Config
-import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, offRouteKey, sessionKey)
+import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, offRouteKey)
 import SharedLogic.SharedCab.Lts (readRoutePositions)
-import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Seats (markDropped)
 import qualified SharedLogic.SharedCab.Session as Session
-import SharedLogic.SharedCab.SessionState (PauseReason (OFF_ROUTE), Session (..), SessionStatus (..))
+import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 import SharedLogic.SharedCab.StopProgress.Rules
 import qualified Storage.CachedQueries.RoutePolylines as QRoutePolylines
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
-import qualified Storage.Queries.VehicleTrip as QVT
 
 type StopProgressFlow m r c =
-  ( LtsFlow m r c,
+  ( CabSyncFlow m r,
     Redis.HedisFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -63,9 +63,7 @@ runStopProgress ::
   m ()
 runStopProgress cityId live positionsByRoute = do
   cfg <- Config.getTunables cityId
-  trips <- QVT.findAllLiveByMerchantOperatingCityId cityId
-  -- one pipelined MGET (grouped by slot) for every live cab's session
-  sessions <- filter ((/= ENDED) . (.status)) <$> shared (Redis.mGetCluster (map (sessionKey . (.vehicleNumber)) trips))
+  sessions <- Session.cityLiveSessions cityId
   now <- getCurrentTime
   let byPlate = bookingsByPlate live
   forM_ (M.toList $ M.fromListWith (<>) [(s.routeCode, [s]) | s <- sessions]) $ \(routeCode, cabs) -> do
@@ -121,7 +119,7 @@ stepCab cfg now bookings positions route s = do
         -- the key the moving timer is armed under must outlive it (see allocKeyTtl in Allocation.Types)
         movingTimerStep (allocKeyTtl cfg) cfg now freshCab plate b
   forM_ onBoard $ dropStep cfg now mbCab plate
-  when (s.status == ACTIVE) $ offRouteStep cfg now route ((.position) <$> freshCab) plate
+  when (s.status == ACTIVE) $ offRouteStep cfg now route ((.position) <$> freshCab) s
 
 cabFix :: LT.VehicleInfo -> CabFix
 cabFix vi =
@@ -159,21 +157,21 @@ dropStep cfg now mbCab plate b = do
       StartDropClock -> Redis.withMasterRedis $ Redis.setExp (dropClockKey b.id) now (2 * cfg.autoEndAfterDropSec)
       AutoEnd -> do
         markDropped b
-        switched <- Session.applyQueuedRoute plate
-        when switched $ releaseUnboarded plate RouteChanged
+        void $ cabEmptied plate
         Redis.withMasterRedis $ Redis.del (dropClockKey b.id)
       KeepWaiting -> pure ()
 
-offRouteStep :: StopProgressFlow m r c => Config.SharedCabTunables -> UTCTime -> [LatLong] -> Maybe LatLong -> Text -> m ()
-offRouteStep cfg now route freshPosition plate = do
+-- | Driver-app owns the run, so the pause is asked of it; the applied answer releases the unboarded allocations.
+offRouteStep :: StopProgressFlow m r c => Config.SharedCabTunables -> UTCTime -> [LatLong] -> Maybe LatLong -> Session -> m ()
+offRouteStep cfg now route freshPosition s = do
+  let plate = s.vehicleNumber
   offSince <- Redis.withMasterRedis $ Redis.safeGet (offRouteKey plate)
   case offRouteAction cfg now offSince route freshPosition of
     StartOffRouteClock -> Redis.withMasterRedis $ Redis.setExp (offRouteKey plate) now (2 * cfg.offRouteSec)
     ClearOffRouteClock -> Redis.withMasterRedis $ Redis.del (offRouteKey plate)
     PauseOffRoute -> do
       Redis.withMasterRedis $ Redis.del (offRouteKey plate)
-      withTryCatch "sharedCabOffRoutePause" (Session.pause plate OFF_ROUTE) >>= \case
+      withTryCatch "sharedCabOffRoutePause" (cabEvent s CAB_OFF_ROUTE) >>= \case
         Left e -> logWarning $ "shared-cab off-route pause skipped for " <> plate <> ": " <> show e
-        Right _ -> do
-          releaseUnboarded plate SessionClosed
+        Right _ -> pure ()
     OffRouteNoChange -> pure ()

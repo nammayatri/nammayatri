@@ -3,6 +3,7 @@
 module SharedLogic.SharedCab.Keys
   ( -- * Session (per plate / route)
     sessionKey,
+    cityCabsKey,
     routeKey,
     legacyRouteKey,
     driverInfoKey,
@@ -53,6 +54,10 @@ sessionKey :: Text -> Text
 sessionKey plate = "sharedcab:session:" <> plate
 
 -- | Per city: two cities' feeds may share a route code.
+-- | The city's live cabs (ACTIVE or PAUSED copies), for the city-wide passes; the session key is truth, a stale member is skipped.
+cityCabsKey :: CityId -> Text
+cityCabsKey cityId = "sharedcab:city:cabs:" <> cityId.getId
+
 routeKey :: CityId -> Text -> Text
 routeKey cityId routeCode = "sharedcab:route:" <> cityId.getId <> ":" <> routeCode
 

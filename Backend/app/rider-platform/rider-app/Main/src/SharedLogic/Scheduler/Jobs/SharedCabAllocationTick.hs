@@ -14,9 +14,9 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.JobScheduler
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, allocationPass)
+import SharedLogic.SharedCab.CabSync (CabSyncFlow)
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled, tickChainContinues)
 import SharedLogic.SharedCab.FindingTimeout (CancelFlow, cancelTimedOutFindings)
-import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import SharedLogic.SharedCab.Schedule (claimTickRun, claimedTick, ensureExpiryJob, ownAllocationChain, scheduleNextTick, withCityTickLease)
 import SharedLogic.SharedCab.StopProgress (runStopProgress)
 import Storage.Beam.SchedulerJob ()
@@ -36,7 +36,7 @@ sharedCabAllocationTick ::
     Metrics.CoreMetrics m,
     HasField "blackListedJobs" r [Text],
     EncFlow m r,
-    LtsFlow m r c,
+    CabSyncFlow m r,
     CancelFlow m r c
   ) =>
   Job 'SharedCabAllocationTick ->

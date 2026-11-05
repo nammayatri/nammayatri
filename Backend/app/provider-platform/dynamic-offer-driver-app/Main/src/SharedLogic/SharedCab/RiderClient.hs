@@ -3,16 +3,11 @@
 -- | driver-app -> rider-app client for the shared-cab internal API (/internal/sharedCab/*). Every call maps the rider app's
 -- APIError envelope onto BapProxyError, so the driver app surfaces the rider app's errorCode and HTTP status unchanged.
 module SharedLogic.SharedCab.RiderClient
-  ( SessionAPI,
-    BAPRouteOperationReq (..),
-    BAPSessionOperationReq (..),
+  ( BAPSessionOperationReq (..),
     BAPBookingOperationReq (..),
-    sessionProbeClient,
     BAPDemandReq (..),
-    getSharedCabRouteData,
     postSharedCabRoutesDemand,
-    postRouteOperation,
-    getSharedCabSession,
+    postCabSync,
     postSessionOperation,
     postBookingOperation,
     RiderCallNumberResp (..),
@@ -25,7 +20,6 @@ module SharedLogic.SharedCab.RiderClient
 where
 
 import API.Types.UI.SharedCab
-import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
 import Domain.Types.Extra.SharedCab ()
 import Domain.Types.SharedCabSession
@@ -48,26 +42,6 @@ type BAPFlow m r =
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasRequestId r
   )
-
--- | Contract: `mode` is passed as null per the rider-app endpoint convention.
-data BAPRouteOperationReq = BAPRouteOperationReq
-  { operation :: SharedCabRouteOperation,
-    driverId :: Text,
-    vehicleNumber :: Text,
-    -- the SHARED_CAB config's agency_key (GTFS agency gtfsId like "<feed>:SHARED_CAB"), the one identity both
-    -- integrated_bpp_config rows share; rider-app looks its own row up by it
-    agencyId :: Maybe Text,
-    capacity :: Maybe Int,
-    routeCode :: Maybe Text,
-    walkupCount :: Maybe Int,
-    mode :: Maybe SelectRouteMode,
-    driverName :: Maybe Text,
-    vehicleModel :: Maybe Text,
-    atLastStop :: Maybe Bool,
-    forceEnd :: Maybe Bool
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON)
 
 data BAPSessionOperationReq = BAPSessionOperationReq
   { operation :: SharedCabSessionOperation,
@@ -99,30 +73,12 @@ type InternalAPI api = "internal" :> "sharedCab" :> api
 
 type TokenHeader = Header "token" Text
 
-type RouteDataAPI =
-  InternalAPI
-    ( "routes"
-        :> "data"
-        :> QueryParam' '[Required, Strict] "agencyId" Text
-        :> TokenHeader
-        :> Get '[JSON] SharedCabRouteDataResp
-    )
-
 type DemandAPI = InternalAPI ("routes" :> "demand" :> TokenHeader :> ReqBody '[JSON] BAPDemandReq :> Post '[JSON] SharedCabDemandResp)
 
-type RouteOperationAPI = InternalAPI ("route" :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPRouteOperationReq :> Post '[JSON] SelectRouteResp)
+-- | The cab's trip, which driver-app owns, for rider-app's live copy; the answer is the driver's session view.
+type CabSyncAPI = InternalAPI ("cab" :> "sync" :> TokenHeader :> ReqBody '[JSON] CabUpdate :> Post '[JSON] CabSyncResp)
 
--- | Parameterised on the response so the reconciler can probe the same endpoint without decoding the session.
-type SessionAPI res =
-  InternalAPI
-    ( "session"
-        :> QueryParam' '[Required, Strict] "driverId" Text
-        :> QueryParam' '[Required, Strict] "vehicleNumber" Text
-        :> TokenHeader
-        :> Get '[JSON] res
-    )
-
-type SessionOperationAPI = InternalAPI ("session" :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPSessionOperationReq :> Post '[JSON] SharedCabSession)
+type SessionOperationAPI = InternalAPI ("session" :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPSessionOperationReq :> Post '[JSON] SharedCabSeatsResp)
 
 type BookingOperationAPI = InternalAPI ("booking" :> Capture "bookingId" Text :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPBookingOperationReq :> Post '[JSON] SharedCabSession)
 
@@ -151,13 +107,6 @@ data BAPMessageReq = BAPMessageReq
 
 type MessageAPI = InternalAPI ("booking" :> Capture "bookingId" Text :> "message" :> TokenHeader :> ReqBody '[JSON] BAPMessageReq :> Post '[JSON] APISuccess)
 
-sessionClient :: Text -> Text -> Maybe Text -> EulerClient (Maybe SharedCabSession)
-sessionClient = client (Proxy @(SessionAPI (Maybe SharedCabSession)))
-
--- | The reconciler only asks whether a session exists, so it does not decode one.
-sessionProbeClient :: Text -> Text -> Maybe Text -> EulerClient Aeson.Value
-sessionProbeClient = client (Proxy @(SessionAPI Aeson.Value))
-
 callRider :: (BAPFlow m r, SanitizedUrl api, ToJSON a) => BaseUrl -> Text -> EulerClient a -> Proxy api -> m a
 callRider internalUrl desc eulerClient api = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
@@ -174,30 +123,15 @@ prepareRiderClientHttpManager :: HM.HashMap Text Http.ManagerSettings
 prepareRiderClientHttpManager =
   HM.singleton riderClientManagerKey $ Http.tlsManagerSettings {Http.managerResponseTimeout = Http.responseTimeoutMicro (riderClientTimeoutMs * 1000)}
 
-getSharedCabRouteData :: BAPFlow m r => Text -> BaseUrl -> Text -> m SharedCabRouteDataResp
-getSharedCabRouteData apiKey internalUrl agencyId = do
-  callRider internalUrl "GetSharedCabRouteData" (client (Proxy @RouteDataAPI) agencyId (Just apiKey)) (Proxy @RouteDataAPI)
-
 postSharedCabRoutesDemand :: BAPFlow m r => Text -> BaseUrl -> BAPDemandReq -> m SharedCabDemandResp
 postSharedCabRoutesDemand apiKey internalUrl req = do
   callRider internalUrl "PostSharedCabRoutesDemand" (client (Proxy @DemandAPI) (Just apiKey) req) (Proxy @DemandAPI)
 
-postRouteOperation :: BAPFlow m r => Text -> BaseUrl -> BAPRouteOperationReq -> m SelectRouteResp
-postRouteOperation apiKey internalUrl req = do
-  callRider internalUrl "SharedCabRouteOperation" (client (Proxy @RouteOperationAPI) (Just apiKey) req) (Proxy @RouteOperationAPI)
+postCabSync :: BAPFlow m r => Text -> BaseUrl -> CabUpdate -> m CabSyncResp
+postCabSync apiKey internalUrl req =
+  callRider internalUrl "SharedCabCabSync" (client (Proxy @CabSyncAPI) (Just apiKey) req) (Proxy @CabSyncAPI)
 
--- | No live session arrives as SHARED_CAB_SESSION_NOT_FOUND in the error body (not a bare status); every other error re-throws verbatim.
-getSharedCabSession :: BAPFlow m r => Text -> BaseUrl -> Text -> Text -> m (Maybe SharedCabSession)
-getSharedCabSession apiKey internalUrl driverId vehicleNumber = do
-  callRider internalUrl "GetSharedCabSession" (sessionClient driverId vehicleNumber (Just apiKey)) (Proxy @(SessionAPI (Maybe SharedCabSession)))
-    `catch` \case
-      BapProxyResponseError _ code _ _ | code == sessionNotFoundErrorCode -> pure Nothing
-      err -> throwError err
-
-sessionNotFoundErrorCode :: Text
-sessionNotFoundErrorCode = "SHARED_CAB_SESSION_NOT_FOUND"
-
-postSessionOperation :: BAPFlow m r => Text -> BaseUrl -> BAPSessionOperationReq -> m SharedCabSession
+postSessionOperation :: BAPFlow m r => Text -> BaseUrl -> BAPSessionOperationReq -> m SharedCabSeatsResp
 postSessionOperation apiKey internalUrl req = do
   callRider internalUrl "SharedCabSessionOperation" (client (Proxy @SessionOperationAPI) (Just apiKey) req) (Proxy @SessionOperationAPI)
 

@@ -82,8 +82,9 @@ candidate plate =
             status = ACTIVE,
             pauseReason = Nothing,
             version = 0,
+            tripVersion = 0,
             startedAt = t0,
-            vehicleTripId = Id "trip1"
+            vehicleTripId = "trip1"
           },
       rcEtaToBoardStopSec = 60,
       rcUpcomingStop = LT.UpcomingStop (LT.Stop "S1" stop "S1" 1 0 0) t0 LT.Upcoming Nothing,
