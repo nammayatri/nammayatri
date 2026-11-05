@@ -231,7 +231,7 @@ dispatchConsequence ctx driverId = \case
             walletSubscriptionCity <- isWalletSubscriptionCity transporterConfig
             if walletSubscriptionCity
               then do
-                -- Wallet-subscription city: debit the driver's wallet right away (an allocator job) instead of
+                -- Wallet-subscription city: debit the driver's wallet right away (a retried job) instead of
                 -- creating a fee that would wait for a daily collection.
                 chargeId <- generateGUIDText
                 JC.createJobIn @_ @'ChargeWalletPenalty (Just ctx.merchantId) (Just ctx.merchantOperatingCityId) 0 $

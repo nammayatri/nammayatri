@@ -18,6 +18,8 @@ module Lib.Finance.Ledger.Service
   ( -- * Create operations
     createEntry,
     createEntryWithBalanceUpdate,
+    balanceUpdateFailedVoidReason,
+    entryMovedMoney,
     createReversal,
 
     -- * Status management
@@ -82,6 +84,7 @@ import Kernel.Prelude
 import Kernel.Types.Common ()
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.Finance.Account.Service (withAccountWriteLock, withMasterReads)
 import qualified Lib.Finance.AccountConfig as AccountConfig
 import Lib.Finance.Audit.Interface (AuditInput (..))
 import qualified Lib.Finance.Audit.Service as Audit
@@ -219,6 +222,7 @@ createEntry input = do
             entityReferenceId = input.entityReferenceId,
             entityReferenceType = input.entityReferenceType,
             reversalOf = Nothing,
+            reversedBy = Nothing,
             voidReason = Nothing,
             settledAt = Nothing,
             metadataV2 = input.metadata,
@@ -241,9 +245,13 @@ createEntry input = do
             updatedAt = now
           }
 
-  QLedger.create entry
-  auditLedgerCreate actorInfo entry
-  pure $ Right entry
+  findPostedLeg input.referenceType input.referenceId input.entityReferenceId input.fromAccountId input.toAccountId Nothing >>= \case
+    Just existing -> pure (alreadyPosted input.amount existing)
+    Nothing ->
+      insertLeg entry >>= \case
+        Left err -> pure (Left err)
+        Right (Just existing) -> pure (Right existing)
+        Right Nothing -> auditLedgerCreate actorInfo entry >> pure (Right entry)
 
 -- | Create a ledger entry AND update account balances atomically
 -- LAW 1: Credits = Debits (fromAccount debited, toAccount credited)
@@ -271,6 +279,37 @@ createEntryWithBalanceUpdate ::
   m (Either FinanceError LedgerEntry)
 createEntryWithBalanceUpdate input = do
   actorInfo <- asks (.actorInfo)
+  result <- withAccountWriteLock [input.fromAccountId, input.toAccountId] (postEntryWithBalances actorInfo input)
+  -- The audit row is written after the lock is released, keeping the locked section to the balance work;
+  -- only for an entry this call created, not for a leg that was already posted.
+  case result of
+    Right (True, entry) -> auditLedgerCreate actorInfo entry
+    _ -> pure ()
+  pure (snd <$> result)
+
+-- | The locked half of 'createEntryWithBalanceUpdate'. A leg that is already posted is returned as it is
+--   (no balance change, and before the negative-balance gate, which an already-made debit must not fail);
+--   otherwise the entry and balances are written. True when this call created the entry. The caller holds
+--   the account write lock.
+postEntryWithBalances ::
+  (BeamFlow.BeamFlow m r) =>
+  ActorInfo ->
+  LedgerEntryInput ->
+  m (Either FinanceError (Bool, LedgerEntry))
+postEntryWithBalances actorInfo input =
+  findPostedLeg input.referenceType input.referenceId input.entityReferenceId input.fromAccountId input.toAccountId Nothing >>= \case
+    Just existing -> pure ((\e -> (False, e)) <$> alreadyPosted input.amount existing)
+    Nothing -> postNewEntryWithBalances actorInfo input
+
+-- | Reads both accounts, applies the negative-balance gate and writes the entry and balances.
+postNewEntryWithBalances ::
+  (BeamFlow.BeamFlow m r) =>
+  ActorInfo ->
+  LedgerEntryInput ->
+  m (Either FinanceError (Bool, LedgerEntry))
+postNewEntryWithBalances actorInfo input = do
+  -- Read inside the account write lock, so the balances computed below can't be overwritten by a
+  -- concurrent posting on either account.
   mbFromAccount <- QAccount.findById input.fromAccountId
   mbToAccount <- QAccount.findById input.toAccountId
 
@@ -318,7 +357,7 @@ createEntryWithBalances ::
   HighPrecMoney ->
   HighPrecMoney ->
   HighPrecMoney ->
-  m (Either FinanceError LedgerEntry)
+  m (Either FinanceError (Bool, LedgerEntry))
 createEntryWithBalances actorInfo input entryId now fromStartBal fromEndBal toStartBal toEndBal = do
   let entry =
         LedgerEntry
@@ -335,6 +374,7 @@ createEntryWithBalances actorInfo input entryId now fromStartBal fromEndBal toSt
             entityReferenceId = input.entityReferenceId,
             entityReferenceType = input.entityReferenceType,
             reversalOf = Nothing,
+            reversedBy = Nothing,
             voidReason = Nothing,
             settledAt = Nothing,
             metadataV2 = input.metadata,
@@ -356,11 +396,100 @@ createEntryWithBalances actorInfo input entryId now fromStartBal fromEndBal toSt
             createdAt = now,
             updatedAt = now
           }
-  QLedger.create entry
-  _ <- QAccount.updateBalance fromEndBal input.fromAccountId
-  _ <- QAccount.updateBalance toEndBal input.toAccountId
-  auditLedgerCreate actorInfo entry
-  pure $ Right entry
+  -- The entry is written first (a concurrent post of the same leg that won is returned instead, with no
+  -- balance change), then the two balances (separate stores, so no transaction). If a balance write fails,
+  -- the entry is voided as 'balanceUpdateFailedVoidReason' and both balances are put back to their starting
+  -- values (safe: the caller holds the account write lock), so the leg can be posted again. A process crash
+  -- between the writes is not covered.
+  insertLeg entry >>= \case
+    Left err -> pure (Left err)
+    Right (Just existing) -> pure (Right (False, existing))
+    Right Nothing -> do
+      balanceWrite <- try @_ @SomeException $ do
+        QAccount.updateBalance fromEndBal input.fromAccountId
+        QAccount.updateBalance toEndBal input.toAccountId
+      case balanceWrite of
+        Left err -> do
+          compensation <- try @_ @SomeException $ do
+            QAccount.updateBalance fromStartBal input.fromAccountId
+            QAccount.updateBalance toStartBal input.toAccountId
+            QLedger.updateVoided VOIDED (Just balanceUpdateFailedVoidReason) (Just actorInfo.actorType) actorInfo.actorId entry.id
+          case compensation of
+            Left compErr -> logError $ "Ledger entry " <> entry.id.getId <> ": balance update failed and could not be undone: " <> show compErr
+            Right () -> pure ()
+          throwM err
+        Right () -> pure $ Right (True, entry)
+
+-- | Void reason of an entry whose balance update failed and was undone: the entry moved no money, so the
+--   once-per-reference checks ignore it.
+balanceUpdateFailedVoidReason :: Text
+balanceUpdateFailedVoidReason = "BalanceUpdateFailed"
+
+-- | Whether an entry counts for a "posted already?" check: one voided because its balance update failed
+--   moved no money, so its reference may be posted again.
+entryMovedMoney :: LedgerEntry -> Bool
+entryMovedMoney e = not (e.status == VOIDED && e.voidReason == Just balanceUpdateFailedVoidReason)
+
+-- | The ledger's one idempotency rule: a leg -- (reference type, reference id, entity reference, from account,
+--   to account, entry reversed) -- is posted at most once among entries that aren't voided or reversed (a unique
+--   index on finance_ledger_entry enforces it). Posting a leg that is already in the ledger returns that entry and moves
+--   no money, so any flow can be run again safely; two different charges must differ in reference type or in
+--   entity reference. Read from the master, so a posting made a moment ago is seen.
+findPostedLeg ::
+  (BeamFlow.BeamFlow m r) =>
+  Text -> -- Reference type
+  Text -> -- Reference id
+  Maybe Text -> -- Entity reference id
+  Id Account -> -- From account
+  Id Account -> -- To account
+  Maybe (Id LedgerEntry) -> -- Entry reversed (Nothing for a posting), so a reversal only matches a reversal of the same entry
+  m (Maybe LedgerEntry)
+findPostedLeg referenceType referenceId entityReferenceId fromAccountId toAccountId reversalOf = do
+  entries <- withMasterReads (QLedger.findByReference referenceType referenceId)
+  -- A reversal keeps its original's reference, so the entries reversed are known from the same rows
+  -- (this also covers entries reversed before 'reversedBy' was recorded).
+  let reversed = [originalId | e <- entries, e.status /= VOIDED, Just originalId <- [e.reversalOf]]
+  pure $ find (\e -> sameLeg e && e.id `notElem` reversed) entries
+  where
+    sameLeg e =
+      e.status /= VOIDED
+        && e.entityReferenceId == entityReferenceId
+        && e.fromAccountId == fromAccountId
+        && e.toAccountId == toAccountId
+        && e.reversalOf == reversalOf
+
+-- | A leg found already posted (and not reversed): the same amount is the same posting, so its entry is returned; a different
+--   amount is a different charge reusing the leg, which is refused rather than silently skipped. Amounts are compared at
+--   stored precision: an amount is written through a Double, so a recomputed amount (a rate or a division) differs from
+--   the stored one in its last digits.
+alreadyPosted :: HighPrecMoney -> LedgerEntry -> Either FinanceError LedgerEntry
+alreadyPosted amount existing
+  | abs (existing.amount - amount) <= storedAmountPrecision = Right existing
+  | otherwise =
+    Left $
+      LedgerError DuplicateEntry $
+        "leg " <> existing.referenceType <> " for " <> existing.referenceId <> " is already posted with amount " <> show existing.amount <> ", not " <> show amount
+
+-- | Two amounts this close are the same amount once stored.
+storedAmountPrecision :: HighPrecMoney
+storedAmountPrecision = 1e-6
+
+-- | Inserts the entry. If the insert fails because a concurrent post of the same leg got in first (the unique
+--   index), that entry is returned (Right (Just existing)); any other failure is rethrown. Right Nothing when
+--   this call inserted it.
+insertLeg ::
+  (BeamFlow.BeamFlow m r) =>
+  LedgerEntry ->
+  m (Either FinanceError (Maybe LedgerEntry))
+insertLeg entry =
+  try @_ @SomeException (QLedger.create entry) >>= \case
+    Right () -> pure (Right Nothing)
+    Left err ->
+      findPostedLeg entry.referenceType entry.referenceId entry.entityReferenceId entry.fromAccountId entry.toAccountId entry.reversalOf >>= \case
+        -- The insert went in although the call failed: it is this call's entry.
+        Just existing | existing.id == entry.id -> pure (Right Nothing)
+        Just existing -> pure (Just <$> alreadyPosted entry.amount existing)
+        Nothing -> throwM err
 
 -- | Create a reversal entry for an existing entry
 -- LAW 2: History is immutable - we create a new entry, not modify the old one
@@ -371,10 +500,12 @@ createReversal ::
   m (Either FinanceError LedgerEntry)
 createReversal originalId reason = do
   actorInfo <- asks (.actorInfo)
-  mbOriginal <- QLedger.findById originalId
+  mbOriginal <- withMasterReads (QLedger.findById originalId)
 
   case mbOriginal of
     Nothing -> pure $ Left $ LedgerError InvalidReversal (show originalId)
+    -- An entry whose balance update failed and was undone moved no money: there is nothing to reverse.
+    Just original | not (entryMovedMoney original) -> pure $ Left $ LedgerError InvalidReversal (show originalId <> " moved no money")
     Just original -> do
       now <- getCurrentTime
       reversalId <- generateGUID
@@ -394,6 +525,7 @@ createReversal originalId reason = do
                 entityReferenceId = original.entityReferenceId,
                 entityReferenceType = original.entityReferenceType,
                 reversalOf = Just originalId,
+                reversedBy = Nothing,
                 voidReason = Nothing,
                 settledAt = Just now,
                 metadataV2 =
@@ -426,20 +558,49 @@ createReversal originalId reason = do
                 updatedAt = now
               }
 
-      QLedger.create reversal
-
       -- Update account balances: undo the original's type-aware delta.
       -- createEntryWithBalanceUpdate applies from +amount / to -amount for Asset|Expense
       -- accounts and the opposite for the rest, so the reversal must invert exactly that
       -- per account type (a flat from +/to - doubles Asset|Expense balances).
-      mbFrom <- QAccount.findById original.fromAccountId
-      mbTo <- QAccount.findById original.toAccountId
-      let isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
-      forM_ mbFrom $ \a -> QAccount.updateBalance (if isAssetOrExpenseAccount a then a.balance - original.amount else a.balance + original.amount) original.fromAccountId
-      forM_ mbTo $ \a -> QAccount.updateBalance (if isAssetOrExpenseAccount a then a.balance + original.amount else a.balance - original.amount) original.toAccountId
-
-      auditLedgerReversal actorInfo reversal
-      pure $ Right reversal
+      -- The entry and balances are written under the account write lock; if a balance write fails, the
+      -- balances are put back and the reversal is voided as 'balanceUpdateFailedVoidReason', as for a posting.
+      -- Reversing the same entry again returns the reversal already made (the reversal is a leg like any other).
+      -- The original is marked reversed before the reversal is inserted, so the leg unique index stops covering
+      -- it and the leg can be posted again; a mark left by a failed reversal is harmless, as postings check
+      -- for a live reversal row, not the mark.
+      result <-
+        withAccountWriteLock [original.fromAccountId, original.toAccountId] $
+          findPostedLeg reversal.referenceType reversal.referenceId reversal.entityReferenceId reversal.fromAccountId reversal.toAccountId reversal.reversalOf >>= \case
+            Just existing -> pure ((\e -> (False, e)) <$> alreadyPosted reversal.amount existing)
+            Nothing -> do
+              -- Read before the mark: a write ends the master reads 'withAccountWriteLock' set.
+              mbFrom <- QAccount.findById original.fromAccountId
+              mbTo <- QAccount.findById original.toAccountId
+              QLedger.updateReversedBy (Just reversal.id) (Just actorInfo.actorType) actorInfo.actorId originalId
+              insertLeg reversal >>= \case
+                Left err -> pure (Left err)
+                Right (Just existing) -> pure (Right (False, existing))
+                Right Nothing -> do
+                  let isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
+                  balanceWrite <- try @_ @SomeException $ do
+                    forM_ mbFrom $ \a -> QAccount.updateBalance (if isAssetOrExpenseAccount a then a.balance - original.amount else a.balance + original.amount) original.fromAccountId
+                    forM_ mbTo $ \a -> QAccount.updateBalance (if isAssetOrExpenseAccount a then a.balance + original.amount else a.balance - original.amount) original.toAccountId
+                  case balanceWrite of
+                    Left err -> do
+                      compensation <- try @_ @SomeException $ do
+                        forM_ mbFrom $ \a -> QAccount.updateBalance a.balance original.fromAccountId
+                        forM_ mbTo $ \a -> QAccount.updateBalance a.balance original.toAccountId
+                        QLedger.updateVoided VOIDED (Just balanceUpdateFailedVoidReason) (Just actorInfo.actorType) actorInfo.actorId reversal.id
+                        QLedger.updateReversedBy Nothing (Just actorInfo.actorType) actorInfo.actorId originalId
+                      case compensation of
+                        Left compErr -> logError $ "Reversal " <> reversal.id.getId <> ": balance update failed and could not be undone: " <> show compErr
+                        Right () -> pure ()
+                      throwM err
+                    Right () -> pure (Right (True, reversal))
+      case result of
+        Right (True, r) -> auditLedgerReversal actorInfo r
+        _ -> pure ()
+      pure (snd <$> result)
 
 --------------------------------------------------------------------------------
 -- STATUS MANAGEMENT (These are generic, domain just calls them)
@@ -472,42 +633,45 @@ settleEntry ::
   m ()
 settleEntry entryId = do
   actorInfo <- asks (.actorInfo)
-  mbEntry <- QLedger.findById entryId
-  forM_ mbEntry $ \entry ->
-    when (entry.status == PENDING || entry.status == DUE) $ do
-      mbFrom <- QAccount.findById entry.fromAccountId
-      mbTo <- QAccount.findById entry.toAccountId
-      case (mbFrom, mbTo) of
-        (Just fromAccount, Just toAccount) -> do
-          now <- getCurrentTime
-          let amount = entry.amount
-              isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
-              fromStartBal = fromAccount.balance
-              toStartBal = toAccount.balance
-              fromEndBal =
-                if isAssetOrExpenseAccount fromAccount
-                  then fromStartBal + amount
-                  else fromStartBal - amount
-              toEndBal =
-                if isAssetOrExpenseAccount toAccount
-                  then toStartBal - amount
-                  else toStartBal + amount
-          _ <- QAccount.updateBalance fromEndBal entry.fromAccountId
-          _ <- QAccount.updateBalance toEndBal entry.toAccountId
-          let updatedEntry =
-                entry
-                  { status = SETTLED,
-                    settledAt = Just now,
-                    fromStartingBalance = Just fromStartBal,
-                    fromEndingBalance = Just fromEndBal,
-                    toStartingBalance = Just toStartBal,
-                    toEndingBalance = Just toEndBal,
-                    updatedBy = Just actorInfo.actorType,
-                    updatedById = actorInfo.actorId
-                  }
-          QLedger.updateByPrimaryKey updatedEntry
-          auditLedgerUpdate actorInfo StatusChanged entry updatedEntry
-        _ -> pure ()
+  mbEntry0 <- withMasterReads (QLedger.findById entryId)
+  -- The entry is re-read under the account write lock, so two settles of one entry can't both apply it.
+  forM_ mbEntry0 $ \entry0 -> withAccountWriteLock [entry0.fromAccountId, entry0.toAccountId] $ do
+    mbEntry <- QLedger.findById entryId
+    forM_ mbEntry $ \entry ->
+      when (entry.status == PENDING || entry.status == DUE) $ do
+        mbFrom <- QAccount.findById entry.fromAccountId
+        mbTo <- QAccount.findById entry.toAccountId
+        case (mbFrom, mbTo) of
+          (Just fromAccount, Just toAccount) -> do
+            now <- getCurrentTime
+            let amount = entry.amount
+                isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
+                fromStartBal = fromAccount.balance
+                toStartBal = toAccount.balance
+                fromEndBal =
+                  if isAssetOrExpenseAccount fromAccount
+                    then fromStartBal + amount
+                    else fromStartBal - amount
+                toEndBal =
+                  if isAssetOrExpenseAccount toAccount
+                    then toStartBal - amount
+                    else toStartBal + amount
+            _ <- QAccount.updateBalance fromEndBal entry.fromAccountId
+            _ <- QAccount.updateBalance toEndBal entry.toAccountId
+            let updatedEntry =
+                  entry
+                    { status = SETTLED,
+                      settledAt = Just now,
+                      fromStartingBalance = Just fromStartBal,
+                      fromEndingBalance = Just fromEndBal,
+                      toStartingBalance = Just toStartBal,
+                      toEndingBalance = Just toEndBal,
+                      updatedBy = Just actorInfo.actorType,
+                      updatedById = actorInfo.actorId
+                    }
+            QLedger.updateByPrimaryKey updatedEntry
+            auditLedgerUpdate actorInfo StatusChanged entry updatedEntry
+          _ -> pure ()
 
 -- | Field-wise merge: prefer non-Nothing from the left (new) side.
 mergeLedgerEntryMetadata :: LedgerEntryMetadata -> LedgerEntryMetadata -> LedgerEntryMetadata
@@ -586,20 +750,23 @@ getEntry ::
   m (Maybe LedgerEntry)
 getEntry = QLedger.findById
 
--- | Get all entries for a reference (e.g., rideId)
+-- | Get all entries for a reference (e.g., rideId). Like every by-reference read below, it leaves out
+--   entries voided because their balance update failed ('entryMovedMoney'): they moved no money, so every
+--   "posted already?" check, hold lookup and reversal picker must treat them as absent. These reads go to
+--   the master: they back those checks, which must see a posting made a moment ago (a replica may not).
 getEntriesByReference ::
   (BeamFlow.BeamFlow m r) =>
   Text -> -- Reference type (e.g., "RIDE")
   Text -> -- Reference ID
   m [LedgerEntry]
-getEntriesByReference = QLedger.findByReference
+getEntriesByReference refType refId = filter entryMovedMoney <$> withMasterReads (QLedger.findByReference refType refId)
 
 -- | Every entry under one reference id (e.g. rideId), across all reference types
 getEntriesByReferenceId ::
   (BeamFlow.BeamFlow m r) =>
   Text -> -- Reference ID
   m [LedgerEntry]
-getEntriesByReferenceId = QLedgerExtra.findByReferenceId
+getEntriesByReferenceId refId = filter entryMovedMoney <$> withMasterReads (QLedgerExtra.findByReferenceId refId)
 
 -- | Every entry for a sub-domain entity (e.g. one refund request), reversals included —
 --   a reversal inherits the entity reference of the entry it reverses.
@@ -609,7 +776,7 @@ getEntriesByEntityReference ::
   Text -> -- Entity reference ID (e.g. refundRequestId)
   m [LedgerEntry]
 getEntriesByEntityReference entityRefType entityRefId =
-  QLedger.findByEntityReference (Just entityRefType) (Just entityRefId)
+  filter entryMovedMoney <$> withMasterReads (QLedger.findByEntityReference (Just entityRefType) (Just entityRefId))
 
 -- | Entries for (refType, refId) where toAccountId matches — i.e. credits
 -- landing in the given account. Use for earn-side lookups.
@@ -619,7 +786,7 @@ getEntriesByReferenceAndToAccount ::
   Text -> -- Reference ID
   Id Account ->
   m [LedgerEntry]
-getEntriesByReferenceAndToAccount = QLedger.findByReferenceAndToAccount
+getEntriesByReferenceAndToAccount refType refId accountId = filter entryMovedMoney <$> withMasterReads (QLedger.findByReferenceAndToAccount refType refId accountId)
 
 -- | Entries for (refType, refId) where fromAccountId matches — i.e. debits
 -- leaving the given account. Use for burn-side lookups.
@@ -629,7 +796,7 @@ getEntriesByReferenceAndFromAccount ::
   Text -> -- Reference ID
   Id Account ->
   m [LedgerEntry]
-getEntriesByReferenceAndFromAccount = QLedger.findByReferenceAndFromAccount
+getEntriesByReferenceAndFromAccount refType refId accountId = filter entryMovedMoney <$> withMasterReads (QLedger.findByReferenceAndFromAccount refType refId accountId)
 
 getEntriesByFromAccountStatusAndReferenceType ::
   (BeamFlow.BeamFlow m r) =>

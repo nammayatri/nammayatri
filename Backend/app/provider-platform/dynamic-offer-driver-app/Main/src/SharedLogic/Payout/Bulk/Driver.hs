@@ -46,6 +46,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.Balance (withOwnerLockOrSkip)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -62,7 +63,6 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobInWithCheck)
 import SharedLogic.Allocator
-import SharedLogic.Finance.Wallet (makeWalletRunningBalanceLockKey)
 import SharedLogic.Finance.WalletPayout (PayoutContext (..), PayoutPrefetch (..), WalletPayoutFlow, WalletPayoutParams (..), initiateWalletPayoutWith, runWalletPayout, runWalletPayoutWith)
 import SharedLogic.Payout.Bulk.Claim (beneficiaryBankOf, claimBeneficiary)
 import SharedLogic.Payout.Bulk.Eligibility (BulkCandidate, usableBankDetails)
@@ -341,7 +341,7 @@ rerunWalletLedgerStep ::
   m ()
 rerunWalletLedgerStep merchantOpCityId merchantId personId request amount status afterLedger = do
   settleRan <- liftIO (newIORef False)
-  Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey personId) 10 10 50000 $ do
+  withOwnerLockOrSkip personId $ do
     person <- QPerson.findById (Id personId) >>= fromMaybeM (PersonNotFound personId)
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId)
     UIPayout.settleDriverWalletPayoutLedgerFor (Id merchantOpCityId) merchantId person transporterConfig request amount status

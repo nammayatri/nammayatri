@@ -28,9 +28,10 @@ LedgerEntry:
       derive: "HttpInstance"
 
     # Sub-domain entity an entry belongs to, when referenceId (the ride) is not selective
-    # enough on its own — e.g. the legs of one refund request among the ride's many.
+    # enough on its own — e.g. the legs of one refund request among the ride's many, or one
+    # manual ledger adjustment among the booking's. Part of the leg's identity (unique index).
     EntityReferenceType:
-      enum: "RefundRequest"
+      enum: "RefundRequest,LedgerAdjustmentRequest"
       derive: "HttpInstance"
 
   # NOTE: Mask sensitive values in ledgerEntryToAuditValue (Ledger.Service)
@@ -49,6 +50,9 @@ LedgerEntry:
     entityReferenceId: Maybe Text
     entityReferenceType: Maybe EntityReferenceType
     reversalOf: Maybe (Id LedgerEntry)
+    # Set on an entry when it is reversed (the reversal's id), so the leg unique index stops covering it
+    # and the same leg can be posted again (tip update, payout re-hold, cashback retry).
+    reversedBy: Maybe (Id LedgerEntry)
     voidReason: Maybe Text
     settledAt: Maybe UTCTime
     # Replace the deprecated `metadata` column: it was created as `text` while the Haskell type
@@ -160,6 +164,11 @@ LedgerEntry:
     updateVoided:
       kvFunction: updateWithKV
       params: [status, voidReason, updatedBy, updatedById]
+      where: id
+
+    updateReversedBy:
+      kvFunction: updateWithKV
+      params: [reversedBy, updatedBy, updatedById]
       where: id
 
   extraIndexes:

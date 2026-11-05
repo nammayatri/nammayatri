@@ -38,6 +38,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.Balance (withOwnerLock)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Finance.Storage.Beam.Account as BeamAccount
@@ -112,12 +113,13 @@ walletIntegrityCheck Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
       forM_ driverAccounts $ \(driverId, balance) ->
         whenJust (HashMap.lookup driverId poolByDriver) $ \entry ->
           -- The pool keeps the balance as a JSON number (read back through Double), so it is compared to the paisa.
-          when (maybe True (\cached -> abs (cached - balance) >= 0.005) entry.walletBalance) $ do
-            -- The balance is read again: a posting that landed after this page was read must not be
-            -- overwritten with the older figure.
-            currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner FAccount.DRIVER driverId.getId
-            logWarning $ "WalletIntegrity: pool wallet balance drifted for driver " <> driverId.getId <> "; correcting"
-            setDriverWalletBalanceInPool driverId currentBalance
+          when (maybe True (\cached -> abs (cached - balance) >= 0.005) entry.walletBalance) $
+            -- Under the wallet lock with the balance read again: a posting that landed after this page was
+            -- read must not be overwritten with the older figure.
+            withOwnerLock driverId.getId $ do
+              currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner FAccount.DRIVER driverId.getId
+              logWarning $ "WalletIntegrity: pool wallet balance drifted for driver " <> driverId.getId <> "; correcting"
+              setDriverWalletBalanceInPool driverId currentBalance
 
 -- | Day fees the nightly run left PAYMENT_PENDING because their wallet debit failed (the debit is
 --   idempotent per fee, so trying again is safe). Only recent ones: older pending dues are the

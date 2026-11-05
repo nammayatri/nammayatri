@@ -83,35 +83,36 @@ ensureAutopayRecharge transporterConfig person mbVariant balance = do
             (Just driverPlan, Just mandateId) | driverPlan.autoPayStatus == Just DI.ACTIVE -> do
               mbMandate <- QMandate.findById mandateId
               case mbMandate of
-                Just mandate | mandate.status == DMandate.ACTIVE -> do
-                  now <- getCurrentTime
-                  mbOpen <- findOpenAutopayRecharge person.id
-                  -- A recharge whose charge never ran (jobs down, notification lost) must not block every later
-                  -- one. Past its pay-by date plus a day it is retired; if the gateway did charge it after
-                  -- all, the paid order still credits the wallet (see creditWalletForPaidDriverFees).
-                  mbLive <- case mbOpen of
-                    Just open | now > addUTCTime staleRechargeGrace open.payBy -> do
-                      logWarning $ "Retiring stale Autopay wallet recharge " <> open.id.getId <> " of driver " <> person.id.getId
-                      QDF.updateStatus DDF.INACTIVE open.id now
-                      QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [open.id] Nothing
-                      pure Nothing
-                    _ -> pure mbOpen
-                  case mbLive of
-                    Just open -> pure (Just open)
-                    Nothing -> do
-                      let amount = roundToHalf transporterConfig.currency mandate.maxAmount
-                      -- A mandate with a zero cap would otherwise leave a zero-amount fee pending forever,
-                      -- which then blocks every later recharge as "already open".
-                      if amount <= 0
-                        then do
-                          logWarning $ "Skipping Autopay wallet recharge for driver " <> person.id.getId <> ": mandate cap leaves nothing to charge"
-                          pure Nothing
-                        else do
-                          fee <- buildRechargeFee driverPlan amount
-                          QDF.create fee
-                          QINV.create =<< buildAutopayInvoice fee
-                          logInfo $ "Scheduled Autopay wallet recharge of " <> show amount <> " for driver " <> person.id.getId
-                          pure (Just fee)
+                Just mandate | mandate.status == DMandate.ACTIVE ->
+                  Redis.withWaitAndLockRedis (autopayRechargeLockKey person.id) 10 1000 $ do
+                    now <- getCurrentTime
+                    mbOpen <- findOpenAutopayRecharge person.id
+                    -- A recharge whose charge never ran (jobs down, notification lost) must not block every later
+                    -- one. Past its pay-by date plus a day it is retired; if the gateway did charge it after
+                    -- all, the paid order still credits the wallet (see creditWalletForPaidDriverFees).
+                    mbLive <- case mbOpen of
+                      Just open | now > addUTCTime staleRechargeGrace open.payBy -> do
+                        logWarning $ "Retiring stale Autopay wallet recharge " <> open.id.getId <> " of driver " <> person.id.getId
+                        QDF.updateStatus DDF.INACTIVE open.id now
+                        QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [open.id] Nothing
+                        pure Nothing
+                      _ -> pure mbOpen
+                    case mbLive of
+                      Just open -> pure (Just open)
+                      Nothing -> do
+                        let amount = roundToHalf transporterConfig.currency mandate.maxAmount
+                        -- A mandate with a zero cap would otherwise leave a zero-amount fee pending forever,
+                        -- which then blocks every later recharge as "already open".
+                        if amount <= 0
+                          then do
+                            logWarning $ "Skipping Autopay wallet recharge for driver " <> person.id.getId <> ": mandate cap leaves nothing to charge"
+                            pure Nothing
+                          else do
+                            fee <- buildRechargeFee driverPlan amount
+                            QDF.create fee
+                            QINV.create =<< buildAutopayInvoice fee
+                            logInfo $ "Scheduled Autopay wallet recharge of " <> show amount <> " for driver " <> person.id.getId
+                            pure (Just fee)
                 _ -> pure Nothing
             _ -> pure Nothing
   where
@@ -195,3 +196,6 @@ ensureAutopayRecharge transporterConfig person mbVariant balance = do
             updatedAt = now,
             createdAt = now
           }
+
+autopayRechargeLockKey :: Id DP.Person -> Text
+autopayRechargeLockKey driverId = "WalletAutopayRecharge:" <> driverId.getId

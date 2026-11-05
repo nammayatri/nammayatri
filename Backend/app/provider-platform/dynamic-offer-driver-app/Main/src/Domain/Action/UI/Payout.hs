@@ -73,6 +73,7 @@ import Kernel.Types.Id
 import Kernel.Types.Servant (RawByteString (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.Balance (withOwnerLock)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.Account (CounterpartyType)
 import qualified Lib.Finance.Domain.Types.Transfer as DTransfer
@@ -438,7 +439,8 @@ reportContradictionAfterSuccess merchantOperatingCityId payoutStatus amount payo
       QTransfer.findByReference walletReferencePayout payoutRequestId >>= \case
         Just transfer
           | transfer.status `elem` [DTransfer.SUCCEEDED, DTransfer.NEEDS_REVIEW] ->
-            Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey driverId.getId) 10 10 50000 $ do
+            -- Waits for the lock: a SUCCESS order is never re-polled, so a skipped contradiction would be lost.
+            withOwnerLock driverId.getId $ do
               payoutConfig <- getPayoutConfigForCustomer merchantOperatingCityId payoutOrder.customerId
               -- the provider's current word, same as the normal settlement re-polls
               (updPayoutStatus, _) <- callPayoutServiceAction payoutOrder.orderId driverId payoutConfig
@@ -467,7 +469,8 @@ settleWalletPayoutAcceptedAsPaid ::
 settleWalletPayoutAcceptedAsPaid merchantOperatingCityId payoutOrder = do
   let driverId = Id payoutOrder.customerId
   whenJust (listToMaybe (fromMaybe [] payoutOrder.entityIds)) $ \payoutRequestId ->
-    Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey driverId.getId) 10 10 50000 $ do
+    -- Waits for the lock, so ops never get a success back for a settlement that did not run.
+    withOwnerLock driverId.getId $ do
       payoutReq <- QPR.findById (Id payoutRequestId) >>= fromMaybeM (InternalError ("PayoutRequest not found: " <> payoutRequestId))
       person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
@@ -599,7 +602,9 @@ settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amoun
         Nothing -> pure Nothing
         Just prId -> QPR.findById (Id prId)
 
-      Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey driverId.getId) 10 10 50000 $ do
+      -- Waits for the lock: a status refresh may already have stored SUCCESS, and a SUCCESS order is
+      -- never refreshed again, so a skipped settlement would leave the hold unsettled for good.
+      withOwnerLock driverId.getId $ do
         (updPayoutStatus, _) <- callPayoutServiceAction payoutOrder.orderId driverId payoutConfig
         person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)

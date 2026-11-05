@@ -22,6 +22,7 @@ module SharedLogic.AirportEntryFee
   )
 where
 
+import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Common as DVST
 import qualified Domain.Types.DriverInformation as DI
@@ -39,6 +40,7 @@ import Lib.Finance
     CounterpartyType (DRIVER),
     FinanceCtx (..),
     transfer,
+    withOwnerLock,
   )
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.Extra.LedgerEntry (LedgerEntryMetadata (..))
@@ -170,7 +172,8 @@ checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking = do
     when (available < required) $
       throwError $ InsufficientAirportBalance required available
 
--- | At StartRide, for airport inner-zone: two transfers via FinanceM — GST to GovtIndirect, net to ParkingFeeRecipient (one per city).
+-- | At StartRide, for airport inner-zone: transfers via FinanceM — GST to GovtIndirect, net to ParkingFeeRecipient (one per city),
+--   and the pickup gate's fee items as one leg to ParkingFeeRecipient.
 --   Allows negative balance; does nothing if feature off or required fee 0.
 --   Runs inside startRide before the ride is marked INPROGRESS, so a failed debit fails the start.
 deductAirportEntryFeeAtStartRide ::
@@ -226,25 +229,28 @@ deductAirportEntryFeeAtStartRide enabled ride booking = do
               enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck,
               buyerCounterpartyId = Nothing
             }
-    result <-
-      runFinance ctx $
-        do
-          when (totalFee > 0) $ do
-            void $ transfer OwnerLiability GovtIndirect gstAmount Wallet.walletReferenceAirportEntryFeeGST Nothing
-            void $ transfer OwnerLiability ParkingFeeRecipient airportPortion Wallet.walletReferenceAirportEntryFee Nothing
-          forM_ gateFeeItems $ \item -> do
-            let itemTotal = item.amountWithCurrency.amount
-                mbMetadata = mkGateFeeItemMetadata item
-            void $ transfer OwnerLiability ParkingFeeRecipient itemTotal Wallet.walletReferenceGateDriverFee mbMetadata
+    -- Under the driver's wallet lock. The kernel posts each leg at most once, so a repeated start (or one that
+    -- stopped part way) deducts only what is missing, never twice. The gate's fee items are one charge: one
+    -- leg for their total, carrying the item names.
+    let chargedGateItems = filter (\item -> item.amountWithCurrency.amount > 0) gateFeeItems
+        gateFeeTotal = sum ((.amountWithCurrency.amount) <$> chargedGateItems)
+    result <- withOwnerLock ride.driverId.getId $
+      runFinance ctx $ do
+        when (totalFee > 0) $ do
+          void $ transfer OwnerLiability GovtIndirect gstAmount Wallet.walletReferenceAirportEntryFeeGST Nothing
+          void $ transfer OwnerLiability ParkingFeeRecipient airportPortion Wallet.walletReferenceAirportEntryFee Nothing
+        when (gateFeeTotal > 0) $
+          void $ transfer OwnerLiability ParkingFeeRecipient gateFeeTotal Wallet.walletReferenceGateDriverFee (mkGateFeeMetadata chargedGateItems)
     case result of
       Left err -> fromEitherM (\e -> InternalError ("Airport entry fee deduction failed: " <> show e)) (Left err)
       Right _ -> pure ()
 
--- | The DriverFeeItem's driver-facing name, kept on the ledger entry so a deduction
---   can be traced back to the configured item.
-mkGateFeeItemMetadata :: DGI.GateFeeItem -> Maybe LedgerEntryMetadata
-mkGateFeeItemMetadata item =
-  item.itemName.driver <&> \name ->
+-- | The gate fee items' driver-facing names, kept on the ledger entry so the deduction can be traced back
+--   to the configured items (and shown as the row's name in the wallet history). If any item has no name,
+--   none is kept, so the row shows the generic label rather than naming only part of the charge.
+mkGateFeeMetadata :: [DGI.GateFeeItem] -> Maybe LedgerEntryMetadata
+mkGateFeeMetadata items =
+  (if null items then Nothing else T.intercalate ", " <$> names) <&> \name ->
     LedgerEntryMetadata
       { d2cReferralEarnings = Nothing,
         d2dReferralEarnings = Nothing,
@@ -254,3 +260,5 @@ mkGateFeeItemMetadata item =
         reason = Just name,
         subscriptionAllocations = Nothing
       }
+  where
+    names = mapM (.itemName.driver) items

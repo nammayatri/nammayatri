@@ -189,7 +189,6 @@ module SharedLogic.Finance.Wallet
     createWalletHold,
     voidWalletHoldByReference,
     getWalletAvailableBalanceByOwner,
-    makeWalletRunningBalanceLockKey,
     removePrepaidOfferHold,
     addOfferHoldsForSearchTry,
     getTotalWalletHoldBalance,
@@ -207,6 +206,7 @@ module SharedLogic.Finance.Wallet
 where
 
 import Control.Applicative ((<|>))
+import Data.IORef (newIORef, readIORef, writeIORef)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Types.Booking as SRB
@@ -845,9 +845,6 @@ connectBearerToFunder bearer = case bearer of
   DTC.CONNECT_PLATFORM -> FundByPlatform
   DTC.CONNECT_DRIVER -> FundByDriver
 
-makeWalletRunningBalanceLockKey :: Text -> Text
-makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
-
 createWalletHold ::
   (BeamFlow m r, Lib.Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   CounterpartyType ->
@@ -997,7 +994,11 @@ reserveWalletForCashRide transporterConfig driver booking mbFleetOwnerId mbSearc
               booking.fareParams.govtCharges
               booking.fareParams.tollCharges
               booking.fareParams.parkingCharge
-      Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey walletOwnerId) 10 10 50000 $ do
+      -- The check must run before the booking is accepted, so a busy wallet lock fails the reservation
+      -- (and the caller's cleanup releases the holds) instead of letting the cash ride through unchecked.
+      checkRan <- liftIO (newIORef False)
+      withOwnerLockOrSkip walletOwnerId $ do
+        liftIO (writeIORef checkRan True)
         availableBalance <- fromMaybe 0 <$> getWalletAvailableBalanceByOwner walletCounterpartyType walletOwnerId
         otherOfferHolds <- getWalletOfferHoldTotalExcluding walletOwnerId mbSearchTryId
         existingBookingHold <- getPendingWalletHoldAmountByReference walletCounterpartyType walletOwnerId booking.id.getId
@@ -1011,6 +1012,9 @@ reserveWalletForCashRide transporterConfig driver booking mbFleetOwnerId mbSearc
             createWalletHold walletCounterpartyType walletOwnerId holdAmount booking.currency booking.providerId booking.merchantOperatingCityId booking.id.getId (Just driver.id) Nothing
               >>= fromEitherM (\err -> InternalError ("Failed to create wallet hold: " <> show err))
           whenJust mbSearchTryId $ removeWalletOfferHold walletOwnerId
+      didRun <- liftIO (readIORef checkRan)
+      unless didRun $
+        throwError (InvalidRequest "Wallet is busy; please try again.")
 
 -- | Get all unsettled redeemable wallet entry IDs (credits + debits before cutoff).
 --   Uses DB-level filtering for efficiency.

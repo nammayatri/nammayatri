@@ -71,12 +71,13 @@ sendConnectAccountCharge Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $
       let dwc = tConfig.driverWalletConfig
       case (dwc.connectAccountCharge, dwc.connectAccountChargeBearer, dwc.connectAccountChargeFrequency) of
         (Just charge, Just bearer, Just freq) | charge > 0 -> do
+          period <- connectChargePeriod freq
           let batchSize = 100
               chargeAccount acc = do
                 mbPerson <- QPerson.findById acc.driverId
                 whenJust mbPerson $ \person -> do
                   let counterparty = counterpartyFromRole person.role
-                      chargeCtx = buildDriverChargeCtx counterparty acc.driverId.getId jobData.merchantId.getId merchantOpCityId.getId tConfig.currency ("ConnectAccountCharge-" <> acc.driverId.getId) (fromMaybe False dwc.enableWalletGatedTierCheck)
+                      chargeCtx = buildDriverChargeCtx counterparty acc.driverId.getId jobData.merchantId.getId merchantOpCityId.getId tConfig.currency ("ConnectAccountCharge-" <> acc.driverId.getId <> "-" <> period) (fromMaybe False dwc.enableWalletGatedTierCheck)
                   void $
                     recordStripeChargeLedger chargeCtx (connectBearerToFunder bearer) charge walletReferenceConnectAccountCharges
                       >>= fromEitherM (\e -> InternalError ("Failed to post connect-account charge: " <> show e))
@@ -95,6 +96,17 @@ sendConnectAccountCharge Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $
         _ -> do
           logInfo "Connect-account charge not fully configured (charge/bearer/frequency); stopping job."
           pure Complete
+
+-- | The billing period a run charges (UTC day, ISO week or month), part of the charge's ledger reference:
+--   each period is charged once, and a rerun within the same period posts nothing new.
+connectChargePeriod :: (MonadFlow m) => DTConf.ChargeFrequency -> m Text
+connectChargePeriod freq = do
+  now <- getCurrentTime
+  let format = case freq of
+        DTConf.CHARGE_DAILY -> "%Y-%m-%d"
+        DTConf.CHARGE_WEEKLY -> "%G-W%V"
+        DTConf.CHARGE_MONTHLY -> "%Y-%m"
+  pure $ toText (Time.formatTime Time.defaultTimeLocale format now)
 
 -- | Next run time based on the configured frequency (interval from now, in UTC).
 nextConnectChargeRun :: (MonadFlow m) => DTConf.ChargeFrequency -> m UTCTime
