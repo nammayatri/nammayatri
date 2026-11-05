@@ -92,6 +92,7 @@ onUpdate authResult reqV2 = withFlowHandlerBecknAPI authResult.subscriber.subscr
             DOnUpdate.OUValidatedEditDestConfirmUpdateReq req -> return req.booking
             DOnUpdate.OUValidatedTollCrossedEventReq req -> return req.booking
             DOnUpdate.OUValidatedDestinationReachedReq req -> return req.booking
+            DOnUpdate.OUValidatedDriverNearPickupReq req -> return req.booking
             DOnUpdate.OUValidatedReturnTripStartedReq req -> return req.booking
             DOnUpdate.OUValidatedEstimatedEndTimeRangeReq req -> return req.booking
             DOnUpdate.OUValidatedParcelImageFileUploadReq req -> return req.booking

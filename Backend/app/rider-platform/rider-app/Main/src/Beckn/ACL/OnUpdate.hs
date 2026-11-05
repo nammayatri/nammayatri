@@ -121,6 +121,7 @@ parseEventV2 transactionId messageId bppUri order = do
         "STOP_ARRIVED" -> parseStopArrivedEvent transactionId order
         "TOLL_CROSSED" -> return $ DOnUpdate.OUTollCrossedEventReq $ DOnUpdate.TollCrossedEventReq transactionId
         "DRIVER_REACHED_DESTINATION" -> parseDriverReachedDestinationEvent order
+        "DRIVER_NEAR_PICKUP" -> parseDriverNearPickupEvent order
         "RETURN_TRIP_STARTED" -> parseReturnTripStartedEvent order
         "ESTIMATED_END_TIME_RANGE_UPDATED" -> parseEstimatedEndTimeRangeUpdatedEvent order
         "PARCEL_IMAGE_UPLOADED" -> parseParcelImageUploaded order
@@ -265,6 +266,15 @@ parseDriverReachedDestinationEvent order = do
       DOnUpdate.DestinationReachedReq
         { bppRideId = Id bppRideId,
           ..
+        }
+
+parseDriverNearPickupEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseDriverNearPickupEvent order = do
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in DriverNearPickup Event.")
+  return $
+    DOnUpdate.OUDriverNearPickupReq $
+      DOnUpdate.DriverNearPickupReq
+        { bppRideId = Id bppRideId
         }
 
 parseReturnTripStartedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
