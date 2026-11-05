@@ -269,8 +269,7 @@ emailAuthReq merchant req authEmail =
       registrationLon = Nothing,
       otpChannel = Nothing,
       password = Nothing,
-      employeeId = Nothing,
-      isOperatorReq = Nothing
+      employeeId = Nothing
     }
 
 postAuthEmailVerifyV2 :: Text -> SL.EmailAuthVerifyV2Req -> Environment.Flow SL.SocialLoginV2Res
