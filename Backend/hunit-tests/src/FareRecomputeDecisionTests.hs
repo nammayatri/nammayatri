@@ -42,6 +42,7 @@ baseCfg =
       RD.cfgTimeForgivenessBands = [],
       RD.cfgGateExtraTimeChargeByRecompute = False,
       RD.cfgFloorTimeAtEstimateWithinThreshold = True,
+      RD.cfgFloorTimeAtEstimateOutsideThreshold = False,
       RD.cfgRecomputeCongestionOnEndRide = False,
       RD.cfgEstimatedTollFallback = False,
       RD.cfgNotifyDriverOnBudgetExceeded = True
