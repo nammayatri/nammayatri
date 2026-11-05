@@ -42,7 +42,6 @@ import qualified SharedLogic.Beckn.Common as DTS
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FarePolicy as SFarePolicy
-import SharedLogic.ScheduledRideTopDrivers (filterTopDrivers, resolveTopDriverCriteria)
 import Storage.Beam.SpecialZone ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -189,15 +188,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       -- previously-attempted drivers are sorted to the tail of LTS candidates (chunking only
       -- pulls them in if fresher drivers run out — replaces the old fillBatch backfill).
       (allDriversNotOnRideBeforeTollFilter, allOnRidePoolResultsBeforeTollFilter) <- withTimeAPI "driverPooling" "calcDriverPool" $ calcDriverPool NormalPool transporterConfig blockListedDrivers previousBatchesDrivers airportEntryFee isAirportRequest
-      (allDriversNotOnRideBeforeTopFilter, allOnRidePoolBeforeTopFilter) <- filterTollRouteBlockedDrivers searchReq searchTry.id batchNum allDriversNotOnRideBeforeTollFilter allOnRidePoolResultsBeforeTollFilter
-      (allDriversNotOnRide', allOnRideDriverPoolResults) <-
-        if dispatchMode == ScheduledTopDriversDispatch
-          then do
-            nowForTopDrivers <- getCurrentTime
-            let topDriverCriteria = resolveTopDriverCriteria transporterConfig searchTry.vehicleServiceTier nowForTopDrivers searchTry.startTime
-            topDrivers <- filterTopDrivers searchTry batchNum topDriverCriteria allDriversNotOnRideBeforeTopFilter
-            pure (topDrivers, [])
-          else pure (allDriversNotOnRideBeforeTopFilter, allOnRidePoolBeforeTopFilter)
+      (allDriversNotOnRide', allOnRideDriverPoolResults) <- filterTollRouteBlockedDrivers searchReq searchTry.id batchNum allDriversNotOnRideBeforeTollFilter allOnRidePoolResultsBeforeTollFilter
       let newFilteredDriversWithFavourites = assignTagsToDrivers favDriverIds FavouriteDriver allDriversNotOnRide'
       (driverPoolNotOnRide, driverPoolOnRide) <- do
         case batchNum of
@@ -274,7 +265,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     mbSearchTryId = Just searchTry.id.getId,
                     ..
                   }
-          calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum
+          calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum dispatchMode
 
         calculateNormalBatch mOCityId transporterConfig onlyNewNormalDrivers txnId' onRidePoolResults airportEntryFee isAirportRequest = do
           logDebug $ "calculateNormalBatch txnId " <> show txnId'

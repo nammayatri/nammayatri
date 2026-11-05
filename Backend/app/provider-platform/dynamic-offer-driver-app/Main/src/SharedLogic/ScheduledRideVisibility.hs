@@ -22,6 +22,7 @@ module SharedLogic.ScheduledRideVisibility
     resolveVisibilityStage,
     factsNeededBy,
     isVisibleUnderRules,
+    driverVisibilityFactsFromStats,
     parseVisibilityStagesJson,
   )
 where
@@ -32,10 +33,12 @@ import qualified Data.Aeson.KeyMap as KM
 import Data.List (nub, sortOn)
 import qualified Data.Text as T
 import Domain.Types.Common (ServiceTierType)
+import qualified Domain.Types.DriverStats as DStats
 import Domain.Types.TransporterConfig (ScheduledRideVisibilityRules, ScheduledRideVisibilityStage)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
+import Kernel.Utils.Common (Centesimal (..))
 
 data DriverVisibilityFacts = DriverVisibilityFacts
   { driverRating :: Maybe Double,
@@ -50,6 +53,21 @@ data BookingVisibilityFacts = BookingVisibilityFacts
     walletMeetsMinimum :: Maybe Bool,
     isFavouriteOfRider :: Maybe Bool
   }
+
+-- | Driver facts that come from driver_stats. The rating counts only once the driver has been rated.
+driverVisibilityFactsFromStats :: Maybe DStats.DriverStats -> [Text] -> Double -> Double -> DriverVisibilityFacts
+driverVisibilityFactsFromStats mbStats activeTags driverLat driverLon =
+  DriverVisibilityFacts
+    { driverRating = mbStats >>= \stats -> if fromMaybe 0 stats.totalRatings > 0 then stats.rating <&> (\(Centesimal ratingValue) -> realToFrac ratingValue) else Nothing,
+      driverCompletedRides = (.totalRides) <$> mbStats,
+      driverCancellationRatePct = mbStats >>= cancellationRatePct,
+      driverActiveTags = activeTags,
+      driverLocation = Just LatLong {lat = driverLat, lon = driverLon}
+    }
+  where
+    cancellationRatePct stats = case stats.totalRidesAssigned of
+      Just assigned | assigned > 0 -> Just (fromIntegral (fromMaybe 0 stats.ridesCancelled) * 100 / fromIntegral assigned :: Double)
+      _ -> Nothing
 
 -- | Which facts a rule set needs, so that only those are loaded.
 data VisibilityFactNeeds = VisibilityFactNeeds

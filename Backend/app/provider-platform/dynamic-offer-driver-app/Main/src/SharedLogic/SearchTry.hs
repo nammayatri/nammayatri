@@ -60,7 +60,7 @@ import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Pricing
-import SharedLogic.ScheduledRideTopDrivers (topDriverBatchCount, topDriversLeadTime, topDriversRoundCutoff)
+import SharedLogic.ScheduledRideTopDrivers (topDriversLeadTime, topDriversRoundCutoff)
 import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
 import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
@@ -274,7 +274,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
                 firstRunIn = 2
                 roundEndsIn = maybe 0 (\cutoff -> diffUTCTime cutoff now) (topDriversRoundCutoff batchInterval driverPoolConfig.scheduleTryTimes searchReq.startTime)
                 secondRunIn = diffUTCTime searchReq.startTime now - leadTime
-                roundDuration = fromIntegral topDriverBatchCount * fromIntegral batchInterval
+                roundDuration = fromIntegral driverPoolConfig.maxNumberOfBatches * fromIntegral batchInterval
                 jobData =
                   SendSearchRequestToDriverJobData
                     { searchTryId = searchTry.id,
