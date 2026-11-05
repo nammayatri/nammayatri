@@ -61,7 +61,8 @@ CREATE TABLE IF NOT EXISTS movin.wallet (
 CREATE TABLE IF NOT EXISTS movin.wallet_entry (
   id         bigserial PRIMARY KEY,
   driver_id  text NOT NULL,
-  -- topup | day | adjustment
+  -- topup | day | adjustment | gift (the welcome gift, written by the website's
+  -- admin-api at acceptance since 2026-11-05: docs/wallet.md)
   kind       text NOT NULL,
   amount     integer NOT NULL,
   -- The top-up this came from, for a credit. NULL on a day charge.

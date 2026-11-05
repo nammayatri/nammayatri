@@ -864,12 +864,23 @@ def numbers(window, merchant):
         (SELECT coalesce(sum(t.amount),0) FROM movin.wallet_topup t
            JOIN atlas_driver_offer_bpp.person p ON p.id = t.driver_id
           WHERE p.merchant_id = '{merchant}'
-            AND t.credited_at > now() - interval '{window}')""")
-    if not r or len(r[0]) < 6:
+            AND t.credited_at > now() - interval '{window}'),
+        -- The welcome gift (2026-11-05): Mova's own money, never a top-up, so
+        -- its own line. Read from the ledger, which always exists, rather than
+        -- from the website's table, which a fresh stack may not have yet.
+        (SELECT count(*) FROM movin.wallet_entry e
+           JOIN atlas_driver_offer_bpp.person p ON p.id = e.driver_id
+          WHERE p.merchant_id = '{merchant}' AND e.kind = 'gift'
+            AND e.created_at > now() - interval '{window}'),
+        (SELECT coalesce(sum(e.amount),0) FROM movin.wallet_entry e
+           JOIN atlas_driver_offer_bpp.person p ON p.id = e.driver_id
+          WHERE p.merchant_id = '{merchant}' AND e.kind = 'gift'
+            AND e.created_at > now() - interval '{window}')""")
+    if not r or len(r[0]) < 8:
         return None
     v = r[0]
     return {"rides": v[0], "fare": v[1], "pending": v[2], "fleet": v[3],
-            "new_drivers": v[4], "topups": v[5]}
+            "new_drivers": v[4], "topups": v[5], "gifts": v[6], "gifted": v[7]}
 
 
 def digest(window, title):
@@ -882,6 +893,7 @@ def digest(window, title):
                      f"Courses            {n['rides']}\n"
                      f"Encaissé           {n['fare']} {c['cur']}\n"
                      f"Rechargements      {n['topups']} {c['cur']}\n"
+                     f"Cadeaux offerts    {n['gifts']} · {n['gifted']} {c['cur']}\n"
                      f"Nouveaux chauffeurs {n['new_drivers']}\n"
                      f"Flotte active      {n['fleet']}\n"
                      f"En attente         {n['pending']}")

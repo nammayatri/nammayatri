@@ -95,8 +95,8 @@ The client's rule, stated because it had been half-understood:
 - **The wallet holds only what the driver loads** through Chargily Pay
   (Algeria) or Moosyl (Mauritania). **Never ride money**: Movin takes **0 %**
   on rides, the passenger pays the driver directly, and the two are entirely
-  separate. The ledger's kinds are `topup`, `day` and `adjustment` — no ride
-  fare ever enters it.
+  separate. The ledger's kinds are `topup`, `day`, `adjustment` and, since
+  2026-11-05, `gift` (below) — no ride fare ever enters it.
 - **A driver without the credit for a day (100 DA / 30 MRU) and no day already
   paid for does not work** — however much he earned from rides.
 
@@ -170,6 +170,43 @@ would report the fleet's unspent credit as income.
 Invoice numbers are drawn from `movin.invoice_seq` at the moment a payment is
 *applied*, never when a page is opened, so an abandoned checkout burns none and
 the series has no holes.
+
+### The welcome gift — `gift`, since 2026-11-05
+
+The boss's decision of 2026-11-04: **every new driver receives 3 000 DA
+(Algeria) or 900 MRU (Mauritania) once, when the office accepts him**, for the
+first year after launch day, with no expiry once given — and kept apart from
+real top-ups. It is the one credit in the wallet that the driver did not load,
+and it is Mova's money, not his.
+
+It lives in the website repository, because it is given by the console's
+« Accepter »: `db/migrations/022_welcome_credit.sql` (the setting per country,
+who received it, and the view that splits each worked day) and
+`apps/api/src/modules/welcome-credit/`. What it is here:
+
+- **A ledger row of kind `gift`**, with the balance moved in the same SQL
+  statement, by adding to it — the same way the day charge subtracts — so
+  `movin.wallet_check` stays at zero drift. Nothing in `maps-shim/wallet.js`
+  changed: a gift is credit like any other, so `canWork` and the day charge
+  treat it as such. The rule *no top-up, no work* is unchanged: a driver whose
+  gift is used up loads credit like everyone else.
+- **Once per person**: one row per account, and one per licence number (kept as
+  a sha256, never the number), so a second account with the same permis gets
+  nothing. The licence row survives an account deletion on purpose.
+- **Not revenue.** The gift is spent first, and `movin.wallet_day_funding`
+  says which part of every `day` entry it paid. Revenue is the other part.
+- **The driver reads it** as a line « 🎁 Cadeau de bienvenue · هدية ترحيبية »
+  in his history (the note: app builds before the gift kind show a row's note),
+  and in an agency message sent at acceptance.
+- **Checked**: `launch-gate.sh` prints each country's start date (WARN with
+  none) and WARNs on any gift already given before launch; the bot's digest has
+  a « Cadeaux offerts » line per country.
+
+**Test gifts are taken back before launch, by hand**: the website's
+`db/welcome-credit/take-back.sql` (`psql -v driver_id=<id> -f …`) removes the
+record, the ledger row and the same amount from the balance in one transaction.
+An account erasure does not do it — the ledger outlives a deletion by design —
+which is why `launch-gate.sh` warns while any gift exists before launch.
 
 ### Routes
 

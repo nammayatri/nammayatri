@@ -109,6 +109,19 @@ drift="$(pg -c "select count(*) from movin.wallet_check where drift <> 0")"
 [ "$drift" = 0 ] && pass "every wallet balance equals its ledger" || fail "${drift:-?} wallet(s) disagree with their ledger (movin.wallet_check)"
 neg="$(pg -c "select count(*) from movin.wallet where balance < 0")"
 [ "${neg:-0}" = 0 ] && pass "no negative wallet" || warn "$neg wallet(s) negative (a driver who finished a course on credit; the bot says who)"
+# The welcome gift starts on launch day (the boss, 2026-11-04). With no start
+# date nobody receives it; and a gift already given before launch is a test one,
+# taken back on the day before (docs/wallet.md, *The welcome gift*). The setting
+# is the website's table (its migration 022), so its absence is said, not failed.
+if [ "$(pg -c "select to_regclass('movin.welcome_credit_setting') is not null")" = t ]; then
+  while IFS='|' read -r c amount starts; do
+    [ -z "$c" ] && continue
+    if [ -z "$starts" ]; then warn "$c welcome gift ($amount) has no start date: put launch day in the console, Porte-monnaie"
+    else pass "$c welcome gift: $amount from $starts"; fi
+  done <<<"$(pg -c "select country, amount, coalesce(to_char(starts_on, 'YYYY-MM-DD'), '') from movin.welcome_credit_setting order by country")"
+  gifts="$(pg -c "select count(*) from movin.welcome_credit")"
+  [ "${gifts:-0}" = 0 ] && pass "no welcome gift given yet" || warn "$gifts welcome gift(s) already given: before launch, these are test gifts to take back"
+else warn "no welcome gift setting: the website's migration 022 has not been applied"; fi
 
 say "what protects the data"
 newest="$(ls -t "$BACKUP_DIR"/movin-*.tar.gz.gpg 2>/dev/null | head -1)"
