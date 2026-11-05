@@ -27,6 +27,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.InternalAuth
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.GeometryGeom as QGEO
@@ -45,6 +46,7 @@ type API =
     :> Capture "city" Context.City
     :> "geometry"
     :> "list"
+    :> Header "api-key" Text
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
     :> QueryParam "allCities" Bool
@@ -56,11 +58,13 @@ handler = getGeometryList
 getGeometryList ::
   Id Merchant ->
   Context.City ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   Maybe Bool ->
   FlowHandler [GeometryAPIEntity]
-getGeometryList merchantId city mbLimit mbOffset mbAllCities = withFlowHandlerAPI $ do
+getGeometryList merchantId city apiKey mbLimit mbOffset mbAllCities = withFlowHandlerAPI $ do
+  checkListKey "geometry/list" merchantId apiKey
   void $ CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchantId.getId <> " ,city: " <> show city)
   geoms <- case mbAllCities of
     Just True -> QGEO.findAllGeometriesForMerchant merchantId mbLimit mbOffset

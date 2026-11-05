@@ -27,6 +27,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.InternalAuth
 import Storage.Beam.SystemConfigs ()
 
 type API =
@@ -34,6 +35,7 @@ type API =
     :> Capture "city" Context.City
     :> "specialLocation"
     :> "upsert"
+    :> Header "api-key" Text
     :> MultipartForm Tmp Domain.SpecialLocationUpsertReq
     :> Post '[JSON] Domain.SpecialLocationUpsertResp
 
@@ -43,6 +45,9 @@ handler = upsertSpecialLocation
 upsertSpecialLocation ::
   Id Merchant ->
   Context.City ->
+  Maybe Text ->
   Domain.SpecialLocationUpsertReq ->
   FlowHandler Domain.SpecialLocationUpsertResp
-upsertSpecialLocation merchantId city = withFlowHandlerAPI . Domain.upsertSpecialLocation merchantId city
+upsertSpecialLocation merchantId city apiKey req = withFlowHandlerAPI $ do
+  requireMerchantKey merchantId apiKey
+  Domain.upsertSpecialLocation merchantId city req

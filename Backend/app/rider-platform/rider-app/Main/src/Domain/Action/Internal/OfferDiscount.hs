@@ -14,6 +14,7 @@ import Kernel.Utils.Common hiding (id)
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified SharedLogic.InternalAuth as SIA
 import qualified SharedLogic.Offer as SOffer
 import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -42,13 +43,16 @@ getOfferDiscount ::
     EncFlow m r,
     ServiceFlow m r,
     EsqDBReplicaFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    HasFlowEnv m r '["internalAPIKey" ::: Text, "enforcingInternalAuth" ::: Bool]
   ) =>
   Maybe Text ->
   Text ->
   OfferDiscountReq ->
   m OfferDiscountResp
-getOfferDiscount _token bppBookingId req = do
+getOfferDiscount apiKey bppBookingId req = do
+  internalAPIKey <- asks (.internalAPIKey)
+  SIA.checkInternalKey "offerDiscount" [internalAPIKey] apiKey
   booking <- B.runInReplica $ QBooking.findByBPPBookingId (Id bppBookingId) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId)
   let mbOfferBase = case req.projectFareParamsBreakup of
         Just b -> Just (b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax)

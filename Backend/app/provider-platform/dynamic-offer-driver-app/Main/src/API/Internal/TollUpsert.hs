@@ -27,12 +27,14 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.InternalAuth
 
 type API =
   Capture "merchantId" (Id Merchant)
     :> Capture "city" Context.City
     :> "toll"
     :> "upsert"
+    :> Header "api-key" Text
     :> MultipartForm Tmp Domain.TollUpsertReq
     :> Post '[JSON] Domain.TollUpsertResp
 
@@ -42,7 +44,9 @@ handler = upsertTollsFromCsv
 upsertTollsFromCsv ::
   Id Merchant ->
   Context.City ->
+  Maybe Text ->
   Domain.TollUpsertReq ->
   FlowHandler Domain.TollUpsertResp
-upsertTollsFromCsv merchantId city req =
-  withFlowHandlerAPI $ Domain.upsertTollsFromCsv merchantId city req
+upsertTollsFromCsv merchantId city apiKey req = withFlowHandlerAPI $ do
+  requireMerchantKey merchantId apiKey
+  Domain.upsertTollsFromCsv merchantId city req

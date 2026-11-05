@@ -27,6 +27,7 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Types.SpecialLocation as SL
 import Servant
+import SharedLogic.InternalAuth
 import Storage.Beam.SpecialZone ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -37,6 +38,7 @@ type API =
     :> Capture "city" Context.City
     :> "specialLocation"
     :> "list"
+    :> Header "api-key" Text
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
     :> QueryParam "locationType" [SL.SpecialLocationType]
@@ -49,12 +51,14 @@ handler = getSpecialLocationList
 getSpecialLocationList ::
   Id Merchant ->
   Context.City ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   Maybe [SL.SpecialLocationType] ->
   Maybe Bool ->
   FlowHandler [QSL.SpecialLocationFull]
-getSpecialLocationList merchantId city mbLimit mbOffset mbSpecialLocationTypes mbGetAllLocations = withFlowHandlerAPI $ do
+getSpecialLocationList merchantId city apiKey mbLimit mbOffset mbSpecialLocationTypes mbGetAllLocations = withFlowHandlerAPI $ do
+  checkListKey "specialLocation/list" merchantId apiKey
   let mbSpecialLocationTypes' = mbSpecialLocationTypes >>= \case [] -> Nothing; xs -> Just xs
   if mbGetAllLocations == Just True
     then QSL.findAllSpecialLocationsWithGeoJSONAllCities Nothing Nothing mbSpecialLocationTypes'

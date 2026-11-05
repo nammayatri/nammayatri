@@ -566,7 +566,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                   }
           result <-
             withTryCatch "getOfferDiscount:endRideTransaction" $
-              CallBAPInternal.getOfferDiscount appBackendBapInternal.internalKey appBackendBapInternal.url booking.id.getId reqBody
+              CallBAPInternal.getOfferDiscount appBackendBapInternal.apiKey appBackendBapInternal.url booking.id.getId reqBody
           case result of
             Right resp -> pure resp.discountAmount
             Left err -> do
