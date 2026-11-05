@@ -218,7 +218,12 @@ data TimeRecomputePolicy = TimeRecomputePolicy
     -- any sections pinned to the estimated minutes; only a policy with
     -- sections and no extra-time charge bills the sections on the
     -- chargeable/actual minutes at recompute).
-    floorAtEstimateWithinThreshold :: Maybe Bool
+    floorAtEstimateWithinThreshold :: Maybe Bool,
+    -- | Same floor for rides ending OUTSIDE the pickup/drop threshold: never
+    -- bill below the estimated duration. Default OFF (shorter rides outside
+    -- the threshold bill their actual duration). Same perMinRateSections
+    -- binding as 'floorAtEstimateWithinThreshold'.
+    floorAtEstimateOutsideThreshold :: Maybe Bool
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
