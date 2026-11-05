@@ -193,14 +193,6 @@ data DriverEdaKafka = DriverEdaKafka
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data EstimatedRouteCall = EstimatedRouteCall {apiName :: Kernel.Prelude.Text, provider :: Kernel.Prelude.Text, calledAt :: Kernel.Prelude.UTCTime, routes :: [EstimatedRouteOption]}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data EstimatedRouteOption = EstimatedRouteOption {distanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int, durationSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int, points :: [Kernel.External.Maps.Types.LatLong]}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data FParamsAmbulanceDetails = FParamsAmbulanceDetails
   { platformFee :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     sgst :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
@@ -355,6 +347,14 @@ data LocationAPIEntity = LocationAPIEntity
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data MapsRouteCall = MapsRouteCall {apiName :: Kernel.Prelude.Text, provider :: Kernel.Prelude.Text, calledAt :: Kernel.Prelude.UTCTime, routes :: [MapsRouteOption]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MapsRouteOption = MapsRouteOption {distanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int, durationSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int, points :: [Kernel.External.Maps.Types.LatLong]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data MultipleRideCancelItem = MultipleRideCancelItem {rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride, reasonCode :: Dashboard.Common.Booking.CancellationReasonCode, additionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -432,7 +432,7 @@ data RideDetailGroup
   deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-data RideEstimatedRouteRes = RideEstimatedRouteRes {transactionId :: Kernel.Prelude.Text, estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters, calls :: [EstimatedRouteCall]}
+data RideEstimatedRouteRes = RideEstimatedRouteRes {transactionId :: Kernel.Prelude.Text, estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters, calls :: [MapsRouteCall]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -712,7 +712,7 @@ newtype RideRouteRes = RideRouteRes {actualRoute :: [ActualRoute]}
 instance Kernel.Types.HideSecrets.HideSecrets RideRouteRes where
   hideSecrets = Kernel.Prelude.identity
 
-data RideSnappedRouteRes = RideSnappedRouteRes {batches :: [SnapBatch], distanceFailures :: [SnapDistanceFailure]}
+data RideSnappedRouteRes = RideSnappedRouteRes {batches :: [SnapBatch], distanceFailures :: [SnapDistanceFailure], approxRoute :: Kernel.Prelude.Maybe MapsRouteCall}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

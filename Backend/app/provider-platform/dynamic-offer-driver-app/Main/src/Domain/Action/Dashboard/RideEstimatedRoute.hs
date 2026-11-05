@@ -14,6 +14,8 @@
 
 module Domain.Action.Dashboard.RideEstimatedRoute
   ( getRideEstimatedRoute,
+    routeApiNames,
+    toCall,
   )
 where
 
@@ -62,25 +64,25 @@ getRideEstimatedRoute ride = do
         calls = mapMaybe toCall rows
       }
 
-toCall :: CHExternalApiCallLogs.ExternalApiCallLogs -> Maybe Common.EstimatedRouteCall
+toCall :: CHExternalApiCallLogs.ExternalApiCallLogs -> Maybe Common.MapsRouteCall
 toCall row = do
   apiName <- row.apiName
   payload <- row.responsePayload
   let routes = filter ((> 1) . length . (.points)) $ parseRoutes apiName payload
   guard (not $ null routes)
   let CH.DateTime calledAt = row.createdAt
-  pure Common.EstimatedRouteCall {apiName, provider = fromMaybe "" row.svcProvider, calledAt, routes}
+  pure Common.MapsRouteCall {apiName, provider = fromMaybe "" row.svcProvider, calledAt, routes}
 
-parseRoutes :: Text -> Text -> [Common.EstimatedRouteOption]
+parseRoutes :: Text -> Text -> [Common.MapsRouteOption]
 parseRoutes apiName payload = case apiName of
   "advancedDirectionsAPI" -> foldMap (map fromRouteV2 . (.routes)) (decodePayload @Google.AdvancedDirectionsResp payload)
   "directions" -> foldMap (map fromDirectionsRoute . (.routes)) (decodePayload @Google.DirectionsResp payload)
   "OsrmRouteAPI" -> foldMap (map fromOsrmRoute . (.routes)) (decodePayload @OSRM.OSRMRouteResponse payload)
   _ -> []
 
-fromRouteV2 :: Google.RouteV2 -> Common.EstimatedRouteOption
+fromRouteV2 :: Google.RouteV2 -> Common.MapsRouteOption
 fromRouteV2 route =
-  Common.EstimatedRouteOption
+  Common.MapsRouteOption
     { distanceMeters = Just route.distanceMeters,
       durationSec = parseProtoDuration route.duration,
       points = case route.polyline of
@@ -88,17 +90,17 @@ fromRouteV2 route =
         _ -> concatMap (\leg -> concatMap (\step -> PolyLinePoints.decode step.polyline.encodedPolyline) leg.steps) route.legs
     }
 
-fromDirectionsRoute :: Google.Route -> Common.EstimatedRouteOption
+fromDirectionsRoute :: Google.Route -> Common.MapsRouteOption
 fromDirectionsRoute route =
-  Common.EstimatedRouteOption
+  Common.MapsRouteOption
     { distanceMeters = Just . sum $ map (\leg -> leg.distance.value) route.legs,
       durationSec = Just . sum $ map (\leg -> leg.duration.value) route.legs,
       points = concatMap (\leg -> concatMap (\step -> PolyLinePoints.decode step.polyline.points) leg.steps) route.legs
     }
 
-fromOsrmRoute :: OSRM.OSRMRouteRoutes -> Common.EstimatedRouteOption
+fromOsrmRoute :: OSRM.OSRMRouteRoutes -> Common.MapsRouteOption
 fromOsrmRoute route =
-  Common.EstimatedRouteOption
+  Common.MapsRouteOption
     { distanceMeters = Just $ round route.distance,
       durationSec = Just $ round route.duration,
       points = map (.getLatLong) route.geometry.coordinates
