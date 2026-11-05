@@ -34,7 +34,11 @@ import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 -- | Write a driver wallet's current balance into that driver's pool data. The pool always checks the
 --   driver's own wallet (the charges of this feature settle there, fleet driver or not), so a posting on
 --   a fleet owner's wallet changes nothing here.
---   A cache that ends up stale is repaired by the next posting, the go-online check or the integrity job.
+--
+--   Refreshes of one wallet are serialised by a per-account lock, and the balance is read inside
+--   it. A refresh that started earlier therefore can't write after a later one and leave an older
+--   balance in the pool: whichever refresh writes last also read last. If the lock can't be taken
+--   the refresh is skipped; the next posting, the go-online check or the integrity job repairs it.
 --
 --   Called only for cities with the wallet on (PostActions reads the city's wallet config): the
 --   pool reads this balance only where the minimum is enforced, which needs the wallet on (and keeping it
@@ -43,13 +47,17 @@ syncWalletBalanceToPool ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id FAccount.Account ->
   m ()
-syncWalletBalanceToPool accountId = do
-  mbAccount <- QFAccount.findById accountId
-  whenJust mbAccount $ \account ->
-    when (account.accountType == FAccount.Liability && isNothing account.subLedger) $
-      case (account.counterpartyType, account.counterpartyId) of
-        (Just FAccount.DRIVER, Just driverId) -> setDriverWalletBalanceInPool (Id driverId) account.balance
-        _ -> pure ()
+syncWalletBalanceToPool accountId =
+  withBalanceSyncLock accountId $ do
+    mbAccount <- QFAccount.findById accountId
+    whenJust mbAccount $ \account ->
+      when (account.accountType == FAccount.Liability && isNothing account.subLedger) $
+        case (account.counterpartyType, account.counterpartyId) of
+          (Just FAccount.DRIVER, Just driverId) -> setDriverWalletBalanceInPool (Id driverId) account.balance
+          _ -> pure ()
+
+withBalanceSyncLock :: (MonadFlow m, Redis.HedisFlow m r) => Id FAccount.Account -> m () -> m ()
+withBalanceSyncLock accountId = Redis.withWaitAndLockRedisWithTimeout ("WalletBalanceCacheSync:" <> accountId.getId) 10 10 50000
 
 setDriverWalletBalanceInPool ::
   (MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>

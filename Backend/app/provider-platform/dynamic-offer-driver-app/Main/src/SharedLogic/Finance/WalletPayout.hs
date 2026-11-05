@@ -33,7 +33,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance (LedgerEntryMetadata (..))
-import Lib.Finance.Balance (TransferAmount (..))
+import Lib.Finance.Balance (TransferAmount (..), ownerLockKey)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Transfer as DTransfer
 import Lib.Finance.Error.Types (AccountErrorCode (InsufficientBalance), FinanceError (..), TransferErrorCode (..))
@@ -200,12 +200,12 @@ computePayoutFee (Just feeConfig) amount =
 --   outer lock goes away once every wallet read/write is behind the kernel lock.
 runWalletPayout :: (WalletPayoutFlow m r) => PayoutContext -> WalletPayoutParams -> m ()
 runWalletPayout ctx params =
-  PayoutRequest.runPayoutUnderLock (makeWalletRunningBalanceLockKey ctx.driverId.getId) 10 (findWalletPayoutAmount ctx params) (initiateWalletPayout ctx params.payoutType)
+  PayoutRequest.runPayoutUnderLock (ownerLockKey ctx.driverId.getId) 10 (findWalletPayoutAmount ctx params) (initiateWalletPayout ctx params.payoutType)
 
 -- | 'runWalletPayout' with a caller-supplied initiate step, under the same wallet lock and amount checks.
 runWalletPayoutWith :: (WalletPayoutFlow m r) => PayoutContext -> WalletPayoutParams -> (WalletPayoutPlan -> m ()) -> m ()
 runWalletPayoutWith ctx params initiate =
-  PayoutRequest.runPayoutUnderLock (makeWalletRunningBalanceLockKey ctx.driverId.getId) 10 (findWalletPayoutAmount ctx params) initiate
+  PayoutRequest.runPayoutUnderLock (ownerLockKey ctx.driverId.getId) 10 (findWalletPayoutAmount ctx params) initiate
 
 findWalletPayoutAmount :: (WalletPayoutFlow m r) => PayoutContext -> WalletPayoutParams -> m (Maybe WalletPayoutPlan)
 findWalletPayoutAmount ctx params = do

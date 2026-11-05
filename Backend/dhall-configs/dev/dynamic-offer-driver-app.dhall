@@ -368,7 +368,9 @@ let jobRetryOnExceptionMapx =
       , { mapKey = AllocatorJobType.MigratePendingDuesToWallet
         , mapValue = True
         }
+      , { mapKey = AllocatorJobType.ProcessEndRideFinance, mapValue = True }
       , { mapKey = AllocatorJobType.WalletIntegrityCheck, mapValue = True }
+      , { mapKey = AllocatorJobType.ChargeWalletPenalty, mapValue = True }
       ]
 
 let jobInfoMapx =

@@ -38,7 +38,10 @@ import Lib.Finance
   ( AccountRole (..),
     CounterpartyType (DRIVER),
     FinanceCtx (..),
+    countPosted,
     transfer,
+    transferOnce,
+    withOwnerLock,
   )
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.Extra.LedgerEntry (LedgerEntryMetadata (..))
@@ -226,16 +229,20 @@ deductAirportEntryFeeAtStartRide enabled ride booking = do
               enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck,
               buyerCounterpartyId = Nothing
             }
-    result <-
-      runFinance ctx $
-        do
-          when (totalFee > 0) $ do
-            void $ transfer OwnerLiability GovtIndirect gstAmount Wallet.walletReferenceAirportEntryFeeGST Nothing
-            void $ transfer OwnerLiability ParkingFeeRecipient airportPortion Wallet.walletReferenceAirportEntryFee Nothing
-          forM_ gateFeeItems $ \item -> do
-            let itemTotal = item.amountWithCurrency.amount
-                mbMetadata = mkGateFeeItemMetadata item
-            void $ transfer OwnerLiability ParkingFeeRecipient itemTotal Wallet.walletReferenceGateDriverFee mbMetadata
+    -- Under the driver's wallet lock, and each leg posted only if it is not in the ledger yet, so a
+    -- repeated start (or one that stopped part way) deducts exactly what is missing, never twice. Gate fee
+    -- items share one reference and one account pair, so they are counted rather than matched: the items
+    -- already posted (in the configured order) are skipped.
+    result <- withOwnerLock ride.driverId.getId $
+      runFinance ctx $ do
+        when (totalFee > 0) $ do
+          void $ transferOnce OwnerLiability GovtIndirect gstAmount Wallet.walletReferenceAirportEntryFeeGST Nothing
+          void $ transferOnce OwnerLiability ParkingFeeRecipient airportPortion Wallet.walletReferenceAirportEntryFee Nothing
+        gateItemsPosted <- countPosted Wallet.walletReferenceGateDriverFee
+        forM_ (drop gateItemsPosted (filter (\item -> item.amountWithCurrency.amount > 0) gateFeeItems)) $ \item -> do
+          let itemTotal = item.amountWithCurrency.amount
+              mbMetadata = mkGateFeeItemMetadata item
+          void $ transfer OwnerLiability ParkingFeeRecipient itemTotal Wallet.walletReferenceGateDriverFee mbMetadata
     case result of
       Left err -> fromEitherM (\e -> InternalError ("Airport entry fee deduction failed: " <> show e)) (Left err)
       Right _ -> pure ()

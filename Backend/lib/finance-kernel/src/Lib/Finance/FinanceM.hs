@@ -37,6 +37,8 @@ module Lib.Finance.FinanceM
     -- * The Monad
     FinanceM,
     FinanceState (..),
+    PostedLeg (..),
+    Collects (..),
     AffectedAccount (..),
     toAffectedAccount,
     runFinance,
@@ -53,6 +55,15 @@ module Lib.Finance.FinanceM
     transferPendingWithEntryType,
     transferAllowZero,
     transferWithoutAttribution,
+
+    -- * Posting once per reference
+    postOnce,
+    transferOnce,
+    transferOnce_,
+    transferPendingOnce,
+    transferWithoutAttributionOnce,
+    anyPosted,
+    countPosted,
     getEntryIds,
     liftFinance,
     liftFinanceM,
@@ -96,7 +107,7 @@ import Lib.Finance.Error.Types (FinanceError (..))
 import Lib.Finance.Invoice.Interface (DirectTaxInput (..), GstAmountBreakdown, IndirectTaxInput (..), InvoiceInput (..), InvoiceLineItem)
 import Lib.Finance.Invoice.Service (createDirectTaxEntry, createIndirectTaxEntry, createInvoice)
 import Lib.Finance.Ledger.Interface (LedgerEntryInput (..))
-import Lib.Finance.Ledger.Service (createEntry, createEntryWithBalanceUpdate)
+import Lib.Finance.Ledger.Service (createEntry, createEntryWithBalanceUpdate, getEntriesByReferenceId)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 
 -- | The financial context for a transaction.
@@ -191,12 +202,28 @@ toAffectedAccount acc =
 --   collected automatically by 'transfer' and friends. See docs/backend/design/post-actions-finance-plan.md.
 data FinanceState = FinanceState
   { collectedEntryIds :: [Id LE.LedgerEntry],
-    affectedAccounts :: [AffectedAccount]
+    affectedAccounts :: [AffectedAccount],
+    -- | The legs already in the ledger under ctx.referenceId, read on the first "once" check of the
+    --   program (Nothing until then).
+    referenceLegs :: Maybe [PostedLeg]
   }
   deriving (Eq, Show, Generic)
 
+-- | One posted entry as the "once" verbs match it.
+data PostedLeg = PostedLeg
+  { referenceType :: Text,
+    fromAccountId :: Id Account,
+    toAccountId :: Id Account,
+    entryId :: Id LE.LedgerEntry
+  }
+  deriving (Eq, Show, Generic)
+
+-- | What a posting verb records in the program state, so 'postOnce' records the same for a leg it skips.
+data Collects = CollectsAccountsAndEntry | CollectsAccounts | CollectsEntry
+  deriving (Eq, Show)
+
 emptyState :: FinanceState
-emptyState = FinanceState {collectedEntryIds = [], affectedAccounts = []}
+emptyState = FinanceState {collectedEntryIds = [], affectedAccounts = [], referenceLegs = Nothing}
 
 -- | Declarative account roles.
 --   Instead of calling 10+ separate getOrCreate*Account functions,
@@ -575,6 +602,105 @@ collectEntryId entryId =
 collectAffectedAccount :: (Monad m) => Account -> FinanceM m ()
 collectAffectedAccount acc =
   modify' (\st -> st {affectedAccounts = st.affectedAccounts <> [toAffectedAccount acc]})
+
+-- | The legs posted under ctx.referenceId, read from the ledger once per program. Entries the
+--   program posts itself are not added: a leg is meant to appear at most once in a program.
+referencePostedLegs :: (BeamFlow.BeamFlow m r) => FinanceM m [PostedLeg]
+referencePostedLegs =
+  gets (.referenceLegs) >>= \case
+    Just legs -> pure legs
+    Nothing -> do
+      ctx <- ask
+      entries <- lift (getEntriesByReferenceId ctx.referenceId)
+      let legs = [PostedLeg {referenceType = e.referenceType, fromAccountId = e.fromAccountId, toAccountId = e.toAccountId, entryId = e.id} | e <- entries]
+      modify' (\st -> st {referenceLegs = Just legs})
+      pure legs
+
+-- | Whether any entry of these reference types is posted under ctx.referenceId (reversed and voided
+--   entries included: the reference was used).
+anyPosted :: (BeamFlow.BeamFlow m r) => [Text] -> FinanceM m Bool
+anyPosted refTypes = any ((`elem` refTypes) . (.referenceType)) <$> referencePostedLegs
+
+-- | How many entries of this reference type are posted under ctx.referenceId.
+countPosted :: (BeamFlow.BeamFlow m r) => Text -> FinanceM m Int
+countPosted refType = length . filter ((== refType) . (.referenceType)) <$> referencePostedLegs
+
+-- | Run a posting only if its leg -- (reference type, from account, to account) under ctx.referenceId
+--   -- is not in the ledger yet, so a program that is run again (a retried job, a repeated request)
+--   posts only the legs that are missing. Nothing when skipped. A leg must be unique per reference
+--   for this to hold. The check and the posting are atomic only under a lock the caller holds over
+--   the owner's postings. A skipped leg is still recorded in the program state as the posting would
+--   have recorded it ('Collects'), so a re-run's invoice links it and its post-actions see the accounts.
+postOnce ::
+  (BeamFlow.BeamFlow m r) =>
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text -> -- Reference type
+  Collects ->
+  FinanceM m (Maybe a) ->
+  FinanceM m (Maybe a)
+postOnce fromRole toRole amount refType collects post
+  | amount <= 0 = pure Nothing
+  | otherwise = do
+    sameRef <- filter ((== refType) . (.referenceType)) <$> referencePostedLegs
+    -- accounts are resolved only when an entry of this reference type exists, so a first run reads none
+    if null sameRef
+      then post
+      else do
+        fromAcc <- account fromRole
+        toAcc <- account toRole
+        case filter (\leg -> leg.fromAccountId == fromAcc.id && leg.toAccountId == toAcc.id) sameRef of
+          [] -> post
+          posted -> do
+            when (collects /= CollectsEntry) $ collectAffectedAccount fromAcc >> collectAffectedAccount toAcc
+            when (collects /= CollectsAccounts) $ mapM_ (collectEntryId . (.entryId)) posted
+            pure Nothing
+
+-- | 'transfer', skipped when the leg is already posted (see 'postOnce').
+transferOnce ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text ->
+  Maybe LE.LedgerEntryMetadata ->
+  FinanceM m (Maybe (Id LE.LedgerEntry))
+transferOnce fromRole toRole amount refType mbMetadata =
+  postOnce fromRole toRole amount refType CollectsAccountsAndEntry (transfer fromRole toRole amount refType mbMetadata)
+
+-- | 'transfer_', skipped when the leg is already posted.
+transferOnce_ ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text ->
+  FinanceM m ()
+transferOnce_ fromRole toRole amount refType =
+  void $ postOnce fromRole toRole amount refType CollectsAccounts (Just <$> transfer_ fromRole toRole amount refType)
+
+-- | 'transferPending', skipped when the leg is already posted.
+transferPendingOnce ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text ->
+  FinanceM m (Maybe (Id LE.LedgerEntry))
+transferPendingOnce fromRole toRole amount refType =
+  postOnce fromRole toRole amount refType CollectsEntry (transferPending fromRole toRole amount refType)
+
+-- | 'transferWithoutAttribution', skipped when the leg is already posted.
+transferWithoutAttributionOnce ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text ->
+  FinanceM m (Maybe (Id LE.LedgerEntry))
+transferWithoutAttributionOnce fromRole toRole amount refType =
+  postOnce fromRole toRole amount refType CollectsAccountsAndEntry (transferWithoutAttribution fromRole toRole amount refType)
 
 -- | Transfer money between two account roles.
 --   Skips if amount <= 0.  Automatically collects the entry ID.

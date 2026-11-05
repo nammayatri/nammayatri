@@ -26,6 +26,9 @@ module Lib.Finance.Balance
     resolveTransferAmount,
     withAccountBalanceLock,
     accountBalanceLockKey,
+    withOwnerLock,
+    withOwnerLockOrSkip,
+    ownerLockKey,
     offerHoldKeyForAccount,
   )
 where
@@ -245,6 +248,26 @@ accountBalanceLockKey accountId = "Finance:BalanceLock:" <> accountId.getId
 withAccountBalanceLock :: (CacheFlow m r, MonadFlow m) => Id Account -> Int -> m a -> m a
 withAccountBalanceLock accountId ttlSeconds =
   Redis.withWaitAndLockRedis (accountBalanceLockKey accountId) ttlSeconds 10000
+
+-- | Kernel-owned lock over one owner's postings and the balance checks made before them (a
+--   driver, a fleet owner, ...), keyed by the owner's id. An account's balance update is
+--   read-modify-write, so every flow that posts on an owner's accounts, or checks a balance and
+--   then posts, takes it. Not 'accountBalanceLockKey': the transfer verbs hold that lock while
+--   they call the caller's runner, and neither lock is re-entrant.
+ownerLockKey :: Text -> Text
+ownerLockKey ownerId = "Finance:OwnerLock:" <> ownerId
+
+-- | Runs the action under the owner's lock, waiting as long as it is held. A crashed holder
+--   cannot wedge the owner for longer than the lock's expiry.
+withOwnerLock :: (CacheFlow m r, MonadFlow m) => Text -> m a -> m a
+withOwnerLock ownerId = Redis.withWaitAndLockRedis (ownerLockKey ownerId) ownerLockSeconds 1000
+
+-- | Like 'withOwnerLock', but gives up after 'ownerLockSeconds' of waiting and skips the action.
+withOwnerLockOrSkip :: (CacheFlow m r, MonadFlow m) => Text -> m () -> m ()
+withOwnerLockOrSkip ownerId = Redis.withWaitAndLockRedisWithTimeout (ownerLockKey ownerId) ownerLockSeconds ownerLockSeconds 50000
+
+ownerLockSeconds :: Int
+ownerLockSeconds = 10
 
 -- | Standard offer-hold key for an account. New write paths must use this; legacy
 --   domain-named keys are accepted read-side via getBalanceBreakdown's second argument.

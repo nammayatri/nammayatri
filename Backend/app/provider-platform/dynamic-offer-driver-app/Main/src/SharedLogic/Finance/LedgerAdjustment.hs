@@ -19,7 +19,6 @@ import qualified Data.Ord
 import qualified Data.Text as T
 import Data.Time.Clock (utctDay)
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverPanCard as DPanCard
@@ -46,6 +45,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance as Finance
 import Lib.Finance.Audit.Interface (AuditInput (..))
 import qualified Lib.Finance.Audit.Service as Audit
+import Lib.Finance.Balance (withOwnerLock)
 import qualified Lib.Finance.Domain.Types.AuditEntry as AuditDomain
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping as DTdsMap
@@ -974,7 +974,7 @@ ledgerAdjustmentPostAction ::
   DLA.LedgerAdjustmentRequest ->
   Flow (Maybe (Id DLE.LedgerEntry))
 ledgerAdjustmentPostAction transporterConfig checkerId adminCheckerName adjustmentRequest =
-  Redis.withWaitAndLockRedis (makeWalletRunningBalanceLockKey adjustmentRequest.personId.getId) 10 50000 $ do
+  withOwnerLock adjustmentRequest.personId.getId $ do
     logInfo $
       "Ledger adjustment post triggered: "
         <> adjustmentRequest.id.getId

@@ -12,9 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | End-ride finance in wallet-subscription cities: 'processEndRideFinance' run as an allocator job
---   instead of a fork on the ride-end request. Its postings are not checked against what is already
---   in the ledger, so the job is not retried on an exception (it is not in jobRetryOnExceptionMap).
+-- | Durable end-ride finance, in every city: 'processEndRideFinance' run as an allocator job that is
+--   retried on failure (it used to be a fork on the ride-end request).
+--   Every step it runs is idempotent per ride (each posting is checked against one read of the ride's
+--   ledger entries, invoices are created only if missing, the fee accrual has a marker, TDS has
+--   tdsProcessedAt), so a retry finishes what is missing and never posts twice.
 module SharedLogic.Allocator.Jobs.Wallet.ProcessEndRideFinance
   ( processEndRideFinanceJob,
   )

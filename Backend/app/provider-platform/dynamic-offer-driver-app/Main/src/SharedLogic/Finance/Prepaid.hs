@@ -907,11 +907,15 @@ debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency me
         Left err -> pure $ Left err
         Right _ -> do
           let ctxPlain = withoutAttribution $ mkPrepaidCtx counterpartyType ownerId currency merchantId merchantOperatingCityId referenceId
-          when (revenueAmount > 0) $
-            void $
-              postLeg "rideRevenueRecognition" $
-                FinanceM.runFinance ctxPlain $
-                  transferWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Revenue Nothing SellerLiability SellerRevenue revenueAmount subscriptionRideReferenceType Nothing
+          when (revenueAmount > 0) $ do
+            -- One revenue entry per booking: the hold settlement above is a no-op on a retried
+            -- end-ride job, but this entry would otherwise be recognised a second time.
+            alreadyRecognised <- any (\existing -> existing.status == SETTLED) <$> getEntriesByReference subscriptionRideReferenceType referenceId
+            unless alreadyRecognised $
+              void $
+                postLeg "rideRevenueRecognition" $
+                  FinanceM.runFinance ctxPlain $
+                    transferWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Revenue Nothing SellerLiability SellerRevenue revenueAmount subscriptionRideReferenceType Nothing
           mbBal <- getBalance ownerAccount.id
           pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
     (Left err, _, _) -> pure $ Left err
