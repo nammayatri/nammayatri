@@ -1131,12 +1131,13 @@ getChargeableDistanceAndDuration disableDownwardRecompute rcfg sectionsBillCharg
       if timeLeversApplicable && not isFloored
         then RD.forgivenessAdjustedDuration rcfg.cfgTimeForgivenessBands estimatedDuration finalDuration
         else Nothing
-    -- Within the pickup/drop threshold, never bill below the estimated
-    -- duration. Default-on, but binds only when perMinRateSections actually
-    -- bill the chargeable minutes (otherwise no fare effect on city rides;
-    -- would inflate rental billing).
+    -- Never bill below the estimated duration: within the pickup/drop
+    -- threshold by default, outside it only when configured. Binds only when
+    -- perMinRateSections actually bill the chargeable minutes (otherwise no
+    -- fare effect on city rides; would inflate rental billing).
     underran = fromMaybe False ((<) <$> finalDuration <*> estimatedDuration)
-    timeFloored = rcfg.cfgFloorTimeAtEstimateWithinThreshold && sectionsBillChargeableMinutes && withinThreshold && not isFloored && underran
+    floorTimeEnabled = if withinThreshold then rcfg.cfgFloorTimeAtEstimateWithinThreshold else rcfg.cfgFloorTimeAtEstimateOutsideThreshold
+    timeFloored = floorTimeEnabled && sectionsBillChargeableMinutes && not isFloored && underran
     adjustedDuration
       | gated || timeFloored = estimatedDuration
       | Just adj <- mbForgivenessAdjusted = Just adj
