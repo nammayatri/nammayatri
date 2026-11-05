@@ -17,6 +17,7 @@ import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.IncentiveJourney.Common.UI.IncentiveJourney as LibUI
 import Lib.IncentiveJourney.Domain.Action.Dashboard.ServiceHandle (ServiceHandle (..))
 import qualified Lib.IncentiveJourney.Domain.Action.UI.IncentiveJourney as LibUIAction
+import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as Fields
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.Assignment as CQAssignment
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.AutoApplyCohortMapping as CQAuto
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourney as CQJourney
@@ -24,10 +25,12 @@ import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyMile
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyStats as CQStats
 import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyStatsExtra as QStats
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified Lib.Types.SpecialLocation as Fields
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.SpecialZone ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Tools.Fields as Fields
 
 mkHandle :: ServiceHandle Flow
 mkHandle =

@@ -43,6 +43,7 @@ import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Notification as QNTF
 import qualified Storage.Queries.Person as QP
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Payment as TPayment
 
 sendPDNNotificationToDriver ::

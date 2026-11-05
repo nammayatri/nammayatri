@@ -21,6 +21,7 @@
 module SharedLogic.CancellationSignals where
 
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.DriverQuote as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.Prelude

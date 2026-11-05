@@ -37,6 +37,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified TempAppCode.Types as Fields
 import Tools.Auth
 import Tools.SignatureAuth
 

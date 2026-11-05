@@ -162,19 +162,19 @@ freshToken config manager = do
     Left err -> throwError (KMRLDecodeError ("token response: " <> T.pack err))
     Right (TokenResponse (TokenData (TokenPayload token))) -> pure token
 
-newtype TokenResponse = TokenResponse {tokenResponseData :: TokenData}
+newtype TokenResponse = TokenResponse {_tokenResponseData :: TokenData}
 
 instance FromJSON TokenResponse where
   -- "Data" (capital) is the envelope key the gateway answers with; the lowercase
   -- "data" below is the inner payload inside it.
   parseJSON = A.withObject "TokenResponse" $ \o -> TokenResponse <$> o A..: "Data"
 
-newtype TokenData = TokenData {tokenDataData :: TokenPayload}
+newtype TokenData = TokenData {_tokenDataData :: TokenPayload}
 
 instance FromJSON TokenData where
   parseJSON = A.withObject "TokenData" $ \o -> TokenData <$> o A..: "data"
 
-newtype TokenPayload = TokenPayload {tokenPayloadAccessToken :: Text}
+newtype TokenPayload = TokenPayload {_tokenPayloadAccessToken :: Text}
 
 instance FromJSON TokenPayload where
   parseJSON = A.withObject "TokenPayload" $ \o -> TokenPayload <$> o A..: "accessToken"

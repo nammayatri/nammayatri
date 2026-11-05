@@ -64,6 +64,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobInWithCheck)
 import SharedLogic.Allocator
 import SharedLogic.Finance.Wallet (makeWalletRunningBalanceLockKey)
 import SharedLogic.Finance.WalletPayout (PayoutContext (..), PayoutPrefetch (..), WalletPayoutFlow, WalletPayoutParams (..), initiateWalletPayoutWith, runWalletPayout, runWalletPayoutWith)
+import qualified SharedLogic.Finance.WalletPayout as Fields
 import SharedLogic.Payout.Bulk.Claim (beneficiaryBankOf, claimBeneficiary)
 import SharedLogic.Payout.Bulk.Eligibility (BulkCandidate, usableBankDetails)
 import Storage.Beam.SchedulerJob ()
@@ -71,6 +72,7 @@ import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDi
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as TPayout
 

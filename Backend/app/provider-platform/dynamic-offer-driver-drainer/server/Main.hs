@@ -24,7 +24,7 @@ import qualified EulerHS.Types as ET
 import qualified Event.Event as Event
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
-import Kernel.Storage.Esqueleto.Config (EsqDBConfig)
+import Kernel.Storage.Esqueleto.Config (EsqDBConfig (..))
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Flow
 import Kernel.Utils.Dhall hiding (void)

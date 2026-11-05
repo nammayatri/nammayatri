@@ -14,6 +14,7 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.RiderDriverCorrelation as RDC
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data BlackListDriverReq = BlackListDriverReq
   { customerMobileNumber :: Text,

@@ -7,6 +7,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.TripTransaction as DTT
 import Domain.Types.VehicleRegistrationCertificate hiding (id)
+import qualified Domain.Types.VehicleRegistrationCertificate as Fields
 import Domain.Types.VehicleVariant as Vehicle
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions

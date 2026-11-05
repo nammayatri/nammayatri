@@ -42,6 +42,7 @@ import Kernel.Utils.Common
 import Lib.Finance.Audit.Interface (AuditInput (..))
 import qualified Lib.Finance.Audit.Service as Audit
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
+import qualified Lib.Finance.Domain.Types.Account as Fields
 import Lib.Finance.Domain.Types.AuditEntry (AuditAction (..))
 import qualified Lib.Finance.Domain.Types.AuditEntry as DAuditEntry
 import Lib.Finance.Domain.Types.DirectTaxTransaction (DirectTaxTransaction (..))
@@ -50,7 +51,7 @@ import Lib.Finance.Domain.Types.IndirectTaxTransaction
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import Lib.Finance.Domain.Types.Invoice
 import Lib.Finance.Domain.Types.InvoiceLedgerLink
-import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntry)
+import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntry (..))
 import Lib.Finance.Error.Types
 import Lib.Finance.Invoice.Interface
 import Lib.Finance.Invoice.InvoiceNumber

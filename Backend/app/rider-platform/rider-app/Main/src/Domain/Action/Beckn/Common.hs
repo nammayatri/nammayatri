@@ -37,19 +37,24 @@ import Domain.Action.UI.RidePayment as Reexport
 import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.BookingPartiesLink as Fields
 import qualified Domain.Types.BookingStatus as BT
 import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.ClientPersonInfo as DPCI
 import qualified Domain.Types.CustomerBlockTransactions as DCBT
+import qualified Domain.Types.Exophone as Fields
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.HotSpot
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantConfig as Fields
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.OfferEntity as DOfferEntity
+import qualified Domain.Types.PayoutConfig as Fields
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
@@ -59,10 +64,12 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.RiderConfig as DRC
+import qualified Domain.Types.SearchRequest as Fields
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import qualified Domain.Types.Yudhishthira as Y
 import Environment
+import qualified IssueManagement.Common as Fields
 import Kernel.Beam.Functions as B
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption
@@ -96,6 +103,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.PayoutOrder as Fields
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
@@ -104,6 +112,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified Safety.Domain.Action.UI.Sos as SafetySos
+import qualified Safety.Domain.Types.SafetySettings as Fields
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
@@ -168,6 +177,7 @@ import Tools.Constants
 import Tools.Error
 import Tools.Event
 import qualified Tools.EventTracking as ET
+import qualified Tools.Fields as Fields
 import Tools.Maps (LatLong (..))
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
@@ -893,13 +903,13 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
       Just location -> frequencyUpdator booking.merchantId location Nothing TripStart Nothing
       Nothing -> return ()
   let updRideForStartReq =
-        ride{status = DRide.INPROGRESS,
-             rideStartTime,
-             rideEndTime = Nothing,
-             endOtp = endOtp_,
-             driverArrivalTime,
-             startOdometerReading,
-             estimatedEndTimeRange
+        ride{DRide.status = DRide.INPROGRESS,
+             DRide.rideStartTime,
+             DRide.rideEndTime = Nothing,
+             DRide.endOtp = endOtp_,
+             DRide.driverArrivalTime,
+             DRide.startOdometerReading,
+             DRide.estimatedEndTimeRange
             }
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
@@ -1072,19 +1082,19 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       ridePaymentCharge = maybe booking.paymentCharge Just paymentCharge
       ridePaymentChargeBearer = maybe booking.paymentChargeBearer Just paymentChargeBearer
       updRide =
-        ride{status = DRide.COMPLETED,
-             fare = Just fare,
-             totalFare = Just totalFareWithTip,
-             chargeableDistance = convertHighPrecMetersToDistance distanceUnit <$> chargeableDistance,
-             traveledDistance = convertHighPrecMetersToDistance distanceUnit <$> traveledDistance,
-             tollConfidence,
-             rideEndTime,
-             paymentStatus = if SPayment.isOnlinePayment mbMerchant booking then DRide.NotInitiated else DRide.Completed,
-             endOdometerReading,
-             rideTags = ride.rideTags <> ((\valid -> ["ValidRide#" <> if valid then "Yes" else "No"] :: [Text]) <$> isValidRide),
-             commission = rideCommission,
-             paymentCharge = ridePaymentCharge,
-             paymentChargeBearer = ridePaymentChargeBearer
+        ride{DRide.status = DRide.COMPLETED,
+             DRide.fare = Just fare,
+             DRide.totalFare = Just totalFareWithTip,
+             DRide.chargeableDistance = convertHighPrecMetersToDistance distanceUnit <$> chargeableDistance,
+             DRide.traveledDistance = convertHighPrecMetersToDistance distanceUnit <$> traveledDistance,
+             DRide.tollConfidence,
+             DRide.rideEndTime,
+             DRide.paymentStatus = if SPayment.isOnlinePayment mbMerchant booking then DRide.NotInitiated else DRide.Completed,
+             DRide.endOdometerReading,
+             DRide.rideTags = ride.rideTags <> ((\valid -> ["ValidRide#" <> if valid then "Yes" else "No"] :: [Text]) <$> isValidRide),
+             DRide.commission = rideCommission,
+             DRide.paymentCharge = ridePaymentCharge,
+             DRide.paymentChargeBearer = ridePaymentChargeBearer
             }
   -- Persist offer details in Ride OfferEntity table for fast lookup in rideList,
   -- apply the offer for cash rides, and schedule the cashback-payout job when
@@ -1268,7 +1278,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   SOffer.scheduleCashbackPayoutJob booking updRide person.id ridePayoutAmount
 
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
-  triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
+  triggerBookingCompletedEvent BookingEventData {booking = booking{DRB.status = DRB.COMPLETED}}
   whenJust person.totalRidesCount $ \rideCount ->
     fork "event_tracking: ride_completed" $
       ET.trackEvent booking.merchantId booking.merchantOperatingCityId (ET.RideCompleted (getId booking.riderId) (rideCount + 1) totalFare.amount)
@@ -1565,13 +1575,13 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
             SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
           DBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
           _ -> pure ()
-        triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}
+        triggerRideCancelledEvent RideEventData {ride = ride{DRide.status = DRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}
       Nothing -> do
         logDebug "No ride found for the booking."
     let merchantOperatingCityId = booking.merchantOperatingCityId
     mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs Nothing
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id) (Just "Blocked by fraud detection") DCBT.Application Nothing
-  triggerBookingCancelledEvent BookingEventData {booking = booking{status = DRB.CANCELLED}}
+  triggerBookingCancelledEvent BookingEventData {booking = booking{DRB.status = DRB.CANCELLED}}
   QPFS.updateStatus booking.riderId DPFS.IDLE
   otherParties <- Notify.getAllOtherRelatedPartyPersons booking
   unless (booking.status == DRB.CANCELLED) $
@@ -1697,8 +1707,8 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
               driverArrivalTime = floor . utcTimeToPOSIXSeconds <$> ride.driverArrivalTime
               tagData =
                 Y.CancelRideTagData
-                  { ride = ride{status = DRide.CANCELLED},
-                    booking = booking{status = DRB.CANCELLED},
+                  { ride = ride{DRide.status = DRide.CANCELLED},
+                    booking = booking{DRB.status = DRB.CANCELLED},
                     cancellationReason = bookingCancellationReason,
                     callAtemptByDriver,
                     currentTime,

@@ -6,6 +6,8 @@ module SharedLogic.PayoutStatusCheck
   )
 where
 
+import qualified Domain.Types.PayoutConfig as Fields
+import qualified Domain.Types.Person as Fields
 import qualified Domain.Types.VehicleCategory as DV
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude

@@ -4,6 +4,7 @@ module Domain.Action.UI.Penalty (postPenaltyCheck) where
 
 import qualified API.Types.UI.Penalty
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity

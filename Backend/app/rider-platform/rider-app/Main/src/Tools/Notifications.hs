@@ -23,6 +23,7 @@ import Data.Time hiding (secondsToNominalDiffTime)
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.BookingPartiesLink as Fields
 import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.EmptyDynamicParam
 import Domain.Types.Estimate (Estimate)
@@ -30,18 +31,23 @@ import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Extra.RiderPreferences as RP
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.Journey
+import qualified Domain.Types.JourneyLeg as Fields
+import qualified Domain.Types.LocationAddress as Fields
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantMessage as DMM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.NotificationSoundsConfig as NSC
 import Domain.Types.Person as Person
+import qualified Domain.Types.PersonDisability as Fields
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RefundRequest as DRefundRequest
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.RiderConfig as DRC
+import qualified Domain.Types.RiderPreferences as Fields
 import qualified Domain.Types.RiderPreferredOption as DRPO
 import Domain.Types.SearchRequest as SearchRequest
 import Domain.Types.Trip (TripCategory)
@@ -69,6 +75,8 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Safety.Domain.Types.Common as SafetyCommon
+import qualified Safety.Domain.Types.PersonDefaultEmergencyNumber as Fields
+import qualified Safety.Domain.Types.SafetySettings as Fields
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import SharedLogic.JobScheduler
@@ -97,6 +105,7 @@ import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSearchReqLite
 import qualified Storage.Queries.Transformers.Booking as TBooking
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.SMS as Sms
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import qualified Tools.Whatsapp as Whatsapp

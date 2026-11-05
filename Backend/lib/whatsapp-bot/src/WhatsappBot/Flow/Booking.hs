@@ -65,12 +65,16 @@ import Kernel.Prelude
 -- The flow-agnostic conversation primitives live in Env (the dependency edge
 -- runs Flow.Booking -> Env and never back).
 import WhatsappBot.Env (BotEnv, btn, ensureAuth, firstNonEmpty, getCtx, locationRequest, mkUserKey, reply, replyButtons, save)
+import qualified WhatsappBot.Env as Fields
+import qualified WhatsappBot.Handles as Fields
 import WhatsappBot.I18n (LanguageStrings, SupportedLanguage, t)
+import qualified WhatsappBot.I18n as Fields
 -- Instances only: LanguageStrings / LanguageInfo are dot-accessed via RDP
 -- (getField), so their selectors are never referenced by name, but the HasField
 -- instances are needed. (Naming them would trip -Wunused-imports under -Werror.)
 import WhatsappBot.I18n.Types ()
 import WhatsappBot.Messages (buildDriverCard)
+import qualified WhatsappBot.Messages as Fields
 -- The flow-agnostic ride lifecycle lives in Ride (Flow.Booking -> Ride -> Env).
 import WhatsappBot.Ride (BookingWindow (..), bumpStage, handleStatus, isValidBookingId, listedBookings, registerRide')
 import WhatsappBot.Types

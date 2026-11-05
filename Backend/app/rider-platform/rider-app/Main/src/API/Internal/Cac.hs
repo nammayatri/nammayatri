@@ -2,6 +2,7 @@ module API.Internal.Cac where
 
 import qualified Domain.Action.Internal.Cac as Domain
 import Environment (FlowHandler, FlowServer)
+import qualified Environment as Fields
 import GHC.Base
 import Kernel.Prelude
 import Kernel.Utils.Common (withFlowHandlerAPI)

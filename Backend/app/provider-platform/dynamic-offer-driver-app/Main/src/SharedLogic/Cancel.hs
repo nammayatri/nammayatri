@@ -23,10 +23,13 @@ import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.ConditionalCharges as DCC
+import qualified Domain.Types.DriverQuote as Fields
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.FareParameters as DFareParams
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
@@ -74,6 +77,7 @@ import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
 
@@ -246,7 +250,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       DP.addDriverToSearchCancelledList searchBlacklistTtl searchReq.id ride.driverId
       (newBooking, newQuote) <- createNewBookingAndQuote quote transporterConfig now searchReq
       let singleBooking = transporterConfig.enableBppReallocation == Just True
-          targetBooking = if singleBooking then booking{quoteId = newQuote.id.getId, status = SRB.NEW, isScheduled = newBooking.isScheduled, startTime = newBooking.startTime, updatedAt = now} else newBooking
+          targetBooking = if singleBooking then booking{SRB.quoteId = newQuote.id.getId, SRB.status = SRB.NEW, SRB.isScheduled = newBooking.isScheduled, SRB.startTime = newBooking.startTime, SRB.updatedAt = now} else newBooking
       let mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> ((.driverExtraFeeBounds) =<< (quote.farePolicy))) <&> uncurry DFP.findDriverExtraFeeBoundsByDistance
           driverPickUpCharge = USRD.extractDriverPickupCharges . (.farePolicyDetails) =<< (quote.farePolicy)
           driverParkingCharge = (.parkingCharge) =<< (quote.farePolicy)
@@ -351,9 +355,9 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       fareParamsId <- generateGUID
       searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
       let newIsScheduled = booking.isScheduled && transporterConfig.scheduleRideBufferTime `addUTCTime` now < searchReq.startTime
-          newFareParams = quote.fareParams{id = fareParamsId, updatedAt = now}
-          newQuote = quote{id = Id quoteId, fareParams = newFareParams, validTill = searchRequestExpirationSeconds `addUTCTime` now, isScheduled = booking.isScheduled}
-          newBooking = booking{id = bookingId, quoteId = quoteId, status = SRB.NEW, isScheduled = newIsScheduled, startTime = max now booking.startTime, createdAt = now, updatedAt = now}
+          newFareParams = quote.fareParams{DFareParams.id = fareParamsId, DFareParams.updatedAt = now}
+          newQuote = quote{DQuote.id = Id quoteId, DQuote.fareParams = newFareParams, DQuote.validTill = searchRequestExpirationSeconds `addUTCTime` now, DQuote.isScheduled = booking.isScheduled}
+          newBooking = booking{SRB.id = bookingId, SRB.quoteId = quoteId, SRB.status = SRB.NEW, SRB.isScheduled = newIsScheduled, SRB.startTime = max now booking.startTime, SRB.createdAt = now, SRB.updatedAt = now}
       return (newBooking, newQuote)
 
     createQuoteDetails ::

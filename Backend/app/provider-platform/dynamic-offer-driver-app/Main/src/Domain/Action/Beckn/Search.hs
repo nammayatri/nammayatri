@@ -26,11 +26,15 @@ module Domain.Action.Beckn.Search
     buildEstimate,
     getIsInterCity,
     searchTxnDedupKey,
+    NearestOperatingAndSourceCity (..),
+    CityState (..),
+    ValidatedDSearchReq (..),
   )
 where
 
 import qualified Beckn.Types.Core.Taxi.Search as BA
 import Control.Applicative ((<|>))
+import qualified Dashboard.Common as Fields
 import Data.Char (isDigit)
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.Geohash as Geohash
@@ -45,15 +49,19 @@ import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import qualified Domain.Action.UI.Maps as DMaps
 import Domain.Types
 import Domain.Types.BapMetadata
+import qualified Domain.Types.DriverReferral as Fields
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Extra.ConditionalCharges as DAC
 import Domain.Types.FareParameters ()
 import qualified Domain.Types.FareParameters as DFareParameters
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.Geometry as Fields
+import qualified Domain.Types.InterCityTravelCities as Fields
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantState as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RefereeLink as DRL
@@ -62,6 +70,7 @@ import qualified Domain.Types.RiderPreferredOption as DRPO
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.ServiceTierType as STT
 import qualified Domain.Types.TransporterConfig as DTMT
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVST
 import qualified Domain.Types.Yudhishthira as Y
@@ -136,6 +145,7 @@ import Toll.SharedLogic.TollsDetector
 import Tools.DynamicLogic
 import Tools.Error
 import Tools.Event
+import qualified Tools.Fields as Fields
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 import Utils.Common.Cac.KeyNameConstants
@@ -1398,7 +1408,7 @@ withDropSpecialLocationArea :: Maybe Text -> Maybe Text -> DLoc.Location -> DLoc
 withDropSpecialLocationArea mbSpecialLocationTag mbSpecialLocationName location =
   case (T.splitOn "_" <$> mbSpecialLocationTag, mbSpecialLocationName) of
     (Just (_ : dropCategory : "PriorityDrop" : _), Just name)
-      | dropCategory `elem` dropAreaOverrideCategories -> location{address = location.address{area = Just name}}
+      | dropCategory `elem` dropAreaOverrideCategories -> location{DLoc.address = location.address{DLoc.area = Just name}}
     _ -> location
 
 getAddressByGetPlaceName :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> LatLong -> m Address

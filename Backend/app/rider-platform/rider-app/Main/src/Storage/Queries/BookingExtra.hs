@@ -8,6 +8,7 @@ import Domain.Types
 import Domain.Types.Booking as Domain
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingLocation as DBBL
+import qualified Domain.Types.BookingPartiesLink as Fields
 import Domain.Types.BookingStatus as Domain
 import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote

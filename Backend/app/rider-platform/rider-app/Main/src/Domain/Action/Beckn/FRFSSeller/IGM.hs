@@ -20,7 +20,8 @@ import qualified IssueManagement.Beckn.ACL.IssueStatus as IssueStatusACL
 import qualified IssueManagement.Common as IGMCommon
 import qualified IssueManagement.Domain.Action.Beckn.Issue as DIssue
 import qualified IssueManagement.Domain.Action.Beckn.IssueStatus as DIssueStatus
-import IssueManagement.Domain.Types.Issue.IGMConfig (IGMConfig)
+import qualified IssueManagement.Domain.Action.Beckn.IssueStatus as DIssueStatusRes (IssueStatusRes (..))
+import IssueManagement.Domain.Types.Issue.IGMConfig (IGMConfig (..))
 import qualified IssueManagement.Domain.Types.Issue.IGMIssue as DIGM
 import qualified IssueManagement.SharedLogic.CallAPI as IGMCallAPI
 import qualified IssueManagement.Storage.Queries.Issue.IGMConfig as QIGMConfig
@@ -35,6 +36,7 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.FRFSTicketBooking as QBooking
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data SellerContext = SellerContext
   { merchant :: DM.Merchant,
@@ -228,6 +230,6 @@ handleIssueStatus operator req = do
           merchantOperatingCity = seller.igmCity,
           bapId
         }
-  let echoed = issueStatusRes{DIssueStatus.issueId = Id dIssueStatus.issueId}
+  let echoed = issueStatusRes{DIssueStatusRes.issueId = Id dIssueStatus.issueId}
   onIssueStatusReq <- IssueStatusACL.buildOnIssueStatusReq transactionId messageId bapId bapUriText echoed
   void $ IGMCallAPI.callOnIssueStatus onIssueStatusReq bapUri seller.igmMerchant

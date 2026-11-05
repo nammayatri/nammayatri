@@ -34,6 +34,7 @@ import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 import qualified Domain.Types as Domain
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.WhiteListOrg as Fields
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics

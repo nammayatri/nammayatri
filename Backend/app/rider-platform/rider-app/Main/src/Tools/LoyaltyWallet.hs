@@ -9,6 +9,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Juspay.Config as Fields
 import qualified Kernel.External.Wallet.Interface as Wallet
 import qualified Kernel.External.Wallet.Interface.Types as WalletTypes
 import qualified Kernel.External.Wallet.Juspay.Config as JuspayWallet

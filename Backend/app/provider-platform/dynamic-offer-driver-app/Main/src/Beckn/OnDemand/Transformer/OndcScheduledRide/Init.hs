@@ -7,6 +7,7 @@ where
 
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.Beckn.Init as DInit
+import qualified Domain.Types.SearchRequest as Fields
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)

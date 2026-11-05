@@ -1,15 +1,18 @@
 module Domain.Action.UI.PriceBreakup (getPriceBreakup, postMeterRidePrice) where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
+import qualified API.Types.UI.FareCalculator as Fields
 import qualified API.Types.UI.PriceBreakup
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Action.Internal.BulkLocUpdate as BLoc
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.FareCalculator as FC
 import Domain.Types
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.Quote as Fields
 import qualified Domain.Types.Ride
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -29,6 +32,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.Fields as Fields
 
 getPriceBreakup ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

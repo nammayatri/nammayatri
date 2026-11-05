@@ -21,11 +21,15 @@
 -- never blocked.
 module SharedLogic.PassRestore (restorePurchasedPassesIfNeeded) where
 
+import qualified Domain.Types.DeletedPerson as Fields
+import qualified Domain.Types.Person as Fields
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.PurchasedPass as DPP
+import qualified Domain.Types.PurchasedPassPayment as Fields
 import EulerHS.Prelude hiding (id)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Error
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride

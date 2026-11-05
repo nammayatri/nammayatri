@@ -29,6 +29,7 @@ import Data.String.Conversions (cs)
 import Email.Types (EmailServiceConfig)
 import "rider-app" Environment (AppCfg (..), SFTPConfig (..))
 import Kernel.External.Encryption (EncTools)
+import qualified Kernel.External.Encryption as Fields
 import qualified Kernel.External.MasterCloudForward as MCF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude

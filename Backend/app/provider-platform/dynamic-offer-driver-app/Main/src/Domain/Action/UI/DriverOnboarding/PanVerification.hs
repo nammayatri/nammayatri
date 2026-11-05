@@ -55,6 +55,7 @@ import Domain.Types.VehicleCategory
 import Environment
 import Kernel.External.Encryption
 import Kernel.External.Types (ServiceFlow)
+import qualified Kernel.External.Verification.Idfy.Types.Response as Fields
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
@@ -80,6 +81,7 @@ import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
 

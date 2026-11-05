@@ -17,7 +17,7 @@ module Email.AWS.Flow where
 import qualified Amazonka as AWS
 import Amazonka.SES
 import Amazonka.SES.Lens (sendRawEmailResponse_messageId, sendRawEmail_configurationSetName, sendRawEmail_tags)
-import Control.Lens ((.~), (^.))
+import Control.Lens ((^.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.Text as T

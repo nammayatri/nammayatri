@@ -36,6 +36,7 @@ import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Kernel.Storage.Queries.SystemConfigs
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Fields
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App
 import Kernel.Types.Beckn.City (initCityMaps)
@@ -61,6 +62,7 @@ import qualified Storage.CachedQueries.BecknConfig as QBecknConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import System.Environment (lookupEnv)
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
+import qualified Tools.Fields as Fields
 import Tools.HTTPManager (prepareCRISHttpManager)
 import "utils" Utils.Common.Events as UE
 import WhatsappBot.Adapter.Tracker (startWhatsAppTracker)

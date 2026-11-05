@@ -65,6 +65,7 @@ import qualified Lib.Finance.Storage.Queries.Account as QFAccount
 import Lib.Finance.TempBalanceHold (getOfferHoldTotalExcludingAtKey)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Tools.Fields as Fields
 
 -- | Wallet (Liability, pooled) accounts of one owner type for many owners, in one query. The query is
 --   scoped by owner type, so a person holding both a DRIVER and a FLEET_OWNER wallet gets only the

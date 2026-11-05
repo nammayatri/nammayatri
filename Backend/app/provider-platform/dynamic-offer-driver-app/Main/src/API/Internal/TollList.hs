@@ -32,6 +32,7 @@ import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Toll.Storage.CachedQueries.Toll as CQToll
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 type API =
   Capture "merchantId" (Id Merchant)

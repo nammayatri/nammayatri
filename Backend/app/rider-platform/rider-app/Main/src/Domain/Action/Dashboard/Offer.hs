@@ -23,11 +23,13 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.Offer as DOffer
 import qualified Lib.Payment.Storage.Queries.Offer as QOffer
 import qualified Lib.Yudhishthira.Tools.Utils as LYUtils
+import qualified Lib.Yudhishthira.Types as Fields
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.Offer (OfferEligibilityInput)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Tools.Fields as Fields
 
 postOfferCreate ::
   ShortId DM.Merchant ->

@@ -9,6 +9,7 @@ import Lib.Scheduler
 import SharedLogic.Allocator
 import qualified SharedLogic.PayoutStatusCheck as SPSC
 import Storage.Beam.SchedulerJob ()
+import qualified Tools.Fields as Fields
 
 payoutStatusCheckJob ::
   ( UIPayout.PayoutSettlementFlow m r,

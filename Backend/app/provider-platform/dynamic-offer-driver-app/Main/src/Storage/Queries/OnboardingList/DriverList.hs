@@ -42,6 +42,7 @@ import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import Domain.Types.Vehicle (Vehicle)
+import qualified Domain.Types.Vehicle as Fields
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (DbHash)
@@ -56,6 +57,7 @@ import qualified Storage.Beam.Vehicle as BeamV
 import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import qualified Storage.Queries.VehicleExtra as QVehicleExtra
+import qualified Tools.Fields as Fields
 
 data DriverListFilters = DriverListFilters
   { dlfVerified :: Maybe Bool,

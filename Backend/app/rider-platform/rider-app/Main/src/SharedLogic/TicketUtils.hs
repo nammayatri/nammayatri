@@ -6,6 +6,7 @@ import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar as Data.Time.Calendar
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.Person as Domain.Types.Person
+import qualified Domain.Types.SeatManagement as Fields
 import qualified Domain.Types.ServiceCategory as Domain.Types.ServiceCategory
 import qualified Environment as Environment
 import EulerHS.Prelude hiding (id)

@@ -19,14 +19,17 @@ where
 
 import qualified Data.Aeson as A
 import Data.Time (utctDay)
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Common as SRD
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
+import qualified Domain.Types.DriverInformation as Fields
 import qualified Domain.Types.DriverStats as DS
 import Domain.Types.FareParameters
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
+import qualified Domain.Types.SearchRequest as Fields
 import qualified Domain.Types.VehicleVariant as DVV
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -37,6 +40,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
+import qualified Lib.BehaviorEngine.Types as Fields
 import qualified Lib.BehaviorTracker.BlockTracker as BT
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
@@ -48,6 +52,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
+import qualified SharedLogic.BehaviourManagement.IssueBreach as Fields
 import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverPool as DP
@@ -66,6 +71,7 @@ import qualified Storage.Queries.Ride as RQ
 import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error
 import qualified Tools.EventTracking as ET
+import qualified Tools.Fields as Fields
 import Tools.MarketingEvents as TM
 import Tools.Metrics (CoreMetrics)
 

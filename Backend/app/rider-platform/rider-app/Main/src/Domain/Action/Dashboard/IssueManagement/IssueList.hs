@@ -28,6 +28,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import Environment
 import qualified IssueManagement.Common as Common
+import qualified IssueManagement.Common.Dashboard.Issue as Fields
 import qualified IssueManagement.Domain.Action.Dashboard.Issue as DCommon
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -43,6 +44,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Issue as QIssue
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 
 getIssueListV1 :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow IssueListRes
 getIssueListV1 merchantShortId opCity mbLimit mbOffset mbmobileCountryCode mbMobileNumber mbFrom mbTo = do

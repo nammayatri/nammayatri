@@ -28,6 +28,7 @@ import IssueManagement.Domain.Types.Issue.IGMIssue
 import IssueManagement.Domain.Types.Issue.IssueCategory as Common
 import IssueManagement.Domain.Types.Issue.IssueOption as Common
 import Kernel.Prelude
+import qualified Kernel.Types.Id as Fields
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 

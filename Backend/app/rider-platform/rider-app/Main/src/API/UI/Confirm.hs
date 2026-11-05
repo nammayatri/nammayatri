@@ -37,11 +37,13 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Confirm as Fields
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import Tools.Auth
+import qualified Tools.Fields as Fields
 import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import qualified Tools.Metrics as Metrics
 

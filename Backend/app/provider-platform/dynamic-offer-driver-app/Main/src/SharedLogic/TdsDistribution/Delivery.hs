@@ -37,6 +37,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.TDSDistributionBatch as QBatch
 import qualified Storage.Queries.TDSDistributionPdfFile as QPdfFile
 import qualified Storage.Queries.TDSDistributionRecord as QRecord
+import qualified Tools.Fields as Fields
 
 -- | Automatic attempts for a transient send failure before the record is marked FAILED.
 maxAutoAttempts :: Int

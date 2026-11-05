@@ -9,6 +9,7 @@ where
 import qualified API.Types.Dashboard.AppManagement.EDCMachine as API
 import qualified Domain.Types.EDCMachineMapping as DEDCM
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified Domain.Types.Person as DP
 import qualified Environment
 import EulerHS.Prelude hiding (id)

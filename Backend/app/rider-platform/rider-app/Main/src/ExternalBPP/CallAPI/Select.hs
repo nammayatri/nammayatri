@@ -19,6 +19,7 @@ import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 
 select ::

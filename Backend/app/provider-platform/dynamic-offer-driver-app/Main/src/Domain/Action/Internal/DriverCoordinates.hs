@@ -28,6 +28,7 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getDriverCoordinates :: Id Ride -> Maybe Text -> Flow (Maybe Maps.LatLong)
 getDriverCoordinates rideId apiKey = do

@@ -16,11 +16,13 @@ import qualified Domain.Types.BookingStatus
 import Domain.Types.EmptyDynamicParam
 import qualified "this" Domain.Types.Journey
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantMessage as Fields
 import qualified Email.Flow as Email
 import qualified Email.Types as EmailT
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Encryption as Fields
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -38,6 +40,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error (RiderError (RiderConfigDoesNotExist))
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as TNotifications
 import Tools.SMS as Sms hiding (Success)
 import qualified Tools.Whatsapp as Whatsapp

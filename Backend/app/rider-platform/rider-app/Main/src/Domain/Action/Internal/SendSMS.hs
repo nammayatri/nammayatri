@@ -20,9 +20,12 @@ module Domain.Action.Internal.SendSMS
 where
 
 import qualified Data.Text as T
+import qualified Domain.Types.Merchant as Fields
+import qualified Domain.Types.MerchantMessage as Fields
 import Environment
 import Kernel.Prelude
 import Kernel.Sms.Config (useFakeSms)
+import qualified Kernel.Sms.Config as Fields
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id

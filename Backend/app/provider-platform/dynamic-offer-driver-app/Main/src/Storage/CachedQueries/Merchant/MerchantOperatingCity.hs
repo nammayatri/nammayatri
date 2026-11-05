@@ -21,6 +21,7 @@ import Kernel.Utils.Common
 import qualified Storage.Queries.MerchantOperatingCity as Queries
 import qualified Storage.Queries.MerchantOperatingCityExtra as QueriesExtra
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantOperatingCity -> m ()
 create = Queries.create

@@ -18,6 +18,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Wallet.Interface.Types as Fields
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
@@ -40,7 +41,7 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow as PBeamFlow
 import qualified Lib.Payment.Storage.Queries.Wallet as QWallet
 import qualified Lib.Payment.Storage.Queries.WalletHistory as QWH
 import qualified Lib.Payment.Storage.Queries.WalletPayments as QWP
-import Lib.Payment.Wallet.Types (LoyaltyProgramSummary)
+import Lib.Payment.Wallet.Types (LoyaltyProgramSummary (..))
 
 data LoyaltyReferenceType
   = LOYALTY_EARN_TOPUP

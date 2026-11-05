@@ -20,6 +20,7 @@ import qualified Data.Text as Text
 import qualified Domain.Action.UI.CancelLogic as CancelLogic
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Translations as Fields
 import Environment
 import Kernel.Beam.Functions as B
 import qualified Kernel.External.Types as Lang

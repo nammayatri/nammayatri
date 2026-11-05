@@ -10,6 +10,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common as Fields
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging

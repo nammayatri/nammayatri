@@ -16,10 +16,12 @@ import qualified Domain.Types.BookingPayment as DBP
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FRFSRecon as Recon
+import qualified Domain.Types.FRFSTicketBooking as Fields
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
 import qualified Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.LocationAddress as Fields
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OfferEntity as DOfferEntity
@@ -27,13 +29,16 @@ import qualified Domain.Types.ParkingTransaction as DPT
 import qualified Domain.Types.PaymentCustomer as DPaymentCustomer
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
+import qualified Domain.Types.PurchasedPassPayment as Fields
 import qualified Domain.Types.RefundRequest as DRefundRequest
 import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.TicketBooking as Fields
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as PInterface
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import qualified Kernel.External.Wallet.Interface.Types as Fields
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -93,6 +98,7 @@ import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.TicketBooking as QTB
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.LoyaltyWallet as LoyaltyWallet
 import Tools.Metrics.BAPMetrics
 import qualified Tools.Notifications as TNotifications

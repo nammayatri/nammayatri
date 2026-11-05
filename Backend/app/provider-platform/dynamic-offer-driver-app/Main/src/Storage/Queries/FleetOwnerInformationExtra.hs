@@ -211,10 +211,10 @@ updateByPrimaryKey fleetOwnerInfo = do
   aadhaarNumber' <- encryptWithDefault fleetOwnerInfo.aadhaarNumber fleetOwnerInfo.aadhaarNumberDec
   businessLicenseNumber' <- encryptWithDefault fleetOwnerInfo.businessLicenseNumber fleetOwnerInfo.businessLicenseNumberDec
   updateByPrimaryKey'
-    fleetOwnerInfo{gstNumber = gstNumber',
-                   panNumber = panNumber',
-                   aadhaarNumber = aadhaarNumber',
-                   businessLicenseNumber = businessLicenseNumber'
+    fleetOwnerInfo{Domain.Types.FleetOwnerInformation.gstNumber = gstNumber',
+                   Domain.Types.FleetOwnerInformation.panNumber = panNumber',
+                   Domain.Types.FleetOwnerInformation.aadhaarNumber = aadhaarNumber',
+                   Domain.Types.FleetOwnerInformation.businessLicenseNumber = businessLicenseNumber'
                   }
   where
     -- don't use directly without backfilling

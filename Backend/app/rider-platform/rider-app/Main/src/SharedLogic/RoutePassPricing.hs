@@ -26,6 +26,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error (GenericError (..))
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils (stageFareBetweenStops, stationCodeForMatching)
+import qualified SharedLogic.FRFSUtils as Fields
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Tools.Metrics.BAPMetrics as Metrics
 

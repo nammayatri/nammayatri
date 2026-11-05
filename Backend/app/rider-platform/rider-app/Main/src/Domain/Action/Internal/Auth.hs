@@ -20,6 +20,7 @@ import Data.OpenApi (ToSchema)
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.RegistrationToken as Fields
 import Environment
 import EulerHS.Prelude hiding (sortBy)
 import Kernel.Beam.Functions as B

@@ -15,6 +15,7 @@
 module Domain.Action.Beckn.FRFS.OnInit where
 
 import Domain.Action.Beckn.FRFS.Common
+import qualified Domain.Types.FRFSConfig as Fields
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking

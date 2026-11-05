@@ -64,12 +64,16 @@ import qualified Data.Text as T
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverInformation as DDI
+import qualified Domain.Types.DriverLocation as Fields
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FareProduct as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
+import qualified Domain.Types.Vehicle as Fields
+import qualified Domain.Types.VehicleServiceTier as Fields
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types (ServiceFlow)
@@ -89,6 +93,7 @@ import qualified Lib.Types.GateInfoExtra as DGI
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
+import qualified SharedLogic.External.LocationTrackingService.Types as Fields
 import qualified SharedLogic.FareCalculator as SFC
 import qualified SharedLogic.FareProduct as SharedFareProduct
 import qualified SharedLogic.Merchant as SMerchant
@@ -100,6 +105,7 @@ import qualified Storage.Queries.DriverInformationExtra as QDI
 import qualified Storage.Queries.FareProduct as QFareProduct
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
 import qualified Storage.Queries.VehicleExtra as QV
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 
 -- | Drivers within this many meters of a *different* queueable gate at the same

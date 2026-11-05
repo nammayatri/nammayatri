@@ -1,6 +1,7 @@
 module Storage.Queries.Transformers.Plan where
 
 import qualified Domain.Types.Plan as DPlan
+import qualified Domain.Types.SubscriptionConfig as Fields
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
 import Kernel.Types.Common

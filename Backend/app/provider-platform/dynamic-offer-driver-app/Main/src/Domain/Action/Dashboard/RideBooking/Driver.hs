@@ -43,14 +43,19 @@ import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.AadhaarCard
 import qualified Domain.Types.DocumentVerificationConfig as ODC
+import qualified Domain.Types.DriverBankAccount as Fields
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverFee as DDF
+import qualified Domain.Types.DriverGstin as Fields
+import qualified Domain.Types.DriverIdentityInfo as Fields
 import Domain.Types.DriverInformation
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverLicense
+import qualified Domain.Types.DriverOperatorAssociation as Fields
 import Domain.Types.DriverPanCard
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.DriverRCAssociation
+import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.Feedback as DFeedback
 import qualified Domain.Types.FleetDriverAssociation as FDA
 import qualified Domain.Types.FleetOwnerInformation as DFOI
@@ -61,6 +66,7 @@ import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.Vehicle as Fields
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
@@ -125,6 +131,7 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.Volunteer as QVF
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.SMS as Sms
 
 getDriverPaymentDue ::

@@ -19,6 +19,7 @@ import SharedLogic.Finance.Prepaid (activateNextQueuedPurchaseExpiry, handleSubs
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.SubscriptionPurchase as QSP
+import qualified Tools.Fields as Fields
 
 rideInFlightRetryDelay :: NominalDiffTime
 rideInFlightRetryDelay = 15 * 60

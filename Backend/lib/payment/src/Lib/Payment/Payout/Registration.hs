@@ -17,6 +17,7 @@ import qualified Kernel.External.Payout.Interface.Types as IPayout
 import Kernel.Prelude
 import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
 import Kernel.Types.Id (Id (..))
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow

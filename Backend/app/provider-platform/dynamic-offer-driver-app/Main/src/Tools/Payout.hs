@@ -31,6 +31,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.SubscriptionConfig as Fields
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (ServiceFlow)
@@ -50,6 +51,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data PayoutServiceNameOption = MerchantServiceUsageConfigOption | SubscriptionConfigOption DPlan.ServiceNames
 

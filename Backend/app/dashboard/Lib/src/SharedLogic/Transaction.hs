@@ -39,7 +39,7 @@ import Kernel.Utils.Common (encodeToText, logError, throwError)
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Transaction as QT
 import Tools.Auth.ApiAuth (ApiTokenInfo (..))
-import Tools.Auth.Dashboard (TokenInfo)
+import Tools.Auth.Dashboard (TokenInfo (..))
 import qualified Tools.Error as E
 
 emptyRequest :: Maybe ()
@@ -157,12 +157,12 @@ withResponseTransactionStoring' responseModifier transaction clientCall = handle
   when (transaction.endpoint == DT.UnknownEndpoint) $
     logError $ "Unknown endpoint: transactionId: " <> transaction.id.getId
   response <- clientCall
-  QT.create $ transaction{response = encodeToText <$> responseModifier response}
+  QT.create $ transaction{DT.response = encodeToText <$> responseModifier response}
   pure response
   where
     -- This code do not handle ExternalAPICallError, only E.Error
     errorHandler (err :: E.Error) = do
-      QT.create transaction{responseError = Just $ show err}
+      QT.create transaction{DT.responseError = Just $ show err}
       throwError err
 
 buildTransactionForSafetyDashboard ::

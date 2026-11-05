@@ -38,6 +38,7 @@ module Tools.Auth.DashboardUser
 where
 
 import "lib-dashboard" Dashboard.Common ()
+import qualified DashboardAlert.Domain.Types.Audience as Fields
 import qualified "lib-dashboard" Domain.Types.Merchant as DDashboardMerchant
 import qualified "lib-dashboard" Domain.Types.Person as DDashboardPerson
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole

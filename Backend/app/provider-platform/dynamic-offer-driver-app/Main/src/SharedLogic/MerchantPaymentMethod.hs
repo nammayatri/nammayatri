@@ -7,6 +7,7 @@ import Domain.Types.MerchantPaymentMethod
 import Kernel.Prelude
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Tools.Fields as Fields
 
 mkPaymentMethodInfo :: MerchantPaymentMethod -> PaymentMethodInfo
 mkPaymentMethodInfo MerchantPaymentMethod {..} = PaymentMethodInfo {..}

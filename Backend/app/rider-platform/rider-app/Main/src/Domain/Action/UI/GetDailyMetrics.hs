@@ -4,6 +4,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.RiderConfig as Fields
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.ClickhouseV2 as CH

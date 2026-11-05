@@ -43,15 +43,20 @@ import Kernel.Prelude
 -- edge runs Engine -> Env and never back).
 import WhatsappBot.Env (BotEnv, btn, ensureAuth, mkUserKey, rawInput, reply, replyButtons, resetContext, save, scopedSessionId)
 -- Booking CREATION now lives in Flow.Booking (Engine -> Flow.Booking -> {Ride, Env}).
-import WhatsappBot.Flow.Booking (bookTriggers, confirmRegularBooking, handleConfirmingRegularDrop, handleFlexiEndOtp, handlePickup, handlePickupConfirm, handleRegularDrop, handleRideType, hiddenRideTypeButtons, menuRow, prefetchSavedLocations, promptForBookingEntry, promptForPickup, promptForRegularDrop, sendPickupConfirm, sendRegularFareConfirm)
-import WhatsappBot.Handles (StoredPerson (..))
-import WhatsappBot.I18n (detectLanguage, getAllLanguages, languageCode, parseLanguage, t)
+
 -- Instances only: LanguageStrings / LanguageInfo are dot-accessed via RDP
 -- (getField), so their selectors are never referenced by name, but the HasField
 -- instances are needed. (Naming them would trip -Wunused-imports under -Werror.)
-import WhatsappBot.I18n.Types ()
-import WhatsappBot.Messages (formatDialable)
+
 -- The flow-agnostic ride lifecycle now lives in Ride (Engine -> Ride -> Env).
+
+import qualified WhatsappBot.Env as Fields
+import WhatsappBot.Flow.Booking (bookTriggers, confirmRegularBooking, handleConfirmingRegularDrop, handleFlexiEndOtp, handlePickup, handlePickupConfirm, handleRegularDrop, handleRideType, hiddenRideTypeButtons, menuRow, prefetchSavedLocations, promptForBookingEntry, promptForPickup, promptForRegularDrop, sendPickupConfirm, sendRegularFareConfirm)
+import WhatsappBot.Handles (StoredPerson (..))
+import qualified WhatsappBot.Handles as Fields
+import WhatsappBot.I18n (detectLanguage, getAllLanguages, languageCode, parseLanguage, t)
+import qualified WhatsappBot.I18n as Fields
+import WhatsappBot.Messages (formatDialable)
 import WhatsappBot.Ride (handleCallDriver, handleCancel, handleCancelConfirm, handleMarkSafeTrigger, handleSosTrigger, handleStatus, handleTracking)
 import WhatsappBot.Types
 

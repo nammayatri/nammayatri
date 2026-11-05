@@ -49,9 +49,11 @@ import qualified Data.Text as T
 import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified IssueManagement.Common as Common
 import qualified IssueManagement.Common.Dashboard.Issue as DCI
+import qualified IssueManagement.Common.UI.Issue as Fields
 import qualified IssueManagement.Domain.Action.Dashboard.Issue as DDI
 import qualified IssueManagement.Domain.Action.UI.Issue as DUI
 import qualified IssueManagement.Domain.Types.Issue.ChatMessage as DCM
+import qualified IssueManagement.Domain.Types.Issue.IssueCategory as Fields
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as DIR
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import IssueManagement.Storage.BeamFlow

@@ -54,6 +54,7 @@ import qualified Storage.Queries.Message as MQuery
 import qualified Storage.Queries.MessageReport as MRQuery
 import System.Environment (lookupEnv)
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 lookupBroadcastPush :: IO Bool
 lookupBroadcastPush = fromMaybe False . (>>= readMaybe) <$> lookupEnv "BROADCAST_KAFKA_PUSH"

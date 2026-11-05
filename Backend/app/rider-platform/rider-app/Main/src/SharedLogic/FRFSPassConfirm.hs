@@ -41,6 +41,7 @@ import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.Person as QP
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- | Confirm every fully pass-covered leg of the journey this booking belongs to.
 -- No-op for a standalone booking: that path confirms inline at booking time.

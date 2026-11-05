@@ -41,6 +41,7 @@ import Lib.Finance
     transfer,
   )
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.Account as Fields
 import Lib.Finance.Domain.Types.Extra.LedgerEntry (LedgerEntryMetadata (..))
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Queries.GateInfo as QGI
@@ -53,6 +54,7 @@ import qualified SharedLogic.Finance.Wallet as Wallet
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- | Required airport entry fee for this booking. Uses booking.pickupGateId (gate where customer is)
 --   and the booking's service tier, since a gate can exempt individual tiers.

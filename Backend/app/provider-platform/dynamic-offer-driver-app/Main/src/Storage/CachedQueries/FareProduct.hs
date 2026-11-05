@@ -27,7 +27,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as Domain
-import Kernel.Utils.Common (CacheFlow, MonadFlow, getCurrentTimestamp)
+import Kernel.Utils.Common (CacheConfig (..), CacheFlow, MonadFlow, getCurrentTimestamp)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Storage.Queries.FareProduct as Queries
 

@@ -28,8 +28,10 @@ import Domain.Action.UI.Booking
 import qualified Domain.Action.UI.MultimodalConfirm as DMultimodal
 import Domain.Action.UI.Quote
 import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.Booking.API as Fields
 import qualified Domain.Types.BookingStatus as DB
 import Domain.Types.CancellationReason
+import qualified Domain.Types.Extra.Ride as Fields
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -56,6 +58,7 @@ import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
+import qualified Tools.Fields as Fields
 
 data GetPersonFlowStatusRes = GetPersonFlowStatusRes
   { oldStatus :: Maybe DPFS.FlowStatus,

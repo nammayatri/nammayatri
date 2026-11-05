@@ -2,6 +2,7 @@ module SharedLogic.Ride where
 
 import qualified Beckn.ACL.Status as StatusACL
 import qualified Beckn.OnDemand.Utils.Common as Common
+import qualified BecknV2.OnDemand.Types as Fields
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.HashMap.Strict as HM
 import Data.List (findIndex)
@@ -10,9 +11,12 @@ import qualified Data.Text as Text
 import qualified Domain.Action.Beckn.OnTrack as OnTrack
 import qualified Domain.Action.UI.Route as DRoute
 import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.Location as Fields
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.RideStatus
+import qualified Domain.Types.RiderConfig as Fields
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
@@ -23,6 +27,7 @@ import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.Gps as Fields
 import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common

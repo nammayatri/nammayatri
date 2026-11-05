@@ -26,6 +26,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Auth
+import qualified Tools.Fields as Fields
 
 listCities :: Id DM.Merchant -> Flow [DTC.CityRes]
 listCities mId = do

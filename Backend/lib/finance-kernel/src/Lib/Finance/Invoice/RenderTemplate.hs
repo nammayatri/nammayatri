@@ -32,7 +32,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (Currency (..), HighPrecMoney)
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as FITxn
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
-import Lib.Finance.Invoice.Interface (InvoiceLineItem, ItemType (..), LineItemDescription)
+import Lib.Finance.Invoice.Interface (InvoiceLineItem (..), ItemType (..), LineItemDescription)
 import Lib.Finance.Utils.GstBreakdown (mkComponentRateFromTxn)
 import Text.Printf (printf)
 

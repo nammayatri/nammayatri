@@ -11,6 +11,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
 import qualified Domain.Types.AddOnConfig as DAddOnConfig
 import qualified Domain.Types.Beckn.Status as DStatus
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context

@@ -30,7 +30,6 @@ module Lib.LocationUpdates
 where
 
 import EulerHS.Prelude hiding (id, state)
-import GHC.Records.Extra
 import Kernel.External.Maps.Interface.Types (MapsServiceConfig)
 import Kernel.External.Maps.Types
 import Kernel.Storage.Hedis (HedisFlow)

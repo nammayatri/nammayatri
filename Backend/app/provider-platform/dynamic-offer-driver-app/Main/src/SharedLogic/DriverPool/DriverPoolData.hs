@@ -17,7 +17,7 @@ import qualified Data.Time.Calendar as Days
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
-import Domain.Types.DriverPoolConfig (DriverPoolConfig)
+import Domain.Types.DriverPoolConfig (DriverPoolConfig (..))
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.Extra.Plan (ServiceNames)
 import Domain.Types.Merchant (Merchant)

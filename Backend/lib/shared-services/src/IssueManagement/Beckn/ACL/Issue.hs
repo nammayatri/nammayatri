@@ -6,6 +6,7 @@ import qualified IGM.Types as Spec hiding (IssueSubCategory)
 import IGM.Utils (mkOrgName)
 import qualified IGM.Utils as Utils
 import qualified IssueManagement.Beckn.ACL.IGM.Utils as Utils
+import qualified IssueManagement.Common as Fields
 import qualified IssueManagement.Domain.Action.Beckn.Issue as DIssue
 import Kernel.Prelude
 import Kernel.Types.Error

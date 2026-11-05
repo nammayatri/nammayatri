@@ -5,6 +5,7 @@ module ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus where
 
 import Data.Aeson
 import qualified Data.Text as T
+import qualified Domain.Types.FRFSTicket as Fields
 import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as Ticket
 import Domain.Types.IntegratedBPPConfig

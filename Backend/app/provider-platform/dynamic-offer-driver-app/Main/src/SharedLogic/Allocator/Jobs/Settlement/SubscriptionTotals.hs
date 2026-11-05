@@ -15,6 +15,7 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgDom
 import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReport as QPgReport
 import qualified Storage.Queries.SubscriptionPurchase as QSP
+import qualified Tools.Fields as Fields
 
 -- ---------------------------------------------------------------------------
 -- Subscription purchase totals (aggregated)

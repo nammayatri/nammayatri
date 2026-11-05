@@ -6,6 +6,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
+import qualified Domain.Types.RiderConfig as Fields
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis

@@ -17,6 +17,9 @@ module Domain.Action.UI.PersonStats where
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.PersonStats as Fields
+import qualified Domain.Types.Ride as Fields
+import qualified Domain.Types.SearchRequest as Fields
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude

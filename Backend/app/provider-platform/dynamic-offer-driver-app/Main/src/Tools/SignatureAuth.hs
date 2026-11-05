@@ -59,6 +59,7 @@ import qualified Servant.OpenApi.Internal as S
 import Servant.Server.Internal.Delayed (addAuthCheck)
 import Servant.Server.Internal.DelayedIO (DelayedIO, withRequest)
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Tools.Fields as Fields
 
 -- | Adds authentication via a signature in the API
 --

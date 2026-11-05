@@ -28,6 +28,7 @@ import Environment
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Id
+import qualified Kernel.Types.Price as Fields
 import Kernel.Utils.Common (distanceToMeters)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate

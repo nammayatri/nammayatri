@@ -4,18 +4,19 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
+import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig (..))
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.Person as Fields
 import EulerHS.Prelude hiding (concatMap, find, null, readMaybe, whenJust)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Types
 import Kernel.External.Encryption
-import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Types.Error
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import Servant.API
 import qualified Storage.Queries.Person as QPerson

@@ -24,11 +24,14 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Queries.GateInfo as QGateInfo
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Queries.SpecialLocationPriority as QSpecialLocationPriority
+import qualified Lib.Types.GateInfo as Fields
 import qualified Lib.Types.SpecialLocation as DSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Types.SpecialLocationPriority as Fields
 import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Tools.Fields as Fields
 
 data FareProducts = FareProducts
   { fareProducts :: [DFareProduct.FareProduct],

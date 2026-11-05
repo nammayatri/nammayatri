@@ -22,6 +22,7 @@ import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Common as SReqD
 import qualified Domain.Types.DriverGoHomeRequest as DGetHomeRequest
 import qualified Domain.Types.DriverInformation as DDI
+import qualified Domain.Types.DriverQuote as Fields
 import qualified Domain.Types.DriverRidePayoutBankAccount as DDPBA
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DTMM
@@ -37,6 +38,7 @@ import qualified Domain.Types.ServiceTierType as DST
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
+import qualified Domain.Types.VehicleServiceTier as Fields
 import Domain.Types.VehicleVariant (castServiceTierToVehicleCategory)
 import Domain.Utils
 import Environment
@@ -54,6 +56,8 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.Account as Fields
+import qualified Lib.Finance.Domain.Types.LedgerEntry as Fields
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified "location-updates" Lib.LocationUpdates as LocUpd
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
@@ -93,6 +97,7 @@ import Storage.Queries.Vehicle as QVeh
 import Storage.Queries.VehicleRegistrationCertificate as QVRC
 import Tools.Error
 import Tools.Event
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 

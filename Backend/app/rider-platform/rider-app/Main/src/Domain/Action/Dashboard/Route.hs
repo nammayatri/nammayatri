@@ -17,7 +17,10 @@ module Domain.Action.Dashboard.Route where
 import qualified Dashboard.Common as Common
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Location as Fields
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as Fields
+import qualified Domain.Types.Ride as Fields
 import qualified Domain.Types.RideStatus as Ride
 import Environment
 import Kernel.Beam.Functions

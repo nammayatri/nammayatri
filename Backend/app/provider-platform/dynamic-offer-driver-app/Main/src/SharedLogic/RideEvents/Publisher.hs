@@ -17,7 +17,7 @@ import qualified Domain.Types.Booking as SRB
 import Domain.Types.Event.RideEndedEvent
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
-import Environment (RideEventsPublisherCfg)
+import Environment (RideEventsPublisherCfg (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Storage.Hedis.Config (HedisFlow)

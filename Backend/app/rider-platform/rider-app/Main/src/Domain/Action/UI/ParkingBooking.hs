@@ -5,6 +5,7 @@ module Domain.Action.UI.ParkingBooking (postMultimodalParkingBook, postMultimoda
 import qualified API.Types.UI.ParkingBooking
 import qualified Data.Text
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified Domain.Types.ParkingTransaction as DPT
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as SP

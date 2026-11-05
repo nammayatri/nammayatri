@@ -29,9 +29,12 @@ import Control.Applicative ((<|>))
 import qualified Data.Map.Strict as Map
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DRC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.HyperVergeVerification as Fields
+import qualified Domain.Types.IdfyVerification as Fields
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Person as Person
 import Environment (Flow)
+import qualified Environment as Fields
 import qualified Kernel.External.Verification as KEV
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis

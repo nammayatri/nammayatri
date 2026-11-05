@@ -16,6 +16,7 @@ import Servant hiding (throwError)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 
 newtype EKDLiveCallFeedbackReq = EKDLiveCallFeedbackReq {rideId :: Text}

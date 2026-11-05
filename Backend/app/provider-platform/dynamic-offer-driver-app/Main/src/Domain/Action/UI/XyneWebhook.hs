@@ -20,6 +20,7 @@ import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import qualified Tools.Fields as Fields
 
 postXyneWebhook :: Maybe Text -> Maybe Text -> RawByteString -> Flow XyneShared.XyneWebhookAck
 postXyneWebhook mbMocId mbSig rawBody = do

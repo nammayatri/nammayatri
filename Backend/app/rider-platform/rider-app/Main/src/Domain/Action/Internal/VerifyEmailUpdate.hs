@@ -5,6 +5,8 @@ module Domain.Action.Internal.VerifyEmailUpdate
 where
 
 import qualified Data.Text as T
+import qualified Domain.Types.Merchant as Fields
+import qualified Domain.Types.Person as Fields
 import Environment
 import Kernel.External.Encryption (encrypt)
 import Kernel.Prelude

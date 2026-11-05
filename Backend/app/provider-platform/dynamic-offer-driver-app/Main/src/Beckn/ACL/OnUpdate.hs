@@ -34,6 +34,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Tools.Fields as Fields
 
 buildOnUpdateMessageV2 ::
   ( MonadFlow m,

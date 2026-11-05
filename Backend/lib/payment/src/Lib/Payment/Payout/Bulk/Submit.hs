@@ -16,6 +16,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
+import qualified Lib.Payment.Domain.Types.PayoutRequest as Fields
 import Lib.Payment.Payout.Bulk.Schedule (firstCheckAt)
 import Lib.Payment.Payout.Bulk.Types
 import Lib.Payment.Storage.Beam.BeamFlow (BeamFlow)

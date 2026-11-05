@@ -23,6 +23,8 @@ module SharedLogic.Finance.Reconciliation.EntitySync
   )
 where
 
+import qualified Domain.Types.Booking as Fields
+import qualified Domain.Types.SubscriptionPurchase as Fields
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common

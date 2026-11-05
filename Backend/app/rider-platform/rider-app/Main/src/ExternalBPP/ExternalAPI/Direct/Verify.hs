@@ -1,5 +1,6 @@
 module ExternalBPP.ExternalAPI.Direct.Verify where
 
+import qualified Domain.Types.FRFSTicket as Fields
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import Domain.Utils (mapConcurrently)

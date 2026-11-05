@@ -640,7 +640,7 @@ runQueryRequestTemplate chakraQuery template = do
     YT.CLICKHOUSE -> do
       case Template.replaceTemplateUnits (Template.RawQuery chakraQuery.queryText) template of
         Right (Template.RawQuery rawQuery) -> do
-          res <- runClickhouseQueryRequest chakraQuery{queryText = rawQuery}
+          res <- runClickhouseQueryRequest chakraQuery{Lib.Yudhishthira.Types.ChakraQueries.queryText = rawQuery}
           pure
             ChakraQueryResult
               { queryName = chakraQuery.queryName,

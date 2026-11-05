@@ -32,8 +32,10 @@ import Domain.Types.VehicleVariant (VehicleVariant (SEDAN))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Seconds (..))
+import qualified Kernel.Types.Distance as Fields
 import Kernel.Types.Id
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Types as Fields
 import SharedLogic.RideFeedback.Rule (stableBucket)
 
 -- | The JSON object the RIDE-FEEDBACK targeting logic and action rules are evaluated against.

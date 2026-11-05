@@ -33,7 +33,9 @@ import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
 import qualified Domain.Types.Booking as DBooking
-import Domain.Types.FeedbackForm (BadgeDetail (..), FeedbackForm)
+import Domain.Types.FeedbackForm (BadgeDetail (..), FeedbackForm (..))
+import qualified Domain.Types.Issue as Fields
+import qualified Domain.Types.LocationAddress as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonFlowStatus as DPFS
@@ -69,6 +71,7 @@ import qualified Storage.Queries.Issue as QIssue
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Ticket as Ticket
 
 data FeedbackAnswer = FeedbackAnswer

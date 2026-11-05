@@ -13,6 +13,8 @@ import Kernel.Beam.Functions (ToTType' (..))
 import Kernel.External.Settlement.Interface.Types (ParsePaymentSettlementResult, ParseResult (..), TxnType (..))
 import qualified Kernel.External.Settlement.Interface.Types as Ext
 import Kernel.Prelude
+import qualified Kernel.Types.ActorInfo as Fields
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common (logInfo, logWarning)
 import Lib.Finance.Audit.Interface (AuditInput (..))
 import qualified Lib.Finance.Audit.Service as Audit

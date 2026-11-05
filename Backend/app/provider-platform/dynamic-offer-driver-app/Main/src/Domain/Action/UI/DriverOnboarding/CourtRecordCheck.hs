@@ -8,6 +8,8 @@ where
 import Control.Applicative ((<|>))
 import Data.Time (utctDay)
 import qualified Domain.Types.DriverIdentityInfo as DDII
+import qualified Domain.Types.DriverInformation as Fields
+import qualified Domain.Types.DriverPanCard as Fields
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment

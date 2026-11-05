@@ -99,7 +99,8 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -Wwarn=ambiguous-fields -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
+      OverloadedRecordDot
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -Wwarn=ambiguous-fields -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -108,8 +109,6 @@ library
     , containers
     , cryptohash
     , mobility-core
-    , record-dot-preprocessor
-    , record-hasfield
     , text
     , time
     , unordered-containers
@@ -164,7 +163,8 @@ test-suite whatsapp-bot-tests
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -Wwarn=ambiguous-fields -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N" -Wincomplete-uni-patterns
+      OverloadedRecordDot
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -Wwarn=ambiguous-fields -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -174,8 +174,6 @@ test-suite whatsapp-bot-tests
     , cryptohash
     , file-embed
     , mobility-core
-    , record-dot-preprocessor
-    , record-hasfield
     , tasty
     , tasty-hunit
     , text

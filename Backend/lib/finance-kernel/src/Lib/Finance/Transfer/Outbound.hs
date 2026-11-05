@@ -26,8 +26,10 @@ import qualified Data.Time as Time
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import qualified Lib.Finance.AccountConfig as Fields
 import Lib.Finance.Balance
 import Lib.Finance.Domain.Types.Account (Account (..))
+import qualified Lib.Finance.Domain.Types.Extra.FinanceAccountConfig as Fields
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Domain.Types.Transfer as DT
 import Lib.Finance.Error.Types

@@ -7,6 +7,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Lib.Finance.Domain.Types.SapJournalEntry as Domain
+import qualified Lib.Finance.Storage.Beam.SapJournalEntry as Fields
 import Lib.Finance.Storage.Queries.OrphanInstances.SapJournalEntry ()
 import qualified Storage.Beam.Common as BeamCommon
 

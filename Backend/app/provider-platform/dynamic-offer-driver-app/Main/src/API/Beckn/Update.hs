@@ -33,6 +33,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Servant
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo as ActorInfo
+import qualified Tools.Fields as Fields
 
 type API =
   Capture "merchantId" (Id Merchant)

@@ -24,6 +24,7 @@ where
 
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.OnDemand.Utils.Common as BecknUtils
+import qualified BecknV2.OnDemand.Types as Fields
 import qualified Domain.Action.Beckn.OnCancel as DOnCancel
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.CancellationReasons as DCancellationReasons

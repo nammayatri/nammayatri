@@ -16,12 +16,14 @@ where
 import qualified Data.Text as T
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as Person
 import Environment
 import qualified EulerHS.Prelude as EulerHS
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
+import qualified Kernel.External.Notification.FCM.Types as Fields
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common

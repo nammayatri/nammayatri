@@ -103,6 +103,9 @@ import qualified Database.Redis.Cluster as RedisCluster
 import Environment
 import EulerHS.Prelude
 import GHC.TypeLits (symbolVal)
+import qualified Kernel.Storage.Esqueleto.Config as Fields
+import qualified Kernel.Storage.Hedis.Config as Fields
+import qualified Kernel.Types.App as Fields
 import Kernel.Utils.Servant.Server (livenessCheck)
 import Servant
 import System.Timeout (timeout)

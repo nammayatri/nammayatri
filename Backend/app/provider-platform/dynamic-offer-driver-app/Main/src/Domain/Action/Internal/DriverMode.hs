@@ -19,6 +19,9 @@ import Domain.Action.Internal.ProcessingChangeOnline (processingChangeOnline)
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverOperatorAssociation as Fields
+import qualified Domain.Types.FleetDriverAssociation as Fields
+import qualified Domain.Types.FleetOperatorAssociation as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import Environment

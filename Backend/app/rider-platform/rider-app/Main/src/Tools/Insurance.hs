@@ -20,6 +20,7 @@ where
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantServiceUsageConfig as Fields
 import EulerHS.Prelude
 import qualified Kernel.External.Insurance.Interface as Insurance
 import qualified Kernel.External.Insurance.Interface.Types as Insurance

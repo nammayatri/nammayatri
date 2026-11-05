@@ -22,6 +22,7 @@ import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import qualified Lib.Yudhishthira.Event.KaalChakra as Event
 import qualified Lib.Yudhishthira.Event.KaalChakra.JobControl as JobControl
+import qualified Lib.Yudhishthira.Types as KaalChakraJobData (KaalChakraJobData (..))
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
 import qualified SharedLogic.KaalChakra.Actions as Actions
@@ -146,7 +147,7 @@ createFetchUserDataJob merchantId merchantOperatingCityId chakra jobData schedul
       LYT.Monthly -> QAllJ.createJobByTime @_ @'Monthly merchantId merchantOperatingCityId scheduledTime updJobData
       LYT.Quarterly -> QAllJ.createJobByTime @_ @'Quarterly merchantId merchantOperatingCityId scheduledTime updJobData
   where
-    updJobData = jobData{startTime = Just scheduledTime}
+    updJobData = jobData{KaalChakraJobData.startTime = Just scheduledTime}
 
 createUpdateUserTagDataJob ::
   ChakraJobs m r =>

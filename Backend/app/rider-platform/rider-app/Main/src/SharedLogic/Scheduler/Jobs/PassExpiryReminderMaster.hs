@@ -17,6 +17,7 @@ import qualified SharedLogic.PassExpiryReminder as SPER
 import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 batchRescheduleDelaySeconds :: NominalDiffTime
 batchRescheduleDelaySeconds = 2

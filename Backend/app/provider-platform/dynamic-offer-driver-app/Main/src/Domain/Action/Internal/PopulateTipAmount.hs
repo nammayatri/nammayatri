@@ -18,7 +18,10 @@ import qualified Data.Aeson as Aeson
 import qualified Data.List as List
 import qualified Data.Text as T
 import Data.Time
+import qualified Domain.Types.Booking as Fields
+import qualified Domain.Types.DailyStats as Fields
 import Domain.Types.Extra.MerchantPaymentMethod
+import qualified Domain.Types.MerchantPaymentMethod as Fields
 import Domain.Types.Ride
 import Environment
 import Kernel.Beam.Functions
@@ -30,6 +33,8 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance (AccountRole (..), FinanceCtx, transfer)
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
+import qualified Lib.Finance.Domain.Types.LedgerEntry as Fields
+import qualified Lib.Finance.FinanceM as Fields
 import qualified Lib.Finance.Invoice.Interface as InvoiceI
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
 import qualified Lib.Finance.Ledger.Service as LedgerSvc
@@ -46,6 +51,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 populateTipAmount :: Id Ride -> HighPrecMoney -> Maybe Text -> Flow APISuccess
 populateTipAmount rideId tipAmount apiKey = ActorInfo.withRequestIdActorInfo $ do

@@ -21,6 +21,8 @@ where
 
 import qualified Data.List as DL
 import qualified Domain.Types.Common as DCommon
+import qualified Domain.Types.SearchRequest as Fields
+import qualified Domain.Types.SearchRequestForDriver as Fields
 import qualified Domain.Types.SearchTry as DST
 import Environment
 import Kernel.Prelude
@@ -32,6 +34,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriverExtra as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data BatchPoolStats = BatchPoolStats
   { batchNum :: Int,

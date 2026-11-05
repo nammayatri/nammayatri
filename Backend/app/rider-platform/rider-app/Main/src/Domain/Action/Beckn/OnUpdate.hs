@@ -44,6 +44,25 @@ module Domain.Action.Beckn.OnUpdate
     ParcelImageFileUploadReq (..),
     ChangeServiceTierReq (..),
     AddBaggageReq (..),
+    ValidatedBookingReallocationReq (..),
+    ValidatedEstimateRepetitionReq (..),
+    ValidatedQuoteRepetitionReq (..),
+    ValidatedNewMessageReq (..),
+    ValidatedSafetyAlertReq (..),
+    ValidatedPhoneCallRequestEventReq (..),
+    ValidatedPhoneCallCompletedEventReq (..),
+    ValidatedStopArrivedReq (..),
+    ValidatedEditDestSoftUpdateReq (..),
+    ValidatedEditDestConfirmUpdateReq (..),
+    ValidatedTollCrossedEventReq (..),
+    ValidatedDestinationReachedReq (..),
+    ValidatedDriverNearPickupReq (..),
+    ValidatedEditDestErrorReq (..),
+    ValidatedReturnTripStartedReq (..),
+    ValidatedEstimatedEndTimeRangeReq (..),
+    ValidatedParcelImageFileUploadReq (..),
+    ValidatedChangeServiceTierReq (..),
+    ValidatedAddBaggageReq (..),
   )
 where
 
@@ -55,6 +74,7 @@ import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.BookingPartiesLink as DBookingPartiesLink
 import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.BookingStatus as SRB
 import qualified Domain.Types.BookingUpdateRequest as DBUR
@@ -62,8 +82,10 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.LocationMapping as DLM
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
+import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.SearchRequest as DSR
@@ -84,6 +106,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Base as JM
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
+import qualified Safety.Domain.Types.SafetySettings as Fields
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
@@ -112,6 +135,7 @@ import qualified Storage.Queries.Quote as SQQ
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Transformers.Booking as STB
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Maps (LatLong)
 import Tools.Metrics (HasBAPMetrics)
 import qualified Tools.Notifications as Notify
@@ -590,8 +614,8 @@ onUpdate = \case
           merchant <- QCM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
           return $ merchant.scheduleRideBufferTime `addUTCTime` now < booking.startTime
         else return False
-    let newQuote = quote{id = Id quoteId_, createdAt = now, updatedAt = now}
-        newBooking = booking{id = bookingId, quoteId = Just (Id quoteId_), status = SRB.CONFIRMED, isScheduled = newIsScheduled, bppBookingId = Just newBppBookingId, startTime = max now booking.startTime, createdAt = now, updatedAt = now}
+    let newQuote = quote{DQuote.id = Id quoteId_, DQuote.createdAt = now, DQuote.updatedAt = now}
+        newBooking = booking{DRB.id = bookingId, DRB.quoteId = Just (Id quoteId_), DRB.status = SRB.CONFIRMED, DRB.isScheduled = newIsScheduled, DRB.bppBookingId = Just newBppBookingId, DRB.startTime = max now booking.startTime, DRB.createdAt = now, DRB.updatedAt = now}
         flowStatus = if newIsScheduled then DPFS.IDLE else DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = bookingId, validTill = addUTCTime 180 now, fareProductType = Just $ STB.getFareProductType booking.bookingDetails, tripCategory = booking.tripCategory}
     void $ SQQ.createQuote newQuote
     -- make all the booking parties inactive during rellocation
@@ -600,7 +624,7 @@ onUpdate = \case
       mapM
         ( \bp -> do
             partyId <- generateGUID
-            return bp{id = partyId, bookingId = bookingId}
+            return bp{DBookingPartiesLink.id = partyId, DBookingPartiesLink.bookingId = bookingId}
         )
         oldBookingParties
     QBPL.makeAllInactiveByBookingId booking.id
@@ -652,7 +676,7 @@ onUpdate = \case
       mapM
         ( \fareBreakup -> do
             id <- generateGUID
-            return fareBreakup{id, entityType = DFareBreakup.BOOKING, entityId = booking.id.getId}
+            return fareBreakup{DFareBreakup.id = id, DFareBreakup.entityType = DFareBreakup.BOOKING, DFareBreakup.entityId = booking.id.getId}
         )
         fareBreakupsBUR
     SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) fareBreakups

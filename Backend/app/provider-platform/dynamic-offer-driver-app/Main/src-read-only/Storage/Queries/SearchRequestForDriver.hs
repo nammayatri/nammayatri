@@ -21,6 +21,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestForDriver as Beam
 import Storage.Queries.SearchRequestForDriverExtra as ReExport
 import Storage.Queries.Transformers.SearchRequestForDriver
+import qualified Tools.Fields as Fields
 
 findAllActiveBySRId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

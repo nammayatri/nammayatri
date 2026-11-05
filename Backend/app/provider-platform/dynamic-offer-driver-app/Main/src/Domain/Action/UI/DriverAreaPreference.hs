@@ -17,6 +17,8 @@ where
 import qualified API.Types.UI.DriverAreaPreference as APIT
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as T
+import qualified Domain.Types.FleetConfig as Fields
+import qualified Domain.Types.GeohashArea as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -34,6 +36,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getDriverAreaPreferenceGetInfo ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

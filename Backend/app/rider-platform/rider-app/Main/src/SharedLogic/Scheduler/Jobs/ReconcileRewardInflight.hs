@@ -20,8 +20,10 @@ where
 
 import qualified Domain.Action.Rewards.Coupon as Coupon
 import Domain.Types.Extra.LeanFlow (LeanFlowFeature (REWARD_INFLIGHT_RECONCILE))
+import qualified Domain.Types.RewardCampaign as Fields
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)

@@ -5,7 +5,7 @@ module Storage.Queries.RiderPreferencesExtra where
 
 import Domain.Types.Extra.RiderPreferences
 import Domain.Types.Person (Person)
-import Domain.Types.RiderPreferences (RiderPreferences)
+import Domain.Types.RiderPreferences (RiderPreferences (..))
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude

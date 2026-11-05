@@ -27,6 +27,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, throwError)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.Beam.Booking as BeamBooking
 import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.RsfReconLedgerEntry as Fields
 import qualified Storage.Queries.Booking as QBooking
 import Storage.Queries.OrphanInstances.Booking ()
 import qualified Storage.Queries.RsfReconLedgerEntry as QLedger

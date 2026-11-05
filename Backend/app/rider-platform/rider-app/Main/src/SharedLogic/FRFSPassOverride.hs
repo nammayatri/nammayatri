@@ -68,6 +68,7 @@ import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
 import Data.List (nubBy)
 import qualified Data.Time as T
+import qualified Domain.Types.FRFSQuoteCategory as Fields
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
@@ -78,6 +79,7 @@ import Domain.Types.PassOverrideConfig
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.PurchasedPassPayment as DPPP
+import qualified Domain.Types.RiderConfig as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common

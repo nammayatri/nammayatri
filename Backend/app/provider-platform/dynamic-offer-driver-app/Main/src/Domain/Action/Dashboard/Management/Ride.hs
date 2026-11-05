@@ -54,8 +54,10 @@ import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideEvidence as Fields
 import Environment
 import qualified FileManagement.Domain.Action.UI.File as DFile
+import qualified IssueManagement.Domain.Types.MediaFile as Fields
 import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis

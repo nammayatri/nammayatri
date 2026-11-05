@@ -3,6 +3,8 @@ module SharedLogic.Insurance where
 import Control.Monad.Extra (maybeM)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Insurance as DI
+import qualified Domain.Types.InsuranceConfig as Fields
+import qualified Domain.Types.Person as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.VehicleCategory as DVC

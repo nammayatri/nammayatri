@@ -15,6 +15,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, logDebug)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 
 data ViolationDetectionReq = ViolationDetectionReq

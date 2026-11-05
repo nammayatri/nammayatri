@@ -8,6 +8,7 @@ import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PolicyAndComplianceDocument as DPCD
+import qualified Domain.Types.RiderConfig as Fields
 import qualified Email.Flow as Email
 import Kernel.Beam.Functions (findAllWithOptionsKV)
 import Kernel.Beam.Lib.Utils (pushToKafka)

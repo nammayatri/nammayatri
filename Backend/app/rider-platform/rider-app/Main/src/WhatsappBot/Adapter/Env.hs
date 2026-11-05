@@ -35,6 +35,7 @@ import Kernel.Utils.Common (fromMaybeM, getCurrentTime, logError)
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Meta (lookupMetaCfg)
 import WhatsappBot.Adapter.Backend (mkBackendHandle)
 import WhatsappBot.Adapter.PersonStore (mkPersonStore)
@@ -45,6 +46,7 @@ import WhatsappBot.Adapter.Translations (getTranslationsMap)
 import WhatsappBot.Engine (handleMessage)
 import WhatsappBot.Env (BotConfig (..), BotEnv (..))
 import WhatsappBot.Handles (Clock (..), RideRegistry (..))
+import qualified WhatsappBot.Handles as Fields
 import qualified WhatsappBot.I18n as WI
 import WhatsappBot.I18n.Types (LanguageStrings, SupportedLanguage)
 import WhatsappBot.Tracker (TrackerDeps (..))

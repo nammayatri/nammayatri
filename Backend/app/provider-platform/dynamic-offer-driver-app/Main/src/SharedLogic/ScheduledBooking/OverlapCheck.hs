@@ -31,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.Fields as Fields
 import qualified Tools.Maps as TMaps
 
 -- | One committed ride as a time interval anchored at its pickup/drop positions.

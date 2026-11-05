@@ -17,7 +17,7 @@ module Domain.Action.Internal.RefundLedger where
 import qualified Domain.Types.Booking as DBooking
 import "beckn-spec" Domain.Types.Invoice (IssuedToType (..))
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
-import Domain.Types.Ride (Ride)
+import Domain.Types.Ride (Ride (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import Kernel.Beam.Functions (runInReplica)
@@ -44,6 +44,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- | Defined here because rider-app's RefundRequestStatus can't be cross-imported.
 data RefundLedgerStatus = APPROVED | REFUNDED | FAILED

@@ -12,6 +12,7 @@ where
 
 import qualified Kernel.External.Payout.Juspay.Types.Payout as JuspayPayout
 import Kernel.Prelude
+import qualified Kernel.Types.Id as Fields
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.StateTransition as ST
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow

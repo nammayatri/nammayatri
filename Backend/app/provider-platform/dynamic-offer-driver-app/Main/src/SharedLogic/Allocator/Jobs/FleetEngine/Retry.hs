@@ -13,15 +13,18 @@ module SharedLogic.Allocator.Jobs.FleetEngine.Retry
 where
 
 import qualified Data.Text as T
+import qualified Domain.Types.Ride as Fields
 import qualified Kernel.External.FleetEngine.Types as FETypes
 import Kernel.Prelude
 import Kernel.Types.Error (GenericError (..))
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..), FleetEngineRetryOperation (..))
+import qualified SharedLogic.Allocator as Fields
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.Fields as Fields
 
 -- | Runs one FE retry attempt. Pattern B: catches its own errors, self-enqueues the
 -- next attempt via 'enqueueFleetEngineRetry' until 'feRetryMaxAttempts' is reached,

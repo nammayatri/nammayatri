@@ -19,6 +19,7 @@ module Lib.IncentiveJourney.Convert
 where
 
 import Kernel.Prelude
+import qualified Kernel.Types.Id as Fields
 import qualified Lib.IncentiveJourney.Domain.Types.Common as Common
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM

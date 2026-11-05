@@ -112,6 +112,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import Tools.Error
 import qualified Tools.EventTracking as ET
+import qualified Tools.Fields as Fields
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types

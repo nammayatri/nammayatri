@@ -31,6 +31,7 @@ import Storage.Beam.SpecialZone ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 type API =
   Capture "merchantId" (Id Merchant)

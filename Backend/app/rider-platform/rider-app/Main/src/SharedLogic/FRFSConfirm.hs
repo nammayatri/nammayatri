@@ -11,6 +11,7 @@ import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
+import qualified Domain.Types.FRFSSearch as Fields
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
@@ -66,6 +67,7 @@ import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MultiModalBus as Fields
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Seat as QSeat
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
@@ -81,6 +83,7 @@ import qualified Storage.Queries.Location as QLocation
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 import qualified Tools.Metrics.BAPMetrics as Metrics

@@ -26,6 +26,7 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Data.Text as T
+import qualified Domain.Types.DriverRCAssociation as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Kernel.External.Encryption
@@ -42,6 +43,7 @@ import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 
 overlayKey :: Text

@@ -20,6 +20,7 @@ import Kernel.External.Encryption
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Types.Error
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)

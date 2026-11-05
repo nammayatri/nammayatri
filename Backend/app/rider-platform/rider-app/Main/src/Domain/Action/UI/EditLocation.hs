@@ -6,8 +6,10 @@ import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Location as QL
+import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
+import qualified Domain.Types.Ride as Fields
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
@@ -28,6 +30,7 @@ import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getEditResult ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

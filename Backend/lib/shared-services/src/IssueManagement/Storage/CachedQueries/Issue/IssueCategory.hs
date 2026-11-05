@@ -22,7 +22,7 @@ import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheConfig (..), CacheFlow)
 
 findAllActiveByMerchantOpCityIdAndLanguage :: BeamFlow m r => Id MerchantOperatingCity -> Language -> Identifier -> m [(IssueCategory, Maybe IssueTranslation)]
 findAllActiveByMerchantOpCityIdAndLanguage merchantOpCityId language identifier =
