@@ -32,6 +32,7 @@ defaultRecomputeSpec = \case
   TargetFleetOwner personId -> recomputeFleetOwners [personId]
   TargetVehicle registrationNo -> recomputeVehicles [registrationNo]
   TargetVehicleById rcId -> mempty {rsVehicleIds = [rcId]}
+  TargetFleetVehicleById rcId -> mempty {rsVehicleIds = [rcId]}
 
 runRecomputeSpec :: OnboardingFlow m r => DTC.TransporterConfig -> RecomputeSpec -> m ()
 runRecomputeSpec transporterConfig spec = do
@@ -75,6 +76,7 @@ withOnboardingActionLock target body = case target of
   TargetDriverVehicle personId _ -> locked personId.getId
   TargetFleetOwner personId -> locked personId.getId
   TargetVehicleById rcId -> locked rcId.getId
+  TargetFleetVehicleById rcId -> locked rcId.getId
   TargetVehicle registrationNo -> locked registrationNo
   where
     locked entityKey =
@@ -104,6 +106,7 @@ targetEntity = \case
   TargetFleetOwner personId -> (DAlertEntity.FleetEntity, personId.getId, Nothing)
   TargetVehicle registrationNo -> (DAlertEntity.VehicleEntity, registrationNo, Nothing)
   TargetVehicleById rcId -> (DAlertEntity.VehicleEntity, rcId.getId, Nothing)
+  TargetFleetVehicleById rcId -> (DAlertEntity.VehicleEntity, rcId.getId, Nothing)
 
 actorFleetOwner :: Actor -> Maybe (Id DP.Person)
 actorFleetOwner = \case
