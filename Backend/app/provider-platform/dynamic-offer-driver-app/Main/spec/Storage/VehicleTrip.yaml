@@ -3,15 +3,16 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
-  ServiceTierType: BecknV2.FRFS.Enums
+  Person: Domain.Types.Person
 
+# One run of a shared cab on one route: opened when the driver picks a route, closed by a route change, a return trip, an end or the
+# rider-app's silence check. The session (Redis) is the live state; this row is what survives a flush and the driver's history.
 VehicleTrip:
   tableName: vehicle_trip
 
   fields:
     id: Id VehicleTrip
-    serviceTierType: ServiceTierType
-    driverId: Text
+    driverId: Id Person
     vehicleNumber: Text
     capacity: Int
     merchantId: Id Merchant
@@ -39,20 +40,17 @@ VehicleTrip:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VehicleTripEndReason>
 
   sqlType:
-    serviceTierType: text
     status: text
     endReason: text
 
   # On KV: the plate's live trip is found through its SecondaryKey while the row is still in Redis. One live trip per plate is held by
-  # the plate lock around every write (SharedCab.Session), not by a DB constraint, which would only fire at drain time. The city's
-  # live list and a driver's history read Postgres through the indexes below; a trip a few seconds late there is the next tick's.
+  # the plate lock around every write (SharedCab.Session), not by a DB constraint, which would only fire at drain time.
   constraints:
     id: PrimaryKey
     vehicleNumber: SecondaryKey
 
   extraIndexes:
     - columns: [driverId, startedAt]
-    - columns: [merchantOperatingCityId, status]
 
   queries:
     findById:
@@ -64,14 +62,6 @@ VehicleTrip:
       where:
         and:
           - vehicleNumber
-          - in:
-            - status: "[Domain.Types.VehicleTrip.ACTIVE, Domain.Types.VehicleTrip.PAUSED]|CIM"
-
-    findAllLiveByMerchantOperatingCityId:
-      kvFunction: findAllWithKV
-      where:
-        and:
-          - merchantOperatingCityId
           - in:
             - status: "[Domain.Types.VehicleTrip.ACTIVE, Domain.Types.VehicleTrip.PAUSED]|CIM"
 
@@ -90,19 +80,6 @@ VehicleTrip:
       kvFunction: updateOneWithKV
       params: [offlineBoardings]
       where: id
-
-    findAllByDriverIdAndStartedAtRange:
-      kvFunction: findAllWithOptionsKV
-      where:
-        and:
-          - driverId
-          - gte:
-            - startedAt: from
-          - lte:
-            - startedAt: to
-      orderBy:
-        field: startedAt
-        order: asc
 
   default:
     offlineBoardings: "0"

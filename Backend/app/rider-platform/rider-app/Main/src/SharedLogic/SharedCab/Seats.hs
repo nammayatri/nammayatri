@@ -152,7 +152,7 @@ cabsSeats sessions = do
 
 cabSeatsWith :: [Text] -> Session -> [Seated] -> CabSeats
 cabSeatsWith stopCodes s rows =
-  CabSeats {capacity = s.capacity, walkups = s.walkupCount, stopCodes, riders = ridersOn stopCodes s.vehicleNumber s.vehicleTripId.getId rows}
+  CabSeats {capacity = s.capacity, walkups = s.walkupCount, stopCodes, riders = ridersOn stopCodes s.vehicleNumber s.vehicleTripId rows}
 
 -- | A booking as the count reads it: its KV row, its tickets and its party.
 data Seated = Seated
@@ -185,7 +185,7 @@ seatedOn plates = do
         { bookingId = b.id.getId,
           status = b.status,
           plate = b.vehicleNumber,
-          boardedTrip = getId <$> b.vehicleTripId,
+          boardedTrip = b.vehicleTripId,
           boardStop = b.fromStationCode,
           dropStop = b.toStationCode,
           tickets = [t.status | t <- tickets, t.frfsTicketBookingId == b.id],

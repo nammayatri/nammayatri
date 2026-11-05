@@ -149,8 +149,8 @@ INSERT INTO atlas_app.route_stop_fare (amount,currency,end_stop_code,fare_policy
 INSERT INTO atlas_app.route_stop_fare (amount,currency,end_stop_code,fare_policy_id,integrated_bpp_config_id,merchant_id,merchant_operating_city_id,start_stop_code,category,created_at,updated_at) VALUES (30,'INR','SC_POLO',md5('e2e-ops-fp-SC-R2-R')::uuid::text,'a9f70a47-6bf9-6c26-f04e-d2a21c3628b5','4b17bd06-ae7e-48e9-85bf-282fb310209c','c7e3c3eb-cc15-46d4-ba04-5af55ac87874','SC_4FURLONG','ADULT',now(),now());
 
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════════════
--- 4. Switch shared cab on for the test city. vehicle_trip and frfs_ticket_booking stay on KV, as in prod: the flows' Postgres
---    reads retry for the drainer's lag, so the rider drainer must run (THREAD_PER_POD_COUNT above 1 keeps that lag to a few seconds).
+-- 4. Switch shared cab on for the test city. frfs_ticket_booking (rider) and vehicle_trip (driver) stay on KV, as in prod: the flows'
+--    Postgres reads retry for the drainer's lag, so both drainers must run (THREAD_PER_POD_COUNT above 1 keeps that lag to a few seconds).
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════════════
 -- shared cab on for the test city (NULL would follow the SHARED_CAB IntegratedBPPConfig alone, false turns it off)
 UPDATE atlas_app.rider_config SET shared_cab_enabled = true, shared_cab_call_enabled = true, shared_cab_chat_enabled = true WHERE merchant_operating_city_id = 'c7e3c3eb-cc15-46d4-ba04-5af55ac87874';

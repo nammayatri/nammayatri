@@ -1,12 +1,6 @@
 -- Shared-cab partial indexes. Kept as hand-written DDL because the storage YAML cannot express a partial (WHERE) index; every
 -- shared-cab column comes from the YAML specs (migrations-read-only).
 
--- vehicle_trip: a plate's live (ACTIVE/PAUSED) trip, for findActiveByVehicleNumber. Not unique: vehicle_trip is on KV, so a unique
--- index or a CHECK would only fire at drain time; one live trip per plate is held by the plate lock in code (SharedCab.Session).
-CREATE INDEX IF NOT EXISTS idx_vehicle_trip_live_vehicle_number
-  ON atlas_app.vehicle_trip (vehicle_number)
-  WHERE status IN ('ACTIVE', 'PAUSED');
-
 -- frfs_ticket_booking: the allocation engine's FINDING scan, confirmed unallocated shared-cab bookings per route.
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_frfs_ticket_booking_shared_cab_finding
   ON atlas_app.frfs_ticket_booking (route_code)
