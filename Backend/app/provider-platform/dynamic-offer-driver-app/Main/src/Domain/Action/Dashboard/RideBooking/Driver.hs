@@ -1039,7 +1039,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
           Driver.checkRCAssociationForFleet personId.getId rc
           mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId personId rc.id now
           when (isNothing mbFleetAssoc) $ do
-            SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.LinkVehicle (SGuard.TargetVehicleById rc.id) $
+            SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.LinkVehicle (SGuard.TargetFleetVehicleById rc.id) $
               createFleetRCAssociationIfPossible transporterConfig personId rc
         _ -> pure ()
 
