@@ -10,10 +10,12 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.InternalAuth
 import Storage.Beam.SystemConfigs ()
 
 type API =
   ( "sourceDeparted"
+      :> Header "api-key" Text
       :> ReqBody '[JSON] Domain.DriverSourceDepartedReq
       :> Post '[JSON] APISuccess
   )
@@ -22,5 +24,7 @@ handler :: FlowServer API
 handler =
   driverSourceDeparted
 
-driverSourceDeparted :: Domain.DriverSourceDepartedReq -> FlowHandler APISuccess
-driverSourceDeparted = withFlowHandlerAPI . Domain.driverSourceDeparted
+driverSourceDeparted :: Maybe Text -> Domain.DriverSourceDepartedReq -> FlowHandler APISuccess
+driverSourceDeparted apiKey req = withFlowHandlerAPI $ do
+  checkLtsKey "sourceDeparted" apiKey
+  Domain.driverSourceDeparted req

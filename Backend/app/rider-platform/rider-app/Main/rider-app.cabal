@@ -57,10 +57,8 @@ library
       API.Beckn.OnStatus
       API.Beckn.OnTrack
       API.Beckn.OnUpdate
-      API.Conductor
       API.Dashboard.Exotel
       API.DashboardExotel
-      API.Depot
       API.DirectDashboard
       API.FleetEngineToken
       API.FRFS
@@ -336,12 +334,10 @@ library
       Domain.Action.UI.CancellationReasons
       Domain.Action.UI.CancelLogic
       Domain.Action.UI.ChangeServiceTier
-      Domain.Action.UI.Conductor.Stats
       Domain.Action.UI.Confirm
       Domain.Action.UI.CRIS
       Domain.Action.UI.CustomerReferral
       Domain.Action.UI.DeletedPerson
-      Domain.Action.UI.Depot.Stats
       Domain.Action.UI.Disability
       Domain.Action.UI.Dispatcher
       Domain.Action.UI.DriverOffer
@@ -633,6 +629,7 @@ library
       SharedLogic.IncentiveJourney
       SharedLogic.Insurance
       SharedLogic.IntegratedBPPConfig
+      SharedLogic.InternalAuth
       SharedLogic.JobScheduler
       SharedLogic.KaalChakra.Actions
       SharedLogic.LegalPolicyEmail
@@ -836,7 +833,6 @@ library
       Storage.Clickhouse.AlertIncident
       Storage.Clickhouse.Booking
       Storage.Clickhouse.BookingCancellationReason
-      Storage.Clickhouse.ConductorStats
       Storage.Clickhouse.Estimate
       Storage.Clickhouse.EstimateBreakup
       Storage.Clickhouse.FareBreakup

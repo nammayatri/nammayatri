@@ -27,6 +27,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.InternalAuth
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.GeometryGeom as QGEO
@@ -45,6 +46,7 @@ type API =
     :> Capture "city" Context.City
     :> "geometry"
     :> "update"
+    :> Header "api-key" Text
     :> ReqBody '[JSON] GeometryUpdateReq
     :> Put '[JSON] APISuccess
 
@@ -54,9 +56,11 @@ handler = updateGeometry
 updateGeometry ::
   Id Merchant ->
   Context.City ->
+  Maybe Text ->
   GeometryUpdateReq ->
   FlowHandler APISuccess
-updateGeometry merchantId city req = withFlowHandlerAPI $ do
+updateGeometry merchantId city apiKey req = withFlowHandlerAPI $ do
+  requireMerchantKey merchantId apiKey
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchantId.getId <> " ,city: " <> show city)
   let cityParam = merchantOpCity.city
       stateParam = merchantOpCity.state

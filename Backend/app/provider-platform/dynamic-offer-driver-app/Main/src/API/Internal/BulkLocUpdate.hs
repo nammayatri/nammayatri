@@ -10,10 +10,12 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.InternalAuth
 import Storage.Beam.SystemConfigs ()
 
 type API =
   ( "bulkLocUpdate"
+      :> Header "api-key" Text
       :> ReqBody '[JSON] Domain.BulkLocUpdateReq
       :> Post '[JSON] APISuccess
   )
@@ -22,5 +24,7 @@ handler :: FlowServer API
 handler =
   bulkLocUpdate
 
-bulkLocUpdate :: Domain.BulkLocUpdateReq -> FlowHandler APISuccess
-bulkLocUpdate = withFlowHandlerAPI . Domain.bulkLocUpdate
+bulkLocUpdate :: Maybe Text -> Domain.BulkLocUpdateReq -> FlowHandler APISuccess
+bulkLocUpdate apiKey req = withFlowHandlerAPI $ do
+  checkLtsKey "bulkLocUpdate" apiKey
+  Domain.bulkLocUpdate req

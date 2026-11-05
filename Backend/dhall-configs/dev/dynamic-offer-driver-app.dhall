@@ -710,6 +710,7 @@ in  { esqDBCfg
     , eventStreamMap = eventStreamMappings
     , kvConfigUpdateFrequency
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , enforcingInternalAuth = False
     , schedulerSetName = "Scheduled_Jobs"
     , schedulerType = common.schedulerType.RedisBased
     , ltsCfg = LocationTrackingeServiceConfig
