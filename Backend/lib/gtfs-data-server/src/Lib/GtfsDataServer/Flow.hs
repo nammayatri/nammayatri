@@ -31,6 +31,14 @@ getRouteByRouteId baseUrl gtfsId routeId =
         logError $ "Error getting route by route id: " <> show err
         pure Nothing
 
+getRoutesByGtfsId :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [RouteInfoNandi]
+getRoutesByGtfsId baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiRoutesByGtfsId gtfsId) "getRoutesByGtfsId" NandiAPI.nandiRoutesByGtfsIdAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTES_BY_GTFS_ID_API") baseUrl)
+
+getGtfsVersion :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m Text
+getGtfsVersion baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiGtfsVersion gtfsId) "getGtfsVersion" NandiAPI.nandiGtfsVersionAPI >>= fromEitherM (ExternalAPICallError (Just ("UNABLE_TO_CALL_NANDI_GET_GTFS_VERSION_API:" <> show gtfsId)) baseUrl)
+
 getRouteStopMappingInMemoryServer :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Maybe Text -> Maybe Text -> m [RouteStopMappingInMemoryServer]
 getRouteStopMappingInMemoryServer baseUrl gtfsId routeCode' stopCode' =
   case (routeCode', stopCode') of

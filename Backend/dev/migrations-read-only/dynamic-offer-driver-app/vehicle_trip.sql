@@ -16,3 +16,10 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_trip ADD COLUMN updated_at timestamp 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_trip ADD COLUMN vehicle_number text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_trip ADD COLUMN walkup_count integer NOT NULL default 0;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_trip ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY vehicle_trip_idx_driver_id_started_at ON atlas_driver_offer_bpp.vehicle_trip USING btree (driver_id, started_at);
+CREATE INDEX CONCURRENTLY vehicle_trip_idx_vehicle_number ON atlas_driver_offer_bpp.vehicle_trip USING btree (vehicle_number);

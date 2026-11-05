@@ -32,9 +32,16 @@ data VehicleTrip = VehicleTrip
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data VehicleTripEndReason = END_ROUTE | ROUTE_CHANGED | END_FOR_NOW | SESSION_TIMEOUT deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data VehicleTripEndReason
+  = END_ROUTE
+  | RETURN
+  | ROUTE_CHANGED
+  | END_FOR_NOW
+  | SESSION_TIMEOUT
+  | OPS_FORCED
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data VehicleTripStatus = ACTIVE | COMPLETED | ABANDONED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data VehicleTripStatus = ACTIVE | PAUSED | COMPLETED | ABANDONED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleTripStatus)
 

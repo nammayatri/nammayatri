@@ -2,27 +2,17 @@ module SharedLogic.SharedCab.SessionState
   ( SessionStatus (..),
     PauseReason (..),
     SessionMovement (..),
-    SelectRouteMode (..),
     Session (..),
-    OpenSessionReq (..),
-    EndRouteAction (..),
-    SelectPlan (..),
     RouteSetMoves (..),
-    planSelect,
+    WalkupSource (..),
+    walkupsToCount,
     shouldDropOnDeadSession,
     ownedSession,
-    newSession,
-    switchRoute,
-    queueRoute,
-    endSession,
-    pauseSession,
-    resumeSession,
     setWalkup,
     fillCab,
     routeSetMoves,
-    returnRouteOf,
-    defaultCapacity,
-    sessionFromTrip,
+    copyFrom,
+    isStale,
     ExpiryAction (..),
     expiryAction,
     Ping (..),
@@ -32,25 +22,18 @@ module SharedLogic.SharedCab.SessionState
     SessionRead (..),
     RouteMember (..),
     routeMember,
-    cityMember,
   )
 where
 
 import BecknV2.FRFS.Enums (ServiceTierType (SHARED_CAB))
-import Data.Aeson (Options (..), defaultOptions)
-import qualified Data.Char as Char
-import Data.OpenApi (ToSchema (..), fromAesonOptions, genericDeclareNamedSchema)
-import qualified Data.Text as T
 import Data.Time (diffUTCTime)
-import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.FRFSTicketStatus as TicketStatus
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import Domain.Types.SharedCabSession (PauseReason (..), SessionMovement (..), SessionStatus (..))
+import Domain.Types.SharedCabSession (CabState, PauseReason (..), SessionMovement (..), SessionStatus (..))
 import Kernel.Prelude
 import Kernel.Types.Id
-import SharedLogic.SharedCab.TripClient (DriverTrip (..))
 import Tools.Error (SharedCabSessionError (..))
 
 -- | How long a session lives without a write; a plate's bookings are written during its session.
@@ -73,30 +56,9 @@ routeMember route = \case
   SessionAbsent -> StaleMember
   SessionUnreadable -> UnknownMember
 
--- | The same rule for the city's set of live plates: a member stays while its session is live in this city.
-cityMember :: Id DMOC.MerchantOperatingCity -> SessionRead -> RouteMember
-cityMember cityId = \case
-  SessionAt s
-    | s.status /= ENDED && s.merchantOperatingCityId == cityId -> LiveMember s
-    | otherwise -> StaleMember
-  SessionAbsent -> StaleMember
-  SessionUnreadable -> UnknownMember
-
-data SelectRouteMode = AfterLastDrop | Force
-  deriving (Show, Eq, Generic)
-
-selectRouteModeOptions :: Options
-selectRouteModeOptions = defaultOptions {constructorTagModifier = \case c : cs -> Char.toLower c : cs; [] -> []}
-
-instance ToJSON SelectRouteMode where
-  toJSON = genericToJSON selectRouteModeOptions
-
-instance FromJSON SelectRouteMode where
-  parseJSON = genericParseJSON selectRouteModeOptions
-
-instance ToSchema SelectRouteMode where
-  declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions selectRouteModeOptions
-
+-- | Rider-app's copy of a cab's run, which driver-app owns (vehicle_trip, the route, the status). Walk-ups are rider-app's own: they
+-- are seats, decided against the bookings. `tripVersion` is driver-app's version of the run, so a late copy never replaces a newer
+-- one; `version` is this copy's, bumped on every change the driver's view shows (walk-up writes are checked against it).
 data Session = Session
   { driverId :: Text,
     vehicleNumber :: Text,
@@ -111,29 +73,11 @@ data Session = Session
     status :: SessionStatus,
     pauseReason :: Maybe PauseReason,
     version :: Int,
+    tripVersion :: Int,
     startedAt :: UTCTime,
     vehicleTripId :: Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data OpenSessionReq = OpenSessionReq
-  { driverId :: Text,
-    vehicleNumber :: Text,
-    merchantId :: Id DM.Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    integratedBppConfigId :: Id DIBC.IntegratedBPPConfig,
-    serviceTierType :: ServiceTierType,
-    capacity :: Int,
-    routeCode :: Text
-  }
-  deriving (Show, Eq, Generic)
-
--- | StartReturn carries driver-app's id for the return run.
-data EndRouteAction = StartReturn Text | EndRoute | EndForNow
-  deriving (Show, Eq)
-
-data SelectPlan = OpenSession | ChangeRoute Session | KeepRoute Session
-  deriving (Show, Eq)
 
 data RouteSetMoves = RouteSetMoves
   { removeFrom :: [Text],
@@ -144,15 +88,6 @@ data RouteSetMoves = RouteSetMoves
 isLive :: Session -> Bool
 isLive s = s.status /= ENDED
 
-planSelect :: Text -> Text -> Maybe Session -> Either SharedCabSessionError SelectPlan
-planSelect driver route = \case
-  Just s
-    | not (isLive s) -> Right OpenSession
-    | s.driverId /= driver -> Left SessionHeldByAnotherDriver
-    | s.routeCode == route -> Right (KeepRoute s)
-    | otherwise -> Right (ChangeRoute s)
-  Nothing -> Right OpenSession
-
 ownedSession :: Text -> Maybe Session -> Either SharedCabSessionError Session
 ownedSession driver = \case
   Just s
@@ -161,59 +96,68 @@ ownedSession driver = \case
     | otherwise -> Right s
   Nothing -> Left SessionNotFound
 
-newSession :: OpenSessionReq -> Text -> UTCTime -> Maybe Session -> Session
-newSession req tripId now prior =
-  Session
-    { driverId = req.driverId,
-      vehicleNumber = req.vehicleNumber,
-      merchantId = req.merchantId,
-      merchantOperatingCityId = req.merchantOperatingCityId,
-      integratedBppConfigId = req.integratedBppConfigId,
-      serviceTierType = req.serviceTierType,
-      routeCode = req.routeCode,
-      queuedRouteCode = Nothing,
-      capacity = req.capacity,
-      walkupCount = 0,
-      status = ACTIVE,
-      pauseReason = Nothing,
-      version = maybe 1 ((+ 1) . (.version)) prior,
-      startedAt = now,
-      vehicleTripId = tripId
-    }
+-- | A copy from the same run that is older than the one held.
+isStale :: CabState -> Session -> Bool
+isStale cab prior = cab.vehicleTripId == prior.vehicleTripId && cab.version < prior.tripVersion
 
-bump :: Session -> Session
-bump s = s {version = s.version + 1}
+-- | The new copy from driver-app's run. Walk-ups ride on with the cab, a route change included; a copy with no live prior (a flush,
+-- or a cab rider-app has not seen) seeds them high from the run's offline boardings, so allocation won't claim seats walk-ups may
+-- fill, and the driver corrects them. The copy's own version moves only when something the driver sees changed.
+copyFrom :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DIBC.IntegratedBPPConfig -> CabState -> Maybe Session -> Session
+copyFrom merchantId cityId ibcId cab prior =
+  let walkupCount = case prior of
+        Just p | p.status /= ENDED, p.driverId == cab.driverId -> p.walkupCount
+        _ -> min cab.capacity cab.offlineBoardings
+      next =
+        Session
+          { driverId = cab.driverId,
+            vehicleNumber = cab.vehicleNumber,
+            merchantId,
+            merchantOperatingCityId = cityId,
+            integratedBppConfigId = ibcId,
+            serviceTierType = SHARED_CAB,
+            routeCode = cab.routeCode,
+            queuedRouteCode = cab.queuedRouteCode,
+            capacity = cab.capacity,
+            walkupCount,
+            status = cab.status,
+            pauseReason = cab.pauseReason,
+            version = maybe 1 (.version) prior,
+            tripVersion = cab.version,
+            startedAt = cab.startedAt,
+            vehicleTripId = cab.vehicleTripId
+          }
+   in case prior of
+        Just p | sameView p next -> next
+        Just p -> withVersion (p.version + 1) next
+        Nothing -> next
 
--- | A new run on the new route: startedAt is the run's start, as the expiry pass reads it.
-switchRoute :: Text -> Text -> UTCTime -> Session -> Session
-switchRoute newRoute tripId now s =
-  bump s {routeCode = newRoute, vehicleTripId = tripId, startedAt = now, queuedRouteCode = Nothing, status = ACTIVE, pauseReason = Nothing}
+-- | Everything the driver's view shows of the copy, its versions aside.
+sameView :: Session -> Session -> Bool
+sameView a b =
+  (a.vehicleTripId, a.routeCode, a.queuedRouteCode, a.capacity, a.walkupCount, a.status, a.pauseReason)
+    == (b.vehicleTripId, b.routeCode, b.queuedRouteCode, b.capacity, b.walkupCount, b.status, b.pauseReason)
 
-queueRoute :: Text -> Session -> Session
-queueRoute route s = bump s {queuedRouteCode = Just route}
-
-endSession :: Session -> Session
-endSession s = bump s {status = ENDED, pauseReason = Nothing}
-
-pauseSession :: PauseReason -> Session -> Either SharedCabSessionError Session
-pauseSession reason s
-  | s.status /= ACTIVE = Left SessionNotActive
-  | otherwise = Right $ bump s {status = PAUSED, pauseReason = Just reason}
-
-resumeSession :: Session -> Either SharedCabSessionError Session
-resumeSession s
-  | s.status /= PAUSED = Left SessionNotPaused
-  | otherwise = Right $ bump s {status = ACTIVE, pauseReason = Nothing}
+withVersion :: Int -> Session -> Session
+withVersion v s = s {version = v}
 
 setWalkup :: Int -> Int -> Session -> Either SharedCabSessionError Session
 setWalkup expectedVersion count s
   | s.version /= expectedVersion = Left SessionVersionMismatch
   | count < 0 || count > s.capacity = Left InvalidWalkupCount
-  | otherwise = Right $ bump s {walkupCount = count}
+  | otherwise = Right $ withVersion (s.version + 1) s {walkupCount = count}
 
 -- | The walk-ups now hold `walkups` seats: every seat left when the cab was marked full.
 fillCab :: Int -> Session -> Session
-fillCab walkups s = bump s {walkupCount = walkups}
+fillCab walkups s = withVersion (s.version + 1) s {walkupCount = walkups}
+
+data WalkupSource = DriverCounted | CabFullFill
+  deriving (Show, Eq)
+
+walkupsToCount :: WalkupSource -> Session -> Session -> Int
+walkupsToCount source before after = case source of
+  DriverCounted -> max 0 (after.walkupCount - before.walkupCount)
+  CabFullFill -> 0
 
 shouldDropOnDeadSession :: Maybe SessionStatus -> Bool -> [TicketStatus.FRFSTicketStatus] -> Bool
 shouldDropOnDeadSession mbStatus hasLiveTrip statuses =
@@ -231,40 +175,6 @@ routeSetMoves old new =
   where
     newRoutes = allocatableOn new
     allocatableOn s = [s.routeCode | s.status == ACTIVE]
-
-returnRouteOf :: Text -> Either SharedCabSessionError Text
-returnRouteOf code
-  | Just corridor <- T.stripSuffix "-F" code = Right (corridor <> "-R")
-  | Just corridor <- T.stripSuffix "-R" code = Right (corridor <> "-F")
-  | otherwise = Left NoReturnRoute
-
-defaultCapacity :: Int
-defaultCapacity = 6
-
--- | Flush recovery from driver-app's ACTIVE trip, under rider-app's config of its feed (merchant, city, config ids). Pause lived only in the lost session, so the
--- run comes back ACTIVE (the expiry pass pauses a silent cab again). Walk-ups seed from the count the driver last set, capped at
--- capacity, and the driver corrects them; the version restarts above any pre-flush counter.
-sessionFromTrip :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DIBC.IntegratedBPPConfig -> DriverTrip -> UTCTime -> Session
-sessionFromTrip merchantId merchantOperatingCityId integratedBppConfigId trip now =
-  Session
-    { driverId = trip.driverId,
-      vehicleNumber = trip.vehicleNumber,
-      merchantId,
-      merchantOperatingCityId,
-      integratedBppConfigId,
-      serviceTierType = SHARED_CAB,
-      routeCode = trip.routeCode,
-      queuedRouteCode = Nothing,
-      capacity = seats,
-      walkupCount = min seats trip.walkupCount,
-      status = ACTIVE,
-      pauseReason = Nothing,
-      version = floor (utcTimeToPOSIXSeconds now),
-      startedAt = trip.startedAt,
-      vehicleTripId = trip.id
-    }
-  where
-    seats = fromMaybe defaultCapacity trip.capacity
 
 -- | A cab's LTS ping as the expiry job sees it: a readable time, or one it can't trust (missing, unparseable, or >5 min ahead, which would keep it alive forever).
 data Ping = SeenAt UTCTime | Unreadable

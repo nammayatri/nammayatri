@@ -5,7 +5,9 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
 
-# One shared-cab run of a plate on a route. driver-app opens and closes it around its rider-app call; rider-app keeps only the id.
+# One run of a shared cab on one route: opened when the driver picks a route, closed by a route change, a return trip, an end or the
+# rider-app's silence check. The session (Redis) is the live state; this row is what survives a flush and the driver's history.
+# walkupCount is the walk-ups the driver counted on the run (rider-app holds the seats).
 VehicleTrip:
   tableName: vehicle_trip
 
@@ -28,10 +30,10 @@ VehicleTrip:
 
   types:
     VehicleTripStatus:
-      enum: "ACTIVE, COMPLETED, ABANDONED"
+      enum: "ACTIVE, PAUSED, COMPLETED, ABANDONED"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
     VehicleTripEndReason:
-      enum: "END_ROUTE, ROUTE_CHANGED, END_FOR_NOW, SESSION_TIMEOUT"
+      enum: "END_ROUTE, RETURN, ROUTE_CHANGED, END_FOR_NOW, SESSION_TIMEOUT, OPS_FORCED"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   domainInstance:
@@ -42,11 +44,14 @@ VehicleTrip:
     status: text
     endReason: text
 
-  # On KV: the plate's live trip is found through its SecondaryKey while the row is still in Redis. One ACTIVE trip per plate is held
-  # by the plate lock around every write (SharedCab), not by a DB constraint, which would only fire at drain time.
+  # On KV: the plate's live trip is found through its SecondaryKey while the row is still in Redis. One live trip per plate is held by
+  # the plate lock around every write (SharedCab.Session), not by a DB constraint, which would only fire at drain time.
   constraints:
     id: PrimaryKey
     vehicleNumber: SecondaryKey
+
+  extraIndexes:
+    - columns: [driverId, startedAt]
 
   queries:
     findById:
@@ -58,11 +63,18 @@ VehicleTrip:
       where:
         and:
           - vehicleNumber
-          - status: "Domain.Types.VehicleTrip.ACTIVE|CIM"
+          - in:
+            - status: "[Domain.Types.VehicleTrip.ACTIVE, Domain.Types.VehicleTrip.PAUSED]|CIM"
 
     closeTrip:
       kvFunction: updateOneWithKV
       params: [status, endReason, endedAt]
+      where: id
+
+    # Pause/resume mirror in Postgres so a Redis flush doesn't silently un-pause the recovered session.
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
       where: id
 
     updateWalkupCount:
@@ -74,3 +86,6 @@ VehicleTrip:
     walkupCount: "0"
     createdAt: "CURRENT_TIMESTAMP"
     updatedAt: "CURRENT_TIMESTAMP"
+
+  extraOperations:
+    - GENERATE_INDEXES

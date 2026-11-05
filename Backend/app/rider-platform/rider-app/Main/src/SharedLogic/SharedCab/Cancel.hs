@@ -18,18 +18,17 @@ import Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import SharedLogic.FRFSCancelJourney (cancelJourneyIfOnlyTransitLeg)
-import qualified SharedLogic.SharedCab.Allocation as Allocation
-import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (RouteChanged), allocationDeadline)
+import SharedLogic.SharedCab.Allocation.Types (allocationDeadline)
 import SharedLogic.SharedCab.Booking (readRiderFix, recordCancelReason, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc)
 import qualified SharedLogic.SharedCab.BookingState as BookingState
+import SharedLogic.SharedCab.CabSync (cabEmptied)
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.LegState (CancelReason (DRIVER, RIDER))
 import SharedLogic.SharedCab.RateLimit (RiderAction (RiderCancel), recordRiderAction, riderActionsLeft)
 import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, isSharedCabBooking)
 import SharedLogic.SharedCab.RefundPolicy
 import SharedLogic.SharedCab.Seats (markDropped)
-import qualified SharedLogic.SharedCab.Session as Session
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Error (SharedCabCancelError (CancelLimitReached))
@@ -88,9 +87,7 @@ dropRider cancelLeg journeyLeg = do
         NothingToDrop -> pure False
         MarkDropped -> do
           markDropped booking
-          whenJust booking.vehicleNumber $ \plate -> do
-            switched <- Session.applyQueuedRoute plate
-            when switched $ Allocation.releaseUnboarded plate RouteChanged
+          whenJust booking.vehicleNumber $ void . cabEmptied
           pure False
     _ -> pure False
 

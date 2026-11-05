@@ -13,6 +13,10 @@ type RouteStopMappingByStopCodeAPI = "route-stop-mapping" :> Capture "gtfs_id" T
 
 type RouteByRouteIdAPI = "route" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> Get '[JSON] RouteInfoNandi
 
+type RoutesByGtfsIdAPI = "routes" :> Capture "gtfs_id" Text :> Get '[JSON] [RouteInfoNandi]
+
+type GtfsVersionAPI = "version" :> Capture "gtfs_id" Text :> Get '[JSON] Text
+
 type ExampleTripAPI = "example-trip" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> Get '[JSON] TripDetails
 
 type BusTripScheduleAPI = "bus-trip-schedule" :> Capture "gtfs_id" Text :> Capture "waybill_no" Text :> Capture "trip_number" Int :> Capture "route_id" Text :> Get '[JSON] BusScheduleDetails
@@ -114,6 +118,12 @@ nandiGetRouteStopMappingByStopCodeAPI = Proxy
 nandiRouteByRouteIdAPI :: Proxy RouteByRouteIdAPI
 nandiRouteByRouteIdAPI = Proxy
 
+nandiRoutesByGtfsIdAPI :: Proxy RoutesByGtfsIdAPI
+nandiRoutesByGtfsIdAPI = Proxy
+
+nandiGtfsVersionAPI :: Proxy GtfsVersionAPI
+nandiGtfsVersionAPI = Proxy
+
 nandiExampleTripAPI :: Proxy ExampleTripAPI
 nandiExampleTripAPI = Proxy
 
@@ -179,6 +189,12 @@ getNandiGetRouteStopMappingByStopCode = ET.client nandiGetRouteStopMappingByStop
 
 getNandiRouteByRouteId :: Text -> Text -> ET.EulerClient RouteInfoNandi
 getNandiRouteByRouteId = ET.client nandiRouteByRouteIdAPI
+
+getNandiRoutesByGtfsId :: Text -> ET.EulerClient [RouteInfoNandi]
+getNandiRoutesByGtfsId = ET.client nandiRoutesByGtfsIdAPI
+
+getNandiGtfsVersion :: Text -> ET.EulerClient Text
+getNandiGtfsVersion = ET.client nandiGtfsVersionAPI
 
 getNandiExampleTrip :: Text -> Text -> ET.EulerClient TripDetails
 getNandiExampleTrip = ET.client nandiExampleTripAPI

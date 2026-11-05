@@ -29,10 +29,19 @@ closeTrip status endReason endedAt id = do
   updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.endReason endReason, Se.Set Beam.endedAt endedAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findActiveByVehicleNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.VehicleTrip.VehicleTrip))
-findActiveByVehicleNumber vehicleNumber = do findOneWithKV [Se.And [Se.Is Beam.vehicleNumber $ Se.Eq vehicleNumber, Se.Is Beam.status $ Se.Eq Domain.Types.VehicleTrip.ACTIVE]]
+findActiveByVehicleNumber vehicleNumber = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.vehicleNumber $ Se.Eq vehicleNumber,
+          Se.Is Beam.status $ Se.In [Domain.Types.VehicleTrip.ACTIVE, Domain.Types.VehicleTrip.PAUSED]
+        ]
+    ]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip -> m (Maybe Domain.Types.VehicleTrip.VehicleTrip))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleTrip.VehicleTripStatus -> Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip -> m ())
+updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateWalkupCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip -> m ())
 updateWalkupCount walkupCount id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.walkupCount walkupCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

@@ -28,6 +28,7 @@ import qualified Domain.Types.FeedbackForm as DFF
 import Domain.Types.Merchant
 import qualified Domain.Types.RefereeLink as LibTypes
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.SharedCabSession as SharedCabSession
 import EulerHS.Types (EulerClient, client)
 import IssueManagement.Common (IssueReportType)
 import Kernel.External.Encryption (DbHash)
@@ -1878,3 +1879,35 @@ sharedCabDriverCallNumber ::
 sharedCabDriverCallNumber apiKey internalUrl driverId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (sharedCabDriverCallNumberClient driverId (Just apiKey)) "SharedCabDriverCallNumber" sharedCabDriverCallNumberApi
+
+-- | A change rider-app saw in a shared cab's run (silence, off route, emptied); driver-app owns the run and answers with the update.
+type SharedCabCabEventAPI =
+  "internal"
+    :> "sharedCab"
+    :> "cab"
+    :> Capture "vehicleNumber" Text
+    :> "event"
+    :> Header "token" Text
+    :> ReqBody '[JSON] SharedCabSession.CabEventReq
+    :> Post '[JSON] SharedCabSession.CabEventResp
+
+sharedCabCabEventClient :: Text -> Maybe Text -> SharedCabSession.CabEventReq -> EulerClient SharedCabSession.CabEventResp
+sharedCabCabEventClient = client sharedCabCabEventApi
+
+sharedCabCabEventApi :: Proxy SharedCabCabEventAPI
+sharedCabCabEventApi = Proxy
+
+sharedCabCabEvent ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  SharedCabSession.CabEvent ->
+  m SharedCabSession.CabEventResp
+sharedCabCabEvent apiKey internalUrl vehicleNumber event = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (sharedCabCabEventClient vehicleNumber (Just apiKey) (SharedCabSession.CabEventReq event)) "SharedCabCabEvent" sharedCabCabEventApi

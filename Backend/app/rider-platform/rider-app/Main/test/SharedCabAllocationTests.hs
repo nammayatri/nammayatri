@@ -82,6 +82,7 @@ candidate plate =
             status = ACTIVE,
             pauseReason = Nothing,
             version = 0,
+            tripVersion = 0,
             startedAt = t0,
             vehicleTripId = "trip1"
           },
