@@ -99,6 +99,7 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
   OU.BookingCancelledBuildReq req -> Common.tfCancelReqToOrder req becknConfig
   OU.DriverArrivedBuildReq req -> Common.tfArrivedReqToOrder req mbFarePolicy becknConfig
   OU.DriverReachedDestinationBuildReq req -> Common.tfReachedDestinationReqToOrder req
+  OU.DriverNearPickupBuildReq req -> Common.tfNearPickupReqToOrder req
   OU.ReturnTripStartedBuildReq req -> Common.tfReturnTripStartedReqToOrder req
   OU.EstimateRepetitionBuildReq OU.DEstimateRepetitionReq {..} -> do
     let BookingDetails {..} = bookingDetails
