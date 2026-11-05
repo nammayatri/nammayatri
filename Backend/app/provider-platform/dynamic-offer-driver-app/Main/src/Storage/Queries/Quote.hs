@@ -82,6 +82,7 @@ instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
             distanceUnit = fromMaybe Meter distanceUnit,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
             addOnData = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< addOnData),
+            isDerived = False,
             ..
           }
 
