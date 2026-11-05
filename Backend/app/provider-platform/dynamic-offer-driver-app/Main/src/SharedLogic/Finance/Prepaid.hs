@@ -854,6 +854,9 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
           invoiceResult <- createInvoice invoiceInput entryIds
           case invoiceResult of
             Right inv -> do
+              -- Only reached once the purchase payment is CHARGED; a failure here must not fail the purchase.
+              updateInvoiceStatus inv.id FInvoice.Paid
+                `catch` (\(e :: SomeException) -> logError $ "Failed to mark subscription invoice Paid: " <> show e)
               -- Fire-and-forget B2B e-invoice generation. Runs in a background
               -- thread so Redis/HTTP calls never block invoice creation.
               -- Any uncaught exception from the forked action is logged and
