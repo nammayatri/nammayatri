@@ -60,7 +60,7 @@ import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Pricing
-import SharedLogic.ScheduledRideTopDrivers (topDriversLeadTime, topDriversRoundCutoff)
+import SharedLogic.ScheduledRideTopDrivers (topDriversLeadTime)
 import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
 import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
@@ -264,17 +264,16 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
         return searchTry
       Right _ -> return searchTry
   where
-    -- Run 1 at booking; run 2 at pickup - lead time if run 1 will be done by then. Both end at the cutoff.
+    -- Run 1 at booking; run 2 at pickup - lead time when the pickup is more than an hour away (closer than
+    -- that, run 1 alone is enough). Both end at the cutoff.
     scheduleTopDriversRound searchTry driverPoolConfig now =
-      unless (isAllocatorBatch || isRepeatSearch) $ do
+      unless isAllocatorBatch $ do
         mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing
         whenJust mbTransporterConfig $ \transporterConfig ->
           whenJust (topDriversLeadTime transporterConfig driverPoolConfig.scheduleTryTimes) $ \leadTime -> do
-            let batchInterval = getNextBatchScheduleTime driverPoolConfig
-                firstRunIn = 2
-                roundEndsIn = maybe 0 (\cutoff -> diffUTCTime cutoff now) (topDriversRoundCutoff batchInterval driverPoolConfig.scheduleTryTimes searchReq.startTime)
+            let firstRunIn = 2
                 secondRunIn = diffUTCTime searchReq.startTime now - leadTime
-                roundDuration = fromIntegral driverPoolConfig.maxNumberOfBatches * fromIntegral batchInterval
+                pickupFarEnoughForSecondRun = diffUTCTime searchReq.startTime now > 3600
                 jobData =
                   SendSearchRequestToDriverJobData
                     { searchTryId = searchTry.id,
@@ -285,11 +284,8 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
                 createRound runIn = do
                   JC.createJobIn @_ @'SendScheduledSearchRequestToTopDrivers (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) runIn jobData
                   logInfo $ "initiateDriverSearchBatch: top drivers round for searchTry " <> searchTry.id.getId <> " queued in " <> show runIn
-            if roundEndsIn > firstRunIn
-              then do
-                createRound firstRunIn
-                when (secondRunIn >= firstRunIn + roundDuration && secondRunIn < roundEndsIn) $ createRound secondRunIn
-              else logInfo $ "initiateDriverSearchBatch: no room for a top drivers round before the regular round for searchTry " <> searchTry.id.getId
+            createRound firstRunIn
+            when pickupFarEnoughForSecondRun $ createRound secondRunIn
 
     scheduleBatching searchTry inTime = do
       let jobData =

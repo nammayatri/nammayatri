@@ -46,8 +46,6 @@ data TopDriversRoundEvent = TopDriversRoundEvent
     merchantOperatingCityId :: Text,
     batchNumber :: Int,
     minutesToPickup :: Int,
-    candidateCount :: Int,
-    withinRadiusCount :: Int,
     passedStatsCount :: Int,
     selectedCount :: Int,
     selectedDriverIds :: [Text],
@@ -99,17 +97,14 @@ resolveTopDriverRules transporterConfig serviceTier now pickupTime =
           Nothing
    in (rules, isNothing mbMinRating && isNothing mbMaxCancellation && isNothing mbMinRides)
 
--- | The per-batch event for ClickHouse. The pool is already within the search radius, so the within-radius
--- count equals the candidate count.
-mkTopDriversRoundEvent :: Text -> Text -> Int -> Int -> Int -> Int -> [Text] -> DTC.ScheduledRideVisibilityRules -> Bool -> UTCTime -> TopDriversRoundEvent
-mkTopDriversRoundEvent searchTryId merchantOperatingCityId batchNumber minutesToPickup candidateCount passedStatsCount selectedDriverIds rules usedDefaults createdAt =
+-- | The per-batch event for ClickHouse.
+mkTopDriversRoundEvent :: Text -> Text -> Int -> UTCTime -> Int -> [Text] -> DTC.ScheduledRideVisibilityRules -> Bool -> UTCTime -> TopDriversRoundEvent
+mkTopDriversRoundEvent searchTryId merchantOperatingCityId batchNumber pickupTime passedStatsCount selectedDriverIds rules usedDefaults createdAt =
   TopDriversRoundEvent
     { searchTryId,
       merchantOperatingCityId,
       batchNumber,
-      minutesToPickup,
-      candidateCount,
-      withinRadiusCount = candidateCount,
+      minutesToPickup = round (diffUTCTime pickupTime createdAt / 60),
       passedStatsCount,
       selectedCount = length selectedDriverIds,
       selectedDriverIds,

@@ -1191,33 +1191,6 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
   sortedCandidates <- withTimeAPI "driverPooling" "fetchSortedLTSCandidates" $ QPG.fetchSortedLTSCandidates ltsReq
   let totalCandidates = length sortedCandidates
   (offRideFinal, onRideFinal) <- chunkLoop ltsReq fetchPoolData sortedCandidates [] []
-  when (dispatchMode == ScheduledTopDriversDispatch) $ do
-    let searchTry = currentSearchInfo.searchTry
-        (topDriverRules, usedDefaults) = SRTD.resolveTopDriverRules transporterConfig searchTry.vehicleServiceTier now searchTry.startTime
-        selected = take (getBatchSize driverPoolCfg.dynamicBatchSize batchNum driverPoolCfg.driverBatchSize) offRideFinal
-        event =
-          SRTD.mkTopDriversRoundEvent
-            searchTry.id.getId
-            searchTry.merchantOperatingCityId.getId
-            batchNum
-            (round (diffUTCTime searchTry.startTime now / 60))
-            totalCandidates
-            (length offRideFinal)
-            (map (\dp -> dp.driverPoolResult.driverId.getId) selected)
-            topDriverRules
-            usedDefaults
-            now
-    logInfo $
-      "TopDrivers: searchTryId=" <> searchTry.id.getId <> " batch=" <> show batchNum
-        <> " candidates=" <> show totalCandidates
-        <> " qualified=" <> show (length offRideFinal)
-        <> " selected=" <> show (length selected)
-        <> " rules(minRating=" <> show topDriverRules.minRating
-        <> " maxCancellationPct=" <> show topDriverRules.maxCancellationRatePct
-        <> " minRides=" <> show topDriverRules.minCompletedRides
-        <> " radius=" <> show topDriverRules.pickupRadiusMeters
-        <> " usedDefaults=" <> show usedDefaults <> ")"
-    fork "publishTopDriversRoundEvent" $ pushToKafka event SRTD.topDriversTopic searchTry.id.getId
   fork "Driver Pool Search Try Batch - Analytics" $ do
     pushToKafka
       ( SearchTryBatchData
