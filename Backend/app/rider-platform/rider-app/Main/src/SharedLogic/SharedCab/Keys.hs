@@ -1,0 +1,174 @@
+-- | Every rider-app shared-cab Redis key and lock name. They are unprefixed and live in the cross-app master cell
+-- (`Booking.shared`), because the API and the scheduler use different key prefixes and must see the same keys.
+module SharedLogic.SharedCab.Keys
+  ( -- * Session (per plate / route)
+    sessionKey,
+    routeKey,
+    legacyRouteKey,
+    livePlatesKey,
+    driverInfoKey,
+    plateLockKey,
+    offRouteKey,
+    noLocationKey,
+    bookingLockKey,
+    bookingStateKey,
+    fallbackPushedKey,
+    pickedCabKey,
+    interestKey,
+    riderFixKey,
+    cancelReasonKey,
+    degradedKey,
+    dropClockKey,
+    refundRetryKey,
+    boardAttemptsKey,
+    chatAttemptsKey,
+    callAttemptsKey,
+    stickerCodeAttemptsKey,
+    searchSkipsKey,
+    searchCancelsKey,
+    allocLeaseKey,
+    refundRetryCityKey,
+    demandKey,
+    allocJobGuardKey,
+    allocRunKey,
+    expiryJobGuardKey,
+    expiryTickKey,
+    sweepJobGuardKey,
+    sweepRunKey,
+    sweepLeaseKey,
+    refundRetryRunKey,
+    cabBookingsKey,
+  )
+where
+
+import qualified Domain.Types.FRFSTicketBooking as DFTB
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Kernel.Prelude
+import Kernel.Types.Id
+
+type BookingId = Id DFTB.FRFSTicketBooking
+
+type CityId = Id DMOC.MerchantOperatingCity
+
+sessionKey :: Text -> Text
+sessionKey plate = "sharedcab:session:" <> plate
+
+-- | Per city: two cities' feeds may share a route code.
+routeKey :: CityId -> Text -> Text
+routeKey cityId routeCode = "sharedcab:route:" <> cityId.getId <> ":" <> routeCode
+
+-- | The route set before it was per city, read for one release so cabs whose sessions predate the deploy stay visible (it is no
+-- longer written, so it lapses with its 16 h TTL). TODO: drop with its read in activeSessionsOnRoute.
+legacyRouteKey :: Text -> Text
+legacyRouteKey routeCode = "sharedcab:route:" <> routeCode
+
+-- | Per city: the plates whose session isn't ENDED, for the tick and the expiry pass.
+livePlatesKey :: CityId -> Text
+livePlatesKey cityId = "sharedcab:live:" <> cityId.getId
+
+driverInfoKey :: Text -> Text
+driverInfoKey plate = "sharedcab:driverinfo:" <> plate
+
+plateLockKey :: Text -> Text
+plateLockKey plate = "sharedcab:lock:" <> plate
+
+offRouteKey :: Text -> Text
+offRouteKey plate = "sharedcab:offroute:" <> plate
+
+noLocationKey :: Text -> Text
+noLocationKey plate = "sharedcab:noloc:" <> plate
+
+bookingLockKey :: BookingId -> Text
+bookingLockKey bookingId = "sharedcab:lock:booking:" <> bookingId.getId
+
+-- | One hash per booking (fields in BookingState): the alloc record, lifetime attempts, finding-since and skipped plates.
+bookingStateKey :: BookingId -> Text
+bookingStateKey bookingId = "sharedcab:booking:" <> bookingId.getId
+
+-- | A once-flag, so it needs SETNX and stays outside the hash.
+fallbackPushedKey :: BookingId -> Text
+fallbackPushedKey bookingId = "sharedcab:fallbackpushed:" <> bookingId.getId
+
+-- | The cab the rider picked, held from the confirm request until the booking exists (keyed by the search the booking is made from).
+pickedCabKey :: Text -> Text
+pickedCabKey searchId = "sharedcab:pickedcab:" <> searchId
+
+-- | Riders who opened a stand's cab view and have not booked: person id scored by when, per route.
+interestKey :: Text -> Text
+interestKey routeCode = "sharedcab:interest:" <> routeCode
+
+-- | The rider's latest position, for the tick's passed-stop judgement.
+riderFixKey :: BookingId -> Text
+riderFixKey bookingId = "sharedcab:riderfix:" <> bookingId.getId
+
+cancelReasonKey :: BookingId -> Text
+cancelReasonKey bookingId = "sharedcab:cancelreason:" <> bookingId.getId
+
+degradedKey :: BookingId -> Text
+degradedKey bookingId = "sharedcab:degraded:" <> bookingId.getId
+
+dropClockKey :: BookingId -> Text
+dropClockKey bookingId = "sharedcab:dropclock:" <> bookingId.getId
+
+refundRetryKey :: BookingId -> Text
+refundRetryKey bookingId = "sharedcab:refundretry:" <> bookingId.getId
+
+-- | Per booking: a booking belongs to exactly one rider, so this bounds the rider's probe rate.
+boardAttemptsKey :: BookingId -> Text
+boardAttemptsKey bookingId = "sharedcab:rate:board:" <> bookingId.getId
+
+-- | Per booking and driver: bounds how many chat pushes one driver can send one rider.
+chatAttemptsKey :: BookingId -> Text -> Text
+chatAttemptsKey bookingId driverId = "sharedcab:rate:chat:" <> bookingId.getId <> ":" <> driverId
+
+-- | Per booking and driver: bounds how many masked calls one driver can place to one rider.
+callAttemptsKey :: BookingId -> Text -> Text
+callAttemptsKey bookingId driverId = "sharedcab:rate:call:" <> bookingId.getId <> ":" <> driverId
+
+-- | Per rider: bounds a sweep of the four-digit sticker codes.
+stickerCodeAttemptsKey :: Text -> Text
+stickerCodeAttemptsKey personId = "sharedcab:rate:code:" <> personId
+
+-- | Per search: how many cabs the rider skipped, and how many bookings they cancelled.
+searchSkipsKey :: Text -> Text
+searchSkipsKey searchId = "sharedcab:rate:skips:" <> searchId
+
+searchCancelsKey :: Text -> Text
+searchCancelsKey searchId = "sharedcab:rate:cancels:" <> searchId
+
+allocLeaseKey :: CityId -> Text
+allocLeaseKey cityId = "sharedcab:alloc:lease:" <> cityId.getId
+
+refundRetryCityKey :: CityId -> Text
+refundRetryCityKey cityId = "sharedcab:refundretry:city:" <> cityId.getId
+
+demandKey :: Text -> Text -> Int -> Text
+demandKey cityId stopCode bucket = "sharedcab:demand:" <> cityId <> ":" <> stopCode <> ":" <> show bucket
+
+allocJobGuardKey :: CityId -> Text
+allocJobGuardKey cityId = "sharedcab:allocJob:" <> cityId.getId
+
+allocRunKey :: CityId -> Text
+allocRunKey cityId = "sharedcab:allocRun:" <> cityId.getId
+
+expiryJobGuardKey :: CityId -> Text
+expiryJobGuardKey cityId = "sharedcab:expiryJob:" <> cityId.getId
+
+expiryTickKey :: CityId -> Text
+expiryTickKey cityId = "sharedcab:expiryTick:" <> cityId.getId
+
+sweepJobGuardKey :: CityId -> Text
+sweepJobGuardKey cityId = "sharedcab:degradedSweepJob:" <> cityId.getId
+
+sweepRunKey :: CityId -> Text
+sweepRunKey cityId = "sharedcab:degradedSweepRun:" <> cityId.getId
+
+sweepLeaseKey :: CityId -> Text
+sweepLeaseKey cityId = "sharedcab:degradedSweepLease:" <> cityId.getId
+
+refundRetryRunKey :: CityId -> Text
+refundRetryRunKey cityId = "sharedcab:refundretryRun:" <> cityId.getId
+
+-- | The bookings assigned to a plate, each added under its plate lock: what a seat count reads beside the DB, which lags KV.
+cabBookingsKey :: Text -> Text
+cabBookingsKey plate = "sharedcab:cab:bookings:" <> plate

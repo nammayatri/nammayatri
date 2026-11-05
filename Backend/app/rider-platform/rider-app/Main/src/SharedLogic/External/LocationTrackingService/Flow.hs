@@ -22,6 +22,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.API.NearbyDrivers as NearByAPI
+import qualified SharedLogic.External.LocationTrackingService.API.Ride as RideAPI
 import qualified SharedLogic.External.LocationTrackingService.API.Sos as SosAPI
 import qualified SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute as VehicleTracking
 import SharedLogic.External.LocationTrackingService.Types
@@ -42,6 +43,22 @@ vehicleTrackingOnRoute vehicleTracking = do
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_VEHICLE_TRACKING_API") url)
   logDebug $ "lts vehicle tracking on route: " <> show vehicleTrackingOnRouteResp
   return vehicleTrackingOnRouteResp
+
+rideStart :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> RideStartReq -> m ()
+rideStart rideId req = do
+  url <- asks (.ltsCfg.url)
+  void $
+    withShortRetry $
+      callAPI url (RideAPI.rideStart rideId req) "rideStart" RideAPI.rideStartAPI
+        >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_START_RIDE_API") url)
+
+rideEnd :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> RideEndReq -> m ()
+rideEnd rideId req = do
+  url <- asks (.ltsCfg.url)
+  void $
+    withShortRetry $
+      callAPI url (RideAPI.rideEnd rideId req) "rideEnd" RideAPI.rideEndAPI
+        >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_END_RIDE_API") url)
 
 nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, Forkable m) => NearByDriverReq -> m [NearByDriverRes]
 nearBy req = do

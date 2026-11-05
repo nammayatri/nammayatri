@@ -390,6 +390,9 @@ data MembershipFeeInfo = MembershipFeeInfo
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data ActiveRideType = SHARED_CAB
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,
     firstName :: Text,
@@ -485,6 +488,10 @@ data DriverInformationRes = DriverInformationRes
     -- active behaviour warnings pinned to the profile (WARN with showOnProfile);
     -- text is pre-localized to the driver's language with placeholders filled
     behaviourWarnings :: Maybe [BTT.ProfileWarningInfo],
+    -- | Set while the driver runs a session with no driver-side Ride row, so the app can reopen it on launch.
+    activeRideType :: Maybe ActiveRideType,
+    -- | The feed version the app checks its cached shared-cab routes against.
+    publicTransportVersion :: Maybe Text,
     onboardingVehicleCategory :: Maybe VehicleCategory,
     subscriptionDown :: Maybe Bool,
     qrUrl :: Maybe Text,
@@ -1661,6 +1668,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.EV_HATCHBACK -> [DVST.EV_HATCHBACK, DVST.HATCHBACK, DVST.ECO] <> [DVST.TAXI | canDowngradeToTaxi]
               DV.EV_SEDAN -> [DVST.EV_SEDAN, DVST.SEDAN, DVST.COMFY] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
               DV.EV_SUV -> [DVST.EV_SUV, DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.COMFY | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
+              DV.SHARED_CAB -> [DVST.SHARED_CAB]
       QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
   let nomineeOrAddressChanged = isJust req.nomineeName || isJust req.nomineeRelationship || isJust req.nomineeDob || isJust req.address || isJust req.addressDocumentType || isJust req.addressState
   mbIdentityInfo <-
@@ -1956,6 +1964,9 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           disabledReasonFlag = driverInfo.disabledReasonFlag,
           preferredMapProvider = driverInfo.preferredMapProvider,
           behaviourWarnings = if null activeProfileWarnings then Nothing else Just activeProfileWarnings,
+          -- module-qualified: VehicleVariant's SHARED_CAB is also in scope
+          activeRideType = if ((.variant) <$> mbVehicle) == Just DV.SHARED_CAB then Just Domain.Action.UI.Driver.SHARED_CAB else Nothing,
+          publicTransportVersion = Nothing,
           ..
         }
 
