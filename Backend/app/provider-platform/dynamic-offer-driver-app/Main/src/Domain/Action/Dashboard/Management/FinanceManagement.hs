@@ -587,12 +587,16 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             (txn : _) -> Just $ fromMaybe "" txn.tdsSection <> " (TDS: " <> show txn.tdsAmount <> ")"
             _ -> Nothing
 
-      -- Get linked ride/subscription IDs from ledger links
+      -- Get linked subscription IDs from ledger links
       ledgerLinks <- QInvoiceLedgerLink.findByInvoice invoice.id
       ledgerEntries <- mapM (QLedgerEntry.findById . (.ledgerEntryId)) ledgerLinks
 
-      -- Extract ride_id and subscription_id from ledger entries
-      let (rideIds, subscriptionIds) = foldr extractIds ([], []) (catMaybes ledgerEntries)
+      let subscriptionIds = [entry.referenceId | Just entry <- ledgerEntries, entry.referenceType == "SubscriptionPurchase"]
+
+      -- Ride ledger entries use types like BaseRide, so resolve the ride via the invoice's booking id
+      mbRide <- case invoice.referenceId of
+        Just bookingId | invoice.invoiceType == Ride -> QRide.findOneByBookingId (Id bookingId)
+        _ -> pure Nothing
 
       -- Get payment method from payment_transaction via invoice.paymentOrderId
       mbPaymentMethod <- case invoice.entityReferenceId of
@@ -635,7 +639,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             tdsReference = tdsRef,
             irn = invoice.irn,
             qrCode = invoice.signedQRCode,
-            rideId = listToMaybe rideIds,
+            rideId = (.id.getId) <$> mbRide,
             subscriptionId = listToMaybe subscriptionIds,
             supplierName = invoice.supplierName,
             supplierAddress = invoice.supplierAddress,
@@ -659,13 +663,6 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             recognizedRevenue = recognizedRevenue,
             deferredRevenue = deferredRevenue
           }
-
-    extractIds :: LedgerEntry.LedgerEntry -> ([Text], [Text]) -> ([Text], [Text])
-    extractIds entry (rides, subs) =
-      case entry.referenceType of
-        "Ride" -> (entry.referenceId : rides, subs)
-        "SubscriptionPurchase" -> (rides, entry.referenceId : subs)
-        _ -> (rides, subs)
 
 -- Alias for generated API
 getFinanceManagementFinanceInvoiceList ::
