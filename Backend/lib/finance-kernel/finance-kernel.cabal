@@ -238,6 +238,7 @@ library
     , euler-hs
     , exceptions
     , filepath
+    , hedis
     , http-api-data
     , mobility-core
     , mtl

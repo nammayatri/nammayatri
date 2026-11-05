@@ -175,13 +175,16 @@ accumulateCancellationPenalty isWalletEnabled booking ride mbPenaltyAmount trans
     -- CancellationConsequence.driverMoneyDeduction emits + for a penalty, − for an
     -- addition). Positive = penalty (fee/wallet debit), negative = compensation, which
     -- rides the wallet only — the legacy DriverFee rail cannot pay out.
+    let walletOwnerId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId
+        -- The ride is the entity reference: a reallocated booking's rides in one fleet post separate legs.
+        rideEntity = Just ride.id.getId
     when (signedAmount < 0) $
       if isWalletEnabled
-        then do
+        then withOwnerLock walletOwnerId $ do
           mbPanCard <- QPanCard.findByDriverId ride.driverId
           mbDriverInfo <- QDI.findById (cast ride.driverId)
           ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True Nothing
-          creditResult <- runFinance ctx $ void $ transfer OwnerExpense OwnerLiability (abs signedAmount) walletReferenceDriverCancellationCharges Nothing
+          creditResult <- runFinance ctx {entityReferenceId = rideEntity} $ void $ transfer OwnerExpense OwnerLiability (abs signedAmount) walletReferenceDriverCancellationCharges Nothing
           case creditResult of
             Left err -> logError $ "Failed to credit driver cancellation compensation: " <> show err <> " bookingId: " <> booking.id.getId
             Right _ -> logInfo $ "Credited driver cancellation compensation ₹" <> show (abs signedAmount) <> " bookingId: " <> booking.id.getId
@@ -189,11 +192,11 @@ accumulateCancellationPenalty isWalletEnabled booking ride mbPenaltyAmount trans
     when (signedAmount > 0) $ do
       let penaltyAmount = signedAmount
       if isWalletEnabled
-        then do
+        then withOwnerLock walletOwnerId $ do
           mbPanCard <- QPanCard.findByDriverId ride.driverId
           mbDriverInfo <- QDI.findById (cast ride.driverId)
           ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True Nothing
-          result <- runFinance ctx $ do
+          result <- runFinance ctx {entityReferenceId = rideEntity} $ do
             _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges Nothing
             invoice
               InvoiceConfig

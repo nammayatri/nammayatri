@@ -53,6 +53,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import Lib.Finance.Balance (withOwnerLock)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified "location-updates" Lib.LocationUpdates as LocUpd
@@ -68,7 +69,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Finance.Prepaid
-import SharedLogic.Finance.Wallet (getPrepaidOfferHoldTotalExcluding, makeWalletRunningBalanceLockKey, removePrepaidOfferHold, reserveWalletForCashRide, resolveIsOnlineFromBooking, voidWalletHoldByReference)
+import SharedLogic.Finance.Wallet (getPrepaidOfferHoldTotalExcluding, removePrepaidOfferHold, reserveWalletForCashRide, resolveIsOnlineFromBooking, voidWalletHoldByReference)
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.ScheduledNotifications as SN
@@ -391,7 +392,9 @@ releaseBookingHolds booking driverId mbFleetOwnerId reason failureLogTag = do
           booking.id.getId
           reason
           mbVehicleCategory
-      Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey ownerId) 10 10 50000 $
+      -- Waits for the lock: nothing else releases a cancelled booking's hold, so a skip would keep it
+      -- reducing the balance for good.
+      withOwnerLock ownerId $
         voidWalletHoldByReference counterpartyType ownerId booking.id.getId reason
   case result of
     Left (e :: SomeException) ->

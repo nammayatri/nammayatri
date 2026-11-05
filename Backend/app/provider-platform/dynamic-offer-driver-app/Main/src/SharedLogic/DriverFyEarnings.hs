@@ -50,7 +50,7 @@ import Tools.Error
 --
 -- Keyed on the /person/, not the driver: for a fleet ride the accumulator belongs
 -- to the fleet owner, so a driver-keyed lock would let two of that fleet's drivers
--- race the same row. Distinct from 'makeWalletRunningBalanceLockKey', which is
+-- race the same row. Distinct from the kernel's 'ownerLockKey', which is
 -- driver-keyed and wraps the whole ledger/invoice block.
 makeFyEarningsLockKey :: Text -> Text
 makeFyEarningsLockKey personId = "DriverFyEarningsLockKey:" <> personId

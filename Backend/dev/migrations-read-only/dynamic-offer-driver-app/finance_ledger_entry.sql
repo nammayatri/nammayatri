@@ -94,3 +94,8 @@ CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_settlement_id ON atlas_driver
 ------- SQL updates -------
 
 CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_timestamp_to_account_id ON atlas_driver_offer_bpp.finance_ledger_entry USING btree (timestamp, to_account_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN reversed_by character varying(36) ;

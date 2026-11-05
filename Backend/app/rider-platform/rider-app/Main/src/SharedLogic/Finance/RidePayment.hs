@@ -649,6 +649,14 @@ createFullyDiscountedRidePaymentLedger ::
   (HighPrecMoney, HighPrecMoney) -> -- (payment charge, its VAT)
   m (Either FinanceError RidePaymentLedgerResult)
 createFullyDiscountedRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee offerDiscountAmount rideVatAbsorbedOnDiscount (paymentChargeAmount, paymentChargeVatAmount) = do
+  -- The PENDING estimate entries written at assignment are the same legs at other amounts: void them (and
+  -- their invoice) first, as 'upsertCoreRidePaymentLedger' does, so the final legs can be posted.
+  existingEntries <- findRidePaymentEntries ctx.referenceId
+  let staleIds = map (.id) $ filter (\e -> e.referenceType `elem` coreRidePaymentRefTypes && e.status == LE.PENDING) existingEntries
+  unless (null staleIds) $ do
+    voidRidePaymentLedger staleIds
+    voidRideInvoice ctx.referenceId
+    logInfo $ "Voided " <> show (length staleIds) <> " PENDING core entries before the fully discounted ledger for ride: " <> ctx.referenceId
   createResult <-
     createRidePaymentLedger
       ctx

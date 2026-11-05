@@ -36,6 +36,7 @@ data LedgerEntry = LedgerEntry
     referenceId :: Kernel.Prelude.Text,
     referenceType :: Kernel.Prelude.Text,
     reversalOf :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry),
+    reversedBy :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry),
     settledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     settlementId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     settlementStatus :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.SettlementStatus,
@@ -52,7 +53,7 @@ data LedgerEntry = LedgerEntry
   }
   deriving (Generic)
 
-data EntityReferenceType = RefundRequest deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data EntityReferenceType = RefundRequest | LedgerAdjustmentRequest deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data EntryStatus = PENDING | DUE | SETTLED | VOIDED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
