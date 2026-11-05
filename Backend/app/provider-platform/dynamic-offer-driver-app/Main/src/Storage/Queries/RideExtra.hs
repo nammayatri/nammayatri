@@ -45,6 +45,7 @@ import IssueManagement.Domain.Types.MediaFile as DMF
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong)
+import qualified Kernel.External.Maps.Types as Fields
 import Kernel.Prelude hiding (foldl', map)
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowCounters (PeriodType (Days), SlidingWindowOptions (SlidingWindowOptions))
@@ -52,6 +53,7 @@ import Kernel.Utils.Common hiding (Days)
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Domain.Types.LedgerEntry as FinanceLedgerEntry
+import qualified Lib.Finance.Storage.Beam.LedgerEntry as Fields
 import Lib.Finance.Storage.Queries.LedgerEntry ()
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR

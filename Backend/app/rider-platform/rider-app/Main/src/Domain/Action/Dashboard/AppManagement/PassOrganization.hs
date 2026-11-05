@@ -19,6 +19,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Time
 import qualified Domain.Action.UI.PassDetails as DPassDetails
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified "this" Domain.Types.PassDetails as DPassDetails
 import qualified "this" Domain.Types.PassOrganization as DPassOrganization
 import qualified Domain.Types.PassType as DPassType

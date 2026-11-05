@@ -1,6 +1,6 @@
 module Storage.Queries.FleetDriverAssociationExtra where
 
-import Control.Applicative (liftA2, liftA3)
+import Control.Applicative (liftA3)
 import Data.List.Split (chunksOf)
 import qualified Data.Map as M
 import Data.Text (takeEnd, toLower)
@@ -12,6 +12,7 @@ import Domain.Types.DriverInformation
 import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetDriverAssociation
 import qualified Domain.Types.FleetDriverAssociation as DFDA
+import qualified Domain.Types.FleetOwnerInformation as Fields
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person

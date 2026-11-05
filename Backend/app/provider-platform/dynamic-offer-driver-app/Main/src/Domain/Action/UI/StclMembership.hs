@@ -44,6 +44,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.StclMembership as QStclMembership
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
+import qualified Tools.Fields as Fields
 import qualified Tools.Payment as TPayment
 import qualified Utils.Common.Cac.KeyNameConstants as CCK
 

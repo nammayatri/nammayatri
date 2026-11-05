@@ -16,6 +16,7 @@ import Kernel.Utils.Common
 import SharedLogic.DriverFleetOperatorAssociation (isAssociationBetweenTwoPerson)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 
 data VerifyEmailUpdateReq = VerifyEmailUpdateReq
   { email :: Text,

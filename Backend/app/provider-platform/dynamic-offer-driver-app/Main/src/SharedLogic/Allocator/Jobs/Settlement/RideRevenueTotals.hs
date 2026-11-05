@@ -23,11 +23,15 @@ import qualified Lib.Finance.Domain.Types.Account as AccountDomain
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DDirectTaxTransaction
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as ITTDomain
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerDomain
+import qualified Lib.Finance.Storage.Beam.Account as Fields
+import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as Fields
+import qualified Lib.Finance.Storage.Beam.LedgerEntry as Fields
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTaxTransaction
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntryExtra
 import qualified SharedLogic.Finance.Prepaid as Prepaid
 import qualified SharedLogic.Finance.Wallet as Wallet
 import qualified Storage.Beam.Common as BeamCommon
+import qualified Tools.Fields as Fields
 
 -- ---------------------------------------------------------------------------
 -- Per-transaction row (persisted to journal_entry_transaction after SAP success)

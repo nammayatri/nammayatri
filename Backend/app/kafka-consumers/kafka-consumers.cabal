@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.38.3.
 --
 -- see: https://github.com/sol/hpack
 
@@ -85,7 +85,8 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
+      OverloadedRecordDot
+  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , async
@@ -117,8 +118,6 @@ library
     , persistent
     , persistent-postgresql
     , postgresql-simple
-    , record-dot-preprocessor
-    , record-hasfield
     , rider-app
     , scheduler
     , sequelize
@@ -127,6 +126,7 @@ library
     , sessionizer-metrics
     , special-zone-a
     , streamly
+    , streamly-core
     , template-haskell
     , text
     , time
@@ -185,7 +185,8 @@ executable kafka-consumers-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+      OverloadedRecordDot
+  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , async
@@ -217,8 +218,6 @@ executable kafka-consumers-exe
     , persistent
     , persistent-postgresql
     , postgresql-simple
-    , record-dot-preprocessor
-    , record-hasfield
     , scheduler
     , sequelize
     , servant-openapi3
@@ -226,6 +225,7 @@ executable kafka-consumers-exe
     , sessionizer-metrics
     , special-zone-a
     , streamly
+    , streamly-core
     , template-haskell
     , text
     , time

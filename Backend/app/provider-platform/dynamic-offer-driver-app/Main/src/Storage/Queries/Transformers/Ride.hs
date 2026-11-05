@@ -1,6 +1,7 @@
 module Storage.Queries.Transformers.Ride where
 
 import Domain.Types
+import qualified Domain.Types.Booking as Fields
 import Domain.Types.Location
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.MerchantOperatingCity

@@ -20,6 +20,7 @@ import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnCancel as DOnCancel
+import qualified Domain.Types.FRFSTicketBooking as Fields
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Beam.Functions
@@ -27,6 +28,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
+import qualified Kernel.Types.Registry.Subscriber as Fields
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.FRFSUtils as FRFSUtils

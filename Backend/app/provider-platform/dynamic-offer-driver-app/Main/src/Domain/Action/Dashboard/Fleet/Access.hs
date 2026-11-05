@@ -20,6 +20,7 @@ module Domain.Action.Dashboard.Fleet.Access
 where
 
 import qualified Domain.Action.Dashboard.Common as DCommon
+import qualified Domain.Types.FleetOperatorAssociation as Fields
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Beam.Functions as B

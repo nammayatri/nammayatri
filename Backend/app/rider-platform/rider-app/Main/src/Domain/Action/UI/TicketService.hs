@@ -55,6 +55,7 @@ import Kernel.Utils.SlidingWindowLimiter
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PaymentOrder as Fields
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
@@ -86,6 +87,7 @@ import qualified Storage.Queries.TicketPlace as QTicketPlace
 import qualified Storage.Queries.TicketService as QTicketService
 import qualified Storage.Queries.TicketSubPlace as QTicketSubPlace
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.SMS as Sms

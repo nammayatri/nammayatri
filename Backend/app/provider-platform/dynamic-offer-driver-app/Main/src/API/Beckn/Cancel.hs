@@ -34,6 +34,7 @@ import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OnCancel as OC
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.SearchTry as Fields
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -47,6 +48,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
+import qualified SharedLogic.CancellationOrchestrator as Fields
 import qualified SharedLogic.Finance.InvoiceDocument as InvoiceDocument
 import qualified SharedLogic.OndcCancellationReason as SOCR
 import qualified SharedLogic.SearchTryLocker as STL
@@ -61,6 +63,7 @@ import qualified Storage.Queries.Ride as QRide
 import Storage.Queries.SearchTry as QST
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
+import qualified Tools.Fields as Fields
 import TransactionLogs.PushLogs
 
 type API =

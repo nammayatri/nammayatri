@@ -4,7 +4,6 @@ import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Person as DPerson
-import Kernel.Prelude
 import Kernel.Types.Id
 import SharedLogic.Search
 

@@ -15,6 +15,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getChatCompletion :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> CIT.GeneralChatCompletionReq -> m CIT.GeneralChatCompletionResp
 getChatCompletion merchantId merchantOpCityId req = do

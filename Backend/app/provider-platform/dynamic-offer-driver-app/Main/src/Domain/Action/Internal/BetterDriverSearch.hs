@@ -33,11 +33,13 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.BetterDriverSearch as SBDS
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSF
+import qualified SharedLogic.External.LocationTrackingService.Types as Fields
 import Storage.CachedQueries.Merchant as QMerchant
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchTry as QST
+import qualified Tools.Fields as Fields
 
 newtype BetterDriverSearchReq = BetterDriverSearchReq
   { bookingId :: Id DRB.Booking

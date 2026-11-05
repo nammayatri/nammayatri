@@ -21,6 +21,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PolicyAndComplianceDocument as CPCD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.PolicyAndComplianceDocument as QPCD
+import qualified Tools.Fields as Fields
 
 postInternalLegalPublish ::
   ( Kernel.Prelude.Maybe Kernel.Prelude.Text ->

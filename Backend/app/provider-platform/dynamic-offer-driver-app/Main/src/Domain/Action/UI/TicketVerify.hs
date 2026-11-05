@@ -9,6 +9,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MultimodalTicketVerify
 import qualified Domain.Types.Person as DP
 import Environment (Flow)
+import qualified Environment as Fields
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
@@ -20,6 +21,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Person as QP
 import Tools.Auth ()
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 postMultimodalTicketVerify ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),

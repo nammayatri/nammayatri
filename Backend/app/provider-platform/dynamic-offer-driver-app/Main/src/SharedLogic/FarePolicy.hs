@@ -10,6 +10,7 @@
 
 module SharedLogic.FarePolicy where
 
+import qualified API.Types.ProviderPlatform.Management.Endpoints.Merchant as Fields
 import BecknV2.OnDemand.Tags as Tags
 import Control.Applicative ((<|>))
 import qualified Control.Concurrent
@@ -28,13 +29,16 @@ import qualified Domain.Types as DVST
 import Domain.Types.Common
 import qualified Domain.Types.ConditionalCharges as DAC
 import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DYNAMIC_PRICING))
+import qualified Domain.Types.FareAdjustment as Fields
 import qualified Domain.Types.FareParameters as DFareParameters
 import qualified Domain.Types.FarePolicy as FarePolicyD
+import qualified Domain.Types.FarePolicy as FullFarePolicyD (FullFarePolicyD (..))
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DDriverExtraFeeBounds
 import qualified Domain.Types.FareProduct as FareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.SurgeConfig as Fields
 import Domain.Types.TransporterConfig (TransporterConfig (isDynamicPricingQARCalEnabled, isMLBasedDynamicPricingEnabled))
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -76,6 +80,7 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.DynamicLogic
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Maps
 import Utils.Common.Cac.KeyNameConstants
 
@@ -479,7 +484,7 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
               if fareWithAddition > estimatedFare
                 then do
                   logWarning $ "Fare with addition: " <> show fareWithAddition <> " is greater than estimated fare: " <> show estimatedFare
-                  let fullFarePolicy' = fullFarePolicy{additionalCongestionCharge = fareWithAddition - estimatedFare}
+                  let fullFarePolicy' = fullFarePolicy{FullFarePolicyD.additionalCongestionCharge = fareWithAddition - estimatedFare}
                   return $ Just fullFarePolicy'
                 else return $ Just fullFarePolicy
             else return $ Just fullFarePolicy

@@ -19,6 +19,7 @@ where
 
 import qualified "this" API.Types.ProviderPlatform.Management.Ride as Common
 import qualified Data.Text as T
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Beam.Functions (runInReplica)
@@ -32,6 +33,7 @@ import Storage.Clickhouse.ExternalApiCallLogs (decodePayload)
 import qualified Storage.Clickhouse.ExternalApiCallLogs as CHExternalApiCallLogs
 import qualified Storage.Queries.Booking as QBooking
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 routeApiNames :: [Text]
 routeApiNames = ["advancedDirectionsAPI", "directions", "OsrmRouteAPI"]

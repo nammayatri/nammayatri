@@ -13,6 +13,7 @@ import SharedLogic.DriverFee (jobDuplicationPreventionKey)
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Webhook ()
+import qualified Tools.Fields as Fields
 
 sendWebhookWithRetryToExternal ::
   ( CacheFlow m r,

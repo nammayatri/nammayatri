@@ -2,6 +2,7 @@ module ExternalBPP.ExternalAPI.Bus.EBIX.Order where
 
 import API.Types.UI.FRFSTicketService
 import Data.Aeson
+import Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import Data.Time.Format
@@ -10,6 +11,9 @@ import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Route as Fields
+import qualified Domain.Types.RouteStopMapping as Fields
+import qualified Domain.Types.Station as Fields
 import EulerHS.Types as ET hiding (Log)
 import ExternalBPP.ExternalAPI.Bus.EBIX.Auth
 import ExternalBPP.ExternalAPI.Types
@@ -18,6 +22,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import Servant hiding (route, throwError)
 import SharedLogic.FRFSUtils
@@ -124,9 +129,11 @@ getBppOrderId booking = do
 getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, HasKafkaProducer r, HasRequestId r, MonadReader r m) => EBIXConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> [FRFSQuoteCategory] -> FRFSRouteStationsAPI -> m ProviderTicket
 getTicketDetail config integratedBPPConfig qrTtl _ quoteCategories routeStation = do
   busTypeId <- routeStation.vehicleServiceTier <&> (.providerCode) & fromMaybeM (InternalError "Bus Provider Code Not Found.")
-  when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
-  let startStation = head routeStation.stations
-      endStation = last routeStation.stations
+  routeStationStationsNE <- case NE.nonEmpty routeStation.stations of
+    Nothing -> throwError (InternalError "Empty Stations")
+    Just ne -> pure ne
+  let startStation = NE.head routeStationStationsNE
+      endStation = NE.last routeStationStationsNE
   fromStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode startStation.code integratedBPPConfig >>= fromMaybeM (StationNotFound $ startStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode endStation.code integratedBPPConfig >>= fromMaybeM (StationNotFound $ endStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   route <- OTPRest.getRouteByRouteId integratedBPPConfig routeStation.code >>= fromMaybeM (RouteNotFound routeStation.code)

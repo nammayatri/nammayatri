@@ -32,10 +32,12 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.API as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingStatus as SRB
+import qualified Domain.Types.BookingUpdateRequest as Fields
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Client as DC
+import qualified Domain.Types.Extra.Ride as Fields
 import qualified Domain.Types.Journey as DJ
-import Domain.Types.Location
+import Domain.Types.Location (Location (..))
 import Domain.Types.LocationAddress
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
@@ -59,6 +61,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common
 import Kernel.Types.Flow
+import qualified Kernel.Types.Geofencing as Fields
 import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
@@ -92,6 +95,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPassExtra as QPurchasedPass
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data StopReq = StopReq
   { gps :: LatLong,
@@ -559,7 +563,7 @@ buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings jour
           passEntity <- DPass.buildPurchasedPassAPIEntity Nothing person Nothing today pass'
           go riderId' ls (acc Seq.|> MultiModalPass passEntity)
 
-    buildJourneyApiEntity :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJ.Journey -> m (Maybe APITypes.JourneyInfoResp)
+    buildJourneyApiEntity :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) => DJ.Journey -> m (Maybe APITypes.JourneyInfoResp)
     buildJourneyApiEntity journey = do
       legsInfo <-
         withTryCatch "getAllLegsInfo:buildJourneyApiEntity" (JMU.measureLatency (getAllLegsInfo journey.riderId journey.id) (show journey.id <> " getAllLegsInfo journey myrides measureLatency: "))
@@ -646,7 +650,7 @@ editLocationForBooking (personId, merchantId) bookingId req = do
         QLM.create pickupMapForRide
       pickupMapForSearchReq <- SLM.buildPickUpLocationMapping startLocation.id booking.transactionId DLM.SEARCH_REQUEST (Just merchantId) (Just booking.merchantOperatingCityId)
       QLM.create pickupMapForSearchReq
-      let origin = Just $ startLocation{id = "0"}
+      let origin = Just $ startLocation{Domain.Types.Location.id = "0"}
       bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
       uuid <- generateGUID
       let dUpdateReq =
@@ -691,7 +695,7 @@ editLocationForBooking (personId, merchantId) bookingId req = do
       newDropLocationMap <- SLM.buildDropLocationMapping newDropLocation.id bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
       QLM.create newDropLocationMap
       prevOrder <- QLM.maxOrderByEntity booking.id.getId
-      let destination' = Just $ newDropLocation{id = show prevOrder}
+      let destination' = Just $ newDropLocation{Domain.Types.Location.id = show prevOrder}
       bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
       let dUpdateReq =
             ACL.UpdateBuildReq
@@ -737,13 +741,13 @@ processStop bookingId loc merchantId isEdit = do
   let details =
         if isEdit
           then do
-            let stopLocation = location{id = Id $ show prevOrder}
+            let stopLocation = location{Domain.Types.Location.id = Id $ show prevOrder}
             ACL.UEditStopBuildReqDetails $
               ACL.EditStopBuildReqDetails
                 { stops = [stopLocation]
                 }
           else do
-            let stopLocation = location{id = Id $ show (prevOrder + 1)}
+            let stopLocation = location{Domain.Types.Location.id = Id $ show (prevOrder + 1)}
             ACL.UAddStopBuildReqDetails $
               ACL.AddStopBuildReqDetails
                 { stops = [stopLocation]

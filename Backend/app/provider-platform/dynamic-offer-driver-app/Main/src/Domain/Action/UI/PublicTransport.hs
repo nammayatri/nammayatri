@@ -7,12 +7,14 @@ where
 import qualified API.Types.UI.PublicTransport as APIT
 import qualified BecknV2.FRFS.Enums as BecknSpec
 import Data.List (nub)
+import qualified Domain.Types.DepotManager as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleActionHistory as DVAH
 import Environment (Flow)
+import qualified Environment as Fields
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import qualified Kernel.Prelude

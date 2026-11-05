@@ -30,6 +30,7 @@ import qualified Domain.Types.DriverPlan as DPlan
 import qualified Domain.Types.Overlay as DOverlay
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
+import qualified Domain.Types.SubscriptionConfig as Fields
 import qualified Domain.Types.TransporterConfig as TC
 import Kernel.Beam.Functions as B
 import qualified Kernel.External.Payment.Interface as Payment

@@ -27,6 +27,7 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 reportACIssue :: Id Ride -> Maybe Text -> Flow APISuccess
 reportACIssue rideId apiKey = do

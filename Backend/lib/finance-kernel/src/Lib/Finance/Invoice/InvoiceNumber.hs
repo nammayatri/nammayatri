@@ -28,7 +28,7 @@ import Data.Time (Day, UTCTime (UTCTime), addUTCTime, diffUTCTime, fromGregorian
 import Kernel.Prelude hiding (length, replicate)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
-import Kernel.Utils.Common (CacheFlow, MonadFlow, getCurrentTime, nominalDiffTimeToSeconds)
+import Kernel.Utils.Common (CacheFlow, MonadFlow, Seconds (..), getCurrentTime, nominalDiffTimeToSeconds)
 import Prelude (length, replicate)
 
 -- | Purpose abbreviations

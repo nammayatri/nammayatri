@@ -24,7 +24,7 @@ import Kafka.Producer
 import qualified Kafka.Producer as KafkaProd
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Streaming.Kafka.Producer (produceToSecondaryProducer)
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools (..))
 import Kernel.Types.Common
 import System.Posix.Signals (raiseSignal, sigKILL)
 import System.Random.PCG
@@ -193,7 +193,8 @@ createInKafka kafkaProducerTools dbObject dbStreamKey model = do
         { prTopic = TopicName topicName,
           prPartition = UnassignedPartition,
           prKey = Just $ TE.encodeUtf8 dbStreamKey,
-          prValue = Just . LBS.toStrict $ A.encode event
+          prValue = Just . LBS.toStrict $ A.encode event,
+          prHeaders = KafkaProd.headersFromList []
         }
 
 shouldPushToKafkaOnly :: DBModel -> [Text] -> Bool

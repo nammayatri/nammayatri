@@ -35,6 +35,7 @@ import qualified SharedLogic.DummySignatureAuth as DummySig
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import qualified Tools.ActorInfo as ActorInfo
+import qualified Tools.Fields as Fields
 import TransactionLogs.PushLogs
 
 type API = OnSearch.OnSearchAPIV2

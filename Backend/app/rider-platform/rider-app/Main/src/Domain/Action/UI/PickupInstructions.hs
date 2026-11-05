@@ -16,6 +16,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.PickupInstructions as DPI
+import qualified Domain.Types.RiderConfig as Fields
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)

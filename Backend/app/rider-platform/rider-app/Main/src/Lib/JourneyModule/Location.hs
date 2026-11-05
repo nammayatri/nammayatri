@@ -7,7 +7,6 @@ import qualified Data.Text.Encoding as TE
 import Domain.Types.Journey
 import Domain.Types.Location
 import EulerHS.Prelude hiding (id, state)
-import GHC.Records.Extra
 import Kernel.External.Maps as Maps
 import Kernel.Prelude (intToNominalDiffTime)
 import Kernel.Storage.Hedis
@@ -16,6 +15,7 @@ import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 
 locationToLatLng :: Location -> LatLong

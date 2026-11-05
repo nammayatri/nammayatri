@@ -16,6 +16,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.VehicleRegistrationCertificate as Fields
 import Storage.Queries.OrphanInstances.VehicleRegistrationCertificate ()
 
 findVehicles ::

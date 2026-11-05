@@ -48,7 +48,6 @@ where
 
 import qualified Control.Monad.Catch as C
 import EulerHS.Prelude hiding (id, state)
-import GHC.Records.Extra
 import Kernel.External.Maps as Maps
 import Kernel.Prelude (last)
 import Kernel.Storage.Hedis
@@ -57,7 +56,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (InternalError))
-import Kernel.Types.Id (Id)
+import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Kernel.Utils.ComputeIntersection
 import Lib.LocationUpdates.TollTypes

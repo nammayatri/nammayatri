@@ -18,13 +18,14 @@ import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Quote as DQuote
-import Domain.Types.SearchRequest (SearchRequest)
+import Domain.Types.SearchRequest (SearchRequest (..))
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as Variant
 import Kernel.Prelude
 import qualified Kernel.Types.Common as Common (mkPrice)
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator (mkFareParamsBreakups)
+import qualified Tools.Fields as Fields
 
 -- | Builds the on_select order from a Quote and applies the ONDC overrides (route info, fulfillment.type, vehicle.energy_type).
 mkOnSelectMessageV2FromQuote ::

@@ -8,6 +8,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id (Id (Id))
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE

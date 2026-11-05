@@ -37,9 +37,11 @@ import Kernel.Utils.Common
 import Lib.Finance.AccountConfig (ResolvedAccountConfig (..), cutoffTimeFor, getAccountConfigForAccount)
 import Lib.Finance.Domain.Types.Account (Account (..), AccountType (PayoutLiability))
 import Lib.Finance.Domain.Types.FinanceAccountConfig (FeeBearer (..), FeeSpec)
+import qualified Lib.Finance.Domain.Types.FinanceAccountConfig as Fields
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntry)
 import Lib.Finance.Error.Types
 import Lib.Finance.Ledger.Service (getPayoutEligibilityAmountsWith, getPayoutEligibilityDataWith)
+import qualified Lib.Finance.Ledger.Service as Fields
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.Account as QAccount
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra

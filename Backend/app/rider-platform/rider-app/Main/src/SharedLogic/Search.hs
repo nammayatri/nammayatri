@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wwarn=x-partial #-}
+
 module SharedLogic.Search where
 
 import qualified API.Types.UI.RiderLocation as RL

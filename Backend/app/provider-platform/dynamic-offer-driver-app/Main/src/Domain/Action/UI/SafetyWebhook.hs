@@ -22,6 +22,7 @@ import EulerHS.Prelude
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Verification as Verification
+import qualified Kernel.External.Verification.SafetyPortal.Config as Fields
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -33,6 +34,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Tools.Fields as Fields
 import qualified Tools.Ticket as TT
 
 type SafetyWebhookAPI =

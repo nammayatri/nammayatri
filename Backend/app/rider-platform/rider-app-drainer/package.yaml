@@ -58,6 +58,7 @@ default-extensions:
   - ViewPatterns
   - UndecidableInstances
   - LambdaCase
+  - OverloadedRecordDot
 
 dependencies:
   - base >=4.7 && <5
@@ -70,12 +71,10 @@ dependencies:
   - resource-pool
   - bytestring
   - casing
-  - connection
+  - crypton-connection
   - containers
   - directory
   - errors
-  - record-dot-preprocessor
-  - record-hasfield
   # - euler-webservice
   - euler-events-hs >=2.0.0 && <2.1
   - euler-hs
@@ -113,7 +112,6 @@ dependencies:
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs: src

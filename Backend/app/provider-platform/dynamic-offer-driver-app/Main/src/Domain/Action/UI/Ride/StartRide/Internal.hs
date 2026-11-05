@@ -36,6 +36,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Ride as QRide
 import Tools.Event
+import qualified Tools.Fields as Fields
 
 startRideTransaction ::
   ( MonadFlow m,
@@ -59,7 +60,7 @@ startRideTransaction ::
   DDI.DriverInformation ->
   m ()
 startRideTransaction driverId ride bookingId firstPoint merchantId odometer transporterConfig driverInfo = do
-  triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
+  triggerRideStartEvent RideEventData {ride = ride{SRide.status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
   minDistanceBetweenTwoPoints <- bool (pure Nothing) (Just <$> asks (.minDistanceBetweenTwoPoints)) (ride.tripCategory == DTC.OneWay DTC.MeterRide)
   void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon merchantId driverId (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = firstPoint, minDistanceBetweenTwoPoints = minDistanceBetweenTwoPoints, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) ride.stops}))
   QRide.updateStartTimeAndLoc ride.id firstPoint

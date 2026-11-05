@@ -42,6 +42,7 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- Create the MediaFile (PENDING), hand out a presigned upload URL, and schedule the completion job.
 mediaFileDocumentUploadLink ::

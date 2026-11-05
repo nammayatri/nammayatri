@@ -16,6 +16,7 @@ module Domain.Action.Beckn.OnTrack
   ( onTrack,
     OnTrackReq (..),
     TrackingLocation (..),
+    ValidatedOnTrackReq (..),
     validateRequest,
   )
 where

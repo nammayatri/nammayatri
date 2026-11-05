@@ -25,6 +25,7 @@ import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Tools.Fields as Fields
 
 -- | Ride-earning GST: compare driver/fleet residence proof vs booking pickup location.
 --   If 'ride.fleetOwnerId' is set, use the fleet owner's addressState; otherwise the driver's.

@@ -35,11 +35,13 @@ import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.Aeson.Types as AT
 import qualified Data.HashMap.Strict as HM
 import Data.List (nub, partition)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime (..), addDays, addUTCTime, diffUTCTime, timeOfDayToTime, utctDay)
 import qualified Data.Time as DT
 import Domain.Action.UI.Plan (getPlanAmount)
+import qualified Domain.Types.Image as Fields
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.LedgerAdjustmentRequest as DLAR
 import qualified Domain.Types.Merchant as DM
@@ -49,6 +51,7 @@ import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Environment (Flow)
+import qualified Environment as Fields
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.External.Types as KET
@@ -73,6 +76,8 @@ import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping 
 import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest as DTdsReq
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
+import qualified Lib.Finance.Domain.Types.InvoiceLedgerLink as Fields
+import qualified Lib.Finance.Domain.Types.JournalEntryTransaction as Fields
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgPaymentSettlementReport
 import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconciliationEntry
@@ -82,6 +87,7 @@ import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import qualified Lib.Finance.Reconciliation.Job as ReconJob
+import qualified Lib.Finance.Reconciliation.Recipe as Fields
 import qualified Lib.Finance.Reconciliation.Runner as ReconRunner
 import qualified Lib.Finance.Reconciliation.Types as ReconT
 import qualified Lib.Finance.Storage.Queries.AuditEntryExtra as QAuditEntryExtra
@@ -133,6 +139,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SapJournalExtra as QSapJournalEntryBPP
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
 import Tools.Encryption (decryptWithDefault)
+import qualified Tools.Fields as Fields
 import "beckn-services" Tools.InvoicePdf (generateFinanceInvoicePdf)
 
 defaultPageLimit :: Int
@@ -1844,12 +1851,13 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
         logError $ "Skipping invoice " <> inv.invoiceNumber <> " (render failed): " <> show err
         pure Nothing
   let pdfDatas = catMaybes results
-  when (Kernel.Prelude.null pdfDatas) $
-    throwError $ InvalidRequest "No invoices could be rendered (all failed)"
+  pdfDatasNE <-
+    NE.nonEmpty pdfDatas
+      & fromMaybeM (InvalidRequest "No invoices could be rendered (all failed)")
 
   -- Always render a single invoice PDF; never aggregate (have seperate handling for commission aggregation).
   -- If multiple invoices match the filters, the first (newest by issuedAt DESC) is rendered.
-  let chosenPdfData = Kernel.Prelude.head pdfDatas
+  let chosenPdfData = NE.head pdfDatasNE
       chosenInv = chosenPdfData.financeInvoice
   mbQrDataUri <- InvoiceDocument.mkInvoiceQrDataUri chosenInv
   let ctx =

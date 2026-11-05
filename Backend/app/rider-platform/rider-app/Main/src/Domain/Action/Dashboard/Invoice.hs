@@ -14,6 +14,8 @@ import qualified Domain.Action.UI.FinanceInvoice as UIFinanceInvoice
 import qualified Domain.Action.UI.Invoice as UIInvoice
 import qualified "beckn-spec" Domain.Types.Invoice as DInvoice
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as Fields
+import qualified Domain.Types.Person as Fields
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
@@ -23,10 +25,12 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as Fields
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as Fields
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.Payment ()

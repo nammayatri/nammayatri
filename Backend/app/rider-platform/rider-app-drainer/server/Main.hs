@@ -23,7 +23,7 @@ import qualified EulerHS.Types as ET
 import qualified Event.Event as Event
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
-import Kernel.Storage.Esqueleto.Config (EsqDBConfig)
+import Kernel.Storage.Esqueleto.Config (EsqDBConfig (..))
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Utils.Dhall hiding (void)
 import qualified Kernel.Utils.FlowLogging as L

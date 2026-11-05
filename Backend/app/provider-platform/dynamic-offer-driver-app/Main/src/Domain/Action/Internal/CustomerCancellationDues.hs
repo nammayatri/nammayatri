@@ -41,6 +41,7 @@ import qualified Storage.Queries.RiderDetails as QRD
 import qualified Text.Hex
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.OpenAPIInstances ()
 
 showDbHashHex :: DbHash -> Text

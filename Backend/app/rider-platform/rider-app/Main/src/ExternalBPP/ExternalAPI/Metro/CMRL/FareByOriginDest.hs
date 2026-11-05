@@ -10,6 +10,7 @@ import Data.Aeson
 import qualified Data.Text as T
 import Domain.Types.FRFSQuoteCategorySpec
 import Domain.Types.FRFSQuoteCategoryType
+import qualified Domain.Types.FRFSTicketCategoryMetadataConfig as Fields
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.Auth

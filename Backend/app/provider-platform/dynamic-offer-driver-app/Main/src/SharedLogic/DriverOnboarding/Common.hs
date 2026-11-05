@@ -45,6 +45,7 @@ import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.DocumentOnboardingStage as DOS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverInformation as Fields
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
@@ -55,6 +56,7 @@ import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
+import qualified Kernel.Sms.Config as Fields
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -69,6 +71,7 @@ import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified TempAppCode.Flow as TempAppCode
 import TempAppCode.Types (TempAppCodeCfg (..), TempAppCodeRes (..))
+import qualified Tools.Fields as Fields
 import qualified Tools.SMS as Sms
 import qualified UrlShortner.Common as UrlShortner
 

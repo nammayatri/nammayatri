@@ -101,8 +101,8 @@ import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration
 import "this" API.Types.ProviderPlatform.Management.Ride (CancellationReasonCode (..))
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified API.Types.UI.FleetOwnerList as FleetOwnerListAPI
+import qualified API.Types.UI.WMB as Fields
 import qualified Beckn.Types.Core.Taxi.Common.PaymentInstrument as BecknPI
-import Control.Applicative (liftA2)
 import qualified "lib-dashboard" Dashboard.Common as DC
 import qualified "lib-dashboard" Dashboard.Common as DCommonRole (Role (..))
 import qualified "lib-dashboard" Dashboard.Common.Driver
@@ -140,6 +140,7 @@ import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as RideCancelInternal
 import qualified Domain.Action.UI.WMB as DWMB
 import qualified Domain.Types as DTC
+import qualified Domain.Types.AadhaarCard as Fields
 import qualified Domain.Types.Alert as DTA
 import Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.Booking as SRB
@@ -147,33 +148,52 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DocumentVerificationConfig as DDoc
+import qualified Domain.Types.DriverBankAccount as Fields
 import qualified Domain.Types.DriverFlowStatus as DDF
+import qualified Domain.Types.DriverGstin as Fields
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverLicense as Fields
 import qualified Domain.Types.DriverLocation as DDL
+import qualified Domain.Types.DriverOperatorAssociation as Fields
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.DriverRCAssociation
+import qualified Domain.Types.DriverReferral as Fields
 import qualified Domain.Types.DriverRidePayoutBankAccount as DRPB
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.FareParameters as DFareParams
 import qualified Domain.Types.FleetBadge as DFB
+import qualified Domain.Types.FleetBadgeAssociation as Fields
 import qualified Domain.Types.FleetBadgeType as DFBT
+import qualified Domain.Types.FleetBookingAssignments as Fields
 import Domain.Types.FleetBookingInformation ()
+import qualified Domain.Types.FleetBookingInformation as Fields
 import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetDriverAssociation
+import qualified Domain.Types.FleetMemberAssociation as Fields
+import qualified Domain.Types.FleetOperatorAssociation as Fields
+import qualified Domain.Types.FleetOperatorStats as Fields
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import Domain.Types.FleetPoolingPriority (FleetPoolingPriority (..), isSupportedPoolingPriorityArea)
+import qualified Domain.Types.FleetRCAssociation as Fields
+import qualified Domain.Types.FleetRouteAssociation as Fields
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
+import qualified Domain.Types.RouteTripStopMapping as Fields
 import qualified Domain.Types.TransporterConfig as DTCConfig
+import qualified Domain.Types.TripAlertRequest as Fields
 import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.VehicleRouteMapping as DVRM
@@ -223,6 +243,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Fleet (getFleetOwnerId, getFleetOwnerIds, getFleetOwnersInfoMerchantBased)
+import qualified SharedLogic.Fleet as Fields
 import qualified SharedLogic.FleetDriverSettings as FDS
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -579,7 +600,7 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
       DTA.AWAITING_APPROVAL -> WMB.updateAlertRequestStatus req.status (Just req.reason) (Id req.approvalRequestId)
       _ -> throwError $ RequestAlreadyProcessed driverRequest.id.getId
     void $ case req.status of
-      DTA.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{status = DTA.REJECTED, reason = Just req.reason}
+      DTA.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{DTR.status = DTA.REJECTED, DTR.reason = Just req.reason}
       DTA.ACCEPTED -> do
         case driverRequest.requestData of
           DTA.EndRide DTA.EndRideData {..} -> do
@@ -1752,13 +1773,13 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
         let (fleetOwnerName, fleetName) = fromMaybe ("", Nothing) (Map.lookup fleetOwnerId fleetOwnerNameMap)
         driverRCAssociation <- QRCAssociation.findAllActiveAndInactiveAssociationsByDriverId driver.id
         let rcAssociatedWithFleet = filter (\(_, rc) -> rc.fleetOwnerId == Just fleetOwnerId) driverRCAssociation
-        (vehicleNo, vehicleType, rcId, vehicleColor, vehicleMake, vehicleModel, vehicleYear, failedRules, isRcActive) <- case rcAssociatedWithFleet of ---- so the logic is if it have active association with the fleet vehicle return that otherwise return the latest one
-          [] -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, False)
-          associations -> do
-            let activeAssociation = find (\(assoc, _) -> assoc.isRcActive) associations
+        (vehicleNo, vehicleType, rcId, vehicleColor, vehicleMake, vehicleModel, vehicleYear, failedRules, isRcActive) <- case NE.nonEmpty rcAssociatedWithFleet of ---- so the logic is if it have active association with the fleet vehicle return that otherwise return the latest one
+          Nothing -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, False)
+          Just associationsNE -> do
+            let activeAssociation = find (\(assoc, _) -> assoc.isRcActive) rcAssociatedWithFleet
             case activeAssociation of
               Just (_, rc) -> getVehicleDetails True rc ------- if driver is using fleet vehicle
-              Nothing -> getVehicleDetails False $ snd $ head associations -------- otherwise give the latest active association
+              Nothing -> getVehicleDetails False $ snd $ NE.head associationsNE -------- otherwise give the latest active association
         let driverName = Just driver.firstName
             firstName = Just driver.firstName
             middleName = driver.middleName
@@ -5122,9 +5143,9 @@ postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Com
   newFareParamsId <- generateGUID
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
   let newIsScheduled = oldBooking.isScheduled && transporterConfig.scheduleRideBufferTime `addUTCTime` now < searchReq.startTime
-      newFareParams = quote.fareParams{id = newFareParamsId, updatedAt = now}
-      newQuote = quote{id = Id newQuoteId, fareParams = newFareParams, validTill = searchRequestExpirationSeconds `addUTCTime` now, isScheduled = newIsScheduled}
-      newBooking = oldBooking{id = newBookingId, quoteId = newQuoteId, status = SRB.NEW, isScheduled = newIsScheduled, startTime = max now oldBooking.startTime, createdAt = now, updatedAt = now}
+      newFareParams = quote.fareParams{DFareParams.id = newFareParamsId, DFareParams.updatedAt = now}
+      newQuote = quote{DQuote.id = Id newQuoteId, DQuote.fareParams = newFareParams, DQuote.validTill = searchRequestExpirationSeconds `addUTCTime` now, DQuote.isScheduled = newIsScheduled}
+      newBooking = oldBooking{SRB.id = newBookingId, SRB.quoteId = newQuoteId, SRB.status = SRB.NEW, SRB.isScheduled = newIsScheduled, SRB.startTime = max now oldBooking.startTime, SRB.createdAt = now, SRB.updatedAt = now}
 
   -- 7. Save new booking and quote
   QQuote.create newQuote

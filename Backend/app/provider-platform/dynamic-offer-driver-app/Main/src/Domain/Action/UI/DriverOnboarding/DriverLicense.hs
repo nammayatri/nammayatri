@@ -26,7 +26,7 @@ module Domain.Action.UI.DriverOnboarding.DriverLicense
 where
 
 import qualified AWS.S3 as S3
-import Control.Applicative (liftA2, (<|>))
+import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import Data.Time (nominalDay, utctDay)
 import Data.Tuple.Extra (both)
@@ -79,6 +79,7 @@ import qualified Storage.Queries.MorthVerification as MorthQuery
 import qualified Storage.Queries.Person as Person
 import qualified Tools.DriverBackgroundVerification as DriverBackgroundVerification
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Ticket as TT
 import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification

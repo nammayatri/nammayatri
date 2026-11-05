@@ -18,6 +18,7 @@ import qualified Beckn.ACL.OnUpdate as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as OnUpdate
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified Domain.Action.Beckn.Common as Fields
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import Environment
 import qualified EulerHS.Language as L
@@ -31,6 +32,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
+import qualified Tools.Fields as Fields
 import TransactionLogs.PushLogs
 
 type API = OnUpdate.OnUpdateAPIV2

@@ -5,7 +5,7 @@ import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import Domain.Types.Person
-import Domain.Types.Ride (Ride)
+import Domain.Types.Ride (Ride (..))
 import EulerHS.Prelude as P hiding (null, (^.))
 import Kernel.Beam.Functions
 import Kernel.Types.Common

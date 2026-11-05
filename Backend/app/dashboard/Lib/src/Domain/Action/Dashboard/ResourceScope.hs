@@ -17,6 +17,7 @@ module Domain.Action.Dashboard.ResourceScope where
 import Data.List (nub)
 import qualified Domain.Types.Capability as DC
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantAccess as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ResourceScope as DRS
 import Kernel.Prelude

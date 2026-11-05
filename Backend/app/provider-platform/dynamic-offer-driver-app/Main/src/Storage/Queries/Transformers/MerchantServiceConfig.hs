@@ -25,8 +25,10 @@ import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Stripe.Config as Stripe
 import qualified Kernel.External.Payout.Interface as Payout
+import qualified Kernel.External.Payout.Stripe.Config as Fields
 import qualified Kernel.External.Plasma as Plasma
 import qualified Kernel.External.SMS.Interface as Sms
+import qualified Kernel.External.Settlement.Types as Fields
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Verification.Interface as Verification

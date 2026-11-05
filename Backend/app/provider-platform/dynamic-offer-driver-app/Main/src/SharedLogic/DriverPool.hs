@@ -92,14 +92,17 @@ import Data.Time.Clock hiding (getCurrentTime)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Data.Vector as V
 import qualified Database.Redis as Hedis
+import qualified Domain.Action.UI.DriverGoHomeRequest as Fields
 import Domain.Types as DVST
 import qualified Domain.Types.Common as SRD
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.DriverInformation as Fields
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.DriverIntelligentPoolConfig as DIPC
+import qualified Domain.Types.DriverLocation as Fields
 import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
-import Domain.Types.GoHomeConfig (GoHomeConfig)
+import Domain.Types.GoHomeConfig (GoHomeConfig (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -111,7 +114,7 @@ import Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (find, id, length)
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Types
-import Kernel.Prelude (head, listToMaybe)
+import Kernel.Prelude (listToMaybe)
 import qualified Kernel.Prelude as KP
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -131,6 +134,7 @@ import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Queries.SpecialLocation as Fields
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Beckn.Common as DST
 import SharedLogic.DriverPool.DriverPoolData (mkParallelSearchRequestKey)
@@ -928,7 +932,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
                     mode = Just Maps.CAR,
                     calcPoints = True
                   }
-            let route = if null routes then defRouteInfo else head routes
+            let route = fromMaybe defRouteInfo $ listToMaybe routes
             return (driver, route, ghReq.id, mbPreferredSpecialLocId, driverGoHomePoolWithActualDistance)
         )
 

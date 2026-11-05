@@ -34,7 +34,7 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     SpecialLocationGeomT sql=special_location
-      id Text
+      uuid Text sql=id
       locationName Text
       category Text
       gates (PostgresList Domain.GatesInfo)
@@ -58,14 +58,14 @@ mkPersist
       boothSpecificFleet Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
-      Primary id
+      Primary uuid
       deriving Generic
     |]
 
 instance ToTType SpecialLocationGeomT Domain.SpecialLocation where
   toTType Domain.SpecialLocation {..} = do
     SpecialLocationGeomT
-      { id = getId id,
+      { uuid = getId id,
         gates = PostgresList gates,
         linkedLocationsIds = PostgresList $ map (.getId) linkedLocationsIds,
         paymentModes = PostgresList <$> paymentModes,

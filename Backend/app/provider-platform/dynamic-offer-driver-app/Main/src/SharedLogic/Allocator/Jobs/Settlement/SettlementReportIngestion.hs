@@ -29,6 +29,7 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption ()
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payment.Juspay.Config as Fields
 import Kernel.External.Settlement.Types (JuspayOrderStatusConfig (..), SettlementService (..), SettlementServiceConfig (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -39,8 +40,11 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgDom
 import Lib.Finance.Settlement.Ingestion (ingestPaymentSettlementReport)
+import qualified Lib.Finance.Settlement.Ingestion as Fields
 import Lib.Finance.Settlement.Pipeline (PipelineResult (..), runSettlementPipeline)
+import qualified Lib.Finance.Settlement.Store as Fields
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Payment.Domain.Types.PaymentOrder as Fields
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPO
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)

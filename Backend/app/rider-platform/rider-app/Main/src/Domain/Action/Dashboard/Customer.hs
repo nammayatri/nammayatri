@@ -32,6 +32,7 @@ where
 
 import qualified "this" API.Types.RiderPlatform.Management.Customer as Common
 import qualified "this" API.Types.RiderPlatform.Management.Customer as CommonC
+import qualified API.Types.UI.RidePayment as Fields
 import qualified Dashboard.Common as Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -46,6 +47,7 @@ import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantConfig as Fields
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Beam.Functions
@@ -61,6 +63,7 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Safety.Domain.Types.SafetySettings as Fields
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MerchantConfig as SMC
@@ -79,6 +82,7 @@ import qualified Storage.Queries.CustomerBlockTransactions as QCBT
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SavedReqLocation as QSRL
 import Tools.Error (DeletedPersonError (..))
+import qualified Tools.Fields as Fields
 
 ---------------------------------------------------------------------
 deleteCustomerDelete ::
@@ -316,8 +320,7 @@ postCustomerPersonId merchantShortId _ req = do
       csvData <- liftIO $ BS.readFile csvFile
       case decodeByName (LBS.fromStrict csvData) of
         Left err -> throwError (InvalidRequest $ show err)
-        Right (_, v) -> pure $ mapMaybe (Common.mobileNumber :: Common.PersonMobileNumberIdsCsvRow -> Maybe Text) $ V.toList v
-
+        Right (_, v) -> pure $ mapMaybe ((.mobileNumber) :: Common.PersonMobileNumberIdsCsvRow -> Maybe Text) $ V.toList v
     processChunk :: Id DM.Merchant -> [Text] -> Flow [Common.PersonRes]
     processChunk merchantId chunk = do
       mobile <- QP.findPersonIdsByPhoneNumberAndMerchantId merchantId chunk

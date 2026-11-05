@@ -31,6 +31,7 @@ import EulerHS.Prelude hiding (id, view, (^?))
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common
 import Kernel.Utils.Common (secondsToMinutes)
+import qualified Tools.Fields as Fields
 
 mkProviderLocations :: [Maybe NearestDriverInfo] -> [Spec.Location]
 mkProviderLocations driverLocationsInfo =

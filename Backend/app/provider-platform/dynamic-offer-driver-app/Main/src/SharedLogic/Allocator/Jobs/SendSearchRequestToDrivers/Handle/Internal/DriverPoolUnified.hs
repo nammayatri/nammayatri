@@ -8,16 +8,19 @@ import qualified Data.List as DL
 import qualified Data.Map as Map
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
+import qualified Domain.Action.UI.DriverGoHomeRequest as Fields
 import qualified Domain.Types as DVST
 import Domain.Types.Common
 import Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.GoHomeConfig (GoHomeConfig)
+import qualified Domain.Types.Location as Fields
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.RiderDetails as DRD
+import qualified Domain.Types.RiderDriverCorrelation as Fields
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTC
@@ -34,6 +37,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Queries.GateInfo
+import qualified Lib.Types.GateInfo as Fields
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.AirportEntryFee as AirportEntryFee
@@ -97,7 +101,7 @@ assignTagsToDrivers driverIds driverTag =
                   (driverPoolResult dp :: DriverPoolResult)
                     { driverTags =
                         insertInObject
-                          (((driverTags :: DriverPoolResult -> Value) . driverPoolResult) dp)
+                          (((.driverTags) . driverPoolResult) dp)
                           [driverTag]
                     }
               }
@@ -583,7 +587,7 @@ assignDriverGoHomeTags pool searchReq searchTry tripQuoteDetails driverPoolCfg m
                       (driverPoolResult dp :: DriverPoolResult)
                         { driverTags =
                             insertInObject
-                              (((driverTags :: DriverPoolResult -> Value) . driverPoolResult) dp)
+                              (((.driverTags) . driverPoolResult) dp)
                               [driverTag]
                         }
                   }

@@ -19,7 +19,7 @@ import Domain.Types.PlaceNameCache
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheConfig (..), CacheFlow)
 import qualified Storage.Queries.PlaceNameCache as Queries
 
 findPlaceByPlaceId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Text -> m ([PlaceNameCache], Source)

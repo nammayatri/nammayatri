@@ -16,6 +16,7 @@ module Domain.Action.Dashboard.Rewards
 where
 
 import qualified API.Types.RiderPlatform.Management.Rewards as API
+import qualified AWS.S3.Types as Fields
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Rewards.CampaignStatus as CampaignStatus
 import qualified Dashboard.Common.Rewards.ClaimMode as ClaimMode
@@ -60,6 +61,7 @@ import qualified Storage.Queries.RewardCohort as QRC
 import qualified Storage.Queries.RewardCohortExtra as QRCE
 import qualified Storage.Queries.RewardCouponUploadBatch as QRUB
 import qualified Storage.Queries.RewardUnlockExtra as QRUE
+import qualified Tools.Fields as Fields
 import qualified Tools.Rewards.RedisPool as Pool
 
 castId :: Id a -> Id b

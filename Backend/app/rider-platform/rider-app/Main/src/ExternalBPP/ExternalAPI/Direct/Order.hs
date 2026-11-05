@@ -1,6 +1,7 @@
 module ExternalBPP.ExternalAPI.Direct.Order where
 
 import API.Types.UI.FRFSTicketService
+import Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Data.Time as Time
@@ -9,12 +10,16 @@ import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
+import qualified Domain.Types.Route as Fields
+import qualified Domain.Types.RouteStopMapping as Fields
+import qualified Domain.Types.Station as Fields
 import ExternalBPP.ExternalAPI.Direct.Utils
 import ExternalBPP.ExternalAPI.Types
 import Kernel.Beam.Functions as B
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -39,9 +44,11 @@ getBppOrderId booking = do
 getTicketDetail :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> [FRFSQuoteCategory] -> FRFSRouteStationsAPI -> m ProviderTicket
 getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeStation = do
   busTypeId <- routeStation.vehicleServiceTier <&> (.providerCode) & fromMaybeM (InternalError "Bus Provider Code Not Found.")
-  when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
-  let startStation = head routeStation.stations
-      endStation = last routeStation.stations
+  routeStationStationsNE <- case NE.nonEmpty routeStation.stations of
+    Nothing -> throwError (InternalError "Empty Stations")
+    Just ne -> pure ne
+  let startStation = NE.head routeStationStationsNE
+      endStation = NE.last routeStationStationsNE
   mbFromStation <- withGtfsFallback booking.id.getId ("station:" <> startStation.code) Nothing $ B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode startStation.code integratedBPPConfig
   mbToStation <- withGtfsFallback booking.id.getId ("station:" <> endStation.code) Nothing $ B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode endStation.code integratedBPPConfig
   mbRoute <- withGtfsFallback booking.id.getId ("route:" <> routeStation.code) Nothing $ OTPRest.getRouteByRouteId integratedBPPConfig routeStation.code

@@ -24,6 +24,7 @@ module Domain.Action.UI.Route
 where
 
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantServiceUsageConfig as Fields
 import qualified Domain.Types.Person as DP
 import Domain.Types.Ride
 import Kernel.External.Types (ServiceFlow)

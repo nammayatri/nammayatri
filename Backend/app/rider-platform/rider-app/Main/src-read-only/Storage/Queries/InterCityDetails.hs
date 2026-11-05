@@ -4,6 +4,7 @@
 
 module Storage.Queries.InterCityDetails where
 
+import qualified Domain.Types.Extra.RentalDetails as Fields
 import qualified Domain.Types.InterCityDetails
 import Kernel.Beam.Functions
 import Kernel.External.Encryption

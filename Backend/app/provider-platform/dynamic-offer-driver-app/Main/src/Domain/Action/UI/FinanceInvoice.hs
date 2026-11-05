@@ -6,23 +6,29 @@ module Domain.Action.UI.FinanceInvoice
 where
 
 import qualified API.Types.UI.FinanceInvoice as API
+import qualified Data.List.NonEmpty as NE
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person (Person)
+import qualified Domain.Types.Ride as Fields
+import qualified Domain.Types.SubscriptionPurchase as Fields
 import Environment (Flow)
+import qualified Environment as Fields
 import EulerHS.Prelude hiding (id)
-import Kernel.Prelude (head, listToMaybe)
+import Kernel.Prelude (listToMaybe)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as Fields
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
 import Lib.Finance.Utils.GstBreakdown (mkComponentRateFromTxn)
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as Fields
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified SharedLogic.Finance.InvoiceDocument as InvoiceDocument
 import Storage.Beam.Payment ()
@@ -31,6 +37,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- | List finance invoices for the authenticated driver/fleet owner.
 getSubscriptionInvoices ::
@@ -190,10 +197,11 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
   -- Hide Voided/Cancelled (incl. 0-amount AggregatedCommission markers).
   let invoices = filter (\i -> i.status `notElem` [FinanceInvoice.Voided, FinanceInvoice.Cancelled]) invoicesAll
 
-  when (null invoices) $
-    throwError $ InvalidRequest "No invoices found for the given criteria"
+  invoicesNE <-
+    NE.nonEmpty invoices
+      & fromMaybeM (InvalidRequest "No invoices found for the given criteria")
 
-  let inv = head invoices
+  let inv = NE.head invoicesNE
   -- Read path: return the stored artifact if present, else render on demand.
   -- Write-through: when the merchant opts into PDF storage, persist the freshly
   -- rendered PDF so subsequent reads (and ONDC sharing) are served from S3.

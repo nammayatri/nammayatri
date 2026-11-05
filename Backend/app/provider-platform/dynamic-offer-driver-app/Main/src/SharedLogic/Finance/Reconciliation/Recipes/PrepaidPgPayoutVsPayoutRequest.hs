@@ -34,7 +34,7 @@ import qualified Domain.Types.ScheduledPayout as ScheduledPayout
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..), cast)
 import Kernel.Utils.Common
-import Lib.Finance.Domain.Types.PgPayoutSettlementReport (PgPayoutSettlementReport)
+import Lib.Finance.Domain.Types.PgPayoutSettlementReport (PgPayoutSettlementReport (..))
 import Lib.Finance.Reconciliation.Recipe (Recipe (..), defaultClassify)
 import qualified Lib.Finance.Reconciliation.Types as ReconT
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)

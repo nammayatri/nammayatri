@@ -12,6 +12,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import IssueManagement.Common (IssueStatus (..))
 import qualified IssueManagement.Domain.Types.Issue.IssueChat as ICT
+import qualified IssueManagement.Domain.Types.Issue.IssueReport as Fields
 import qualified IssueManagement.Storage.Queries.Issue.IssueChat as QIssueChat
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIssueReport
 import qualified Kernel.Beam.Functions as B

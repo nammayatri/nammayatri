@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.38.3.
 --
 -- see: https://github.com/sol/hpack
 
@@ -73,6 +73,7 @@ library
       TypeFamilies
       TypeOperators
       ViewPatterns
+      OverloadedRecordDot
   build-depends:
       HUnit
     , aeson
@@ -94,8 +95,6 @@ library
     , mobility-core
     , mock-sms
     , mtl
-    , record-dot-preprocessor
-    , record-hasfield
     , rider-app
     , shared-services
     , string-conversions
@@ -147,6 +146,7 @@ executable hunit-tests
       TypeFamilies
       TypeOperators
       ViewPatterns
+      OverloadedRecordDot
   ghc-options: -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       HUnit
@@ -170,8 +170,6 @@ executable hunit-tests
     , mobility-core
     , mock-sms
     , mtl
-    , record-dot-preprocessor
-    , record-hasfield
     , rider-app
     , shared-services
     , string-conversions

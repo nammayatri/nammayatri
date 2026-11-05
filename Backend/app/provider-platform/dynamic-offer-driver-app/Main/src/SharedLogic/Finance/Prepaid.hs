@@ -60,10 +60,13 @@ where
 
 import qualified Data.List as DL
 import qualified Data.Map as Map
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.Extra.Plan (ServiceNames (..))
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Plan as Fields
+import qualified Domain.Types.Ride as Fields
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Encryption (EncFlow, decrypt)
@@ -93,6 +96,7 @@ import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
+import qualified Tools.Fields as Fields
 
 -- | Optional parameters for creating a finance invoice during prepaid balance credit
 data InvoiceCreationParams = InvoiceCreationParams

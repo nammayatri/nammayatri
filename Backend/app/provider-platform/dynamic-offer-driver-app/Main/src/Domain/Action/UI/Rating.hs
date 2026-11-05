@@ -27,6 +27,7 @@ import Kernel.Utils.Common
 import SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 rating :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal], CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => CallBAPInternal.FeedbackReq -> m APISuccess
 rating request = do

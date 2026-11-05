@@ -20,9 +20,11 @@ module Domain.Action.Internal.SendSMS
 where
 
 import qualified Data.Text as T
+import qualified Domain.Types.MerchantMessage as Fields
 import Environment
 import Kernel.Prelude
 import Kernel.Sms.Config (useFakeSms)
+import qualified Kernel.Sms.Config as Fields
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -32,6 +34,7 @@ import qualified SMS.Types as Shared
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Tools.Fields as Fields
 import qualified Tools.SMS as Sms
 
 sendSMS ::

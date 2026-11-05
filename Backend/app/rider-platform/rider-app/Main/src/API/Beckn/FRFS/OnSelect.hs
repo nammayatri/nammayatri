@@ -9,8 +9,12 @@ import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import Data.Aeson (eitherDecodeStrict')
 import Domain.Action.Beckn.FRFS.Common (DCategorySelect (..))
+import qualified Domain.Action.Beckn.FRFS.Common as Fields
 import qualified Domain.Action.Beckn.FRFS.OnSelect as DOnSelect
 import qualified Domain.Types.Extra.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.FRFSQuote as Fields
+import qualified Domain.Types.FRFSQuoteCategory as Fields
+import qualified Domain.Types.FRFSTicketBooking as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Environment
 import EulerHS.Prelude (ByteString)
@@ -19,6 +23,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
+import qualified Kernel.Types.Registry.Subscriber as Fields
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
@@ -32,6 +37,7 @@ import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QQuoteCategory
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 import TransactionLogs.PushLogs
 
 type API = Spec.OnSelectAPIBS

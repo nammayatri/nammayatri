@@ -19,7 +19,7 @@ import qualified Data.Map.Strict as M
 import Data.Text (unpack)
 import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Domain.Types.ServerName
-import Kernel.External.Encryption (EncTools)
+import Kernel.External.Encryption (EncTools (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)

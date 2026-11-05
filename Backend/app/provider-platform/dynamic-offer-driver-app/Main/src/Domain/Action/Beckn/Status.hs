@@ -25,6 +25,7 @@ import Domain.Types.Beckn.Status
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideDetails as Fields
 import Environment
 import EulerHS.Prelude
 import Kernel.Beam.Functions as B

@@ -4,6 +4,7 @@ import Data.List (partition)
 import qualified Data.Set as Set
 import qualified Data.Time as Time
 import Domain.Action.UI.Conductor.Stats (aggStat, emptyAgg)
+import qualified Domain.Action.UI.Conductor.Stats as Fields
 import Environment
 import Kernel.Prelude
 import Kernel.Types.Common

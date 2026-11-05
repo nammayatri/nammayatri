@@ -40,6 +40,7 @@ import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (DbHash, decrypt, encrypt, getDbHash)
+import qualified Kernel.External.Verification.Idfy.Types.Response as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
@@ -65,6 +66,7 @@ import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as Person
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
 

@@ -27,10 +27,12 @@ import Domain.Types.Booking (Booking)
 import qualified Domain.Types.CallbackRequest as DCallback
 import qualified Domain.Types.Issue as DIssue
 import qualified Domain.Types.Location as Location
+import qualified Domain.Types.LocationAddress as Fields
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Quote (Quote)
 import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.RiderConfig as Fields
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (state)
 import qualified IssueManagement.Common as Domain

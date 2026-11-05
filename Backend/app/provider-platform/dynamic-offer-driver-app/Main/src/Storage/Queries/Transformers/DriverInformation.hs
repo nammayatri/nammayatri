@@ -6,7 +6,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
+import Kernel.Utils.Common (CacheConfig (..), CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Lib.Queries.SpecialLocation as SpecialLocation
 import Sequelize as Se
 import qualified Storage.Beam.DriverInformation as Beam

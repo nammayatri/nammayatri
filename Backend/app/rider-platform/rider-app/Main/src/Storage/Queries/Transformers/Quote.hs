@@ -3,10 +3,14 @@ module Storage.Queries.Transformers.Quote where
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Domain.Types.Common
+import qualified Domain.Types.DriverOffer as Fields
+import qualified Domain.Types.InterCityDetails as Fields
 import qualified Domain.Types.MerchantOperatingCity
 import Domain.Types.Quote as DQ
 import qualified Domain.Types.Quote
 import qualified Domain.Types.QuoteBreakup as DQB
+import qualified Domain.Types.RentalDetails as Fields
+import qualified Domain.Types.SpecialZoneQuote as Fields
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common

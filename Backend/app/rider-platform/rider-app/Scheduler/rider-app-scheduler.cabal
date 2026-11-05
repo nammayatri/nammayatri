@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.38.3.
 --
 -- see: https://github.com/sol/hpack
 
@@ -67,7 +67,8 @@ library
       UndecidableInstances
       StandaloneDeriving
       PackageImports
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -89,8 +90,6 @@ library
     , passetto-client
     , passetto-lib
     , prometheus-client
-    , record-dot-preprocessor
-    , record-hasfield
     , resource-pool
     , rider-app
     , safe
@@ -158,7 +157,8 @@ executable rider-app-scheduler-exe
       UndecidableInstances
       StandaloneDeriving
       PackageImports
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -179,8 +179,6 @@ executable rider-app-scheduler-exe
     , passetto-client
     , passetto-lib
     , prometheus-client
-    , record-dot-preprocessor
-    , record-hasfield
     , resource-pool
     , rider-app-scheduler
     , safe

@@ -4,6 +4,7 @@ import Control.Applicative ((<|>))
 import Domain.Types.DriverFee
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Plan as Plan
+import qualified Domain.Types.SubscriptionConfig as Fields
 import qualified Domain.Types.VehicleCategory as DSV
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -15,6 +16,7 @@ import qualified Storage.Beam.DriverFee as BeamDF
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.CachedQueries.SubscriptionConfig as QSC
 import qualified Storage.Queries.Person as QP
+import qualified Tools.Fields as Fields
 
 getMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Text -> m (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
 getMerchantOperatingCityId merchantOperatingCityId driverId id = do

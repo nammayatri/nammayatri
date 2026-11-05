@@ -13,6 +13,7 @@ import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTriggerV2 as SQNTTV2
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as SQNTV2
 import Lib.Yudhishthira.Tools.Utils (mkTagNameValue, mkTagNameValueExpiry)
 import Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types.NammaTagTriggerV2 as Fields
 import qualified Lib.Yudhishthira.Types.NammaTagV2 as DNTv2
 
 yudhishthiraDecide ::

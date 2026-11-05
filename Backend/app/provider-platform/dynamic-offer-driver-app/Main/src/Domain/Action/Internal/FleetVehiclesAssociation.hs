@@ -16,6 +16,7 @@ module Domain.Action.Internal.FleetVehiclesAssociation where
 
 import qualified Dashboard.Common as Common
 import qualified Data.List as List
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as Map
 import qualified Domain.Types.FleetBookingAssignments as DFBA
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
@@ -30,6 +31,7 @@ import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCExtra
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- Custom response types tailored for boat fleet listing
 newtype BoatFleetVehicleListRes = BoatFleetVehicleListRes {vehicles :: [BoatFleetVehicle]}
@@ -59,11 +61,11 @@ getFleetVehicleAssociation apiKey placeId mbLimit mbOffset mbSearchString = do
   fleetOwners <- QFOIE.getFleetOwnerByTicketPlaceId (Just placeId)
   let fleetOwnerIds = map (.fleetOwnerPersonId.getId) fleetOwners
 
-  if null fleetOwnerIds
-    then pure $ BoatFleetVehicleListRes []
-    else do
+  case NE.nonEmpty fleetOwnerIds of
+    Nothing -> pure $ BoatFleetVehicleListRes []
+    Just fleetOwnerIdsNE -> do
       -- Use the first fleet owner's merchant for the RC query
-      let firstOwnerId = head fleetOwnerIds
+      let firstOwnerId = NE.head fleetOwnerIdsNE
       firstOwnerPerson <- QP.findById (Id firstOwnerId) >>= fromMaybeM (PersonNotFound firstOwnerId)
       let merchantId = firstOwnerPerson.merchantId
           merchantOperatingCityId = firstOwnerPerson.merchantOperatingCityId.getId
@@ -93,11 +95,11 @@ getFleetVehicleAssociationV2 apiKey placeId mbLimit mbOffset mbSearchString = do
   fleetOwners <- QFOIE.getFleetOwnerByTicketPlaceId (Just placeId)
   let fleetOwnerIds = map (.fleetOwnerPersonId.getId) fleetOwners
 
-  if null fleetOwnerIds
-    then pure $ BoatFleetVehicleListRes []
-    else do
+  case NE.nonEmpty fleetOwnerIds of
+    Nothing -> pure $ BoatFleetVehicleListRes []
+    Just fleetOwnerIdsNE -> do
       -- Use the first fleet owner's merchant for the RC query
-      let firstOwnerId = head fleetOwnerIds
+      let firstOwnerId = NE.head fleetOwnerIdsNE
       firstOwnerPerson <- QP.findById (Id firstOwnerId) >>= fromMaybeM (PersonNotFound firstOwnerId)
       let merchantId = firstOwnerPerson.merchantId
           merchantOperatingCityId = firstOwnerPerson.merchantOperatingCityId.getId

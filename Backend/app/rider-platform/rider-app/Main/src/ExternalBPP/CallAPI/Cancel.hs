@@ -4,9 +4,12 @@ import qualified Beckn.ACL.FRFS.Cancel as ACL
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Domain.Action.Beckn.FRFS.OnCancel.Core as OnCancelCore
+import qualified Domain.Types.Beckn.FRFS.OnCancel as Fields
 import Domain.Types.BecknConfig
+import qualified Domain.Types.FRFSConfig as Fields
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
+import qualified Domain.Types.FRFSVehicleServiceTier as Fields
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -29,6 +32,7 @@ import Storage.CachedQueries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import qualified UrlShortner.Common as UrlShortner
 

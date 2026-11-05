@@ -37,8 +37,10 @@ import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Utils.Common
 import SharedLogic.DriverPool (DriverPoolWithActualDistResult (..))
+import qualified SharedLogic.DriverPool.Types as Fields
 import SharedLogic.ScheduledRideVisibility (resolveVisibilityStage)
 import qualified Storage.Queries.DriverStatsExtra as QDriverStats
+import qualified Tools.Fields as Fields
 
 topDriverBatchCount :: Int
 topDriverBatchCount = 20
@@ -137,10 +139,14 @@ filterTopDrivers searchTry batchNumber criteria pool = do
       selected = take topDriverPoolSize $ sortOn (\dp -> dp.actualDistanceToPickup) good
   logInfo $
     "TopDrivers: searchTryId=" <> searchTry.id.getId <> " batch=" <> show batchNumber
-      <> " candidates=" <> show (length pool)
-      <> " withinRadius=" <> show (length withinRadius)
-      <> " passedStats=" <> show (length good)
-      <> " selected=" <> show (length selected)
+      <> " candidates="
+      <> show (length pool)
+      <> " withinRadius="
+      <> show (length withinRadius)
+      <> " passedStats="
+      <> show (length good)
+      <> " selected="
+      <> show (length selected)
   publishEvent now selected (length withinRadius) (length good)
   pure selected
   where

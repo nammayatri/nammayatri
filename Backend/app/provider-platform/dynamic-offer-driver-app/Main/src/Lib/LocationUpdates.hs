@@ -32,6 +32,7 @@ import qualified Domain.Action.UI.Ride.EndRide.RecomputeDecision as RD
 import Domain.Types.Booking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPushNotification as Fields
 import Domain.Types.Person
 import Domain.Types.Ride
 import qualified Domain.Types.RideRoute as RI
@@ -72,6 +73,7 @@ import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as QVeh
 import qualified Toll.SharedLogic.TollsDetector as TollsDetector
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Maps as TMaps
 import Tools.Metrics.ARDUBPPMetrics.Types
 import qualified Tools.Notifications as TN

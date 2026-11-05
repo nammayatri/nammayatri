@@ -34,7 +34,9 @@ import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.CancellationConsequenceMatrix as Fields
 import qualified Domain.Types.CancellationDuesDetails as DCDD
+import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
@@ -64,6 +66,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 buildOnCancelMessageV2 ::
   ( MonadFlow m,

@@ -21,6 +21,7 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
+import qualified Domain.Types.MerchantServiceUsageConfig as Fields
 import Kernel.External.Call as Reexport hiding
   ( initiateCall,
   )

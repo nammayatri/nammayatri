@@ -5,6 +5,7 @@ import qualified Beckn.ACL.Cancel as ACL
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Data.HashMap.Strict as HM
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
@@ -15,10 +16,12 @@ import qualified Domain.Types.BookingPayment as DBP
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FRFSRecon as Recon
+import qualified Domain.Types.FRFSTicketBooking as Fields
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
 import qualified Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.LocationAddress as Fields
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OfferEntity as DOfferEntity
@@ -26,13 +29,16 @@ import qualified Domain.Types.ParkingTransaction as DPT
 import qualified Domain.Types.PaymentCustomer as DPaymentCustomer
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
+import qualified Domain.Types.PurchasedPassPayment as Fields
 import qualified Domain.Types.RefundRequest as DRefundRequest
 import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.TicketBooking as Fields
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as PInterface
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import qualified Kernel.External.Wallet.Interface.Types as Fields
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -92,6 +98,7 @@ import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.TicketBooking as QTB
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.LoyaltyWallet as LoyaltyWallet
 import Tools.Metrics.BAPMetrics
 import qualified Tools.Notifications as TNotifications
@@ -1253,7 +1260,7 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
   charged <- DPayment.chargePaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput useDomainOffers applyOfferCall ride.createdAt
   -- Find all unsettled ledger entries (PENDING or DUE) for this ride
   unsettledEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId.getId
-  unless (null unsettledEntries) $ do
+  whenJust (NE.nonEmpty unsettledEntries) $ \unsettledEntriesNE -> do
     let entryIds = map (.id) unsettledEntries
     if charged
       then do
@@ -1263,7 +1270,7 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
               RidePaymentFinance.buildRiderFinanceCtx
                 merchantId.getId
                 merchantOpCityId.getId
-                (Kernel.Prelude.head unsettledEntries).currency
+                (NE.head unsettledEntriesNE).currency
                 True
                 personId.getId
                 rideId.getId
@@ -1487,11 +1494,11 @@ getDuesForPerson person = do
     Just (ride, _) -> do
       pendingEntries <- RidePaymentFinance.findDueRidePaymentEntries ride.id.getId
       let filteredEntries = filterPendingDuesEntries pendingEntries excludedPurposes
-      if null filteredEntries
-        then pure noDues
-        else do
+      case NE.nonEmpty filteredEntries of
+        Nothing -> pure noDues
+        Just filteredEntriesNE -> do
           let totalAmount = sum $ map (.amount) filteredEntries
-              currency = Kernel.Prelude.head filteredEntries & (.currency)
+              currency = NE.head filteredEntriesNE & (.currency)
           logInfo $
             "AUDIT: Get Dues - person_id: " <> person.id.getId
               <> ", ride_id: "

@@ -14,6 +14,8 @@ import Data.Ord (comparing)
 import qualified Data.Text as T
 import Data.Time (addUTCTime)
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverLocation as Fields
+import qualified Domain.Types.Location as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -33,6 +35,8 @@ import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as LQSL
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.GateInfo as GI
+import qualified Lib.Types.GateInfoExtra as Fields
+import qualified Lib.Types.SpecialLocation as Fields
 import SharedLogic.Allocator (AllocatorJobType (..), CheckPickupZoneArrivalJobData (..))
 import qualified SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival as ArrivalCheck
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow

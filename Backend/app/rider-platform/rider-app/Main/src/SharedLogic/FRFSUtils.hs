@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wwarn=x-partial #-}
 
 module SharedLogic.FRFSUtils
   ( module SharedLogic.FRFSUtils,
@@ -43,6 +44,8 @@ import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSRecon as Recon
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import Domain.Types.FRFSRouteFareProduct
+import qualified Domain.Types.FRFSRouteStopStageFare as Fields
+import qualified Domain.Types.FRFSStageFare as Fields
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicket as DT
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
@@ -53,13 +56,17 @@ import qualified Domain.Types.FRFSTicketBookingPaymentCategory as DTBPC
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketCategoryMetadataConfig as DFRFSTicketCategoryMetadataConfig
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
+import qualified Domain.Types.FRFSVehicleServiceTier as Fields
 import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as DJourney
+import qualified Domain.Types.JourneyLeg as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.PartnerOrgStation as Fields
 import qualified Domain.Types.PartnerOrganization as DPO
+import qualified Domain.Types.Pass as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PurchasedPassPayment as DPPP
 import qualified Domain.Types.Route as Route
@@ -67,6 +74,7 @@ import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import qualified Domain.Types.RouteTripMapping as DRTM
 import qualified Domain.Types.Seat as DSeat
 import qualified Domain.Types.Station as Station
+import qualified Domain.Types.StopFare as Fields
 import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.VendorSplitDetails as VendorSplitDetails
 import EulerHS.Prelude (comparing, concatMapM, (+||), (<|>), (||+))
@@ -91,11 +99,13 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as Fields
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.External.Nandi.Types as Fields
 import SharedLogic.FRFSFareCalculator as Reexport
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.IntegratedBPPConfig as SIBC

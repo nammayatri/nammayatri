@@ -1,5 +1,6 @@
 module ExternalBPP.CallAPI.Types where
 
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -47,5 +48,6 @@ type FRFSConfirmFlow m r c =
     -- Needed for withTimeAPI, used to time the auto-seat hold retry loop
     -- (SharedLogic.FRFSConfirm.selectAndHoldWithRetries).
     HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    HasMasterCloudForwarder r
   )

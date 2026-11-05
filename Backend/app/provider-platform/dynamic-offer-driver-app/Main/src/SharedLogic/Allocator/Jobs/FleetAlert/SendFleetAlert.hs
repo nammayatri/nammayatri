@@ -17,6 +17,7 @@ module SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert
   )
 where
 
+import qualified DashboardAlert.Domain.Types.DashboardAlert as Fields
 import qualified DashboardAlert.Storage.Queries.DashboardAlert as QAR
 import Domain.Action.UI.Call
 import qualified Domain.Types.Alert as DA
@@ -30,11 +31,13 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.Allocator as Fields
 import Storage.Beam.DashboardAlert ()
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
 import Tools.Call as TCall
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 sendFleetAlert ::
   ( EncFlow m r,

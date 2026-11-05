@@ -27,6 +27,7 @@ import qualified Lib.Finance.Domain.Types.Transfer as DT
 import qualified Lib.Finance.Storage.Queries.Transfer as QTransfer
 import qualified Lib.Payment.API.Payout.Types as PayoutTypes
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
+import qualified Lib.Payment.Domain.Types.PayoutRequest as Fields
 import qualified Lib.Payment.Payout.HoldRelease as TransferReview
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPayoutRequest
@@ -36,6 +37,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getPayoutPayoutOrder ::
   ShortId DM.Merchant ->

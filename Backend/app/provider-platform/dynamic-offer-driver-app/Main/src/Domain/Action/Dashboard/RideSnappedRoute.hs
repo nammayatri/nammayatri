@@ -37,6 +37,7 @@ import Lib.LocationUpdates (pickupSnapEntityIdSuffix, snapToRoadReqPoints)
 import Storage.Clickhouse.ExternalApiCallLogs (decodePayload)
 import qualified Storage.Clickhouse.ExternalApiCallLogs as CHExternalApiCallLogs
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Tools.Fields as Fields
 
 googleSnapApiName, osrmSnapApiName :: Text
 googleSnapApiName = "snapToRoad"

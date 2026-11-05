@@ -7,6 +7,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.TripTransaction as DTT
 import Domain.Types.VehicleRegistrationCertificate hiding (id)
+import qualified Domain.Types.VehicleRegistrationCertificate as Fields
 import Domain.Types.VehicleVariant as Vehicle
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -448,7 +449,7 @@ countAllActiveRCForFleet fleetOwnerId (Id merchantId') = do
                 rc <- B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
                 driverRcAssociation <- B.join_ (BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\driverRcAssociation -> BeamVRC.id rc B.==. BeamDRA.rcId driverRcAssociation)
                 pure (rc, driverRcAssociation)
-  pure $ either (const 0) (\r -> if null r then 0 else head r) res
+  pure $ either (const 0) (fromMaybe 0 . listToMaybe) res
 
 countAllRCForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Merchant.Merchant -> m Int
 countAllRCForFleet fleetOwnerId (Id merchantId') = do
@@ -465,7 +466,7 @@ countAllRCForFleet fleetOwnerId (Id merchantId') = do
               )
               do
                 B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
-  pure $ either (const 0) (\r -> if null r then 0 else head r) res
+  pure $ either (const 0) (fromMaybe 0 . listToMaybe) res
 
 updateVerificationStatusAndRejectReason ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wwarn=x-partial #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Domain.Action.UI.MultimodalConfirm
@@ -61,9 +62,11 @@ import qualified BecknV2.FRFS.Utils as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Concurrent (modifyMVar)
 import Control.Monad.Extra (mapMaybeM)
+import Data.Aeson (defaultOptions)
 import qualified Data.HashMap.Strict as HashMap
 import Data.Int ()
 import Data.List (nub, nubBy, partition)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -74,18 +77,23 @@ import qualified Domain.Action.UI.Dispatcher as Dispatcher
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
 import qualified Domain.Action.UI.Pass as Pass
+import qualified Domain.Action.UI.Person as Fields
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
+import qualified Domain.Types.DepotManager as Fields
+import qualified Domain.Types.DeviceVehicleMapping as Fields
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEst
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
+import qualified Domain.Types.FRFSVehicleServiceTier as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
+import qualified Domain.Types.JourneyLegMapping as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MultimodalPreferences as DMP
@@ -97,6 +105,7 @@ import qualified Domain.Types.RouteStopMapping as DRSM
 import Domain.Types.RouteStopTimeTable (SourceType (..))
 import qualified Domain.Types.Station as DStation
 import qualified Domain.Types.VehicleActionHistory
+import qualified Domain.Types.VehicleSeatLayoutMapping as Fields
 import Domain.Utils (castTravelModeToVehicleCategory, mapConcurrently)
 import Environment
 import qualified EulerHS.Language as L
@@ -179,6 +188,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import Tools.Error
 import qualified Tools.Error as StationError
 import qualified Tools.EventTracking as ET
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Metrics.BAPMetrics as BAPMetrics
 import Tools.MultiModal as MM
@@ -2656,11 +2666,11 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
       Environment.Flow (Maybe ApiTypes.EffectiveStops, [ResolvedLeg])
     resolveLegsViaOtp srcCode destCode ctx = do
       validatedRoute <- JMU.measureLatency (getValidSingleModeRoute ctx srcCode destCode) ("getValidSingleModeRoute src=" <> srcCode <> " dest=" <> destCode)
-      case validatedRoute.legs of
-        [] -> pure (Nothing, [])
-        legs -> do
-          let firstLeg = head legs
-              lastLeg = last legs
+      case NE.nonEmpty validatedRoute.legs of
+        Nothing -> pure (Nothing, [])
+        Just legsNE -> do
+          let firstLeg = NE.head legsNE
+              lastLeg = NE.last legsNE
           (effSrc, effDest) <-
             fromMaybeM
               (InvalidRequest "OTP returned legs without stop codes")
@@ -2682,7 +2692,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
                         rlStopsByRoute = []
                       }
               )
-              (zip [0 ..] legs)
+              (zip [0 ..] validatedRoute.legs)
           effectiveStops <- JMU.measureLatency (calculateEffectiveStops srcCode destCode effSrc effDest ctx.integratedBPPConfig) ("calculateEffectiveStops src=" <> srcCode <> " dest=" <> destCode <> " effSrc=" <> effSrc <> " effDest=" <> effDest)
           pure
             (Just effectiveStops, resolvedLegs)

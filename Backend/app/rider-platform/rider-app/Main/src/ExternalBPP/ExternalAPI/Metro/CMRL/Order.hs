@@ -11,6 +11,7 @@ import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
+import qualified Domain.Types.Station as Fields
 import EulerHS.Types as ET hiding (Log)
 import ExternalBPP.ExternalAPI.Metro.CMRL.Auth
 import ExternalBPP.ExternalAPI.Metro.CMRL.Error (CMRLError (..))
@@ -21,6 +22,7 @@ import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.CacheFlow
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride

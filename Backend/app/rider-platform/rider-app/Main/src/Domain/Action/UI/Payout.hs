@@ -16,6 +16,7 @@ where
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.PayoutConfig as DPayoutConfig
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonStats as DPS

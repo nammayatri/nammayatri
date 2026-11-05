@@ -6,6 +6,7 @@ where
 
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption (EncFlow)
+import qualified Kernel.External.Settlement.Interface.Types as Fields
 import Kernel.External.Settlement.Types (JuspayOrderStatusConfig, SettlementServiceConfig (..))
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
@@ -18,6 +19,7 @@ import Lib.Finance.Domain.Types.SettlementFileInfo (SettlementFileInfo (..), Set
 import Lib.Finance.Settlement.Fetch (settlementServiceToPaymentGatewayName)
 import Lib.Finance.Settlement.Store (IngestionResult (..), emptyIngestionResult, storeParseResult)
 import Lib.Finance.Settlement.Strategy (resolveAndFetch)
+import qualified Lib.Finance.Settlement.Strategy as Fields
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.SettlementFileInfo as QSFI
 

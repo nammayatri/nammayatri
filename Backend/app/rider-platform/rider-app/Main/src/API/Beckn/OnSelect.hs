@@ -30,7 +30,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.DummySignatureAuth as DummySig
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as Fields
 import qualified Tools.ActorInfo as ActorInfo
+import qualified Tools.Fields as Fields
 import TransactionLogs.PushLogs
 
 type API = OnSelect.OnSelectAPIV2

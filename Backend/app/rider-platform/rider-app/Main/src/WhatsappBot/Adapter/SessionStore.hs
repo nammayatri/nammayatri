@@ -20,6 +20,7 @@
 module WhatsappBot.Adapter.SessionStore (mkSessionStore) where
 
 import Environment (Flow)
+import qualified Environment as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common (generateGUID, getCurrentTime)

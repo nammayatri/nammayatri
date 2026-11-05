@@ -5,12 +5,14 @@ import qualified Data.Geohash as DG
 import Data.Text as T
 import qualified Domain.Types.Booking
 import Domain.Types.BookingUpdateRequest
+import qualified Domain.Types.DriverInformation as Fields
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.OnUpdate as OU
 import qualified Domain.Types.Person
+import qualified Domain.Types.Ride as Fields
 import Domain.Types.RideRoute
 import qualified Environment
 import EulerHS.Prelude hiding (id)

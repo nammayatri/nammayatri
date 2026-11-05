@@ -15,12 +15,14 @@
 module SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout where
 
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
+import qualified Domain.Types.DriverRidePayoutBankAccount as Fields
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payout.Interface as IPayout
+import qualified Kernel.External.Payout.Juspay.Types.Payout as Fields
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -32,6 +34,7 @@ import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.LocationUpdates
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
+import qualified Lib.Payment.Domain.Types.PayoutOrder as Fields
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
@@ -49,6 +52,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.ScheduledPayout as QSP
 import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
+import qualified Tools.Fields as Fields
 import qualified Tools.Payout as TP
 
 sendSpecialZonePayout ::

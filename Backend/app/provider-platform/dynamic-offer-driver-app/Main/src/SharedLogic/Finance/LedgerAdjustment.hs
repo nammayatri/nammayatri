@@ -79,6 +79,7 @@ import qualified Storage.Queries.LedgerAdjustmentRequest as QLedgerAdjustmentReq
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 mkAdminName :: Text -> Maybe DP.Person -> Text
 mkAdminName requestorName = \case

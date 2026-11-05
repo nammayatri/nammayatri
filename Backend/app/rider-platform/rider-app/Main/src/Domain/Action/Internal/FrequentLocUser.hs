@@ -11,6 +11,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import qualified Storage.Queries.Person as QP
+import qualified Tools.Fields as Fields
 
 newtype UpdateFrLocGeohashReq = UpdateFrLocGeohashReq
   { reqList :: [UpdateFrLocGeohash]

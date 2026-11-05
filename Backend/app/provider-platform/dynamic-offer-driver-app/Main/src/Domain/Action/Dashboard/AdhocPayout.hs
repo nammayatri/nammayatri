@@ -41,11 +41,14 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation (Validate, runRequestValidation, validateField)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.AccountConfig as Fields
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
+import qualified Lib.Payment.Domain.Types.PayoutOrder as Fields
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import Lib.Payment.Payout.Bulk.Types (BulkClaimOutcome (..))
+import qualified Lib.Payment.Payout.Bulk.Types as Fields
 import SharedLogic.Finance.Wallet
 import SharedLogic.Payout.Bulk.Driver (runBulkPayoutCycle)
 import SharedLogic.Payout.Bulk.Eligibility (PayoutSnapshot (..), checkBulkPayoutEligibility, classifyBulkCandidate, usableBankDetails)
@@ -57,6 +60,7 @@ import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 import qualified Tools.Payout as TP
 
 -- | A person checked for an adhoc payout, with their city's payout settings.

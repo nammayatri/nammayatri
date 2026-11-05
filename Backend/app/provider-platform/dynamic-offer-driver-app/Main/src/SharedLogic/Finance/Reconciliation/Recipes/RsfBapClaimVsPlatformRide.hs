@@ -13,6 +13,7 @@ import qualified Data.Aeson.Types as A
 import qualified Data.HashSet as HS
 import qualified Data.Map.Strict as Map
 import Data.Time (nominalDay)
+import qualified Domain.Types.Ride as Fields
 import qualified Domain.Types.RsfReconLedgerEntry as L
 import Kernel.Beam.Functions as B
 import Kernel.Prelude

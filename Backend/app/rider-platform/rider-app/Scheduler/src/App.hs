@@ -20,8 +20,12 @@ import qualified Control.Concurrent.MVar as MVar
 import qualified Data.Bool as B
 import Data.Singletons (SingI)
 import qualified Data.Text as T
+import qualified "rider-app" Domain.Types.BecknConfig as Fields
+import qualified "rider-app" Domain.Types.Merchant as Fields
 import Environment (Flow, HandlerCfg, HandlerEnv, buildHandlerEnv)
+import qualified Environment as Fields
 import "rider-app" Environment (AppCfg (..), buildAppEnv)
+import qualified "rider-app" Environment as Fields
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R

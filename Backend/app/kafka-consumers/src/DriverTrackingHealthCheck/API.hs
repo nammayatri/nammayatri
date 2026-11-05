@@ -15,6 +15,7 @@
 module DriverTrackingHealthCheck.API (healthCheckAPI, healthCheck, iAmAlive) where
 
 import EulerHS.Prelude
+import Kernel.Prelude (HasFieldUpd)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (HasCoreMetrics)
 import Kernel.Types.Common
@@ -31,16 +32,16 @@ healthCheckAPI = Proxy
 healthCheck ::
   ( HasCoreMetrics r,
     HasField "isShuttingDown" r Shutdown,
-    HasField "loggerEnv" r LoggerEnv,
-    HasField "hedisEnv" r Redis.HedisEnv,
-    HasField "requestId" r (Maybe Text),
-    HasField "sessionId" r (Maybe Text),
+    HasFieldUpd "loggerEnv" r LoggerEnv,
+    HasFieldUpd "hedisEnv" r Redis.HedisEnv,
+    HasFieldUpd "requestId" r (Maybe Text),
+    HasFieldUpd "sessionId" r (Maybe Text),
     HasField "hedisMigrationStage" r Bool,
     HasField "enableRedisLatencyLogging" r Bool,
     HasField "enablePrometheusMetricLogging" r Bool,
-    HasField "hedisNonCriticalEnv" r Redis.HedisEnv,
-    HasField "hedisNonCriticalClusterEnv" r Redis.HedisEnv,
-    HasField "hedisClusterEnv" r Redis.HedisEnv,
+    HasFieldUpd "hedisNonCriticalEnv" r Redis.HedisEnv,
+    HasFieldUpd "hedisNonCriticalClusterEnv" r Redis.HedisEnv,
+    HasFieldUpd "hedisClusterEnv" r Redis.HedisEnv,
     HasField "secondaryHedisClusterEnv" r (Maybe Redis.HedisEnv)
   ) =>
   FlowHandlerR r Text

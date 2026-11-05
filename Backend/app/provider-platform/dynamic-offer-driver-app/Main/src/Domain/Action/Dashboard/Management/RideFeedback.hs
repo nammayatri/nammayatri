@@ -8,8 +8,11 @@ where
 import qualified API.Types.ProviderPlatform.Management.RideFeedback as Common
 import qualified Data.Aeson as A
 import Data.List (sortOn)
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Ride as Fields
+import qualified Domain.Types.RideFeedbackConfig as Fields
 import qualified Domain.Types.RideFeedbackResponse as DRFR
 import Environment
 import Kernel.Prelude

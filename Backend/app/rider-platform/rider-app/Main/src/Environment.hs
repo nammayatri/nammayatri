@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Environment
   ( Env,
@@ -37,13 +38,14 @@ import qualified Data.Text as T
 import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Database.PostgreSQL.Simple as PG
 import Domain.Types (GatewayAndRegistryService (..))
+import qualified Domain.Types.BecknConfig as Fields
 import Domain.Types.FeedbackForm
 import qualified Domain.Types.Merchant as DM
 import "lib-dashboard" Domain.Types.ServerName (DataServer)
 import Email.Types (EmailServiceConfig)
 import EulerHS.Prelude (newEmptyTMVarIO, (+||), (||+))
 import Kernel.External.BapHostRedirect (BapHostRedirectMap)
-import Kernel.External.Encryption (EncTools)
+import Kernel.External.Encryption (EncTools (..))
 import Kernel.External.Infobip.Types (InfoBIPConfig)
 import qualified Kernel.External.MasterCloudForward as MCF
 import Kernel.External.Slack.Types (SlackConfig)
@@ -59,7 +61,7 @@ import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Cache
 import qualified Kernel.Types.CacheFlow as CF
-import Kernel.Types.Common (Days, Distance, DistanceUnit (Meter), HighPrecMeters, Seconds, convertHighPrecMetersToDistance)
+import Kernel.Types.Common (Days, Distance, DistanceUnit (Meter), HighPrecMeters, Seconds (..), convertHighPrecMetersToDistance)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Error
 import Kernel.Types.Flow

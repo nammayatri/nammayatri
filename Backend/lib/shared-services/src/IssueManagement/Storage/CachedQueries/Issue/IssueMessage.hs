@@ -18,6 +18,7 @@ import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueMessage
 import IssueManagement.Domain.Types.Issue.IssueOption
 import IssueManagement.Domain.Types.Issue.IssueTranslation
+import qualified IssueManagement.Domain.Types.MediaFile as Fields
 import IssueManagement.Storage.BeamFlow
 import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQueriesMF
 import qualified IssueManagement.Storage.Queries.Issue.IssueMessage as Queries
@@ -25,7 +26,7 @@ import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheConfig (..), CacheFlow)
 
 findById :: BeamFlow m r => Id IssueMessage -> Identifier -> m (Maybe IssueMessage)
 findById issueMessageId identifier =

@@ -28,9 +28,14 @@ where
 import API.UI.HotSpot
 import Data.List (sortBy)
 import Data.Ord
+import qualified Domain.Action.UI.Person as Fields
+import qualified Domain.Types.Geometry as Fields
 import qualified Domain.Types.HotSpot as DHotSpot
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as Fields
+import qualified Domain.Types.MerchantState as Fields
 import Domain.Types.Person as Person
+import qualified Domain.Types.RiderConfig as Fields
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types hiding (geometry)
 import Kernel.Prelude

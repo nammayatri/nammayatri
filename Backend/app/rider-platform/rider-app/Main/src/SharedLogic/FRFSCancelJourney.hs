@@ -2,8 +2,11 @@ module SharedLogic.FRFSCancelJourney where
 
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.Journey as DJourney
+import qualified Domain.Types.JourneyLeg as Fields
+import qualified Domain.Types.RouteDetails as Fields
 import Environment
 import Kernel.Prelude
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils

@@ -28,7 +28,7 @@ import qualified Lib.BehaviorEngine.EventLog as EventLog
 import Lib.BehaviorEngine.RuleEvaluator (RuleFetcher, evaluateRules)
 import Lib.BehaviorEngine.Types
 import Lib.BehaviorTracker.Recorder (recordAndSnapshot)
-import Lib.BehaviorTracker.Types (ActionEvent, BehaviorSnapshot, CounterConfig)
+import Lib.BehaviorTracker.Types (ActionEvent, BehaviorSnapshot (..), CounterConfig)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow, HasYudhishthiraTablesSchema)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT

@@ -23,7 +23,7 @@ import qualified Database.Redis as Hedis
 import Domain.Types
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DI
-import Domain.Types.DriverLocation (DriverLocation)
+import Domain.Types.DriverLocation (DriverLocation (..))
 import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
 import Domain.Types.Merchant
 import Domain.Types.Person as Person

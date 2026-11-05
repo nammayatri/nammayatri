@@ -8,6 +8,8 @@ where
 import Control.Applicative ((<|>))
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Extra.MerchantServiceConfig ()
+import qualified Domain.Types.Merchant as Fields
+import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (incrementConfigPilotFailureCounter, incrementConfigPilotSuccessCounter)

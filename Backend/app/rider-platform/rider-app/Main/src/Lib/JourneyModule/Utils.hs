@@ -17,11 +17,13 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Data.Time.LocalTime as LocalTime
 import qualified Domain.Action.UI.Dispatcher as Dispatcher
+import qualified Domain.Types.FRFSConfig as Fields
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuote as DQuote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingPayment as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
@@ -33,6 +35,7 @@ import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RiderConfig as RCTypes
 import Domain.Types.RouteDetails
 import qualified Domain.Types.RouteDetails as DRouteDetails
+import qualified Domain.Types.RouteStopMapping as Fields
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Seat as Seat
 import qualified Domain.Types.SeatLayout as SeatLayout
@@ -86,6 +89,7 @@ import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.RouteDetails as QRouteDetails
 import System.Environment (lookupEnv)
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Maps (LatLong (..))
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.BAPMetrics as Metrics
@@ -492,7 +496,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   let tierSummary =
         map
           ( \timingsForTier ->
-              let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
+              let serviceTierType = maybe Spec.ORDINARY (.serviceTierType) $ listToMaybe timingsForTier
                   routeCodesForTier = nub $ map (.routeCode) timingsForTier
                in (serviceTierType, routeCodesForTier)
           )
@@ -547,9 +551,9 @@ processTierGroup ::
   m [AvailableRoutesByTier]
 processTierGroup integratedBppConfig currentTime currentTimeIST mbAvailableServiceTiers alternateRouteHashMap enableSuburbanRoundTrip vc timingsForTier = do
   let (serviceTierType, tierSource) =
-        if null timingsForTier
-          then (Spec.ORDINARY, GTFS)
-          else ((head timingsForTier).serviceTierType, (head timingsForTier).source)
+        case listToMaybe timingsForTier of
+          Nothing -> (Spec.ORDINARY, GTFS)
+          Just timing -> (timing.serviceTierType, timing.source)
       routeCodesForTier = nub $ map (.routeCode) timingsForTier
   logDebug $ "routeCodesForTier: " <> show routeCodesForTier <> " serviceTierType: " <> show serviceTierType <> " source: " <> show tierSource
 
@@ -719,13 +723,13 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
   let upcomingBuses = sortBy (\a b -> compare (arrivalTimeInSeconds a) (arrivalTimeInSeconds b)) tripTimingsWithSubTypes
 
   let busFrequency =
-        if length upcomingBuses >= 3
-          then do
+        case NonEmpty.nonEmpty upcomingBuses of
+          Just upcomingBusesNE | length upcomingBuses >= 3 -> do
             let gaps =
                   zipWith
                     (\a b -> arrivalTimeInSeconds b - arrivalTimeInSeconds a)
                     upcomingBuses
-                    (tail upcomingBuses)
+                    (NonEmpty.tail upcomingBusesNE)
 
             let avgGap :: Double = fromIntegral (sum gaps) / fromIntegral (length gaps)
                 gapsAreEqual = all (\gap -> abs (fromIntegral gap - avgGap) <= (0.2 * avgGap)) gaps
@@ -733,7 +737,7 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
             if gapsAreEqual
               then Just $ round avgGap
               else Nothing
-          else Nothing
+          _ -> Nothing
 
   let upcomingTripInfo =
         UpcomingTripInfo

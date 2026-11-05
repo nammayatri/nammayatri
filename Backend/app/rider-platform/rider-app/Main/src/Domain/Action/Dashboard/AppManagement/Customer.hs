@@ -11,6 +11,7 @@ import qualified Domain.Action.UI.Sos
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import Domain.Types.SavedReqLocation (SavedReqLocationAPIEntity (..))
+import qualified Domain.Types.SavedReqLocation as Fields
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions (runInReplica)

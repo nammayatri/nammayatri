@@ -23,12 +23,15 @@ import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Common as DCommon
+import qualified Domain.Types.DriverIntelligentPoolConfig as Fields
+import qualified Domain.Types.DriverLocation as Fields
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchReqLocation as DSSL
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleVariant as DVeh
 import Domain.Utils (safeLast)
 import Environment
@@ -57,6 +60,7 @@ import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as TN
 import Utils.Common.Cac.KeyNameConstants
 

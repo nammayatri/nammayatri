@@ -18,8 +18,10 @@ import qualified Data.Map.Strict as Map
 import Data.Ord (Down (..))
 import qualified Data.Text.Encoding as TE
 import Data.Time (Day, addDays)
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Ride as Fields
 import qualified Domain.Types.RsfReconLedgerEntry as L
 import qualified EulerHS.Types as ET
 import qualified Kernel.Beam.Functions as B

@@ -18,6 +18,7 @@ import Kernel.Types.Beckn.Context (IndianState)
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Storage.Queries.DriverIdentityInfo as QDII
+import qualified Tools.Fields as Fields
 
 data IdentityInfo = IdentityInfo
   { nomineeName :: Maybe Text,

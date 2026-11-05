@@ -39,6 +39,7 @@ import Kernel.Utils.Common
 import qualified Servant.Client.Core as SCC
 import SharedLogic.Search as SLS
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 validatePrices :: (MonadThrow m, Log m, Num a, Ord a) => a -> a -> m ()
 validatePrices price priceWithDiscount = do

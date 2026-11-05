@@ -15,6 +15,7 @@
 
 module Storage.CachedQueries.VehicleServiceTier where
 
+import qualified Dashboard.Common as Fields
 import Domain.Types.Common
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.VehicleCategory

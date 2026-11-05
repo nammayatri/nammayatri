@@ -7,9 +7,9 @@ import Domain.Types.DomainDiscountConfig
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common (CacheConfig (..), CacheFlow)
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Queries.DomainDiscountConfig as Queries
 

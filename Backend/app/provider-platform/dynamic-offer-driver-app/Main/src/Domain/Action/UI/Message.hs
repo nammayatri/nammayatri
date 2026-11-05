@@ -21,9 +21,12 @@ import Domain.Types.Extra.MessageReport (MessageDynamicFieldsType)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Message as Domain
+import qualified Domain.Types.MessageReport as Fields
+import qualified Domain.Types.MessageTranslation as Fields
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified IssueManagement.Domain.Types.MediaFile as Fields
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQ
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Types (Language (ENGLISH))
