@@ -143,12 +143,13 @@ buildCrisViaRouteQuotes merchant merchantOperatingCity integratedBPPConfig searc
       perSegment <- forM (zip stopPath (drop 1 stopPath)) $ \(fromCode, toCode) -> do
         routeCodes <- JMU.getRouteCodesFromTo fromCode toCode integratedBPPConfig
         when (null routeCodes) $
-          logInfo $ "CRIS path " <> show stopPath <> " not servable for search " <> searchReq.id.getId <> ": no route between " <> fromCode <> " and " <> toCode
+          logInfo $ "CRIS path " <> show stopPath <> " for search " <> searchReq.id.getId <> ": no route between " <> fromCode <> " and " <> toCode <> ", treating as walk"
         return (CrisSegment fromCode toCode <$> listToMaybe routeCodes)
-      return (collapseSameRoute <$> sequence perSegment)
+      let segments = collapseSameRoute (catMaybes perSegment)
+      return $ if null segments then Nothing else Just segments
 
     collapseSameRoute (leg : nextLeg : rest)
-      | leg.routeCode == nextLeg.routeCode = collapseSameRoute (CrisSegment leg.fromStopCode nextLeg.toStopCode leg.routeCode : rest)
+      | leg.routeCode == nextLeg.routeCode && leg.toStopCode == nextLeg.fromStopCode = collapseSameRoute (CrisSegment leg.fromStopCode nextLeg.toStopCode leg.routeCode : rest)
       | otherwise = leg : collapseSameRoute (nextLeg : rest)
     collapseSameRoute segments = segments
 
