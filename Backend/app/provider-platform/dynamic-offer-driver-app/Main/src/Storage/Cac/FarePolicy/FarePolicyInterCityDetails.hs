@@ -32,5 +32,5 @@ instance FromCacType (BeamFPRD.FarePolicyInterCityDetails, [(CacContext, Value)]
   fromCacType (farePolicyInterCityDetails, context, tenant, id, toss) = do
     fullFPICDPS <- CQFPTCDPS.findFarePolicyInterCityDetailsPricingSlabsFromCAC context tenant id toss
     case nonEmpty fullFPICDPS of
-      Just fPICDPS -> pure $ Just $ fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS
+      Just fPICDPS -> Just <$> fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS
       _ -> pure Nothing

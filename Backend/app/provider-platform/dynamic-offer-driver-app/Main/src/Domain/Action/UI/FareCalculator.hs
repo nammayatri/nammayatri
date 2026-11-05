@@ -86,7 +86,10 @@ calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong 
   mbTollChargesAndNames <- TD.getTollInfoOnRoute merchanOperatingCityId.getId Nothing Nothing (maybe [] (\x -> x.points) mbRoute)
   let mbIsAutoRickshawAllowed = (.isAutoRickshawAllowed) <$> mbTollChargesAndNames
   let mbIsTwoWheelerAllowed = join ((.isTwoWheelerAllowed) <$> mbTollChargesAndNames)
-  let allFarePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed fareProducts.farePolicies
+  interStateDestination <- case (DTC.isInterCityTrip tripCategory, mbDropLatLong) of
+    (True, Just dropLoc) -> DBS.getInterStateDestination merchantId pickupLatlong dropLoc
+    _ -> pure Nothing
+  let allFarePolicies = map (FP.applyStateEntryPermitCharges interStateDestination) $ selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed fareProducts.farePolicies
   estimates <- mapMaybeM (\fp -> buildEstimateHelper fp mbTollChargesAndNames now transporterConfig.currency transporterConfig) allFarePolicies
   let estimateAPIEntity = map buildEstimateApiEntity estimates
   return API.Types.UI.FareCalculator.FareResponse {estimatedFares = estimateAPIEntity}

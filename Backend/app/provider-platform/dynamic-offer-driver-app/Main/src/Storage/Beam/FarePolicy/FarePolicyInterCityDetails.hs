@@ -34,6 +34,7 @@ data FarePolicyInterCityDetailsT f = FarePolicyInterCityDetailsT
     defaultWaitTimeAtDestination :: B.C f Minutes,
     currency :: B.C f Currency,
     stateEntryPermitCharges :: B.C f (Maybe HighPrecMoney),
+    stateEntryPermitChargesByState :: B.C f (Maybe Value),
     nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
   }
   deriving (Generic, B.Beamable)

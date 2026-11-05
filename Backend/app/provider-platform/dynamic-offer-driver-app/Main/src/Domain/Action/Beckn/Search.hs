@@ -25,6 +25,7 @@ module Domain.Action.Beckn.Search
     validateScheduledBookingWindowForSearch,
     buildEstimate,
     getIsInterCity,
+    getInterStateDestination,
     searchTxnDedupKey,
   )
 where
@@ -222,6 +223,7 @@ data DSearchReqLocation = DSearchReqLocation
 data ValidatedDSearchReq = ValidatedDSearchReq
   { transporterConfig :: DTMT.TransporterConfig,
     possibleTripOption :: TripOption,
+    interStateDestination :: Maybe Context.IndianState, -- drop's state when it isn't the pickup's
     bapCity :: Context.City,
     merchantOpCityId :: Id DMOC.MerchantOperatingCity,
     cityDistanceUnit :: DistanceUnit,
@@ -360,7 +362,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
         allFarePoliciesProduct.mbPickupDropArea
           <|> Just allFarePoliciesProduct.area
   mbVehicleServiceTier <- withTimeAPI "search" "getVehicleServiceTierForMeterRideSearch" $ getVehicleServiceTierForMeterRideSearch isMeterRideSearch driverIdForSearch configVersionMap
-  let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier allFarePoliciesProduct.farePolicies
+  let farePolicies = map (applyStateEntryPermitCharges interStateDestination) $ selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
   let resolvedArea = fromMaybe allFarePoliciesProduct.area allFarePoliciesProduct.mbPickupDropArea
   -- Spot ride: tiers with isSpotRideEnabled get an extra OneWayRideOtp quote, identical in
@@ -880,7 +882,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
   let estimatedFare = fareSum fareParams (Just [])
   quoteId <- Id <$> generateGUID
   void $
-    if isScheduled
+    if keepFarePolicyForWholeTrip isScheduled fullFarePolicy.tripCategory
       then cacheFarePolicyByScheduledEstOrQuoteId quoteId.getId pickupTime returnTime fullFarePolicy
       else cacheFarePolicyByQuoteId quoteId.getId fullFarePolicy
   now <- getCurrentTime
@@ -1003,7 +1005,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
   estimateId <- Id <$> generateGUID
   now <- getCurrentTime
   void $
-    if isScheduled
+    if keepFarePolicyForWholeTrip isScheduled fullFarePolicy.tripCategory
       then cacheFarePolicyByScheduledEstOrQuoteId estimateId.getId startTime returnTime fullFarePolicy
       else cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
   rideCommissionCharges <- FC.calculateCommission minFareParams (Just fullFarePolicy)
@@ -1107,7 +1109,7 @@ validateRequest merchant sReq = do
   let (cityDistanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   let stopsForIntercityCheck = if sReq.riderPreferredOption == DRPO.Rental then map (.gps) sReq.stops else []
-  (isInterCity, isCrossCity, destinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig sReq.dropLocation stopsForIntercityCheck sReq.toSpecialLocationId sourceCity merchant
+  (isInterCity, isCrossCity, destinationTravelCityName, interStateDestination) <- checkForIntercityOrCrossCity transporterConfig sReq.dropLocation stopsForIntercityCheck sReq.toSpecialLocationId sourceCity merchant
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
       isMeterRideSearch = sReq.isMeterRideSearch
@@ -1147,10 +1149,10 @@ getIsInterCity merchantId apiKey IsIntercityReq {..} = do
   let bapCity = nearestOperatingCity.city
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
-  (isInterCity, isCrossCity, _) <- checkForIntercityOrCrossCity transporterConfig mbDropLatLong [] Nothing sourceCity merchant
+  (isInterCity, isCrossCity, _, _) <- checkForIntercityOrCrossCity transporterConfig mbDropLatLong [] Nothing sourceCity merchant
   return $ IsIntercityResp {..}
 
-checkForIntercityOrCrossCity :: DTMT.TransporterConfig -> Maybe LatLong -> [LatLong] -> Maybe (Id SL.SpecialLocation) -> CityState -> DM.Merchant -> Flow (Bool, Bool, Maybe Text)
+checkForIntercityOrCrossCity :: DTMT.TransporterConfig -> Maybe LatLong -> [LatLong] -> Maybe (Id SL.SpecialLocation) -> CityState -> DM.Merchant -> Flow (Bool, Bool, Maybe Text, Maybe Context.IndianState)
 checkForIntercityOrCrossCity transporterConfig mbDropLocation stops mbToSpecialLocationId sourceCity merchant = do
   case (mbDropLocation, mbToSpecialLocationId) of
     (Just dropLoc, Nothing) -> do
@@ -1158,19 +1160,20 @@ checkForIntercityOrCrossCity transporterConfig mbDropLocation stops mbToSpecialL
       if destinationCityState.city == sourceCity.city && destinationCityState.city /= Context.City "AnyCity"
         then
           findFirstCrossCityStop stops >>= \case
-            Just city -> pure (True, False, Just city)
-            Nothing -> pure (False, False, Nothing)
+            Just city -> pure (True, False, Just city, Nothing)
+            Nothing -> pure (False, False, Nothing, Nothing)
         else do
           mbMerchantState <- CQMS.findByMerchantIdAndState merchant.id sourceCity.state
           let allowedStates = maybe [sourceCity.state] (.allowedDestinationStates) mbMerchantState
+              interStateDestination = interStateDestinationOf sourceCity destinationCityState
           -- Destination states should be in the allowed states of the origin state
           if destinationCityState.state `elem` allowedStates
             then do
               if destinationCityState.city `elem` transporterConfig.crossTravelCities
-                then return (True, True, mbDestinationTravelCityName)
-                else return (True, False, mbDestinationTravelCityName)
+                then return (True, True, mbDestinationTravelCityName, interStateDestination)
+                else return (True, False, mbDestinationTravelCityName, interStateDestination)
             else throwError (RideNotServiceableInState $ show destinationCityState.state)
-    _ -> pure (False, False, Nothing)
+    _ -> pure (False, False, Nothing, Nothing)
   where
     findFirstCrossCityStop [] = pure Nothing
     findFirstCrossCityStop (s : rest) = do
@@ -1321,6 +1324,20 @@ getNearestOperatingAndSourceCity merchant pickupLatLong = do
           -- Nearest operating city and source city are same
           let operatingCityState = CityState {city = g.city, state = g.state}
           return $ NearestOperatingAndSourceCity {nearestOperatingCity = operatingCityState, sourceCity = operatingCityState}
+
+-- | The drop's state when it isn't the pickup's, for pricing outside search: state entry permits are
+-- charged only then. Nothing when either location is outside the merchant's regions.
+getInterStateDestination :: Id DM.Merchant -> LatLong -> LatLong -> Flow (Maybe Context.IndianState)
+getInterStateDestination merchantId pickupLoc dropLoc = do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  result <- withTryCatch "getInterStateDestination" $ do
+    NearestOperatingAndSourceCity {sourceCity} <- getNearestOperatingAndSourceCity merchant pickupLoc
+    (destinationCityState, _) <- getDestinationCity merchant dropLoc
+    pure $ interStateDestinationOf sourceCity destinationCityState
+  pure $ join (eitherToMaybe result)
+
+interStateDestinationOf :: CityState -> CityState -> Maybe Context.IndianState
+interStateDestinationOf pickupCity dropCity = bool Nothing (Just dropCity.state) (dropCity.state /= pickupCity.state)
 
 getDestinationCity :: DM.Merchant -> LatLong -> Flow (CityState, Maybe Text)
 getDestinationCity merchant dropLatLong = do

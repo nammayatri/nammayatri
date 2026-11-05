@@ -19,6 +19,7 @@ import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
 import Data.Text as T hiding (elem, find, map, null)
 import Data.Time hiding (getCurrentTime)
@@ -48,6 +49,7 @@ import Kernel.Storage.Esqueleto (Transactionable)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
@@ -142,6 +144,11 @@ cacheFarePolicyByScheduledEstOrQuoteId estOrQuoteId startTime mbReturnTime fp = 
   Hedis.setExp (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) (coerce @FarePolicyD.FullFarePolicy @(FarePolicyD.FullFarePolicyD 'Unsafe) fp) (max scheduledFarePolicyBufferSecs expTime)
   where
     scheduledFarePolicyBufferSecs = 86400
+
+-- | Intercity trips also run long after search (long round trips, reallocation), and their per-trip
+-- state entry permit lives only in this snapshot, so they keep it as long as scheduled trips do.
+keepFarePolicyForWholeTrip :: Bool -> DTC.TripCategory -> Bool
+keepFarePolicyForWholeTrip isScheduled tripCategory = isScheduled || DTC.isInterCityTrip tripCategory
 
 -- 30 Mins, Assuming that all searchTries would be done by then. Correct logic would be searchRequestExpirationTime * searchRepeatLimit
 cacheFarePolicyByEstimateId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> FarePolicyD.FullFarePolicy -> m ()
@@ -350,6 +357,31 @@ addSpotRidePolicies vehicleServiceTierMap isScheduled farePolicies
                 Just fp {FarePolicyD.tripCategory = DTC.OneWay DTC.OneWayRideOtp}
             _ -> Nothing
      in farePolicies <> derived
+
+-- | Intercity: the state entry permit charge for this trip, looked up by the drop's state in the
+-- policy's per-state charges. Same-state trips and states without a charge pay nothing.
+applyStateEntryPermitCharges :: Maybe Context.IndianState -> FarePolicyD.FullFarePolicy -> FarePolicyD.FullFarePolicy
+applyStateEntryPermitCharges mbInterStateDestination fp =
+  (fp {FarePolicyD.farePolicyDetails = setStateEntryPermitCharges permitCharge fp.farePolicyDetails} :: FarePolicyD.FullFarePolicy)
+  where
+    permitCharge det = do
+      destinationState <- mbInterStateDestination
+      Map.lookup destinationState =<< det.stateEntryPermitChargesByState
+
+-- | Intercity: a fare policy loaded from the DB has no per-trip permit, so a rate card built from it
+-- takes the permit the trip was priced with.
+withPricedStateEntryPermitCharges :: DFareParameters.FareParameters -> FarePolicyD.FarePolicy -> FarePolicyD.FarePolicy
+withPricedStateEntryPermitCharges fareParams fp =
+  (fp {FarePolicyD.farePolicyDetails = setStateEntryPermitCharges (const pricedPermitCharge) fp.farePolicyDetails} :: FarePolicyD.FarePolicy)
+  where
+    pricedPermitCharge = case fareParams.fareParametersDetails of
+      DFareParameters.InterCityDetails det -> det.stateEntryPermitCharges
+      _ -> Nothing
+
+setStateEntryPermitCharges :: (FarePolicyD.FPInterCityDetails -> Maybe HighPrecMoney) -> FarePolicyD.FarePolicyDetails -> FarePolicyD.FarePolicyDetails
+setStateEntryPermitCharges permitCharge = \case
+  FarePolicyD.InterCityDetails det -> FarePolicyD.InterCityDetails det {FarePolicyD.stateEntryPermitCharges = permitCharge det}
+  details -> details
 
 getBaseVariantFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => TransporterConfig -> Maybe LatLong -> Maybe LatLong -> Id DMOC.MerchantOperatingCity -> Maybe FareProduct.FareProduct -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> [LYT.ConfigVersionMap] -> Maybe Text -> Maybe Text -> [(Maybe DVC.VehicleCategory, DynamicPricingInputs)] -> m (Maybe HighPrecMoney)
 getBaseVariantFarePolicy transporterConfig mbFromLocation mbToLocation merchantOpCityId mbBaseVariantCarFareProduct txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion configsInExperimentVersions mbSpecialLocName mbSpecialZoneId dpInputsList = do

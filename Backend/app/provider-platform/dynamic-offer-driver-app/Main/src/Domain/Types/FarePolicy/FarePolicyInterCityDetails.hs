@@ -10,10 +10,13 @@
 module Domain.Types.FarePolicy.FarePolicyInterCityDetails where
 
 import Data.Aeson as DA
+import Data.Map.Strict (Map)
 import Domain.Types.Common
+import Domain.Types.Extra.IndianState ()
 import Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as Reexport
 import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
 import Kernel.Prelude
+import Kernel.Types.Beckn.Context (IndianState)
 import Kernel.Types.Common
 
 data FPInterCityDetailsD (s :: UsageSafety) = FPInterCityDetails
@@ -30,7 +33,8 @@ data FPInterCityDetailsD (s :: UsageSafety) = FPInterCityDetails
     pricingSlabs :: NonEmpty (FPInterCityDetailsPricingSlabsD s),
     defaultWaitTimeAtDestination :: Minutes,
     currency :: Currency,
-    stateEntryPermitCharges :: Maybe HighPrecMoney,
+    stateEntryPermitCharges :: Maybe HighPrecMoney, -- this trip's charge: not read from the table, search sets it from stateEntryPermitChargesByState
+    stateEntryPermitChargesByState :: Maybe (Map IndianState HighPrecMoney),
     nightShiftCharge :: Maybe Domain.NightShiftCharge,
     waitingChargeInfo :: Maybe Domain.WaitingChargeInfo
   }
