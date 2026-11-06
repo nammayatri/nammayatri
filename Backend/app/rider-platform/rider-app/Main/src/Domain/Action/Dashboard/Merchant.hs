@@ -48,6 +48,8 @@ module Domain.Action.Dashboard.Merchant
     postMerchantRiderConfigEstimatesOrderUpdate,
     getMerchantConfigPaymentMethodList,
     postMerchantConfigPaymentMethodPaymentChargeUpdate,
+    getMerchantRiderConfigCalling,
+    postMerchantRiderConfigCallingUpdate,
     postMerchantConfigMerchantCreate,
     postMerchantConfigDebugLogUpdate,
     getMerchantMerchantMessageCatalog,
@@ -2353,6 +2355,52 @@ postMerchantRiderConfigEstimatesOrderUpdate merchantShortId city req = do
   invalidateConfigInMem LYT.RiderConfig
 
   logTagInfo "dashboard -> postMerchantRiderConfigEstimatesOrderUpdate : " (show merchantOperatingCity.id)
+  pure Success
+
+getMerchantRiderConfigCalling ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Flow Common.RiderCallingConfigRes
+getMerchantRiderConfigCalling merchantShortId city = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+
+  riderConfig <-
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
+      >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
+
+  pure
+    Common.RiderCallingConfigRes
+      { enableShareNumberWithDriver = fromMaybe False riderConfig.enableShareNumberWithDriver,
+        pushConsentToBpp = fromMaybe False riderConfig.pushConsentToBpp
+      }
+
+postMerchantRiderConfigCallingUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.UpdateRiderCallingConfigReq ->
+  Flow APISuccess
+postMerchantRiderConfigCallingUpdate merchantShortId city req = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+
+  _ <-
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
+      >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
+
+  let setRiderFlags enabled = do
+        QRiderConfig.updateCallingConfig (Just enabled) (Just enabled) merchantOperatingCity.id
+        QRC.clearCache merchantOperatingCity.id
+        invalidateConfigInMem LYT.RiderConfig
+  case req.mode of
+    Common.CLOUD_CALLING -> setRiderFlags False
+    Common.DIRECT_CALLING_WITH_CONSENT -> setRiderFlags True
+    -- Forced direct calling is decided on the driver side and ignores rider consent, so the rider flags stay as they are.
+    Common.FORCED_DIRECT_CALLING -> pure ()
+
+  logTagInfo "dashboard -> postMerchantRiderConfigCallingUpdate : " (show merchantOperatingCity.id <> " mode: " <> show req.mode)
   pure Success
 
 -- Type conversion helpers for VehicleServiceTierOrderConfig

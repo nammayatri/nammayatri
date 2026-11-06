@@ -48,6 +48,8 @@ module Domain.Action.Dashboard.Management.Merchant
     getMerchantToll,
     getMerchantConfigCommon,
     postMerchantConfigCommonUpdate,
+    getMerchantConfigCalling,
+    postMerchantConfigCallingUpdate,
     getMerchantConfigDriverPool,
     postMerchantConfigDriverPoolUpdate,
     postMerchantConfigDriverPoolCreate,
@@ -121,6 +123,7 @@ import Data.Text.Encoding.Error (lenientDecode)
 import Data.Time (DayOfWeek (..))
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
+import qualified Domain.Action.UI.Ride as DRideUI
 import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeCalcJobCache)
 import qualified Domain.Action.UI.Ride.EndRide.RecomputeDecision as RD
 import Domain.Types
@@ -562,6 +565,34 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
   CQTC.clearCache merchantOpCityId
   invalidateConfigInMem LYT.TransporterConfig
   logTagInfo "dashboard -> postMerchantConfigCommonUpdate : " (show merchant.id)
+  pure Success
+
+getMerchantConfigCalling :: ShortId DM.Merchant -> Context.City -> Flow Common.CallingConfigRes
+getMerchantConfigCalling merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  callingOption <- DRideUI.effectiveCallingOption config
+  let mode = case callingOption of
+        DTC.ForceDirectCall -> Common.FORCED_DIRECT_CALLING
+        DTC.DirectCall -> Common.DIRECT_CALLING_WITH_CONSENT
+        DTC.DualCall -> Common.DIRECT_CALLING_WITH_CONSENT
+        DTC.AnonymousCall -> Common.CLOUD_CALLING
+  pure Common.CallingConfigRes {mode, callingMode = config.callingMode}
+
+postMerchantConfigCallingUpdate :: ShortId DM.Merchant -> Context.City -> Common.UpdateCallingConfigReq -> Flow APISuccess
+postMerchantConfigCallingUpdate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  _ <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let (callingOption, legacyOption, legacyForceDirect) = case req.mode of
+        Common.CLOUD_CALLING -> (DTC.AnonymousCall, DTC.AnonymousCall, False)
+        Common.DIRECT_CALLING_WITH_CONSENT -> (DTC.DirectCall, DTC.DirectCall, False)
+        Common.FORCED_DIRECT_CALLING -> (DTC.ForceDirectCall, DTC.DirectCall, True)
+  QTC.updateCallingMode (Just (show callingOption)) (Just legacyOption) (Just legacyForceDirect) merchantOpCityId
+  CQTC.clearCache merchantOpCityId
+  invalidateConfigInMem LYT.TransporterConfig
+  logTagInfo "dashboard -> postMerchantConfigCallingUpdate : " (show merchantOpCityId <> " mode: " <> show req.mode)
   pure Success
 
 getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> Maybe [SL.SpecialLocationType] -> Flow [QSL.SpecialLocationFull]
