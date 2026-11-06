@@ -86,7 +86,9 @@ data SharedCabLegStatus = SharedCabLegStatus
     -- | Other cabs on the route that reach the board stop after the assigned one, soonest first (ALLOCATED only).
     upcomingCabs :: [UpcomingCab],
     -- | The rider may still skip the assigned cab: once per booking, and only while it is more than skipMinEtaSec away.
-    skipAvailable :: Bool
+    skipAvailable :: Bool,
+    -- | A cab already passed this booking by (its driver declined or let the request lapse, or it left the stop): the rider is told another one is being found.
+    driverPassed :: Bool
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 

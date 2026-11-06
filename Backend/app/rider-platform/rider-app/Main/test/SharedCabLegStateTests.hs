@@ -280,7 +280,8 @@ tests =
           preferredCab = Nothing,
           preferredCabLost = False,
           upcomingCabs = [],
-          skipAvailable = False
+          skipAvailable = False,
+          driverPassed = False
         }
 
     statusWithReason :: SharedCabLegStatus
