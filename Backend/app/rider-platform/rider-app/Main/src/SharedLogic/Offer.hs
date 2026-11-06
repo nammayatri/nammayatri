@@ -427,8 +427,27 @@ mkCumulativeOfferResp ::
   Maybe Text ->
   m (Maybe CumulativeOfferResp)
 mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos mbFareCtx mbOfferSegment = do
+  logics <- getCumulativeOfferLogics merchantOperatingCityId
+  mkCumulativeOfferRespWithLogics logics merchantOperatingCityId offerListRes legInfos mbFareCtx mbOfferSegment
+
+-- | The cumulative offer rules depend only on the city, so a caller that builds several
+--   responses in one request fetches them once here and uses 'mkCumulativeOfferRespWithLogics'.
+getCumulativeOfferLogics :: (MonadFlow m, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> m [A.Value]
+getCumulativeOfferLogics merchantOperatingCityId = do
   now <- getCurrentTime
-  (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY now Nothing Nothing
+  (logics, _version) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY now Nothing Nothing
+  pure logics
+
+mkCumulativeOfferRespWithLogics ::
+  (MonadFlow m, EncFlow m r, BeamFlow m r, ClickhouseFlow m r) =>
+  [A.Value] ->
+  Id DMOC.MerchantOperatingCity ->
+  Payment.OfferListResp ->
+  [JL.LegInfo] ->
+  OfferFareCtx ->
+  Maybe Text ->
+  m (Maybe CumulativeOfferResp)
+mkCumulativeOfferRespWithLogics logics merchantOperatingCityId offerListRes legInfos mbFareCtx mbOfferSegment =
   if null logics
     then do
       logInfo "No cumulative offer logic found."
@@ -769,8 +788,9 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
         let mbRideData = mkRideData <$> mbRide
             mbBookingData = mkBookingData <$> mbBooking
             language = fromMaybe ENGLISH person.language
+        fraudLogics <- if null offersByProduct then pure [] else getOffersFraudChecksLogics merchantOperatingCityId
         forM offersByProduct $ \(productId, offersForProduct) -> do
-          filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
+          filteredOffers <- applyOffersFraudChecksWithLogics fraudLogics offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
           translatedOffers <- translateOfferListResp merchantOperatingCityId language filteredOffers
           pure (productId, translatedOffers)
       else do
@@ -783,8 +803,9 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
         let offersByProduct = DPayment.splitOfferRespByProduct productsWithAmount resp
             mbRideData = mkRideData <$> mbRide
             mbBookingData = mkBookingData <$> mbBooking
+        fraudLogics <- if null offersByProduct then pure [] else getOffersFraudChecksLogics merchantOperatingCityId
         forM offersByProduct $ \(productId, offersForProduct) -> do
-          filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
+          filteredOffers <- applyOffersFraudChecksWithLogics fraudLogics offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
           pure (productId, filteredOffers)
   pure $ map (\(productId, resp) -> (productId, overrideOfferListRespAutoApply autoApplyOfferCodes resp)) productOffers
 
@@ -798,8 +819,18 @@ timeQuoteOfferStep isQuoteFlow operationName action
 
 applyOffersFraudChecks :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> Maybe DRide.Ride -> Maybe DRB.Booking -> Maybe SSR.SearchRequest -> Maybe Y.RideData -> Maybe Y.BookingData -> Maybe Y.SearchRequestData -> Maybe Bool -> Bool -> [DOfferStats.OfferStats] -> Maybe DPS.PersonStats -> Bool -> Maybe Int -> m Payment.OfferListResp
 applyOffersFraudChecks merchantOperatingCityId offerListResp mbRideEntity mbBookingEntity mbSearchReqEntity mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats hasTakenValidRide totalRidesCount = do
+  logics <- getOffersFraudChecksLogics merchantOperatingCityId
+  applyOffersFraudChecksWithLogics logics offerListResp mbRideEntity mbBookingEntity mbSearchReqEntity mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats hasTakenValidRide totalRidesCount
+
+-- | Same idea as 'getCumulativeOfferLogics': the fraud-check rules depend only on the city.
+getOffersFraudChecksLogics :: (MonadFlow m, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> m [A.Value]
+getOffersFraudChecksLogics merchantOperatingCityId = do
   now <- getCurrentTime
-  (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) LYT.OFFERS_FRAUD_CHECKS now Nothing Nothing
+  (logics, _version) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) LYT.OFFERS_FRAUD_CHECKS now Nothing Nothing
+  pure logics
+
+applyOffersFraudChecksWithLogics :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, BeamFlow m r) => [A.Value] -> Payment.OfferListResp -> Maybe DRide.Ride -> Maybe DRB.Booking -> Maybe SSR.SearchRequest -> Maybe Y.RideData -> Maybe Y.BookingData -> Maybe Y.SearchRequestData -> Maybe Bool -> Bool -> [DOfferStats.OfferStats] -> Maybe DPS.PersonStats -> Bool -> Maybe Int -> m Payment.OfferListResp
+applyOffersFraudChecksWithLogics logics offerListResp mbRideEntity mbBookingEntity mbSearchReqEntity mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats hasTakenValidRide totalRidesCount =
   if null logics
     then pure offerListResp
     else do
