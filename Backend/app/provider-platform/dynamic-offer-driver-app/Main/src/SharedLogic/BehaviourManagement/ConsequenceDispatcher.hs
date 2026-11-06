@@ -45,6 +45,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.BehaviorEngine.EventLog as EventLog
 import qualified Lib.BehaviorTracker.BlockTracker as BT
+import qualified Lib.BehaviorTracker.EventsWindow as BTEW
 import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.CommunicationEngine.Parser as CMParser
@@ -182,6 +183,10 @@ dispatchConsequence ctx driverId = \case
             SFlags.bpMode = Just DriverInfo.OFFLINE,
             SFlags.bpFlag = reasonFlag
           }
+    -- The driver is blocked from here on, so their offences are served: reset the window now,
+    -- before the follow-up steps below, so a failure in one of them can't leave the old
+    -- offences to block the driver again after the unblock.
+    resetEventsWindow ctx driverId
     -- Block location tracking + schedule auto-unblock
     now <- getCurrentTime
     let expiryTime = addUTCTime (fromIntegral params.blockDurationHours * 60 * 60) now
@@ -202,6 +207,8 @@ dispatchConsequence ctx driverId = \case
             SFlags.spMerchantOperatingCityId = ctx.merchantOperatingCityId,
             SFlags.spBlockedBy = DTDBT.Application
           }
+    -- Blocked from here on: reset the window before the follow-up step (see HardBlock).
+    resetEventsWindow ctx driverId
     let tag = fromMaybe "PERMANENT_BLOCK" params.blockReasonTag
     BT.writeBlockKey BTT.DRIVER driverId.getId BTT.PERMANENT_BLOCK tag 0 params.blockReason (A.Object mempty)
   CET.Nudge params -> void $ sendOverlayByKey ctx driverId params.nudgeKey params.templateParams
@@ -289,6 +296,21 @@ dispatchConsequence ctx driverId = \case
         when (not (null (fromMaybe [] vehicle.selectedAutoAcceptTiers)) || remainingServiceTiers /= vehicle.selectedServiceTiers) $
           QVehicle.updateSelectedServiceTiersAndAutoAcceptTiers remainingServiceTiers [] driverId
 
+-- | A hard or permanent block clears the events window of the behaviour that fired it, so
+-- the driver starts fresh (Time and Events versions alike; windows are kept in every city).
+-- Behaviours without a window have no key, so the delete does nothing. A failed reset is
+-- logged and never undoes the block.
+-- Note: it deletes by the event's action type, which is the window key for cancellation
+-- (RIDE_CANCELLATION). Switch it to the pack's window key when a behaviour whose events use
+-- other action types (quote response: QUOTE_RESPONSE_ACCEPT/_REJECT) gets events support.
+resetEventsWindow :: (MonadFlow m, Redis.HedisFlow m r) => DispatchContext -> Id DP.Person -> m ()
+resetEventsWindow ctx driverId =
+  whenJust ctx.actionEvent $ \event -> do
+    result <- withTryCatch "eventsWindow:resetAfterBlock" $ BTEW.resetWindow event.entityType event.actionType event.entityId
+    case result of
+      Right () -> logInfo $ "Events window reset after a block for driver " <> driverId.getId <> " (" <> event.actionType <> ")"
+      Left err -> logError $ "Events window: reset after a block failed for driver " <> driverId.getId <> " (" <> event.actionType <> ") because the Redis delete failed: " <> show err
+
 autoAcceptOnlyTierTypes :: [DVST.VehicleServiceTier] -> [DriverInfo.ServiceTierType]
 autoAcceptOnlyTierTypes cityServiceTiers =
   [ tier.serviceTierType
@@ -303,6 +325,8 @@ parseBlockReasonFlag = \case
   Just "CancellationRateDaily" -> CancellationRateDaily
   Just "CancellationRateWeekly" -> CancellationRateWeekly
   Just "CancellationRate" -> CancellationRate
+  -- a block by an Events ("last X events") cancellation rulebook
+  Just "CancellationRateEvents" -> CancellationRateEvents
   Just "ExtraFareDaily" -> ExtraFareDaily
   Just "ExtraFareWeekly" -> ExtraFareWeekly
   Just "DrunkAndDriveViolation" -> DrunkAndDriveViolation

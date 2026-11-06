@@ -95,3 +95,4 @@ library:
     - mobility-core
     - openapi3
     - data-default-class
+    - hedis

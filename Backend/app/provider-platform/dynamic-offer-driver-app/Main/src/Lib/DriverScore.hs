@@ -42,21 +42,20 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
 import qualified Lib.BehaviorEngine.Types as Fields
 import qualified Lib.BehaviorTracker.BlockTracker as BT
-import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler.Environment
-import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
+import qualified SharedLogic.BehaviourManagement.EventsWindow as EventsWindow
 import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
 import qualified SharedLogic.BehaviourManagement.IssueBreach as Fields
 import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
+import qualified SharedLogic.BehaviourManagement.RunRules as RunRules
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverPool as DP
 import SharedLogic.External.LocationTrackingService.Types
@@ -71,7 +70,6 @@ import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as FPPDQ
 import qualified Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as RQ
-import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error
 import qualified Tools.EventTracking as ET
 import qualified Tools.Fields as Fields
@@ -105,7 +103,9 @@ eventPayloadHandler merchantOpCityId DST.OnNewRideAssigned {..} = do
   void $ case mbDriverStats of
     Just driverStats -> incrementOrSetTotalRides driverId driverStats
     Nothing -> createDriverStat currency distanceUnit driverId
+  -- ELIGIBLE_COUNT +1, and '0' (eligible) in the driver's cancellation events window next to it.
   DP.incrementTotalRidesCount merchantOpCityId driverId
+  EventsWindow.recordEventsWindow LYT.CANCELLATION_RATE_BEHAVIOR merchantOpCityId driverId.getId BTT.ELIGIBLE_COUNT
 eventPayloadHandler _merchantOpCityId DST.OnNewSearchRequestForDrivers {..} =
   -- Shared quote-response eligibility is NOT counted here: DP.incrementSrdSentCount (called
   -- when the request is actually sent to each driver) writes the bt: QUOTE_RESPONSE
@@ -120,7 +120,10 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   -- Count this cancellation BEFORE the ladder reads the counters. ELIGIBLE_COUNT already
   -- includes this ride (incremented at assignment), so incrementing ACTION_COUNT after the
   -- evaluation made every rung fire one offence late and understated the rate.
-  when countsTowardCancellationCount $ DP.incrementCancellationCount merchantOpCityId driverId
+  -- The events window gets its '1' (offence) next to the counter, before the rules read it.
+  when countsTowardCancellationCount $ do
+    DP.incrementCancellationCount merchantOpCityId driverId
+    EventsWindow.recordEventsWindow LYT.CANCELLATION_RATE_BEHAVIOR merchantOpCityId driverId.getId BTT.ACTION_COUNT
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   IBM.issueBreachMitigation EXTRA_FARE_MITIGATION merchantConfig driverInfo
   when (doCancellationRateBasedBlocking == Just True && not (driverInfo.onRide)) $ do
@@ -152,12 +155,11 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
               timestamp = eventTime
             }
         entityState = A.object []
-        cooldownTags = ["CancellationRateDaily", "CancellationRateWeekly"]
-        fetchRules = \domain -> do
-          localTime <- getLocalCurrentTime merchantConfig.timeDiffFromUtc
-          getAppDynamicLogic (cast merchantOpCityId) domain localTime Nothing Nothing
-    snapshot <- BTSnap.buildSnapshotWithCooldowns counterConfig actionEvent entityState cooldownTags
-    output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) (BehaviorDispatch.behaviourEventCity (cast merchantOpCityId)) LYT.CANCELLATION_RATE_BEHAVIOR fetchRules
+        cooldownTags = ["CancellationRateDaily", "CancellationRateWeekly", "CancellationRateEvents"]
+    localTime <- getLocalCurrentTime merchantConfig.timeDiffFromUtc
+    -- TIME or EVENTS: the shared runner picks the version once and, for EVENTS, adds the
+    -- driver's newest X events as counters.events.
+    output <- RunRules.runBehaviourRules LYT.CANCELLATION_RATE_BEHAVIOR merchantOpCityId localTime counterConfig actionEvent entityState cooldownTags
     logInfo $ "CancellationRate behavior evaluation: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
     let dispatchCtx =
           BehaviorDispatch.DispatchContext
@@ -177,7 +179,9 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
     -- Guard overall block with cooldown check to prevent re-blocking during cooldown period
     dailyCooldownActive <- BT.isEntityInCooldown BTT.DRIVER driverId.getId "CancellationRateDaily"
     weeklyCooldownActive <- BT.isEntityInCooldown BTT.DRIVER driverId.getId "CancellationRateWeekly"
-    let inCooldown = dailyCooldownActive || weeklyCooldownActive
+    -- A driver blocked by an Events ("last X events") rulebook isn't blocked again by this one.
+    eventsCooldownActive <- BT.isEntityInCooldown BTT.DRIVER driverId.getId "CancellationRateEvents"
+    let inCooldown = dailyCooldownActive || weeklyCooldownActive || eventsCooldownActive
     when (not inCooldown && driverStats.totalRidesAssigned > merchantConfig.minRidesToUnlist && cancellationRateExceeded) $ do
       logDebug $ "Blocking Driver: " <> driverId.getId
       SFlags.markBlockFlags (cast driverId) $

@@ -27,6 +27,7 @@ module Domain.Action.Dashboard.Management.NammaTag
     getNammaTagAppDynamicLogicExperimentGroups,
     getNammaTagTimeBounds,
     getNammaTagAppDynamicLogicVersions,
+    getNammaTagAppDynamicLogicWindowConfig,
     getNammaTagAppDynamicLogicDomains,
     getNammaTagAppDynamicLogicDomainsAndEvents,
     getNammaTagAppDynamicLogicGetDomainSchema,
@@ -149,6 +150,7 @@ import qualified Lib.Yudhishthira.Types.NammaTagV2
 import qualified Lib.Yudhishthira.Types.TagActionNotificationConfig as DTANC
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.BehaviourManagement.EventsWindow as BEWindow
 import qualified SharedLogic.BehaviourManagement.Packs as BPacks
 import qualified SharedLogic.BehaviourManagement.Visibility as BehaviorVisibility
 import SharedLogic.CancellationFault (FaultVerdict, FaultVerdictData)
@@ -470,6 +472,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let mbMerchantId = Just $ cast merchant.id
+  -- Behaviour rulebook settings (TIME, or EVENTS with X) are checked before anything is saved,
+  -- on dry runs too, against this city's window size; the library saves it with the rules.
+  BEWindow.validateWindowSettings merchantOpCityId req
   resp <- case req.domain of
     LYT.POOLING -> do
       driversData :: [DriverPoolWithActualDistResult] <- mapM (YudhishthiraFlow.createLogicData def . Just) req.inputData
@@ -547,8 +552,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DTPN.MerchantPushNotification)) req logicData
     LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
       -- The generic check only parses the patch output on a default row. A change to the city's wallet
-      -- settings must also leave them consistent on its stored row (base patch, then this patch).
-      walletErrors <- transporterConfigWalletErrors merchantOpCityId req.rules
+      -- settings must also leave them consistent on its stored row (base patch, then this patch), and a
+      -- change to its events window size must stay in range.
+      walletErrors <- transporterConfigPatchErrors merchantOpCityId req.rules
       when (fromMaybe False req.shouldUpdateRule && not (null walletErrors)) $
         throwError $ InvalidRequest $ Text.intercalate "; " walletErrors
       defaultConfig <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTT.TransporterConfig)) >>= fromMaybeM (InvalidRequest "Transporter config not found")
@@ -632,6 +638,13 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     _ -> pure ()
   pure resp
 
+getNammaTagAppDynamicLogicWindowConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.LogicDomain -> Environment.Flow LYT.RulebookWindowConfigResp
+getNammaTagAppDynamicLogicWindowConfig merchantShortId opCity domain = do
+  -- versions are global; the city gives its window size (Z)
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  BEWindow.getWindowConfigs merchantOpCityId domain
+
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> LYT.LogicDomain -> Environment.Flow [LYT.GetLogicsResp]
 getNammaTagAppDynamicLogic merchantShortId opCity mbVersion domain = do
   merchant <- findMerchantByShortId merchantShortId
@@ -710,6 +723,8 @@ postNammaTagAppDynamicLogicUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.
 postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  -- Events-window city rules, checked on the whole new live set before anything is written.
+  BEWindow.validateEventsRollout merchantOpCityId rolloutReq
   result <- YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) rolloutReq TC.returnConfigs opCity
   forM_ rolloutReq $ \rolloutObj -> case rolloutObj.domain of
     LYT.DRIVER_CONFIG cfgType -> do
@@ -728,7 +743,12 @@ postNammaTagAppDynamicLogicBulkUpsertLogicRollout _authMerchantShortId _authOpCi
       case attempt of
         Left (e :: SomeException) -> do
           logError $ "bulkUpsertLogicRollout failed for " <> entry.merchantShortId <> "/" <> Text.pack (show city) <> ": " <> show e
-          pure $ Left (LYT.BulkRolloutCityFailure entry.merchantShortId city "Failed to upsert rollout for this merchant and city.")
+          -- A refused request (e.g. the events-window city guard) names the fix, so the city
+          -- gets that message; anything else stays generic (no internal details).
+          let reason = case fromException e of
+                Just (InvalidRequest msg) -> Text.pack (show city) <> ": " <> msg
+                _ -> "Failed to upsert rollout for this merchant and city."
+          pure $ Left (LYT.BulkRolloutCityFailure entry.merchantShortId city reason)
         Right _ -> pure $ Right (entry.merchantShortId <> ":" <> Text.pack (show city))
   let flatResults = concat results
   pure $ LYT.BulkLogicRolloutResult [s | Right s <- flatResults] [f | Left f <- flatResults]
@@ -1351,11 +1371,12 @@ patchRideFeedbackCity merchantOpCityId rules = do
       A.Error err -> Left (row.questionKey <> ": " <> Text.pack err)
   pure (rows, case partitionEithers patched of ([], ok) -> Right ok; (errs, _) -> Left errs)
 
--- | What is wrong with a city's wallet settings (driver wallet config, ride GST) once @rules@ are
--- applied to its stored TransporterConfig on top of the base patch. Checked only when @rules@ change
--- those settings, so an unrelated patch is never blocked by settings that were already inconsistent.
-transporterConfigWalletErrors :: Id DMOC.MerchantOperatingCity -> [A.Value] -> Environment.Flow [Text]
-transporterConfigWalletErrors merchantOpCityId rules = do
+-- | What is wrong with a city's wallet settings (driver wallet config, ride GST) or its events window
+-- size once @rules@ are applied to its stored TransporterConfig on top of the base patch. Each is
+-- checked only when @rules@ change it, so an unrelated patch is never blocked by settings that were
+-- already wrong.
+transporterConfigPatchErrors :: Id DMOC.MerchantOperatingCity -> [A.Value] -> Environment.Flow [Text]
+transporterConfigPatchErrors merchantOpCityId rules = do
   mbRow <- SQTC.findByMerchantOpCityId merchantOpCityId
   case mbRow of
     Nothing -> pure []
@@ -1371,11 +1392,15 @@ transporterConfigWalletErrors merchantOpCityId rules = do
       mbCurrent <- applyLogics baseLogics
       mbPatched <- applyLogics (baseLogics <> rules)
       case (mbCurrent, mbPatched) of
-        (Just current, Just patched)
-          | patched.driverWalletConfig /= current.driverWalletConfig || patched.taxConfig.rideGst /= current.taxConfig.rideGst ->
-            WalletAccount.driverWalletConfigErrors patched
-              <$> Wallet.walletClassConfig patched.merchantId.getId merchantOpCityId.getId FAccount.DRIVER
-              <*> CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+        (Just current, Just patched) -> do
+          walletErrors <-
+            if patched.driverWalletConfig /= current.driverWalletConfig || patched.taxConfig.rideGst /= current.taxConfig.rideGst
+              then
+                WalletAccount.driverWalletConfigErrors patched
+                  <$> Wallet.walletClassConfig patched.merchantId.getId merchantOpCityId.getId FAccount.DRIVER
+                  <*> CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+              else pure []
+          pure $ walletErrors <> BEWindow.eventsWindowSizeErrors current.eventsWindowSize patched.eventsWindowSize
         _ -> pure []
 
 -- { os :: DeviceType,
@@ -1458,7 +1483,8 @@ postNammaTagConfigPilotVerify merchantShortId opCity configType req =
         description = req.description,
         shouldUpdateRule = req.shouldUpdateRule,
         verifyOutput = req.verifyOutput,
-        domain = LYT.DRIVER_CONFIG configType
+        domain = LYT.DRIVER_CONFIG configType,
+        settings = Nothing
       }
 
 postNammaTagConfigPilotUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ConfigType -> LYT.ConfigPilotRolloutReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -1518,13 +1544,16 @@ getNammaTagBehaviorStatus merchantShortId opCity = do
       Just v -> do
         elements <- CADLE.findByDomainAndVersion bPack.packDomain v
         pure $ DL.nub $ concatMap (collectOverlayKeys . (.logic)) elements
-    let overlaySatisfied key = any (\o -> o.overlayKey == key) cityOverlays
+    -- An EVENTS version uses its own overlays, not the TIME template's daily/weekly ones.
+    activeIsEvents <- maybe (pure False) (BEWindow.isEventsVersion bPack.packDomain) mbActiveVersion
+    let packKeys = BEWindow.versionOverlayKeys bPack activeIsEvents
+        overlaySatisfied key = any (\o -> o.overlayKey == key) cityOverlays
         overlayPrereqs =
-          bPack.requiredOverlayKeys <&> \key ->
+          packKeys <&> \key ->
             let rows = filter (\o -> o.overlayKey == key) cityOverlays
              in LYT.BehaviourPrereqStatus {name = key, kind = LYT.OVERLAY_KEY, satisfied = not (null rows), detail = Just ("rows: " <> show (length rows))}
         rulebookOverlayPrereqs =
-          filter (`notElem` bPack.requiredOverlayKeys) rulebookKeys <&> \key ->
+          filter (`notElem` packKeys) rulebookKeys <&> \key ->
             LYT.BehaviourPrereqStatus {name = key, kind = LYT.OVERLAY_KEY, satisfied = overlaySatisfied key, detail = Just "referenced by the active rulebook"}
         togglePrereqs =
           bPack.configPrereqs <&> \prereq ->
@@ -1580,13 +1609,15 @@ postNammaTagBehaviorEnable merchantShortId opCity domain requestorId requestorNa
             rollout = [LYT.RolloutVersion {version = version, rolloutPercentage = percentage, versionDescription = Just ("Enabled via behaviour switchboard by " <> requestorName), experimentGroup = Nothing}],
             modifiedBy = Just (Id requestorId)
           }
+  BEWindow.validateEventsRollout merchantOpCityId [rolloutObj]
   void $ YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) [rolloutObj] TC.returnConfigs opCity
   -- Seed the pack's template keys PLUS every NUDGE/WARN key the enabled rulebook
   -- version actually references, so a customised rulebook never points at an
   -- overlay the city doesn't have.
   elements <- CADLE.findByDomainAndVersion domain version
   let rulebookKeys = DL.nub $ concatMap (collectOverlayKeys . (.logic)) elements
-      overlayKeysToSeed = DL.nub $ bPack.requiredOverlayKeys <> rulebookKeys
+  versionIsEvents <- BEWindow.isEventsVersion domain version
+  let overlayKeysToSeed = DL.nub $ BEWindow.versionOverlayKeys bPack versionIsEvents <> rulebookKeys
   seedBehaviourOverlays merchant merchantOpCityId overlayKeysToSeed
   seedBehaviourBlockReasons bPack
   logInfo $ "Behaviour " <> show domain <> " enabled at " <> show percentage <> "% (version " <> show version <> ") in city " <> merchantOpCityId.getId <> " by " <> requestorId
