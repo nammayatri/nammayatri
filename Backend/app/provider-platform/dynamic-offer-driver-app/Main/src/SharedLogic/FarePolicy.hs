@@ -817,11 +817,15 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
           includedKmPerHrCaption = show Tags.PER_HOUR_DISTANCE_KM
           includedKmPerHrItem = mkBreakupItem includedKmPerHrCaption . mkValue $ show det.kmPerPlannedExtraHour
 
+          -- with sections, the flat rate isn't charged; apps that don't read the step fares get the first section's rate
           plannedPerKmRateCaption = show Tags.PLANNED_PER_KM_CHARGE
-          plannedPerKmRateItem = mkBreakupItem plannedPerKmRateCaption . mkValue $ show det.perKmRateOneWay
+          plannedPerKmRateItem = mkBreakupItem plannedPerKmRateCaption . mkValue $ show (maybe det.perKmRateOneWay ((.perKmRate) . NE.head) det.perKmRateSectionsOneWay)
 
           plannedPerKmRateRoundCaption = show Tags.PLANNED_PER_KM_CHARGE_ROUND_TRIP
-          plannedPerKmRateRoundItem = mkBreakupItem plannedPerKmRateRoundCaption . mkValue $ show det.perKmRateRoundTrip
+          plannedPerKmRateRoundItem = mkBreakupItem plannedPerKmRateRoundCaption . mkValue $ show (maybe det.perKmRateRoundTrip ((.perKmRate) . NE.head) det.perKmRateSectionsRoundTrip)
+
+          plannedPerKmStepFareItems = mkPerKmRateSectionStepFareItems (\sectionStart sectionEnd -> show $ Tags.PLANNED_PER_KM_STEP_FARE sectionStart sectionEnd) det.perKmRateSectionsOneWay
+          plannedPerKmRoundTripStepFareItems = mkPerKmRateSectionStepFareItems (\sectionStart sectionEnd -> show $ Tags.PLANNED_PER_KM_ROUND_TRIP_STEP_FARE sectionStart sectionEnd) det.perKmRateSectionsRoundTrip
 
           perDayMaxHourAllowanceCaption = show Tags.PER_DAY_MAX_HOUR_ALLOWANCE
           perDayMaxHourAllowanceItem = mkBreakupItem perDayMaxHourAllowanceCaption . mkValue $ show det.perDayMaxHourAllowance
@@ -837,8 +841,16 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
 
       [minFareItem, pickupChargeBreakup, perHourChargeItem, perExtraMinRateItem, perExtraHourRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem, plannedPerKmRateRoundItem, perDayMaxHourAllowanceItem]
         <> catMaybes [perDayMaxAllowanceInMinutesItem, stateEntryPermitChargesItem]
+        <> plannedPerKmStepFareItems
+        <> plannedPerKmRoundTripStepFareItems
         <> (oldNightShiftChargeBreakups det.nightShiftCharge)
         <> (newNightShiftChargeBreakups det.nightShiftCharge)
+      where
+        -- one step fare per section, the way progressive sends EXTRA_PER_KM_STEP_FARE: the last section has no end
+        mkPerKmRateSectionStepFareItems mkStepFareCaption = maybe [] $ \sections -> do
+          let sortedSections = toList $ NE.sortBy (comparing (.startDistance)) sections
+              sectionEnds = map (Just . (.startDistance.getMeters)) (List.drop 1 sortedSections) <> [Nothing]
+          List.zipWith (\section sectionEnd -> mkBreakupItem (mkStepFareCaption section.startDistance.getMeters sectionEnd) (mkValue $ highPrecMoneyToText section.perKmRate)) sortedSections sectionEnds
 
     mkAdditionalProgressiveBreakups det = do
       let perExtraKmFareSections = NE.nubBy (\x y -> x.perExtraKmRate == y.perExtraKmRate) $ NE.sortBy (comparing (.startDistance)) det.perExtraKmRateSections
