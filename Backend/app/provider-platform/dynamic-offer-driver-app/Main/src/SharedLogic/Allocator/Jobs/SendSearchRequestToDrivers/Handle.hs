@@ -60,6 +60,9 @@ data Handle m r = Handle
     topDriversRoundDone :: Maybe (m ()),
     -- | False for a stand-by better-driver search: the rider never knew it ran.
     notifyBapOnExpiry :: Bool,
+    -- | For a stand-by better-driver search: tells the rider's app the search ran out with no match
+    -- (notifyBapOnExpiry stays False: the shared search request must not be reported as expired).
+    onBetterDriverSearchExpiry :: m (),
     mbTopUpSize :: Maybe Int,
     popTopUpDrivers :: Int -> m [DriverPoolWithActualDistResult],
     markDriversAttempted :: [DriverPoolWithActualDistResult] -> m ()
@@ -124,6 +127,7 @@ processBatchChainDispatch Handle {..} goHomeCfg transactionId = do
                 let request = CallBAPInternal.RideSearchExpiredReq {transactionId = transactionId}
                 void $ CallBAPInternal.rideSearchExpired appBackendBapInternal.apiKey appBackendBapInternal.url request
               cancelSearchTry
+              onBetterDriverSearchExpiry
               cancelBookingIfApplies
               return (Complete, NormalPool, Nothing)
     else do

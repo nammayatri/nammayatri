@@ -772,7 +772,8 @@ rideAssignedReqHandler req = do
       -- never re-rolled (Domain.Action.UI.BetterDriverSearch enforces the persisted value).
       -- Gated on the city switch too, not just the probability: this value is what the app
       -- shows the button from, so marking a booking eligible in a disabled city would show a
-      -- button whose trigger always errors.
+      -- button whose trigger always errors. Same for the minimum trip distance: the Find API
+      -- rejects shorter trips, so they are never marked eligible.
       -- A swap does NOT re-roll - one search per original booking, so a rider cannot chain
       -- swaps and cancel a driver on each hop. To allow repeats later, drop this branch.
       eligibleForBetterDriverSearch <-
@@ -781,7 +782,10 @@ rideAssignedReqHandler req = do
           else do
             riderConfigForBetterDriverSearch <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
             let mbEnabledProbability = case riderConfigForBetterDriverSearch of
-                  Just riderConfig' | riderConfig'.betterDriverSearchEnabled == Just True -> riderConfig'.betterDriverSearchEligibilityProbability
+                  Just riderConfig'
+                    | riderConfig'.betterDriverSearchEnabled == Just True,
+                      fromMaybe 0 (distanceToMeters <$> booking.estimatedDistance) >= fromMaybe 0 riderConfig'.minTripDistanceForBetterDriverSearch ->
+                      riderConfig'.betterDriverSearchEligibilityProbability
                   _ -> Nothing
             case mbEnabledProbability of
               Nothing -> pure False
@@ -1734,7 +1738,10 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   if abandonedPayScreen
     then logInfo $ "Skipping cancel push for booking " <> booking.id.getId <> ": rider left the deposit pay screen without paying"
-    else Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties
+    else
+      if isJust booking.supersededByBookingId
+        then logInfo $ "Skipping cancel push for booking " <> booking.id.getId <> ": swapped out for a closer driver"
+        else Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties
   when (booking.isDashboardRequest == Just True && riderConfig.autoSendBookingDetailsViaWhatsapp == Just True) $ do
     fork "Sending Dashboard Cancelled Ride Message" $ do
       sendBookingCancelledMessageViaWhatsapp booking.riderId riderConfig
