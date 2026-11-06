@@ -17,6 +17,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.FarePolicy.FarePolicyInterCityDetails as BeamFPRD
+import qualified Storage.Cac.FarePolicy.FarePolicyInterCityDetailsPerKmRateSection as CQFPICDPerKm
 import qualified Storage.Cac.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as CQFPTCDPS
 import Storage.Queries.FarePolicy.FarePolicyInterCityDetails (fromTTypeFarePolicyInterCityDetails)
 import Utils.Common.CacUtils
@@ -31,6 +32,7 @@ findFarePolicyInterCityDetailsFromCAC context tenant id toss = do
 instance FromCacType (BeamFPRD.FarePolicyInterCityDetails, [(CacContext, Value)], String, Id Domain.FarePolicy, Int) Domain.FullFarePolicyInterCityDetails where
   fromCacType (farePolicyInterCityDetails, context, tenant, id, toss) = do
     fullFPICDPS <- CQFPTCDPS.findFarePolicyInterCityDetailsPricingSlabsFromCAC context tenant id toss
+    perKmRateSections <- CQFPICDPerKm.findFarePolicyInterCityDetailsPerKmRateSectionFromCAC context tenant id toss
     case nonEmpty fullFPICDPS of
-      Just fPICDPS -> Just <$> fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS
+      Just fPICDPS -> Just <$> fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS perKmRateSections
       _ -> pure Nothing

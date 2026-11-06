@@ -822,7 +822,7 @@ calculateFareParametersHandler params = do
           extraTimeFare = HighPrecMoney $ toRational extraMins * perExtraMinRate.getHighPrecMoney
           fareByTime = HighPrecMoney $ (toRational (estimatedDurationInMins + allowanceMins) / 60) * perHourCharge.getHighPrecMoney
 
-      let perKmRate = if params.roundTrip then perKmRateRoundTrip else perKmRateOneWay
+      let (perKmRate, perKmRateSections) = if params.roundTrip then (perKmRateRoundTrip, perKmRateSectionsRoundTrip) else (perKmRateOneWay, perKmRateSectionsOneWay)
           estimatedDistance = maybe 0 (.getMeters) params.estimatedDistance
           estimatedDistanceInKm = estimatedDistance `div` 1000
           actualDistance = (.getMeters) <$> params.actualDistance
@@ -831,7 +831,12 @@ calculateFareParametersHandler params = do
           extraDistanceFare = HighPrecMoney $ toRational extraDist * perExtraKmRate.getHighPrecMoney
           extraTimeSpent = max 0 ((diffUTCTime (fromMaybe params.rideTime params.returnTime) params.rideTime) - intToNominalDiffTime estimatedDuration) / 60
           extraHoursSpent = max 0 (realToFrac extraTimeSpent - fromIntegral (defaultWaitTimeAtDestination.getMinutes)) / 60.0 :: Double
-          fareByDist = HighPrecMoney $ toRational ((extraHoursSpent * fromIntegral kmPerPlannedExtraHour.getKilometers) + fromIntegral estimatedDistanceInKm) * fromRational (perKmRate.getHighPrecMoney)
+          plannedDistanceInKm = (extraHoursSpent * fromIntegral kmPerPlannedExtraHour.getKilometers) + fromIntegral estimatedDistanceInKm
+          -- with sections, each planned km is charged at its section's rate, the same way progressive charges its extra km
+          fareByDist = case perKmRateSections of
+            Just sections -> fst $ processFPProgressiveDetailsPerExtraKmFare (toPerExtraKmRateSection <$> sections) (Meters . round $ plannedDistanceInKm * 1000)
+            Nothing -> HighPrecMoney $ toRational plannedDistanceInKm * fromRational (perKmRate.getHighPrecMoney)
+          toPerExtraKmRateSection section = DFP.FPProgressiveDetailsPerExtraKmRateSection {startDistance = section.startDistance, distanceUnit = params.distanceUnit, perExtraKmRate = section.perKmRate, baseFareDepreciation = 0}
 
       let distPercent = case (actualDistance, estimatedDistance) of
             (Just ad, ed) -> if ed == 0 then 1 else min 1 (fromIntegral ad / (fromIntegral ed :: Double))

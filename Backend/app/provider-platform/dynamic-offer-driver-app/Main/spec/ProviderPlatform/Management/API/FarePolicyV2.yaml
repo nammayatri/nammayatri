@@ -285,11 +285,16 @@ types:
   FPV2StateEntryPermitCharge:
     - state: IndianState
     - charge: HighPrecMoney
+  FPV2InterCityPerKmRateSection:
+    - startDistance: Meters
+    - perKmRate: HighPrecMoney
   FPV2InterCityDetails:
     - baseFare: HighPrecMoney
     - perHourCharge: HighPrecMoney
     - perKmRateOneWay: HighPrecMoney
     - perKmRateRoundTrip: HighPrecMoney
+    - perKmRateSectionsOneWay: "Maybe [FPV2InterCityPerKmRateSection]"
+    - perKmRateSectionsRoundTrip: "Maybe [FPV2InterCityPerKmRateSection]"
     - perExtraKmRate: HighPrecMoney
     - perExtraMinRate: HighPrecMoney
     - kmPerPlannedExtraHour: Kilometers

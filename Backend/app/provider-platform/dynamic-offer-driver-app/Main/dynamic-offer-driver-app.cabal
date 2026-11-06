@@ -910,6 +910,7 @@ library
       Storage.Cac.FarePolicy.DriverExtraFeeBounds
       Storage.Cac.FarePolicy.FarePolicyAmbulanceDetails
       Storage.Cac.FarePolicy.FarePolicyInterCityDetails
+      Storage.Cac.FarePolicy.FarePolicyInterCityDetailsPerKmRateSection
       Storage.Cac.FarePolicy.FarePolicyInterCityDetailsPricingSlabs
       Storage.Cac.FarePolicy.FarePolicyProgressiveDetails
       Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
@@ -1719,6 +1720,7 @@ library
       Domain.Types.FleetRCAssociation
       Domain.Types.FleetRcDailyStats
       Domain.Types.FleetRouteAssociation
+      Domain.Types.FullFarePolicyInterCityDetailsPerKmRateSection
       Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSection
       Domain.Types.GeohashArea
       Domain.Types.GoHomeConfig
@@ -1929,6 +1931,7 @@ library
       Storage.Beam.FleetRCAssociation
       Storage.Beam.FleetRcDailyStats
       Storage.Beam.FleetRouteAssociation
+      Storage.Beam.FullFarePolicyInterCityDetailsPerKmRateSection
       Storage.Beam.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Beam.GeohashArea
       Storage.Beam.GoHomeConfig
@@ -2144,6 +2147,7 @@ library
       Storage.Queries.FleetRCAssociation
       Storage.Queries.FleetRcDailyStats
       Storage.Queries.FleetRouteAssociation
+      Storage.Queries.FullFarePolicyInterCityDetailsPerKmRateSection
       Storage.Queries.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Queries.GeohashArea
       Storage.Queries.GoHomeConfig

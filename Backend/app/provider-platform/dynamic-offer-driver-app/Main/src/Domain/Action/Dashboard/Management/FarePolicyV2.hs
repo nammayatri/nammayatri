@@ -854,6 +854,15 @@ validatePolicy transporterConfig p =
     stateEntryPermitChargeIssues permits =
       sortedUnique "farePolicyDetails.stateEntryPermitChargesByState" "state" (map (.state) permits)
         <> concatMap (nonNegativeMaybe "farePolicyDetails.stateEntryPermitChargesByState" . Just . (.charge)) permits
+    -- a section runs from its start distance to the next one's, so the planned km before the first section would go unpriced
+    perKmRateSectionIssues :: Text -> [Common.FPV2InterCityPerKmRateSection] -> [Common.FPV2ValidationIssue]
+    perKmRateSectionIssues field sections =
+      concat
+        [ sortedUnique field "startDistance" (map (.startDistance) sections),
+          concatMap (nonNegativeMaybe field . Just . (.perKmRate)) sections,
+          if any ((< 0) . (.startDistance)) sections then issue field "startDistance must not be negative" else [],
+          if not (null sections) && all ((/= 0) . (.startDistance)) sections then issue field "a section starting at 0 is required" else []
+        ]
     -- Rental/InterCity pricing-slab invariants (upstream commit 03c947988:
     -- "added slab checks for intercity and rentals"): slab resolution at
     -- end-ride errors out without a 0/0 base row, and a completed ride is
@@ -915,7 +924,9 @@ validatePolicy transporterConfig p =
           [ if null d.pricingSlabs then issue "farePolicyDetails.pricingSlabs" "at least one pricing slab is required" else [],
             pricingSlabIssues d.pricingSlabs,
             minBaseFareIssue d.baseFare,
-            stateEntryPermitChargeIssues (fromMaybe [] d.stateEntryPermitChargesByState)
+            stateEntryPermitChargeIssues (fromMaybe [] d.stateEntryPermitChargesByState),
+            perKmRateSectionIssues "farePolicyDetails.perKmRateSectionsOneWay" (fromMaybe [] d.perKmRateSectionsOneWay),
+            perKmRateSectionIssues "farePolicyDetails.perKmRateSectionsRoundTrip" (fromMaybe [] d.perKmRateSectionsRoundTrip)
           ]
       Common.FPV2Ambulance d ->
         concat
@@ -1085,6 +1096,8 @@ toApiDetails = \case
           perHourCharge = d.perHourCharge,
           perKmRateOneWay = d.perKmRateOneWay,
           perKmRateRoundTrip = d.perKmRateRoundTrip,
+          perKmRateSectionsOneWay = map (\s -> Common.FPV2InterCityPerKmRateSection {startDistance = s.startDistance, perKmRate = s.perKmRate}) . NE.toList <$> d.perKmRateSectionsOneWay,
+          perKmRateSectionsRoundTrip = map (\s -> Common.FPV2InterCityPerKmRateSection {startDistance = s.startDistance, perKmRate = s.perKmRate}) . NE.toList <$> d.perKmRateSectionsRoundTrip,
           perExtraKmRate = d.perExtraKmRate,
           perExtraMinRate = d.perExtraMinRate,
           kmPerPlannedExtraHour = d.kmPerPlannedExtraHour,
@@ -1265,6 +1278,8 @@ fromApiDetails currency distanceUnit = \case
             perHourCharge = d.perHourCharge,
             perKmRateOneWay = d.perKmRateOneWay,
             perKmRateRoundTrip = d.perKmRateRoundTrip,
+            perKmRateSectionsOneWay = NE.nonEmpty . map (\s -> FarePolicyD.FPInterCityDetailsPerKmRateSection {startDistance = s.startDistance, perKmRate = s.perKmRate}) =<< d.perKmRateSectionsOneWay,
+            perKmRateSectionsRoundTrip = NE.nonEmpty . map (\s -> FarePolicyD.FPInterCityDetailsPerKmRateSection {startDistance = s.startDistance, perKmRate = s.perKmRate}) =<< d.perKmRateSectionsRoundTrip,
             perExtraKmRate = d.perExtraKmRate,
             perExtraMinRate = d.perExtraMinRate,
             kmPerPlannedExtraHour = d.kmPerPlannedExtraHour,
