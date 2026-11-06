@@ -1,0 +1,114 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  LatLong: Kernel.External.Maps.Types
+  Meters: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Value: Data.Aeson
+
+OpenMeterRide:
+  tableName: open_meter_ride
+
+  derives: "Generic,Show,ToJSON,FromJSON,ToSchema,Eq"
+
+  types:
+    OpenMeterRideStatus:
+      enum: "RUNNING,ENDED,CANCELLED,AUTO_ENDED"
+      derive: "HttpInstance"
+    OpenMeterEndReason:
+      enum: "USER,SYSTEM_PAUSED,CONFLICT"
+
+  fields:
+    id: Id OpenMeterRide
+    personId: Id Person
+    status: OpenMeterRideStatus
+    startTime: UTCTime
+    serverStartedAt: UTCTime
+    endTime: Maybe UTCTime
+    lastHeartbeatAt: Maybe UTCTime
+    startLatLong: Maybe LatLong
+    endLatLong: Maybe LatLong
+    lastLatLong: Maybe LatLong
+    distanceMeters: Meters
+    serverLinearDistanceMeters: Maybe Meters
+    estimatedGapMeters: Meters
+    waitingTimeSeconds: Seconds
+    encodedPolyline: Maybe Text
+    pointsCount: Int
+    fare: Maybe HighPrecMoney
+    currency: Maybe Currency
+    tariffSnapshot: Maybe Value
+    trackingConfig: Maybe Value
+    endReason: Maybe OpenMeterEndReason
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamFields:
+    startLatLong:
+      startLat: Maybe Double
+      startLon: Maybe Double
+    endLatLong:
+      endLat: Maybe Double
+      endLon: Maybe Double
+    lastLatLong:
+      lastLat: Maybe Double
+      lastLon: Maybe Double
+
+  fromTType:
+    startLatLong: Kernel.External.Maps.Types.LatLong <$> startLat <*> startLon|E
+    endLatLong: Kernel.External.Maps.Types.LatLong <$> endLat <*> endLon|E
+    lastLatLong: Kernel.External.Maps.Types.LatLong <$> lastLat <*> lastLon|E
+
+  toTType:
+    startLat: (startLatLong <&> (.lat))|E
+    startLon: (startLatLong <&> (.lon))|E
+    endLat: (endLatLong <&> (.lat))|E
+    endLon: (endLatLong <&> (.lon))|E
+    lastLat: (lastLatLong <&> (.lat))|E
+    lastLon: (lastLatLong <&> (.lon))|E
+
+  constraints:
+    id: PrimaryKey
+    personId: "!SecondaryKey"
+
+  sqlType:
+    tariffSnapshot: json
+    trackingConfig: json
+    encodedPolyline: text
+
+  extraIndexes:
+    - columns: [personId, status]
+    - columns: [personId, createdAt]
+
+  queries:
+    findAllByPersonIdAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [personId, status]
+    updateHeartbeatById:
+      kvFunction: updateWithKV
+      params: [distanceMeters, waitingTimeSeconds, lastLatLong, fare, lastHeartbeatAt, updatedAt]
+      where: id
+    updateEndById:
+      kvFunction: updateWithKV
+      params: [status, endTime, endLatLong, distanceMeters, serverLinearDistanceMeters, waitingTimeSeconds, fare, currency, encodedPolyline, pointsCount, estimatedGapMeters, endReason, updatedAt]
+      where: id
+    updateStatusById:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: id
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+    deleteAllByPersonId:
+      kvFunction: deleteWithKV
+      where: personId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES

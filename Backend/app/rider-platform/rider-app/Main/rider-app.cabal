@@ -379,6 +379,7 @@ library
       Domain.Action.UI.NearbyDrivers
       Domain.Action.UI.NyRegularSubscription
       Domain.Action.UI.Offers
+      Domain.Action.UI.OpenMeter
       Domain.Action.UI.ParkingBooking
       Domain.Action.UI.PartnerBookingStatement
       Domain.Action.UI.PartnerOrganizationFRFS
@@ -645,6 +646,7 @@ library
       SharedLogic.Offer
       SharedLogic.OfferSegment
       SharedLogic.OfferTypes
+      SharedLogic.OpenMeter
       SharedLogic.OTP
       SharedLogic.Pass.Eligibility
       SharedLogic.PassExpiryReminder
@@ -909,6 +911,7 @@ library
       Storage.Queries.MerchantServiceUsageConfigExtra
       Storage.Queries.MetaWebhookConfigExtra
       Storage.Queries.NyRegularSubscriptionExtra
+      Storage.Queries.OpenMeterRideExtra
       Storage.Queries.PartnerOrganizationExtra
       Storage.Queries.PartnerOrgConfigExtra
       Storage.Queries.PassCategoryExtra
@@ -1126,6 +1129,7 @@ library
       API.Action.UI.NearbyDrivers
       API.Action.UI.NyRegularSubscription
       API.Action.UI.Offers
+      API.Action.UI.OpenMeter
       API.Action.UI.ParkingBooking
       API.Action.UI.PartnerBookingStatement
       API.Action.UI.Pass
@@ -1293,6 +1297,7 @@ library
       API.Types.UI.NearbyBuses
       API.Types.UI.NearbyDrivers
       API.Types.UI.NyRegularSubscription
+      API.Types.UI.OpenMeter
       API.Types.UI.ParkingBooking
       API.Types.UI.PartnerBookingStatement
       API.Types.UI.Pass
@@ -1422,6 +1427,7 @@ library
       Domain.Types.NyRegularSubscription
       Domain.Types.OfferEntity
       Domain.Types.OnSearchEvent
+      Domain.Types.OpenMeterRide
       Domain.Types.ParcelDetails
       Domain.Types.ParkingTransaction
       Domain.Types.PartnerInvoiceDataLog
@@ -1600,6 +1606,7 @@ library
       Storage.Beam.NyRegularSubscription
       Storage.Beam.OfferEntity
       Storage.Beam.OnSearchEvent
+      Storage.Beam.OpenMeterRide
       Storage.Beam.ParcelDetails
       Storage.Beam.ParkingTransaction
       Storage.Beam.PartnerInvoiceDataLog
@@ -1783,6 +1790,7 @@ library
       Storage.Queries.NyRegularSubscription
       Storage.Queries.OfferEntity
       Storage.Queries.OnSearchEvent
+      Storage.Queries.OpenMeterRide
       Storage.Queries.OrphanInstances.AppInstalls
       Storage.Queries.OrphanInstances.BBPS
       Storage.Queries.OrphanInstances.BecknConfig
@@ -1820,6 +1828,7 @@ library
       Storage.Queries.OrphanInstances.MerchantServiceUsageConfig
       Storage.Queries.OrphanInstances.MetaWebhookConfig
       Storage.Queries.OrphanInstances.NyRegularSubscription
+      Storage.Queries.OrphanInstances.OpenMeterRide
       Storage.Queries.OrphanInstances.PartnerOrganization
       Storage.Queries.OrphanInstances.PartnerOrgConfig
       Storage.Queries.OrphanInstances.Pass
@@ -2248,6 +2257,7 @@ test-suite rider-app-test
   main-is: Main.hs
   other-modules:
       FRFS.DirectQR
+      OpenMeter.TransitionsSpec
       SharedCabAllocationTests
       SharedCabBoardingTests
       SharedCabCallTests

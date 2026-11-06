@@ -1,0 +1,134 @@
+# Rider-started open meter rides: the rider's phone measures distance, time and fare;
+# the backend keeps one row per ride. The client generates the ride id (UUID v4), so
+# start is idempotent. Every lookup checks that the ride belongs to the caller.
+#
+# Generates:
+#   src-read-only/API/Types/UI/OpenMeter.hs
+#   src-read-only/API/Action/UI/OpenMeter.hs
+# Business logic: src/Domain/Action/UI/OpenMeter.hs (transitions in src/SharedLogic/OpenMeter.hs)
+
+imports:
+  OpenMeterRide: Domain.Types.OpenMeterRide
+  OpenMeterRideStatus: Domain.Types.OpenMeterRide
+  OpenMeterEndReason: Domain.Types.OpenMeterRide
+  LatLong: Kernel.External.Maps.Types
+  Meters: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  Value: Data.Aeson
+  APISuccess: Kernel.Types.APISuccess
+
+module: OpenMeter
+
+types:
+  OpenMeterRideStartReq:
+    rideId: Id OpenMeterRide
+    startTime: UTCTime
+    startLatLong: Maybe LatLong
+    tariffSnapshot: Maybe Value
+    trackingConfig: Maybe Value
+
+  # Absolute totals as of sampledAt; a heartbeat not newer than the stored one is ignored.
+  OpenMeterRideHeartbeatReq:
+    sampledAt: UTCTime
+    distanceMeters: Meters
+    waitingTimeSeconds: Seconds
+    lastLatLong: Maybe LatLong
+    fare: Maybe HighPrecMoney
+
+  OpenMeterRideEndReq:
+    endTime: UTCTime
+    endLatLong: Maybe LatLong
+    distanceMeters: Meters
+    waitingTimeSeconds: Seconds
+    fare: Maybe HighPrecMoney
+    currency: Maybe Currency
+    encodedPolyline: Text
+    pointsCount: Int
+    estimatedGapMeters: Meters
+    endReason: OpenMeterEndReason
+
+  # encodedPolyline is only filled by GET /openMeter/ride/{rideId}.
+  OpenMeterRideRes:
+    id: Id OpenMeterRide
+    status: OpenMeterRideStatus
+    startTime: UTCTime
+    endTime: Maybe UTCTime
+    distanceMeters: Meters
+    serverLinearDistanceMeters: Maybe Meters
+    waitingTimeSeconds: Seconds
+    fare: Maybe HighPrecMoney
+    currency: Maybe Currency
+    encodedPolyline: Maybe Text
+    pointsCount: Int
+    estimatedGapMeters: Meters
+    createdAt: UTCTime
+
+apis:
+  # Idempotent on rideId. Rejected with OPEN_METER_RIDE_ALREADY_ACTIVE when another ride
+  # is RUNNING and RiderConfig.allowMultipleOpenMeterRides is off.
+  - POST:
+      endpoint: /openMeter/ride/start
+      auth: TokenAuth
+      request:
+        type: OpenMeterRideStartReq
+      response:
+        type: OpenMeterRideRes
+
+  - POST:
+      endpoint: /openMeter/ride/{rideId}/heartbeat
+      auth: TokenAuth
+      params:
+        rideId: Id OpenMeterRide
+      request:
+        type: OpenMeterRideHeartbeatReq
+      response:
+        type: OpenMeterRideRes
+
+  # Idempotent: ending an ENDED ride returns the stored ride unchanged.
+  - POST:
+      endpoint: /openMeter/ride/{rideId}/end
+      auth: TokenAuth
+      params:
+        rideId: Id OpenMeterRide
+      request:
+        type: OpenMeterRideEndReq
+      response:
+        type: OpenMeterRideRes
+
+  - POST:
+      endpoint: /openMeter/ride/{rideId}/cancel
+      auth: TokenAuth
+      params:
+        rideId: Id OpenMeterRide
+      response:
+        type: OpenMeterRideRes
+
+  - GET:
+      endpoint: /openMeter/ride/{rideId}
+      auth: TokenAuth
+      params:
+        rideId: Id OpenMeterRide
+      response:
+        type: OpenMeterRideRes
+
+  # Newest first, without encodedPolyline.
+  - GET:
+      endpoint: /openMeter/rides
+      auth: TokenAuth
+      query:
+        status: OpenMeterRideStatus
+        limit: Int
+        offset: Int
+      response:
+        type: "[OpenMeterRideRes]"
+
+  # Only for rides that are not RUNNING.
+  - DELETE:
+      endpoint: /openMeter/ride/{rideId}
+      auth: TokenAuth
+      params:
+        rideId: Id OpenMeterRide
+      response:
+        type: APISuccess

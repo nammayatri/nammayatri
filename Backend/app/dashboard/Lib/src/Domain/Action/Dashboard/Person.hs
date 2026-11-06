@@ -98,6 +98,42 @@ data MerchantCityAccessReq = MerchantCityAccessReq
 
 type MerchantAccessRes = MerchantCityAccessReq
 
+-- | Bulk grant/revoke of merchant-city access on one person in a single call.
+-- `add`/`remove` each list a merchant with the cities to grant/revoke under it.
+-- Every (merchant, city) is processed independently: the response reports a row
+-- per item so a partial failure (one bad city, one denied merchant) never rolls
+-- back the items that did succeed.
+data UpdateMerchantCityAccessReq = UpdateMerchantCityAccessReq
+  { add :: [MerchantCitiesReq],
+    remove :: [MerchantCitiesReq]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data MerchantCitiesReq = MerchantCitiesReq
+  { merchantId :: ShortId DMerchant.Merchant,
+    cities :: [City.City]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data MerchantAccessOp = Grant | Revoke
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
+-- | One per (merchant, city, action). `success=False` carries a human-readable
+-- `message`; `success=True` leaves it empty.
+data MerchantCityAccessOutcome = MerchantCityAccessOutcome
+  { merchantId :: ShortId DMerchant.Merchant,
+    operatingCity :: City.City,
+    action :: MerchantAccessOp,
+    success :: Bool,
+    message :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+newtype UpdateMerchantCityAccessRes = UpdateMerchantCityAccessRes
+  { results :: [MerchantCityAccessOutcome]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data ChangePasswordReq = ChangePasswordReq
   { oldPassword :: Text,
     newPassword :: Text
@@ -647,6 +683,104 @@ resetMerchantCityAccess tokenInfo personId req = do
       QAccess.deleteById merchantAccess.id
       DashboardScope.invalidateMerchantAccess personId
       pure Success
+
+-- | Generic bulk editor for a person's merchant-city access. One call grants
+-- (`add`) and/or revokes (`remove`) any number of (merchant, city) pairs and
+-- returns a per-item outcome so the caller sees exactly which pairs succeeded
+-- and why the rest failed — the successful mutations are committed regardless.
+--
+-- Authorization is CITY-SCOPED (stricter than the single-grant APIs, which gate
+-- at merchant level): a non-SUPER_ADMIN caller may only touch a (merchant, city)
+-- they themselves hold access to. SUPER_ADMIN bypasses this. The admin-tier
+-- email-domain policy and server-availability checks from the single-grant path
+-- are preserved.
+updateMerchantCityAccess ::
+  ( BeamFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
+  ) =>
+  TokenInfo ->
+  Id DP.Person ->
+  UpdateMerchantCityAccessReq ->
+  m UpdateMerchantCityAccessRes
+updateMerchantCityAccess tokenInfo personId req = do
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  role <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  decPerson <- decrypt person
+  availableServers <- asks (.dataServers)
+  callerIsSuperAdmin <- isSuperAdmin tokenInfo.personId
+  -- Prefetch the giver's entire merchant_access set in ONE query (skipped for
+  -- SUPER_ADMIN, who bypasses the city-scoped gate), so the per-city caller
+  -- authorization below is an in-memory check rather than a KV lookup per item.
+  callerAccess <-
+    if callerIsSuperAdmin
+      then pure []
+      else QAccess.findAllMerchantAccessByPersonId tokenInfo.personId
+  let serverNames = availableServers <&> (.name)
+      callerHolds mId city =
+        callerIsSuperAdmin || any (\a -> a.merchantId == mId && a.operatingCity == city) callerAccess
+      fail' op mSid city msg =
+        MerchantCityAccessOutcome {merchantId = mSid, operatingCity = city, action = op, success = False, message = Just msg}
+      ok' op mSid city =
+        MerchantCityAccessOutcome {merchantId = mSid, operatingCity = city, action = op, success = True, message = Nothing}
+      runGrant op merchant city =
+        -- Admin-tier access into a merchant must satisfy that merchant's email-domain
+        -- policy (pure check — mirrors assertAdminEmailDomain without throwing).
+        case adminEmailDomainOutcome merchant role decPerson.email of
+          Just msg -> pure $ fail' op merchant.shortId city msg
+          Nothing -> do
+            mbExisting <- QAccess.findByPersonIdAndMerchantIdAndCity personId merchant.id city
+            case mbExisting of
+              Just _ -> pure $ fail' op merchant.shortId city "Merchant access already assigned"
+              Nothing -> do
+                acc <- buildMerchantAccess personId merchant.id merchant.shortId city
+                QAccess.create acc
+                pure $ ok' op merchant.shortId city
+      runRevoke op merchant city = do
+        mbExisting <- QAccess.findByPersonIdAndMerchantIdAndCity personId merchant.id city
+        case mbExisting of
+          Nothing -> pure $ fail' op merchant.shortId city "Server access already denied"
+          Just acc -> do
+            QAccess.deleteById acc.id
+            pure $ ok' op merchant.shortId city
+      processCity op merchant city =
+        if not (callerHolds merchant.id city)
+          then pure $ fail' op merchant.shortId city "You do not have access to this merchant and city"
+          else
+            if city `notElem` merchant.supportedOperatingCities
+              then pure $ fail' op merchant.shortId city "Server does not support this city"
+              else case op of
+                Grant -> runGrant op merchant city
+                Revoke -> runRevoke op merchant city
+      processGrant op MerchantCitiesReq {merchantId = mSid, cities} = do
+        mbMerchant <- QMerchant.findByShortId mSid
+        case mbMerchant of
+          Nothing -> pure [fail' op mSid c "Merchant not found" | c <- cities]
+          Just merchant
+            | not (all (`elem` serverNames) merchant.serverNames) ->
+              pure [fail' op mSid c "Server for this merchant is not available" | c <- cities]
+            | otherwise -> mapM (processCity op merchant) cities
+  addResults <- concat <$> mapM (processGrant Grant) req.add
+  removeResults <- concat <$> mapM (processGrant Revoke) req.remove
+  let results = addResults <> removeResults
+  -- Invalidate the person's cached merchant_access set once, only if any row
+  -- actually mutated, so the next request sees the new grants immediately.
+  when (any (.success) results) $ DashboardScope.invalidateMerchantAccess personId
+  pure UpdateMerchantCityAccessRes {results}
+
+-- | Pure mirror of assertAdminEmailDomain: Nothing = allowed, Just err = rejected.
+adminEmailDomainOutcome :: DMerchant.Merchant -> DRole.Role -> Maybe Text -> Maybe Text
+adminEmailDomainOutcome merchant role mbEmail
+  | not (isAdminTier role.dashboardAccessType) = Nothing
+  | null merchant.adminEmailDomains = Nothing
+  | otherwise = case mbEmail of
+    Nothing -> Just adminEmailDomainError
+    Just email ->
+      let domain = T.toLower . T.drop 1 . T.dropWhile (/= '@') $ email
+       in if any (\allowed -> domain == T.toLower allowed) merchant.adminEmailDomains
+            then Nothing
+            else Just adminEmailDomainError
 
 changePassword ::
   ( BeamFlow m r,

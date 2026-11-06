@@ -27,7 +27,8 @@ import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
 
 data RiderConfig = RiderConfig
-  { alwaysAllowedNotificationCategories :: [Domain.Types.Extra.RiderPreferences.NotificationCategory],
+  { allowMultipleOpenMeterRides :: Kernel.Prelude.Bool,
+    alwaysAllowedNotificationCategories :: [Domain.Types.Extra.RiderPreferences.NotificationCategory],
     appUrl :: Kernel.Prelude.Text,
     autoSendBookingDetailsViaWhatsapp :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoUnblockSafetyCenterAfterDays :: Kernel.Prelude.Int,
@@ -178,6 +179,7 @@ data RiderConfig = RiderConfig
     nyRegularMinGapSeconds :: Kernel.Types.Common.Seconds,
     nyRegularSubscriptionBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     offerListCacheVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    openMeterMaxIdleHours :: Kernel.Prelude.Int,
     passExpiryReminderBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     passExpiryReminderDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     passExpiryReminderNextRunLocalTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,

@@ -24,7 +24,8 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data RiderConfigT f = RiderConfigT
-  { alwaysAllowedNotificationCategories :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+  { allowMultipleOpenMeterRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    alwaysAllowedNotificationCategories :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     appUrl :: B.C f Kernel.Prelude.Text,
     autoSendBookingDetailsViaWhatsapp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autoUnblockSafetyCenterAfterDays :: B.C f Kernel.Prelude.Int,
@@ -175,6 +176,7 @@ data RiderConfigT f = RiderConfigT
     nyRegularMinGapSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     nyRegularSubscriptionBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     offerListCacheVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    openMeterMaxIdleHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     passExpiryReminderBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     passExpiryReminderDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     passExpiryReminderNextRunLocalTime :: B.C f (Kernel.Prelude.Maybe Data.Time.TimeOfDay),
