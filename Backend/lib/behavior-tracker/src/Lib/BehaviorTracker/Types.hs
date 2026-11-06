@@ -17,6 +17,8 @@ module Lib.BehaviorTracker.Types
     CounterType (..),
     ActionEvent (..),
     CounterConfig (..),
+    EventsWindowMark (..),
+    EventsWindowRead (..),
     PeriodConfig (..),
     CounterValues (..),
     BehaviorSnapshot (..),
@@ -76,6 +78,27 @@ data CounterConfig = CounterConfig
     hashTagEntityId :: Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Where an offence goes in an events window (Lib.BehaviorTracker.EventsWindow). Each
+-- behaviour that keeps a window picks one (the app's behaviour pack).
+data EventsWindowMark
+  = -- | The action belongs to the eligible event just before it, e.g. a cancel of the ride
+    -- just assigned: the most recent '0' becomes '1' (a '1' is appended when there is no '0').
+    MarkLatestEligible
+  | -- | The action is an event of its own: a '1' is appended.
+    AppendAction
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Which events window a snapshot counts, and how many of its newest events
+-- (Lib.BehaviorTracker.Snapshot.buildSnapshotWithEvents). The entity id is the event's.
+data EventsWindowRead = EventsWindowRead
+  { readEntity :: EntityType,
+    -- | action type of the window, e.g. "RIDE_CANCELLATION"
+    readKeyName :: Text,
+    -- | how many of the newest events to count (X)
+    readLastX :: Int
+  }
+  deriving (Show, Eq, Generic)
 
 -- | A time period to compute counter values for
 data PeriodConfig = PeriodConfig

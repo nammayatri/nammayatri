@@ -673,6 +673,7 @@ library
       SharedLogic.BehaviourManagement.AutoAcceptCancellation
       SharedLogic.BehaviourManagement.CancellationRate
       SharedLogic.BehaviourManagement.ConsequenceDispatcher
+      SharedLogic.BehaviourManagement.EventsWindow
       SharedLogic.BehaviourManagement.GpsTollBehavior
       SharedLogic.BehaviourManagement.IssueBreach
       SharedLogic.BehaviourManagement.IssueBreachMitigation
@@ -680,6 +681,7 @@ library
       SharedLogic.BehaviourManagement.Packs
       SharedLogic.BehaviourManagement.PickupStall
       SharedLogic.BehaviourManagement.PickupStallState
+      SharedLogic.BehaviourManagement.RunRules
       SharedLogic.BehaviourManagement.Visibility
       SharedLogic.BetterDriverSearch
       SharedLogic.BetterDriverSwap

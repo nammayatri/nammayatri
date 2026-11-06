@@ -20,3 +20,12 @@ ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_element ADD COLUMN merchant
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_element ADD COLUMN patched_element text ;
+
+
+------- SQL updates -------
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_element ADD COLUMN settings text ;

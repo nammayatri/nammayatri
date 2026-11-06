@@ -16,6 +16,7 @@ module Lib.BehaviorTracker.Snapshot
   ( buildSnapshot,
     buildSnapshotWithCooldowns,
     buildSnapshotWithSharedEligible,
+    buildSnapshotWithEvents,
   )
 where
 
@@ -25,6 +26,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Lib.BehaviorTracker.Accumulator (buildCounterValuesWithEligible)
 import Lib.BehaviorTracker.BlockTracker (isEntityInCooldown)
+import qualified Lib.BehaviorTracker.EventsWindow as EventsWindow
 import Lib.BehaviorTracker.Types
 
 -- | Build a snapshot from existing counters without recording a new action
@@ -77,6 +79,37 @@ buildSnapshotWithSharedEligible ::
   m BehaviorSnapshot
 buildSnapshotWithSharedEligible config event entityState cooldownTags eligibleActionType =
   buildSnapshotInternal config event entityState cooldownTags (Just eligibleActionType)
+
+-- | Like buildSnapshotWithCooldowns, plus the counts of an events window. With Nothing it is
+-- exactly buildSnapshotWithCooldowns. With Just it reads the window of the event's entity (one
+-- GET) and adds the counts of its newest X events as counters.events
+-- (EventsWindow.eventsCounterName). Returns the snapshot and the length of an oversized window
+-- that was counted as empty (for the caller to log), or Left with the cause when the window
+-- couldn't be read, so the caller can skip rules that would judge an empty count.
+-- Rules can reference: {"var": "counters.events.actionCount"}
+buildSnapshotWithEvents ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m
+  ) =>
+  CounterConfig ->
+  ActionEvent ->
+  Value -> -- entityState
+  [Text] -> -- cooldown reasonTags to check
+  Maybe EventsWindowRead -> -- the events window to count, Nothing for none
+  m (Either Text (BehaviorSnapshot, Maybe Int))
+buildSnapshotWithEvents config event entityState cooldownTags = \case
+  Nothing -> Right . (,Nothing) <$> buildSnapshotWithCooldowns config event entityState cooldownTags
+  Just window -> do
+    result <- withTryCatch "behaviorTracker:eventsWindowRead" $ EventsWindow.getWindow window.readEntity window.readKeyName event.entityId
+    case result of
+      Left err ->
+        pure $ Left $ "the events window " <> EventsWindow.windowKey window.readEntity window.readKeyName event.entityId <> " couldn't be read because the Redis read failed: " <> show err
+      Right stored -> do
+        snapshot <- buildSnapshotWithCooldowns config event entityState cooldownTags
+        let (counts, mbOversized) = EventsWindow.countLast window.readLastX stored
+        pure $ Right ((snapshot :: BehaviorSnapshot) {counters = Map.insert EventsWindow.eventsCounterName counts snapshot.counters}, mbOversized)
 
 buildSnapshotInternal ::
   ( Redis.HedisFlow m r,

@@ -18,6 +18,9 @@ AppDynamicLogicElement:
     logic: Data.Aeson.Value
     merchantId: Maybe (Id Merchant)
     patchedElement: Maybe Data.Aeson.Value
+    # Version-level settings, the same on every row of a version; null = none. Behaviour
+    # rulebooks: {"ruleType": "EVENTS", "windowSize": X} or {"ruleType": "TIME"} (null = TIME).
+    settings: Maybe Data.Aeson.Value
 
   constraints:
     domain: "PrimaryKey | CompositeSecondaryKey DomainVersion | SecondaryKey"
@@ -45,14 +48,17 @@ AppDynamicLogicElement:
   beamType:
     logic: Text
     patchedElement: Maybe Text
+    settings: Maybe Text
 
   toTType:
     logic: (Data.String.Conversions.cs . Data.Aeson.encode)|I
     patchedElement: fmap (Data.String.Conversions.cs . Data.Aeson.encode)|I
+    settings: fmap (Data.String.Conversions.cs . Data.Aeson.encode)|I
 
   fromTType:
     logic: (Kernel.Prelude.fromMaybe Data.Aeson.Null . Data.Aeson.decode . Data.String.Conversions.cs)|I
     patchedElement: (\val -> (Data.Aeson.decode . Data.String.Conversions.cs) =<< val)|I
+    settings: (\val -> (Data.Aeson.decode . Data.String.Conversions.cs) =<< val)|I
 
   extraOperations:
     - EXTRA_QUERY_FILE

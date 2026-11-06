@@ -37,6 +37,7 @@ module SharedLogic.DriverPool
     quoteResponseCooldownTags,
     rideCancellationActionType,
     rideCancellationCounterConfig,
+    cityEventsWindowSize,
     getLatestCancellationRatio,
     getCurrentWindowAvailability,
     getPopupDelay,
@@ -133,6 +134,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Lib.BehaviorTracker.Accumulator as BTAcc
+import qualified Lib.BehaviorTracker.EventsWindowSettings as EWS
 import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
@@ -476,6 +478,29 @@ rideCancellationCounterConfig =
       periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7],
       hashTagEntityId = True
     }
+
+-- | How many events each events window keeps in this city (Z), for every behaviour that keeps
+-- one: the city's TransporterConfig.eventsWindowSize (default 100). Config patches outside 1 to EWS.maxWindowSize
+-- are refused; a value that got in another way is clamped into that range and logged. The
+-- config is cached, so reading it on every ride costs no database call.
+cityEventsWindowSize ::
+  ( EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  m Int
+cityEventsWindowSize merchantOpCityId = do
+  mbConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+  case mbConfig of
+    Nothing -> do
+      logWarning $ "Events window: city " <> merchantOpCityId.getId <> " has no TransporterConfig, so its events windows keep the default " <> show EWS.defaultWindowSize <> " events."
+      pure EWS.defaultWindowSize
+    Just config -> do
+      let z = config.eventsWindowSize
+          clamped = max 1 (min EWS.maxWindowSize z)
+      when (clamped /= z) $
+        logWarning $ "Events window: TransporterConfig.eventsWindowSize of city " <> merchantOpCityId.getId <> " is " <> show z <> ", outside 1 to " <> show EWS.maxWindowSize <> ", so its events windows keep " <> show clamped <> " events. Fix TransporterConfig.eventsWindowSize."
+      pure clamped
 
 incrementTotalRidesCount ::
   ( Redis.HedisFlow m r,
