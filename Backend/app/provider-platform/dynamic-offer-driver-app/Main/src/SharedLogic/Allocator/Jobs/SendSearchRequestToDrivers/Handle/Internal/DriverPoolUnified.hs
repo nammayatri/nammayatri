@@ -23,7 +23,6 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -216,22 +215,11 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           else pure (poolNotOnRide, poolOnRide)
       pure $ SDP.PrepareDriverPoolBatchEntity poolWithSpecialZoneInfoNotOnRide NormalPool Nothing poolWithSpecialZoneInfoOnRide
       where
-        -- Logs the top-drivers batch (how many drivers passed the rules) and publishes its event.
+        -- Logs the top-drivers batch: how many drivers passed the rules, and the rules in force.
         reportTopDriversBatch transporterConfig qualifiedDrivers = do
           now <- getCurrentTime
           let (topDriverRules, usedDefaults) = SRTD.resolveTopDriverRules transporterConfig searchTry.vehicleServiceTier now searchTry.startTime
               selected = take (getBatchSize driverPoolCfg.dynamicBatchSize batchNum driverPoolCfg.driverBatchSize) qualifiedDrivers
-              event =
-                SRTD.mkTopDriversRoundEvent
-                  searchTry.id.getId
-                  searchTry.merchantOperatingCityId.getId
-                  batchNum
-                  searchTry.startTime
-                  (length qualifiedDrivers)
-                  (map (\dp -> dp.driverPoolResult.driverId.getId) selected)
-                  topDriverRules
-                  usedDefaults
-                  now
           logInfo $
             "TopDrivers: searchTryId=" <> searchTry.id.getId <> " batch=" <> show batchNum
               <> " qualified=" <> show (length qualifiedDrivers)
@@ -241,7 +229,6 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               <> " minRides=" <> show topDriverRules.minCompletedRides
               <> " radius=" <> show topDriverRules.pickupRadiusMeters
               <> " usedDefaults=" <> show usedDefaults <> ")"
-          fork "publishTopDriversRoundEvent" $ pushToKafka event SRTD.topDriversTopic searchTry.id.getId
 
         addSpecialZonePickupInfo pool = do
           (driversFromGate, restDrivers) <- splitDriverFromGateAndRest pool

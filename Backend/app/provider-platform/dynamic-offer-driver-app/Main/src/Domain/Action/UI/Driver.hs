@@ -2012,7 +2012,15 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
           parkingCharges = farePolicy.parkingCharge
       let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) farePolicy.conditionalCharges
-      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (Just transporterConfig.driverWalletConfig) mbRiderDetails transporterConfig.showRoutePerRequest -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      -- Scheduled rides: tell the app whether this driver can accept it, so it can guide a driver who is short of the minimum balance.
+      nowForWalletFlag <- getCurrentTime
+      mbHasMinWalletBalance <-
+        if searchTry.isScheduled && not (DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes searchTry.startTime nowForWalletFlag)
+          then do
+            let minBalance = scheduledRideMinWalletFloor farePolicy.conditionalCharges <|> transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides
+            Just <$> FWallet.hasMinWalletBalance counterpartyDriver minBalance driverId.getId
+          else pure Nothing
+      return $ (USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (Just transporterConfig.driverWalletConfig) mbRiderDetails transporterConfig.showRoutePerRequest -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.) {USRD.hasMinWalletBalance = mbHasMinWalletBalance}
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
