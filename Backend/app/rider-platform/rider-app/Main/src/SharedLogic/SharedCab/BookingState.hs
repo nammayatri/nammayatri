@@ -114,7 +114,8 @@ data BookingStateView = BookingStateView
     attemptCount :: Int,
     findingStintSince :: Maybe UTCTime,
     preferredPlate :: Maybe Text,
-    preferenceLost :: Bool
+    preferenceLost :: Bool,
+    driverPassed :: Bool
   }
 
 -- | A missing or undecodable field reads as its single-field reader's default.
@@ -125,7 +126,8 @@ bookingStateFrom fields =
       attemptCount = fromMaybe 0 (field "attempts"),
       findingStintSince = field "findingSince",
       preferredPlate = field "preferred",
-      preferenceLost = fromMaybe False (field "preferredDropped")
+      preferenceLost = fromMaybe False (field "preferredDropped"),
+      driverPassed = not (null (fromMaybe ([] :: [Text]) (field "skipped")))
     }
   where
     field :: FromJSON a => Text -> Maybe a
