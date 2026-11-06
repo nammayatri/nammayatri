@@ -341,6 +341,22 @@ apis:
         type: APISuccess
       migrate:
         capability: system-config.fare_policy.write
+  - GET: # GetRiderConfigCallingAPI
+      endpoint: /riderConfig/calling
+      auth: ApiAuthV2
+      response:
+        type: RiderCallingConfigRes
+      migrate:
+        capability: city-config.launch.read
+  - POST: # PostRiderConfigCallingUpdateAPI
+      endpoint: /riderConfig/calling/update
+      auth: ApiAuthV2
+      request:
+        type: UpdateRiderCallingConfigReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-config.launch.write
   - POST: # MerchantConfigDebugLogUpdateAPI
       endpoint: /config/debugLog/update
       auth: ApiAuthV2
@@ -463,6 +479,15 @@ types:
     - paymentCharge: Maybe HighPrecMoney
     - paymentChargeTax: Maybe TaxConfig
     - paymentChargeBearer: Maybe PaymentChargeBearer
+    - derive: "'HideSecrets"
+  CallingMode:
+    - enum: "EXOTEL, RIDER_PREFERENCE, EMERGENCY"
+  RiderCallingConfigRes:
+    - mode: Maybe CallingMode
+    - enableShareNumberWithDriver: Bool
+    - pushConsentToBpp: Bool
+  UpdateRiderCallingConfigReq:
+    - mode: CallingMode
     - derive: "'HideSecrets"
   RiderMerchantMessageCatalogResp:
     - values: "[Text]"

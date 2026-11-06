@@ -59,6 +59,7 @@ data RiderConfig = RiderConfig
     busTrackingNotificationTiers :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     busTransitTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     busTripTtl :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    callingMode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationPaymentDelay :: Kernel.Prelude.NominalDiffTime,
     cancellationRateCalculationThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationRateThresholdDaily :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
