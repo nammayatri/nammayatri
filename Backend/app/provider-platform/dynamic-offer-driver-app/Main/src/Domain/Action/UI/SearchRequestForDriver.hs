@@ -125,6 +125,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     isPaymentOnline :: Maybe Bool,
     driverCancellationNotAllowed :: Maybe Bool,
     isScheduled :: Bool,
+    hasMinWalletBalance :: Maybe Bool,
     customerRating :: Maybe Centesimal,
     showRoutePerRequest :: Maybe Bool,
     -- Only present when at least one of the driver's own preferences applied to this request.
@@ -192,6 +193,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           -- customerCancellationDuesWithCurrency = PriceAPIEntity nearbyReq.customerCancellationDues nearbyReq.currency,
           tripCategory = searchTry.tripCategory,
           isScheduled = searchTry.isScheduled,
+          hasMinWalletBalance = Nothing,
           preferenceMatchScore =
             if fromMaybe False nearbyReq.hasApplicablePreferences
               then nearbyReq.preferenceMatchScore

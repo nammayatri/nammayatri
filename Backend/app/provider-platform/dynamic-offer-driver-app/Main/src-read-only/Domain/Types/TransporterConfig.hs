@@ -642,7 +642,8 @@ data ScheduledRideConfig = ScheduledRideConfig
     maxHoldsPerDriver :: Kernel.Prelude.Int,
     maxLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     minLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    scheduledRideVisibilityStages :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ScheduledRideVisibilityStage]
+    scheduledRideVisibilityStages :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ScheduledRideVisibilityStage],
+    topDriversFirstAdvanceTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
