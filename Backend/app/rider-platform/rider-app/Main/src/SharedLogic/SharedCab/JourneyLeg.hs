@@ -149,7 +149,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
           fleetNo = journeyLeg.finalBoardedBusNumber,
           serviceTierType = Just Spec.SHARED_CAB,
           merchantOperatingCityId = booking.merchantOperatingCityId,
-          sharedCab = mkLegStatus visibleBooking mbDriverInfo cabsComing boardDeadlineSec cabTrack maskedCall chatChannel mbCancelReason preference (upcomingCabs, skipAvailable) <$> mbState
+          sharedCab = mkLegStatus visibleBooking mbDriverInfo cabsComing boardDeadlineSec cabTrack maskedCall chatChannel mbCancelReason preference (upcomingCabs, skipAvailable) bookingState.driverPassed <$> mbState
         }
   where
     mbRouteCode = listToMaybe journeyLeg.routeDetails >>= (.routeGtfsId) <&> gtfsIdtoDomainCode
@@ -187,9 +187,10 @@ mkLegStatus ::
   Maybe SharedCabLeg.CancelReason ->
   (Maybe Text, Bool) ->
   ([SharedCabLeg.UpcomingCab], Bool) ->
+  Bool ->
   SharedCabLeg.SharedCabState ->
   SharedCabLeg.SharedCabLegStatus
-mkLegStatus booking mbDriverInfo cabsComing boardDeadlineSec cabTrack maskedCall chatChannel reason (preferredCab, preferredCabLost) (upcomingCabs, skipAvailable) st =
+mkLegStatus booking mbDriverInfo cabsComing boardDeadlineSec cabTrack maskedCall chatChannel reason (preferredCab, preferredCabLost) (upcomingCabs, skipAvailable) driverPassed st =
   SharedCabLeg.SharedCabLegStatus
     { state = st,
       bookingId = booking.id.getId,
@@ -208,7 +209,8 @@ mkLegStatus booking mbDriverInfo cabsComing boardDeadlineSec cabTrack maskedCall
       preferredCab,
       preferredCabLost,
       upcomingCabs,
-      skipAvailable
+      skipAvailable,
+      driverPassed = driverPassed && st == SharedCabLeg.FINDING
     }
   where
     live = if st `elem` [SharedCabLeg.DROPPED, SharedCabLeg.CANCELLED] then Nothing else cabTrack
