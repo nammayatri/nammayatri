@@ -1564,7 +1564,10 @@ buildComponentMap FareParameters {..} =
             (CustomerGateFeeComponent, sum (map (.amount) (fromMaybe [] customerGateFeeItems))),
             (DriverSelectedFareComponent, maybeZero driverSelectedFare),
             (NegotiatedFareDeltaComponent, maybeZero negotiatedFareDelta),
-            (NegativeFareAdjustmentComponent, maybeZero negativeFareAdjustment)
+            (NegativeFareAdjustmentComponent, maybeZero negativeFareAdjustment),
+            (GovtChargesComponent, maybeZero govtCharges),
+            (PersonalDiscountComponent, if shouldApplyPersonalDiscount then negate (maybeZero personalDiscount) else 0),
+            (BusinessDiscountComponent, if shouldApplyBusinessDiscount then negate (maybeZero businessDiscount) else 0)
           ]
    in Map.union baseMap (detailComponentMap fareParametersDetails)
 
