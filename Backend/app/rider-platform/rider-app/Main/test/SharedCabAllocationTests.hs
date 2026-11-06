@@ -220,6 +220,9 @@ tests =
       testCase "only a stationary cab within atStopRadiusM of the board stop gets the stand timer" $
         map claimedAs [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5, cabFix "P1" farAway Nothing 5]
           @?= [[CabAtStop], [CabAway], [CabMoving], [CabAway]],
+      testCase "a cab standing at the board stop stays a candidate after gps-processor drops the stop from its ETAs; a moving one does not" $
+        let reached speed = (cabFix "P1" nearStop speed 5) {Lts.etas = [etaEntry "S2" (addUTCTime 120 t0)]}
+         in map claimedAs [reached (Just 0), reached (Just 8)] @?= [[CabAtStop], []],
       testCase "a stationary cab gets a bounded wait, at the stop the stand timer and away the allocation window; a moving cab none" $
         map (\veh -> [claimTimer defaultTunables t0 c | c <- eligibleCandidates t0 defaultTunables [veh] [(candidate "P1").rcSession] finding stop]) [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5]
           @?= [[StandTimer (addUTCTime (fromIntegral defaultTunables.standTimerSec) t0)], [AwayTimer (addUTCTime (fromIntegral defaultTunables.allocationWindowSec) t0)], [NoTimer]],

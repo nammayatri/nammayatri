@@ -88,7 +88,6 @@ acceptOffer driver plate bookingId = do
       pure . fromMaybe CabAway $ do
         cab <- mbTrack
         guard (isFreshPosition now cfg.ltsMaxAgeSec cab)
-        guard (isJust (Lts.etaAt boardStopCode cab)) -- the board stop is still ahead of it
         boardPoint <- (.stopPoint) <$> find ((== boardStopCode) . (.stopCode)) stops
         pure (cabStance cfg cab boardPoint)
 

@@ -40,6 +40,7 @@ module SharedLogic.SharedCab.Allocation.Select
   )
 where
 
+import Control.Applicative ((<|>))
 import Data.List (sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -151,8 +152,8 @@ cabStance cfg cab stopPoint
 isFreshPosition :: UTCTime -> Int -> CabTrack -> Bool
 isFreshPosition now maxAgeSec cab = let age = diffUTCTime now cab.pingAt in 0 <= age && age <= fromIntegral maxAgeSec
 
--- | Nearest first. A cab not past the board stop (it stays ahead while the cab stands at it), big enough for the party (Phase 2 checks
--- the seats under the lock), and ETA within allocationWindowSec. `boardPoint` is the board stop's position.
+-- | Nearest first. A cab not past the board stop, or standing at it (gps-processor drops a stop from the ETAs once the cab reaches it),
+-- big enough for the party (Phase 2 checks the seats under the lock), and ETA within allocationWindowSec. `boardPoint` is the board stop's position.
 eligibleCandidates ::
   UTCTime ->
   Config.SharedCabTunables ->
@@ -164,13 +165,14 @@ eligibleCandidates ::
 eligibleCandidates now cfg tracking sessions booking boardPoint =
   sortOn
     rcEtaToBoardStopSec
-    [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcStance = cabStance cfg cab boardPoint}
+    [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcStance = stance}
       | s <- sessions,
         s.status == ACTIVE,
         s.capacity >= booking.seats,
         Just cab <- [find ((== s.vehicleNumber) . (.vehicleNumber)) tracking],
         isFreshPosition now cfg.ltsMaxAgeSec cab,
-        Just eta <- [etaAt booking.boardStopCode cab],
+        let stance = cabStance cfg cab boardPoint,
+        Just eta <- [etaAt booking.boardStopCode cab <|> (now <$ guard (stance == CabAtStop))],
         let etaSec = max 0 (floor (diffUTCTime eta now)),
         etaSec <= cfg.allocationWindowSec,
         etaPlausible cfg etaSec cab.position boardPoint
