@@ -51,6 +51,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.SearchTry as QST
 import qualified Tools.Metrics as Metrics
+import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 
 betterDriverSearchProximityInitialDelaySec :: NominalDiffTime
@@ -169,6 +170,7 @@ checkBetterDriverSearchProximity Job {id, jobInfo} = withLogTag ("JobId-" <> id.
                     if distance < abortRadius
                       then do
                         QST.cancelBetterDriverSearchByBookingId bookingId.getId
+                        SharedRedisKeys.setBetterDriverSearchOutcome bookingId.getId "DRIVER_CLOSE"
                         return Complete
                       else rescheduleIn $ nextCheckDelay (realToFrac (distance - abortRadius)) (observedSpeedMps driverLocationResp.loc)
   where
