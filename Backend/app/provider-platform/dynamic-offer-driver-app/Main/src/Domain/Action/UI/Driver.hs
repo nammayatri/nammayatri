@@ -302,6 +302,7 @@ import qualified SharedLogic.OneShotAssign as OneShot
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Payout.Bulk.Eligibility (mkBankVerificationStatus)
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
+import SharedLogic.Person (applyPendingOnRideBlock)
 import SharedLogic.Ride
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import SharedLogic.ScheduledRideVisibility (BookingVisibilityFacts (..), DriverVisibilityFacts (..), VisibilityFactNeeds (..), factsNeededBy, isVisibleUnderRules, resolveVisibilityStage)
@@ -1403,7 +1404,9 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId, identit
         Ride.notOnRide person.id >>= \veryMuchNotOnRide ->
           if veryMuchNotOnRide
             then do
-              fork "Update Wrongly Set OnRide" $ updateOnRideStatusWithAdvancedRideCheck person.id Nothing
+              fork "Update Wrongly Set OnRide" $ do
+                updateOnRideStatusWithAdvancedRideCheck person.id Nothing
+                applyPendingOnRideBlock person.id
               return False
             else return driverInfo.onRide
       else return driverInfo.onRide

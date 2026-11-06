@@ -818,6 +818,7 @@ library
       SharedLogic.Payout.Bulk.Eligibility
       SharedLogic.Payout.RetimeScheduledBatchPayout
       SharedLogic.PayoutStatusCheck
+      SharedLogic.PendingOnRideBlock
       SharedLogic.Person
       SharedLogic.PersonBankAccount
       SharedLogic.PersonDefaultEmergencyNumber

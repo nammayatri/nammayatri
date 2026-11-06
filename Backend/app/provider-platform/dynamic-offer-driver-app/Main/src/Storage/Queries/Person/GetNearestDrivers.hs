@@ -48,6 +48,7 @@ import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.WalletAccount
+import qualified SharedLogic.PendingOnRideBlock as PendingBlock
 import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
 import Storage.Beam.Finance ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -204,7 +205,11 @@ processCandidatesChunk req@NearestDriversReq {..} fetchPoolData chunk = do
   let poolDataMap = HashMap.fromList $ (\dpd -> (dpd.driverId, dpd)) <$> poolDataList
       cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
       results = concat $ mapMaybe (buildDriverResult req isPrepaidEnabled poolDataMap cityServiceTiersHashMap . driverLoc) filteredChunk
-  filterByWalletBalance req isPrepaidEnabled results
+  -- A driver with a dashboard block waiting on their current ride must not be forward-batched
+  -- another one; the block is applied as soon as this ride ends.
+  pendingBlockedOnRide <- filterM PendingBlock.hasPendingOnRideBlock (DL.nub [cast r.driverId | r <- results, r.onRide])
+  let eligible = filter (\r -> not (r.onRide && cast r.driverId `elem` pendingBlockedOnRide)) results
+  filterByWalletBalance req isPrepaidEnabled eligible
 
 -- | Wrapper for non-chunked callers (Estimate stage): fetch then process all as one chunk.
 getNearestDrivers ::

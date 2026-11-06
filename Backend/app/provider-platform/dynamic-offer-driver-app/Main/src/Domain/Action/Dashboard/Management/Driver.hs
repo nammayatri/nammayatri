@@ -175,6 +175,8 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.PendingOnRideBlock as PendingBlock
+import SharedLogic.Person (applyPendingOnRideBlock)
 import SharedLogic.Ride
 import SharedLogic.VehicleServiceTier
 import Storage.Beam.SystemConfigs ()
@@ -612,38 +614,54 @@ blockDriverWithReason merchant merchantOpCityId reqDriverId dashboardUserName re
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   let isFleetOwner = SDO.isFleetRole driver.role
+  mbDriverInfo <- if isFleetOwner then pure Nothing else Just <$> (QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound)
   alreadyBlocked <-
     if isFleetOwner
       then (.blocked) <$> (QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId))
-      else (.blocked) <$> (QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound)
+      else pure $ maybe False (.blocked) mbDriverInfo
   when alreadyBlocked $ throwError DriverAccountAlreadyBlocked
-  tcForBlock <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let blockTarget = if isFleetOwner then SGuard.TargetFleetOwner personId else SGuard.TargetDriver personId
-  SGuard.withOnboardingAction tcForBlock SGuard.None SGuard.Block blockTarget $ do
-    void $
-      SFlags.markBlockFlags personId $
-        SFlags.Block
-          SFlags.BlockPayload
-            { SFlags.bpReason = req.blockReason,
-              SFlags.bpExpiryHours = req.blockTimeInHours,
-              SFlags.bpDashboardUserName = dashboardUserName,
-              SFlags.bpMerchantId = merchantId,
-              SFlags.bpReasonCode = req.reasonCode,
-              SFlags.bpMerchantOperatingCityId = driver.merchantOperatingCityId,
-              SFlags.bpBlockedBy = DTDBT.Dashboard,
-              SFlags.bpActive = Nothing,
-              SFlags.bpMode = Nothing,
-              SFlags.bpFlag = ByDashboard
-            }
-    case req.blockTimeInHours of
-      Just hrs -> do
-        let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral hrs) * 60 * 60
-        JC.createJobIn @_ @'UnblockDriver (Just merchantId) (Just merchantOpCityId) unblockDriverJobTs $
-          UnblockDriverRequestJobData
-            { driverId = driverId
-            }
-      Nothing -> return ()
-  logTagInfo "dashboard -> blockDriver : " (show personId)
+  if maybe False (.onRide) mbDriverInfo
+    then do
+      -- The driver is mid-ride: blocking now would strand the customer. Park the request; it is
+      -- applied when the driver comes off the ride, and meanwhile keeps them out of forward batching.
+      now <- getCurrentTime
+      PendingBlock.setPendingOnRideBlock personId $
+        PendingBlock.PendingOnRideBlock
+          { reasonCode = req.reasonCode,
+            blockReason = req.blockReason,
+            blockTimeInHours = req.blockTimeInHours,
+            dashboardUserName = dashboardUserName,
+            requestedAt = now
+          }
+      logTagInfo "dashboard -> blockDriver deferred till ride end : " (show personId)
+    else do
+      tcForBlock <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      let blockTarget = if isFleetOwner then SGuard.TargetFleetOwner personId else SGuard.TargetDriver personId
+      SGuard.withOnboardingAction tcForBlock SGuard.None SGuard.Block blockTarget $ do
+        void $
+          SFlags.markBlockFlags personId $
+            SFlags.Block
+              SFlags.BlockPayload
+                { SFlags.bpReason = req.blockReason,
+                  SFlags.bpExpiryHours = req.blockTimeInHours,
+                  SFlags.bpDashboardUserName = dashboardUserName,
+                  SFlags.bpMerchantId = merchantId,
+                  SFlags.bpReasonCode = req.reasonCode,
+                  SFlags.bpMerchantOperatingCityId = driver.merchantOperatingCityId,
+                  SFlags.bpBlockedBy = DTDBT.Dashboard,
+                  SFlags.bpActive = Nothing,
+                  SFlags.bpMode = Nothing,
+                  SFlags.bpFlag = ByDashboard
+                }
+        case req.blockTimeInHours of
+          Just hrs -> do
+            let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral hrs) * 60 * 60
+            JC.createJobIn @_ @'UnblockDriver (Just merchantId) (Just merchantOpCityId) unblockDriverJobTs $
+              UnblockDriverRequestJobData
+                { driverId = driverId
+                }
+          Nothing -> return ()
+      logTagInfo "dashboard -> blockDriver : " (show personId)
 
 ---------------------------------------------------------------------
 --TODO : To Be Deprecated
@@ -726,6 +744,8 @@ postDriverUnblock merchantShortId opCity reqDriverId dashboardUserName preventWe
           void $ SFlags.markBlockFlags personId (SFlags.Unblock unblockPayload)
     else do
       driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+      -- An unblock also withdraws a block that is still waiting for the driver's ride to end.
+      PendingBlock.clearPendingOnRideBlock personId
       SGuard.withOnboardingAction tcForUnblock SGuard.None SGuard.Unblock (SGuard.TargetDriver personId) $ do
         when driverInf.blocked $ do
           void $ SFlags.markBlockFlags personId (SFlags.Unblock unblockPayload)
@@ -991,6 +1011,7 @@ getDriverClearStuckOnRide merchantShortId _ dbSyncTime = do
     mapM
       ( \dI -> do
           updateOnRideStatusWithAdvancedRideCheck (cast dI.driverInfo.driverId) (Just dI.ride)
+          applyPendingOnRideBlock (cast dI.driverInfo.driverId)
           void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (dI.ride.fromLocation.lat) (dI.ride.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) dI.ride.stops}))
           return (cast dI.driverInfo.driverId)
       )

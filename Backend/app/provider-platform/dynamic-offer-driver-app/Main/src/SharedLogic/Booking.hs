@@ -37,6 +37,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
+import SharedLogic.Person (applyPendingOnRideBlock)
 import SharedLogic.Ride
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.SearchTryLocker as CS
@@ -143,6 +144,7 @@ cancelBooking' notifyBAP booking mbDriver transporter = do
         FleetEngine.notifyTripCancelled booking.merchantOperatingCityId ride.id
       when (ride.status == SRide.INPROGRESS) $ DSC.recordOnRideChange booking.merchantOperatingCityId False
       updateOnRideStatusWithAdvancedRideCheck (cast ride.driverId) mbRide
+      applyPendingOnRideBlock (cast ride.driverId)
       -- Mirrors cancelRideTransaction: without this the gate keeps pointing at the cancelled booking and benches the driver from every later scheduled pool.
       when booking.isScheduled $ do
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)

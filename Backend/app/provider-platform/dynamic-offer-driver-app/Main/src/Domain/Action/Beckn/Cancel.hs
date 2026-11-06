@@ -60,6 +60,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.OndcCancellationReason as SOCR
+import SharedLogic.Person (applyPendingOnRideBlock)
 import SharedLogic.Ride
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.SearchTryLocker as CS
@@ -116,6 +117,7 @@ cancel req merchant booking mbActiveSearchTry = do
     whenJust mbRide $ \ride -> do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
       updateOnRideStatusWithAdvancedRideCheck ride.driverId mbRide
+      applyPendingOnRideBlock ride.driverId
       Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
       void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
       QRide.updateStatus ride.id SRide.CANCELLED
