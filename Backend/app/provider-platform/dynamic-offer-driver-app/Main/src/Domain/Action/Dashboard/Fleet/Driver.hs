@@ -2988,7 +2988,7 @@ linkExistingDriverToFleet merchant merchantOpCityId transporterConfig requestorA
     when (merchant.overwriteAssociation == Just True) $
       DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
     QFDV.createFleetDriverAssociationWithLTSSync person.id (Id fleetOwnerId) Nothing (Just person.merchantId) (Just person.merchantOperatingCityId)
-    fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver person.id merchantOpCityId
+    fork "applyFleetSettings" $ FDS.applyFleetSettingsOnJoin person.id merchantOpCityId
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById person.id
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig
@@ -4524,7 +4524,7 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
         SOnboardingComms.setOnboardingAsWithoutLock transporterConfig driver DI.FLEET_DRIVER
         when (merchant.overwriteAssociation == Just True) $ do
           DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig driverId
-        fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver driverId merchantOpCityId
+        fork "applyFleetSettings" $ FDS.applyFleetSettingsOnJoin driverId merchantOpCityId
         when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $
           QDBA.deleteById driverId
         Analytics.handleDriverAnalyticsAndFlowStatus
@@ -4586,7 +4586,12 @@ postDriverFleetDriverChangeFleetOwner merchantShortId opCity driverId req = do
     FDV.createFleetDriverAssociationIfNotExists personId newFleetOwner.id Nothing (fromMaybe DVC.CAR driverInfo.onboardingVehicleCategory) linkAsActive req.reason (Just merchant.id) (Just moc.id) $
       when (linkAsActive && transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $
         Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just newFleetOwner.id.getId) personId
-    when linkAsActive $ fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver personId moc.id
+    -- A move to another fleet starts from scratch on auto-assign; a re-link to the same fleet keeps it.
+    when linkAsActive $
+      fork "applyFleetSettings" $
+        if fmap (.fleetOwnerId) mbActiveAssociation == Just newFleetOwner.id.getId
+          then FDS.applyFleetSettingsToDriver personId moc.id
+          else FDS.applyFleetSettingsOnJoin personId moc.id
   fork "Fleet owner change notification" $
     SOnboardingComms.notifyOnFleetOwnerChange moc.id person newFleetOwner mbOldFleetOwner
   pure Success
@@ -5467,10 +5472,15 @@ postDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFl
   Redis.withWaitAndLockRedisWithTimeout (SVST.selectedServiceTiersLockKey personId) 5 10 50000 $ do
     driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
     vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
-    let tiers = FDS.vehicleAutoAcceptTiers cityTiers vehicle
     if req.enable
       then do
+        -- A fleet that doesn't let its drivers toggle force-selects the vehicle's eligible tiers, so it isn't limited to
+        -- the ones already selected.
+        tiers <- FDS.fleetAutoAssignTiers True cityTiers driver vehicle
         when (null tiers) $ throwError NoAutoAcceptTierForVehicle
         FDS.applyFleetSettings True cityTiers driver vehicle
-      else FDS.removeAutoAssign tiers driver vehicle
+      else do
+        -- The whole tag, whatever it holds: a tier the wallet strip unselected, or one the city no longer has, would stay
+        -- on it and keep the driver fleet-locked. As OptOutAutoAssign. Selected tiers stay.
+        void $ FDS.clearAutoAssign driver (Just vehicle)
   pure Success

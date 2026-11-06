@@ -26,6 +26,7 @@ import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding.Common as SOnbCommon
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
+import qualified SharedLogic.FleetDriverSettings as FDS
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -99,6 +100,8 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
     mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId res.person.id
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
     QFDV.createFleetDriverAssociationWithLTSSync res.person.id (Id fleetOwnerId) mbOperatorId (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId)
+    -- An existing driver may still carry an earlier fleet's auto-assign: cleared, then this fleet's settings.
+    fork "applyFleetSettings" $ FDS.applyFleetSettingsOnJoin res.person.id transporterConfig.merchantOperatingCityId
     fleetLinkDriver <- QP.findById res.person.id >>= fromMaybeM (PersonNotFound res.person.id.getId)
     SOnboardingComms.setOnboardingAs transporterConfig SGuard.None fleetLinkDriver DDI.FLEET_DRIVER
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById res.person.id
