@@ -608,10 +608,12 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
             Right r -> pure r
       else pure []
   let offerMap = Map.fromList productOffers
+  -- The rules depend only on the city, so fetch them once for the whole search, and only when some product has offers.
+  cumulativeLogics <- if Map.null offerMap then pure [] else SOffer.getCumulativeOfferLogics searchReq.merchantOperatingCityId
   forM quoteEntitiesWithCtx $ \(quoteEntity, (productId, mbBreakup, _)) -> do
     mbOffer <- case Map.lookup productId offerMap of
       Nothing -> pure Nothing
-      Just resp -> SOffer.mkCumulativeOfferResp searchReq.merchantOperatingCityId resp [] mbBreakup Nothing
+      Just resp -> SOffer.mkCumulativeOfferRespWithLogics cumulativeLogics searchReq.merchantOperatingCityId resp [] mbBreakup Nothing
     serviceTierName <- translateServiceTierText searchReq.merchantOperatingCityId language quoteEntity.serviceTierName
     serviceTierShortDesc <- translateServiceTierText searchReq.merchantOperatingCityId language quoteEntity.serviceTierShortDesc
     pure quoteEntity {customerOffers = mbOffer, SharedLogic.Quote.serviceTierName = serviceTierName, SharedLogic.Quote.serviceTierShortDesc = serviceTierShortDesc}
@@ -671,11 +673,13 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
             Right r -> pure r
       else pure []
   let offerMap = Map.fromList productOffers
+  -- The rules depend only on the city, so fetch them once for the whole search, and only when some product has offers.
+  cumulativeLogics <- if Map.null offerMap then pure [] else SOffer.getCumulativeOfferLogics searchRequest.merchantOperatingCityId
   estimates <- forM estimatesWithCtx $ \(estimate, mbBreakup, _) -> do
     let mbOfferResp = Map.lookup (show estimate.vehicleServiceTierType) offerMap
     mbOffer <- case mbOfferResp of
       Nothing -> pure Nothing
-      Just resp -> SOffer.mkCumulativeOfferResp searchRequest.merchantOperatingCityId resp [] mbBreakup Nothing
+      Just resp -> SOffer.mkCumulativeOfferRespWithLogics cumulativeLogics searchRequest.merchantOperatingCityId resp [] mbBreakup Nothing
     (bppDetails, valueAddNP) <- lookupProvider providerLookup estimate.providerId
     apiEntity <- UEstimate.mkEstimateAPIEntity isReferredRide mbOffer bppDetails valueAddNP estimate
     serviceTierName <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierName

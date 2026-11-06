@@ -729,7 +729,12 @@ getOrderCardInfo mbOrder = runMaybeT $ do
 buildBookingStatusAPIEntity :: Booking -> Flow BookingStatusAPIEntity
 buildBookingStatusAPIEntity booking = do
   mbActiveRide <- runInReplica $ QRideLite.findActiveByRBIdLite booking.id
-  batchConfig <- maybe (SharedRedisKeys.getBatchConfig booking.transactionId) (\_ -> pure Nothing) mbActiveRide
+  -- A better-driver stand-by search runs while the ride is active and writes its schedule under
+  -- the same key, so the app can tell when that search runs out.
+  batchConfig <-
+    if isNothing mbActiveRide || (booking.eligibleForBetterDriverSearch == Just True && booking.status == TRIP_ASSIGNED)
+      then SharedRedisKeys.getBatchConfig booking.transactionId
+      else pure Nothing
   stopsInfo <- if (fromMaybe False booking.hasStops) then maybe (pure []) (\ride -> QSI.findAllByRideId ride.id) mbActiveRide else return []
   let showPrevDropLocationLatLon = maybe False (.showDriversPreviousRideDropLoc) mbActiveRide
       driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (mbActiveRide >>= (.driversPreviousRideDropLoc)) else Nothing

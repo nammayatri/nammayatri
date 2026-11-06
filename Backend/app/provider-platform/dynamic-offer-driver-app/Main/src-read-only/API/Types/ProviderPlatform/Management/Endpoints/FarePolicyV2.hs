@@ -226,6 +226,9 @@ data FPV2FareChargeComponent
   | NegotiatedFareDeltaComponent
   | NegativeFareAdjustmentComponent
   | PaymentChargePaidByCustomerComponent
+  | GovtChargesComponent
+  | PersonalDiscountComponent
+  | BusinessDiscountComponent
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

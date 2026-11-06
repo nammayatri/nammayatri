@@ -287,6 +287,7 @@ data FareUISubItem = FareUISubItem
   { title :: Text,
     price :: PriceAPIEntity,
     uiTranslation :: Maybe Text,
+    _type :: FareUIComponentType,
     subItems :: [FareUISubItem]
   }
   deriving stock (Show, Generic)
@@ -382,7 +383,8 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam cus
       mkConfiguredSubItem line = do
         label <- resolveLabel lang line.key
         kids <- mapM mkConfiguredSubItem line.subItems
-        pure FareUISubItem {title = line.key, price = PriceAPIEntity line.amount cur, uiTranslation = label, subItems = kids}
+        let lineType = if line.amount < 0 then Deduction else Earning
+        pure FareUISubItem {title = line.key, price = PriceAPIEntity (abs line.amount) cur, uiTranslation = label, _type = lineType, subItems = kids}
       customerPaymentCharge = if customerBearsCharge then paymentChargeGross else 0
       chargeBorneByDriver = customerBearsCharge || driverBearsCharge
   farePaidSubItems <-

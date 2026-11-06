@@ -1503,6 +1503,9 @@ toApiChargeComponent = \case
   FarePolicyD.NegotiatedFareDeltaComponent -> Common.NegotiatedFareDeltaComponent
   FarePolicyD.NegativeFareAdjustmentComponent -> Common.NegativeFareAdjustmentComponent
   FarePolicyD.PaymentChargePaidByCustomerComponent -> Common.PaymentChargePaidByCustomerComponent
+  FarePolicyD.GovtChargesComponent -> Common.GovtChargesComponent
+  FarePolicyD.PersonalDiscountComponent -> Common.PersonalDiscountComponent
+  FarePolicyD.BusinessDiscountComponent -> Common.BusinessDiscountComponent
 
 fromApiChargeComponent :: Common.FPV2FareChargeComponent -> FarePolicyD.FareChargeComponent
 fromApiChargeComponent = \case
@@ -1553,3 +1556,6 @@ fromApiChargeComponent = \case
   Common.NegotiatedFareDeltaComponent -> FarePolicyD.NegotiatedFareDeltaComponent
   Common.NegativeFareAdjustmentComponent -> FarePolicyD.NegativeFareAdjustmentComponent
   Common.PaymentChargePaidByCustomerComponent -> FarePolicyD.PaymentChargePaidByCustomerComponent
+  Common.GovtChargesComponent -> FarePolicyD.GovtChargesComponent
+  Common.PersonalDiscountComponent -> FarePolicyD.PersonalDiscountComponent
+  Common.BusinessDiscountComponent -> FarePolicyD.BusinessDiscountComponent
