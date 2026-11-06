@@ -1,8 +1,7 @@
 module Storage.CachedQueries.PassType
   ( findById,
     findAllByPassCategoryId,
-    clearCacheById,
-    clearCacheByPassCategoryId,
+    clearCache,
   )
 where
 
@@ -47,14 +46,18 @@ findAllByPassCategoryId passCategoryId = do
           Hedis.setExp cacheKey passTypes expTime
         pure passTypes
 
-clearCacheById :: (CacheFlow m r) => Id Domain.PassType -> m ()
-clearCacheById passTypeId = Hedis.del (makePassTypeIdKey passTypeId)
+clearCache :: (CacheFlow m r, MonadFlow m) => Id Domain.PassType -> [Id DPassCategory.PassCategory] -> m ()
+clearCache passTypeId passCategoryIds = do
+  Hedis.runInMultiCloudRedisWrite $ do
+    Hedis.del (makePassTypeIdKey passTypeId)
+    mapM_ (Hedis.del . makePassCategoryIdKey) passCategoryIds
+  IM.refreshInMem passTypeCacheKeyPrefix
 
-clearCacheByPassCategoryId :: (CacheFlow m r) => Id DPassCategory.PassCategory -> m ()
-clearCacheByPassCategoryId passCategoryId = Hedis.del (makePassCategoryIdKey passCategoryId)
+passTypeCacheKeyPrefix :: Text
+passTypeCacheKeyPrefix = "CachedQueries:PassType:"
 
 makePassTypeIdKey :: Id Domain.PassType -> Text
-makePassTypeIdKey passTypeId = "CachedQueries:PassType:Id-" <> getId passTypeId
+makePassTypeIdKey passTypeId = passTypeCacheKeyPrefix <> "Id-" <> getId passTypeId
 
 makePassCategoryIdKey :: Id DPassCategory.PassCategory -> Text
-makePassCategoryIdKey passCategoryId = "CachedQueries:PassType:PassCategoryId-" <> getId passCategoryId
+makePassCategoryIdKey passCategoryId = passTypeCacheKeyPrefix <> "PassCategoryId-" <> getId passCategoryId

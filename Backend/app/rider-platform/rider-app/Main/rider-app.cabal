@@ -1371,6 +1371,7 @@ library
       Domain.Types.DraftTicketChangeHistory
       Domain.Types.DriverOffer
       Domain.Types.EDCMachineMapping
+      Domain.Types.EntityValueLog
       Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.FareBreakup
@@ -1550,6 +1551,7 @@ library
       Storage.Beam.DraftTicketChangeHistory
       Storage.Beam.DriverOffer
       Storage.Beam.EDCMachineMapping
+      Storage.Beam.EntityValueLog
       Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.FareBreakup
@@ -1734,6 +1736,7 @@ library
       Storage.Queries.DraftTicketChangeHistory
       Storage.Queries.DriverOffer
       Storage.Queries.EDCMachineMapping
+      Storage.Queries.EntityValueLog
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
