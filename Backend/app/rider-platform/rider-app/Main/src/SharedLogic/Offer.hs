@@ -729,12 +729,11 @@ offerListWithBasket ::
 offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType products estimates quotes mbRide mbBooking mbSearchReq = do
   -- Confirm also passes a search request, so a booking marks it as not being the quote flow.
   let isQuoteFlow = isJust mbSearchReq && isNothing mbBooking && isNothing (mbSearchReq >>= (.parentSearchRequestId))
-  (person, personOfferStats, mbPersonStats, isMultipleOrNoDeviceIdExist) <- timeQuoteOfferStep isQuoteFlow "quotesOfferSetupReads" $ do
+  (person, personOfferStats, mbPersonStats) <- timeQuoteOfferStep isQuoteFlow "quotesOfferSetupReads" $ do
     person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
     personOfferStats <- QOfferStats.findAllByEntityIdAndEntityType personId.getId DOfferStats.Person
     mbPersonStats <- QPersonStats.findByPersonId personId
-    isMultipleOrNoDeviceIdExist <- mkIsMultipleOrNoDeviceIdExist person
-    pure (person, personOfferStats, mbPersonStats, isMultipleOrNoDeviceIdExist)
+    pure (person, personOfferStats, mbPersonStats)
   let isDriverNumberSameAsCustomer = mkIsDriverNumberSameAsCustomer person mbRide
   useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing paymentServiceType
   autoApplyOfferCodes <- getAutoApplyOfferCodes person.customerNammaTags
@@ -789,6 +788,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
             mbBookingData = mkBookingData <$> mbBooking
             language = fromMaybe ENGLISH person.language
         fraudLogics <- if null offersByProduct then pure [] else getOffersFraudChecksLogics merchantOperatingCityId
+        isMultipleOrNoDeviceIdExist <- mkIsMultipleOrNoDeviceIdExist fraudLogics person
         forM offersByProduct $ \(productId, offersForProduct) -> do
           filteredOffers <- applyOffersFraudChecksWithLogics fraudLogics offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
           translatedOffers <- translateOfferListResp merchantOperatingCityId language filteredOffers
@@ -804,6 +804,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
             mbRideData = mkRideData <$> mbRide
             mbBookingData = mkBookingData <$> mbBooking
         fraudLogics <- if null offersByProduct then pure [] else getOffersFraudChecksLogics merchantOperatingCityId
+        isMultipleOrNoDeviceIdExist <- mkIsMultipleOrNoDeviceIdExist fraudLogics person
         forM offersByProduct $ \(productId, offersForProduct) -> do
           filteredOffers <- applyOffersFraudChecksWithLogics fraudLogics offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
           pure (productId, filteredOffers)
@@ -854,13 +855,14 @@ mkRideData DRide.Ride {updatedAt = updatedAt', ..} =
       ..
     }
 
-mkIsMultipleOrNoDeviceIdExist :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person.Person -> m (Maybe Bool)
-mkIsMultipleOrNoDeviceIdExist person =
+-- | Only the fraud rules read this flag, so skip the lookup when there are none to run.
+mkIsMultipleOrNoDeviceIdExist :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [A.Value] -> Person.Person -> m (Maybe Bool)
+mkIsMultipleOrNoDeviceIdExist fraudLogics person =
   case person.deviceId of
-    Nothing -> pure Nothing
-    Just deviceId -> do
-      personsWithSameDeviceId <- QPerson.findAllByDeviceIdAndMerchantId (Just deviceId) person.merchantId
+    Just deviceId | not (null fraudLogics) -> do
+      personsWithSameDeviceId <- QPerson.findUpToTwoByDeviceIdAndMerchantId deviceId person.merchantId
       pure $ Just (length personsWithSameDeviceId > 1)
+    _ -> pure Nothing
 
 mkIsDriverNumberSameAsCustomer :: Person.Person -> Maybe DRide.Ride -> Bool
 mkIsDriverNumberSameAsCustomer person mbRide =
