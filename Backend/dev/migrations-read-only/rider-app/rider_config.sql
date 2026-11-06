@@ -945,3 +945,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN better_driver_search_eligibility_p
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_xyne_support_bot boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_email_enabled boolean ;

@@ -20,6 +20,7 @@ module SharedLogic.JobScheduler where
 import Data.Singletons.TH
 import Domain.Types.Booking
 import qualified Domain.Types.BookingStatus as DEB
+import qualified Domain.Types.EmailTemplate as DET
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import qualified Domain.Types.Merchant as DM
@@ -81,6 +82,7 @@ data RiderJobType
   | BookingDepositExpiry
   | SilentReallocationExpiry
   | SendLegalPolicyNotification
+  | SendRideInvoiceEmail
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -131,6 +133,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SReconcileRewardInflight jobData = AnyJobInfo <$> restoreJobInfo SReconcileRewardInflight jobData
   restoreAnyJobInfo SSilentReallocationExpiry jobData = AnyJobInfo <$> restoreJobInfo SSilentReallocationExpiry jobData
   restoreAnyJobInfo SSendLegalPolicyNotification jobData = AnyJobInfo <$> restoreJobInfo SSendLegalPolicyNotification jobData
+  restoreAnyJobInfo SSendRideInvoiceEmail jobData = AnyJobInfo <$> restoreJobInfo SSendRideInvoiceEmail jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -516,3 +519,14 @@ data SendLegalPolicyNotificationJobData = SendLegalPolicyNotificationJobData
 instance JobInfoProcessor 'SendLegalPolicyNotification
 
 type instance JobContent 'SendLegalPolicyNotification = SendLegalPolicyNotificationJobData
+
+data SendRideInvoiceEmailJobData = SendRideInvoiceEmailJobData
+  { rideId :: Id DRide.Ride,
+    templateKey :: DET.EmailTemplateKey,
+    refundRequestId :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SendRideInvoiceEmail
+
+type instance JobContent 'SendRideInvoiceEmail = SendRideInvoiceEmailJobData
