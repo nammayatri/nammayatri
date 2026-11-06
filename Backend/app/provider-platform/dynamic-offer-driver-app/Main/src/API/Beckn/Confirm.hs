@@ -25,8 +25,10 @@ import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Domain.Action.Beckn.Confirm as DConfirm
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.SearchTry as DST
 import Environment
 import qualified EulerHS.Language as L
 import Kernel.Beam.Types (TxnIdKey (..))
@@ -54,6 +56,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.SearchTry as QST
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import TransactionLogs.PushLogs
@@ -127,11 +131,22 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
               fork "on_confirm on-us" $ do
                 handle (errHandler dConfirmRes transporter Nothing) $ do
                   callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country isValueAddNP transporterConfig
+                  cancelIfSearchTryCancelled dConfirmRes transporter
     pure Ack
   where
     isMeterRide = \case
       DTC.OneWay DTC.MeterRide -> True
       _ -> False
+
+    -- A scheduled booking with no try slot left before pickup gets its search try CANCELLED inside
+    -- DConfirm.handler; it is cancelled here, after on_confirm, so the BAP sees on_confirm then on_cancel.
+    cancelIfSearchTryCancelled dConfirmRes transporter =
+      whenJust dConfirmRes.booking.searchTryId $ \searchTryId -> do
+        mbSearchTry <- QST.findById searchTryId
+        when ((mbSearchTry <&> (.status)) == Just DST.CANCELLED) $ do
+          booking <- QRB.findById dConfirmRes.booking.id >>= fromMaybeM (BookingNotFound dConfirmRes.booking.id.getId)
+          unless (booking.status == DRB.CANCELLED) $
+            SBooking.cancelBooking booking Nothing transporter
 
     errHandler dConfirmRes transporter mbDriver exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking dConfirmRes.booking mbDriver transporter
