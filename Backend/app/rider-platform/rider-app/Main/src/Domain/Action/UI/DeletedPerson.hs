@@ -4,6 +4,7 @@ module Domain.Action.UI.DeletedPerson (postDeletedPerson) where
 
 import qualified API.Types.UI.DeletedPerson
 import Data.OpenApi (ToSchema)
+import qualified Domain.Action.UI.OpenMeter as DOpenMeter
 import Domain.Types.DeletedPerson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -51,6 +52,8 @@ postDeletedPerson (mbPersonId, merchantId) (API.Types.UI.DeletedPerson.DeletedPe
   QD.create (createDeletedPerson person now mbStaticPersonId)
   SPersonPTStats.stampPersonCreatedAt person mbStaticPersonId
   SSocialLogin.deleteSocialIdentities personId
+  -- Open meter rides are kept. A running one is auto-ended, because no device can end it once the account is gone.
+  DOpenMeter.autoEndRunningRides personId
   _ <- QP.deleteById personId
   _ <- QSRL.deleteAllByRiderId personId
   pure APISuccess.Success

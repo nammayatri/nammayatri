@@ -35,6 +35,7 @@ import qualified API.Action.UI.NearbyBuses as NearbyBuses
 import qualified API.Action.UI.NearbyDrivers as NearbyDrivers
 import qualified API.Action.UI.NyRegularSubscription as NYRegular
 import qualified API.Action.UI.Offers as Offers
+import qualified API.Action.UI.OpenMeter as OpenMeter
 import qualified API.Action.UI.PartnerBookingStatement as PartnerBookingStatement
 import qualified API.Action.UI.PassDetails as PassDetails
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
@@ -215,6 +216,7 @@ type API =
            :<|> FleetEngineToken.API
            :<|> VehicleServiceTier.API
            :<|> PolicyDocument.API
+           :<|> OpenMeter.API
        )
 
 -- Healthcheck for every datastore connection the app holds, so a pod with any
@@ -359,3 +361,4 @@ handler =
     :<|> FleetEngineToken.handler
     :<|> VehicleServiceTier.handler
     :<|> PolicyDocument.handler
+    :<|> OpenMeter.handler

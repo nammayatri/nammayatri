@@ -49,7 +49,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.alwaysAllowedNotificationCategories (Just (map show alwaysAllowedNotificationCategories)),
+    [ Se.Set Beam.allowMultipleOpenMeterRides (Just allowMultipleOpenMeterRides),
+      Se.Set Beam.alwaysAllowedNotificationCategories (Just (map show alwaysAllowedNotificationCategories)),
       Se.Set Beam.appUrl appUrl,
       Se.Set Beam.autoSendBookingDetailsViaWhatsapp autoSendBookingDetailsViaWhatsapp,
       Se.Set Beam.autoUnblockSafetyCenterAfterDays autoUnblockSafetyCenterAfterDays,
@@ -199,6 +200,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
       Se.Set Beam.nyRegularMinGapSeconds (Just nyRegularMinGapSeconds),
       Se.Set Beam.nyRegularSubscriptionBatchSize nyRegularSubscriptionBatchSize,
       Se.Set Beam.offerListCacheVersion offerListCacheVersion,
+      Se.Set Beam.openMeterMaxIdleHours (Just openMeterMaxIdleHours),
       Se.Set Beam.passExpiryReminderBatchSize passExpiryReminderBatchSize,
       Se.Set Beam.passExpiryReminderDays passExpiryReminderDays,
       Se.Set Beam.passExpiryReminderNextRunLocalTime passExpiryReminderNextRunLocalTime,
@@ -282,7 +284,8 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
     pure $
       Just
         Domain.Types.RiderConfig.RiderConfig
-          { alwaysAllowedNotificationCategories = fromMaybe [Domain.Types.Extra.RiderPreferences.RIDE_RELATED, Domain.Types.Extra.RiderPreferences.SAFETY] (alwaysAllowedNotificationCategories >>= traverse (readMaybe . Data.Text.unpack)),
+          { allowMultipleOpenMeterRides = fromMaybe False allowMultipleOpenMeterRides,
+            alwaysAllowedNotificationCategories = fromMaybe [Domain.Types.Extra.RiderPreferences.RIDE_RELATED, Domain.Types.Extra.RiderPreferences.SAFETY] (alwaysAllowedNotificationCategories >>= traverse (readMaybe . Data.Text.unpack)),
             appUrl = appUrl,
             autoSendBookingDetailsViaWhatsapp = autoSendBookingDetailsViaWhatsapp,
             autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
@@ -433,6 +436,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             nyRegularMinGapSeconds = fromMaybe 900 nyRegularMinGapSeconds,
             nyRegularSubscriptionBatchSize = nyRegularSubscriptionBatchSize,
             offerListCacheVersion = offerListCacheVersion,
+            openMeterMaxIdleHours = fromMaybe 12 openMeterMaxIdleHours,
             passExpiryReminderBatchSize = passExpiryReminderBatchSize,
             passExpiryReminderDays = passExpiryReminderDays,
             passExpiryReminderNextRunLocalTime = passExpiryReminderNextRunLocalTime,
@@ -512,7 +516,8 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
 instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
   toTType' (Domain.Types.RiderConfig.RiderConfig {..}) = do
     Beam.RiderConfigT
-      { Beam.alwaysAllowedNotificationCategories = Just (map show alwaysAllowedNotificationCategories),
+      { Beam.allowMultipleOpenMeterRides = Just allowMultipleOpenMeterRides,
+        Beam.alwaysAllowedNotificationCategories = Just (map show alwaysAllowedNotificationCategories),
         Beam.appUrl = appUrl,
         Beam.autoSendBookingDetailsViaWhatsapp = autoSendBookingDetailsViaWhatsapp,
         Beam.autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
@@ -663,6 +668,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Beam.nyRegularMinGapSeconds = Just nyRegularMinGapSeconds,
         Beam.nyRegularSubscriptionBatchSize = nyRegularSubscriptionBatchSize,
         Beam.offerListCacheVersion = offerListCacheVersion,
+        Beam.openMeterMaxIdleHours = Just openMeterMaxIdleHours,
         Beam.passExpiryReminderBatchSize = passExpiryReminderBatchSize,
         Beam.passExpiryReminderDays = passExpiryReminderDays,
         Beam.passExpiryReminderNextRunLocalTime = passExpiryReminderNextRunLocalTime,

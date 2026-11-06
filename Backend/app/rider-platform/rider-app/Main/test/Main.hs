@@ -16,6 +16,7 @@ import Kernel.Utils.App
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall
 import Kernel.Utils.FlowLogging
+import OpenMeter.TransitionsSpec (openMeterTransitionsTests)
 import qualified SharedCabAllocationTests
 import qualified SharedCabBoardingTests
 import qualified SharedCabCallTests
@@ -56,4 +57,4 @@ main = do
 
   -- -- Let the Logs be flushed
   -- threadDelaySec (Seconds 10)
-  defaultMain $ testGroup "rider-app" [SharedCabSessionTests.tests, SharedCabLegStateTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests, SharedCabConfigTests.tests, SharedCabAllocationTests.tests, SharedCabDriverActionTests.tests, SharedCabExpiryTests.tests, SharedCabStopProgressTests.tests, SharedCabBoardingTests.tests, SharedCabDegradedTests.tests, SharedCabNoShowTests.tests, SharedCabDegradedSweepTests.tests, SharedCabRefundPolicyTests.tests, SharedCabCheckedInStatusTests.tests, SharedCabRefundRetryTests.tests, SharedCabSeatTests.tests, SharedCabLockTests.tests, SharedCabWalkUpTests.tests, SharedCabCallTests.tests]
+  defaultMain $ testGroup "rider-app" [SharedCabSessionTests.tests, SharedCabLegStateTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests, SharedCabConfigTests.tests, SharedCabAllocationTests.tests, SharedCabDriverActionTests.tests, SharedCabExpiryTests.tests, SharedCabStopProgressTests.tests, SharedCabBoardingTests.tests, SharedCabDegradedTests.tests, SharedCabNoShowTests.tests, SharedCabDegradedSweepTests.tests, SharedCabRefundPolicyTests.tests, SharedCabCheckedInStatusTests.tests, SharedCabRefundRetryTests.tests, SharedCabSeatTests.tests, SharedCabLockTests.tests, SharedCabWalkUpTests.tests, SharedCabCallTests.tests, openMeterTransitionsTests]
