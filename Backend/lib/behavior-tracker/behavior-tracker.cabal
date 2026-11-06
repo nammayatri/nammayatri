@@ -28,6 +28,8 @@ library
   exposed-modules:
       Lib.BehaviorTracker.Accumulator
       Lib.BehaviorTracker.BlockTracker
+      Lib.BehaviorTracker.EventsWindow
+      Lib.BehaviorTracker.EventsWindowSettings
       Lib.BehaviorTracker.Recorder
       Lib.BehaviorTracker.Snapshot
       Lib.BehaviorTracker.Types
@@ -76,6 +78,7 @@ library
     , containers
     , data-default-class
     , euler-hs
+    , hedis
     , mobility-core
     , openapi3
     , record-dot-preprocessor

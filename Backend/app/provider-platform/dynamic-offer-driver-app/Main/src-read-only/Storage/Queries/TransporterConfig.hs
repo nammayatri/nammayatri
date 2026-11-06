@@ -310,6 +310,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.enableUdfForOffers enableUdfForOffers,
       Se.Set Beam.enableVendorCheckForCollectingDues enableVendorCheckForCollectingDues,
       Se.Set Beam.enforceUploadFileTypeCheck enforceUploadFileTypeCheck,
+      Se.Set Beam.eventsWindowSize eventsWindowSize,
       Se.Set Beam.exotelAppIdMapping exotelAppIdMapping,
       Se.Set Beam.exotelStatusCheckSchedulerDelay (Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay),
       Se.Set Beam.fakeOtpEmails fakeOtpEmails,

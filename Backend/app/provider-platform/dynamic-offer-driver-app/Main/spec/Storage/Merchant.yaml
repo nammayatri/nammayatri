@@ -1489,6 +1489,10 @@ TransporterConfig:
     isDeviceIdChecksRequired: Maybe Bool
     cachedDevicesOSForSearchRequest: "[Kernel.Types.Version.DeviceType]"
     cancellationRateWindow: Maybe Int
+    # Events-window rulebooks: how many recent events each driver's window keeps in Redis in
+    # this city (Z), 1 to 400 (default 100; a config patch outside that is refused). A rulebook
+    # judging the last X events needs X <= Z.
+    eventsWindowSize: Int
     cancellationRateCalculationThreshold: Maybe Int
     arrivalTimeBufferOfVehicle: Maybe ArrivalTimeBufferOfVehicle
     demandHotspotsConfig: Maybe DemandHotspotsConfig
@@ -2095,6 +2099,7 @@ TransporterConfig:
 
   default:
     enableLegalComplianceDocuments: "false"
+    eventsWindowSize: "100"
     enableGoOnlinePolicyBlocker: "false"
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'

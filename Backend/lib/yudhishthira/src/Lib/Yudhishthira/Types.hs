@@ -77,6 +77,10 @@ module Lib.Yudhishthira.Types
     UpdateTagReq (..),
     TagNameValue (..),
     ExperimentStatus (..),
+    RulebookWindowMode (..),
+    RulebookSettings (..),
+    RulebookWindowConfig (..),
+    RulebookWindowConfigResp (..),
     TableDataResp (..),
     ConfigDetailsResp (..),
     DomainSchemaResp (..),
@@ -701,6 +705,25 @@ data ExperimentStatus
 $(mkBeamInstancesForEnumAndList ''ExperimentStatus)
 $(mkHttpInstancesForEnum ''ExperimentStatus)
 
+-- | How a behaviour rulebook version counts offences, chosen when the version is saved.
+-- TIME: daily/weekly counters. EVENTS: offences in the driver's last X events.
+data RulebookWindowMode
+  = TIME
+  | EVENTS
+  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, Read, Show)
+
+$(mkBeamInstancesForEnumAndList ''RulebookWindowMode)
+$(mkHttpInstancesForEnum ''RulebookWindowMode)
+
+-- | Version-level settings of a behaviour rulebook, stored in app_dynamic_logic_element.settings
+-- (the same on every row of the version). No settings = TIME. EVENTS carries X, the number of
+-- recent events its rules judge: {"ruleType": "EVENTS", "windowSize": 10}.
+data RulebookSettings = RulebookSettings
+  { ruleType :: RulebookWindowMode,
+    windowSize :: Maybe Int
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
 data ActionChangeRequest
   = Conclude ConcludeReq
   | Abort AbortReq
@@ -803,7 +826,10 @@ data AppDynamicLogicReq = AppDynamicLogicReq
     description :: Maybe Text,
     shouldUpdateRule :: Maybe Bool,
     verifyOutput :: Maybe Bool,
-    domain :: LogicDomain
+    domain :: LogicDomain,
+    -- Saved on every row of the new version (app_dynamic_logic_element.settings). Behaviour
+    -- rulebooks send a RulebookSettings; other domains send nothing.
+    settings :: Maybe Value
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1070,6 +1096,22 @@ data RolloutGroupInfo = RolloutGroupInfo
     experimentGroup :: Maybe Text,
     experimentStatus :: Maybe ExperimentStatus,
     isBaseVersion :: Maybe Bool
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | A behaviour rulebook version's window settings (from app_dynamic_logic_element.settings). Versions not listed are TIME.
+data RulebookWindowConfig = RulebookWindowConfig
+  { version :: Int,
+    windowMode :: RulebookWindowMode,
+    windowSize :: Int
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | The EVENTS versions of a behaviour, and how many events each driver's window keeps in this
+-- city (Z). A version whose X is above Z can count at most Z events here.
+data RulebookWindowConfigResp = RulebookWindowConfigResp
+  { cityWindowSize :: Int,
+    versions :: [RulebookWindowConfig]
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
