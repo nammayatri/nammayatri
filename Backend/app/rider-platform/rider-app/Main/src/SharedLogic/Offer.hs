@@ -23,6 +23,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as SSR
 import qualified Domain.Types.VehicleVariant as DV
 import qualified Domain.Types.Yudhishthira as Y
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (Language (ENGLISH), SchedulerFlow, ServiceFlow)
@@ -708,41 +709,67 @@ offerListWithBasket ::
   Maybe SSR.SearchRequest ->
   m [(Text, Payment.OfferListResp)]
 offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType products estimates quotes mbRide mbBooking mbSearchReq = do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  offerListWithBasketForPerson person merchantId merchantOperatingCityId paymentServiceType products estimates quotes mbRide mbBooking mbSearchReq
+
+-- | 'offerListWithBasket' for a caller that already holds the person, so the search flow
+--   doesn't read it a second time. The reads that don't depend on each other run at once.
+offerListWithBasketForPerson ::
+  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, BeamFlow m r) =>
+  Person.Person ->
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DOrder.PaymentServiceType ->
+  [(Text, Price)] ->
+  [DEstimate.Estimate] ->
+  [DQuote.Quote] ->
+  Maybe DRide.Ride ->
+  Maybe DRB.Booking ->
+  Maybe SSR.SearchRequest ->
+  m [(Text, Payment.OfferListResp)]
+offerListWithBasketForPerson person merchantId merchantOperatingCityId paymentServiceType products estimates quotes mbRide mbBooking mbSearchReq = do
+  let personId = person.id
   -- Confirm also passes a search request, so a booking marks it as not being the quote flow.
   let isQuoteFlow = isJust mbSearchReq && isNothing mbBooking && isNothing (mbSearchReq >>= (.parentSearchRequestId))
-  (person, personOfferStats, mbPersonStats, isMultipleOrNoDeviceIdExist) <- timeQuoteOfferStep isQuoteFlow "quotesOfferSetupReads" $ do
-    person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-    personOfferStats <- QOfferStats.findAllByEntityIdAndEntityType personId.getId DOfferStats.Person
-    mbPersonStats <- QPersonStats.findByPersonId personId
-    isMultipleOrNoDeviceIdExist <- mkIsMultipleOrNoDeviceIdExist person
-    pure (person, personOfferStats, mbPersonStats, isMultipleOrNoDeviceIdExist)
   let isDriverNumberSameAsCustomer = mkIsDriverNumberSameAsCustomer person mbRide
   useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing paymentServiceType
   autoApplyOfferCodes <- getAutoApplyOfferCodes person.customerNammaTags
   let mbSearchReqData = mkSearchRequestData <$> mbSearchReq
+      -- All three need only the person, so they run together.
+      readSetupReads =
+        timeQuoteOfferStep isQuoteFlow "quotesOfferSetupReads" $
+          bothAtOnce
+            (QOfferStats.findAllByEntityIdAndEntityType personId.getId DOfferStats.Person)
+            (bothAtOnce (QPersonStats.findByPersonId personId) (mkIsMultipleOrNoDeviceIdExist person))
   productOffers <-
     if useDomainOffers
       then do
         let productsWithAmount = map (\(pid, p) -> (pid, p.amount)) products
-        (mbRider, staticPersonOfferStats, deviceOfferStats, mbPersonDailyOfferStats) <- timeQuoteOfferStep isQuoteFlow "quotesOfferDomainReads" $ do
-          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
-          when (isNothing mbRiderConfig) $ logWarning $ "No rider config for city " <> merchantOperatingCityId.getId <> ": offers with a maxApplyCount are withheld"
-          let mbRider = mbRiderConfig <&> \riderConfig -> Counters.OfferRiderContext {personId = personId.getId, deviceId = person.deviceId, timeDiffFromUtc = riderConfig.timeDiffFromUtc}
-          staticPersonOfferStats <- do
-            personPhone <- mapM decrypt person.mobileNumber
-            case personPhone of
-              Just phone -> do
-                staticId <- SLUtils.getStaticCustomerId person phone
-                if staticId /= personId.getId
-                  then QOfferStats.findAllByEntityIdAndEntityType staticId DOfferStats.StaticPerson
-                  else pure []
-              Nothing -> pure []
-          deviceOfferStats <- case person.deviceId of
-            Just did | not (T.null did) -> QOfferStats.findAllByEntityIdAndEntityType did DOfferStats.Device
-            _ -> pure []
-          today <- utctDay <$> getCurrentTime
-          mbPersonDailyOfferStats <- QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today
-          pure (mbRider, staticPersonOfferStats, deviceOfferStats, mbPersonDailyOfferStats)
+            readDomainStats = timeQuoteOfferStep isQuoteFlow "quotesOfferDomainReads" $ do
+              mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+              when (isNothing mbRiderConfig) $ logWarning $ "No rider config for city " <> merchantOperatingCityId.getId <> ": offers with a maxApplyCount are withheld"
+              let mbRider = mbRiderConfig <&> \riderConfig -> Counters.OfferRiderContext {personId = personId.getId, deviceId = person.deviceId, timeDiffFromUtc = riderConfig.timeDiffFromUtc}
+                  readStaticPersonOfferStats = do
+                    personPhone <- mapM decrypt person.mobileNumber
+                    case personPhone of
+                      Just phone -> do
+                        staticId <- SLUtils.getStaticCustomerId person phone
+                        if staticId /= personId.getId
+                          then QOfferStats.findAllByEntityIdAndEntityType staticId DOfferStats.StaticPerson
+                          else pure []
+                      Nothing -> pure []
+                  readDeviceOfferStats = case person.deviceId of
+                    Just did | not (T.null did) -> QOfferStats.findAllByEntityIdAndEntityType did DOfferStats.Device
+                    _ -> pure []
+              today <- utctDay <$> getCurrentTime
+              (staticPersonOfferStats, (deviceOfferStats, mbPersonDailyOfferStats)) <-
+                bothAtOnce
+                  readStaticPersonOfferStats
+                  (bothAtOnce readDeviceOfferStats (QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today))
+              pure (mbRider, staticPersonOfferStats, deviceOfferStats, mbPersonDailyOfferStats)
+        -- The setup reads and the domain reads don't depend on each other, so they run at once.
+        ((personOfferStats, (mbPersonStats, isMultipleOrNoDeviceIdExist)), (mbRider, staticPersonOfferStats, deviceOfferStats, mbPersonDailyOfferStats)) <-
+          bothAtOnce readSetupReads readDomainStats
         -- RideHailing product ids are service tiers (show vehicleServiceTierType), so each
         -- product's eligibility runs with its own serviceTierType for tier-specific offer rules.
         let domainContextFor productId =
@@ -783,10 +810,23 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
         let offersByProduct = DPayment.splitOfferRespByProduct productsWithAmount resp
             mbRideData = mkRideData <$> mbRide
             mbBookingData = mkBookingData <$> mbBooking
+        (personOfferStats, (mbPersonStats, isMultipleOrNoDeviceIdExist)) <- readSetupReads
         forM offersByProduct $ \(productId, offersForProduct) -> do
           filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
           pure (productId, filteredOffers)
   pure $ map (\(productId, resp) -> (productId, overrideOfferListRespAutoApply autoApplyOfferCodes resp)) productOffers
+
+-- | Runs two reads at the same time. Unlike 'mapConcurrently', a read that fails fails the call
+--   instead of silently going missing, so the offer rules never see half the data.
+bothAtOnce :: MonadFlow m => m a -> m b -> m (a, b)
+bothAtOnce readA readB = do
+  forkedA <- awaitableFork "offerReads" readA
+  forkedB <- awaitableFork "offerReads" readB
+  a <- L.await Nothing forkedA >>= either (throwError . forkFailure) pure
+  b <- L.await Nothing forkedB >>= either (throwError . forkFailure) pure
+  pure (a, b)
+  where
+    forkFailure err = InternalError $ "offer read failed: " <> show err
 
 -- | Records a step only for the ride search quote flow, so other offer callers don't skew it.
 --   Calls 'withTime' directly because 'withTimeAPI' would add its flag fields to the constraints
