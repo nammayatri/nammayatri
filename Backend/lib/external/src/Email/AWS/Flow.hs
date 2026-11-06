@@ -20,6 +20,7 @@ import Amazonka.SES.Lens (sendRawEmailResponse_messageId, sendRawEmail_configura
 import Control.Lens ((.~), (^.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64
+import Data.Char (isAscii)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Email.Types as Email
@@ -241,3 +242,82 @@ buildMultiAttachmentRawEmail from to subject body bodyFormat attachments =
         ]
       closing = ["--" <> outerBoundary <> "--"]
    in T.unlines $ headerPart <> bodyPart <> concatMap attachmentPart attachments <> closing
+
+sendEncodedEmailWithAttachments ::
+  Text ->
+  [Text] ->
+  Text ->
+  Text ->
+  Email.EmailBodyFormat ->
+  [Email.EmailAttachment] ->
+  IO ()
+sendEncodedEmailWithAttachments from to subject bodyText bodyFormat attachments = do
+  let rawEmail = buildEncodedAttachmentRawEmail from to subject bodyText bodyFormat attachments
+  env <- AWS.newEnv AWS.discover
+  void $ AWS.runResourceT $ AWS.send env (newSendRawEmail (newRawMessage (TE.encodeUtf8 rawEmail)))
+
+buildEncodedAttachmentRawEmail ::
+  Text ->
+  [Text] ->
+  Text ->
+  Text ->
+  Email.EmailBodyFormat ->
+  [Email.EmailAttachment] ->
+  Text
+buildEncodedAttachmentRawEmail from to subject body bodyFormat attachments =
+  let outerBoundary = "----=_Part_0_123456789.987654321"
+      altBoundary = "----=_Alt_0_abcdefghi.jklmnopq"
+      encodedTextPart contentType content =
+        [ "Content-Type: " <> contentType <> "; charset=UTF-8",
+          "Content-Transfer-Encoding: base64",
+          "",
+          base64Lines (TE.encodeUtf8 content),
+          ""
+        ]
+      bodyPart = case bodyFormat of
+        Email.HtmlText ->
+          ["--" <> outerBoundary, "Content-Type: multipart/alternative; boundary=\"" <> altBoundary <> "\"", "", "--" <> altBoundary]
+            <> encodedTextPart "text/plain" (htmlToPlaintext (dropHtmlBlock "title" (dropHtmlBlock "style" body)))
+            <> ["--" <> altBoundary]
+            <> encodedTextPart "text/html" body
+            <> ["--" <> altBoundary <> "--", ""]
+        Email.Text -> ["--" <> outerBoundary] <> encodedTextPart "text/plain" body
+      attachmentPart att =
+        [ "--" <> outerBoundary,
+          "Content-Type: " <> att.contentType <> "; name=\"" <> att.filename <> "\"",
+          "Content-Description: " <> att.filename,
+          "Content-Disposition: attachment; filename=\"" <> att.filename <> "\"",
+          "Content-Transfer-Encoding: base64",
+          "",
+          base64Lines att.content,
+          ""
+        ]
+      headerPart =
+        [ "From: " <> from,
+          "To: " <> T.intercalate ", " to,
+          "Subject: " <> encodeHeaderValue subject,
+          "MIME-Version: 1.0",
+          "Content-Type: multipart/mixed; boundary=\"" <> outerBoundary <> "\"",
+          ""
+        ]
+      closing = ["--" <> outerBoundary <> "--"]
+   in T.intercalate "\r\n" (headerPart <> bodyPart <> concatMap attachmentPart attachments <> closing) <> "\r\n"
+
+dropHtmlBlock :: Text -> Text -> Text
+dropHtmlBlock name content = case T.breakOn ("<" <> name) content of
+  (before, "") -> before
+  (before, rest) -> case T.breakOn closingTag rest of
+    (_, "") -> before
+    (_, closing) -> before <> dropHtmlBlock name (T.drop (T.length closingTag) closing)
+  where
+    closingTag = "</" <> name <> ">"
+
+base64Lines :: BS.ByteString -> Text
+base64Lines = T.intercalate "\r\n" . T.chunksOf 76 . TE.decodeUtf8 . B64.encode
+
+encodeHeaderValue :: Text -> Text
+encodeHeaderValue value
+  | T.all isAscii value = value
+  | otherwise = T.intercalate "\r\n " (map encodedWord (T.chunksOf 10 value))
+  where
+    encodedWord chunk = "=?UTF-8?B?" <> TE.decodeUtf8 (B64.encode (TE.encodeUtf8 chunk)) <> "?="

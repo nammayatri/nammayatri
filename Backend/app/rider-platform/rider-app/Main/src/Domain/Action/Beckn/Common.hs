@@ -117,6 +117,7 @@ import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.Insurance as SI
+import qualified SharedLogic.InvoiceEmailSchedule as SInvoiceEmailSchedule
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -1189,7 +1190,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         settleResult <- RidePaymentFinance.settleRidePaymentLedger cashLedgerCtx settleableIds RidePaymentFinance.settledReasonRidePayment
         case settleResult of
           Right () -> do
-            RidePaymentFinance.markRideInvoicePaid ride.id.getId
+            paidInvoiceTypes <- RidePaymentFinance.markRideInvoicePaid ride.id.getId
+            SInvoiceEmailSchedule.schedulePaidInvoiceEmails booking.merchantId booking.merchantOperatingCityId ride.id paidInvoiceTypes
             logInfo $ "Cash ride BAP ledger settled for ride: " <> ride.id.getId <> " invoiceId=" <> show upsertRes.invoiceId
           Left err -> logError $ "Cash ride settle failed: " <> show err
     else do
