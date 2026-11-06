@@ -2203,7 +2203,8 @@
           {
             "where": {},
             "set": {
-              "driver_calling_option": "DirectCall"
+              "driver_calling_option": "DirectCall",
+              "calling_mode": "DirectCall"
             }
           }
         ]
@@ -4279,7 +4280,8 @@
           {
             "where": {},
             "set": {
-              "driver_calling_option": "DirectCall"
+              "driver_calling_option": "DirectCall",
+              "calling_mode": "DirectCall"
             }
           }
         ]
@@ -6366,7 +6368,8 @@
           {
             "where": {},
             "set": {
-              "driver_calling_option": "DirectCall"
+              "driver_calling_option": "DirectCall",
+              "calling_mode": "DirectCall"
             }
           }
         ]
