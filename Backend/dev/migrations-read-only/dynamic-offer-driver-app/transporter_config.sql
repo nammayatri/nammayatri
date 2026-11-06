@@ -1331,3 +1331,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_config jso
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN calling_mode text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN customer_payable_fare_breakup_sub_items_config json ;

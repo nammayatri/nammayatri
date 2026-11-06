@@ -210,6 +210,17 @@ data FareChargeComponent
   | BoothChargeComponent
   | RideExtraTimeFareComponent
   | SchedulingChargeComponent
+  | SgstComponent
+  | CgstComponent
+  | ParkingTaxComponent
+  | CardChargeOnFareComponent
+  | CardChargeFixedComponent
+  | ConditionalChargesComponent
+  | CustomerGateFeeComponent
+  | DriverSelectedFareComponent
+  | NegotiatedFareDeltaComponent
+  | NegativeFareAdjustmentComponent
+  | PaymentChargePaidByCustomerComponent
   deriving stock (Show, Read, Eq, Ord, Enum, Bounded, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
