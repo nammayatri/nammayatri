@@ -29,7 +29,7 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("merchant" :> (PostMerchantUpdate :<|> GetMerchantServiceUsageConfig :<|> PostMerchantServiceConfigMapsUpdate :<|> PostMerchantServiceUsageConfigMapsUpdate :<|> PostMerchantServiceConfigSmsUpdate :<|> PostMerchantServiceUsageConfigSmsUpdate :<|> PostMerchantConfigOperatingCityCreate :<|> PostMerchantConfigSpecialLocationUpsert :<|> GetMerchantConfigSpecialLocationList :<|> GetMerchantConfigGeometryList :<|> PutMerchantConfigGeometryUpdate :<|> PostMerchantSpecialLocationUpsert :<|> DeleteMerchantSpecialLocationDelete :<|> PostMerchantSpecialLocationGatesUpsert :<|> DeleteMerchantSpecialLocationGatesDelete :<|> PostMerchantConfigTollUpsert :<|> GetMerchantConfigTollList :<|> PostMerchantTollUpsert :<|> DeleteMerchantTollDelete :<|> PostMerchantConfigFailover :<|> PostMerchantTicketConfigUpsert :<|> PostMerchantSchedulerTrigger :<|> PostMerchantSchedulerRevive :<|> PostMerchantConfigOperatingCityWhiteList :<|> PostMerchantConfigAllowedDestinationStates :<|> GetMerchantConfigAllowedDestinationStates :<|> PostMerchantConfigMerchantCreate :<|> GetMerchantRiderConfigEstimatesOrder :<|> PostMerchantRiderConfigEstimatesOrderUpdate :<|> PostMerchantConfigDebugLogUpdate :<|> GetMerchantMerchantMessageCatalog :<|> PostMerchantMerchantMessageUpsert :<|> DeleteMerchantMerchantMessage :<|> PostMerchantCloudUpdate :<|> PostMerchantCloudCityUpdate))
+type API = ("merchant" :> (PostMerchantUpdate :<|> GetMerchantServiceUsageConfig :<|> PostMerchantServiceConfigMapsUpdate :<|> PostMerchantServiceUsageConfigMapsUpdate :<|> PostMerchantServiceConfigSmsUpdate :<|> PostMerchantServiceUsageConfigSmsUpdate :<|> PostMerchantConfigOperatingCityCreate :<|> PostMerchantConfigSpecialLocationUpsert :<|> GetMerchantConfigSpecialLocationList :<|> GetMerchantConfigGeometryList :<|> PutMerchantConfigGeometryUpdate :<|> PostMerchantSpecialLocationUpsert :<|> DeleteMerchantSpecialLocationDelete :<|> PostMerchantSpecialLocationGatesUpsert :<|> DeleteMerchantSpecialLocationGatesDelete :<|> PostMerchantConfigTollUpsert :<|> GetMerchantConfigTollList :<|> PostMerchantTollUpsert :<|> DeleteMerchantTollDelete :<|> PostMerchantConfigFailover :<|> PostMerchantTicketConfigUpsert :<|> PostMerchantSchedulerTrigger :<|> PostMerchantSchedulerRevive :<|> PostMerchantConfigOperatingCityWhiteList :<|> PostMerchantConfigAllowedDestinationStates :<|> GetMerchantConfigAllowedDestinationStates :<|> PostMerchantConfigMerchantCreate :<|> GetMerchantRiderConfigEstimatesOrder :<|> PostMerchantRiderConfigEstimatesOrderUpdate :<|> GetMerchantRiderConfigCalling :<|> PostMerchantRiderConfigCallingUpdate :<|> PostMerchantConfigDebugLogUpdate :<|> GetMerchantMerchantMessageCatalog :<|> PostMerchantMerchantMessageUpsert :<|> DeleteMerchantMerchantMessage :<|> PostMerchantCloudUpdate :<|> PostMerchantCloudCityUpdate))
 
 type PostMerchantUpdate = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_UPDATE" :> API.Types.RiderPlatform.Management.Merchant.PostMerchantUpdate)
 
@@ -224,6 +224,20 @@ type PostMerchantRiderConfigEstimatesOrderUpdate =
       :> API.Types.RiderPlatform.Management.Merchant.PostMerchantRiderConfigEstimatesOrderUpdate
   )
 
+type GetMerchantRiderConfigCalling =
+  ( DashboardUserAuth
+      'APP_BACKEND_MANAGEMENT
+      "RIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_RIDER_CONFIG_CALLING"
+      :> API.Types.RiderPlatform.Management.Merchant.GetMerchantRiderConfigCalling
+  )
+
+type PostMerchantRiderConfigCallingUpdate =
+  ( DashboardUserAuth
+      'APP_BACKEND_MANAGEMENT
+      "RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_RIDER_CONFIG_CALLING_UPDATE"
+      :> API.Types.RiderPlatform.Management.Merchant.PostMerchantRiderConfigCallingUpdate
+  )
+
 type PostMerchantConfigDebugLogUpdate =
   ( DashboardUserAuth
       'APP_BACKEND_MANAGEMENT
@@ -267,7 +281,7 @@ type PostMerchantCloudCityUpdate =
   )
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postMerchantUpdate merchantId city :<|> getMerchantServiceUsageConfig merchantId city :<|> postMerchantServiceConfigMapsUpdate merchantId city :<|> postMerchantServiceUsageConfigMapsUpdate merchantId city :<|> postMerchantServiceConfigSmsUpdate merchantId city :<|> postMerchantServiceUsageConfigSmsUpdate merchantId city :<|> postMerchantConfigOperatingCityCreate merchantId city :<|> postMerchantConfigSpecialLocationUpsert merchantId city :<|> getMerchantConfigSpecialLocationList merchantId city :<|> getMerchantConfigGeometryList merchantId city :<|> putMerchantConfigGeometryUpdate merchantId city :<|> postMerchantSpecialLocationUpsert merchantId city :<|> deleteMerchantSpecialLocationDelete merchantId city :<|> postMerchantSpecialLocationGatesUpsert merchantId city :<|> deleteMerchantSpecialLocationGatesDelete merchantId city :<|> postMerchantConfigTollUpsert merchantId city :<|> getMerchantConfigTollList merchantId city :<|> postMerchantTollUpsert merchantId city :<|> deleteMerchantTollDelete merchantId city :<|> postMerchantConfigFailover merchantId city :<|> postMerchantTicketConfigUpsert merchantId city :<|> postMerchantSchedulerTrigger merchantId city :<|> postMerchantSchedulerRevive merchantId city :<|> postMerchantConfigOperatingCityWhiteList merchantId city :<|> postMerchantConfigAllowedDestinationStates merchantId city :<|> getMerchantConfigAllowedDestinationStates merchantId city :<|> postMerchantConfigMerchantCreate merchantId city :<|> getMerchantRiderConfigEstimatesOrder merchantId city :<|> postMerchantRiderConfigEstimatesOrderUpdate merchantId city :<|> postMerchantConfigDebugLogUpdate merchantId city :<|> getMerchantMerchantMessageCatalog merchantId city :<|> postMerchantMerchantMessageUpsert merchantId city :<|> deleteMerchantMerchantMessage merchantId city :<|> postMerchantCloudUpdate merchantId city :<|> postMerchantCloudCityUpdate merchantId city
+handler merchantId city = postMerchantUpdate merchantId city :<|> getMerchantServiceUsageConfig merchantId city :<|> postMerchantServiceConfigMapsUpdate merchantId city :<|> postMerchantServiceUsageConfigMapsUpdate merchantId city :<|> postMerchantServiceConfigSmsUpdate merchantId city :<|> postMerchantServiceUsageConfigSmsUpdate merchantId city :<|> postMerchantConfigOperatingCityCreate merchantId city :<|> postMerchantConfigSpecialLocationUpsert merchantId city :<|> getMerchantConfigSpecialLocationList merchantId city :<|> getMerchantConfigGeometryList merchantId city :<|> putMerchantConfigGeometryUpdate merchantId city :<|> postMerchantSpecialLocationUpsert merchantId city :<|> deleteMerchantSpecialLocationDelete merchantId city :<|> postMerchantSpecialLocationGatesUpsert merchantId city :<|> deleteMerchantSpecialLocationGatesDelete merchantId city :<|> postMerchantConfigTollUpsert merchantId city :<|> getMerchantConfigTollList merchantId city :<|> postMerchantTollUpsert merchantId city :<|> deleteMerchantTollDelete merchantId city :<|> postMerchantConfigFailover merchantId city :<|> postMerchantTicketConfigUpsert merchantId city :<|> postMerchantSchedulerTrigger merchantId city :<|> postMerchantSchedulerRevive merchantId city :<|> postMerchantConfigOperatingCityWhiteList merchantId city :<|> postMerchantConfigAllowedDestinationStates merchantId city :<|> getMerchantConfigAllowedDestinationStates merchantId city :<|> postMerchantConfigMerchantCreate merchantId city :<|> getMerchantRiderConfigEstimatesOrder merchantId city :<|> postMerchantRiderConfigEstimatesOrderUpdate merchantId city :<|> getMerchantRiderConfigCalling merchantId city :<|> postMerchantRiderConfigCallingUpdate merchantId city :<|> postMerchantConfigDebugLogUpdate merchantId city :<|> getMerchantMerchantMessageCatalog merchantId city :<|> postMerchantMerchantMessageUpsert merchantId city :<|> deleteMerchantMerchantMessage merchantId city :<|> postMerchantCloudUpdate merchantId city :<|> postMerchantCloudCityUpdate merchantId city
 
 postMerchantUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.RiderPlatform.Management.Merchant.MerchantUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantUpdate a4 a3 a2 a1 =
@@ -522,6 +536,23 @@ postMerchantRiderConfigEstimatesOrderUpdate a4 a3 a2 a1 =
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_RIDER_CONFIG_ESTIMATES_ORDER_UPDATE" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Merchant.postMerchantRiderConfigEstimatesOrderUpdate a4 a3 a1
+    )
+
+getMerchantRiderConfigCalling :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler API.Types.RiderPlatform.Management.Merchant.RiderCallingConfigRes)
+getMerchantRiderConfigCalling a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a1 a3 a2
+        Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Merchant.getMerchantRiderConfigCalling a3 a2
+    )
+
+postMerchantRiderConfigCallingUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.RiderPlatform.Management.Merchant.UpdateRiderCallingConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postMerchantRiderConfigCallingUpdate a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_RIDER_CONFIG_CALLING_UPDATE" a2 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Merchant.postMerchantRiderConfigCallingUpdate a4 a3 a1
     )
 
 postMerchantConfigDebugLogUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Lib.Yudhishthira.Tools.DebugLog.SetJsonLogicDebugReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

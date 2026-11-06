@@ -121,6 +121,19 @@ updateCustomerPayableFareBreakupSubItemsConfig customerPayableFareBreakupSubItem
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
+updateCallingMode ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CallingOption -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+updateCallingMode callingMode driverCallingOption forceDirectCalling merchantOperatingCityId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.callingMode callingMode,
+      Se.Set Beam.driverCallingOption driverCallingOption,
+      Se.Set Beam.forceDirectCalling forceDirectCalling,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TransporterConfig.TransporterConfig -> m ())
 updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
   _now <- getCurrentTime

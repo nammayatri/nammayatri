@@ -296,3 +296,21 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostMerchantConfigFareBreakupUpdate","migration":"capability","param":"system-config.fare_policy.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.fare_policy.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_BREAKUP_UPDATE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetMerchantRiderConfigCalling","migration":"capability","param":"city-config.launch.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-config.launch.read', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_RIDER_CONFIG_CALLING' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostMerchantRiderConfigCallingUpdate","migration":"capability","param":"city-config.launch.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-config.launch.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_RIDER_CONFIG_CALLING_UPDATE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetMerchantConfigCalling","migration":"capability","param":"city-config.launch.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-config.launch.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_CALLING' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostMerchantConfigCallingUpdate","migration":"capability","param":"city-config.launch.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-config.launch.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_CALLING_UPDATE' ) ON CONFLICT DO NOTHING;
