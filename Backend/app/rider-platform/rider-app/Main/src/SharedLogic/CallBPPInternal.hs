@@ -769,11 +769,11 @@ populateTipAmount apiKey internalUrl bppRideId tipAmount = do
 data RefundLedgerStatus = APPROVED | REFUNDED | FAILED
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
--- | Per-component refund breakdown (BAP-split). 'component' is the FareComponent enum;
+-- | Per-component refund breakdown (BAP-split). 'component' is the RefundFareComponent enum;
 --   Generic JSON encodes it as "RIDE_FARE"/"TOLL"/"PARKING"/"CANCELLATION_FEE". Field names
 --   byte-identical to BPP.
 data RefundLedgerComponent = RefundLedgerComponent
-  { component :: DFareBreakup.FareComponent,
+  { component :: DFareBreakup.RefundFareComponent,
     fareAmount :: HighPrecMoney,
     vatAmount :: HighPrecMoney
   }
@@ -786,9 +786,7 @@ data RefundLedgerReq = RefundLedgerReq
     refundsAmount :: HighPrecMoney,
     deductFromDriver :: Maybe Bool,
     refundRequestStatus :: RefundLedgerStatus,
-    refundComponents :: Maybe [RefundLedgerComponent],
-    rideFareComponentTotal :: Maybe HighPrecMoney,
-    cancellationComponentTotal :: Maybe HighPrecMoney
+    refundComponents :: Maybe [RefundLedgerComponent]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

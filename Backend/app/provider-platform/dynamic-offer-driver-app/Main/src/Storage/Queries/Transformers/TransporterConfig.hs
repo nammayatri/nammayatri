@@ -112,6 +112,7 @@ parseTaxConfig merchantOperatingCityId mbVal = do
             rideGst = emptyGst,
             subscriptionGst = emptyGst,
             airportEntryFeeGst = Nothing,
+            airportEntryFeeTaxConfig = Nothing,
             securityDepositGst = Nothing,
             defaultTdsRate = Nothing,
             subscriptionTdsRate = Nothing,

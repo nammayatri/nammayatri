@@ -18,7 +18,6 @@ module SharedLogic.CancellationFee
 where
 
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
@@ -28,11 +27,10 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.Payment (MakePaymentIntentConstraints)
 import qualified SharedLogic.Payment as SPayment
-import qualified Storage.Queries.FareBreakup as QFareBreakup
+import qualified SharedLogic.PaymentCharge as SPaymentCharge
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -63,16 +61,13 @@ settleCancellationFeeViaStripe booking ride personD cancellationBase cancellatio
   -- The gateway charges on this capture too, so the cancellation fee carries the
   -- same payment charge the fare does. The rate comes from the booking's breakup;
   -- a ride cancelled before any fare was priced simply yields no rate and no charge.
-  bookingFareBreakups <-
-    SFareBreakupInfo.getFareBreakupsWithFallback booking.id.getId DFareBreakup.BOOKING (QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING)
-  let mbChargeRate = SPayment.paymentChargeRateFromFareBreakups bookingFareBreakups
-      levied = SPayment.levyPaymentChargeOn mbChargeRate ride.paymentChargeBearer cancellationTotal
-      cancellationChargeNet = levied.chargeNet
+  levied <- SPayment.levyPaymentCharge <$> SPaymentCharge.resolvePaymentCharge booking.merchantOperatingCityId booking.paymentInstrument currency cancellationTotal
+  let cancellationChargeNet = levied.chargeNet
       cancellationChargeVat = levied.chargeVat
   let createPaymentIntentServiceReq =
         DPayment.CreatePaymentIntentServiceReq
           { amount = cancellationTotal + levied.riderGrossUp,
-            applicationFeeAmount = levied.applicationFee,
+            applicationFeeAmount = levied.collectedPaymentCharge,
             discountAmount = 0,
             offerId = Nothing,
             currency = currency,
@@ -94,20 +89,9 @@ settleCancellationFeeViaStripe booking ride personD cancellationBase cancellatio
   logDebug $ "[CancellationSettlement] Creating cancellation payment intent amount=" <> show cancellationTotal <> " currency=" <> show currency
   let cancellationLedgerInfo =
         SPayment.RidePaymentLedgerInfo
-          { rideFare = 0,
-            gstAmount = 0,
-            tollFare = 0,
-            tollVatAmount = 0,
-            parkingCharge = 0,
-            parkingChargeVat = 0,
-            platformFee = 0,
-            paymentCharge = 0,
-            paymentChargeVat = 0,
+          { ledgerLines = [RidePaymentFinance.cancellationFeeLedgerLine cancellationBase cancellationTax],
             offerDiscountAmount = 0,
             cashbackPayoutAmount = 0,
-            rideVatAbsorbedOnDiscount = 0,
-            cancellationCharge = cancellationBase,
-            cancellationTax = cancellationTax,
             financeCtx = ledgerCtx
           }
   eitherMbIntent <-

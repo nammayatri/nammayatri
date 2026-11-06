@@ -53,7 +53,7 @@ quotePaymentCharge currency config payable = do
         FIXED -> config.chargeValue
       mbTax = config.chargeTax >>= \taxConfig -> Tax.taxOnExclusive currency (Tax.chargeRegime taxConfig) (Just taxConfig) net
   guard (net > 0)
-  pure PaymentChargeQuote {net, tax = Tax.taxTotal mbTax, cgst = mbTax >>= Tax.cgst, sgst = mbTax >>= Tax.sgst, igst = mbTax >>= Tax.igst, bearer = config.bearer}
+  pure PaymentChargeQuote {net, tax = Tax.taxTotal mbTax, cgst = mbTax >>= (.cgst), sgst = mbTax >>= (.sgst), igst = mbTax >>= (.igst), bearer = config.bearer}
 
 paymentChargeGross :: PaymentChargeQuote -> HighPrecMoney
 paymentChargeGross quote = quote.net + quote.tax

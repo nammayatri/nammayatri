@@ -8,10 +8,10 @@ module SharedLogic.FareBreakdown
   )
 where
 
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
-import Domain.SharedLogic.RideDiscount (isProjectedFareParamTag)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.OfferEntity as DOfferEntity
@@ -122,5 +122,5 @@ groupAmounts rows =
   Map.fromListWith (+) [(row.description, row.amount.amount) | row <- rows, isShownCharge row.description]
   where
     isShownCharge description =
-      not (isProjectedFareParamTag description || "_TAX" `T.isSuffixOf` description || "_TAX_EXCLUSIVE" `T.isSuffixOf` description)
+      not (FB.isTaxTitle description || "_TAX" `T.isSuffixOf` description || "_TAX_EXCLUSIVE" `T.isSuffixOf` description)
         && description `notElem` ["FIXED_GOVERNMENT_RATE", "RIDE_CANCELLATION_CHARGES"]

@@ -8,7 +8,6 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
-import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as Booking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingPayment as DBP
@@ -23,6 +22,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.ParkingTransaction as DPT
+import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
 import qualified Domain.Types.PaymentCustomer as DPaymentCustomer
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
@@ -48,7 +48,6 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
-import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -65,11 +64,13 @@ import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSUtils as FRFSUtils
+import qualified SharedLogic.FareBreakupLines as FBL
 import qualified SharedLogic.Finance.Rails as FinanceRails
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import qualified SharedLogic.JobScheduler as JobScheduler
 import SharedLogic.Offer
+import qualified SharedLogic.PaymentCharge as SPaymentCharge
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -823,123 +824,30 @@ syncOrderStatus fulfillmentHandler merchantId personId paymentOrder = do
 -- | Optional ledger info for ride payments. When provided, ledger entries are
 --   created/settled/voided alongside the payment intent operations.
 data RidePaymentLedgerInfo = RidePaymentLedgerInfo
-  { rideFare :: HighPrecMoney, -- base ride fare without tax (post-discount when discount applied)
-    gstAmount :: HighPrecMoney, -- GST/VAT on ride fare (post-discount when discount applied)
-    tollFare :: HighPrecMoney, -- toll charges without tax
-    tollVatAmount :: HighPrecMoney, -- VAT on toll charges
-    parkingCharge :: HighPrecMoney, -- parking charges without tax
-    parkingChargeVat :: HighPrecMoney, -- VAT on parking charges
-    platformFee :: HighPrecMoney, -- application fee / platform commission
-    paymentCharge :: HighPrecMoney,
-    paymentChargeVat :: HighPrecMoney,
-    offerDiscountAmount :: HighPrecMoney, -- discount absorbed by marketplace (0 for CASHBACK or no offer)
-    cashbackPayoutAmount :: HighPrecMoney, -- cashback to pay rider (0 for DISCOUNT or no offer)
-
-    -- | Platform-absorbed VAT on the discount portion. Funded on BAP via
-    --   BuyerExpense → BuyerAsset; paid across to BPP via buyer-external
-    --   where it is credited to the driver as part of BaseRide.
-    rideVatAbsorbedOnDiscount :: HighPrecMoney,
-    cancellationCharge :: HighPrecMoney, -- cancellation fee without tax (0 for normal ride)
-    cancellationTax :: HighPrecMoney, -- GST/VAT on cancellation fee (0 for normal ride)
+  { ledgerLines :: [RidePaymentFinance.LedgerLine],
+    offerDiscountAmount :: HighPrecMoney,
+    cashbackPayoutAmount :: HighPrecMoney,
     financeCtx :: FinanceCtx
   }
   deriving (Show, Generic)
 
--- | Smart constructor for RidePaymentLedgerInfo from numeric fields.
---   Call sites that can project into [FareBreakup] (ride-completed,
---   ride-assigned, scheduled PI execution) go through
---   'buildLedgerInfoFromBreakups' which uses this internally; call sites
---   where only pre-aggregated dues are available (debt settlement) build
---   the numeric fields themselves and pass them here directly.
-mkRidePaymentLedgerInfo ::
-  HighPrecMoney -> -- rideFare (tax-exclusive)
-  HighPrecMoney -> -- gstAmount
-  HighPrecMoney -> -- tollFare (tax-exclusive)
-  HighPrecMoney -> -- tollVatAmount
-  HighPrecMoney -> -- parkingCharge (tax-exclusive)
-  HighPrecMoney -> -- parkingChargeVat
-  HighPrecMoney -> -- platformFee
-  HighPrecMoney -> -- paymentCharge (the payment-charge share of platformFee)
-  HighPrecMoney -> -- paymentChargeVat
-  HighPrecMoney -> -- offerDiscountAmount
-  HighPrecMoney -> -- cashbackPayoutAmount
-  HighPrecMoney -> -- rideVatAbsorbedOnDiscount
-  HighPrecMoney -> -- cancellationCharge (0 for normal ride)
-  HighPrecMoney -> -- cancellationTax (0 for normal ride)
-  FinanceCtx ->
-  RidePaymentLedgerInfo
-mkRidePaymentLedgerInfo rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee paymentCharge paymentChargeVat offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount cancellationCharge cancellationTax financeCtx =
-  RidePaymentLedgerInfo
-    { rideFare,
-      gstAmount,
-      tollFare,
-      tollVatAmount,
-      parkingCharge,
-      parkingChargeVat,
-      platformFee,
-      paymentCharge,
-      paymentChargeVat,
-      offerDiscountAmount,
-      cashbackPayoutAmount,
-      rideVatAbsorbedOnDiscount,
-      cancellationCharge,
-      cancellationTax,
-      financeCtx
-    }
-
--- | Build RidePaymentLedgerInfo from raw fare breakups + customer offer
---   discount. Delegates to 'RD.parseProjectFareParamsBreakup' +
---   'RD.applyRideDiscount' — the canonical discount + VAT algorithm
---   from 'Domain.SharedLogic.RideDiscount'.
---
---   Returns 'Nothing' when the BPP breakup doesn't include the ten-tag
---   summary (legacy ON_SEARCH / non-compliant BPP). Callers fall back to
---   a domain-side constructed ledger info for backward compatibility.
-buildLedgerInfoFromBreakups ::
-  (MonadFlow m) =>
+buildLedgerInfo ::
+  HighPrecMoney ->
   [DFareBreakup.FareBreakup] ->
-  HighPrecMoney -> -- requestedDiscount (bookingDiscountAmount)
-  HighPrecMoney -> -- cashbackPayoutAmount (0 for DISCOUNT or no offer)
-  HighPrecMoney -> -- applicationFeeAmount (platform commission + payment charge)
-  HighPrecMoney -> -- paymentChargeAmount (the payment-charge share of appFee)
-  HighPrecMoney -> -- tipAmount (0 when tip is a separate PI add-on)
+  HighPrecMoney ->
+  HighPrecMoney ->
+  (HighPrecMoney, Maybe HighPrecMoney) ->
   FinanceCtx ->
-  m (Maybe RidePaymentLedgerInfo)
-buildLedgerInfoFromBreakups breakups discount cashback appFee mbPaymentChargeOverride _tip ctx =
-  case RD.parseProjectFareParamsBreakup (breakupToPair <$> breakups) of
-    Nothing -> pure Nothing
-    Just b -> do
-      let mbChargeRate = RD.paymentChargeRateFromBreakup b
-          (breakupPostDiscount, r) = RD.applyDiscountAndRepriceCharge mbChargeRate b discount
-          -- The override is booking/ride.paymentCharge, stored VAT-inclusive. Reverse the rate
-          -- out of it: reporting the whole gross as net dropped the VAT line from every invoice.
-          (paymentChargeAmt, paymentChargeVatAmt) =
-            if mbPaymentChargeOverride > 0
-              then splitGrossPaymentCharge mbChargeRate mbPaymentChargeOverride
-              else (breakupPostDiscount.paymentChargeTaxExclusive, breakupPostDiscount.paymentChargeTax)
-          info =
-            mkRidePaymentLedgerInfo
-              (breakupPostDiscount.discountApplicableRideFareTaxExclusive + breakupPostDiscount.nonDiscountApplicableRideFareTaxExclusive - appFee)
-              (breakupPostDiscount.discountApplicableRideFareTax + breakupPostDiscount.nonDiscountApplicableRideFareTax)
-              breakupPostDiscount.tollFareTaxExclusive
-              breakupPostDiscount.tollFareTax
-              breakupPostDiscount.parkingChargeTaxExclusive
-              breakupPostDiscount.parkingChargeTax
-              appFee
-              paymentChargeAmt
-              paymentChargeVatAmt
-              r.clampedDiscount
-              cashback
-              r.rideVatAbsorbedOnDiscount
-              -- A cancelled ride's own fee arrives as a base+tax pair. A due carried into a LATER
-              -- ride's fare arrives gross in the tax-exclusive slot with cancellationTax = 0, since
-              -- the BPP tracks such dues as one running total.
-              breakupPostDiscount.cancellationFeeTaxExclusive
-              breakupPostDiscount.cancellationTax
-              ctx
-      pure (Just info)
+  RidePaymentLedgerInfo
+buildLedgerInfo fareAmount breakups discount cashback paymentChargeAmount ctx =
+  RidePaymentLedgerInfo
+    { ledgerLines = RidePaymentFinance.rideLedgerLines fareAmount (maybe [] (.breakupLines) mbFareLines) paymentChargeAmount,
+      offerDiscountAmount = maybe discount (\fareLines -> (FBL.applyOffer discount fareLines).appliedDiscount) mbFareLines,
+      cashbackPayoutAmount = cashback,
+      financeCtx = ctx
+    }
   where
-    breakupToPair fb = (fb.description, fb.amount.amount)
+    mbFareLines = FBL.fareLinesFromBreakups fareAmount breakups
 
 -- | Build offer stats input from a person. Resolves staticCustomerId from phone
 --   and passes raw identifiers to the payment library for entity resolution.
@@ -1007,20 +915,6 @@ type MakePaymentIntentConstraints m r c =
 
 -- | The portion of the Stripe payment charge the platform collects via the application
 --   fee: added when the CUSTOMER or DRIVER bears it, zero when the PLATFORM bears it.
--- | The rate a ride's payment charge was priced at, recovered from the fare
---   breakup the BPP emitted. Needed wherever the charge must be levied on an
---   amount that was not part of the original fare -- a tip, or a cancellation
---   fee -- since there is no stored charge to read for those.
---
---   Prefers the explicit rate tags; falls back to dividing the emitted charge by
---   its base, which is the same arithmetic and covers a BPP that predates them.
-paymentChargeRateFromFareBreakups :: [DFareBreakup.FareBreakup] -> Maybe RD.PaymentChargeRate
-paymentChargeRateFromFareBreakups bs =
-  let pairs = (\fb -> (fb.description, fb.amount.amount)) <$> bs
-   in case RD.parsePaymentChargeRate pairs of
-        Just r -> Just r
-        Nothing -> RD.paymentChargeRateFromBreakup =<< RD.parseProjectFareParamsBreakup pairs
-
 -- | The payment charge levied on an amount outside the original fare, split the
 --   way the invoice and ledger need it.
 data LeviedPaymentCharge = LeviedPaymentCharge
@@ -1029,25 +923,10 @@ data LeviedPaymentCharge = LeviedPaymentCharge
     chargeVat :: HighPrecMoney,
     -- | What the rider is captured on top of the amount.
     riderGrossUp :: HighPrecMoney,
-    -- | What the platform collects as the payment intent's application fee.
-    applicationFee :: HighPrecMoney
+    -- | The gross charge the platform collects; added to the commission for the
+    --   payment intent's application fee.
+    collectedPaymentCharge :: HighPrecMoney
   }
-
--- | Split a VAT-inclusive payment charge back into (net, VAT) at the rate the
---   ride was priced at. booking.paymentCharge and ride.paymentCharge are stored
---   gross, so anywhere the two halves are needed separately -- an invoice line
---   pair, a ledger leg -- has to reverse the rate. Without a rate the whole
---   amount is treated as net, which keeps the total right and simply omits the
---   VAT line.
-splitGrossPaymentCharge :: Maybe RD.PaymentChargeRate -> HighPrecMoney -> (HighPrecMoney, HighPrecMoney)
-splitGrossPaymentCharge mbRate gross =
-  case mbRate of
-    Just rate
-      | rate.vatPct > 0,
-        gross > 0 ->
-        let net = gross / (1 + rate.vatPct / 100)
-         in (net, gross - net)
-    _ -> (gross, 0)
 
 -- | Levy the ride's payment charge on an amount outside the original fare.
 --
@@ -1057,25 +936,30 @@ splitGrossPaymentCharge mbRate gross =
 --   rider pays only the amount and the driver funds the fee out of it; under
 --   PAYMENT_PLATFORM the platform absorbs it. So a tip or cancellation fee is
 --   not silently cheaper to process than a fare of the same size.
-levyPaymentChargeOn :: Maybe RD.PaymentChargeRate -> Maybe Text -> HighPrecMoney -> LeviedPaymentCharge
-levyPaymentChargeOn mbRate mbBearer amount =
-  case (mbRate, mbBearer) of
-    (Just rate, Just bearer)
-      | amount > 0,
-        rate.ratePct > 0 ->
-        let net = amount * rate.ratePct / 100
-            vat = net * rate.vatPct / 100
-            gross = net + vat
-         in case bearer of
-              "PAYMENT_CUSTOMER" -> LeviedPaymentCharge net vat gross gross
-              "PAYMENT_DRIVER" -> LeviedPaymentCharge net vat 0 gross
-              _ -> none
-    _ -> none
+levyPaymentCharge :: Maybe SPaymentCharge.PaymentChargeQuote -> LeviedPaymentCharge
+levyPaymentCharge = \case
+  Just quote -> case quote.bearer of
+    PAYMENT_CUSTOMER -> LeviedPaymentCharge quote.net quote.tax (SPaymentCharge.paymentChargeGross quote) (SPaymentCharge.paymentChargeGross quote)
+    PAYMENT_DRIVER -> LeviedPaymentCharge quote.net quote.tax 0 (SPaymentCharge.paymentChargeGross quote)
+    PAYMENT_PLATFORM -> none
+  Nothing -> none
   where
     none = LeviedPaymentCharge 0 0 0 0
 
-paymentChargeForAppFee :: Maybe HighPrecMoney -> Maybe Text -> HighPrecMoney
-paymentChargeForAppFee mbCharge mbBearer =
+data PlatformComponent = COMMISSION | PAYMENT_CHARGE
+  deriving (Show, Eq, Ord, Generic, Bounded, Enum)
+
+platformComponents :: Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> [(PlatformComponent, HighPrecMoney)]
+platformComponents mbCommission mbCharge mbBearer =
+  [ (COMMISSION, fromMaybe 0 mbCommission),
+    (PAYMENT_CHARGE, platformCollectedPaymentCharge mbCharge mbBearer)
+  ]
+
+applicationFeeOf :: [(PlatformComponent, HighPrecMoney)] -> HighPrecMoney
+applicationFeeOf = sum . map snd
+
+platformCollectedPaymentCharge :: Maybe HighPrecMoney -> Maybe Text -> HighPrecMoney
+platformCollectedPaymentCharge mbCharge mbBearer =
   case mbBearer of
     Just bearer
       | bearer `elem` ["PAYMENT_CUSTOMER", "PAYMENT_DRIVER"] -> fromMaybe 0 mbCharge
@@ -1178,25 +1062,11 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
               { paymentIntentId = serviceResp.paymentServiceOrderId,
                 orderId = serviceResp.orderId
               }
-      -- Create or update PENDING core ride ledger entries (RideFare, GST, PlatformFee) after successful payment creation.
-      -- Cancellation entries are handled via cancellationCharge/cancellationTax fields; tip entries are managed separately.
+      -- Create or update PENDING core ride ledger entries (RideFare, GST, PaymentCharge) after successful payment creation.
+      -- Cancellation entries come from the CANCELLATION_FEE component; tip entries are managed separately.
       whenJust mbLedgerInfo $ \ledgerInfo ->
         void $
-          RidePaymentFinance.upsertCoreRidePaymentLedger
-            ledgerInfo.financeCtx
-            ledgerInfo.rideFare
-            ledgerInfo.gstAmount
-            ledgerInfo.tollFare
-            ledgerInfo.tollVatAmount
-            ledgerInfo.parkingCharge
-            ledgerInfo.parkingChargeVat
-            ledgerInfo.platformFee
-            ledgerInfo.offerDiscountAmount
-            ledgerInfo.cashbackPayoutAmount
-            ledgerInfo.rideVatAbsorbedOnDiscount
-            ledgerInfo.cancellationCharge
-            ledgerInfo.cancellationTax
-            (ledgerInfo.paymentCharge, ledgerInfo.paymentChargeVat)
+          RidePaymentFinance.upsertCoreRidePaymentLedger ledgerInfo.financeCtx ledgerInfo.ledgerLines ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount
       pure (Just resp)
 
 cancelPaymentIntent ::
@@ -1460,15 +1330,6 @@ updateDefaultPersonPaymentMethodIdWithCard person paymentMethodId mbCard = do
 paymentJobExecLockKey :: Text -> Text
 paymentJobExecLockKey rideId = "PaymentJobExec:RideId-" <> rideId
 
--- | Capture pending payment before allowing new ride.
--- Finds rides with uncaptured payment (Initiated or NotInitiated), attempts capture.
--- Success -> allow new ride. Failure -> block ride; user can retry via Get Dues / Clear Dues.
-filterPendingDuesEntries :: [LE.LedgerEntry] -> [Text] -> [LE.LedgerEntry]
-filterPendingDuesEntries entries excludedRefTypes =
-  entries
-    & filter (\e -> e.status == LE.DUE)
-    & filter (\e -> e.referenceType `notElem` excludedRefTypes)
-
 getDuesForPerson ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -1479,36 +1340,34 @@ getDuesForPerson ::
   Person.Person ->
   m APIRidePayment.GetDueAmountResp
 getDuesForPerson person = do
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
-  let excludedPurposes = fromMaybe [] (riderConfig >>= (.duesExcludedPaymentPurposes))
   mbLatestRideBooking <- QRide.findMostRecentRideForRider person.id
   case mbLatestRideBooking of
     Nothing -> pure noDues
     Just (ride, _) -> do
-      pendingEntries <- RidePaymentFinance.findDueRidePaymentEntries ride.id.getId
-      let filteredEntries = filterPendingDuesEntries pendingEntries excludedPurposes
-      if null filteredEntries
+      dueEntries <- RidePaymentFinance.findDueRidePaymentEntries ride.id.getId
+      if null dueEntries
         then pure noDues
         else do
-          let totalAmount = sum $ map (.amount) filteredEntries
-              currency = Kernel.Prelude.head filteredEntries & (.currency)
+          let currency = Kernel.Prelude.head dueEntries & (.currency)
+              totalAmount = RidePaymentFinance.dueAmountToClear dueEntries
+              entriesDue ref = RidePaymentFinance.sumByRefType ref dueEntries
           logInfo $
             "AUDIT: Get Dues - person_id: " <> person.id.getId
               <> ", ride_id: "
               <> ride.id.getId
               <> ", due_invoices: "
-              <> show (length filteredEntries)
+              <> show (length dueEntries)
               <> ", total_amount: "
               <> show totalAmount
           pure $
             APIRidePayment.GetDueAmountResp
               { rides = [APIRidePayment.DueAmountRide {rideId = ride.id, amount = totalAmount}],
                 totalDueAmount = totalAmount,
-                rideFareDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefRideFare filteredEntries,
-                gstDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefGST filteredEntries,
-                tollFareDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefTollFare filteredEntries,
-                tollVatDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefTollVAT filteredEntries,
-                platformFeeDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefPlatformFee filteredEntries,
+                rideFareDue = entriesDue RidePaymentFinance.ridePaymentRefRideFare,
+                gstDue = entriesDue RidePaymentFinance.ridePaymentRefGST,
+                tollFareDue = entriesDue RidePaymentFinance.ridePaymentRefTollFare,
+                tollVatDue = entriesDue RidePaymentFinance.ridePaymentRefTollVAT,
+                platformFeeDue = entriesDue RidePaymentFinance.ridePaymentRefPlatformFee,
                 currency = Just currency
               }
   where
@@ -1556,12 +1415,11 @@ clearDuesForPerson person duesResp currency paymentMethodId = do
     (customerPaymentId, _) <- getCustomerAndPaymentMethod booking person
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
     email <- mapM decrypt person.email
-    let debtPaymentCharge = paymentChargeForAppFee ride.paymentCharge ride.paymentChargeBearer
-        debtApplicationFeeAmount = fromMaybe 0 ride.commission + debtPaymentCharge
+    let debtPlatformComponents = platformComponents ride.commission ride.paymentCharge ride.paymentChargeBearer
     let createPaymentIntentServiceReq =
           DPayment.CreatePaymentIntentServiceReq
             { amount = duesResp.totalDueAmount,
-              applicationFeeAmount = debtApplicationFeeAmount,
+              applicationFeeAmount = applicationFeeOf debtPlatformComponents,
               discountAmount = debtDiscountAmount,
               offerId = Nothing,
               currency = currency,
@@ -1570,32 +1428,6 @@ clearDuesForPerson person duesResp currency paymentMethodId = do
               receiptEmail = email,
               driverAccountId
             }
-    let debtLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
-        debtLedgerInfo =
-          mkRidePaymentLedgerInfo
-            (duesResp.rideFareDue - duesResp.platformFeeDue)
-            duesResp.gstDue
-            duesResp.tollFareDue
-            duesResp.tollVatDue
-            0
-            0
-            -- The charge is booked inside PlatformFee on the ride path, so carve
-            -- it back out here rather than adding it on top: the invoice total is
-            -- unchanged and the charge gets its own line instead of being
-            -- mislabelled as ride fare. duesResp is built for this one ride
-            -- (rides = [DueAmountRide {rideId = ride.id}]), so ride.paymentCharge
-            -- is the right figure to carve out.
-            (duesResp.platformFeeDue - debtPaymentCharge)
-            debtPaymentCharge
-            -- No fare breakup is loaded on this path, so there is no rate to
-            -- reverse; the whole charge shows as net and the VAT line is omitted.
-            0
-            debtDiscountAmount
-            0
-            0
-            0
-            0
-            debtLedgerCtx
     -- Creating the intent can fail at the gateway (card, network, or a restricted counterparty
     -- account). That must surface as a FAILED response the app can render, not an unhandled
     -- exception: an uncaught throw here 500s the endpoint and leaves the rider with DUE entries and
@@ -1611,7 +1443,7 @@ clearDuesForPerson person duesResp currency paymentMethodId = do
           Nothing
           DOrder.RideHailing
           createPaymentIntentServiceReq
-          (Just debtLedgerInfo)
+          Nothing
           True -- platform-only: never route dues through the ride's connected account
     let gatewayFailure msg =
           APIRidePayment.ClearDuesResp
@@ -1798,18 +1630,7 @@ zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person 
   logDebug $ "zeroEffectivePaymentDueToOffer: rideId=" <> rideId.getId <> " mbOfferId=" <> show mbOfferId <> " ledgerInfo=" <> show li
   whenJust mbOfferId $ \offerId -> do
     result <-
-      RidePaymentFinance.createFullyDiscountedRidePaymentLedger
-        li.financeCtx
-        li.rideFare
-        li.gstAmount
-        li.tollFare
-        li.tollVatAmount
-        li.parkingCharge
-        li.parkingChargeVat
-        li.platformFee
-        discountAmount
-        li.rideVatAbsorbedOnDiscount
-        (li.paymentCharge, li.paymentChargeVat)
+      RidePaymentFinance.createFullyDiscountedRidePaymentLedger li.financeCtx li.ledgerLines li.offerDiscountAmount
     case result of
       Right _ -> logInfo $ "Created SETTLED ledger for fully discounted ride: " <> rideId.getId
       Left err -> logError $ "Failed to create fully discounted ledger: " <> show err

@@ -77,7 +77,7 @@ import qualified Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs 
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
 import qualified Domain.Types.TransporterConfig as DTC
-import EulerHS.Prelude hiding (elem, id, map, sum)
+import EulerHS.Prelude hiding (elem, id, map, or, sum)
 import GHC.Float (int2Double)
 import Kernel.Prelude as KP
 import qualified Kernel.Storage.Esqueleto as Esq

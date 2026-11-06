@@ -59,9 +59,9 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RefereeLink as DRL
 import Domain.Types.RideRoute
+import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.RiderPreferredOption as DRPO
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.ServiceTierType as STT
 import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.VehicleServiceTier as DVST

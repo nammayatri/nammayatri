@@ -19,7 +19,7 @@ import qualified Domain.Types.Booking as DBooking
 import Domain.Types.FareParameters (FareParameters)
 import "beckn-spec" Domain.Types.Invoice (IssuedToType (..))
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
-import Domain.Types.Ride (Ride)
+import Domain.Types.Ride (Ride, RideStatus (CANCELLED))
 import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import Kernel.Beam.Functions (runInReplica)
@@ -99,8 +99,9 @@ refundLedger rideId req apiKey = do
     -- with no config either, the platform absorbs.
     cancellationCommissionGross <- cancellationCommissionFromLedger (fromMaybe False booking.fareParams.isVatTaxType) ride
     overdueBenefit <- cancellationOverdueBenefitFromLedger ride
+    driverCancellationCredit <- cancellationCreditFromLedger (fromMaybe False booking.fareParams.isVatTaxType) ride
     fareParams <- QFP.rideFareParams ride booking
-    let totals = refundTotals ride fareParams
+    let totals = refundTotals ride fareParams (driverCancellationCredit + fst overdueBenefit + snd overdueBenefit)
     let deductFromDriver = fromMaybe (fromMaybe False transporterConfig.defaultRefundDeductFromDriver) req.deductFromDriver
         isVatMarket = fromMaybe False booking.fareParams.isVatTaxType
         legs = refundLegs deductFromDriver (RideTax.commissionTaxPct (RideTax.bookingRideTax booking transporterConfig)) cancellationCommissionGross overdueBenefit isVatMarket totals req ride
@@ -175,6 +176,22 @@ cancellationOverdueBenefitFromLedger ride = do
         pure $ maybe 0 (.amount) $ listToMaybe [e | e <- entries, e.status == LE.SETTLED, isNothing e.reversalOf, e.id `notElem` reversedIds]
   (,) <$> unreversedAmount Wallet.walletReferenceCancellationOverdueBenefit <*> unreversedAmount Wallet.walletReferenceCancellationOverdueBenefitTax
 
+cancellationCreditFromLedger :: Bool -> Ride -> Flow HighPrecMoney
+cancellationCreditFromLedger isVat ride = do
+  entries <- concat <$> mapM (`LedgerSvc.getEntriesByReference` ride.bookingId.getId) creditRefs
+  let reversedIds = mapMaybe (.reversalOf) entries
+  pure $ sum [e.amount | e <- entries, e.status == LE.SETTLED, isNothing e.reversalOf, e.id `notElem` reversedIds]
+  where
+    creditRefs =
+      [ Wallet.walletReferenceCustomerCancellationCharges,
+        if isVat then Wallet.walletReferenceCustomerCancellationVAT else Wallet.walletReferenceCustomerCancellationGST,
+        Wallet.walletReferenceOverdueCancellationCharge,
+        Wallet.walletReferenceOverdueCancellationTax
+      ]
+
+coveredRefundGross :: HighPrecMoney -> HighPrecMoney -> HighPrecMoney
+coveredRefundGross collectedGross refundedGross = max 0 (min collectedGross refundedGross)
+
 -- | Per-component refund legs. Platform-absorbed (deductFromDriver = False): every component posts
 --   from SellerExpense. Driver-deducted: the driver refunds every component gross, and the platform
 --   rebates to the driver the commission slice and the overdue benefit it kept on the refunded part.
@@ -208,12 +225,18 @@ refundLegs deductFromDriver mbCommissionVatPct cancellationCommissionGross (over
     -- Three buckets funded the fee (driver net share, charged commission, overdue benefit); each
     -- returns the same fraction of the refunded gross, so a full refund zeroes every bucket.
     cancellationFeeLegs comp baseRef vatRef =
-      let prorate amt = if cancellationTotal > 0 then amt * (comp.fareAmount + comp.vatAmount) / cancellationTotal else 0
+      let refundedGross = comp.fareAmount + comp.vatAmount
+          coveredGross = coveredRefundGross cancellationTotal refundedGross
+          coveredShare = if refundedGross > 0 then coveredGross / refundedGross else 0
+          coveredBase = comp.fareAmount * coveredShare
+          coveredTax = comp.vatAmount * coveredShare
+          prorate amt = if cancellationTotal > 0 then amt * coveredGross / cancellationTotal else 0
           commissionSlice = prorate (fst cancellationCommissionGross)
           benefitSlice = prorate overdueBenefit
           benefitTaxSlice = if isVatMarket then prorate overdueBenefitTax else 0
           (sliceBase, sliceVat) = splitByPostedTax cancellationCommissionGross commissionSlice
-       in driverOnlyLegs remittedTaxSource comp.fareAmount comp.vatAmount baseRef vatRef
+       in filter (\(_, _, amount, _) -> amount > 0) (driverOnlyLegs remittedTaxSource coveredBase coveredTax baseRef vatRef)
+            <> platformLegs [(SellerExpense, comp.fareAmount - coveredBase, baseRef), (SellerExpense, comp.vatAmount - coveredTax, vatRef)]
             <> platformToDriverRebateLegs
               [ (sliceBase, Wallet.walletReferenceCancellationRefundCommission),
                 (sliceVat, byTaxRegime Wallet.walletReferenceCancellationRefundCommissionVAT Wallet.walletReferenceCancellationRefundCommissionGST),
@@ -234,11 +257,11 @@ data RefundTotals = RefundTotals
     cancellationGross :: HighPrecMoney
   }
 
-refundTotals :: Ride -> FareParameters -> RefundTotals
-refundTotals ride fareParams =
+refundTotals :: Ride -> FareParameters -> HighPrecMoney -> RefundTotals
+refundTotals ride fareParams collectedCancellationGross =
   RefundTotals
     { rideFareBase = if gross > 0 then amounts.rideBase * remaining / gross else amounts.rideBase,
-      cancellationGross = amounts.cancellationDues
+      cancellationGross = if ride.status == CANCELLED then collectedCancellationGross else amounts.cancellationDues
     }
   where
     amounts = FC.fareParamsAmounts ride.fare fareParams
@@ -360,7 +383,7 @@ createCommissionRefundInvoice ctx req totals ride booking transporterConfig canc
       cancellationTotal = totals.cancellationGross
       refundedFor p f = maybe 0 (sum . map f . filter (\c -> c.component == p)) req.refundComponents
       commissionSlice = if rideFareTotal > 0 then commission * refundedFor RIDE_FARE (.fareAmount) / rideFareTotal else 0
-      cancellationSlice = if cancellationTotal > 0 then fst cancellationCommissionGross * refundedFor CANCELLATION_FEE (\c -> c.fareAmount + c.vatAmount) / cancellationTotal else 0
+      cancellationSlice = if cancellationTotal > 0 then fst cancellationCommissionGross * refundedFor CANCELLATION_FEE (\c -> coveredRefundGross cancellationTotal (c.fareAmount + c.vatAmount)) / cancellationTotal else 0
       bookingTax = RideTax.bookingRideTax booking transporterConfig
       (commissionSliceBase, commissionSliceVat) = RideTax.splitCommissionInclusive bookingTax commissionSlice
       (cancellationSliceBase, cancellationSliceVat) = splitByPostedTax cancellationCommissionGross cancellationSlice

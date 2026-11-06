@@ -56,6 +56,8 @@ module SharedLogic.CancellationOrchestrator
   )
 where
 
+import BecknV2.OnDemand.FareBreakup.Tax (TaxBreakup, mkTaxBreakup)
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
@@ -104,6 +106,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified SharedLogic.RideTax as RideTax
 import qualified Storage.CachedQueries.CancellationConsequenceMatrix as CQCCM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
@@ -355,8 +358,8 @@ applyTerminalConsequences ::
     ClickhouseFlow m r
   ) =>
   ConsequenceCtx ->
-  -- | create finance ledger entries: base -> gst -> prepaid-balance debit -> m ()
-  (HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> m ()) ->
+  -- | create finance ledger entries: base -> fee tax -> prepaid-balance debit -> m ()
+  (HighPrecMoney -> Maybe TaxBreakup -> Maybe HighPrecMoney -> m ()) ->
   m (Maybe CancellationChargesOutcome)
 applyTerminalConsequences ctx createLedgerEntries = do
   let booking = ctx.booking
@@ -368,11 +371,13 @@ applyTerminalConsequences ctx createLedgerEntries = do
         depositForfeitFee booking decision.faultVerdict <&> \d ->
           CancellationChargesOutcome
             { fee = Just d,
-              tax = Nothing,
+              feeTax = Nothing,
               overdueFee = Nothing,
-              overdueTax = Nothing,
+              overdueFeeTax = Nothing,
               commission = Nothing,
+              commissionTax = Nothing,
               overdueCommission = Nothing,
+              overdueCommissionTax = Nothing,
               consequenceRowId = Nothing,
               collectionMode = Nothing
             }
@@ -392,7 +397,7 @@ applyTerminalConsequences ctx createLedgerEntries = do
             then pure Nothing
             else case (ctx.source == SBCR.ByUser, ride.cancellationFeeIfCancelled, ride.cancellationConsequenceRowIdIfCancelled) of
               (True, Just softCancelTotal, Just quotedRowId) ->
-                softCancelOutcome softCancelTotal (fromMaybe 0 ride.cancellationFeeTaxIfCancelled) quotedRowId
+                softCancelOutcome softCancelTotal quotedRowId
               _ ->
                 if transporterConfig.canAddCancellationFee
                   then do
@@ -401,7 +406,7 @@ applyTerminalConsequences ctx createLedgerEntries = do
                   else pure Nothing
         whenJust mbOutcome $ \outcome ->
           whenJust outcome.fee $ \baseFee -> do
-            let gst = fromMaybe 0 outcome.tax
+            let gst = Tax.taxTotal outcome.feeTax
                 totalCharges = baseFee + gst
                 carriesForwardDues = CancellationConsequence.shouldCarryForwardDues decision.consequenceRow
             logTagInfo ("bookingId-" <> booking.id.getId) ("cancellation charge applied: base=" <> show baseFee <> " tax=" <> show gst <> " row=" <> show outcome.consequenceRowId)
@@ -409,7 +414,7 @@ applyTerminalConsequences ctx createLedgerEntries = do
             -- outstanding dues inside SCD (clamped at zero) — no ride charge, no counters,
             -- no ledger entries
             when (totalCharges > 0) $
-              QRide.updateCancellationChargesOnCancel (Just totalCharges) ride.id
+              QRide.updateCancellationChargesOnCancel (Just totalCharges) (Just gst) ride.id
             SCD.applyCancellationCharge
               SCD.ApplyCancellationChargeReq
                 { ride = ride,
@@ -417,11 +422,13 @@ applyTerminalConsequences ctx createLedgerEntries = do
                   totalCharges = totalCharges,
                   currency = booking.currency,
                   cancellationFee = outcome.fee,
-                  cancellationFeeTax = outcome.tax,
+                  cancellationFeeTax = outcome.feeTax,
                   overdueCancellationCharge = outcome.overdueFee,
-                  overdueCancellationTax = outcome.overdueTax,
+                  overdueCancellationTax = outcome.overdueFeeTax,
                   cancellationCommission = outcome.commission,
+                  cancellationCommissionTax = outcome.commissionTax,
                   overdueCancellationCommission = outcome.overdueCommission,
+                  overdueCancellationCommissionTax = outcome.overdueCommissionTax,
                   consequenceRowId = outcome.consequenceRowId,
                   collectionMode = outcome.collectionMode,
                   carryForwardEnabled = carriesForwardDues
@@ -430,11 +437,11 @@ applyTerminalConsequences ctx createLedgerEntries = do
               QRiderDetails.updateCancellationDueRidesCount riderId.getId
             let driverCancellationEarnings = baseFee + (if fromMaybe False booking.fareParams.isVatTaxType then gst else 0)
             when (isWalletEnabled && totalCharges > 0) $
-              createLedgerEntries baseFee gst ((\r -> CancellationConsequence.driverRideCreditDeduction r driverCancellationEarnings) =<< decision.consequenceRow)
-        let mbTotalCharges = mbOutcome >>= \o -> (\fee -> fee + fromMaybe 0 o.tax) <$> o.fee
+              createLedgerEntries baseFee outcome.feeTax ((\r -> CancellationConsequence.driverRideCreditDeduction r driverCancellationEarnings) =<< decision.consequenceRow)
+        let mbTotalCharges = mbOutcome >>= \o -> (\fee -> fee + Tax.taxTotal o.feeTax) <$> o.fee
             isFreeCancellation = maybe True (== 0) mbTotalCharges
         when (ctx.source == SBCR.ByUser && isWalletEnabled && isFreeCancellation && not (hasPositiveDeposit booking)) $
-          createLedgerEntries 0 0 Nothing
+          createLedgerEntries 0 Nothing Nothing
         pure mbOutcome
       case chargesE of
         Left err -> do
@@ -442,23 +449,25 @@ applyTerminalConsequences ctx createLedgerEntries = do
           pure depositOutcome
         Right res -> pure (depositOutcome <|> res)
   where
-    softCancelOutcome softCancelTotal quotedTax rowId = do
+    softCancelOutcome softCancelTotal rowId = do
       rows <- CQCCM.findAllByMerchantOpCityId ctx.booking.merchantOperatingCityId
       let mbRow = listToMaybe (filter (\r -> r.id.getId == rowId) rows)
-          base = softCancelTotal - quotedTax
-          -- same basis as the real-charge path: this supplies only overdueFee and
-          -- commission (fee and tax come from the quote), but a percentage must be
-          -- reckoned on the pass-through-free fare wherever it is taken.
-          breakup = mbRow <&> \row -> CancellationConsequence.computeCustomerCharge row (FC.customerCancellationFareBasis ctx.booking.fareParams ctx.booking.estimatedFare) ctx.booking.bookingDeposit
+          quotedTax = ctx.ride.cancellationFeeTaxBreakupIfCancelled <|> mkTaxBreakup (mfilter (> 0) ctx.ride.cancellationFeeTaxIfCancelled) Nothing Nothing Nothing
+          -- same basis as the real-charge path: this supplies only the overdue fields (fee,
+          -- tax and commission come from the quote), but a percentage must be reckoned on
+          -- the pass-through-free fare wherever it is taken.
+          breakup = mbRow <&> \row -> CancellationConsequence.computeCustomerCharge ctx.booking.currency (RideTax.bookingTax ctx.booking ctx.transporterConfig) row (FC.customerCancellationFareBasis ctx.booking.fareParams ctx.booking.estimatedFare) ctx.booking.bookingDeposit
       pure $
         Just
           CancellationChargesOutcome
-            { fee = Just base,
-              tax = if quotedTax > 0 then Just quotedTax else Nothing,
+            { fee = Just (softCancelTotal - Tax.taxTotal quotedTax),
+              feeTax = quotedTax,
               overdueFee = breakup >>= (.overdueFee),
-              overdueTax = Nothing,
-              commission = breakup >>= (.commission),
-              overdueCommission = Nothing,
+              overdueFeeTax = breakup >>= (.overdueFeeTax),
+              commission = ctx.ride.cancellationCommissionIfCancelled <|> (breakup >>= (.commission)),
+              commissionTax = ctx.ride.cancellationCommissionTaxBreakupIfCancelled <|> (breakup >>= (.commissionTax)),
+              overdueCommission = breakup >>= (.overdueCommission),
+              overdueCommissionTax = breakup >>= (.overdueCommissionTax),
               consequenceRowId = Just rowId,
               collectionMode = show <$> (mbRow >>= (.collectionMode))
             }
@@ -468,11 +477,13 @@ applyTerminalConsequences ctx createLedgerEntries = do
 --   a Nothing fee means no charge applies (downstream skips the dues/counter writes).
 data CancellationChargesOutcome = CancellationChargesOutcome
   { fee :: Maybe HighPrecMoney,
-    tax :: Maybe HighPrecMoney,
+    feeTax :: Maybe TaxBreakup,
     overdueFee :: Maybe HighPrecMoney,
-    overdueTax :: Maybe HighPrecMoney,
+    overdueFeeTax :: Maybe TaxBreakup,
     commission :: Maybe HighPrecMoney,
+    commissionTax :: Maybe TaxBreakup,
     overdueCommission :: Maybe HighPrecMoney,
+    overdueCommissionTax :: Maybe TaxBreakup,
     -- id of the CancellationConsequenceMatrix row that produced this outcome (audit trail)
     consequenceRowId :: Maybe Text,
     -- show ConsequenceCollectionMode from the row; persisted on the dues row so the BAP
@@ -565,24 +576,27 @@ previewCancellationConsequences booking ride transporterConfig source reasonCode
 -- | Build the customer charge outcome from an (already resolved) matrix row — shared by
 -- the real-cancel calculation and the dry-run soft-cancel preview.
 chargesOutcomeFromRow ::
-  (MonadFlow m) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   SRB.Booking ->
   Maybe DCCM.CancellationConsequenceMatrix ->
   m (Maybe CancellationChargesOutcome)
 chargesOutcomeFromRow booking = \case
   Nothing -> pure Nothing
   Just row -> do
-    let breakup = CancellationConsequence.computeCustomerCharge row (FC.customerCancellationFareBasis booking.fareParams booking.estimatedFare) booking.bookingDeposit
-    logTagInfo ("bookingId-" <> getId booking.id) ("consequence matrix row " <> row.id.getId <> ": fee=" <> show breakup.fee <> " tax=" <> show breakup.tax <> " commission=" <> show breakup.commission <> " overdue=" <> show breakup.overdueFee)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+    let breakup = CancellationConsequence.computeCustomerCharge booking.currency (RideTax.bookingTax booking transporterConfig) row (FC.customerCancellationFareBasis booking.fareParams booking.estimatedFare) booking.bookingDeposit
+    logTagInfo ("bookingId-" <> getId booking.id) ("consequence matrix row " <> row.id.getId <> ": fee=" <> show breakup.fee <> " tax=" <> show breakup.feeTax <> " commission=" <> show breakup.commission <> " overdue=" <> show breakup.overdueFee)
     pure $
       Just
         CancellationChargesOutcome
           { fee = breakup.fee,
-            tax = breakup.tax,
+            feeTax = breakup.feeTax,
             overdueFee = breakup.overdueFee,
-            overdueTax = Nothing,
+            overdueFeeTax = breakup.overdueFeeTax,
             commission = breakup.commission,
-            overdueCommission = Nothing,
+            commissionTax = breakup.commissionTax,
+            overdueCommission = breakup.overdueCommission,
+            overdueCommissionTax = breakup.overdueCommissionTax,
             consequenceRowId = Just row.id.getId,
             collectionMode = show <$> row.collectionMode
           }
@@ -592,8 +606,8 @@ chargesOutcomeFromRow booking = \case
 dropZeroCharge :: CancellationChargesOutcome -> CancellationChargesOutcome
 dropZeroCharge o = case o.fee of
   Just charges
-    | charges + fromMaybe 0 o.tax == 0 ->
-      CancellationChargesOutcome {fee = Nothing, tax = Nothing, overdueFee = o.overdueFee, overdueTax = o.overdueTax, commission = Nothing, overdueCommission = o.overdueCommission, consequenceRowId = o.consequenceRowId, collectionMode = o.collectionMode}
+    | charges + Tax.taxTotal o.feeTax == 0 ->
+      CancellationChargesOutcome {fee = Nothing, feeTax = Nothing, overdueFee = o.overdueFee, overdueFeeTax = o.overdueFeeTax, commission = Nothing, commissionTax = Nothing, overdueCommission = o.overdueCommission, overdueCommissionTax = o.overdueCommissionTax, consequenceRowId = o.consequenceRowId, collectionMode = o.collectionMode}
   _ -> o
 
 -- | Compute (without applying) the customer cancellation charge — used by the
@@ -633,11 +647,13 @@ getCancellationCharges booking ride source reasonCode = do
           depositForfeitFee booking decision.faultVerdict <&> \deposit ->
             CancellationChargesOutcome
               { fee = Just deposit,
-                tax = Nothing,
+                feeTax = Nothing,
                 overdueFee = Nothing,
-                overdueTax = Nothing,
+                overdueFeeTax = Nothing,
                 commission = Nothing,
+                commissionTax = Nothing,
                 overdueCommission = Nothing,
+                overdueCommissionTax = Nothing,
                 consequenceRowId = Nothing,
                 collectionMode = Nothing
               }

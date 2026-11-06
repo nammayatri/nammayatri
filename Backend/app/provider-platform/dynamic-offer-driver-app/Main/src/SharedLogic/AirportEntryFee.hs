@@ -27,6 +27,7 @@ import qualified Domain.Types.Common as DVST
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -50,6 +51,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.FareCalculator as FareCalculator
 import SharedLogic.Finance.PostActions (runFinance)
 import qualified SharedLogic.Finance.Wallet as Wallet
+import qualified SharedLogic.RideTax as RideTax
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
 import Tools.Error
@@ -111,22 +113,22 @@ driverFeeItemsOfGate mbGate mbCurrency =
 --   and always the real fee, so the override never charges the driver more.
 requiredDriverWalletAmountForBooking ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
-  Bool ->
+  DTC.TransporterConfig ->
   Maybe Text ->
   Maybe DVST.ServiceTierType ->
   Maybe SL.FareSettlementType ->
   Maybe Currency ->
   m (Maybe HighPrecMoney)
-requiredDriverWalletAmountForBooking enabled mbGateId mbServiceTier mbFareSettlementType mbCurrency = do
+requiredDriverWalletAmountForBooking transporterConfig mbGateId mbServiceTier mbFareSettlementType mbCurrency = do
   mbGate <- findGate mbGateId
   case mbGate >>= (.minBalanceRequired) of
     Just minBalance -> do
       logInfo $ "requiredDriverWalletAmountForBooking: using gate minBalanceRequired " <> show minBalance <> " for gate " <> show mbGateId
       pure $ Just minBalance
     _ -> do
-      entryFee <- fromMaybe 0 <$> requiredEntryFeeForBooking enabled mbGateId mbServiceTier mbFareSettlementType
+      entryFee <- fromMaybe 0 <$> requiredEntryFeeForBooking (fromMaybe False transporterConfig.airportEntryFeeEnabled) mbGateId mbServiceTier mbFareSettlementType
       let gateFeeItemsTotal = sum $ map (.amountWithCurrency.amount) (driverFeeItemsOfGate mbGate mbCurrency)
-          total = entryFee + gateFeeItemsTotal
+          total = entryFee + entryFeeTax (RideTax.taxPctOf (Just (RideTax.cityRideTax transporterConfig)) (.airportEntryFee)) entryFee + gateFeeItemsTotal
       pure $ if total > 0 then Just total else Nothing
 
 isAirportPickupArea ::
@@ -158,12 +160,12 @@ ensureDriverEnabledForAirportPickup mbArea now driverInfo = do
 --   No wallet account is treated as 0 balance (same as insufficient).
 checkAirportEntryFeeBalanceBeforeStartRide ::
   (BeamFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) =>
-  Bool -> -- feature flag airportEntryFeeEnabled
+  DTC.TransporterConfig ->
   Id DP.Person ->
   SRB.Booking ->
   m ()
-checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking = do
-  mbRequired <- requiredDriverWalletAmountForBooking enabled booking.pickupGateId (Just booking.vehicleServiceTier) booking.fareSettlementType (Just booking.currency)
+checkAirportEntryFeeBalanceBeforeStartRide transporterConfig driverId booking = do
+  mbRequired <- requiredDriverWalletAmountForBooking transporterConfig booking.pickupGateId (Just booking.vehicleServiceTier) booking.fareSettlementType (Just booking.currency)
   whenJust mbRequired $ \required -> do
     mbAccount <- Wallet.getWalletAccountByOwner DRIVER driverId.getId
     let available = maybe 0 (.balance) mbAccount
@@ -183,17 +185,13 @@ deductAirportEntryFeeAtStartRide enabled ride booking = do
   entryFee <- fromMaybe 0 <$> requiredEntryFeeForBooking enabled booking.pickupGateId (Just booking.vehicleServiceTier) booking.fareSettlementType
   gateFeeItems <- driverGateFeeItemsForGate booking.pickupGateId (Just booking.currency)
   unless (entryFee <= 0 && null gateFeeItems) $ do
-    let totalFee = entryFee
     transporterConfig <-
       getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
         >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     -- Derive the mode from the booking's payment method rather than hardcoding.
     isOnline <- Wallet.resolveIsOnlineFromBooking booking
-    let gstBreakup =
-          fromMaybe transporterConfig.taxConfig.rideGst transporterConfig.taxConfig.airportEntryFeeGst
-        gstRate = fromMaybe 0 (FareCalculator.computeTotalGstRate gstBreakup)
-        airportPortion = if gstRate >= 0 then totalFee / (1 + realToFrac gstRate) else totalFee
-        gstAmount = totalFee - airportPortion
+    let airportPortion = entryFee
+        gstAmount = entryFeeTax (RideTax.taxPctOf (RideTax.bookingRideTax booking transporterConfig) (.airportEntryFee)) entryFee
         ctx =
           FinanceCtx
             { merchantId = booking.providerId.getId,
@@ -229,8 +227,8 @@ deductAirportEntryFeeAtStartRide enabled ride booking = do
     result <-
       runFinance ctx $
         do
-          when (totalFee > 0) $ do
-            void $ transfer OwnerLiability GovtIndirect gstAmount Wallet.walletReferenceAirportEntryFeeGST Nothing
+          when (entryFee > 0) $ do
+            void $ transfer OwnerLiability GovtIndirect gstAmount (if fromMaybe False booking.fareParams.isVatTaxType then Wallet.walletReferenceAirportEntryFeeVAT else Wallet.walletReferenceAirportEntryFeeGST) Nothing
             void $ transfer OwnerLiability ParkingFeeRecipient airportPortion Wallet.walletReferenceAirportEntryFee Nothing
           forM_ gateFeeItems $ \item -> do
             let itemTotal = item.amountWithCurrency.amount
@@ -239,6 +237,9 @@ deductAirportEntryFeeAtStartRide enabled ride booking = do
     case result of
       Left err -> fromEitherM (\e -> InternalError ("Airport entry fee deduction failed: " <> show e)) (Left err)
       Right _ -> pure ()
+
+entryFeeTax :: Maybe Double -> HighPrecMoney -> HighPrecMoney
+entryFeeTax mbPct entryFee = maybe 0 (\pct -> entryFee * HighPrecMoney (toRational pct) / 100) mbPct
 
 -- | The DriverFeeItem's driver-facing name, kept on the ledger entry so a deduction
 --   can be traced back to the configured item.

@@ -23,6 +23,7 @@
 -- rows (a validation failure) resolve deterministically by lowest id.
 module SharedLogic.CancellationConsequence where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import Data.List (sortOn)
 import Data.Ord (Down (..))
 import qualified Domain.Types.Booking as SRB
@@ -48,6 +49,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Sequelize as Se
 import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.CancellationSignals as CancellationSignals
+import qualified SharedLogic.RideTax as RideTax
 import qualified Storage.CachedQueries.CancellationConsequenceMatrix as CQCCM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -180,9 +182,13 @@ buildConsequenceInputFromBooking booking ride mbFaultVerdict cancelledBy transpo
 
 data CustomerChargeBreakup = CustomerChargeBreakup
   { fee :: Maybe HighPrecMoney,
-    tax :: Maybe HighPrecMoney,
+    feeTax :: Maybe Tax.TaxBreakup,
     commission :: Maybe HighPrecMoney,
-    overdueFee :: Maybe HighPrecMoney
+    commissionTax :: Maybe Tax.TaxBreakup,
+    overdueFee :: Maybe HighPrecMoney,
+    overdueFeeTax :: Maybe Tax.TaxBreakup,
+    overdueCommission :: Maybe HighPrecMoney,
+    overdueCommissionTax :: Maybe Tax.TaxBreakup
   }
   deriving (Generic, Show)
 
@@ -198,25 +204,34 @@ data CustomerChargeBreakup = CustomerChargeBreakup
 --     negative fee; tax/commission/overdue never apply to credits.
 --   * Coin variants on the customer side are meaningless (riders have no coin wallet)
 --     and yield no charge.
-computeCustomerCharge :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> Maybe HighPrecMoney -> CustomerChargeBreakup
-computeCustomerCharge row fareBasis mbBookingDeposit =
+computeCustomerCharge :: Currency -> Tax.RideTax -> DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> Maybe HighPrecMoney -> CustomerChargeBreakup
+computeCustomerCharge currency bookingTax row fareBasis mbBookingDeposit =
   case row.customerDeduction of
     Just (DExtra.MoneyDeduction money) ->
       let deduction = moneyDeductionAmount money fareBasis mbBookingDeposit
-          (base, tax) =
-            if amountsAreInclusiveOfTax row
-              then splitTaxInclusiveTotal row deduction.amount
-              else (deduction.amount, (customerTaxAndCommission row deduction.amount).tax)
+          rideTax = Just (RideTax.resolveCancellationTax row bookingTax)
+          cancellationTaxes mbFee mbCommission = RideTax.resolveTaxBreakups currency rideTax Nothing RideTax.TaxableAmounts {commission = Nothing, cancellationFee = mbFee, cancellationCommission = mbCommission, paymentCharge = Nothing}
+          feeTaxable = if amountsAreInclusiveOfTax row then RideTax.Inclusive deduction.amount else RideTax.Exclusive deduction.amount
+          inclusiveFeeTax = (cancellationTaxes (Just feeTaxable) Nothing).riderPayable.cancellationFee
+          base = if amountsAreInclusiveOfTax row then deduction.amount - Tax.taxTotal inclusiveFeeTax else deduction.amount
+          baseCommission = customerCommission row base
+          overdueBaseCommission = customerCommission row =<< deduction.overdueAmount
+          taxes = cancellationTaxes (Just feeTaxable) baseCommission
+          overdueTaxes = cancellationTaxes (RideTax.Exclusive <$> deduction.overdueAmount) overdueBaseCommission
        in CustomerChargeBreakup
             { fee = Just base,
-              tax = tax,
-              commission = (customerTaxAndCommission row base).commission,
-              overdueFee = deduction.overdueAmount
+              feeTax = taxes.riderPayable.cancellationFee,
+              commission = baseCommission,
+              commissionTax = taxes.driverDeductible.cancellationCommission,
+              overdueFee = deduction.overdueAmount,
+              overdueFeeTax = overdueTaxes.riderPayable.cancellationFee,
+              overdueCommission = overdueBaseCommission,
+              overdueCommissionTax = overdueTaxes.driverDeductible.cancellationCommission
             }
     Just (DExtra.MoneyAddition money) ->
       let credit = moneyDeductionAmount money fareBasis mbBookingDeposit
-       in CustomerChargeBreakup {fee = Just (negate (abs credit.amount)), tax = Nothing, commission = Nothing, overdueFee = Nothing}
-    _ -> CustomerChargeBreakup Nothing Nothing Nothing Nothing
+       in CustomerChargeBreakup (Just (negate (abs credit.amount))) Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+    _ -> CustomerChargeBreakup Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 shouldCarryForwardDues :: Maybe DCCM.CancellationConsequenceMatrix -> Bool
 shouldCarryForwardDues mbRow = (mbRow >>= (.collectionMode)) /= Just DCCM.ImmediateCapture
@@ -229,37 +244,13 @@ customerIsCharged row = case row.customerDeduction of
   Just (DExtra.MoneyDeduction _) -> True
   _ -> False
 
--- | Split a TAX-INCLUSIVE total back into (base, tax) using the row's tax percentage.
--- ride.cancellationFeeIfCancelled stores the total quoted to the rider at soft-cancel
--- (base + tax, see API.Beckn.Cancel), so the confirm path must divide it out rather
--- than apply tax to it a second time.
-splitTaxInclusiveTotal :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> (HighPrecMoney, Maybe HighPrecMoney)
-splitTaxInclusiveTotal row total
-  | not (customerIsCharged row) = (total, Nothing)
+customerCommission :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> Maybe HighPrecMoney
+customerCommission row base
+  | not (customerIsCharged row) = Nothing
   | otherwise =
-    case (.taxPercentage) =<< row.customerCommissionAndTax of
-      Just p | 100 + p /= 0 -> let base = total * 100 / (100 + p) in (base, Just (total - base))
-      _ -> (total, Nothing)
-
--- | Tax and commission for a base charge. Split out of 'computeCustomerCharge' because
--- the confirm-cancel path has to rebuild them against the fee quoted at soft-cancel
--- rather than the fee the row would compute now.
-data TaxAndCommission = TaxAndCommission
-  { tax :: Maybe HighPrecMoney,
-    commission :: Maybe HighPrecMoney
-  }
-
-customerTaxAndCommission :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> TaxAndCommission
-customerTaxAndCommission row base
-  | not (customerIsCharged row) = TaxAndCommission {tax = Nothing, commission = Nothing}
-  | otherwise =
-    TaxAndCommission
-      { tax = ((.taxPercentage) =<< row.customerCommissionAndTax) <&> \p -> base * p / 100,
-        commission =
-          ((.commission) =<< row.customerCommissionAndTax) <&> \case
-            DExtra.FixedRate {amount} -> amount
-            DExtra.PercentageRate {percentage} -> base * percentage / 100
-      }
+    ((.commission) =<< row.customerCommissionAndTax) <&> \case
+      DExtra.FixedRate {amount} -> amount
+      DExtra.PercentageRate {percentage} -> base * percentage / 100
 
 data MoneyAmounts = MoneyAmounts
   { amount :: HighPrecMoney,

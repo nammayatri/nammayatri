@@ -16,6 +16,8 @@ module Beckn.ACL.OnInit (buildOnInitReqV2) where
 
 import Beckn.ACL.Common as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import BecknV2.OnDemand.FareBreakup.Tax (mkTaxBreakup)
+import qualified BecknV2.OnDemand.PaymentCharge as PaymentCharge
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -46,8 +48,11 @@ buildOnInitReqV2 req = do
     fareParamsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "Missing Quote Breakups.")
     let fareBreakups = mapMaybe ACL.mkDFareBreakup fareParamsQuotationBreakup
         commission = extractCommissionFromPaymentTags order.orderPayments
-        paymentCharge = extractHighPrecTagFromPaymentTags Tags.PAYMENT_CHARGE order.orderPayments
-        paymentChargeBearer = extractTextTagFromPaymentTags Tags.PAYMENT_CHARGE_BEARER order.orderPayments
+        paymentTag tag = extractHighPrecTagFromPaymentTags tag order.orderPayments
+        commissionTaxBreakup = mkTaxBreakup (paymentTag Tags.COMMISSION_TAX) (paymentTag Tags.COMMISSION_CGST) (paymentTag Tags.COMMISSION_SGST) (paymentTag Tags.COMMISSION_IGST)
+        paymentCharge = paymentTag Tags.PAYMENT_CHARGE
+        paymentChargeTaxBreakup = mkTaxBreakup (paymentTag Tags.PAYMENT_CHARGE_TAX) (paymentTag Tags.PAYMENT_CHARGE_CGST) (paymentTag Tags.PAYMENT_CHARGE_SGST) (paymentTag Tags.PAYMENT_CHARGE_IGST)
+        paymentChargeBearer = show . (.bearer) <$> PaymentCharge.paymentChargeDetailsFromTags (order.orderPayments >>= listToMaybe >>= (.paymentTags))
     case parsedData of
       Left err -> throwError . InvalidBecknSchema $ "on_init req," <> "on_init error: " <> show err
       Right (bookingId, bppBookingId, estimatedFare, paymentId, currency) -> do
@@ -58,7 +63,9 @@ buildOnInitReqV2 req = do
                 discount = Nothing, -- TODO : replace when actual discount logic is implemented
                 paymentUrl = Nothing, -- TODO check with ONDC
                 commission = commission,
+                commissionTaxBreakup = commissionTaxBreakup,
                 paymentCharge = paymentCharge,
+                paymentChargeTaxBreakup = paymentChargeTaxBreakup,
                 paymentChargeBearer = paymentChargeBearer,
                 ..
               }

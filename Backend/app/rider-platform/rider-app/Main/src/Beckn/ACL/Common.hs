@@ -19,6 +19,8 @@ import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Common
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified BecknV2.OnDemand.Enums as Enums
+import BecknV2.OnDemand.FareBreakup.Tax (mkTaxBreakup)
+import qualified BecknV2.OnDemand.PaymentCharge as PaymentCharge
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -244,20 +246,16 @@ parseRideCompletedEvent order msgId txnId = do
       tripEndLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
       rideEndTime = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) >>= Utils.getDropLocation >>= (.stopTime) >>= (.timeTimestamp)
       paymentStatus = order.orderPayments >>= listToMaybe >>= (.paymentStatus) >>= readMaybe . T.unpack
-      commission = do
+      paymentTag tag = do
         payment <- order.orderPayments >>= listToMaybe
         tags <- payment.paymentTags
-        txt <- Utils.getTag Tag.COMMISSION (Just tags)
+        txt <- Utils.getTag tag (Just tags)
         highPrecMoneyFromText txt
-      paymentCharge = do
-        payment <- order.orderPayments >>= listToMaybe
-        tags <- payment.paymentTags
-        txt <- Utils.getTag Tag.PAYMENT_CHARGE (Just tags)
-        highPrecMoneyFromText txt
-      paymentChargeBearer = do
-        payment <- order.orderPayments >>= listToMaybe
-        tags <- payment.paymentTags
-        Utils.getTag Tag.PAYMENT_CHARGE_BEARER (Just tags)
+      commission = paymentTag Tag.COMMISSION
+      commissionTaxBreakup = mkTaxBreakup (paymentTag Tag.COMMISSION_TAX) (paymentTag Tag.COMMISSION_CGST) (paymentTag Tag.COMMISSION_SGST) (paymentTag Tag.COMMISSION_IGST)
+      paymentCharge = paymentTag Tag.PAYMENT_CHARGE
+      paymentChargeTaxBreakup = mkTaxBreakup (paymentTag Tag.PAYMENT_CHARGE_TAX) (paymentTag Tag.PAYMENT_CHARGE_CGST) (paymentTag Tag.PAYMENT_CHARGE_SGST) (paymentTag Tag.PAYMENT_CHARGE_IGST)
+      paymentChargeBearer = show . (.bearer) <$> PaymentCharge.paymentChargeDetailsFromTags (order.orderPayments >>= listToMaybe >>= (.paymentTags))
   pure $
     Common.RideCompletedReq
       { bookingDetails,

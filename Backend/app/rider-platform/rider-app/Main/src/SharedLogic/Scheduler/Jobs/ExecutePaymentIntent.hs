@@ -14,7 +14,6 @@
 
 module SharedLogic.Scheduler.Jobs.ExecutePaymentIntent where
 
-import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.Ride as DRide
@@ -35,9 +34,11 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Lib.Scheduler
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
+import qualified SharedLogic.FareBreakupLines as FBL
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import SharedLogic.Payment as SPayment
+import qualified SharedLogic.RideLedgerLines as SCT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.OfferEntity as QOfferEntity
@@ -63,12 +64,12 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       personId = jobData.personId
       rideId = jobData.rideId
       fare = jobData.fare
-      applicationFeeAmount = jobData.applicationFeeAmount
   Redis.withWaitAndLockRedisWithTimeout (SPayment.paymentJobExecLockKey rideId.getId) 10 20 50000 $ do
     logDebug "Executing payment intent"
     -- Check if payment is already completed (idempotent check using invoice status)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-    let ridePaymentChargeAmount = SPayment.paymentChargeForAppFee ride.paymentCharge ride.paymentChargeBearer
+    let ridePlatformComponents = SPayment.platformComponents ride.commission ride.paymentCharge ride.paymentChargeBearer
+        rideFarePaymentCharge = SCT.customerBornePaymentCharge ride.paymentCharge ride.paymentChargeTaxBreakup ride.paymentChargeBearer
     -- Check if payment is already settled (idempotent check using ledger entry status)
     isPaymentSettled <- RidePaymentFinance.isRidePaymentSettled rideId.getId
     if isPaymentSettled
@@ -106,7 +107,7 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             let createPaymentIntentServiceReq =
                   DPayment.CreatePaymentIntentServiceReq
                     { amount = fareWithTip.amount,
-                      applicationFeeAmount,
+                      applicationFeeAmount = SPayment.applicationFeeOf ridePlatformComponents,
                       discountAmount = rideCaptureDiscount,
                       offerId = Id <$> booking.selectedOfferId,
                       currency = fareWithTip.currency,
@@ -121,32 +122,10 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             rideFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId DFareBreakup.RIDE (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE)
             -- ExecutePaymentIntent is the online-payment scheduler path → isOnline=True.
             let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
-            mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups rideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount ridePaymentChargeAmount 0 ledgerCtx
-            let ledgerInfo =
-                  fromMaybe
-                    SPayment.RidePaymentLedgerInfo
-                      { rideFare = fare.amount - applicationFeeAmount - rideDiscountAmount,
-                        gstAmount = 0,
-                        tollFare = 0,
-                        tollVatAmount = 0,
-                        parkingCharge = 0,
-                        parkingChargeVat = 0,
-                        platformFee = applicationFeeAmount,
-                        paymentCharge = ridePaymentChargeAmount,
-                        paymentChargeVat = 0,
-                        offerDiscountAmount = rideDiscountAmount,
-                        cashbackPayoutAmount = ridePayoutAmount,
-                        rideVatAbsorbedOnDiscount = 0,
-                        cancellationCharge = 0,
-                        cancellationTax = 0,
-                        financeCtx = ledgerCtx
-                      }
-                    mbLedgerInfo
-            logDebug $ "makePaymentIntent (execute-payment-intent): breakups=" <> show rideFareBreakups <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show ledgerInfo
+            let ledgerInfo = SPayment.buildLedgerInfo fare.amount rideFareBreakups rideDiscountAmount ridePayoutAmount rideFarePaymentCharge ledgerCtx
+            logDebug $ "makePaymentIntent (execute-payment-intent): breakups=" <> show rideFareBreakups <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformComponents=" <> show ridePlatformComponents <> " -> ledgerInfo=" <> show ledgerInfo
             mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId booking.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just ledgerInfo) False
-            let discountApplicableFareAmountTaxIncl = case RD.parseProjectFareParamsBreakup $ (\fb -> (fb.description, fb.amount.amount)) <$> rideFareBreakups of
-                  Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
-                  Nothing -> fareWithTip.amount
+            let discountApplicableFareAmountTaxIncl = maybe fareWithTip.amount FBL.offerBasePrice (FBL.fareLinesFromBreakups fare.amount rideFareBreakups)
             case mbPaymentIntentResp of
               Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount ledgerInfo booking
               Just paymentIntentResp -> do
