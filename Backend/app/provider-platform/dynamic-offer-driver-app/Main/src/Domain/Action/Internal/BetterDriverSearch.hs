@@ -38,7 +38,6 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchTry as QST
-import qualified Tools.SharedRedisKeys as SharedRedisKeys
 
 newtype BetterDriverSearchReq = BetterDriverSearchReq
   { bookingId :: Id DRB.Booking
@@ -64,7 +63,6 @@ betterDriverSearch req = do
       let pickupLoc = getCoordinates booking.fromLocation
           distance = distanceBetweenInMeters (LatLong latest.lat latest.lon) pickupLoc
       when (distance < abortRadius) $ throwError (InvalidRequest "Driver is already close to pickup; not eligible for a better-driver search")
-  SharedRedisKeys.clearBetterDriverSearchOutcome booking.id.getId
   SBDS.startBetterDriverSearch merchant booking ride
   pure Success
   where

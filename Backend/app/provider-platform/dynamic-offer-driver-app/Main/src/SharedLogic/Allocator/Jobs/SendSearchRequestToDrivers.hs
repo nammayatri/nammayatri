@@ -80,7 +80,6 @@ import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import qualified Tools.Metrics as Metrics
-import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import Tools.Utils
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
@@ -503,10 +502,6 @@ sendSearchRequestToDriversWithMode dispatchMode mbTopUpSize driverPoolConfig sea
           initiateDriverSearchBatch = SST.initiateDriverSearchBatch driverSearchBatchInput,
           isScheduledBooking = searchTry.isScheduled,
           notifyBapOnExpiry = searchTry.searchRepeatType /= DST.BETTER_DRIVER_SEARCH,
-          onBetterDriverSearchExpiry =
-            when (searchTry.searchRepeatType == DST.BETTER_DRIVER_SEARCH) $
-              whenJust searchTry.standInForBookingId $ \bppBookingId ->
-                SharedRedisKeys.setBetterDriverSearchOutcome bppBookingId "NO_MATCH",
           cancelSearchTry = I.cancelSearchTry searchTry.id,
           isBookingValid = do
             case mbBooking of
