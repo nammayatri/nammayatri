@@ -27,13 +27,12 @@ data DepositLedgerView = DepositLedgerView
 
 -- | Every attempt row counts, since the refund pays back every charged order, not just the latest.
 --   Balance-funded deposits have no row: an ended booking that ever held one got it back in the balance.
-depositDisplayStatus :: DRB.BookingStatus -> DepositLedgerView -> [DBP.BookingPayment] -> (Bool, Bool) -> API.BookingDepositStatus
-depositDisplayStatus bookingStatus ledger rows (inFlight, attemptFailed)
+--   A live unheld deposit is PAYABLE here; in-flight/failed attempts are resolved by the pay screen's status poll.
+depositDisplayStatus :: DRB.BookingStatus -> DepositLedgerView -> [DBP.BookingPayment] -> API.BookingDepositStatus
+depositDisplayStatus bookingStatus ledger rows
   | ledger.captured = API.FORFEITED
   | bookingStatus `elem` DRB.terminalBookingStatus = terminalStatus
   | ledger.held = API.COVERED
-  | inFlight = API.PROCESSING
-  | attemptFailed = API.FAILED
   | otherwise = API.PAYABLE
   where
     anyRow statuses = any ((`elem` statuses) . (.status)) rows
@@ -56,9 +55,7 @@ withBookingDeposit booking entity = case booking.bookingDepositAmount of
               held = any ((== LE.PENDING) . (.status)) entries,
               everHeld = not (null entries)
             }
-        isLive = booking.status `notElem` DRB.terminalBookingStatus && not ledger.held && not ledger.captured
-    verdict <- if isLive then BookingDeposit.depositAttemptVerdict (listToMaybe rows) else pure (False, False)
-    let refundedRows = filter ((`elem` [DBP.REFUND_PENDING, DBP.REFUND_INITIATED, DBP.REFUND_FAILED, DBP.REFUNDED]) . (.status)) rows
+        refundedRows = filter ((`elem` [DBP.REFUND_PENDING, DBP.REFUND_INITIATED, DBP.REFUND_FAILED, DBP.REFUNDED]) . (.status)) rows
     refunds <- concat <$> mapM (\row -> QPaymentOrder.findById row.paymentOrderId >>= SRB.getOrderRefunds) refundedRows
-    pure entity {SRB.bookingDeposit = Just (SRB.BookingDepositInfo amount (depositDisplayStatus booking.status ledger rows verdict) refunds)}
+    pure entity {SRB.bookingDeposit = Just (SRB.BookingDepositInfo amount (depositDisplayStatus booking.status ledger rows) refunds)}
   _ -> pure entity
