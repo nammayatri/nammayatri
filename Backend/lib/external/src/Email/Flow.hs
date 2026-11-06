@@ -19,6 +19,7 @@ module Email.Flow
     sendBusinessVerificationEmail,
     sendEmailWithAttachment,
     sendEmailWithAttachments,
+    sendEncodedEmailWithAttachments,
     sendEmailWithAttachmentsTracked,
     module Email.Types,
   )
@@ -112,6 +113,24 @@ sendEmailWithAttachments serviceConfig from to subject bodyText bodyFormat attac
       UNAVAILABLE -> do
         putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
         error "CloudType UNAVAILABLE: Cannot route email with attachments"
+
+sendEncodedEmailWithAttachments ::
+  EmailServiceConfig ->
+  Text ->
+  [Text] ->
+  Text ->
+  Text ->
+  EmailBodyFormat ->
+  [EmailAttachment] ->
+  IO ()
+sendEncodedEmailWithAttachments serviceConfig from to subject bodyText bodyFormat attachments = do
+  handleEmailRouting serviceConfig "sendEncodedEmailWithAttachments" $ \cloudType ->
+    case cloudType of
+      AWS -> AWS.sendEncodedEmailWithAttachments from to subject bodyText bodyFormat attachments
+      GCP -> GCP.sendEmailWithAttachments (getSendGridUrl serviceConfig) from to subject bodyText bodyFormat attachments
+      UNAVAILABLE -> do
+        putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
+        error "CloudType UNAVAILABLE: Cannot route encoded email with attachments"
 
 -- | 'sendEmailWithAttachments' with delivery-tracking options; returns which provider accepted the message
 -- and its message id. Throws, like the other senders, when the provider rejects the request.

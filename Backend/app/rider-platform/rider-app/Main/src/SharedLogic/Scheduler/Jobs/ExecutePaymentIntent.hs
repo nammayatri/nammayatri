@@ -52,6 +52,7 @@ executePaymentIntentJob ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
+    HasField "blackListedJobs" r [Text],
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]

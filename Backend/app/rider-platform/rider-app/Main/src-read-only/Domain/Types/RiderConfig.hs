@@ -131,6 +131,7 @@ data RiderConfig = RiderConfig
     initiateFirstMultimodalJourney :: Kernel.Prelude.Bool,
     intercitySearchLocations :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation],
     invoiceConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.RiderInvoiceConfig,
+    invoiceEmailEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     invoiceLogoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isAvoidToll :: Kernel.Prelude.Bool,
     isDeviceIdCheckDisabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
