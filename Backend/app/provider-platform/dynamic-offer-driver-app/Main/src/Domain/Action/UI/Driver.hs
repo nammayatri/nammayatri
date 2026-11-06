@@ -667,7 +667,8 @@ data UpdateDriverReq = UpdateDriverReq
     nomineeRelationship :: Maybe Text,
     nomineeDob :: Maybe Day,
     addressState :: Maybe Context.IndianState,
-    preferredMapProvider :: Maybe DriverInfo.MapProvider
+    preferredMapProvider :: Maybe DriverInfo.MapProvider,
+    enableCashRide :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -1543,6 +1544,7 @@ updateDriver ::
     HasField "version" r DeploymentVersion,
     HasField "cloudType" r (Maybe CloudType),
     Redis.HedisLTSFlowEnv r,
+    Forkable m,
     Finance.HasActorInfo m r,
     SOnboardingFlags.OnboardingFlow m r
   ) =>
@@ -1602,6 +1604,11 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     whenJust transporterConfig.supportedMapProviders $ \supported ->
       unless (mp `elem` supported) $ throwError $ InvalidRequest "Map provider not supported by merchant"
+  -- Cash ride preference of a fleet driver is controlled by the fleet (see postDriverFleetCashRideUpdate), so the driver cannot change it.
+  -- Checked before any write so a rejected request does not leave a partial update.
+  whenJust req.enableCashRide $ \_ -> do
+    mbActiveFda <- QFDA.findByDriverId personId True
+    when (isJust mbActiveFda) $ throwError $ InvalidRequest "Cash ride preference is managed by your fleet"
   -- Compute vehicle-related fields (use existing values if no vehicle or no request)
   (canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, canSwitchToIntraCity, availableUpiApps) <-
     case mVehicle of
@@ -1676,6 +1683,10 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   -- Update driver information (works for both cases: with or without vehicle)
   when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.availableUpiApps || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isTTSEnabled || isJust req.isHighAccuracyLocationEnabled || isJust req.rideRequestVolumeEnabled || isJust req.onboardingAs || isJust req.address || isJust req.addressDocumentType || isJust req.nomineeName || isJust req.nomineeRelationship || isJust req.preferredMapProvider) $ do
     QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs legacyAddress legacyAddressDocumentType legacyNomineeName legacyNomineeRelationship preferredMapProvider person.id
+
+  -- driver_information.enableCashRide (unset means cash rides allowed); synced so the driver pool sees it immediately.
+  whenJust req.enableCashRide $ \enableCashRide -> do
+    QFDA.updateEnableCashRideForDriversWithSync (Just enableCashRide) 1 [personId]
 
   whenJust req.onboardingAs $ \reqOnboardingAs -> do
     transporterConfigForOnboardingAs <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
