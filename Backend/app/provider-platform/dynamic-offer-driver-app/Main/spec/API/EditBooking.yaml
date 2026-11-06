@@ -9,6 +9,7 @@ types:
     enum: "ACCEPT, REJECT"
   EditBookingRespondAPIReq:
     action : EditBookingRespondAction
+    isTimeout: Maybe Bool
 
 apis:
   - POST:
