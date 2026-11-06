@@ -98,7 +98,7 @@ stepCab cfg now bookings routeRead s = do
   -- an offered booking is not the rider's yet: the cab passing its stop is nobody's miss
   unoffered <- filterM (fmap seatIsRiders . readAlloc . (.id)) awaiting
   forM_ unoffered $ \b ->
-    if any (boardStopPassed b.fromStationCode) mbCab
+    if any (boardStopPassed (fromIntegral cfg.atStopRadiusM) b.fromStationCode) mbCab
       then do
         -- the no-show is allocation_closed's blame; a stop missing from the cab's list can't be judged
         riderFix <- readRiderFix b.id

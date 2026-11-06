@@ -41,12 +41,13 @@ tests =
         let byRoute = groupByKey fst [(Just "R1", "b1"), (Nothing, "b2"), (Just "R2", "b3"), (Just "R1", "b4" :: String)]
          in (map snd (Map.findWithDefault [] "R1" byRoute), Map.findWithDefault [] "R9" byRoute)
               @?= (["b1", "b4"], []),
-      testCase "board stop passed only once LTS marks it Reached" $
-        ( boardStopPassed "S1" (fix 25.59 [stopAt 1 True, stopAt 2 False]),
-          boardStopPassed "S1" (fix 25.58 [stopAt 1 False, stopAt 2 False]),
-          boardStopPassed "S3" (fix 25.59 [stopAt 1 True, stopAt 2 False])
+      testCase "board stop passed only once LTS marks it Reached and the cab has left it" $
+        ( boardStopPassed 100 "S1" (fix 25.59 [stopAt 1 True, stopAt 2 False]),
+          boardStopPassed 100 "S1" (fix 25.58 [stopAt 1 False, stopAt 2 False]),
+          boardStopPassed 100 "S3" (fix 25.59 [stopAt 1 True, stopAt 2 False]),
+          boardStopPassed 100 "S1" (fix 25.58 [stopAt 1 True, stopAt 2 False])
         )
-          @?= (True, False, False),
+          @?= (True, False, False, False),
       testCase "drop: clock starts on arrival, ride ends autoEndAfterDropSec later" $
         ( dropAction cfg t0 Nothing (Just (fix 25.595 [stopAt 2 True, stopAt 3 False])) "S2",
           dropAction cfg t0 Nothing (Just (fix 25.6295 [stopAt 5 False, stopAt 6 False])) "S6",

@@ -40,8 +40,9 @@ data OffRouteAction = StartOffRouteClock | ClearOffRouteClock | PauseOffRoute | 
 meters :: LatLong -> LatLong -> Double
 meters a b = realToFrac (distanceBetweenInMeters a b)
 
-boardStopPassed :: Text -> CabFix -> Bool
-boardStopPassed code cab = any (\s -> s.stopCode == code && s.reached) cab.stops
+-- | Reached and left: a cab still within `radius` of its board stop stands at it, though gps-processor has already moved past it.
+boardStopPassed :: Double -> Text -> CabFix -> Bool
+boardStopPassed radius code cab = any (\s -> s.stopCode == code && s.reached && meters cab.position s.coordinate > radius) cab.stops
 
 -- | LTS never marks a route's last stop Reached (nothing lies beyond it to project onto), so arriving within the radius counts too.
 arrivedAt :: Double -> CabFix -> StopMark -> Bool
