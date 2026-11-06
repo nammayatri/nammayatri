@@ -42,6 +42,7 @@ import Data.Ord (Down (..))
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.Cancel as DCancel
+import qualified Domain.Action.UI.OpenMeter as DOpenMeter
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.CustomerBlockTransactions as DCBT
@@ -97,6 +98,8 @@ deleteCustomerDelete merchantShortId opCity customerId = do
   dues <- SPayment.getDuesForPerson person
   when (dues.totalDueAmount > 0) $ throwError (PersonHasPendingDues dues.totalDueAmount)
   SSocialLogin.deleteSocialIdentities personId
+  -- Open meter rides are kept. A running one is auto-ended, because no device can end it once the account is gone.
+  DOpenMeter.autoEndRunningRides personId
   _ <- QP.deleteById personId
   QPFS.clearCache personId
   _ <- QSRL.deleteAllByRiderId personId

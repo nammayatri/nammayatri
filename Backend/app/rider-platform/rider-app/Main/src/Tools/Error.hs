@@ -1687,3 +1687,35 @@ instance IsHTTPError SharedCabContactError where
     SharedCabChatNotAvailable -> E400
 
 instance IsAPIError SharedCabContactError
+
+-- | Thrown by Domain.Action.UI.OpenMeter and returned by the pure transitions in
+-- SharedLogic.OpenMeter. Another rider's ride is reported as not found.
+data OpenMeterError
+  = OpenMeterRideNotFound Text
+  | OpenMeterRideAlreadyActive Text
+  | OpenMeterRideBusy
+  | OpenMeterRideInvalidState Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''OpenMeterError
+
+instance IsBaseError OpenMeterError where
+  toMessage = \case
+    OpenMeterRideNotFound rideId -> Just $ "Open meter ride not found: " <> rideId
+    OpenMeterRideAlreadyActive activeRideId -> Just $ "Another open meter ride is already running: " <> activeRideId
+    OpenMeterRideBusy -> Just "The open meter ride is being updated by another request. Retry shortly."
+    OpenMeterRideInvalidState status -> Just $ "Not allowed while the open meter ride is " <> status
+
+instance IsHTTPError OpenMeterError where
+  toErrorCode = \case
+    OpenMeterRideNotFound _ -> "OPEN_METER_RIDE_NOT_FOUND"
+    OpenMeterRideAlreadyActive _ -> "OPEN_METER_RIDE_ALREADY_ACTIVE"
+    OpenMeterRideBusy -> "OPEN_METER_RIDE_BUSY"
+    OpenMeterRideInvalidState _ -> "OPEN_METER_RIDE_INVALID_STATE"
+  toHttpCode = \case
+    OpenMeterRideNotFound _ -> E400
+    OpenMeterRideAlreadyActive _ -> E409
+    OpenMeterRideBusy -> E409
+    OpenMeterRideInvalidState _ -> E400
+
+instance IsAPIError OpenMeterError
