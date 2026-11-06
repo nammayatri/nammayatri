@@ -665,6 +665,7 @@ createFullyDiscountedRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAm
           logError $ "Failed to settle fully discounted ride payment ledger: " <> show err
           pure $ Left err
         Right _ -> do
+          whenJust res.invoiceId $ \invoiceId -> FInvoiceService.updateInvoiceStatus invoiceId FInvoice.Paid
           logInfo "Created + settled ledger for fully discounted ride (offer covers 100%)"
           pure $ Right res
 
@@ -946,11 +947,14 @@ voidRidePaymentLedger entryIds = do
 markCancellationFeeInvoicePaid ::
   (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Maybe (Id FInvoice.Invoice) ->
-  m ()
-markCancellationFeeInvoicePaid mbInvoiceId =
-  whenJust mbInvoiceId $ \invoiceId -> do
+  m Bool
+markCancellationFeeInvoicePaid mbInvoiceId = case mbInvoiceId of
+  Nothing -> pure False
+  Just invoiceId -> do
+    mbInvoice <- QInvoice.findById invoiceId
     FInvoiceService.updateInvoiceStatus invoiceId FInvoice.Paid
     logInfo $ "Marked cancellation fee invoice as Paid: " <> invoiceId.getId
+    pure $ maybe False (\inv -> inv.status `elem` [FInvoice.Draft, FInvoice.Issued]) mbInvoice
 
 -- | Find and cancel the Ride invoice linked to a rideId (called when ride intent is cancelled).
 voidRideInvoice ::
@@ -989,19 +993,21 @@ voidRidePaymentEntriesAndInvoice rideId = do
 markRideInvoicePaid ::
   (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- rideId
-  m ()
+  m [DInvType.InvoiceType]
 markRideInvoicePaid rideId = do
   rideEntries <- findRidePaymentEntries rideId
   -- Close the Ride invoice and, when a cancellation fee was also collected on this ride
   -- (its own intent, a dues payment, or a later ride's fare), the RideCancellation invoice —
   -- both settle through the same capture, so one commonised pass handles them.
-  forM_ [ridePaymentRefRideFare, ridePaymentRefCancellationFee] $ \refType -> do
+  fmap catMaybes . forM [ridePaymentRefRideFare, ridePaymentRefCancellationFee] $ \refType -> do
     let settledEntry = find (\e -> e.referenceType == refType && e.status == LE.SETTLED) rideEntries
-    whenJust settledEntry $ \entry -> do
-      mbInvoice <- FInvoiceService.getInvoiceForEntry entry.id
-      whenJust mbInvoice $ \inv -> do
+    mbInvoice <- maybe (pure Nothing) (FInvoiceService.getInvoiceForEntry . (.id)) settledEntry
+    case mbInvoice of
+      Nothing -> pure Nothing
+      Just inv -> do
         FInvoiceService.updateInvoiceStatus inv.id FInvoice.Paid
         logInfo $ "Marked invoice " <> inv.id.getId <> " (" <> refType <> ") as Paid for rideId: " <> rideId
+        pure $ if inv.status `elem` [FInvoice.Draft, FInvoice.Issued] then Just inv.invoiceType else Nothing
 
 -- | Mark the Ride invoice as Issued when capture fails (entries now DUE for collection).
 markRideInvoiceIssued ::
@@ -1490,7 +1496,7 @@ createRefundInvoice ::
   Text -> -- rideId
   Text -> -- refundsRequestId
   [RefundComponentSplit] -> -- per-component split (always present; caller throws on no breakup)
-  m ()
+  m Bool
 createRefundInvoice rideId refundsRequestId splits = do
   let activeStatuses = [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid]
   -- Parent invoice: header source (customer/merchant/currency) + referenceInvoiceNumber. Prefer the
@@ -1501,7 +1507,9 @@ createRefundInvoice rideId refundsRequestId splits = do
     Just inv -> pure (Just inv)
     Nothing -> listToMaybe <$> QInvoiceExtra.findByReferenceIdWithOptions rideId (Just DInvType.RideCancellation) Nothing activeStatuses (Just 1) (Just 0)
   case mbSource of
-    Nothing -> logInfo $ "createRefundInvoice: no ride or cancellation invoice for ride " <> rideId <> "; skipping refund invoice"
+    Nothing -> do
+      logInfo $ "createRefundInvoice: no ride or cancellation invoice for ride " <> rideId <> "; skipping refund invoice"
+      pure False
     Just srcInv -> do
       let lineItems = concatMap mkRefundLineItems splits
           anyVat = any (\s -> s.vatAmount > 0) splits
@@ -1548,10 +1556,13 @@ createRefundInvoice rideId refundsRequestId splits = do
             }
           []
       case createRes of
-        Left err -> logError $ "createRefundInvoice: failed for ride " <> rideId <> ": " <> show err
+        Left err -> do
+          logError $ "createRefundInvoice: failed for ride " <> rideId <> ": " <> show err
+          pure False
         Right newInv -> do
           FInvoiceService.updateInvoiceStatus newInv.id FInvoice.Paid
           logInfo $ "createRefundInvoice: created refund invoice " <> newInv.id.getId <> " for ride " <> rideId <> " refundRequest " <> refundsRequestId
+          pure True
 
 -- | Per-component refund invoice lines: a negative Fare + a negative inline Tax (shared
 --   groupId). Ride fare and cancellation fee are regular taxable lines; toll/parking are

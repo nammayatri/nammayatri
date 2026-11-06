@@ -13,6 +13,7 @@ import qualified Domain.Types.Booking as Booking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingPayment as DBP
 import qualified Domain.Types.CancellationReason as SCR
+import qualified Domain.Types.EmailTemplate as DET
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
@@ -67,6 +68,7 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.Finance.Rails as FinanceRails
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
+import qualified SharedLogic.InvoiceEmailSchedule as SInvoiceEmailSchedule
 import SharedLogic.JobScheduler
 import qualified SharedLogic.JobScheduler as JobScheduler
 import SharedLogic.Offer
@@ -1231,7 +1233,9 @@ chargePaymentIntent ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     FinanceBeamFlow.BeamFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -1275,7 +1279,8 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
           Right () -> do
             logInfo $ "Settled " <> show (length entryIds) <> " ledger entries for ride: " <> rideId.getId <> " reason: " <> settledReason
             -- markRideInvoicePaid now closes both the Ride and (if any) RideCancellation invoice.
-            RidePaymentFinance.markRideInvoicePaid rideId.getId
+            paidInvoiceTypes <- RidePaymentFinance.markRideInvoicePaid rideId.getId
+            SInvoiceEmailSchedule.schedulePaidInvoiceEmails merchantId merchantOpCityId rideId paidInvoiceTypes
           Left err -> logError $ "Failed to settle ledger entries for ride " <> rideId.getId <> ": " <> show err
       else do
         -- Mark entries as DUE on failed capture so getDueAmount picks them up
@@ -1535,6 +1540,8 @@ getDefaultPaymentMethodForDues p = do
 
 clearDuesForPerson ::
   ( MakePaymentIntentConstraints m r c,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text],
     EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasRequestId r,
@@ -1729,7 +1736,9 @@ clearDuesForPerson person duesResp currency paymentMethodId = do
       | otherwise = "Payment failed. Please try again or contact support if the issue persists."
 
 capturePendingPaymentIfExists ::
-  ( EsqDBFlow m r,
+  ( SchedulerFlow r,
+    HasField "blackListedJobs" r [Text],
+    EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EncFlow m r,
@@ -1780,7 +1789,7 @@ capturePendingPaymentIfExists person merchantOperatingCityId = do
                   throwError $ InvalidRequest "You have pending dues from a previous ride. Please clear your dues before booking a new ride."
 
 zeroEffectivePaymentDueToOffer ::
-  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, FinanceBeamFlow.BeamFlow m r, HasKafkaProducer r, Finance.HasActorInfo m r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, FinanceBeamFlow.BeamFlow m r, HasKafkaProducer r, Finance.HasActorInfo m r, SchedulerFlow r, HasField "blackListedJobs" r [Text]) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id Ride.Ride ->
@@ -1811,7 +1820,10 @@ zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person 
         li.rideVatAbsorbedOnDiscount
         (li.paymentCharge, li.paymentChargeVat)
     case result of
-      Right _ -> logInfo $ "Created SETTLED ledger for fully discounted ride: " <> rideId.getId
+      Right res -> do
+        logInfo $ "Created SETTLED ledger for fully discounted ride: " <> rideId.getId
+        when (isJust res.invoiceId) $
+          SInvoiceEmailSchedule.scheduleInvoiceEmail merchantId merchantOperatingCityId rideId DET.RIDE_INVOICE Nothing
       Left err -> logError $ "Failed to create fully discounted ledger: " <> show err
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
     let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
