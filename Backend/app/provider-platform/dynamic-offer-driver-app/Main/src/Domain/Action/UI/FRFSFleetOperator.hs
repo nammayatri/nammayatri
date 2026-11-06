@@ -792,9 +792,9 @@ fileIncident person messageId req merchantOpCityId mbPersonId = do
     Nothing -> do
       logWarning $ "fileIncident: unexpected role for a bus crew report: " <> show person.role
       pure Nothing
-  mbGimsVehicle <- case mbIbppConfig of
+  (mbGimsVehicle, mbRouteId) <- case mbIbppConfig of
     Just integratedBPPConfig -> resolveReportedVehicle integratedBPPConfig anchor
-    Nothing -> pure Nothing
+    Nothing -> pure (Nothing, Nothing)
   busId <-
     (mbGimsVehicle <|> req.vehicleNumber)
       & fromMaybeM (InvalidRequest "Could not determine which bus this report is for")
@@ -812,7 +812,8 @@ fileIncident person messageId req merchantOpCityId mbPersonId = do
         description = mkBmsDescription req,
         reportedByPersonId = Just person.id.getId,
         reportedByName = Just reporterName,
-        gtfsId = mbGtfsId
+        gtfsId = mbGtfsId,
+        routeId = mbRouteId
       }
   persistIncidentReport person messageId.getId req busId
   logInfo $ "FRFSFleetOperator: incident reported - " <> show req.incidentType <> " bus " <> busId
@@ -836,7 +837,9 @@ reportLockTtlSeconds = 60
 -- | Fails open: a crashed bus is exactly when GIMS may be unreachable, and the report
 -- must still go through on the client-supplied vehicleNumber. Takes the already-resolved
 -- config rather than re-resolving it, so a GIMS failure here can't waste a prior lookup.
-resolveReportedVehicle :: DIBC.IntegratedBPPConfig -> GimsOperationAnchor -> Flow (Maybe Text)
+-- Returns (vehicleNumber, routeId) -- route_id rides along for free off the same GIMS
+-- call that resolves the vehicle, read off the bus's current trip if it has one.
+resolveReportedVehicle :: DIBC.IntegratedBPPConfig -> GimsOperationAnchor -> Flow (Maybe Text, Maybe Text)
 resolveReportedVehicle integratedBPPConfig anchor = do
   result <- withTryCatch "FRFSFleetOperator:resolveReportedVehicle" $ do
     baseUrl <- getGimsBaseUrl integratedBPPConfig
@@ -852,12 +855,12 @@ resolveReportedVehicle integratedBPPConfig anchor = do
             gimsDriverId = anchor.gimsDriverId,
             vehicleNumber = anchor.vehicleNumber
           }
-    pure tripResp.vehicleNumber
+    pure (tripResp.vehicleNumber, (.route_id) <$> tripResp.current)
   case result of
-    Right vehicleNumber -> pure (Just vehicleNumber)
+    Right (vehicleNumber, mbRouteId) -> pure (Just vehicleNumber, mbRouteId)
     Left err -> do
       logWarning $ "FRFSFleetOperator: falling back to client vehicleNumber for incident report - " <> show err
-      pure Nothing
+      pure (Nothing, Nothing)
 
 -- | bms has no location field, so coordinates ride in the description rather than be lost.
 mkBmsDescription :: FleetOperatorIncidentReq -> Maybe Text
