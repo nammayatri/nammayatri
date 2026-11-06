@@ -1262,6 +1262,7 @@ library
       Tools.OcrProviderResponse
       Tools.OpenAPIInstances
       Tools.PartnerSdk
+      Tools.PayloadEncryption
       Tools.Payment
       Tools.PaymentNudge
       Tools.Payout

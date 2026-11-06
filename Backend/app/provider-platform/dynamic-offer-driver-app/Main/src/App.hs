@@ -76,6 +76,7 @@ import qualified Storage.CachedQueries.Merchant as Storage
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import System.Environment (lookupEnv)
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
+import qualified Tools.PayloadEncryption as PayloadEncryption
 import "utils" Utils.Common.Events as UE
 
 instance HasSchemaName Beam.MerchantOperatingCityT where
@@ -190,7 +191,8 @@ runDynamicOfferDriverApp' appCfg = do
         pure flowRt'
     let timeoutMiddleware = UE.timeoutEvent flowRt appEnv (responseLBS status408 [] "") appCfg.incomingAPIResponseTimeout
     proxyManager <- HttpTLS.newTlsManager
-    runSettings settings $ timeoutMiddleware (App.run proxyManager (App.EnvR flowRt' appEnv))
+    payloadEncryption <- PayloadEncryption.payloadEncryptionMiddleware <$> PayloadEncryption.loadPayloadEncryptionConfig
+    runSettings settings $ timeoutMiddleware (payloadEncryption (App.run proxyManager (App.EnvR flowRt' appEnv)))
 
 convertToHashMap :: Map.Map String Http.ManagerSettings -> HashMap.HashMap Text Http.ManagerSettings
 convertToHashMap = HashMap.fromList . map convert . Map.toList
