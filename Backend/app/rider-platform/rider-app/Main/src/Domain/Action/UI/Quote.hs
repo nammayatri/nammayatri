@@ -57,6 +57,7 @@ import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.QuoteBreakup as DQB
 import qualified Domain.Types.RideStatus as DRide
@@ -343,8 +344,8 @@ buildGetQuotesRes timerLabel searchRequest estimateList quoteList mbRiderConfig 
       enableRideHailingOffers = maybe False (.enableRideHailingOffers) mbRiderConfig
       language = fromMaybe Lang.ENGLISH person.language
   (offers, estimates') <- withTimeAPI timerLabel "quotesAndEstimates" $ do
-    offers <- getOffers searchRequest enableRideHailingOffers providerLookup quoteList language
-    estimates' <- getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList language
+    offers <- getOffers searchRequest person enableRideHailingOffers providerLookup quoteList language
+    estimates' <- getEstimates searchRequest person enableRideHailingOffers isReferredRide providerLookup estimateList language
     pure (offers, estimates')
   let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) mbRiderConfig
       defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) mbRiderConfig
@@ -408,7 +409,7 @@ mkSuggestedEstimates shadow estimateList alternatives = do
           isReferredRide = isJust shadow.driverIdentifier
           language = fromMaybe Lang.ENGLISH person.language
       providerLookup <- buildProviderLookup estimateList []
-      apiEstimates <- getEstimates shadow enableRideHailingOffers isReferredRide providerLookup estimateList language
+      apiEstimates <- getEstimates shadow person enableRideHailingOffers isReferredRide providerLookup estimateList language
       pure . Just $
         SuggestedEstimates
           { searchId = shadow.id,
@@ -480,7 +481,7 @@ mkAlternateSuggestion shadow route isDefault estimateList =
           isReferredRide = isJust shadow.driverIdentifier
           language = fromMaybe Lang.ENGLISH person.language
       providerLookup <- buildProviderLookup estimateList []
-      apiEstimates <- getEstimates shadow enableRideHailingOffers isReferredRide providerLookup estimateList language
+      apiEstimates <- getEstimates shadow person enableRideHailingOffers isReferredRide providerLookup estimateList language
       pure . Just $
         AlternateSuggestion
           { searchId = shadow.id,
@@ -553,15 +554,15 @@ lookupProvider providerLookup bppId =
     Just v -> pure v
     Nothing -> throwError $ InternalError $ "BPP details not found for providerId:-" <> bppId
 
-getOffers :: SSR.SearchRequest -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [SQuote.Quote] -> Lang.Language -> Flow [OfferRes]
-getOffers searchRequest enableRideHailingOffers providerLookup quoteList0 language = do
+getOffers :: SSR.SearchRequest -> DP.Person -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [SQuote.Quote] -> Lang.Language -> Flow [OfferRes]
+getOffers searchRequest person enableRideHailingOffers providerLookup quoteList0 language = do
   logDebug $ "search Request is : " <> show searchRequest
   let quoteList = case searchRequest.toLocation of
         Just _ -> sortByNearestDriverDistance quoteList0
         Nothing -> sortByEstimatedFare quoteList0
   logDebug $ "quotes are :-" <> show quoteList
   (bppDetailList, isValueAddNPList) <- unzip <$> forM quoteList (\q -> lookupProvider providerLookup q.providerId)
-  quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest enableRideHailingOffers quoteList bppDetailList isValueAddNPList language
+  quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest person enableRideHailingOffers quoteList bppDetailList isValueAddNPList language
   let quotes = case searchRequest.toLocation of
         Just _ ->
           case searchRequest.riderPreferredOption of
@@ -575,13 +576,14 @@ getOffers searchRequest enableRideHailingOffers providerLookup quoteList0 langua
 
 mkQuoteAPIEntitiesWithOffers ::
   SSR.SearchRequest ->
+  DP.Person ->
   Bool ->
   [SQuote.Quote] ->
   [BppDetails] ->
   [Bool] ->
   Lang.Language ->
   Flow [QuoteAPIEntity]
-mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDetailList isValueAddNPList language = do
+mkQuoteAPIEntitiesWithOffers searchReq person enableRideHailingOffers quoteList bppDetailList isValueAddNPList language = do
   let quoteEntitiesWithCtx =
         zip
           (mkQAPIEntityList quoteList bppDetailList isValueAddNPList)
@@ -602,7 +604,7 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
       then
         withTryCatch
           "getOffers:offerListWithBasket"
-          (SOffer.offerListWithBasket searchReq.merchantId searchReq.riderId searchReq.merchantOperatingCityId DOrder.RideHailing products [] quoteList Nothing Nothing (Just searchReq))
+          (SOffer.offerListWithBasketForPerson person searchReq.merchantId searchReq.merchantOperatingCityId DOrder.RideHailing products [] quoteList Nothing Nothing (Just searchReq))
           >>= \case
             Left _ -> pure []
             Right r -> pure r
@@ -642,8 +644,8 @@ offerCreationTime (OnRentalCab QuoteAPIEntity {createdAt}) = createdAt
 offerCreationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 offerCreationTime (OnMeterRide QuoteAPIEntity {createdAt}) = createdAt
 
-getEstimates :: SSR.SearchRequest -> Bool -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [DEstimate.Estimate] -> Lang.Language -> Flow [UEstimate.EstimateAPIEntity]
-getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLookup estimateList language = do
+getEstimates :: SSR.SearchRequest -> DP.Person -> Bool -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [DEstimate.Estimate] -> Lang.Language -> Flow [UEstimate.EstimateAPIEntity]
+getEstimates searchRequest person _enableRideHailingOffers isReferredRide providerLookup estimateList language = do
   let sortedEstimates = sortByEstimatedFare estimateList
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
   let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
@@ -665,7 +667,7 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
       then
         withTryCatch
           "getEstimates:offerListWithBasket"
-          (SOffer.offerListWithBasket searchRequest.merchantId searchRequest.riderId searchRequest.merchantOperatingCityId DOrder.RideHailing products sortedEstimates [] Nothing Nothing (Just searchRequest))
+          (SOffer.offerListWithBasketForPerson person searchRequest.merchantId searchRequest.merchantOperatingCityId DOrder.RideHailing products sortedEstimates [] Nothing Nothing (Just searchRequest))
           >>= \case
             Left _ -> pure []
             Right r -> pure r
