@@ -2790,6 +2790,9 @@ getFleetOrOperatorInfo person = do
                   allowDriverToToggleAutoAssign = (.allowDriverToToggle) <$> fleetConfig'.autoAssign,
                   allowCancellationByDriver = Just fleetConfig'.allowCancellationByDriver,
                   ignoreDriverAreaAndDistancePreference = (.disableDriverAreaAndDistancePreference) <$> fleetConfig'.autoAssign,
+                  lockTiers = (.lockTiers) =<< fleetConfig'.autoAssign,
+                  lockAc = (.lockAc) =<< fleetConfig'.autoAssign,
+                  lockIntraCity = (.lockIntraCity) =<< fleetConfig'.autoAssign,
                   fleetPoolingPriority = fleetConfig'.fleetPoolingPriority
                 }
       gstNumber' <- decryptWithDefault gstNumber gstNumberDec
@@ -5317,7 +5320,7 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
 ---------------------------------------------------------------------
 
 defaultAutoAssignConfig :: DFC.AutoAssignConfig
-defaultAutoAssignConfig = DFC.AutoAssignConfig {defaultOn = False, allowDriverToToggle = True, disableDriverAreaAndDistancePreference = False}
+defaultAutoAssignConfig = DFC.AutoAssignConfig {defaultOn = False, allowDriverToToggle = True, disableDriverAreaAndDistancePreference = False, lockTiers = Nothing, lockAc = Nothing, lockIntraCity = Nothing}
 
 getFleetConfigOwner :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Flow (DM.Merchant, Id DMOC.MerchantOperatingCity, DP.Person)
 getFleetConfigOwner merchantShortId opCity requestorId mbFleetOwnerId = do
@@ -5345,6 +5348,9 @@ getDriverFleetConfig merchantShortId opCity requestorId mbFleetOwnerId = do
         allowDriverToToggleAutoAssign = autoAssign.allowDriverToToggle,
         allowCancellationByDriver = maybe True (.allowCancellationByDriver) mbFleetConfig,
         ignoreDriverAreaAndDistancePreference = autoAssign.disableDriverAreaAndDistancePreference,
+        lockTiers = FDS.fleetLocksTiers (Just autoAssign),
+        lockAc = fromMaybe False autoAssign.lockAc,
+        lockIntraCity = fromMaybe False autoAssign.lockIntraCity,
         fleetPoolingPriority = mbFleetConfig >>= (.fleetPoolingPriority)
       }
 
@@ -5364,7 +5370,10 @@ postDriverFleetConfigUpdate merchantShortId opCity requestorId mbFleetOwnerId re
         DFC.AutoAssignConfig
           { defaultOn = fromMaybe current.defaultOn req.autoAssignDefaultOn,
             allowDriverToToggle = fromMaybe current.allowDriverToToggle req.allowDriverToToggleAutoAssign,
-            disableDriverAreaAndDistancePreference = fromMaybe current.disableDriverAreaAndDistancePreference req.ignoreDriverAreaAndDistancePreference
+            disableDriverAreaAndDistancePreference = fromMaybe current.disableDriverAreaAndDistancePreference req.ignoreDriverAreaAndDistancePreference,
+            lockTiers = req.lockTiers <|> current.lockTiers,
+            lockAc = req.lockAc <|> current.lockAc,
+            lockIntraCity = req.lockIntraCity <|> current.lockIntraCity
           }
       nonEmptyPriority (FleetPoolingPriority priorities) = if Map.null priorities then Nothing else Just (FleetPoolingPriority priorities)
       poolingPriority stored = maybe stored nonEmptyPriority req.fleetPoolingPriority
@@ -5401,6 +5410,15 @@ postDriverFleetConfigUpdate merchantShortId opCity requestorId mbFleetOwnerId re
           }
   -- ConfigPilot caches each city's fleet configs (in-memory and Redis); a direct write must clear them.
   invalidateConfigInMem LYT.FleetConfig
+  -- Enforced on save: when the effective tier lock turns on, the fleet's drivers on auto-assign get every eligible tier
+  -- selected with auto-accept, then locked. Drivers the fleet switched off (no AutoAssign tag) are skipped.
+  when (FDS.fleetLocksTiers (Just autoAssign) && not (FDS.fleetLocksTiers (Just current))) $
+    fork "enforceFleetTierLock" $ do
+      driverIds <- QFDAExtra.getActiveDriverIdsByFleetOwnerId fleetOwner.id.getId
+      results <- forM driverIds $ \driverId ->
+        withTryCatch "enforceFleetTierLock:driver" $ FDS.applyLockedFleetSettingsToDriver driverId merchantOpCityId
+      let failed = length [() | Left _ <- results]
+      logInfo $ "enforceFleetTierLock: fleet " <> fleetOwner.id.getId <> ", " <> show (length driverIds) <> " active drivers, " <> show failed <> " failed"
   pure Success
 
 validatePoolingPrioritySpecialLocations :: Id DMOC.MerchantOperatingCity -> FleetPoolingPriority -> Flow ()
@@ -5470,7 +5488,9 @@ postDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFl
     let tiers = FDS.vehicleAutoAcceptTiers cityTiers vehicle
     if req.enable
       then do
-        when (null tiers) $ throwError NoAutoAcceptTierForVehicle
+        -- A fleet that locks tiers force-selects the vehicle's eligible tiers, not only the ones already selected.
+        fleetTiers <- FDS.fleetAutoAssignTiers True cityTiers driver vehicle
+        when (null fleetTiers) $ throwError NoAutoAcceptTierForVehicle
         FDS.applyFleetSettings True cityTiers driver vehicle
       else FDS.removeAutoAssign tiers driver vehicle
   pure Success

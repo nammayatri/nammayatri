@@ -1019,7 +1019,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
           driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
           let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' requestor merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
           QVehicle.create vehicle
-          fork "applyFleetSettings" $ FDS.applyFleetSettings False cityVehicleServiceTiers requestor vehicle
+          fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver vehicle.driverId merchantOpCityId
           DDriverMode.forceDriverOfflineOnVehicleChange personId transporterConfig driverInfo'
           when (vehicle.variant == DV.SUV) $
             QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId

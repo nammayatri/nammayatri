@@ -2302,6 +2302,9 @@ types:
     - allowDriverToToggleAutoAssign: Maybe Bool
     - allowCancellationByDriver: Maybe Bool
     - ignoreDriverAreaAndDistancePreference: Maybe Bool
+    - lockTiers: Maybe Bool
+    - lockAc: Maybe Bool
+    - lockIntraCity: Maybe Bool
     - fleetPoolingPriority: Maybe FleetPoolingPriority
     - derive: "'HideSecrets"
   FleetDriverControlsConfigRes:
@@ -2309,6 +2312,9 @@ types:
     - allowDriverToToggleAutoAssign: Bool
     - allowCancellationByDriver: Bool
     - ignoreDriverAreaAndDistancePreference: Bool
+    - lockTiers: Bool
+    - lockAc: Bool
+    - lockIntraCity: Bool
     - fleetPoolingPriority: Maybe FleetPoolingPriority
     - derive: "'HideSecrets"
   UpdateFleetDriverControlsConfigReq:
@@ -2316,6 +2322,9 @@ types:
     - allowDriverToToggleAutoAssign: Maybe Bool
     - allowCancellationByDriver: Maybe Bool
     - ignoreDriverAreaAndDistancePreference: Maybe Bool
+    - lockTiers: Maybe Bool
+    - lockAc: Maybe Bool
+    - lockIntraCity: Maybe Bool
     - fleetPoolingPriority: Maybe FleetPoolingPriority
     - derive: "'HideSecrets"
   DriverAutoAssignStatusRes:

@@ -195,6 +195,7 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
     isDefault :: Kernel.Prelude.Bool,
     isSelected :: Kernel.Prelude.Bool,
     isUsageRestricted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    lockedByFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Kernel.Prelude.Text,
@@ -208,12 +209,14 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverVehicleServiceTiers = DriverVehicleServiceTiers
-  { airConditioned :: Kernel.Prelude.Maybe AirConditionedTier,
+  { acLockedByFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    airConditioned :: Kernel.Prelude.Maybe AirConditionedTier,
     autoAcceptLockedByFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canSwitchToInterCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canSwitchToIntraCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableForAirport :: Domain.Types.DriverInformation.AirportRestrictionType,
+    intraCityLockedByFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     tiers :: [DriverVehicleServiceTier]
   }
   deriving stock (Generic)
