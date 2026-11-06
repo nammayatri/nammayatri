@@ -1994,7 +1994,16 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
           parkingCharges = farePolicy.parkingCharge
       let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) farePolicy.conditionalCharges
-      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (Just transporterConfig.driverWalletConfig) mbRiderDetails transporterConfig.showRoutePerRequest -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      -- Scheduled rides: tell the app whether this driver can accept it, so it can guide a driver who is short of the minimum balance.
+      nowForWalletFlag <- getCurrentTime
+      mbHasMinWalletBalance <-
+        if searchTry.isScheduled && not (DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes searchTry.startTime nowForWalletFlag)
+          then do
+            let minBalance = scheduledRideMinWalletFloor farePolicy.conditionalCharges <|> transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides
+            Just <$> FWallet.hasMinWalletBalance counterpartyDriver minBalance driverId.getId
+          else pure Nothing
+      -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ (USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (Just transporterConfig.driverWalletConfig) mbRiderDetails transporterConfig.showRoutePerRequest) {USRD.hasMinWalletBalance = mbHasMinWalletBalance}
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -2127,7 +2136,9 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       batchRejectCount <- DP.incrementBatchRejectCount searchTry.id sReqFD.batchNumber
       -- Forked for the same reason as the queue-skip below: nothing here should add latency to
       -- the driver-respond hot path, and an early advance is fire-and-forget.
-      fork "continuousTopUpOrEarlyBatchAdvance" $ tryTopUpOrAdvanceBatchEarly searchTry sReqFD batchRejectCount
+      -- Scheduled tries dispatch on their own timers; an early advance or top-up would send an unfiltered batch.
+      unless searchTry.isScheduled $
+        fork "continuousTopUpOrEarlyBatchAdvance" $ tryTopUpOrAdvanceBatchEarly searchTry sReqFD batchRejectCount
       fork "releaseOfferHoldsOnDriverReject" $ releaseOfferHoldsOnReject merchantId transporterConfig sReqFD searchTry.id
       -- Handle queue skip for special zone rides — forked so a slow Redis/LTS hop
       -- can't add latency to the driver-respond hot path.

@@ -139,12 +139,15 @@ import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.QuickRetry (withQuickRetry)
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
+import qualified SharedLogic.ScheduledRideTopDrivers as SRTD
+import qualified SharedLogic.ScheduledRideVisibility as SRV
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import Storage.Cac.DriverPoolConfig as Reexport
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverInformation.Internal as Int
+import qualified Storage.Queries.DriverStatsExtra as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.GetNearestDrivers as QPG
 import qualified Storage.Queries.Transformers.DriverInformation as TDI
@@ -1132,8 +1135,9 @@ calculateDriverPoolWithActualDist ::
   PoolType ->
   DST.CurrentSearchInfo ->
   Int ->
+  DispatchMode ->
   m ([DriverPoolWithActualDistResult], [DriverPoolResult]) -- (offRideWithActualDist, onRidePool)
-calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSearchInfo batchNum = do
+calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSearchInfo batchNum dispatchMode = do
   let radius = driverPoolCfg.maxRadiusOfSearch
   let coord = getCoordinates pickup
   enableLtsPoolData <- asks (.enableLtsPoolDataForPooling)
@@ -1209,7 +1213,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
       <> show (length offRideFinal)
       <> " onRideFinal="
       <> show (length onRideFinal)
-  return (offRideFinal, onRideFinal)
+  return (offRideFinal, if dispatchMode == ScheduledTopDriversDispatch then [] else onRideFinal)
   where
     chunkSize :: Int
     chunkSize = 50
@@ -1241,7 +1245,28 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
           let (chunkOnRide, chunkOffRide) = partition (.onRide) rateLimited
               chunkOnRideAsPool = makeDriverPoolResult <$> chunkOnRide
           processedOffRide <- runOffRideStages chunkOffRide
-          chunkLoop ltsReq fetchPoolData rest (offRideAcc <> processedOffRide) (onRideAcc <> chunkOnRideAsPool)
+          qualifiedOffRide <- qualifyChunk processedOffRide
+          chunkLoop ltsReq fetchPoolData rest (offRideAcc <> qualifiedOffRide) (onRideAcc <> chunkOnRideAsPool)
+
+    qualifyChunk drivers = case dispatchMode of
+      RegularDispatch -> pure drivers
+      ScheduledTopDriversDispatch -> do
+        stats <- QDriverStats.findAllByDriverIdListFromDb (map (\dp -> dp.driverPoolResult.driverId) drivers)
+        let searchTry = currentSearchInfo.searchTry
+            (topDriverRules, _) = SRTD.resolveTopDriverRules transporterConfig now searchTry.startTime
+            statsByDriver = Map.fromList [(driverStats.driverId, driverStats) | driverStats <- stats]
+            bookingFacts =
+              SRV.BookingVisibilityFacts
+                { SRV.bookingPickup = getCoordinates pickup,
+                  SRV.walletMeetsMinimum = Nothing,
+                  SRV.isFavouriteOfRider = Nothing
+                }
+            qualifies dp =
+              SRV.isVisibleUnderRules
+                (SRV.driverVisibilityFactsFromStats (Map.lookup dp.driverPoolResult.driverId statsByDriver) [] dp.driverPoolResult.lat dp.driverPoolResult.lon)
+                bookingFacts
+                topDriverRules
+        pure (filter qualifies drivers)
 
     runOffRideStages chunkOffRide = case poolType of
       SpecialZoneQueuePool -> pure $ map (mkSpecialZoneQueueActualDistanceResult . makeDriverPoolResult) chunkOffRide
