@@ -1976,7 +1976,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           preferredMapProvider = driverInfo.preferredMapProvider,
           behaviourWarnings = if null activeProfileWarnings then Nothing else Just activeProfileWarnings,
           -- module-qualified: VehicleVariant's SHARED_CAB is also in scope
-          activeRideType = if ((.variant) <$> mbVehicle) == Just DV.SHARED_CAB then Just Domain.Action.UI.Driver.SHARED_CAB else Nothing,
+          activeRideType = if maybe False ((DVST.SHARED_CAB `elem`) . (.selectedServiceTiers)) mbVehicle then Just Domain.Action.UI.Driver.SHARED_CAB else Nothing,
           publicTransportVersion = Nothing,
           ..
         }
