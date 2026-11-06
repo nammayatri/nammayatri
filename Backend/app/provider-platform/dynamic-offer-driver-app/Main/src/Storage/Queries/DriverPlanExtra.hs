@@ -114,6 +114,24 @@ findByDriverIdAndServiceName (Id driverId) serviceName =
         ]
     ]
 
+-- | One query for many drivers' plans of a single service (batch form of
+-- 'Storage.Queries.DriverPlan.findByDriverIdWithServiceName').
+findAllByDriverIdsAndServiceName ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id Person] ->
+  DPlan.ServiceNames ->
+  m [DriverPlan]
+findAllByDriverIdsAndServiceName driverIds serviceName =
+  if null driverIds
+    then pure []
+    else
+      findAllWithKV
+        [ Se.And
+            [ Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds),
+              Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
+            ]
+        ]
+
 findAllByDriverIdsPaymentModeAndServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [Id Person] ->

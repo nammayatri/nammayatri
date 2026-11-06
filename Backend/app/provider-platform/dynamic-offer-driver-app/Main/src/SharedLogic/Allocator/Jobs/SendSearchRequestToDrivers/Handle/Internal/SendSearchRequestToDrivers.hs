@@ -15,6 +15,8 @@
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
   ( sendSearchRequestToDrivers,
     buildSearchRequestForDriver,
+    buildSearchRequestForDriverWith,
+    fetchBatchDriverReads,
     attemptPriorityDirectAssign,
   )
 where
@@ -40,7 +42,9 @@ import qualified Domain.Types.Booking as DRB
 import Domain.Types.Common
 import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.ConditionalCharges as DCC
+import qualified Domain.Types.DriverPlan as DDP
 import Domain.Types.DriverPoolConfig
+import qualified Domain.Types.DriverStats as DDS
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FleetConfig as DFC
@@ -48,6 +52,7 @@ import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
+import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Plan as DPlan
 import Domain.Types.RiderDetails
 import qualified Domain.Types.SearchRequest as DSR
@@ -109,11 +114,13 @@ import Storage.ConfigPilot.Config.FleetConfig (fleetForbidsDriverCancellation, g
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.BookingExtra as QBE
 import qualified Storage.Queries.Coins.CoinsConfig as SQCC
-import qualified Storage.Queries.DriverPlan as QDP
+import qualified Storage.Queries.DriverPlanExtra as QDPExtra
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.DriverStatsExtra as QDriverStatsExtra
 import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.Person.GetNearestDrivers (isDriverModeEligibleHelper, isWalletMinBalanceEligible)
+import qualified Storage.Queries.PersonExtra as QPersonExtra
 import Storage.Queries.RiderDriverCorrelation
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -220,7 +227,10 @@ sendSearchRequestToDrivers dispatchMode isAllocatorBatch isTopUpDispatch tripQuo
   dispatchPool <- attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolConfig batchNumber transporterConfig coinConfigCache fleetConfigs driverPool
   dynamicPickupMetrics <- fetchDynamicPickupMetrics driverPoolConfig searchReq dispatchPool
   languageDictionary <- foldM (addLanguageToDictionary transporterConfig searchReq) M.empty dispatchPool
-  searchRequestsForDrivers <- mapM (\dp -> buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache fleetConfigs False driverPoolConfig.autoAssignMaxPickupDistance (M.lookup dp.driverPoolResult.driverId.getId dynamicPickupMetrics) dp) dispatchPool
+  -- One query per table for the whole batch, instead of one per driver per table.
+  driverReads <- fetchBatchDriverReads searchReq.riderId dispatchPool
+  driverPersons <- fetchDriverPersons dispatchPool
+  searchRequestsForDrivers <- mapM (\dp -> buildSearchRequestForDriverWith driverReads searchTry searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig coinConfigCache fleetConfigs False driverPoolConfig.autoAssignMaxPickupDistance (M.lookup dp.driverPoolResult.driverId.getId dynamicPickupMetrics) dp) dispatchPool
   let driverPoolZipSearchRequests = zip dispatchPool searchRequestsForDrivers
   (merchantLabel, cityLabel) <- SML.getMetricsLabels searchReq.providerId searchReq.merchantOperatingCityId
   let metricsDistanceBucketEdges = SML.distanceBucketEdges transporterConfig
@@ -301,7 +311,7 @@ sendSearchRequestToDrivers dispatchMode isAllocatorBatch isTopUpDispatch tripQuo
             (Notify.getNewMerchantOpCityId sReqFD.clientSdkVersion sReqFD.merchantOperatingCityId)
             (Notify.cityFallback sReqFD.clientSdkVersion sReqFD.merchantOperatingCityId)
             (searchTry.merchantId `elem` otherMerchantIds) -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-    Notify.sendSearchRequestToDriverNotification searchReq.providerId fallBackCity sReqFD.driverId notificationData
+    Notify.sendSearchRequestToDriverNotificationWithPerson searchReq.providerId fallBackCity sReqFD.driverId (M.lookup sReqFD.driverId.getId driverPersons) notificationData
 
   -- Update operator/fleet analytics: batch increment total request count for all drivers at once
   Analytics.recordFleetOperatorAnalytics
@@ -423,7 +433,47 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
         }
   pure $ Fare.fareSum fareParams $ Just []
 
+-- | Per-driver DB reads for one batch, keyed by driver id. Fetched once per batch so the
+-- per-driver builder does no DB reads of its own.
+data BatchDriverReads = BatchDriverReads
+  { driverStatsById :: M.Map Text DDS.DriverStats,
+    safetyPlusPlanById :: M.Map Text DDP.DriverPlan,
+    favouriteById :: M.Map Text Bool
+  }
+
+fetchBatchDriverReads ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    CacheFlow m r
+  ) =>
+  Maybe (Id RiderDetails) ->
+  [SDP.DriverPoolWithActualDistResult] ->
+  m BatchDriverReads
+fetchBatchDriverReads riderId dispatchPool = do
+  let driverIds = map (\dp -> dp.driverPoolResult.driverId) dispatchPool
+  stats <- runInReplica $ QDriverStatsExtra.findAllByDriverIdList driverIds
+  plans <- QDPExtra.findAllByDriverIdsAndServiceName driverIds (DPlan.DASHCAM_RENTAL DPlan.CAUTIO)
+  correlations <- maybe (pure []) findAllCorrelationsForRider riderId
+  pure
+    BatchDriverReads
+      { driverStatsById = M.fromList $ map (\st -> (st.driverId.getId, st)) stats,
+        safetyPlusPlanById = M.fromList $ map (\pl -> (pl.driverId.getId, pl)) plans,
+        favouriteById = M.fromList $ map (\c -> (c.driverId.getId, c.favourite)) correlations
+      }
+
+fetchDriverPersons ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [SDP.DriverPoolWithActualDistResult] ->
+  m (M.Map Text DPerson.Person)
+fetchDriverPersons dispatchPool
+  | null dispatchPool = pure M.empty
+  | otherwise = do
+    persons <- QPersonExtra.getDriversByIdIn (map (\dp -> dp.driverPoolResult.driverId) dispatchPool)
+    pure $ M.fromList $ map (\p -> (p.id.getId, p)) persons
+
 -- | Extracted from sendSearchRequestToDrivers' where-clause so DriverPoolUnified's priority-assign path can reuse it too.
+-- Single-driver form: fetches its own reads.
 buildSearchRequestForDriver ::
   ( MonadFlow m,
     Redis.HedisFlow m r,
@@ -451,12 +501,42 @@ buildSearchRequestForDriver ::
   SDP.DriverPoolWithActualDistResult ->
   m SearchRequestForDriver
 buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache fleetConfigs isAutoAccepted autoAssignMaxPickupDistance mbDynamicPickup dpwRes = do
+  driverReads <- fetchBatchDriverReads riderId [dpwRes]
+  buildSearchRequestForDriverWith driverReads searchTry searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig coinConfigCache fleetConfigs isAutoAccepted autoAssignMaxPickupDistance mbDynamicPickup dpwRes
+
+buildSearchRequestForDriverWith ::
+  ( MonadFlow m,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["version" ::: DeploymentVersion],
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    ClickhouseFlow m r
+  ) =>
+  BatchDriverReads ->
+  DST.SearchTry ->
+  DSR.SearchRequest ->
+  HashMap.HashMap DVST.ServiceTierType SDP.TripQuoteDetail ->
+  Int ->
+  UTCTime ->
+  DTR.TransporterConfig ->
+  M.Map DVST.ServiceTierType (Maybe Int) ->
+  M.Map Text DFC.FleetConfig ->
+  Bool ->
+  Maybe Meters ->
+  Maybe (Meters, Seconds) ->
+  SDP.DriverPoolWithActualDistResult ->
+  m SearchRequestForDriver
+buildSearchRequestForDriverWith driverReads searchTry searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig coinConfigCache fleetConfigs isAutoAccepted autoAssignMaxPickupDistance mbDynamicPickup dpwRes = do
   let currency = searchTry.currency
   guid <- generateGUID
   now <- getCurrentTime
   let dpRes = dpwRes.driverPoolResult
-  driverStats <- runInReplica $ QDriverStats.findById dpRes.driverId
-  driverPlanSafetyPlus <- QDP.findByDriverIdWithServiceName dpRes.driverId (DPlan.DASHCAM_RENTAL DPlan.CAUTIO)
+  let driverStats = M.lookup dpRes.driverId.getId driverReads.driverStatsById
+      driverPlanSafetyPlus = M.lookup dpRes.driverId.getId driverReads.safetyPlusPlanById
   tripQuoteDetail <- HashMap.lookup dpRes.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dpRes.serviceTier)
   let isEligibleForSafetyPlusCharge = maybe False (.enableServiceUsageCharge) driverPlanSafetyPlus && searchReq.preferSafetyPlus
       additionalChargesEligiblFor = additionalChargeConditional isEligibleForSafetyPlusCharge tripQuoteDetail.conditionalCharges
@@ -473,7 +553,7 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
       getBaseFare searchTry searchReq farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
     _ -> pure $ tripQuoteDetail.baseFare + additionalCharges
   deploymentVersion <- asks (.version)
-  isFavourite <- maybe (pure Nothing) (\riderid -> findByRiderIdAndDriverId riderid (cast dpRes.driverId) <&> fmap (.favourite)) riderId
+  let isFavourite = M.lookup dpRes.driverId.getId driverReads.favouriteById
   let fleetForbidsCancellation = fleetForbidsDriverCancellation (dpRes.fleetOwnerId >>= (`M.lookup` fleetConfigs))
       searchRequestForDriver =
         SearchRequestForDriver
