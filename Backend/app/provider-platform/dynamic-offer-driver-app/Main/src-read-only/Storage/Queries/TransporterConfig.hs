@@ -6,6 +6,7 @@ module Storage.Queries.TransporterConfig (module Storage.Queries.TransporterConf
 
 import qualified Data.Aeson
 import qualified Data.Text
+import qualified Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TransporterConfig
 import Kernel.Beam.Functions
@@ -105,6 +106,17 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.manualTollChargeConfig (Kernel.Prelude.toJSON <$> manualTollChargeConfig),
       Se.Set Beam.rideEvidenceConfig (Kernel.Prelude.toJSON <$> rideEvidenceConfig),
       Se.Set Beam.showRoutePerRequest showRoutePerRequest,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
+updateCustomerPayableFareBreakupSubItemsConfig ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe [Domain.Types.Extra.TransporterConfig.FareBreakupNode] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+updateCustomerPayableFareBreakupSubItemsConfig customerPayableFareBreakupSubItemsConfig merchantOperatingCityId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.customerPayableFareBreakupSubItemsConfig (Kernel.Prelude.toJSON <$> customerPayableFareBreakupSubItemsConfig),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
@@ -209,6 +221,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.createDocumentRequired createDocumentRequired,
       Se.Set Beam.crossTravelCities crossTravelCities,
       Se.Set Beam.currency (Just currency),
+      Se.Set Beam.customerPayableFareBreakupSubItemsConfig (Kernel.Prelude.toJSON <$> customerPayableFareBreakupSubItemsConfig),
       Se.Set Beam.dailyConditionCooldownTimeHours dailyConditionCooldownTimeHours,
       Se.Set Beam.dailyMinRidesForBlocking dailyMinRidesForBlocking,
       Se.Set Beam.dailyMinRidesForNudging dailyMinRidesForNudging,
