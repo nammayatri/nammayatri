@@ -18,9 +18,11 @@ module SharedLogic.CancellationFee
 where
 
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.EmailTemplate as DET
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
+import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
@@ -30,6 +32,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
+import qualified SharedLogic.InvoiceEmailSchedule as SInvoiceEmailSchedule
 import SharedLogic.Payment (MakePaymentIntentConstraints)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.Queries.FareBreakup as QFareBreakup
@@ -45,7 +48,7 @@ import Tools.Error
 --        and sync SettleCancellationLedger to the BPP
 --        on failure: mark the pending entries DUE and sync OverdueCancellationLedger
 settleCancellationFeeViaStripe ::
-  (MakePaymentIntentConstraints m r c, EsqDBReplicaFlow m r) =>
+  (MakePaymentIntentConstraints m r c, EsqDBReplicaFlow m r, SchedulerFlow r, HasField "blackListedJobs" r [Text]) =>
   DRB.Booking ->
   DRide.Ride ->
   DPerson.Person ->
@@ -137,7 +140,9 @@ settleCancellationFeeViaStripe booking ride personD cancellationBase cancellatio
               SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing cancellationPaymentIntentResp.paymentIntentId ride.id RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput
           case eitherCaptured of
             Right True -> do
-              RidePaymentFinance.markCancellationFeeInvoicePaid mbCancelInvoiceId
+              becamePaid <- RidePaymentFinance.markCancellationFeeInvoicePaid mbCancelInvoiceId
+              when becamePaid $
+                SInvoiceEmailSchedule.scheduleInvoiceEmail booking.merchantId booking.merchantOperatingCityId ride.id DET.RIDE_CANCELLATION_INVOICE Nothing
               QRide.markPaymentStatus DRide.Completed ride.id
               syncCancellationLedger CallBPPInternal.SettleCancellationLedger
               logDebug "[CancellationSettlement] Captured cancellation fee, invoice marked Paid, payment status Completed"

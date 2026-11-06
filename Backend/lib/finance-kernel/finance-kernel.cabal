@@ -41,6 +41,7 @@ library
       Lib.Finance.Domain.Types.Extra.Transfer
       Lib.Finance.Error.Types
       Lib.Finance.FinanceM
+      Lib.Finance.Invoice.Email
       Lib.Finance.Invoice.Interface
       Lib.Finance.Invoice.InvoiceNumber
       Lib.Finance.Invoice.PdfService

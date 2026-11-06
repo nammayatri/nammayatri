@@ -63,7 +63,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.Payment.Interface as Payment
-import Kernel.External.Types (ServiceFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
@@ -112,7 +112,9 @@ import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 
 type SelectFlow m r c =
-  ( CacheFlow m r,
+  ( SchedulerFlow r,
+    HasField "blackListedJobs" r [Text],
+    CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EventStreamFlow m r,
