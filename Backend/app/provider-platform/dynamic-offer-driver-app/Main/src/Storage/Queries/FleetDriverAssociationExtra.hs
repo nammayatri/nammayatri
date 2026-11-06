@@ -255,7 +255,10 @@ updateEnableCashRideForDriversWithSync enableCashRide batchSize driverIds = do
   QDIE.updateEnableCashRideForDrivers enableCashRide (cast <$> driverIds)
   now <- getCurrentTime
   assocs <- findAllByDriverIds driverIds
-  ownerFlag <- fleetOwnerEnableCashRideFlags assocs
+  ownerFlag <-
+    if null assocs
+      then return M.empty
+      else fleetOwnerEnableCashRideFlags assocs
   let assocByDriver = M.fromList [(a.driverId.getId, a) | a <- assocs]
   syncEnableCashRideToLTS batchSize $
     driverIds
