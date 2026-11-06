@@ -3641,8 +3641,10 @@ getReachableScheduledBookingsInPickupOrder from mocCityId serviceTiers dLoc tran
   now <- getCurrentTime
   let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
       localNow = addUTCTime timeDiff now
-      isToday = utctDay now >= from
-      referenceTime = if isToday then localNow else addUTCTime timeDiff (UTCTime from 0)
+      -- Keys and scores are local wall-clock time (addScheduledBookingInRedis), so `from` is a local
+      -- day: compare it to the local date and start a future day at its local midnight, unshifted.
+      isToday = utctDay localNow >= from
+      referenceTime = if isToday then localNow else UTCTime from 0
       redisKeys = createRedisKeysForCombinations referenceTime mocCityId tripCategories serviceTiers
       redisKeyForHset = createRedisKeyForHset referenceTime mocCityId
       windowEnd = if isToday then UTCTime (addDays 1 (utctDay localNow)) 0 else addUTCTime 86400 referenceTime
@@ -3660,8 +3662,9 @@ getScheduledBookings from mocCityId serviceTiers mbDLoc transporterConfig mbPoss
   now <- getCurrentTime
   let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
       localNow = addUTCTime timeDiff now
-      isToday = utctDay now >= from
-      referenceTime = if isToday then localNow else addUTCTime timeDiff (UTCTime from 0)
+      -- Local day vs local date, local midnight unshifted: see getReachableScheduledBookingsInPickupOrder.
+      isToday = utctDay localNow >= from
+      referenceTime = if isToday then localNow else UTCTime from 0
       redisKeys = createRedisKeysForCombinations referenceTime mocCityId tripCategories serviceTiers
       redisKeyForHset = createRedisKeyForHset referenceTime mocCityId
       queryTimeRange startTime endTime off lim =
