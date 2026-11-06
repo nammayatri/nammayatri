@@ -221,6 +221,9 @@ data FareChargeComponent
   | NegotiatedFareDeltaComponent
   | NegativeFareAdjustmentComponent
   | PaymentChargePaidByCustomerComponent
+  | GovtChargesComponent
+  | PersonalDiscountComponent
+  | BusinessDiscountComponent
   deriving stock (Show, Read, Eq, Ord, Enum, Bounded, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
