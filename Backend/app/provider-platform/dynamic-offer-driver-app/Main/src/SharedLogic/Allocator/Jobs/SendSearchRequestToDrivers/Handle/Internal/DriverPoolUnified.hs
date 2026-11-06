@@ -23,6 +23,7 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -42,7 +43,7 @@ import qualified SharedLogic.Beckn.Common as DTS
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FarePolicy as SFarePolicy
-import SharedLogic.ScheduledRideTopDrivers (filterTopDrivers, resolveTopDriverCriteria)
+import qualified SharedLogic.ScheduledRideTopDrivers as SRTD
 import Storage.Beam.SpecialZone ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -189,15 +190,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       -- previously-attempted drivers are sorted to the tail of LTS candidates (chunking only
       -- pulls them in if fresher drivers run out — replaces the old fillBatch backfill).
       (allDriversNotOnRideBeforeTollFilter, allOnRidePoolResultsBeforeTollFilter) <- withTimeAPI "driverPooling" "calcDriverPool" $ calcDriverPool NormalPool transporterConfig blockListedDrivers previousBatchesDrivers airportEntryFee isAirportRequest
-      (allDriversNotOnRideBeforeTopFilter, allOnRidePoolBeforeTopFilter) <- filterTollRouteBlockedDrivers searchReq searchTry.id batchNum allDriversNotOnRideBeforeTollFilter allOnRidePoolResultsBeforeTollFilter
-      (allDriversNotOnRide', allOnRideDriverPoolResults) <-
-        if dispatchMode == ScheduledTopDriversDispatch
-          then do
-            nowForTopDrivers <- getCurrentTime
-            let topDriverCriteria = resolveTopDriverCriteria transporterConfig searchTry.vehicleServiceTier nowForTopDrivers searchTry.startTime
-            topDrivers <- filterTopDrivers searchTry batchNum topDriverCriteria allDriversNotOnRideBeforeTopFilter
-            pure (topDrivers, [])
-          else pure (allDriversNotOnRideBeforeTopFilter, allOnRidePoolBeforeTopFilter)
+      when (dispatchMode == ScheduledTopDriversDispatch) $ reportTopDriversBatch transporterConfig allDriversNotOnRideBeforeTollFilter
+      (allDriversNotOnRide', allOnRideDriverPoolResults) <- filterTollRouteBlockedDrivers searchReq searchTry.id batchNum allDriversNotOnRideBeforeTollFilter allOnRidePoolResultsBeforeTollFilter
       let newFilteredDriversWithFavourites = assignTagsToDrivers favDriverIds FavouriteDriver allDriversNotOnRide'
       (driverPoolNotOnRide, driverPoolOnRide) <- do
         case batchNum of
@@ -222,6 +216,33 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           else pure (poolNotOnRide, poolOnRide)
       pure $ SDP.PrepareDriverPoolBatchEntity poolWithSpecialZoneInfoNotOnRide NormalPool Nothing poolWithSpecialZoneInfoOnRide
       where
+        -- Logs the top-drivers batch (how many drivers passed the rules) and publishes its event.
+        reportTopDriversBatch transporterConfig qualifiedDrivers = do
+          now <- getCurrentTime
+          let (topDriverRules, usedDefaults) = SRTD.resolveTopDriverRules transporterConfig searchTry.vehicleServiceTier now searchTry.startTime
+              selected = take (getBatchSize driverPoolCfg.dynamicBatchSize batchNum driverPoolCfg.driverBatchSize) qualifiedDrivers
+              event =
+                SRTD.mkTopDriversRoundEvent
+                  searchTry.id.getId
+                  searchTry.merchantOperatingCityId.getId
+                  batchNum
+                  searchTry.startTime
+                  (length qualifiedDrivers)
+                  (map (\dp -> dp.driverPoolResult.driverId.getId) selected)
+                  topDriverRules
+                  usedDefaults
+                  now
+          logInfo $
+            "TopDrivers: searchTryId=" <> searchTry.id.getId <> " batch=" <> show batchNum
+              <> " qualified=" <> show (length qualifiedDrivers)
+              <> " selected=" <> show (length selected)
+              <> " rules(minRating=" <> show topDriverRules.minRating
+              <> " maxCancellationPct=" <> show topDriverRules.maxCancellationRatePct
+              <> " minRides=" <> show topDriverRules.minCompletedRides
+              <> " radius=" <> show topDriverRules.pickupRadiusMeters
+              <> " usedDefaults=" <> show usedDefaults <> ")"
+          fork "publishTopDriversRoundEvent" $ pushToKafka event SRTD.topDriversTopic searchTry.id.getId
+
         addSpecialZonePickupInfo pool = do
           (driversFromGate, restDrivers) <- splitDriverFromGateAndRest pool
           pure $ restDrivers <> addSpecialZoneInfo searchReq.driverDefaultExtraFee driversFromGate
@@ -274,7 +295,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     mbSearchTryId = Just searchTry.id.getId,
                     ..
                   }
-          calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum
+          calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum dispatchMode
 
         calculateNormalBatch mOCityId transporterConfig onlyNewNormalDrivers txnId' onRidePoolResults airportEntryFee isAirportRequest = do
           logDebug $ "calculateNormalBatch txnId " <> show txnId'
