@@ -116,6 +116,8 @@ findByDriverIdAndServiceName (Id driverId) serviceName =
 
 -- | One query for many drivers' plans of a single service (batch form of
 -- 'Storage.Queries.DriverPlan.findByDriverIdWithServiceName').
+-- Redis is read once; Postgres is queried only for the drivers with no plan in Redis.
+-- A driver found in Redis is taken as complete, which holds as long as (driverId, serviceName) is unique.
 findAllByDriverIdsAndServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [Id Person] ->
@@ -124,13 +126,15 @@ findAllByDriverIdsAndServiceName ::
 findAllByDriverIdsAndServiceName driverIds serviceName =
   if null driverIds
     then pure []
-    else
-      findAllWithKV
-        [ Se.And
-            [ Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds),
-              Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
-            ]
-        ]
+    else findAllWithKVInBatch (clauseFor ids) BeamDF.driverId ids clauseFor
+  where
+    ids = getId <$> driverIds
+    clauseFor driverIdTexts =
+      [ Se.And
+          [ Se.Is BeamDF.driverId $ Se.In driverIdTexts,
+            Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
+          ]
+      ]
 
 findAllByDriverIdsPaymentModeAndServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
