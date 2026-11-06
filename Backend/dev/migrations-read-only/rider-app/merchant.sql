@@ -170,3 +170,8 @@ ALTER TABLE atlas_app.merchant ADD COLUMN driver_offer_merchant_short_id text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

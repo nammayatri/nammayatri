@@ -58,7 +58,8 @@ fromTTypeFarePolicyAmbulanceDetails BeamFPAD.FarePolicyAmbulanceDetailsSlabT {..
             Domain.PlatformFeeInfo
               { platformFeeCharge = platformFeeCharge',
                 cgst = platformFeeCgst',
-                sgst = platformFeeSgst'
+                sgst = platformFeeSgst',
+                vat = platformFeeVat
               },
         ..
       }
@@ -70,6 +71,7 @@ instance ToTType' BeamFPAD.FarePolicyAmbulanceDetailsSlab BeamFPAD.FullFarePolic
       { platformFeeCharge = Domain.platformFeeCharge <$> (platformFeeInfo :: Maybe Domain.PlatformFeeInfo),
         platformFeeCgst = (.cgst) <$> (platformFeeInfo :: Maybe Domain.PlatformFeeInfo),
         platformFeeSgst = (.sgst) <$> (platformFeeInfo :: Maybe Domain.PlatformFeeInfo),
+        platformFeeVat = (.vat) =<< (platformFeeInfo :: Maybe Domain.PlatformFeeInfo),
         waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge,
         freeWaitingTime = (.freeWaitingTime) <$> waitingChargeInfo,

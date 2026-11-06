@@ -30,6 +30,8 @@ imports:
   Sos: Safety.Domain.Types.Sos
   PayoutFlagReason: Domain.Types.RiderDetails
   CancellationReasonCode: Domain.Types.CancellationReason
+  TaxBreakup: BecknV2.OnDemand.FareBreakup.Tax
+  Value: Data.Aeson
 
 Ride:
   tableName: ride
@@ -82,6 +84,7 @@ Ride:
     previousRideTripEndPos: Maybe LatLong
     previousRideTripEndTime: Maybe UTCTime
     cancellationChargesOnCancel : Maybe HighPrecMoney
+    cancellationChargesOnCancelTax : Maybe HighPrecMoney
     isDriverSpecialLocWarrior: Bool
     isAdvanceBooking : Bool
     isPetRide: Bool
@@ -136,6 +139,9 @@ Ride:
     cancellationFeeIfCancelled: Maybe HighPrecMoney
     cancellationFeeTaxIfCancelled: Maybe HighPrecMoney
     cancellationConsequenceRowIdIfCancelled: Maybe Text
+    cancellationFeeTaxBreakupIfCancelled: Maybe TaxBreakup
+    cancellationCommissionIfCancelled: Maybe HighPrecMoney
+    cancellationCommissionTaxBreakupIfCancelled: Maybe TaxBreakup
     cancellationFaultVerdict: Maybe Text
     cancellationFaultRule: Maybe Text
     scheduledAcceptanceMode: Maybe ScheduledAcceptanceMode # how this scheduled ride's driver assignment came to be; authoritative, stamped once at accept time
@@ -153,8 +159,11 @@ Ride:
     driverCancellationPenaltyAmount: Maybe HighPrecMoney
     driverCancellationPenaltyWaivedReason: Maybe Text
     commission: Maybe HighPrecMoney
+    commissionTaxBreakup: Maybe TaxBreakup
     cancellationCommission: Maybe HighPrecMoney
+    cancellationCommissionTaxBreakup: Maybe TaxBreakup
     paymentCharge: Maybe HighPrecMoney
+    paymentChargeTaxBreakup: Maybe TaxBreakup
     paymentChargeBearer: Maybe Text
     discountAmount: Maybe HighPrecMoney
     driverGpsTurnedOff: Maybe Bool
@@ -190,6 +199,11 @@ Ride:
     rideTags: "text[]"
     finalFarePolicyId: character(36)
     subscriptionPurchaseIds: "text[]"
+    commissionTaxBreakup: "json"
+    cancellationCommissionTaxBreakup: "json"
+    paymentChargeTaxBreakup: "json"
+    cancellationFeeTaxBreakupIfCancelled: "json"
+    cancellationCommissionTaxBreakupIfCancelled: "json"
 
   default:
     traveledDistance: '0'
@@ -264,6 +278,11 @@ Ride:
     isInsured: Kernel.Prelude.fromMaybe False isInsured|E
     billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
     cancellationReasonCode: Domain.Types.CancellationReason.CancellationReasonCode <$> cancellationReasonCode|E
+    commissionTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< commissionTaxBreakup|E
+    cancellationCommissionTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< cancellationCommissionTaxBreakup|E
+    paymentChargeTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< paymentChargeTaxBreakup|E
+    cancellationFeeTaxBreakupIfCancelled: Kernel.Utils.JSON.valueToMaybe =<< cancellationFeeTaxBreakupIfCancelled|E
+    cancellationCommissionTaxBreakupIfCancelled: Kernel.Utils.JSON.valueToMaybe =<< cancellationCommissionTaxBreakupIfCancelled|E
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -302,6 +321,11 @@ Ride:
     isInsured: Kernel.Prelude.Just|I
     billingCategory: Kernel.Prelude.Just billingCategory|E
     cancellationReasonCode: (\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> cancellationReasonCode|E
+    commissionTaxBreakup: toJSON <$> commissionTaxBreakup|E
+    cancellationCommissionTaxBreakup: toJSON <$> cancellationCommissionTaxBreakup|E
+    paymentChargeTaxBreakup: toJSON <$> paymentChargeTaxBreakup|E
+    cancellationFeeTaxBreakupIfCancelled: toJSON <$> cancellationFeeTaxBreakupIfCancelled|E
+    cancellationCommissionTaxBreakupIfCancelled: toJSON <$> cancellationCommissionTaxBreakupIfCancelled|E
 
   beamType:
     trackingUrl: Text
@@ -324,6 +348,11 @@ Ride:
     isInsured: Maybe Bool
     billingCategory: Maybe BillingCategory
     cancellationReasonCode: Maybe Text
+    commissionTaxBreakup: Maybe Value
+    cancellationCommissionTaxBreakup: Maybe Value
+    paymentChargeTaxBreakup: Maybe Value
+    cancellationFeeTaxBreakupIfCancelled: Maybe Value
+    cancellationCommissionTaxBreakupIfCancelled: Maybe Value
 
   constraints:
     id: PrimaryKey
@@ -348,7 +377,7 @@ Ride:
       where: id
     updateCancellationQuoteIfCancelled:
       kvFunction: updateOneWithKV
-      params: [cancellationFeeIfCancelled, cancellationFeeTaxIfCancelled, cancellationConsequenceRowIdIfCancelled]
+      params: [cancellationFeeIfCancelled, cancellationFeeTaxIfCancelled, cancellationFeeTaxBreakupIfCancelled, cancellationCommissionIfCancelled, cancellationCommissionTaxBreakupIfCancelled, cancellationConsequenceRowIdIfCancelled]
       where: id
     updateCancellationFaultVerdict:
       kvFunction: updateOneWithKV
@@ -362,17 +391,13 @@ Ride:
       kvFunction: updateOneWithKV
       params: [discountAmount]
       where: id
-    updateCommission:
-      kvFunction: updateOneWithKV
-      params: [commission]
-      where: id
     updateCommissionAndDiscount:
       kvFunction: updateOneWithKV
-      params: [commission, cancellationCommission, discountAmount]
+      params: [commission, commissionTaxBreakup, cancellationCommission, cancellationCommissionTaxBreakup, discountAmount]
       where: id
     updatePaymentCharge:
       kvFunction: updateOneWithKV
-      params: [paymentCharge, paymentChargeBearer]
+      params: [paymentCharge, paymentChargeTaxBreakup, paymentChargeBearer]
       where: id
     updatePreviousRideTripEndPosAndTime:
       kvFunction: updateOneWithKV
@@ -400,7 +425,7 @@ Ride:
       where: id
     updateCancellationChargesOnCancel:
       kvFunction: updateOneWithKV
-      params: [cancellationChargesOnCancel]
+      params: [cancellationChargesOnCancel, cancellationChargesOnCancelTax]
       where: id
     updateDriverGpsTurnedOff:
       kvFunction: updateOneWithKV

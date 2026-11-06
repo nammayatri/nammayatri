@@ -3,6 +3,7 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   TimeBound: Kernel.Types.TimeBound
   Centesimal: Kernel.Types.Common
+  TaxConfig: BecknV2.OnDemand.FareBreakup.Tax
 
 module: CancellationConsequence
 
@@ -78,8 +79,12 @@ types:
     - enum: FixedRateAPIEntity HighPrecMoney, PercentageRateAPIEntity HighPrecMoney
   CommissionAndTaxAPI:
     - taxPercentage: Maybe HighPrecMoney
+    - cgstPercentage: Maybe HighPrecMoney
+    - sgstPercentage: Maybe HighPrecMoney
+    - igstPercentage: Maybe HighPrecMoney
     - commission: Maybe ChargeRateAPI
     - amountsInclusiveOfTax: Maybe Bool
+    - commissionTax: Maybe TaxConfig
   CancellationConsequenceRowAPI:
     - faultVerdict: Maybe Text
     - faultRule: Maybe Text

@@ -275,6 +275,11 @@ generateGenericDefaultDefaultForType fieldType = do
     AppT (ConT maybeName) inner | maybeName == ''Maybe -> do
       (vals, decs) <- generateGenericDefaultDefaultForType inner
       pure (AppE (AppE (VarE 'map) (ConE 'Just)) vals, decs)
+    appliedTy@(AppT _ _)
+      | (ConT realName, args@(_ : _)) <- unapplyType appliedTy -> do
+        yes <- checkInstance ''GenericDefaults appliedTy
+        nestedIns <- if yes then pure [] else generateGenericDefaultForApplied [] appliedTy realName args
+        pure (AppE (VarE 'genDef) (AppTypeE (ConE (mkName "Proxy")) appliedTy), nestedIns)
     a@(_) -> do
       runIO $ putStrLn $ "non supported type: " ++ show a
       fail "Not Supported currently, to add support for your case check this: https://hackage.haskell.org/package/template-haskell-2.22.0.0/docs/Language-Haskell-TH.html#g:22"

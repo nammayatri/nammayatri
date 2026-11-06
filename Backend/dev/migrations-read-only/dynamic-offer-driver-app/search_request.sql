@@ -241,3 +241,11 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN silent_reallocation
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN customer_cancellation_dues_tax_breakup json ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN customer_cancellation_dues_commission_tax_breakup json ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN customer_cancellation_dues_commission double precision ;

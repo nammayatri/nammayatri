@@ -51,7 +51,8 @@ data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatform
 data PlatformFeeInfo = PlatformFeeInfo
   { platformFeeCharge :: PlatformFeeCharge,
     cgst :: Double,
-    sgst :: Double
+    sgst :: Double,
+    vat :: Maybe Double
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 

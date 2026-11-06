@@ -17,6 +17,7 @@ module Beckn.ACL.Select (buildSelectReqV2) where
 import Beckn.OnDemand.Utils.Init
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.PaymentCharge as PaymentCharge
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -110,6 +111,7 @@ buildSelectReqV2 subscriber req = do
         negotiatedFare = Nothing,
         addOns = [],
         negativeFareAdjustment = negativeFareAdjustment,
+        paymentChargeDetails = PaymentCharge.paymentChargeDetailsFromTags item.itemTags,
         estimateIds = [Id estimateIdText] <> maybe [] (map Id) bookAnyEstimates,
         customerPhoneNum = customerPhoneNum,
         customerName = customerName,

@@ -65,7 +65,8 @@ instance FromTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicyS
                   DFP.PlatformFeeInfo
                     { platformFeeCharge = platformFeeCharge',
                       cgst = platformFeeCgst',
-                      sgst = platformFeeSgst'
+                      sgst = platformFeeSgst',
+                      vat = platformFeeVat
                     }
             }
         )
@@ -83,6 +84,7 @@ instance ToTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySla
         platformFeeCharge = (.platformFeeCharge) <$> platformFeeInfo,
         platformFeeCgst = (.cgst) <$> platformFeeInfo,
         platformFeeSgst = (.sgst) <$> platformFeeInfo,
+        platformFeeVat = (.vat) =<< platformFeeInfo,
         waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge,
         freeWatingTime = (.freeWaitingTime) <$> waitingChargeInfo

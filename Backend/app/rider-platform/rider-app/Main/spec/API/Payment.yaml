@@ -11,7 +11,7 @@ imports:
   RefundRequestStatus: Domain.Types.RefundRequest
   RefundRequestCode: Domain.Types.RefundRequest
   RefundPurpose: Domain.Types.RefundRequest
-  FareComponent: Domain.Types.FareBreakup
+  RefundFareComponent: Domain.Types.FareBreakup
   FileType: AWS.S3
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   Ride: Domain.Types.Ride
@@ -55,14 +55,14 @@ types:
   RefundRequestListResp:
     refundRequests: "[RefundRequestResp]"
   # coarse customer-facing fare bucket — the fare-breakup output + refund-create input
-  # FareComponent lives in Domain.Types.FareBreakup (shared by this API + RefundRequest storage)
+  # RefundFareComponent lives in Domain.Types.FareBreakup (shared by this API + RefundRequest storage)
   FareBreakupComponent:
-    component: FareComponent
+    component: RefundFareComponent
     exclTax: PriceAPIEntity
     tax: PriceAPIEntity
     total: PriceAPIEntity
   RefundComponentReq:
-    component: FareComponent
+    component: RefundFareComponent
     amount: PriceAPIEntity
   FareBreakupRes:
     components: "Maybe [FareBreakupComponent]"

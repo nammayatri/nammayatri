@@ -2,6 +2,7 @@ module Beckn.OnDemand.Transformer.OnSearch where
 
 import qualified Beckn.OnDemand.Utils.Common
 import Beckn.OnDemand.Utils.OnSearch
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Utils.Context
@@ -15,6 +16,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Price
+import qualified SharedLogic.RideTax
 
 buildOnSearchMessage :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool -> Maybe BecknV2.OnDemand.Types.OnSearchReqMessage
 buildOnSearchMessage res bppConfig isValueAddNP = do
@@ -99,7 +101,7 @@ tfProviderItems res isValueAddNP pricing = do
       itemId_ = Just pricing.pricingId
       itemLocationIds_ = Beckn.OnDemand.Utils.OnSearch.mkItemLocationIds ((map (\(_, _, c, _) -> c) res.estimates) <> (map (\(_, _, c, _) -> c) res.quotes))
       itemPaymentIds_ = Nothing
-      itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags pricing isValueAddNP res.fareParametersInRateCard (not $ null res.stops) res.reservedTime
+      itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags pricing isValueAddNP (not $ null res.stops) res.reservedTime (Just (BecknV2.OnDemand.FareBreakup.Tax.riderTaxRatesOf (SharedLogic.RideTax.resolveTaxRates res.transporterConfig pricing.farePolicy Nothing)))
       itemPrice_ = tfItemPrice pricing
       itemCategoryIds_ = Just [BecknV2.OnDemand.Utils.Common.tripCategoryToCategoryCode pricing.tripCategory]
   let itemAddOns_ = Beckn.OnDemand.Utils.OnSearch.mkRentalAddOns pricing

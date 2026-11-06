@@ -3,6 +3,7 @@
 
 module Storage.Beam.Ride where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.RefundRequest
@@ -47,6 +48,7 @@ data RideT f = RideT
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType),
     commission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    commissionTaxBreakup :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     destinationReachedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
@@ -90,6 +92,7 @@ data RideT f = RideT
     otp :: B.C f Kernel.Prelude.Text,
     paymentCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     paymentChargeBearer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    paymentChargeTaxBreakup :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     paymentStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.PaymentStatus),
     pickupEtaLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     pickupRouteCallCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

@@ -36,3 +36,11 @@ ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN cancella
 
 ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN cancellation_consequence_row_id text ;
 ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN cancellation_collection_mode text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN overdue_cancellation_tax_breakup json ;
+ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN overdue_cancellation_commission_tax_breakup json ;
+ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN cancellation_fee_tax_breakup json ;
+ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN cancellation_commission_tax_breakup json ;

@@ -303,6 +303,7 @@ import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Payout.Bulk.Eligibility (mkBankVerificationStatus)
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import SharedLogic.Ride
+import qualified SharedLogic.RideTax as RideTax
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import SharedLogic.ScheduledRideVisibility (BookingVisibilityFacts (..), DriverVisibilityFacts (..), VisibilityFactNeeds (..), factsNeededBy, isVisibleUnderRules, resolveVisibilityStage)
 import qualified SharedLogic.SearchTryLocker as CS
@@ -2023,7 +2024,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
           parkingCharges = farePolicy.parkingCharge
       let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) farePolicy.conditionalCharges
-      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (Just transporterConfig.driverWalletConfig) mbRiderDetails transporterConfig.showRoutePerRequest -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) farePolicy.commissionChargeConfig (Just (RideTax.resolveTaxRates transporterConfig (Just farePolicy) Nothing)) (RideTax.fareTaxTotal <$> (estimate >>= (.fareParams))) mbRiderDetails transporterConfig.showRoutePerRequest -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -2339,10 +2340,12 @@ assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver trans
   result <- withTryCatch "assignReusedBookingForDynamicReallocation" $ do
     unless (reusedBooking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
     mbFarePolicyForCommission <- getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote'.id.getId
-    commission <- FC.calculateCommission driverQuote'.fareParams mbFarePolicyForCommission
-    cancellationCommission <- FC.calculateCancellationCommission driverQuote'.fareParams mbFarePolicyForCommission
-    let mbClampedDiscount = FC.clampDiscountToDiscountable driverQuote'.fareParams reusedBooking.discountAmount
-        chargeRes = FC.finalisePaymentCharge (Just transporterConfig.driverWalletConfig) driverQuote'.estimatedFare (fromMaybe 0 driverQuote'.fareParams.paymentProcessingFee + fromMaybe 0 driverQuote'.fareParams.paymentProcessingFeeVat) mbClampedDiscount driverQuote'.fareParams
+    commissionCharges <- FC.calculateCommission driverQuote'.fareParams mbFarePolicyForCommission
+    let commission = commissionCharges.rideCommission
+        cancellationCommission = commissionCharges.duesCommission
+    let bookingTax = RideTax.bookingRideTax reusedBooking transporterConfig
+        chargeRes = FC.paymentChargeResult reusedBooking.paymentChargeDetails (FC.clampDiscountToDiscountable driverQuote'.fareParams reusedBooking.discountAmount) driverQuote'.estimatedFare driverQuote'.fareParams
+        taxBreakups = RideTax.resolveTaxBreakups reusedBooking.currency bookingTax (Just chargeRes.adjustedFareParams) RideTax.TaxableAmounts {commission = commission, cancellationFee = Nothing, cancellationCommission = Nothing, paymentCharge = chargeRes.paymentCharge}
         mbPaymentCharge = chargeRes.paymentCharge
         mbPaymentChargeBearer = chargeRes.paymentChargeBearer
     now <- getCurrentTime
@@ -2358,8 +2361,11 @@ assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver trans
               DRB.fareParams = driverQuote'.fareParams,
               DRB.estimatedCongestionCharge = driverQuote'.fareParams.congestionCharge,
               DRB.commission = commission,
+              DRB.commissionTaxBreakup = taxBreakups.driverDeductible.commission,
               DRB.cancellationCommission = cancellationCommission,
+              DRB.cancellationCommissionTaxBreakup = taxBreakups.driverDeductible.cancellationCommission,
               DRB.paymentCharge = mbPaymentCharge,
+              DRB.paymentChargeTaxBreakup = taxBreakups.driverDeductible.paymentCharge <|> taxBreakups.platformDeductible.paymentCharge,
               DRB.paymentChargeBearer = mbPaymentChargeBearer,
               DRB.isPetRide = isJust driverQuote'.fareParams.petCharges,
               DRB.vehicleServiceTier = driverQuote'.vehicleServiceTier,
@@ -3572,13 +3578,12 @@ buildBookingAPIEntityFromBooking mbDriverLocation DRB.Booking {..} = do
       distanceToPickup' = highPrecMetersToMeters . (`distanceBetweenInMeters` pickup) <$> mbDriverLocation
   mbQuote <- QQuote.findById (Id quoteId)
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
-  let govtChargesRate = mbTransporterConfig >>= (computeTotalGstRate . (.taxConfig.rideGst))
   case mbQuote of
     Nothing -> do
       fork "Error in case of no quote - Potential drainer lag" $ throwError (ShouldNotHappen $ "Quote with quoteId = \"" <> quoteId <> "\" not found.")
       pure Nothing
     Just quote -> do
-      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem currency) estimatedDistance quote.fareParams.customerCancellationDues Nothing estimatedFare quote.fareParams.congestionChargeViaDp govtChargesRate (not $ null stops) . withPricedStateEntryPermitCharges fareParams) quote.farePolicy
+      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem currency) estimatedDistance quote.fareParams.customerCancellationDues Nothing estimatedFare quote.fareParams.congestionChargeViaDp mbTransporterConfig (not $ null stops) . withPricedStateEntryPermitCharges fareParams) quote.farePolicy
       return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, ..} (catMaybes farePolicyBreakups)
 
 mkBreakupItem :: Currency -> Text -> Text -> Maybe DOVT.RateCardItem

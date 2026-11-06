@@ -90,13 +90,6 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             onlineCommissionPaidOutDirectly = Nothing,
             fetchWalletTransactionsFromClickhouse = Nothing,
             enableWalletGatedTierCheck = Nothing,
-            paymentChargeBearer = Nothing,
-            paymentChargeRate = Nothing,
-            paymentChargeVat = Nothing,
-            clubProjectFareInRideInvoice = Nothing,
-            clubProjectFareInRefundsInvoice = Nothing,
-            clubProjectFareInEarnings = Nothing,
-            clubProjectFareInPayouts = Nothing,
             connectAccountCharge = Nothing,
             connectAccountChargeFrequency = Nothing,
             connectAccountChargeBearer = Nothing,
@@ -115,7 +108,8 @@ parseTaxConfig merchantOperatingCityId mbVal = do
   let emptyGst = GstBreakup {cgstPercentage = Nothing, sgstPercentage = Nothing, igstPercentage = Nothing}
       def =
         TaxConfig
-          { rideGst = emptyGst,
+          { taxRegime = Nothing,
+            rideGst = emptyGst,
             subscriptionGst = emptyGst,
             airportEntryFeeGst = Nothing,
             securityDepositGst = Nothing,
@@ -124,9 +118,7 @@ parseTaxConfig merchantOperatingCityId mbVal = do
             invalidPanTdsRate = TdsConfig {rate = 0, thresholdAmount = Nothing},
             individualLinked = Nothing,
             individualNotLinked = Nothing,
-            businessTds = Nothing,
-            serviceVatPercentage = Nothing,
-            commissionVatPercentage = Nothing
+            businessTds = Nothing
           }
   -- Legacy flat-number TDS fields are tolerated by TdsConfig's hand-written
   -- FromJSON (Domain.Types.Extra.TransporterConfig), so no post-parse backfill

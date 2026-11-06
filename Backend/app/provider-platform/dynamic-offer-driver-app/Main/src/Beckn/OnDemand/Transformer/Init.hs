@@ -1,6 +1,7 @@
 module Beckn.OnDemand.Transformer.Init where
 
 import qualified Beckn.OnDemand.Utils.Init
+import qualified BecknV2.OnDemand.PaymentCharge as PaymentCharge
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Types as Spec
@@ -59,6 +60,8 @@ buildDInitReq subscriber req isValueAddNP = do
   let (isInsured, insuredAmount) = getIsInsured orderItem.itemTags
   let displayBookingId = getDisplayBookingId orderItem.itemTags
   let discountAmount = getOfferDiscountAmount orderItem.itemTags
+      paymentChargeDetails = PaymentCharge.paymentChargeDetailsFromTags orderItem.itemTags
+      platformDeductions = PaymentCharge.platformDeductionsFromTags orderItem.itemTags
   pure $ Domain.Action.Beckn.Init.InitReq {bapCity = bapCity_, bapCountry = bapCountry_, bapId = bapId_, bapUri = bapUri_, fulfillmentId = fulfillmentId_, maxEstimatedDistance = maxEstimatedDistance_, paymentMethodInfo = paymentMethodInfo_, vehicleVariant = vehicleVariant_, bppSubscriberId = bppSubscriberId_, estimateId = estimateId, riderGender = riderGender, addOns = [], ..}
 
 getDeliveryDetails :: Maybe [Spec.TagGroup] -> Maybe Domain.Action.Beckn.Init.InitReqDetails

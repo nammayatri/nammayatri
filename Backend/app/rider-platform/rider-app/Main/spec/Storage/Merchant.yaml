@@ -1,5 +1,8 @@
 imports:
   Merchant: Domain.Types.Merchant
+  TaxConfig: BecknV2.OnDemand.FareBreakup.Tax
+  PaymentChargeBearer: Domain.Types.PaymentChargeBearer
+  PaymentChargeType: Domain.Types.PaymentChargeBearer
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   MerchantMessageDefaultDataJSON: Domain.Types.Extra.MerchantMessage
   CallService: Kernel.External.Call.Types
@@ -502,8 +505,15 @@ MerchantPaymentMethod:
     paymentInstrument: Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument
     collectedBy: Domain.Types.Extra.MerchantPaymentMethod.PaymentCollector
     priority: Int
+    paymentChargeType: Maybe PaymentChargeType
+    paymentCharge: Maybe HighPrecMoney
+    paymentChargeTax: Maybe TaxConfig
+    paymentChargeBearer: Maybe PaymentChargeBearer
     updatedAt: UTCTime
     createdAt: UTCTime
+
+  beamType:
+    paymentChargeTax: Maybe Value
 
   default: {}
   sqlType:
@@ -511,10 +521,14 @@ MerchantPaymentMethod:
     paymentInstrument: character varying(255)
     collectedBy: character varying(30)
     priority: int
+    paymentChargeTax: "json"
 
+  toTType:
+    paymentChargeTax: toJSON <$> paymentChargeTax|E
 
   fromTType:
     paymentType: paymentTypeTrans
+    paymentChargeTax: Kernel.Utils.JSON.valueToMaybe =<< paymentChargeTax|E
 
 
   excludedDefaultQueries:

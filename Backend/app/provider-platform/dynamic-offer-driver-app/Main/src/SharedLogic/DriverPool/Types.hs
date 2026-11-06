@@ -15,6 +15,7 @@
 
 module SharedLogic.DriverPool.Types where
 
+import BecknV2.OnDemand.PaymentCharge (PaymentChargeDetails)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.Aeson.Types as A
@@ -28,6 +29,7 @@ import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (..))
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.FleetPoolingPriority (PoolingPriorityLevel)
 import Domain.Types.GoHomeConfig (GoHomeConfig)
@@ -481,6 +483,8 @@ data TripQuoteDetail = TripQuoteDetail
     estimateOrQuoteId :: Text,
     eligibleForUpgrade :: Bool,
     commissionCharges :: Maybe HighPrecMoney,
+    commissionChargeConfig :: Maybe DFP.FareChargeConfig,
+    riderTaxes :: Maybe HighPrecMoney,
     driverCancellationNotAllowed :: Maybe Bool,
     bufferedFare :: Maybe HighPrecMoney
   }
@@ -492,6 +496,8 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     tripQuoteDetails :: [TripQuoteDetail],
     customerExtraFee :: Maybe HighPrecMoney,
     negativeFareAdjustment :: Maybe HighPrecMoney,
+    paymentChargeDetails :: Maybe PaymentChargeDetails,
+    buyerOfferDiscount :: Maybe HighPrecMoney,
     messageId :: Text,
     isRepeatSearch :: Bool,
     isAllocatorBatch :: Bool,

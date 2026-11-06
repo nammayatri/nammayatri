@@ -429,14 +429,14 @@ remapBreakupTitle title
   | title == show Enums.TOTAL_FARE = Nothing
   | title == show Enums.BASE_FARE = Just "BASE_FARE"
   | title `elem` [show Enums.DISTANCE_FARE, show Enums.DEAD_KILOMETER_FARE, show Enums.TIME_BASED_FARE] = Just "DISTANCE_FARE"
-  | title `elem` [show Enums.PARKING_CHARGE, show Enums.PARKING_CHARGE_TAX_EXCLUSIVE, show Enums.PARKING_CHARGE_TAX] = Just "PARKING_CHARGES"
+  | title `elem` [show Enums.PARKING_CHARGE, show Enums.PARKING_CHARGE_TAX] = Just "PARKING_CHARGES"
   | title == show Enums.WAITING_OR_PICKUP_CHARGES = Just "WAITING_CHARGES"
   | title == show Enums.NIGHT_SHIFT_CHARGE = Just "NIGHT_CHARGES"
-  | title `elem` [show Enums.TOLL_VAT, show Enums.TOLL_FARE_TAX_EXCLUSIVE, show Enums.TOLL_FARE_TAX, show Enums.TOLL_CHARGES] = Just "TOLL_CHARGES"
-  | title `elem` [show Enums.CANCELLATION_CHARGES, show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE, show Enums.CANCELLATION_TAX] = Just "CANCELLATION_CHARGES"
+  | title `elem` [show Enums.TOLL_VAT, show Enums.TOLL_FARE_TAX, show Enums.TOLL_CHARGES] = Just "TOLL_CHARGES"
+  | title `elem` [show Enums.CANCELLATION_CHARGES, show Enums.CANCELLATION_TAX] = Just "CANCELLATION_CHARGES"
   | title == show Enums.CUSTOMER_SELECTED_FARE = Just "BUYER_ADDITIONAL_AMOUNT"
   | title == show Enums.DRIVER_ALLOWANCE = Just "DRIVER_BATA"
-  | title `elem` [show Enums.SGST, show Enums.CGST, show Enums.FIXED_GOVERNMENT_RATE, show Enums.RIDE_VAT, show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE, show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX, show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE, show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX] = Just "TAX"
+  | title `elem` [show Enums.SGST, show Enums.CGST, show Enums.FIXED_GOVERNMENT_RATE, show Enums.RIDE_VAT] = Just "TAX"
   | title `elem` [show Enums.SERVICE_CHARGE, show Enums.EXTRA_TIME_FARE, show Enums.RIDE_STOP_CHARGES, show Enums.PER_STOP_CHARGES, show Enums.LUGGAGE_CHARGE, show Enums.AIRPORT_CONVENIENCE_FEE, show Enums.RETURN_FEE, show Enums.BOOTH_CHARGE, show Enums.PLATFORM_FEE, show Enums.DRIVER_SELECTED_FARE, show Enums.ADD_ON_CHARGES] = Just "ADD_ONS"
   | title == show Enums.NEGOTIATED_FARE_DELTA = Just "NEGOTIATED_FARE_DELTA"
   | otherwise = Nothing

@@ -27,6 +27,8 @@ imports:
   BillingCategory: SharedLogic.Type
   RefundRequestStatus: Domain.Types.RefundRequest
   Sos: Safety.Domain.Types.Sos
+  Value: Data.Aeson
+  TaxBreakup: BecknV2.OnDemand.FareBreakup.Tax
 
 Ride:
   tableName: ride
@@ -144,7 +146,9 @@ Ride:
     insuredAmount: Maybe Text
     pickupEtaLogicVersion: Maybe Int
     commission: Maybe HighPrecMoney
+    commissionTaxBreakup: Maybe TaxBreakup
     paymentCharge: Maybe HighPrecMoney
+    paymentChargeTaxBreakup: Maybe TaxBreakup
     paymentChargeBearer: Maybe Text
     sosId: Maybe (Id Sos)
     isTierUpgrade: Maybe Bool
@@ -183,6 +187,8 @@ Ride:
     driverAlternateNumberHash: bytea
     tipAmount: numeric(30,2)
     rideTags: "text[]"
+    commissionTaxBreakup: json
+    paymentChargeTaxBreakup: json
 
   default:
     driverMobileNumber: "NULL"
@@ -253,6 +259,8 @@ Ride:
     isSafetyPlus: Kernel.Prelude.fromMaybe False isSafetyPlus| E
     isPetRide: Kernel.Prelude.fromMaybe False isPetRide|E
     billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
+    commissionTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< commissionTaxBreakup|E
+    paymentChargeTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< paymentChargeTaxBreakup|E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -290,6 +298,8 @@ Ride:
     isInsured: Kernel.Prelude.Just isInsured|E
     isPetRide: Kernel.Prelude.Just isPetRide|E
     billingCategory: Kernel.Prelude.Just billingCategory|E
+    commissionTaxBreakup: toJSON <$> commissionTaxBreakup|E
+    paymentChargeTaxBreakup: toJSON <$> paymentChargeTaxBreakup|E
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
@@ -310,6 +320,8 @@ Ride:
     isInsured: Maybe Bool
     isPetRide: Maybe Bool
     billingCategory: Maybe BillingCategory
+    commissionTaxBreakup: Maybe Value
+    paymentChargeTaxBreakup: Maybe Value
 
   constraints:
     id: PrimaryKey

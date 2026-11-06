@@ -3,6 +3,7 @@
 
 module Domain.Types.RiderDetails where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import Data.Aeson
 import qualified Domain.Types.DriverReferral
 import qualified Domain.Types.Merchant
@@ -18,7 +19,10 @@ data RiderDetailsE e = RiderDetails
   { bapId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationDueRides :: Kernel.Prelude.Int,
     cancellationDues :: Kernel.Types.Common.HighPrecMoney,
+    cancellationDuesCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationDuesCommissionTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     cancellationDuesPaid :: Kernel.Types.Common.HighPrecMoney,
+    cancellationDuesTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     cancelledRides :: Kernel.Prelude.Int,
     completedRides :: Kernel.Prelude.Int,
     consentToShareMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -67,7 +71,10 @@ instance EncryptedItem RiderDetails where
         { bapId = bapId entity,
           cancellationDueRides = cancellationDueRides entity,
           cancellationDues = cancellationDues entity,
+          cancellationDuesCommission = cancellationDuesCommission entity,
+          cancellationDuesCommissionTaxBreakup = cancellationDuesCommissionTaxBreakup entity,
           cancellationDuesPaid = cancellationDuesPaid entity,
+          cancellationDuesTaxBreakup = cancellationDuesTaxBreakup entity,
           cancelledRides = cancelledRides entity,
           completedRides = completedRides entity,
           consentToShareMobileNumber = consentToShareMobileNumber entity,
@@ -108,7 +115,10 @@ instance EncryptedItem RiderDetails where
           { bapId = bapId entity,
             cancellationDueRides = cancellationDueRides entity,
             cancellationDues = cancellationDues entity,
+            cancellationDuesCommission = cancellationDuesCommission entity,
+            cancellationDuesCommissionTaxBreakup = cancellationDuesCommissionTaxBreakup entity,
             cancellationDuesPaid = cancellationDuesPaid entity,
+            cancellationDuesTaxBreakup = cancellationDuesTaxBreakup entity,
             cancelledRides = cancelledRides entity,
             completedRides = completedRides entity,
             consentToShareMobileNumber = consentToShareMobileNumber entity,

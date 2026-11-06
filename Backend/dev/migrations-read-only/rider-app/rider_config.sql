@@ -966,3 +966,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN flow_status_feedback_window_sec in
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_config json ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN open_meter_max_idle_hours integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN allow_multiple_open_meter_rides boolean ;
+
+
+
+------- SQL updates -------
+

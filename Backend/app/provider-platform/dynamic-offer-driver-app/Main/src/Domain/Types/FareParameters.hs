@@ -78,7 +78,7 @@ data FareParameters = FareParameters
     paymentProcessingFee :: Maybe HighPrecMoney,
     -- | VAT on the payment charge. 'Nothing' on rows priced before the split,
     --   where 'paymentProcessingFee' still holds the VAT-inclusive blend.
-    paymentProcessingFeeVat :: Maybe HighPrecMoney,
+    paymentProcessingFeeTax :: Maybe HighPrecMoney,
     isVatTaxType :: Maybe Bool,
     -- | Canonical fare-breakup partition, populated by
     --   'SharedLogic.FareCalculator.calculateFareParameters'. Sum of
@@ -116,7 +116,34 @@ data FareParameters = FareParameters
     -- decided per fare policy by listing that component in the charge config's
     -- appliesOn (absent => neither applies). Shown to the rider as its own
     -- ADD_ON_CHARGES breakup line.
-    addOnCharges :: Maybe HighPrecMoney
+    addOnCharges :: Maybe HighPrecMoney,
+    rideTaxCgst :: Maybe HighPrecMoney,
+    rideTaxSgst :: Maybe HighPrecMoney,
+    rideTaxIgst :: Maybe HighPrecMoney,
+    parkingTaxCgst :: Maybe HighPrecMoney,
+    parkingTaxSgst :: Maybe HighPrecMoney,
+    parkingTaxIgst :: Maybe HighPrecMoney,
+    tollTaxCgst :: Maybe HighPrecMoney,
+    tollTaxSgst :: Maybe HighPrecMoney,
+    tollTaxIgst :: Maybe HighPrecMoney,
+    airportEntryFee :: Maybe HighPrecMoney,
+    airportEntryFeeTax :: Maybe HighPrecMoney,
+    airportEntryFeeTaxCgst :: Maybe HighPrecMoney,
+    airportEntryFeeTaxSgst :: Maybe HighPrecMoney,
+    airportEntryFeeTaxIgst :: Maybe HighPrecMoney,
+    paymentChargeTaxCgst :: Maybe HighPrecMoney,
+    paymentChargeTaxSgst :: Maybe HighPrecMoney,
+    paymentChargeTaxIgst :: Maybe HighPrecMoney,
+    customerCancellationDuesTaxExclusive :: Maybe HighPrecMoney,
+    customerCancellationDuesTax :: Maybe HighPrecMoney,
+    cancellationTaxCgst :: Maybe HighPrecMoney,
+    cancellationTaxSgst :: Maybe HighPrecMoney,
+    cancellationTaxIgst :: Maybe HighPrecMoney,
+    customerCancellationDuesCommission :: Maybe HighPrecMoney,
+    customerCancellationDuesCommissionTax :: Maybe HighPrecMoney,
+    customerCancellationDuesCommissionTaxCgst :: Maybe HighPrecMoney,
+    customerCancellationDuesCommissionTaxSgst :: Maybe HighPrecMoney,
+    customerCancellationDuesCommissionTaxIgst :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
@@ -147,6 +174,7 @@ data FParamsSlabDetails = FParamsSlabDetails
   { platformFee :: Maybe HighPrecMoney,
     sgst :: Maybe HighPrecMoney,
     cgst :: Maybe HighPrecMoney,
+    vat :: Maybe HighPrecMoney,
     currency :: Currency
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
@@ -155,6 +183,7 @@ data FParamsAmbulanceDetails = FParamsAmbulanceDetails
   { platformFee :: Maybe HighPrecMoney,
     sgst :: Maybe HighPrecMoney,
     cgst :: Maybe HighPrecMoney,
+    vat :: Maybe HighPrecMoney,
     distBasedFare :: HighPrecMoney,
     currency :: Currency
   }

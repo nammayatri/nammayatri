@@ -417,7 +417,7 @@ otpRideCreate driver otpCode booking clientId = do
   -- Verify the driver has enough liability balance to cover the airport entry
   -- fee BEFORE creating the ride entity. Doing it here (instead of at StartRide)
   -- ensures we don't leave an orphan ride row when the balance is insufficient.
-  AirportEntryFee.checkAirportEntryFeeBalanceBeforeStartRide (fromMaybe False transporterConfig.airportEntryFeeEnabled) driver.id booking
+  AirportEntryFee.checkAirportEntryFeeBalanceBeforeStartRide transporterConfig driver.id booking
   (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing (mFleetOwnerId <&> (.fleetOwnerId) <&> Id) False False Nothing
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle

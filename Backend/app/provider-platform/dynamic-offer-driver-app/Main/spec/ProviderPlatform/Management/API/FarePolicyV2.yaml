@@ -10,6 +10,7 @@ imports:
   DistanceUnit: Kernel.Types.Common
   Months: Kernel.Types.Time
   TimeBound: Kernel.Types.TimeBound
+  TaxConfig: BecknV2.OnDemand.FareBreakup.Tax
   Area: Lib.Types.SpecialLocation
   IndianState: Kernel.Types.Beckn.Context
   TripCategory: Dashboard.Common
@@ -217,6 +218,7 @@ types:
     - platformFeeCharge: FPV2PlatformFeeCharge
     - cgst: Double
     - sgst: Double
+    - vat: Maybe Double
   FPV2CancellationFarePolicy:
     - description: Text
     - freeCancellationTimeSeconds: Seconds
@@ -343,10 +345,12 @@ types:
     - congestionChargeMultiplier: Maybe FPV2CongestionChargeMultiplier
     - perDistanceUnitInsuranceCharge: Maybe HighPrecMoney
     - cardCharge: Maybe FPV2CardCharge
-    - vatChargeConfig: Maybe FPV2FareChargeConfig
     - commissionChargeConfig: Maybe FPV2FareChargeConfig
     - cancellationCommissionChargeConfig: Maybe FPV2FareChargeConfig
-    - tollTaxChargeConfig: Maybe FPV2FareChargeConfig
+    - rideTaxConfig: Maybe TaxConfig
+    - tollTaxConfig: Maybe TaxConfig
+    - parkingTaxConfig: Maybe TaxConfig
+    - commissionTaxConfig: Maybe TaxConfig
     - platformFee: Maybe HighPrecMoney
     - platformFeeCgst: Maybe HighPrecMoney
     - platformFeeSgst: Maybe HighPrecMoney

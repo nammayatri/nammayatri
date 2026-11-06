@@ -1,5 +1,6 @@
 module Storage.Queries.MerchantPaymentMethodExtra where
 
+import qualified Data.Aeson as A
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.MerchantPaymentMethod
 import Kernel.Beam.Functions
@@ -27,6 +28,10 @@ updateByPrimaryKey MerchantPaymentMethod {..} = do
       Se.Set BeamMPM.paymentInstrument paymentInstrument,
       Se.Set BeamMPM.paymentType paymentType,
       Se.Set BeamMPM.priority priority,
+      Se.Set BeamMPM.paymentChargeType paymentChargeType,
+      Se.Set BeamMPM.paymentCharge paymentCharge,
+      Se.Set BeamMPM.paymentChargeTax (A.toJSON <$> paymentChargeTax),
+      Se.Set BeamMPM.paymentChargeBearer paymentChargeBearer,
       Se.Set BeamMPM.updatedAt now
     ]
     [Se.Is BeamMPM.id $ Se.Eq (getId id)]

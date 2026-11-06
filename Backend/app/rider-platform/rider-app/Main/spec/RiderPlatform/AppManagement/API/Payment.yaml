@@ -10,7 +10,7 @@ imports:
   RefundPurpose: Domain.Types.RefundRequest
   Ride: Domain.Types.Ride
   Booking: Dashboard.Common
-  FareComponent: Domain.Types.FareBreakup
+  RefundFareComponent: Domain.Types.FareBreakup
   FareBreakupRes: API.Types.UI.RidePayment
   FileType: AWS.S3
 
@@ -148,7 +148,7 @@ types:
     - errorCode: Maybe Text
     - derive: "'HideSecrets"
   RefundComponentItem:
-    - component: FareComponent
+    - component: RefundFareComponent
     - amount: PriceAPIEntity
   RefundRequestInitiateReq:
     - refundComponents: "[RefundComponentItem]"  # per-component amounts (required) — same as customer create; component-wise cap; total = sum

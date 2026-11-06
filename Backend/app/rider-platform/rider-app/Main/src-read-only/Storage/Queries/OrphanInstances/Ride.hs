@@ -13,6 +13,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Kernel.Utils.Version
 import qualified SharedLogic.Type
 import qualified Storage.Beam.Ride as Beam
@@ -51,6 +52,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             clientSdkVersion = clientSdkVersion',
             cloudType = cloudType,
             commission = commission,
+            commissionTaxBreakup = Kernel.Utils.JSON.valueToMaybe =<< commissionTaxBreakup,
             createdAt = createdAt,
             destinationReachedAt = destinationReachedAt,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
@@ -90,6 +92,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             otp = otp,
             paymentCharge = paymentCharge,
             paymentChargeBearer = paymentChargeBearer,
+            paymentChargeTaxBreakup = Kernel.Utils.JSON.valueToMaybe =<< paymentChargeTaxBreakup,
             paymentStatus = Kernel.Prelude.fromMaybe Domain.Types.Ride.Completed paymentStatus,
             pickupEtaLogicVersion = pickupEtaLogicVersion,
             pickupRouteCallCount = pickupRouteCallCount,
@@ -153,6 +156,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.cloudType = cloudType,
         Beam.commission = commission,
+        Beam.commissionTaxBreakup = toJSON <$> commissionTaxBreakup,
         Beam.createdAt = createdAt,
         Beam.destinationReachedAt = destinationReachedAt,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
@@ -196,6 +200,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.otp = otp,
         Beam.paymentCharge = paymentCharge,
         Beam.paymentChargeBearer = paymentChargeBearer,
+        Beam.paymentChargeTaxBreakup = toJSON <$> paymentChargeTaxBreakup,
         Beam.paymentStatus = Kernel.Prelude.Just paymentStatus,
         Beam.pickupEtaLogicVersion = pickupEtaLogicVersion,
         Beam.pickupRouteCallCount = pickupRouteCallCount,
