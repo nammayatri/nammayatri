@@ -14,6 +14,7 @@
 
 module Lib.BehaviorEngine.RuleEvaluator
   ( evaluateRules,
+    evaluateLogics,
     RuleFetcher,
   )
 where
@@ -56,32 +57,48 @@ evaluateRules ::
   m (OrchestratedOutput, Maybe Int)
 evaluateRules callerApp mocId domain fetchRules snapshotJson = do
   (allLogics, mbVersion) <- fetchRules domain
-  (,mbVersion) <$> evaluateFetchedRules allLogics
-  where
-    evaluateFetchedRules allLogics =
-      if null allLogics
-        then do
-          logInfo $ "BehaviorEngine: No rules configured for domain " <> show domain <> ". Returning empty output."
+  (,mbVersion) <$> evaluateLogics callerApp mocId domain allLogics snapshotJson
+
+-- | Evaluate rules the caller has already fetched (e.g. one version picked up front,
+-- so the same version decides both the rules and how the snapshot is built).
+evaluateLogics ::
+  ( BeamFlow m r,
+    MonadFlow m,
+    ClickhouseFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasYudhishthiraTablesSchema
+  ) =>
+  LYDL.CallerApp ->
+  Id LYT.MerchantOperatingCity ->
+  LYT.LogicDomain ->
+  [A.Value] -> -- the rules
+  A.Value -> -- snapshot as JSON
+  m OrchestratedOutput
+evaluateLogics callerApp mocId domain allLogics snapshotJson =
+  if null allLogics
+    then do
+      logInfo $ "BehaviorEngine: No rules configured for domain " <> show domain <> ". Returning empty output."
+      return defaultOrchestratedOutput
+    else do
+      logInfo $ "BehaviorEngine: Evaluating " <> show (length allLogics) <> " rules for domain " <> show domain
+      result <-
+        try @_ @SomeException $
+          LYDL.runLogicsWithDebugLog callerApp mocId domain Nothing allLogics snapshotJson
+      case result of
+        Left err -> do
+          logError $ "BehaviorEngine: Error evaluating rules for domain " <> show domain <> ": " <> show err
           return defaultOrchestratedOutput
-        else do
-          logInfo $ "BehaviorEngine: Evaluating " <> show (length allLogics) <> " rules for domain " <> show domain
-          result <-
-            try @_ @SomeException $
-              LYDL.runLogicsWithDebugLog callerApp mocId domain Nothing allLogics snapshotJson
-          case result of
-            Left err -> do
-              logError $ "BehaviorEngine: Error evaluating rules for domain " <> show domain <> ": " <> show err
-              return defaultOrchestratedOutput
-            Right logicResp -> do
-              logInfo $ "BehaviorEngine: Raw rule output for domain " <> show domain <> ": " <> show logicResp.result
-              let (output, parseErrors) = extractOutput logicResp.result
-              unless (null parseErrors) $
-                logError $ "BehaviorEngine: Parse errors for domain " <> show domain <> ": " <> show parseErrors
-              logInfo $
-                "BehaviorEngine: Parsed output — Consequences: " <> show (length output.consequences)
-                  <> ", Communications: "
-                  <> show (length output.communications)
-              return output
+        Right logicResp -> do
+          logInfo $ "BehaviorEngine: Raw rule output for domain " <> show domain <> ": " <> show logicResp.result
+          let (output, parseErrors) = extractOutput logicResp.result
+          unless (null parseErrors) $
+            logError $ "BehaviorEngine: Parse errors for domain " <> show domain <> ": " <> show parseErrors
+          logInfo $
+            "BehaviorEngine: Parsed output — Consequences: " <> show (length output.consequences)
+              <> ", Communications: "
+              <> show (length output.communications)
+          return output
 
 -- | Extract consequences and communications from rule engine JSON output
 --

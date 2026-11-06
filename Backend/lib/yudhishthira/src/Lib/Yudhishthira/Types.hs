@@ -77,6 +77,8 @@ module Lib.Yudhishthira.Types
     UpdateTagReq (..),
     TagNameValue (..),
     ExperimentStatus (..),
+    RulebookWindowMode (..),
+    RulebookWindowConfig (..),
     TableDataResp (..),
     ConfigDetailsResp (..),
     DomainSchemaResp (..),
@@ -701,6 +703,16 @@ data ExperimentStatus
 $(mkBeamInstancesForEnumAndList ''ExperimentStatus)
 $(mkHttpInstancesForEnum ''ExperimentStatus)
 
+-- | How a behaviour rulebook version counts offences, chosen when the version is saved.
+-- TIME: daily/weekly counters. EVENTS: offences in the driver's last X events.
+data RulebookWindowMode
+  = TIME
+  | EVENTS
+  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, Read, Show)
+
+$(mkBeamInstancesForEnumAndList ''RulebookWindowMode)
+$(mkHttpInstancesForEnum ''RulebookWindowMode)
+
 data ActionChangeRequest
   = Conclude ConcludeReq
   | Abort AbortReq
@@ -803,7 +815,10 @@ data AppDynamicLogicReq = AppDynamicLogicReq
     description :: Maybe Text,
     shouldUpdateRule :: Maybe Bool,
     verifyOutput :: Maybe Bool,
-    domain :: LogicDomain
+    domain :: LogicDomain,
+    -- Behaviour rulebooks only, read by the driver app; Nothing = TIME. Other apps ignore both.
+    windowMode :: Maybe RulebookWindowMode,
+    windowSize :: Maybe Int
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1070,6 +1085,14 @@ data RolloutGroupInfo = RolloutGroupInfo
     experimentGroup :: Maybe Text,
     experimentStatus :: Maybe ExperimentStatus,
     isBaseVersion :: Maybe Bool
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | A behaviour rulebook version's window settings, as saved. Versions not listed are TIME.
+data RulebookWindowConfig = RulebookWindowConfig
+  { version :: Int,
+    windowMode :: RulebookWindowMode,
+    windowSize :: Int
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 

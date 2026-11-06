@@ -35,6 +35,7 @@ imports:
   ChakraQueryResp: Lib.Yudhishthira.Types
   AppDynamicLogicDomainResp: Lib.Yudhishthira.Types
   AppDynamicLogicVersionResp: Lib.Yudhishthira.Types
+  RulebookWindowConfig: Lib.Yudhishthira.Types
   CreateNammaTagResponse: Lib.Yudhishthira.Types
   VerifyNammaTagRequest: Lib.Yudhishthira.Types
   VerifyNammaTagResponse: Lib.Yudhishthira.Types
@@ -293,6 +294,15 @@ apis:
         offset: Int
       response:
         type: AppDynamicLogicVersionResp
+  - GET: # window settings (TIME/EVENTS + X) of a behaviour domain's versions; unlisted versions are TIME
+      endpoint: /appDynamicLogic/windowConfig
+      auth: ApiAuthV2
+      mandatoryQuery:
+        domain: LogicDomain
+      response:
+        type: "[RulebookWindowConfig]"
+      migrate:
+        capability: system-config.dynamic_logic.read
   - GET:
       endpoint: /appDynamicLogic/domains
       auth: ApiAuthV2

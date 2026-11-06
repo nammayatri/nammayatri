@@ -46,7 +46,8 @@ lowRatingCounterConfig =
     { windowSizeDays = 90,
       counters = [BTT.ACTION_COUNT, BTT.ELIGIBLE_COUNT],
       periods = [BTT.mkPeriodConfig "weekly" 7, BTT.mkPeriodConfig "monthly" 30, BTT.mkPeriodConfig "quarterly" 90],
-      hashTagEntityId = False
+      hashTagEntityId = False,
+      eventsWindow = Nothing
     }
 
 -- The snapshot counts exclude this rating; rules count it with INCREMENT_COUNTER

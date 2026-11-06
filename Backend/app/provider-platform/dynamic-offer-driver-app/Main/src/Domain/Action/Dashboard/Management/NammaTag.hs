@@ -27,6 +27,7 @@ module Domain.Action.Dashboard.Management.NammaTag
     getNammaTagAppDynamicLogicExperimentGroups,
     getNammaTagTimeBounds,
     getNammaTagAppDynamicLogicVersions,
+    getNammaTagAppDynamicLogicWindowConfig,
     getNammaTagAppDynamicLogicDomains,
     getNammaTagAppDynamicLogicDomainsAndEvents,
     getNammaTagAppDynamicLogicGetDomainSchema,
@@ -144,6 +145,7 @@ import qualified Lib.Yudhishthira.Types.NammaTagV2
 import qualified Lib.Yudhishthira.Types.TagActionNotificationConfig as DTANC
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.BehaviourManagement.EventsWindow as BEWindow
 import qualified SharedLogic.BehaviourManagement.Packs as BPacks
 import qualified SharedLogic.BehaviourManagement.Visibility as BehaviorVisibility
 import SharedLogic.CancellationFault (FaultVerdict, FaultVerdictData)
@@ -465,6 +467,8 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let mbMerchantId = Just $ cast merchant.id
+  -- checked before anything is saved, on dry runs too; Just X = an EVENTS version
+  mbEventsWindowSize <- BEWindow.validateWindowSettings req
   resp <- case req.domain of
     LYT.POOLING -> do
       driversData :: [DriverPoolWithActualDistResult] <- mapM (YudhishthiraFlow.createLogicData def . Just) req.inputData
@@ -625,7 +629,18 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       invalidateConfigInMem (TC.toCacheConfigType cfgType)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
-  pure resp
+  mbWindowError <- case mbEventsWindowSize of
+    Just windowSize | resp.isRuleUpdated -> BEWindow.saveWindowConfig merchant.id req.domain resp.version windowSize
+    _ -> pure Nothing
+  -- The version is saved either way; a missing window row is reported in errors, which the
+  -- control center shows on save.
+  pure $ maybe resp (\windowError -> resp{errors = resp.errors <> [toString windowError]}) mbWindowError
+
+getNammaTagAppDynamicLogicWindowConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.LogicDomain -> Environment.Flow [LYT.RulebookWindowConfig]
+getNammaTagAppDynamicLogicWindowConfig merchantShortId _opCity domain = do
+  -- versions are global, so the city only scopes access
+  void $ findMerchantByShortId merchantShortId
+  BEWindow.getWindowConfigs domain
 
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> LYT.LogicDomain -> Environment.Flow [LYT.GetLogicsResp]
 getNammaTagAppDynamicLogic merchantShortId opCity mbVersion domain = do
@@ -705,6 +720,8 @@ postNammaTagAppDynamicLogicUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.
 postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  -- Events-window city rules, checked on the whole new live set before anything is written.
+  BEWindow.validateEventsRollout rolloutReq
   result <- YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) rolloutReq TC.returnConfigs opCity
   forM_ rolloutReq $ \rolloutObj -> case rolloutObj.domain of
     LYT.DRIVER_CONFIG cfgType -> do
@@ -1452,7 +1469,9 @@ postNammaTagConfigPilotVerify merchantShortId opCity configType req =
         description = req.description,
         shouldUpdateRule = req.shouldUpdateRule,
         verifyOutput = req.verifyOutput,
-        domain = LYT.DRIVER_CONFIG configType
+        domain = LYT.DRIVER_CONFIG configType,
+        windowMode = Nothing,
+        windowSize = Nothing
       }
 
 postNammaTagConfigPilotUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ConfigType -> LYT.ConfigPilotRolloutReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -1512,13 +1531,16 @@ getNammaTagBehaviorStatus merchantShortId opCity = do
       Just v -> do
         elements <- CADLE.findByDomainAndVersion bPack.packDomain v
         pure $ DL.nub $ concatMap (collectOverlayKeys . (.logic)) elements
-    let overlaySatisfied key = any (\o -> o.overlayKey == key) cityOverlays
+    -- An EVENTS version uses its own overlays, not the TIME template's daily/weekly ones.
+    activeIsEvents <- maybe (pure False) (BEWindow.isEventsVersion bPack.packDomain) mbActiveVersion
+    let packKeys = BPacks.packOverlayKeys bPack activeIsEvents
+        overlaySatisfied key = any (\o -> o.overlayKey == key) cityOverlays
         overlayPrereqs =
-          bPack.requiredOverlayKeys <&> \key ->
+          packKeys <&> \key ->
             let rows = filter (\o -> o.overlayKey == key) cityOverlays
              in LYT.BehaviourPrereqStatus {name = key, kind = LYT.OVERLAY_KEY, satisfied = not (null rows), detail = Just ("rows: " <> show (length rows))}
         rulebookOverlayPrereqs =
-          filter (`notElem` bPack.requiredOverlayKeys) rulebookKeys <&> \key ->
+          filter (`notElem` packKeys) rulebookKeys <&> \key ->
             LYT.BehaviourPrereqStatus {name = key, kind = LYT.OVERLAY_KEY, satisfied = overlaySatisfied key, detail = Just "referenced by the active rulebook"}
         togglePrereqs =
           bPack.configPrereqs <&> \prereq ->
@@ -1574,13 +1596,15 @@ postNammaTagBehaviorEnable merchantShortId opCity domain requestorId requestorNa
             rollout = [LYT.RolloutVersion {version = version, rolloutPercentage = percentage, versionDescription = Just ("Enabled via behaviour switchboard by " <> requestorName), experimentGroup = Nothing}],
             modifiedBy = Just (Id requestorId)
           }
+  BEWindow.validateEventsRollout [rolloutObj]
   void $ YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) [rolloutObj] TC.returnConfigs opCity
   -- Seed the pack's template keys PLUS every NUDGE/WARN key the enabled rulebook
   -- version actually references, so a customised rulebook never points at an
   -- overlay the city doesn't have.
   elements <- CADLE.findByDomainAndVersion domain version
   let rulebookKeys = DL.nub $ concatMap (collectOverlayKeys . (.logic)) elements
-      overlayKeysToSeed = DL.nub $ bPack.requiredOverlayKeys <> rulebookKeys
+  versionIsEvents <- BEWindow.isEventsVersion domain version
+  let overlayKeysToSeed = DL.nub $ BPacks.packOverlayKeys bPack versionIsEvents <> rulebookKeys
   seedBehaviourOverlays merchant merchantOpCityId overlayKeysToSeed
   seedBehaviourBlockReasons bPack
   logInfo $ "Behaviour " <> show domain <> " enabled at " <> show percentage <> "% (version " <> show version <> ") in city " <> merchantOpCityId.getId <> " by " <> requestorId
