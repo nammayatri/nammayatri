@@ -61,3 +61,8 @@ ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN ondc_encryption_private_k
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN auto_enforce_frfs_pass boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN pass_ticket_overlap_warning_time integer ;

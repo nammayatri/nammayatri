@@ -27,6 +27,7 @@ import Kernel.Types.Error (GenericError (..))
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils (stageFareBetweenStops, stationCodeForMatching)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import Tools.Error (PassError (..))
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
 type RoutePassFlow m r c =
@@ -90,7 +91,7 @@ resolveRoutePassTerm person pass config selection = do
   referenceFare <- passReferenceFare person pass integratedBPPConfig serviceTier sourceStopCode destinationStopCode
   let perTripAmount = roundToUnits (max 0 (referenceFare - pricingSaving config.pricing referenceFare))
   when (perTripAmount <= 0) $
-    throwError (InvalidRequest $ "This pass has no price between " <> sourceStopCode <> " and " <> destinationStopCode)
+    throwError (PassUnserviceableBetweenRequestedStops sourceStopCode destinationStopCode)
   let soldBenefit =
         OverrideBenefit
           { percentageSaving = config.benefit.percentageSaving,
@@ -184,7 +185,7 @@ passReferenceFare person pass integratedBPPConfig serviceTier sourceStopCode des
         adultPrice fare = (.price.amount) <$> find ((== ADULT) . (.category)) fare.categories
     listToMaybe (mapMaybe adultPrice onTier) & fromMaybeM noFare
   where
-    noFare = InvalidRequest $ "No " <> show serviceTier <> " fare between " <> sourceStopCode <> " and " <> destinationStopCode
+    noFare = PassUnserviceableBetweenRequestedStops sourceStopCode destinationStopCode
 
 normaliseStopCode ::
   (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) =>

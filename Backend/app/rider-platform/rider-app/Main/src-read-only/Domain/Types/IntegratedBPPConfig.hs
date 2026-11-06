@@ -30,6 +30,7 @@ data IntegratedBPPConfig = IntegratedBPPConfig
     ondcRegistryPublicKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     operatorConfig :: Kernel.Prelude.Maybe Domain.Types.Extra.IntegratedBPPConfig.OperatorConfig,
     passOverrideApplicable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    passTicketOverlapWarningTime :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     platformType :: Domain.Types.IntegratedBPPConfig.PlatformType,
     providerConfig :: Domain.Types.IntegratedBPPConfig.ProviderConfig,
     providerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
