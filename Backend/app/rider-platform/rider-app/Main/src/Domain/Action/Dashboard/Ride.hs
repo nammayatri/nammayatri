@@ -15,6 +15,8 @@
 module Domain.Action.Dashboard.Ride
   ( getRideInfo,
     getShareRideInfoByShortId,
+    getShareRideInfoForMerchant,
+    getShareRideInfoByShortIdForMerchant,
     getRideList,
     rideInfo,
     getShareRideInfo,
@@ -132,7 +134,13 @@ getShareRideInfo ::
   Context.City ->
   Id Common.Ride ->
   Flow Common.ShareRideInfoRes
-getShareRideInfo merchantId _ rideId = do
+getShareRideInfo merchantId _ = getShareRideInfoForMerchant merchantId
+
+getShareRideInfoForMerchant ::
+  ShortId DM.Merchant ->
+  Id Common.Ride ->
+  Flow Common.ShareRideInfoRes
+getShareRideInfoForMerchant merchantId rideId = do
   ride <- B.runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   buildShareRideInfo merchantId ride
 
@@ -141,7 +149,13 @@ getShareRideInfoByShortId ::
   Context.City ->
   ShortId Common.Ride ->
   Flow Common.ShareRideInfoRes
-getShareRideInfoByShortId merchantId _ rideId = do
+getShareRideInfoByShortId merchantId _ = getShareRideInfoByShortIdForMerchant merchantId
+
+getShareRideInfoByShortIdForMerchant ::
+  ShortId DM.Merchant ->
+  ShortId Common.Ride ->
+  Flow Common.ShareRideInfoRes
+getShareRideInfoByShortIdForMerchant merchantId rideId = do
   let rideShortId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) rideId
   ride <- QRide.findRideByRideShortId rideShortId >>= fromMaybeM (InvalidRequest "Ride ShortId Not Found")
   buildShareRideInfo merchantId ride
