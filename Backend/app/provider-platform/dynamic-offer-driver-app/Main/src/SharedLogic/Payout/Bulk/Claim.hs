@@ -23,7 +23,6 @@ where
 import Control.Applicative ((<|>))
 import Data.IORef (newIORef, readIORef, writeIORef)
 import qualified Data.Text as T
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DriverBankAccount
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -40,6 +39,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Finance.Balance (ownerLockKey, withOwnerLockOrSkip)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -80,7 +80,7 @@ claimBeneficiary ::
   m Bulk.ClaimResult
 claimBeneficiary config payoutType transporterConfig payoutServiceName merchantId merchantOpCityId batch candidate = do
   let personId = candidate.beneficiary.id
-      walletLockKey = makeWalletRunningBalanceLockKey personId.getId
+      walletLockKey = ownerLockKey personId.getId
   -- Decrypted before the locks: it calls the encryption service, and ride end waits on the inner lock.
   customerPhone <- mapM decrypt candidate.beneficiary.mobileNumber
   -- Stays empty only when the inner lock could not be taken.
@@ -91,7 +91,7 @@ claimBeneficiary config payoutType transporterConfig payoutServiceName merchantI
     -- inner wait alone can take 10 s). Inner: the balance lock ride end and settlement take.
     -- Always in this order; never take a payout lock inside the inner one.
     PayoutRequest.runPayoutUnderLock walletLockKey 30 (pure (Just ())) $ \() ->
-      Redis.withWaitAndLockRedisWithTimeout walletLockKey 10 10 50000 $ do
+      withOwnerLockOrSkip personId.getId $ do
         standing <- readPayoutSnapshot transporterConfig candidate.beneficiary
         case classifyBulkCandidate config candidate.beneficiary standing of
           Left reason -> do

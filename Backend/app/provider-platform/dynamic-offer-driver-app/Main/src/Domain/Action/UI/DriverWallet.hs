@@ -76,6 +76,7 @@ import Lib.Finance
     invoice,
     markEntriesAsClaimed,
     transfer,
+    withOwnerLock,
   )
 import Lib.Finance.Account.Interface (AccountInput (..))
 import qualified Lib.Finance.Account.Service as FAccountService
@@ -1238,6 +1239,7 @@ recordAirportCashRecharge ::
     CacheFlow m r,
     EsqDBFlow m r,
     Redis.HedisLTSFlowEnv r,
+    Redis.HedisFlow m r,
     Finance.HasActorInfo m r
   ) =>
   (Id DP.Person, Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
@@ -1255,46 +1257,48 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId mbRea
   let isReversal = amount < 0
       absAmount = abs amount
       referenceType = if isReversal then walletReferenceAirportCashWithdrawal else walletReferenceAirportCashRecharge
-  existing <- getEntriesByReference referenceType referenceId
-  when (null existing) $ do
-    merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
-    let currency = merchantOpCity.currency
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
-    ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
-    let cashRechargeInvoiceConfig =
-          InvoiceConfig
-            { invoiceType = SubscriptionPurchase,
-              issuedToType = DRIVER,
-              issuedToId = driverId.getId,
-              issuedToName = Nothing,
-              issuedToAddress = Nothing,
-              referenceId = Nothing,
-              lineItems = [InvoiceLineItem {description = "Airport Cash Recharge", descriptionType = Just AirportCashRecharge, quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False, groupId = Just "g-airport", itemType = Just Fare}],
-              gstBreakdown = Nothing,
-              isVat = False,
-              issuedToTaxNo = Nothing,
-              issuedByTaxNo = Nothing,
-              paymentMode = Just "CASH",
-              periodStart = Nothing,
-              periodEnd = Nothing
-            }
-    let mbLedgerMetadata =
-          mbReason <&> \reason ->
-            LedgerEntryMetadata
-              { d2cReferralEarnings = Nothing,
-                d2dReferralEarnings = Nothing,
-                dailyStatsId = Nothing,
-                driverPayable = Nothing,
-                payoutOrderId = Nothing,
-                reason = Just reason,
-                subscriptionAllocations = Nothing
+  -- Under the wallet lock so this credit can't interleave with another posting on the wallet.
+  withOwnerLock driverId.getId $ do
+    existing <- getEntriesByReference referenceType referenceId
+    when (null existing) $ do
+      merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
+      let currency = merchantOpCity.currency
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+      ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+      let cashRechargeInvoiceConfig =
+            InvoiceConfig
+              { invoiceType = SubscriptionPurchase,
+                issuedToType = DRIVER,
+                issuedToId = driverId.getId,
+                issuedToName = Nothing,
+                issuedToAddress = Nothing,
+                referenceId = Nothing,
+                lineItems = [InvoiceLineItem {description = "Airport Cash Recharge", descriptionType = Just AirportCashRecharge, quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False, groupId = Just "g-airport", itemType = Just Fare}],
+                gstBreakdown = Nothing,
+                isVat = False,
+                issuedToTaxNo = Nothing,
+                issuedByTaxNo = Nothing,
+                paymentMode = Just "CASH",
+                periodStart = Nothing,
+                periodEnd = Nothing
               }
-    result <-
-      runFinance ctx $
-        if isReversal
-          then void $ transfer OwnerLiability PlatformAsset absAmount referenceType mbLedgerMetadata
-          else do
-            _ <- transfer PlatformAsset OwnerLiability amount referenceType mbLedgerMetadata
-            void $ invoice cashRechargeInvoiceConfig
-    (_, entryIds) <- fromEitherM (\e -> WalletLedgerEntryFailed ("airport cash recharge: " <> show e)) result
-    when isReversal $ markEntriesAsClaimed entryIds
+      let mbLedgerMetadata =
+            mbReason <&> \reason ->
+              LedgerEntryMetadata
+                { d2cReferralEarnings = Nothing,
+                  d2dReferralEarnings = Nothing,
+                  dailyStatsId = Nothing,
+                  driverPayable = Nothing,
+                  payoutOrderId = Nothing,
+                  reason = Just reason,
+                  subscriptionAllocations = Nothing
+                }
+      result <-
+        runFinance ctx $
+          if isReversal
+            then void $ transfer OwnerLiability PlatformAsset absAmount referenceType mbLedgerMetadata
+            else do
+              _ <- transfer PlatformAsset OwnerLiability amount referenceType mbLedgerMetadata
+              void $ invoice cashRechargeInvoiceConfig
+      (_, entryIds) <- fromEitherM (\e -> WalletLedgerEntryFailed ("airport cash recharge: " <> show e)) result
+      when isReversal $ markEntriesAsClaimed entryIds

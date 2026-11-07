@@ -34,7 +34,6 @@ module Domain.Action.UI.Ride.EndRide.Internal
     getMonth,
     pickedWaypointsForEditDestination,
     pickNWayPoints,
-    makeWalletRunningBalanceLockKey,
     makeSubscriptionRunningBalanceLockKey,
   )
 where
@@ -93,10 +92,11 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, transfer, transferPending, transferWithoutAttribution, transfer_)
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), anyPosted, countPosted, invoice, transfer, transferOnce, transferOnce_, transferPendingOnce, transferWithoutAttributionOnce, withOwnerLock)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
+import qualified Lib.Finance.FinanceM as FinanceM
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
 import Lib.Scheduler.Environment (JobCreatorEnv)
@@ -274,8 +274,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
                 (CallBAPInternal.UpdateCancellationFeeStatusReq {bppRideIds = bppRideIds})
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
 
-  -- A wallet-subscription city runs the end-ride finance (fee accrual, wallet postings incl. GST) as an
-  -- allocator job instead of a fork. Every other city keeps the fork.
+  -- A wallet-subscription city runs the end-ride finance (fee accrual, wallet postings incl. GST) as a
+  -- retried job, so a crash after the ride is COMPLETED can't lose it. Every other city keeps the fork.
   walletSubscriptionCity <- isWalletSubscriptionCity thresholdConfig
   if walletSubscriptionCity
     then
@@ -360,12 +360,27 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
   allActivePrepaidPurchases <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
   nowForPrepaidExpiry <- getCurrentTime
   let expiredPrepaidPurchases = filter (\p -> maybe False (<= nowForPrepaidExpiry) p.expiryDate) allActivePrepaidPurchases
-      serviceName = if not (null allActivePrepaidPurchases) then PREPAID_SUBSCRIPTION else YATRI_SUBSCRIPTION
+      liveServiceName = if not (null allActivePrepaidPurchases) then PREPAID_SUBSCRIPTION else YATRI_SUBSCRIPTION
+      routeKey = "EndRideFinanceRoute:" <> ride.id.getId
+  -- A retried job keeps the first run's route: that run's prepaid debit can exhaust the last purchase,
+  -- and a retry routed by the live purchases would then accrue a subscription fee for a prepaid ride.
+  _ <- Redis.setNxExpire routeKey (3 * 24 * 3600) liveServiceName
+  serviceName <- fromMaybe liveServiceName <$> Redis.get routeKey
 
   -- 1. Subscription Flow — route by serviceName.
   case serviceName of
     PREPAID_SUBSCRIPTION -> processEndRidePrepaidSubscription baseFare mbVehicleCategory expiredPrepaidPurchases
-    _ | thresholdConfig.subscription -> createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
+    _ | thresholdConfig.subscription -> do
+      -- createDriverFee adds this ride onto the day's ongoing fee; the marker keeps a retried
+      -- end-ride finance job from adding it twice. createDriverFee sets it right after the fee write, so a
+      -- failure in the steps after it can't re-add the ride. Check, accrual and marker run under a per-ride
+      -- lock, so two runs of the job can't both see "not accrued". The fee is a driver_fee row, not a ledger
+      -- posting, so the kernel's once-per-reference posting can't guard it.
+      let accrualKey = "DriverFeeAccrued:" <> ride.id.getId
+      Redis.withWaitAndLockRedis ("DriverFeeAccrualLock:" <> ride.id.getId) 10 1000 $ do
+        alreadyAccrued <- fromMaybe False <$> Redis.get accrualKey
+        unless alreadyAccrued $
+          createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName (Redis.setExp accrualKey True (3 * 24 * 3600))
     _ -> pure ()
 
   -- 2. Wallet Flow
@@ -608,7 +623,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
   isExternalBap <- if requireBapConfirm && isCollectedByBap then not <$> CQVAN.isValueAddNP booking.bapId else pure False
   let shouldSetBapPending = requireBapConfirm && isCollectedByBap && isExternalBap
       initialSettlementStatus = if shouldSetBapPending then Just LE.EXTERNAL_PENDING else Nothing
-  Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey driverOrFleetPersonId.getId) 10 10 50000 $ do
+  withOwnerLock driverOrFleetPersonId.getId $ do
     voidWalletHoldByReference holdCounterparty holdOwnerId booking.id.getId "Ride completed - replaced by actual deductions"
 
     isOnline <- do
@@ -656,15 +671,24 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         case mbPersistedFareParams of
           Just fp | isJust fp.tdsProcessedAt -> pure fp.tdsAmount
           _ -> do
-            fyToDate <- SDFE.getFyToDateNetEarnings driverOrFleetPersonId (financialYearOf fyStartMonth rideLocalDate)
-            let mbAmount = do
-                  rate <- effectiveTdsRate
-                  let rawAmount = tdsBaseAmount * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
-                      gatedAmount = applyThresholdBenefit transporterConfig.taxConfig (Just fyToDate) mbPanCard tdsBaseAmount rawAmount
-                  if gatedAmount > 0 then Just gatedAmount else Nothing
-            -- Net take home = TDS base - TDS. Written after the gate, since the
-            -- deduction is not known until it runs.
-            SDFE.addQuarterNetEarnings driverOrFleetPersonId fyStartMonth rideLocalDate (tdsBaseAmount - fromMaybe 0 mbAmount) (fromMaybe 0 mbAmount)
+            -- A retried job that already added this ride's earnings (but failed before the TDS stamp below)
+            -- reuses that run's amount, so the ride is counted in the FY earnings once.
+            let earningsAddedKey = "TdsEarningsAdded:" <> ride.id.getId
+            mbAddedAmount <- Redis.get earningsAddedKey
+            mbAmount <- case mbAddedAmount of
+              Just addedAmount -> pure $ if addedAmount > 0 then Just addedAmount else Nothing
+              Nothing -> do
+                fyToDate <- SDFE.getFyToDateNetEarnings driverOrFleetPersonId (financialYearOf fyStartMonth rideLocalDate)
+                let gated = do
+                      rate <- effectiveTdsRate
+                      let rawAmount = tdsBaseAmount * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
+                          gatedAmount = applyThresholdBenefit transporterConfig.taxConfig (Just fyToDate) mbPanCard tdsBaseAmount rawAmount
+                      if gatedAmount > 0 then Just gatedAmount else Nothing
+                -- Net take home = TDS base - TDS. Written after the gate, since the
+                -- deduction is not known until it runs.
+                SDFE.addQuarterNetEarnings driverOrFleetPersonId fyStartMonth rideLocalDate (tdsBaseAmount - fromMaybe 0 gated) (fromMaybe 0 gated)
+                Redis.setExp earningsAddedKey (fromMaybe 0 gated) (3 * 24 * 3600)
+                pure gated
             processedAt <- getCurrentTime
             whenJust ride.fareParametersId $ QFare.updateTdsDeduction mbAmount effectiveTdsRate processedAt
             pure mbAmount
@@ -848,6 +872,16 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     -- immediately reversed so the net balance lands at 0 (driver got the
     -- money from the rider directly; BPP's books didn't hold it). See the
     -- module-level table at the top of this file for the full matrix.
+    -- Retry safety (a retried end-ride finance job): every ride leg is posted only if that leg is not in
+    -- the ledger yet (the kernel's 'transferOnce'), so a run that stopped part way is completed and never
+    -- doubled; the invoices are created only if missing. The commission and PG-charge legs are posted the
+    -- same way; only the Stripe PG-charge ledger, which posts as a whole, is skipped once its entry exists.
+    let alreadyPosted refTypes = fst <$> (FinanceM.runFinance ctx (anyPosted refTypes) >>= fromEitherM (\e -> InternalError ("Failed to read the ride's ledger entries: " <> show e)))
+    existingRideInvoices <- QFInvoice.findByReferenceId (Just booking.id.getId)
+    let driverInvoiceIssuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
+        findRideInvoice issuedTo = find (\inv -> inv.invoiceType == BeckInvoice.Ride && inv.issuedToType == issuedTo) existingRideInvoices
+        existingCustomerInvoice = findRideInvoice CUSTOMER
+        existingDriverInvoice = findRideInvoice driverInvoiceIssuedToType
     result <- runFinance ctx $ do
       -- Ride-earning components. Online: 2-leg pass-through (BAP cash in via
       -- BuyerExternal, then credited to driver wallet). Cash: single leg
@@ -858,10 +892,10 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
             if isOnline
               then do
                 if shouldSetBapPending
-                  then void $ transferPending BuyerAsset BuyerExternal amt ref
-                  else transfer_ BuyerAsset BuyerExternal amt ref
-                void $ transfer BuyerExternal OwnerLiability amt ref Nothing
-              else void $ transfer BuyerControl OwnerControl amt ref Nothing
+                  then void $ transferPendingOnce BuyerAsset BuyerExternal amt ref
+                  else transferOnce_ BuyerAsset BuyerExternal amt ref
+                void $ transferOnce BuyerExternal OwnerLiability amt ref Nothing
+              else void $ transferOnce BuyerControl OwnerControl amt ref Nothing
       if isVat
         then do
           let rideEarningComponents =
@@ -883,54 +917,62 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           if isOnline
             then do
               if shouldSetBapPending
-                then void $ transferPending BuyerAsset BuyerExternal taxAmount taxRefOnline
-                else transfer_ BuyerAsset BuyerExternal taxAmount taxRefOnline
-              void $ transfer BuyerExternal GovtIndirect taxAmount taxRefOnline Nothing
-            else void $ transfer OwnerLiability GovtIndirect taxAmount taxRefCash Nothing
+                then void $ transferPendingOnce BuyerAsset BuyerExternal taxAmount taxRefOnline
+                else transferOnce_ BuyerAsset BuyerExternal taxAmount taxRefOnline
+              void $ transferOnce BuyerExternal GovtIndirect taxAmount taxRefOnline Nothing
+            else void $ transferOnce OwnerLiability GovtIndirect taxAmount taxRefCash Nothing
       -- TDS — driver wallet reduces in both modes (cash driver owes platform).
       whenJust mbTdsAmount $ \tdsAmount ->
-        void $ transfer OwnerLiability GovtDirect tdsAmount tdsRef Nothing
+        void $ transferOnce OwnerLiability GovtDirect tdsAmount tdsRef Nothing
       when (isVat && serviceVatAmount > 0) $
-        void $ transferWithoutAttribution GovtExpense OwnerLiability serviceVatAmount walletReferenceVATInput
+        void $ transferWithoutAttributionOnce GovtExpense OwnerLiability serviceVatAmount walletReferenceVATInput
       -- BAP subsidy — BAP remits to BPP in both modes (2-leg pass-through); credits driver wallet.
       let discountsRef = if isOnline then walletReferenceDiscountsOnline else walletReferenceDiscountsCash
       when (customerDiscountAmount > 0) $ do
         if shouldSetBapPending
-          then void $ transferPending BuyerAsset BuyerExternal customerDiscountAmount discountsRef
-          else transfer_ BuyerAsset BuyerExternal customerDiscountAmount discountsRef
-        void $ transfer BuyerExternal OwnerLiability customerDiscountAmount discountsRef Nothing
+          then void $ transferPendingOnce BuyerAsset BuyerExternal customerDiscountAmount discountsRef
+          else transferOnce_ BuyerAsset BuyerExternal customerDiscountAmount discountsRef
+        void $ transferOnce BuyerExternal OwnerLiability customerDiscountAmount discountsRef Nothing
       -- Tip — online: BuyerAsset → OwnerLiability (1 leg). Cash: Control.
       when (tipAmount > 0) $
         if isOnline
-          then void $ transfer BuyerAsset OwnerLiability tipAmount walletReferenceTips Nothing
-          else void $ transfer BuyerControl OwnerControl tipAmount walletReferenceTips Nothing
-      invoice customerInvoiceConfig
+          then void $ transferOnce BuyerAsset OwnerLiability tipAmount walletReferenceTips Nothing
+          else void $ transferOnce BuyerControl OwnerControl tipAmount walletReferenceTips Nothing
+      if isJust existingCustomerInvoice then pure Nothing else invoice customerInvoiceConfig
     case result of
       Left err -> fromEitherM (\e -> InternalError ("Failed to create wallet transaction: " <> show e)) (Left err)
-      Right (mbInvoiceId, _entryIds) -> do
-        let mbInvoiceIdText = (.getId) <$> mbInvoiceId
-        QRB.updateFinanceInvoiceId booking.id mbInvoiceIdText
-        whenJust mbInvoiceId $ \invId -> do
-          QFInvoice.updatePlaceOfSupply mbPlaceOfSupply Nothing Nothing invId
-          -- B2C self-generated unsigned QR (no IRN) on the customer tax invoice.
-          B2CQRCode.generateB2CQRForInvoice transporterConfig invId
-          -- Render + store the PDF off the ride-end path, after the place-of-supply and
-          -- QR stamps above (a stored PDF is final), so ONDC on_status can attach it.
-          when (fromMaybe False (transporterConfig.invoiceConfig >>= (.enableInvoicePdfS3Storage))) $
-            createJobIn @_ @'GenerateInvoicePdf (Just booking.providerId) (Just booking.merchantOperatingCityId) 0 $
-              GenerateInvoicePdfJobData {invoiceId = invId.getId}
+      Right (mbPostedInvoiceId, _entryIds) -> do
+        let mbInvoiceId = mbPostedInvoiceId <|> (existingCustomerInvoice <&> (.id))
+        -- A newly created invoice, or a retry of a run that stopped before the booking was linked to its
+        -- invoice. The booking link is written last, so it also marks these steps as finished; the steps
+        -- themselves are safe to repeat.
+        when (isNothing existingCustomerInvoice || isNothing booking.financeInvoiceId) $ do
+          whenJust mbInvoiceId $ \invId -> do
+            QFInvoice.updatePlaceOfSupply mbPlaceOfSupply Nothing Nothing invId
+            -- B2C self-generated unsigned QR (no IRN) on the customer tax invoice.
+            B2CQRCode.generateB2CQRForInvoice transporterConfig invId
+            -- Render + store the PDF off the ride-end path, after the place-of-supply and
+            -- QR stamps above (a stored PDF is final), so ONDC on_status can attach it.
+            when (fromMaybe False (transporterConfig.invoiceConfig >>= (.enableInvoicePdfS3Storage))) $
+              createJobIn @_ @'GenerateInvoicePdf (Just booking.providerId) (Just booking.merchantOperatingCityId) 0 $
+                GenerateInvoicePdfJobData {invoiceId = invId.getId}
+          QRB.updateFinanceInvoiceId booking.id ((.getId) <$> mbInvoiceId)
 
     -- Standalone driver / fleet-owner Ride invoice mirroring the customer
     -- invoice. No transfers in this block → no ledger entries are linked,
     -- so no duplicate IndirectTaxTransaction is emitted.
     let generateDriverInvoice = maybe True (fromMaybe True . (.enableDriverInvoice)) transporterConfig.invoiceConfig
-    when generateDriverInvoice $ do
+    when (generateDriverInvoice && isNothing existingDriverInvoice) $ do
       driverInvoiceResult <- runFinance ctx $ invoice driverInvoiceConfig
       case driverInvoiceResult of
         Left err -> fromEitherM (\e -> InternalError ("Failed to create driver ride invoice: " <> show e)) (Left err)
         Right (mbDriverInvoiceId, _) -> whenJust mbDriverInvoiceId $ \invId -> QFInvoice.updatePlaceOfSupply mbPlaceOfSupply Nothing Nothing invId
+    -- A retry of a run that created the driver invoice but stopped before stamping it.
+    whenJust existingDriverInvoice $ \inv ->
+      when (isNothing inv.placeOfSupply) $ QFInvoice.updatePlaceOfSupply mbPlaceOfSupply Nothing Nothing inv.id
 
     let commissionAlreadyCollectedAtBooth = SL.commissionCollectedAtBooth booking.fareSettlementType
+        existingCommissionInvoice = find (\inv -> inv.invoiceType == BeckInvoice.Commission) existingRideInvoices
     when (commissionAmount + cancellationCommissionAmount > 0) $ do
       let commissionRef = if isOnline then walletReferenceCommissionOnline else walletReferenceCommissionCash
           commissionVatRef = if isOnline then walletReferenceCommissionVATOnline else walletReferenceCommissionVATCash
@@ -968,44 +1010,46 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 periodEnd = Nothing
               }
       commissionResult <- runFinance ctx $ do
-        void $ transfer OwnerLiability SellerRevenue commissionBaseAmount commissionRef Nothing
-        when (commissionVatAmount > 0) $
-          void $ transfer OwnerLiability SellerRevenue commissionVatAmount commissionVatRef Nothing
-        when (cancellationCommissionBase > 0) $
-          void $ transfer OwnerLiability SellerRevenue cancellationCommissionBase walletReferenceCancellationCommission Nothing
-        when (cancellationCommissionVat > 0) $
-          void $ transfer OwnerLiability SellerRevenue cancellationCommissionVat walletReferenceCancellationCommissionVAT Nothing
+        void $ transferOnce OwnerLiability SellerRevenue commissionBaseAmount commissionRef Nothing
+        void $ transferOnce OwnerLiability SellerRevenue commissionVatAmount commissionVatRef Nothing
+        void $ transferOnce OwnerLiability SellerRevenue cancellationCommissionBase walletReferenceCancellationCommission Nothing
+        void $ transferOnce OwnerLiability SellerRevenue cancellationCommissionVat walletReferenceCancellationCommissionVAT Nothing
         -- Reversal mirrors every posted leg; shared refType, so the wallet still shows one summed row.
+        -- Both reversals are the same leg, so a retry posts only the ones beyond those already in the ledger.
         when shouldReverseCommissionWalletDebit $ do
-          void $ transfer SellerRevenue OwnerLiability (commissionBaseAmount + commissionVatAmount) walletReferenceDeductedAtPaymentByPlatform Nothing
-          when (cancellationCommissionBase + cancellationCommissionVat > 0) $
-            void $ transfer SellerRevenue OwnerLiability (cancellationCommissionBase + cancellationCommissionVat) walletReferenceDeductedAtPaymentByPlatform Nothing
-        invoice commissionInvoiceConfig
+          let reversals = filter (> 0) [commissionBaseAmount + commissionVatAmount, cancellationCommissionBase + cancellationCommissionVat]
+          reversalsPosted <- countPosted walletReferenceDeductedAtPaymentByPlatform
+          forM_ (drop reversalsPosted reversals) $ \reversalAmount ->
+            void $ transfer SellerRevenue OwnerLiability reversalAmount walletReferenceDeductedAtPaymentByPlatform Nothing
+        if isJust existingCommissionInvoice then pure Nothing else invoice commissionInvoiceConfig
       case commissionResult of
         Left err -> fromEitherM (\e -> InternalError ("Failed to create commission invoice: " <> show e)) (Left err)
         Right _ -> pure ()
 
     whenJust mbPaymentBearer $ \paymentBearer ->
       when (paymentChargeGross > 0) $ case paymentBearer of
-        PAYMENT_PLATFORM ->
-          void $
-            recordStripeChargeLedger ctx FundByPlatform paymentChargeGross walletReferencePGPaymentCharges
-              >>= fromEitherM (\e -> InternalError ("Failed to post PG payment charge: " <> show e))
+        PAYMENT_PLATFORM -> do
+          -- The Stripe charge ledger posts as a whole, so it is skipped once its entry exists.
+          paymentChargePosted <- alreadyPosted [walletReferencePGPaymentCharges]
+          unless paymentChargePosted $
+            void $
+              recordStripeChargeLedger ctx FundByPlatform paymentChargeGross walletReferencePGPaymentCharges
+                >>= fromEitherM (\e -> InternalError ("Failed to post PG payment charge: " <> show e))
         _ -> do
+          -- Every leg is posted once, so a retry after a partial run posts only the missing legs.
           paymentChargeResult <- runFinance ctx $ do
             let postChargePaidByCustomer amt ref =
                   if isOnline
                     then do
-                      transfer_ BuyerAsset BuyerExternal amt ref
-                      void $ transfer BuyerExternal OwnerLiability amt ref Nothing
-                    else void $ transfer BuyerControl OwnerControl amt ref Nothing
+                      transferOnce_ BuyerAsset BuyerExternal amt ref
+                      void $ transferOnce BuyerExternal OwnerLiability amt ref Nothing
+                    else void $ transferOnce BuyerControl OwnerControl amt ref Nothing
             when customerBearsPayment $ do
               postChargePaidByCustomer paymentChargeAmt walletReferencePaymentChargePaidByCustomer
               when (paymentChargeVatAmt > 0) $
                 postChargePaidByCustomer paymentChargeVatAmt walletReferencePaymentChargeVatPaidByCustomer
-            void $ transfer OwnerLiability SellerLiability paymentChargeAmt walletReferencePGPaymentCharges Nothing
-            when (paymentChargeVatAmt > 0) $
-              void $ transfer OwnerLiability SellerLiability paymentChargeVatAmt walletReferencePGPaymentChargesVAT Nothing
+            void $ transferOnce OwnerLiability SellerLiability paymentChargeAmt walletReferencePGPaymentCharges Nothing
+            void $ transferOnce OwnerLiability SellerLiability paymentChargeVatAmt walletReferencePGPaymentChargesVAT Nothing
           case paymentChargeResult of
             Left err -> fromEitherM (\e -> InternalError ("Failed to post PG payment charge: " <> show e)) (Left err)
             Right _ -> pure ()
@@ -1175,8 +1219,9 @@ createDriverFee ::
   DI.DriverInformation ->
   SRB.Booking ->
   ServiceNames ->
+  m () -> -- marks the ride accrued; run right after the fee and vendor-fee writes
   m ()
-createDriverFee merchantId merchantOpCityId driverId rideFare currency newFareParams driverInfo booking serviceName = do
+createDriverFee merchantId merchantOpCityId driverId rideFare currency newFareParams driverInfo booking serviceName markAccrued = do
   unless (newFareParams.platformFeeChargesBy == DFP.None) $ do
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     fleetDriverAssoc <- QFDAE.findByDriverId driverId True
@@ -1253,6 +1298,8 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
               case lastDriverFee of
                 Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFeeWithMaxLimit merchantOpCityId vendorFeesWithLimit
                 _ -> QVF.createManyWithMaxLimit vendorFeesWithLimit
+        -- The rest is a nudge and a once-per-window job, safe to skip on a retry.
+        markAccrued
 
         plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing currentVehicleCategory
         fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName

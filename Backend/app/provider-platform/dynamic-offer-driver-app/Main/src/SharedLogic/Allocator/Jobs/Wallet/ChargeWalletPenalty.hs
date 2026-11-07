@@ -13,9 +13,9 @@
 -}
 
 -- | A penalty the behaviour engine decided (CHARGE_FEE) in a wallet-subscription city: debited from the
---   driver's own wallet right away instead of becoming a fee that waits for a daily collection, then the
---   wallet floor is applied. The debit is not checked against the ledger, so the job is not retried on an
---   exception (it is not in jobRetryOnExceptionMap).
+--   driver's own wallet right away instead of becoming a fee that waits for a daily collection. The
+--   debit is posted at most once per charge (reference-checked under the wallet lock), so the job is
+--   retried freely until it goes through, then the wallet floor is applied.
 module SharedLogic.Allocator.Jobs.Wallet.ChargeWalletPenalty
   ( chargeWalletPenaltyJob,
   )
