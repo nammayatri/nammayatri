@@ -6,7 +6,7 @@ import Domain.Types.OpenMeterRide (OpenMeterEndReason (..), OpenMeterRide (..), 
 import qualified "rider-app" Domain.Types.Person as DP
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
-import Kernel.Types.Common (Currency (..), Meters (..), Seconds (..))
+import Kernel.Types.Common (Currency (..), HighPrecMoney, Meters (..), Seconds (..))
 import Kernel.Types.Error.BaseError.HTTPError (IsHTTPError (toErrorCode))
 import Kernel.Types.Id (Id (..))
 import SharedLogic.OpenMeter
@@ -80,27 +80,36 @@ errorCodeOf :: IsHTTPError e => Either e a -> Either Text a
 errorCodeOf = either (Left . toErrorCode) Right
 
 heartbeatAt :: Time.UTCTime -> API.OpenMeterRideHeartbeatReq
-heartbeatAt t =
+heartbeatAt t = heartbeatWith t (Meters 1500) (Seconds 90) (Just 65)
+
+-- | A heartbeat sampled at the given time with the given distance, waiting time and fare. The API
+-- request types share field names, so tests build requests whole instead of updating fields.
+heartbeatWith :: Time.UTCTime -> Meters -> Seconds -> Maybe HighPrecMoney -> API.OpenMeterRideHeartbeatReq
+heartbeatWith t distance waiting fare' =
   API.OpenMeterRideHeartbeatReq
     { sampledAt = t,
-      distanceMeters = Meters 1500,
-      waitingTimeSeconds = Seconds 90,
+      distanceMeters = distance,
+      waitingTimeSeconds = waiting,
       lastLatLong = Just (LatLong 12.92 77.62),
-      fare = Just 65
+      fare = fare'
     }
 
 endReq :: API.OpenMeterRideEndReq
-endReq =
+endReq = endWith now (Meters 2400) (Seconds 120) (Just 80) 42 (Meters 30)
+
+-- | An END at the given time with the given distance, waiting time, fare, point count and gap.
+endWith :: Time.UTCTime -> Meters -> Seconds -> Maybe HighPrecMoney -> Int -> Meters -> API.OpenMeterRideEndReq
+endWith t distance waiting fare' points gap =
   API.OpenMeterRideEndReq
-    { endTime = now,
+    { endTime = t,
       endLatLong = Just (LatLong 12.93 77.63),
-      distanceMeters = Meters 2400,
-      waitingTimeSeconds = Seconds 120,
-      fare = Just 80,
+      distanceMeters = distance,
+      waitingTimeSeconds = waiting,
+      fare = fare',
       currency = Just INR,
       encodedPolyline = "???gE",
-      pointsCount = 42,
-      estimatedGapMeters = Meters 30,
+      pointsCount = points,
+      estimatedGapMeters = gap,
       endReason = USER
     }
 
@@ -110,9 +119,12 @@ rideIdTests :: TestTree
 rideIdTests =
   testGroup
     "isValidRideId"
-    [ testCase "start accepts a UUID ride id in either case" $ do
-        isValidRideId (Id "3f0a8c2e-7b1d-4c5e-9a6f-0b2d4e6f8a1c") @?= True
-        isValidRideId (Id "3F0A8C2E-7B1D-4C5E-9A6F-0B2D4E6F8A1C") @?= True,
+    [ testCase "start accepts a lowercase UUID ride id" $
+        isValidRideId (Id "3f0a8c2e-7b1d-4c5e-9a6f-0b2d4e6f8a1c") @?= True,
+      testCase "start rejects a UUID ride id that is not all lowercase" $ do
+        -- One ride must never be reachable under two spellings of its id.
+        isValidRideId (Id "3F0A8C2E-7B1D-4C5E-9A6F-0B2D4E6F8A1C") @?= False
+        isValidRideId (Id "3f0a8c2e-7b1d-4c5e-9a6f-0B2D4E6F8A1C") @?= False,
       testCase "start rejects a ride id that is not a UUID" $ do
         isValidRideId (Id "") @?= False
         isValidRideId (Id "ride-r") @?= False
@@ -137,8 +149,15 @@ startTests =
       testCase "start allows second ride when allowMultiple=true" $
         decideStart p True now 12 Nothing [ride "running-1"] @?= Create [],
       testCase "stale running ride is auto-ended on start" $ do
-        let stale = (ride "stale") {lastHeartbeatAt = Just (hoursAgo 13)}
-        decideStart p False now 12 Nothing [stale] @?= Create [stale.id]
+        let stale = (ride "stale") {lastHeartbeatAt = Just (hoursAgo 13), updatedAt = hoursAgo 13}
+        decideStart p False now 12 Nothing [stale] @?= Create [stale.id],
+      testCase "a heartbeat dated 13 h back by a slow phone clock leaves a live ride active" $ do
+        -- The server applied that heartbeat a minute ago (updatedAt), so the ride is live.
+        let slowClock = (ride "slow-clock") {lastHeartbeatAt = Just (hoursAgo 13), updatedAt = minutesAgo 1}
+        decideStart p False now 12 Nothing [slowClock] @?= RejectActive slowClock.id,
+      testCase "maxIdleHours below 1 counts as 1 hour" $ do
+        map (\hours -> isStale now hours r) [0, -1] @?= [False, False]
+        map (\hours -> isStale now hours r {updatedAt = hoursAgo 2}) [0, -1] @?= [True, True]
     ]
 
 heartbeatTests :: TestTree
@@ -161,7 +180,21 @@ heartbeatTests =
                     lastHeartbeatAt = Just now,
                     updatedAt = now
                   }
-            )
+            ),
+      testCase "a heartbeat from a phone clock running ahead is stored at the server's now" $ do
+        let later = Time.addUTCTime 60 now
+        case applyHeartbeat now (heartbeatAt (Time.addUTCTime 3600 now)) r of
+          Right (Just capped) -> do
+            capped.lastHeartbeatAt @?= Just now
+            -- The next heartbeat, a minute later by the server's clock, still lands.
+            fmap (fmap (.lastHeartbeatAt)) (applyHeartbeat later (heartbeatAt later) capped) @?= Right (Just (Just later))
+          other -> assertFailure ("expected the heartbeat to apply, got " <> show other),
+      testCase "a heartbeat with a negative total is refused" $ do
+        negativeHeartbeatField (heartbeatAt now) @?= Nothing
+        negativeHeartbeatField (heartbeatWith now (Meters 0) (Seconds 0) (Just 0)) @?= Nothing
+        negativeHeartbeatField (heartbeatWith now (Meters (-1)) (Seconds 90) (Just 65)) @?= Just "distanceMeters"
+        negativeHeartbeatField (heartbeatWith now (Meters 1500) (Seconds (-1)) (Just 65)) @?= Just "waitingTimeSeconds"
+        negativeHeartbeatField (heartbeatWith now (Meters 1500) (Seconds 90) (Just (-1))) @?= Just "fare"
     ]
 
 endTests :: TestTree
@@ -191,7 +224,19 @@ endTests =
                   }
             ),
       testCase "end on CANCELLED is invalid state" $
-        errorCodeOf (applyEnd now endReq (Meters 111) (withStatus CANCELLED r)) @?= Left "OPEN_METER_RIDE_INVALID_STATE"
+        errorCodeOf (applyEnd now endReq (Meters 111) (withStatus CANCELLED r)) @?= Left "OPEN_METER_RIDE_INVALID_STATE",
+      testCase "an end time before the start is stored as the start time" $
+        -- The phone's clock moved back during the ride; the ride still closes.
+        fmap (fmap (.endTime)) (applyEnd now (endWith (hoursAgo 2) (Meters 2400) (Seconds 120) (Just 80) 42 (Meters 30)) (Meters 111) r)
+          @?= Right (Just (Just r.startTime)),
+      testCase "an END with a negative total is refused" $ do
+        negativeEndField endReq @?= Nothing
+        negativeEndField (endWith now (Meters 0) (Seconds 0) (Just 0) 0 (Meters 0)) @?= Nothing
+        negativeEndField (endWith now (Meters (-1)) (Seconds 120) (Just 80) 42 (Meters 30)) @?= Just "distanceMeters"
+        negativeEndField (endWith now (Meters 2400) (Seconds (-1)) (Just 80) 42 (Meters 30)) @?= Just "waitingTimeSeconds"
+        negativeEndField (endWith now (Meters 2400) (Seconds 120) (Just (-1)) 42 (Meters 30)) @?= Just "fare"
+        negativeEndField (endWith now (Meters 2400) (Seconds 120) (Just 80) (-1) (Meters 30)) @?= Just "pointsCount"
+        negativeEndField (endWith now (Meters 2400) (Seconds 120) (Just 80) 42 (Meters (-1))) @?= Just "estimatedGapMeters"
     ]
 
 cancelTests :: TestTree
@@ -238,6 +283,11 @@ distanceTests =
         serverLinearDistance "" @?= Just (Meters 0),
       testCase "a truncated polyline is rejected instead of crashing the decoder" $
         serverLinearDistance "???g" @?= Nothing,
+      testCase "a polyline with an unpaired coordinate is rejected" $ do
+        -- "?" is one value (0) and "???" three; the decoder would silently drop the last one.
+        serverLinearDistance "?" @?= Nothing
+        serverLinearDistance "???" @?= Nothing
+        serverLinearDistance "????" @?= Just (Meters 0),
       testCase "client distance more than 30% off the server's is a mismatch" $ do
         isDistanceMismatch (Meters 1400) (Meters 1000) @?= True
         isDistanceMismatch (Meters 1200) (Meters 1000) @?= False,

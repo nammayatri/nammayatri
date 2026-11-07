@@ -112,6 +112,9 @@ check "a second id gives 409" "409 OPEN_METER_RIDE_ALREADY_ACTIVE" "$code $(jq -
 # The id column is varchar(36): a longer id would be accepted by KV and lost when the drainer's insert fails.
 code=$(req "$WORK/not-uuid" POST /openMeter/ride/start "$(start_body "$(new_id)x")")
 check "a start with a rideId that is not a UUID gives 400" "400 INVALID_REQUEST" "$code $(jq -r '.errorCode // empty' "$WORK/not-uuid")"
+# Only the lowercase spelling is stored, so one ride can never be reached under two spellings.
+code=$(req "$WORK/upper-uuid" POST /openMeter/ride/start "$(start_body "$(new_id | tr '[:lower:]' '[:upper:]')")")
+check "a start with an uppercase UUID rideId gives 400" "400 INVALID_REQUEST" "$code $(jq -r '.errorCode // empty' "$WORK/upper-uuid")"
 
 code=$(req "$WORK/delete-running" DELETE "/openMeter/ride/$RIDE_ID")
 check "a DELETE of a running ride gives 400" "400 OPEN_METER_RIDE_INVALID_STATE" "$code $(jq -r '.errorCode // empty' "$WORK/delete-running")"
@@ -138,7 +141,7 @@ make_ended_ride() {
 # AUTO_ENDs it at its last heartbeat. Left RUNNING, it would refuse the rider's next start with
 # ALREADY_ACTIVE until it went stale (openMeterMaxIdleHours, 12 h). After the logout, PSQL puts the
 # token row back, so the logout is tested alone; otherwise the script logs in again with the OTP,
-# and that login ends the ride the same way.
+# and that login ends the ride the same way, so the check then covers the two together.
 if [[ -n ${PSQL:-} || -n $LOGIN_BY_SCRIPT ]]; then
   LOGOUT_RIDE_ID=$(new_id)
   code=$(start_with_retry "$WORK/logout-start" "$LOGOUT_RIDE_ID")
@@ -153,11 +156,13 @@ if [[ -n ${PSQL:-} || -n $LOGIN_BY_SCRIPT ]]; then
   check "logout gives 200" 200 "$code"
   if [[ -n ${PSQL:-} ]]; then
     sql "INSERT INTO atlas_app.registration_token SELECT * FROM json_populate_record(NULL::atlas_app.registration_token, :'row'::json)" -v row="$TOKEN_ROW" >/dev/null
+    ENDED_BY="logout"
   else
     login
+    ENDED_BY="logout or the OTP login after it (no PSQL to test logout alone)"
   fi
   code=$(req "$WORK/logout-ride" GET "/openMeter/ride/$LOGOUT_RIDE_ID")
-  check "logout auto-ends the rider's RUNNING ride at its last heartbeat" "200 AUTO_ENDED $HEARTBEAT_AT" "$code $(jq -r '"\(.status) \(.endTime)"' "$WORK/logout-ride")"
+  check "$ENDED_BY auto-ends the rider's RUNNING ride at its last heartbeat" "200 AUTO_ENDED $HEARTBEAT_AT" "$code $(jq -r '"\(.status) \(.endTime)"' "$WORK/logout-ride")"
   AFTER_LOGOUT_ID=$(new_id)
   code=$(start_with_retry "$WORK/after-logout" "$AFTER_LOGOUT_ID")
   check "a start after logout is not refused as ALREADY_ACTIVE" 200 "$code"
@@ -187,6 +192,8 @@ req "$WORK/first40" GET "/openMeter/rides?limit=40&offset=0" >/dev/null
 req "$WORK/page1" GET "/openMeter/rides?limit=20&offset=0" >/dev/null
 code=$(req "$WORK/page2" GET "/openMeter/rides?limit=20&offset=20")
 check "page 2 of the trip history gives 200" 200 "$code"
+# Empty pages would pass the two checks below, so the pages must hold the rides made above.
+check "page 1 holds 20 rides and page 2 at least 2" "20 true" "$(jq 'length' "$WORK/page1") $(jq 'length >= 2' "$WORK/page2")"
 check "page 2 repeats no ride of page 1" 0 "$(jq -n --slurpfile a "$WORK/page1" --slurpfile b "$WORK/page2" '[$a[0][].id] - ([$a[0][].id] - [$b[0][].id]) | length')"
 check "pages of 20 by offset read as the first 40 rides" true "$(jq -n --slurpfile all "$WORK/first40" --slurpfile a "$WORK/page1" --slurpfile b "$WORK/page2" '[$all[0][].id] == [$a[0][].id, $b[0][].id]')"
 

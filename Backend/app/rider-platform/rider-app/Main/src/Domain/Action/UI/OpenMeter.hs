@@ -15,6 +15,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OpenMeterRide as DOMR
 import qualified Domain.Types.Person as DP
 import Environment
+import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -29,6 +30,8 @@ import Tools.Error
 
 -- | Start is serialised per rider, so two starts can never both see "no RUNNING ride" (KV
 -- inserts cannot enforce uniqueness). Retrying a start with the same rideId returns the ride.
+-- Every read under an open meter lock goes to the master DB and Redis: a replica lagging the
+-- last write could hide a RUNNING ride from a start, or hand a transition stale totals.
 postOpenMeterRideStart ::
   (Maybe (Id DP.Person), Id DM.Merchant) ->
   API.OpenMeterRideStartReq ->
@@ -42,8 +45,8 @@ postOpenMeterRideStart (mbPersonId, _merchantId) req = do
       maxIdleHours = maybe 12 (.openMeterMaxIdleHours) riderConfig
   ride <- withOpenMeterLock (personLockKey personId) $ do
     now <- getCurrentTime
-    mbExisting <- QOMR.findByPrimaryKey req.rideId
-    running <- QOMR.findAllByPersonIdAndStatus personId DOMR.RUNNING
+    mbExisting <- B.runInMasterDbAndRedis $ QOMR.findByPrimaryKey req.rideId
+    running <- B.runInMasterDbAndRedis $ QOMR.findAllByPersonIdAndStatus personId DOMR.RUNNING
     case SOM.decideStart personId allowMultiple now maxIdleHours mbExisting running of
       SOM.ReturnExisting existing -> pure existing
       SOM.RejectNotFound -> throwError $ OpenMeterRideNotFound req.rideId.getId
@@ -89,6 +92,7 @@ postOpenMeterRideHeartbeat ::
   Flow API.OpenMeterRideRes
 postOpenMeterRideHeartbeat (mbPersonId, _merchantId) rideId req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  whenJust (SOM.negativeHeartbeatField req) $ throwError . mustNotBeNegative
   ride <- withOpenMeterLock (rideLockKey rideId) $ do
     stored <- findOwnedRide personId rideId
     now <- getCurrentTime
@@ -103,6 +107,7 @@ postOpenMeterRideEnd ::
   Flow API.OpenMeterRideRes
 postOpenMeterRideEnd (mbPersonId, _merchantId) rideId req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  whenJust (SOM.negativeEndField req) $ throwError . mustNotBeNegative
   serverLinear <- SOM.serverLinearDistance req.encodedPolyline & fromMaybeM (InvalidRequest "encodedPolyline is not a valid encoded polyline")
   ride <- withOpenMeterLock (rideLockKey rideId) $ do
     stored <- findOwnedRide personId rideId
@@ -166,7 +171,7 @@ deleteOpenMeterRide (mbPersonId, _merchantId) rideId = do
 autoEndStaleRide :: UTCTime -> Int -> Id DOMR.OpenMeterRide -> Flow ()
 autoEndStaleRide now maxIdleHours rideId =
   withOpenMeterLock (rideLockKey rideId) $
-    QOMR.findByPrimaryKey rideId >>= \case
+    B.runInMasterDbAndRedis (QOMR.findByPrimaryKey rideId) >>= \case
       Just ride
         | SOM.isStale now maxIdleHours ride -> mapM_ writeAutoEnd (SOM.applyAutoEnd now ride)
         | ride.status == DOMR.RUNNING -> throwError OpenMeterRideBusy
@@ -176,16 +181,17 @@ autoEndStaleRide now maxIdleHours rideId =
 -- rider's RUNNING rides: a phone drops its meters and its pending sync with its session. Left
 -- RUNNING, such a ride would refuse every new start of the rider with ALREADY_ACTIVE until it
 -- went stale (openMeterMaxIdleHours), so each one is AUTO_ENDED here at once, under its own lock.
--- Best effort: it never fails the logout or login. A ride it cannot close (lock busy, a read or a
--- write failing) is logged and left to the stale auto-end on a later start.
+-- Best effort: it never fails the logout or login. A ride's lock that a heartbeat holds is waited
+-- for briefly. A ride it still cannot close (lock busy, a read or a write failing) is logged and
+-- left to the stale auto-end on a later start.
 autoEndRunningRides :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> m ()
 autoEndRunningRides personId =
   logFailure "list running rides" $ do
-    running <- QOMR.findAllByPersonIdAndStatus personId DOMR.RUNNING
+    running <- B.runInMasterDbAndRedis $ QOMR.findAllByPersonIdAndStatus personId DOMR.RUNNING
     forM_ running $ \ride ->
-      logFailure ("ride " <> ride.id.getId) . withOpenMeterLock (rideLockKey ride.id) $ do
+      logFailure ("ride " <> ride.id.getId) . withOpenMeterLockWaiting (rideLockKey ride.id) $ do
         now <- getCurrentTime
-        QOMR.findByPrimaryKey ride.id >>= \case
+        B.runInMasterDbAndRedis (QOMR.findByPrimaryKey ride.id) >>= \case
           Just current | current.personId == personId -> mapM_ writeAutoEnd (SOM.applyAutoEnd now current)
           _ -> pure ()
   where
@@ -203,16 +209,33 @@ withOpenMeterLock :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m a -> m a
 withOpenMeterLock key action =
   Redis.whenWithLockRedisAndReturnValue key 10 action >>= either (const $ throwError OpenMeterRideBusy) pure
 
+-- | withOpenMeterLock for the server's own cleanup, which has no client to retry it: a busy lock
+-- is tried again every 100 ms, five times in all, before OPEN_METER_RIDE_BUSY. A heartbeat holds a
+-- ride's lock only for one read and one write.
+withOpenMeterLockWaiting :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m a -> m a
+withOpenMeterLockWaiting key action = go (5 :: Int)
+  where
+    go attemptsLeft =
+      Redis.whenWithLockRedisAndReturnValue key 10 action >>= \case
+        Right result -> pure result
+        Left ()
+          | attemptsLeft > 1 -> threadDelayMilliSec 100 >> go (attemptsLeft - 1)
+          | otherwise -> throwError OpenMeterRideBusy
+
+mustNotBeNegative :: Text -> GenericError
+mustNotBeNegative field = InvalidRequest (field <> " must not be negative")
+
 personLockKey :: Id DP.Person -> Text
 personLockKey personId = "OpenMeter:Person:" <> personId.getId
 
 rideLockKey :: Id DOMR.OpenMeterRide -> Text
 rideLockKey rideId = "OpenMeter:Ride:" <> rideId.getId
 
--- | Another rider's ride is reported exactly like a missing one.
+-- | Another rider's ride is reported exactly like a missing one. Every caller but the unlocked
+-- GET holds the ride's lock, so the read goes to the master DB and Redis.
 findOwnedRide :: Id DP.Person -> Id DOMR.OpenMeterRide -> Flow DOMR.OpenMeterRide
 findOwnedRide personId rideId =
-  QOMR.findByPrimaryKey rideId >>= \case
+  B.runInMasterDbAndRedis (QOMR.findByPrimaryKey rideId) >>= \case
     Just ride | ride.personId == personId -> pure ride
     _ -> throwError $ OpenMeterRideNotFound rideId.getId
 
