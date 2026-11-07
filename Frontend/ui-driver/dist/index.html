@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1">
+    <title>e-Pass</title>
+  </head>
+  
+  <body>
+    <style>
+      * {
+        padding: 0;
+        margin: 0;
+        box-sizing: border-box;
+        font-family: Arial
+      }
+
+      html, body {
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+      }
+
+      .la-tekst a {
+        display: inline;
+      }
+
+      #content {
+          width: 100%;
+          height: 100%;
+          position: relative;
+      }
+
+      @media screen and (min-width: 992px) {
+        #content {
+          width: 800px;
+        }
+      }
+  </style>
+    <div style="height: 100%; width: 100%; display: flex;justify-content: center;">
+      <div id="content"></div>
+    </div>
+    <script src="/dist/index_bundle.js"></script>
+  </body>
+</html>

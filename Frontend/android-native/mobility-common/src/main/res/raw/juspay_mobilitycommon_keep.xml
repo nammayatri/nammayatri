@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_grey_border,@drawable/ny_ic_dest_marker,@drawable/ny_ic_icon,@drawable/ny_ic_settings,@drawable/ny_ic_src_marker,@drawable/progress_loader,@drawable/round_corner_layout@layout/loader,@layout/marker_label_layout" />

@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Service areas — Algeria</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root {
+    --bg:#0f1115; --panel:#171a21; --line:#262b36;
+    --fg:#e8ecf2; --muted:#9aa4b2;
+    --yes:#22c55e; --no:#ef4444; --accent:#38bdf8; --warn:#f59e0b;
+  }
+  * { box-sizing:border-box; }
+  html,body { height:100%; margin:0; }
+  body {
+    background:var(--bg); color:var(--fg);
+    font:16px/1.5 "Segoe UI", system-ui, sans-serif;
+    display:flex; flex-direction:column;
+  }
+  header {
+    padding:14px 22px; border-bottom:1px solid var(--line);
+    display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;
+  }
+  header h1 { margin:0; font-size:21px; font-weight:600; letter-spacing:.2px; }
+  header .sub { color:var(--muted); font-size:14px; }
+  .pill {
+    margin-left:auto; font-size:13px; padding:5px 12px; border-radius:999px;
+    border:1px solid var(--line); color:var(--muted); white-space:nowrap;
+  }
+  .pill.ok { color:var(--yes); border-color:rgba(34,197,94,.45); }
+  .pill.err{ color:var(--no);  border-color:rgba(239,68,68,.45); }
+
+  main { flex:1; display:flex; min-height:0; }
+  #map { flex:1; background:#0b0d11; }
+  aside {
+    width:380px; flex:none; background:var(--panel);
+    border-left:1px solid var(--line); padding:18px 20px;
+    overflow:auto; display:flex; flex-direction:column; gap:18px;
+  }
+  h2 {
+    margin:0 0 10px; font-size:12px; font-weight:700; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--muted);
+  }
+  .hint { color:var(--muted); font-size:13.5px; margin:0; }
+
+  button.pt {
+    display:block; width:100%; text-align:left; cursor:pointer;
+    margin-bottom:7px; padding:10px 13px; border-radius:9px;
+    border:1px solid var(--line); background:#1d222c; color:var(--fg);
+    font:inherit; font-size:14.5px; transition:border-color .12s, background .12s;
+  }
+  button.pt:hover { background:#252b37; border-color:#3a424f; }
+  button.pt .co { display:block; color:var(--muted); font-size:12px; margin-top:2px;
+                  font-family:ui-monospace,Consolas,monospace; }
+  button.pt.route { border-color:#3b5bdb; background:#1b2340; }
+  button.pt.route:hover { background:#222c52; border-color:#4c6ef5; }
+  button.pt.route.armed { border-color:var(--warn); background:#3a2f14; color:#ffd8a8; }
+
+  .row.route { border-left-color:#4c6ef5; }
+  .row .vd.km { color:#748ffc; }
+
+  #log { display:flex; flex-direction:column; gap:7px; }
+  .row {
+    display:flex; align-items:center; gap:11px;
+    padding:10px 13px; border-radius:9px;
+    background:#1d222c; border-left:4px solid var(--line);
+    animation:in .18s ease-out;
+  }
+  @keyframes in { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:none} }
+  .row.yes { border-left-color:var(--yes); }
+  .row.no  { border-left-color:var(--no); }
+  .row .nm { flex:1; font-size:14.5px; }
+  .row .nm small { display:block; color:var(--muted); font-size:11.5px;
+                   font-family:ui-monospace,Consolas,monospace; }
+  .row .vd { font-weight:700; font-size:13px; letter-spacing:.04em; }
+  .row.yes .vd { color:var(--yes); }
+  .row.no  .vd { color:var(--no); }
+
+  footer {
+    padding:9px 22px; border-top:1px solid var(--line);
+    color:var(--muted); font-size:12.5px;
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+  }
+  code { font-family:ui-monospace,Consolas,monospace; color:#cbd5e1; }
+  .leaflet-tooltip.lbl {
+    background:rgba(15,17,21,.85); border:1px solid var(--line); color:var(--fg);
+    font-weight:600; font-size:13px; box-shadow:none;
+  }
+  .leaflet-tooltip.lbl::before { display:none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Service areas — Algeria</h1>
+  <span class="sub">boundaries and answers come from our own backend, live</span>
+  <span class="pill" id="status">connecting…</span>
+</header>
+
+<main>
+  <div id="map"></div>
+  <aside>
+    <section>
+      <h2>Plan a ride — real routing</h2>
+      <div id="routes"></div>
+      <button class="pt route" id="pickTwo">Pick two points on the map</button>
+      <p class="hint" id="routeHint">Routes come from our own engine, not Google.</p>
+    </section>
+
+    <section>
+      <h2>Try a pickup point</h2>
+      <div id="buttons"></div>
+      <p class="hint">…or click anywhere on the map.</p>
+    </section>
+    <section style="flex:1">
+      <h2>Backend answers</h2>
+      <div id="log"></div>
+    </section>
+  </aside>
+</main>
+
+<footer>
+  <span>Each click is a real <code>POST /v2/serviceability/origin</code> to the backend.</span>
+  <span>Boundaries drawn from <code>atlas_app.geometry</code>.</span>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const statusEl = document.getElementById('status');
+const logEl    = document.getElementById('log');
+
+function setStatus(text, kind) {
+  statusEl.textContent = text;
+  statusEl.className = 'pill' + (kind ? ' ' + kind : '');
+}
+
+const map = L.map('map', { zoomControl:true }).setView([35.5, 3.0], 6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution:'&copy; OpenStreetMap contributors', maxZoom:19
+}).addTo(map);
+
+// Preset points, spread across the country plus three places outside it. The
+// foreign ones are deliberate: they show the backend really is refusing what
+// it does not serve, rather than saying yes to everything.
+const PRESETS = [
+  { name:'Algiers — city centre', lat:36.7538,    lon:3.0588     },
+  { name:'Algiers — airport',     lat:36.6910,    lon:3.2154     },
+  { name:'Oran',                  lat:35.6969,    lon:-0.6331    },
+  { name:'Annaba',                lat:36.9000,    lon:7.7667     },
+  { name:'Constantine',           lat:36.3650,    lon:6.6147     },
+  { name:'Tlemcen',               lat:34.8828,    lon:-1.3150    },
+  { name:'Ghardaïa',              lat:32.4900,    lon:3.6667     },
+  { name:'Tamanrasset (Sahara)',  lat:22.7850,    lon:5.5228     },
+  { name:'Tunis, Tunisia',        lat:36.8065,    lon:10.1815    },
+  { name:'Oujda, Morocco',        lat:34.6867,    lon:-1.9114    },
+  { name:'Bangalore, India',      lat:12.9715987, lon:77.5945627 },
+];
+
+const btns = document.getElementById('buttons');
+PRESETS.forEach(p => {
+  const b = document.createElement('button');
+  b.className = 'pt';
+  b.innerHTML = `${p.name}<span class="co">${p.lat}, ${p.lon}</span>`;
+  b.onclick = () => { map.flyTo([p.lat, p.lon], 11, { duration:.6 }); ask(p.lat, p.lon, p.name); };
+  btns.appendChild(b);
+});
+
+let token = null;
+
+// The API sends no CORS headers, so this page is served from the same origin
+// (nginx proxies /v2 through to rider-app) and these are plain relative calls.
+async function login() {
+  setStatus('logging in…');
+  const auth = await fetch('/v2/auth', {
+    method:'POST',
+    headers:{ 'content-type':'application/json',
+              'x-bundle-version':'1.0.1', 'x-client-version':'1.0.0' },
+    // An Algerian number. This used to be rejected before the request was even
+    // looked at -- POST /v2/auth hard-coded the Indian dial code -- so the page
+    // signing in at all is the +213 patch working.
+    body: JSON.stringify({ mobileCountryCode:'+213', mobileNumber:'0550123456', merchantId:'YATRI' })
+  }).then(r => r.json());
+
+  const v = await fetch(`/v2/auth/${auth.authId}/verify`, {
+    method:'POST', headers:{ 'content-type':'application/json' },
+    body: JSON.stringify({ otp:'7891', deviceToken:'map-demo' })
+  }).then(r => r.json());
+
+  token = v.token;
+  setStatus('signed in · token ' + token.slice(0, 8) + '…', 'ok');
+}
+
+async function drawAreas() {
+  const fc = await fetch('areas.geojson', { cache:'no-store' }).then(r => r.json());
+  const layer = L.geoJSON(fc, {
+    style:{ color:'#38bdf8', weight:2, fillColor:'#38bdf8', fillOpacity:.13 }
+  }).addTo(map);
+
+  layer.eachLayer(l => {
+    const n = l.feature.properties.region;
+    l.bindTooltip(n, { permanent:true, direction:'center', className:'lbl' });
+  });
+
+  map.fitBounds(layer.getBounds().pad(0.45));
+  return fc.features.map(f => f.properties.region).join(' · ');
+}
+
+function addRow(name, lat, lon, serviceable) {
+  const d = document.createElement('div');
+  d.className = 'row ' + (serviceable ? 'yes' : 'no');
+  d.innerHTML = `<div class="nm">${name}<small>${lat}, ${lon}</small></div>
+                 <div class="vd">${serviceable ? '✓ SERVICEABLE' : '✕ NOT SERVED'}</div>`;
+  logEl.prepend(d);
+}
+
+async function ask(lat, lon, name) {
+  if (!token) return;
+  const r = await fetch('/v2/serviceability/origin', {
+    method:'POST',
+    headers:{ 'content-type':'application/json', token },
+    body: JSON.stringify({ location:{ lat, lon } })
+  }).then(r => r.json());
+
+  const yes = r.serviceable === true;
+  L.circleMarker([lat, lon], {
+    radius:9, weight:3,
+    color: yes ? '#22c55e' : '#ef4444',
+    fillColor: yes ? '#22c55e' : '#ef4444', fillOpacity:.55
+  }).addTo(map).bindPopup(
+    `<b>${name}</b><br>${lat}, ${lon}<br>serviceable: <b>${r.serviceable}</b>`
+  ).openPopup();
+
+  addRow(name, lat, lon, yes);
+}
+
+// ---------------------------------------------------------------- routing
+// These go through POST /v2/rideSearch — the same call the passenger app
+// makes — so what gets drawn is the route the backend actually computed, not
+// a separate query to the routing engine. Proves the whole chain:
+//   rider-app -> maps-shim -> OSRM
+const ROUTES = [
+  { name:'Algiers centre → Bab Ezzouar', from:[36.7538, 3.0588], to:[36.7169, 3.1836] },
+  { name:'Algiers → Oran',               from:[36.7538, 3.0588], to:[35.6969, -0.6331] },
+  { name:'Algiers → Constantine',        from:[36.7538, 3.0588], to:[36.3650, 6.6147] },
+  { name:'Oran → Tlemcen',               from:[35.6969, -0.6331], to:[34.8828, -1.3150] },
+];
+
+let routeLayer = null, pins = [], picking = false, pickA = null;
+
+const routesEl = document.getElementById('routes');
+ROUTES.forEach(r => {
+  const b = document.createElement('button');
+  b.className = 'pt route';
+  b.innerHTML = `${r.name}<span class="co">plan this ride</span>`;
+  b.onclick = () => planRide(r.from, r.to, r.name);
+  routesEl.appendChild(b);
+});
+
+const pickBtn = document.getElementById('pickTwo');
+const routeHint = document.getElementById('routeHint');
+pickBtn.onclick = () => {
+  picking = true; pickA = null;
+  pickBtn.classList.add('armed');
+  pickBtn.textContent = 'Click the pickup point…';
+  routeHint.textContent = 'Then click where the passenger is going.';
+};
+
+function clearRoute() {
+  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+  pins.forEach(p => map.removeLayer(p));
+  pins = [];
+}
+
+async function planRide(from, to, name) {
+  if (!token) return;
+  clearRoute();
+  setStatus('calculating route…');
+
+  const addr = (area) => ({ area, city:'Algiers', country:'Algeria', state:'Alger',
+                            building:'1', areaCode:'16000', street:'-', door:'1' });
+  const body = {
+    fareProductType: 'ONE_WAY',
+    contents: {
+      origin:      { address: addr('pickup'),      gps: { lat: from[0], lon: from[1] } },
+      destination: { address: addr('destination'), gps: { lat: to[0],   lon: to[1]   } },
+    },
+  };
+
+  let r;
+  try {
+    r = await fetch('/v2/rideSearch', {
+      method:'POST',
+      headers:{ 'content-type':'application/json', token },
+      body: JSON.stringify(body),
+    }).then(x => x.json());
+  } catch (err) {
+    setStatus('route request failed', 'err');
+    return;
+  }
+
+  if (!r.routeInfo || !r.routeInfo.points || !r.routeInfo.points.length) {
+    setStatus('no route found', 'err');
+    addRow(name, from[0], from[1], false);
+    return;
+  }
+
+  const line = r.routeInfo.points.map(p => [p.lat, p.lon]);
+  routeLayer = L.polyline(line, { color:'#4c6ef5', weight:5, opacity:.9 }).addTo(map);
+  pins = [
+    L.circleMarker(from, { radius:8, weight:3, color:'#22c55e', fillColor:'#22c55e', fillOpacity:.7 })
+      .addTo(map).bindTooltip('Pickup'),
+    L.circleMarker(to, { radius:8, weight:3, color:'#ef4444', fillColor:'#ef4444', fillOpacity:.7 })
+      .addTo(map).bindTooltip('Destination'),
+  ];
+  map.fitBounds(routeLayer.getBounds().pad(0.15));
+
+  const km = (r.routeInfo.distance / 1000).toFixed(1);
+  const mins = r.routeInfo.duration / 60;
+  const time = mins >= 60 ? `${(mins / 60).toFixed(1)} h` : `${Math.round(mins)} min`;
+
+  const d = document.createElement('div');
+  d.className = 'row route';
+  d.innerHTML = `<div class="nm">${name}<small>${line.length} route points · from our own engine</small></div>
+                 <div class="vd km">${km} km · ${time}</div>`;
+  logEl.prepend(d);
+  setStatus(`route: ${km} km, ${time} · asking for offers…`, 'ok');
+
+  showOffers(r.searchId, name, km, time);
+}
+
+// The price does not come back with the route. The rider side posts /search to
+// the gateway, which looks the driver side up in the registry and forwards it;
+// the driver side prices the trip and answers on_search, and only then do
+// estimates appear here. So this polls rather than reading one response.
+//
+// Everything this draws is proof the two sides are talking: before the gateway
+// and registry existed, the route above appeared exactly as it does now and
+// this stayed empty forever.
+async function showOffers(searchId, name, km, time) {
+  if (!searchId) return;
+
+  for (let i = 0; i < 12; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+
+    let res;
+    try {
+      res = await fetch(`/v2/rideSearch/${searchId}/results`, { headers:{ token } })
+        .then(x => x.json());
+    } catch { continue; }
+
+    const est = (res.estimates || []);
+    if (!est.length) continue;
+
+    // One row per vehicle type, cheapest first.
+    est.sort((a, b) => a.estimatedTotalFare - b.estimatedTotalFare);
+    for (const e of est) {
+      const near = (e.driversLatLong || []).length;
+      const row = document.createElement('div');
+      row.className = 'row route';
+      row.innerHTML =
+        `<div class="nm">${e.vehicleVariant.replace(/_/g, ' ')}` +
+        `<small>${near} driver${near === 1 ? '' : 's'} nearby · via gateway → driver side</small></div>` +
+        `<div class="vd km">${e.estimatedTotalFare} DZD</div>`;
+      logEl.prepend(row);
+    }
+
+    // Put the drivers that produced these offers on the map.
+    const seen = new Set();
+    for (const e of est) {
+      for (const p of (e.driversLatLong || [])) {
+        const k = `${p.lat},${p.lon}`;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        pins.push(
+          L.circleMarker([p.lat, p.lon],
+            { radius:6, weight:2, color:'#f59e0b', fillColor:'#f59e0b', fillOpacity:.9 })
+            .addTo(map).bindTooltip('Driver'));
+      }
+    }
+
+    const cheapest = est[0];
+    setStatus(`${km} km · ${time} · from ${cheapest.estimatedTotalFare} DZD` +
+              ` · ${est.length} offer${est.length === 1 ? '' : 's'}`, 'ok');
+    return;
+  }
+
+  setStatus(`route: ${km} km, ${time} · no offers came back`, 'err');
+}
+
+map.on('click', e => {
+  const lat = +e.latlng.lat.toFixed(5), lon = +e.latlng.lng.toFixed(5);
+
+  if (picking) {
+    if (!pickA) {
+      clearRoute();
+      pickA = [lat, lon];
+      pins.push(L.circleMarker(pickA, { radius:8, weight:3, color:'#22c55e',
+        fillColor:'#22c55e', fillOpacity:.7 }).addTo(map).bindTooltip('Pickup'));
+      pickBtn.textContent = 'Now click the destination…';
+      return;
+    }
+    picking = false;
+    pickBtn.classList.remove('armed');
+    pickBtn.textContent = 'Pick two points on the map';
+    routeHint.textContent = 'Routes come from our own engine, not Google.';
+    planRide(pickA, [lat, lon], 'Your route');
+    pickA = null;
+    return;
+  }
+
+  ask(lat, lon, 'Dropped pin');
+});
+
+(async () => {
+  try {
+    const regions = await drawAreas();
+    await login();
+    setStatus('signed in · serving ' + regions, 'ok');
+  } catch (err) {
+    setStatus('backend unreachable — is the stack up?', 'err');
+    console.error(err);
+  }
+})();
+</script>
+</body>
+</html>

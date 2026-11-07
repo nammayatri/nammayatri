@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#8e8e8e</color>
+    <color name="colorPrimaryActive">#122B57</color>
+    <color name="colorPrimaryDisable">#BAC5D8</color>
+    <color name="colorPrimaryDark">#8e8e8e</color>
+    <color name="colorAccent">#8e8e8e</color>
+    <color name="colorWhite">#ffffff</color>
+    <color name="colorGray">#4DDADADA</color>
+    <color name="colorLightBlue">#E0EAFD</color>
+    <color name="colorLightBlueSel">#80E0EAFD</color>
+    <color name="colorCircleButton">#204480</color>
+    <color name="colorSublimePicker">#323643</color>
+    <color name="colorIconBackground">#d3f0ea</color>
+    <color name="colorApprovalText">#38a398</color>
+    <color name="colorBodyText">#8e8e8e</color>
+    <color name="colorVoipBackground">#14171F</color>
+
+</resources>

@@ -1,0 +1,15 @@
+{
+  "name": "movin-auth-guard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "In front of both Haskell apps: sign-in codes (SMS, WhatsApp, SMS-in), attempt limits, the wallet gate. Node's standard library only -- no dependency, on purpose.",
+  "license": "UNLICENSED",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}
