@@ -54,7 +54,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.GtfsDataServer.Flow as NandiFlow
 import Lib.GtfsDataServer.Types
 import SharedLogic.CallBAPInternal (getFrfsTripManifest, notifyFrfsTripEnded, notifyFrfsTripStarted)
-import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, findIntegratedBPPConfig, getGimsBaseUrl)
+import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, findIntegratedBPPConfig, findMaybeIntegratedBPPConfig, getGimsBaseUrl)
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -780,12 +780,27 @@ fileIncident person messageId req merchantOpCityId mbPersonId = do
               vehicleNumber = req.vehicleNumber
             }
           mbDerivedAnchor
-  mbGimsVehicle <- resolveReportedVehicle merchantOpCityId anchor
+  -- Derived once from the reporter's own role, not assumed. integratedBPPConfig
+  -- is resolved once here too -- both the GIMS vehicle lookup and gtfs_id read
+  -- off this same value, so a GIMS failure never costs a second DB lookup.
+  let mbVehicleCategory = case person.role of
+        Domain.Types.Person.BUS_DRIVER -> Just BUS
+        Domain.Types.Person.BUS_CONDUCTOR -> Just BUS
+        _ -> Nothing
+  mbIbppConfig <- case mbVehicleCategory of
+    Just vehicleCategory -> findMaybeIntegratedBPPConfig Nothing merchantOpCityId (show vehicleCategory) MULTIMODAL
+    Nothing -> do
+      logWarning $ "fileIncident: unexpected role for a bus crew report: " <> show person.role
+      pure Nothing
+  (mbGimsVehicle, mbRouteId) <- case mbIbppConfig of
+    Just integratedBPPConfig -> resolveReportedVehicle integratedBPPConfig anchor
+    Nothing -> pure (Nothing, Nothing)
   busId <-
     (mbGimsVehicle <|> req.vehicleNumber)
       & fromMaybeM (InvalidRequest "Could not determine which bus this report is for")
   let reporterName = T.unwords $ catMaybes [Just person.firstName, person.middleName, person.lastName]
   bmsCfg <- getBmsBackendConfig merchantOpCityId
+  let mbGtfsId = DIBC.feedKey <$> mbIbppConfig
   BmsFlow.reportEvent
     bmsCfg
     BmsTypes.ReportEventReq
@@ -796,7 +811,9 @@ fileIncident person messageId req merchantOpCityId mbPersonId = do
         depotId = Nothing,
         description = mkBmsDescription req,
         reportedByPersonId = Just person.id.getId,
-        reportedByName = Just reporterName
+        reportedByName = Just reporterName,
+        gtfsId = mbGtfsId,
+        routeId = mbRouteId
       }
   persistIncidentReport person messageId.getId req busId
   logInfo $ "FRFSFleetOperator: incident reported - " <> show req.incidentType <> " bus " <> busId
@@ -818,11 +835,13 @@ reportLockTtlSeconds :: Int
 reportLockTtlSeconds = 60
 
 -- | Fails open: a crashed bus is exactly when GIMS may be unreachable, and the report
--- must still go through on the client-supplied vehicleNumber.
-resolveReportedVehicle :: Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> GimsOperationAnchor -> Flow (Maybe Text)
-resolveReportedVehicle merchantOpCityId anchor = do
+-- must still go through on the client-supplied vehicleNumber. Takes the already-resolved
+-- config rather than re-resolving it, so a GIMS failure here can't waste a prior lookup.
+-- Returns (vehicleNumber, routeId) -- route_id rides along for free off the same GIMS
+-- call that resolves the vehicle, read off the bus's current trip if it has one.
+resolveReportedVehicle :: DIBC.IntegratedBPPConfig -> GimsOperationAnchor -> Flow (Maybe Text, Maybe Text)
+resolveReportedVehicle integratedBPPConfig anchor = do
   result <- withTryCatch "FRFSFleetOperator:resolveReportedVehicle" $ do
-    integratedBPPConfig <- findFirstIbppConfigByCityAndVehicle merchantOpCityId (show BUS)
     baseUrl <- getGimsBaseUrl integratedBPPConfig
     let gtfsId = DIBC.feedKey integratedBPPConfig
     gimsOps <- NandiFlow.gimsCurrentOperation baseUrl gtfsId anchor
@@ -836,12 +855,12 @@ resolveReportedVehicle merchantOpCityId anchor = do
             gimsDriverId = anchor.gimsDriverId,
             vehicleNumber = anchor.vehicleNumber
           }
-    pure tripResp.vehicleNumber
+    pure (tripResp.vehicleNumber, (.route_id) <$> tripResp.current)
   case result of
-    Right vehicleNumber -> pure (Just vehicleNumber)
+    Right (vehicleNumber, mbRouteId) -> pure (Just vehicleNumber, mbRouteId)
     Left err -> do
       logWarning $ "FRFSFleetOperator: falling back to client vehicleNumber for incident report - " <> show err
-      pure Nothing
+      pure (Nothing, Nothing)
 
 -- | bms has no location field, so coordinates ride in the description rather than be lost.
 mkBmsDescription :: FleetOperatorIncidentReq -> Maybe Text
