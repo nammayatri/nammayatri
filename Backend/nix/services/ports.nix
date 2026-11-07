@@ -19,6 +19,7 @@
   # Kafka
   zookeeper = 2181;
   kafka = 29092;
+  kafkaController = 29093;
 
   # Infrastructure
   nginx = 8085;

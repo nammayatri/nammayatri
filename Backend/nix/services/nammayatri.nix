@@ -508,6 +508,34 @@ in
                 MASTER_PASSWORD=1 passetto-server
               '';
             });
+            # services-flake declares formatLogDirs/clusterId but never runs kafka-storage
+            # format. KRaft (process.roles) requires meta.properties before broker start.
+            kafka.command = lib.mkForce (pkgs.writeShellApplication {
+              name = "kafka-kraft";
+              runtimeInputs = [ pkgs.apacheKafka pkgs.coreutils ];
+              text = ''
+                set -euo pipefail
+                DATA_DIR="$(mkdir -p ./data/kafka/logs && cd ./data/kafka/logs && pwd)"
+                CONFIG_FILE="$DATA_DIR/server.properties"
+                {
+                  echo "process.roles=broker,controller"
+                  echo "node.id=1"
+                  echo "controller.quorum.voters=1@127.0.0.1:${toString ports.kafkaController}"
+                  echo "controller.listener.names=CONTROLLER"
+                  echo "listeners=PLAINTEXT://127.0.0.1:${toString ports.kafka},CONTROLLER://127.0.0.1:${toString ports.kafkaController}"
+                  echo "listener.security.protocol.map=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+                  echo "log.dirs=$DATA_DIR"
+                  echo "offsets.topic.replication.factor=1"
+                  echo "transaction.state.log.replication.factor=1"
+                  echo "transaction.state.log.min.isr=1"
+                } > "$CONFIG_FILE"
+                if [ ! -f "$DATA_DIR/meta.properties" ]; then
+                  echo "Formatting Kafka KRaft storage in $DATA_DIR ..."
+                  kafka-storage.sh format -t MkU3OEVBNTcwNTJENDM2Qk -c "$CONFIG_FILE"
+                fi
+                exec kafka-server-start.sh "$CONFIG_FILE"
+              '';
+            });
           })
           {
             # Rider producer: same binary as producer-exe, different env vars
@@ -1870,6 +1898,7 @@ in
             };
           };
 
+          # TODO remove zookeper after nixpkgs upgrade
           zookeeper."zookeeper" = {
             enable = true;
             port = ports.zookeeper;
@@ -1878,13 +1907,26 @@ in
           apache-kafka."kafka" = {
             enable = true;
             port = ports.kafka;
+            # Declared for documentation; services-flake does not honor these yet.
+            # Actual format+start is in settings.processes.kafka.command override above.
+            clusterId = "MkU3OEVBNTcwNTJENDM2Qk";
+            formatLogDirs = true;
             settings = {
+              "process.roles" = [ "broker" "controller" ];
+              "node.id" = 1;
+              "controller.quorum.voters" = [ "1@127.0.0.1:${toString ports.kafkaController}" ];
+              "controller.listener.names" = [ "CONTROLLER" ];
+              "listeners" = [
+                "PLAINTEXT://127.0.0.1:${toString ports.kafka}"
+                "CONTROLLER://127.0.0.1:${toString ports.kafkaController}"
+              ];
+              "listener.security.protocol.map" = [ "PLAINTEXT:PLAINTEXT" "CONTROLLER:PLAINTEXT" ];
               # Since the available brokers are only 1
               "offsets.topic.replication.factor" = 1;
-              "zookeeper.connect" = [ "localhost:${toString ports.zookeeper}" ];
+              "transaction.state.log.replication.factor" = 1;
+              "transaction.state.log.min.isr" = 1;
             };
           };
-
 
           nginx."nginx" = {
             enable = true;
