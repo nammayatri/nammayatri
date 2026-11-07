@@ -43,16 +43,27 @@ import qualified API.Action.DashboardAuth.RideBooking as RideBookingDSL
 -- OrphanInstances module in (unlike TicketDashboard / MerchantOnboarding),
 -- so the module serving the route has to import it for HasServer to resolve.
 import API.Types.Dashboard.AppManagement.OrphanInstances.TransitOperator ()
+import qualified API.Types.RiderPlatform.Management.Ride as RideAPI
+import qualified Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Utils.Common (withDashboardFlowHandlerAPI)
 import Servant
+import qualified Tools.ActorInfo
 
 type API =
   "direct-dashboard"
     :> Capture "merchantId" (ShortId DM.Merchant)
-    :> Capture "city" Context.City
+    :> (MerchantScopedAPI :<|> CityScopedAPI)
+
+type MerchantScopedAPI =
+  "ride"
+    :> (RideAPI.GetShareRideInfo :<|> RideAPI.GetShareRideInfoByShortId)
+
+type CityScopedAPI =
+  Capture "city" Context.City
     :> ( AppManagementDSL.API
            :<|> ManagementDSL.API
            -- provider-dashboard mounts this folder under an extra "rideBooking"
@@ -65,7 +76,15 @@ type API =
        )
 
 handler :: FlowServer API
-handler merchantId city =
+handler merchantId = merchantScopedHandler merchantId :<|> cityScopedHandler merchantId
+
+merchantScopedHandler :: ShortId DM.Merchant -> FlowServer MerchantScopedAPI
+merchantScopedHandler merchantId =
+  (withDashboardFlowHandlerAPI . Tools.ActorInfo.withRequestIdActorInfo . DRide.getShareRideInfoForMerchant merchantId)
+    :<|> (withDashboardFlowHandlerAPI . Tools.ActorInfo.withRequestIdActorInfo . DRide.getShareRideInfoByShortIdForMerchant merchantId)
+
+cityScopedHandler :: ShortId DM.Merchant -> FlowServer CityScopedAPI
+cityScopedHandler merchantId city =
   AppManagementDSL.handler merchantId city
     :<|> ManagementDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
