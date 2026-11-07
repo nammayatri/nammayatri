@@ -669,6 +669,10 @@ RiderConfig:
     findByFrfsMetricsApiKey:
       kvFunction: findOneWithKV
       where: frfsMetricsApiKey
+    updateCallingConfig:
+      kvFunction: updateOneWithKV
+      params: [enableShareNumberWithDriver, pushConsentToBpp]
+      where: merchantOperatingCityId
 
   beamInstance:
     - MakeTableInstances

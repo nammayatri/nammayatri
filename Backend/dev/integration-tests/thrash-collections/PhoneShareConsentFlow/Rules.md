@@ -1,13 +1,15 @@
 # PhoneShareConsentFlow
 
 E2E coverage for the rider phone-sharing consent gate: the driver app **dials** the
-rider's real mobile number (`callingNumber`) only when the merchant's
-`driver_calling_option` allows direct calling **and** the rider consented
+rider's real mobile number (`callingNumber`) only when the city's calling
+option (see below) allows direct calling **and** the rider consented
 (`SafetySettings.consentToShareMobileNumber`, pushed to the BPP through its
 internal consent API whenever the rider changes it while
 `rider_config.push_consent_to_bpp` is on, and also sent in the confirm tag
-`CONSENT_TO_SHARE_MOBILE_NUMBER`). The legacy
-`riderMobileNumber` field is gated by the merchant option alone.
+`CONSENT_TO_SHARE_MOBILE_NUMBER`). The exception is `ForceDirectCall`, which
+dials the real number on active rides without consent (see the calling rule
+below). The legacy `riderMobileNumber` field is gated by the merchant option
+alone.
 
 `rider_config.enable_share_number_with_driver` (BAP) controls whether the rider
 app shows the consent toggle and auto opt-in, and whether confirm carries the
@@ -75,7 +77,9 @@ mounted at the driver-app root, not under `/ui`; env var `baseURL_namma_P_root`,
 ## Seeding: the suite needs `DirectCall` locally
 
 `setup-phone-share-consent.sql` seeds, in `atlas_driver_offer_bpp`,
-`transporter_config.driver_calling_option = 'DirectCall'` for every city. The
+`transporter_config.driver_calling_option = 'DirectCall'` and
+`calling_mode = 'DirectCall'` for every city (a `calling_mode` left over from the
+Calling Config dashboard would otherwise win). The
 upstream/config-synced value is `'AnonymousCall'` for the test cities, under which
 consent can never expose the number: ride 2's positive assertion fails with
 `riderMobileNumber = null` even though the consent reached `rider_details` (the
@@ -95,8 +99,8 @@ Three run paths, each with its own seeding story:
    seed above. Instead, `dev/config-sync/assets/patches.json` carries
    `dimension_overrides` entries for both
    (`atlas_driver_offer_bpp.transporter_config` -> `driver_calling_option =
-   DirectCall`, `atlas_app.rider_config` -> `enable_share_number_with_driver =
-   true`), so every config-sync import re-applies them and flushes Redis itself.
+   DirectCall`, `calling_mode = DirectCall`, `atlas_app.rider_config` ->
+   `enable_share_number_with_driver = true`), so every config-sync import re-applies them and flushes Redis itself.
    Both are synced tables, so without the patch entries each sync silently reverts the seed.
 3. **Raw newman**: apply the SQL and flush Redis manually first.
 

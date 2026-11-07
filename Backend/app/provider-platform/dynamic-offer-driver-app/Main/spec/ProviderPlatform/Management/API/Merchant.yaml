@@ -89,6 +89,22 @@ apis:
       response:
         type: APISuccess
       validation: Dashboard.ProviderPlatform.Management.Merchant.validateMerchantCommonConfigUpdateReq
+  - GET: # CallingConfigAPI
+      endpoint: /config/calling
+      auth: ApiAuthV2
+      response:
+        type: CallingConfigRes
+      migrate:
+        capability: city-config.launch.read
+  - POST: # CallingConfigUpdateAPI
+      endpoint: /config/calling/update
+      auth: ApiAuthV2
+      request:
+        type: UpdateCallingConfigReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-config.launch.write
   - GET: # DriverPoolConfigAPI
       endpoint: /config/driverPool
       auth: ApiAuthV2
@@ -735,6 +751,14 @@ types:
     - enabled: Bool
   Status:
     - enum: "PENDING_VERIFICATION, APPROVED, REJECTED"
+  CallingMode:
+    - enum: "EXOTEL, RIDER_PREFERENCE, EMERGENCY"
+  CallingConfigRes:
+    - mode: CallingMode
+    - callingMode: Maybe Text
+  UpdateCallingConfigReq:
+    - mode: CallingMode
+    - derive: "'HideSecrets"
   RideEvidenceConfigItem:
     - enabled: Maybe Bool
     - maxFilesPerRide: Maybe Int
