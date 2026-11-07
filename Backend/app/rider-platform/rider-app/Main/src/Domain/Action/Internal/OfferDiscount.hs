@@ -1,8 +1,8 @@
 module Domain.Action.Internal.OfferDiscount where
 
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
-import qualified Domain.SharedLogic.RideDiscount as RD
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Types (ServiceFlow)
@@ -14,6 +14,7 @@ import Kernel.Utils.Common hiding (id)
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified SharedLogic.FareBreakupLines as FBL
 import qualified SharedLogic.InternalAuth as SIA
 import qualified SharedLogic.Offer as SOffer
 import Storage.Beam.Payment ()
@@ -22,12 +23,12 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 
 -- | Request body for the BPP → BAP internal offer-discount lookup.
---   BPP sends the post-EndRide eight-slot breakup ('projectFareParamsBreakup');
---   BAP applies the offer against the discount-applicable ride fare
---   inclusive of its VAT. 'fareAmount' is a legacy fallback.
+--   BPP sends its fare breakup lines ('fareBreakups'). BAP applies the offer
+--   against the discountable fare inclusive of its tax. 'fareAmount' is a
+--   legacy fallback.
 data OfferDiscountReq = OfferDiscountReq
   { fareAmount :: Maybe HighPrecMoney,
-    projectFareParamsBreakup :: Maybe RD.ProjectFareParamsBreakup
+    fareBreakups :: Maybe [FB.BreakupLine]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -54,9 +55,12 @@ getOfferDiscount apiKey bppBookingId req = do
   internalAPIKey <- asks (.internalAPIKey)
   SIA.checkInternalKey "offerDiscount" [internalAPIKey] apiKey
   booking <- B.runInReplica $ QBooking.findByBPPBookingId (Id bppBookingId) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId)
-  let mbOfferBase = case req.projectFareParamsBreakup of
-        Just b -> Just (b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax)
-        Nothing -> req.fareAmount
+  let mbOfferBase =
+        listToMaybe $
+          catMaybes
+            [ req.fareAmount >>= \fare -> FBL.offerBasePrice <$> (req.fareBreakups >>= FBL.fareLinesFromPairs fare . map (\l -> (l.title, l.amount))),
+              req.fareAmount
+            ]
   case (booking.selectedOfferId, mbOfferBase) of
     (Just offerId, Just offerBase) -> do
       let productId = show booking.vehicleServiceTierType

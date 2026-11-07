@@ -328,7 +328,6 @@ RiderConfig:
     singleModeWalkSpeed: Maybe Double
     kafkaTopicName: Text
     staticCustomerIdThresholdDay: Maybe Day
-    duesExcludedPaymentPurposes: "Maybe [Text]"
     invoiceLogoUrl: Maybe Text
     externalSOSConfig: Maybe ExternalSOSConfig
     maxNumberOfLuggages: Maybe Int
@@ -459,7 +458,6 @@ RiderConfig:
     openMeterMaxIdleHours: Maybe Int
     kafkaTopicName: Maybe Text
     staticCustomerIdThresholdDay: Maybe Day
-    duesExcludedPaymentPurposes: "Maybe [Text]"
     externalSOSConfig: Maybe Value
     invoiceConfig: Maybe Value
     syncSearchDispatchConfig: Maybe Value
@@ -716,7 +714,6 @@ RiderConfig:
     metricsBlacklistPatterns: text []
     ptCircuitBreakerConfig: "json"
     staticCustomerIdThresholdDay: date
-    duesExcludedPaymentPurposes: text []
     externalSOSConfig: "json"
     invoiceConfig: "json"
     syncSearchDispatchConfig: "jsonb"

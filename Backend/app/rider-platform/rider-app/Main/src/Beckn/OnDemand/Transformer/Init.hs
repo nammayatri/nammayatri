@@ -20,6 +20,7 @@ import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Utils.Text
 import qualified SharedLogic.Confirm
+import qualified SharedLogic.PaymentCharge as SPaymentCharge
 
 buildInitReq :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Bool -> DBC.BecknConfig -> DRC.RiderConfig -> Text -> m BecknV2.OnDemand.Types.InitReq
 buildInitReq uiConfirm bapUrl action domain isValueAddNP bapConfig riderConfig initTtl = do
@@ -150,7 +151,7 @@ mkItemTags res =
       itemTags'' = mkInsuranceTagGroup res : itemTags'
       itemTags''' = maybe itemTags'' (\displayId -> mkDisplayBookingIdTagGroup displayId : itemTags'') res.booking.displayBookingId
       itemTags'''' = mkOfferInfoTagGroup res : itemTags'''
-   in itemTags''''
+   in itemTags'''' <> fromMaybe [] (Tags.buildTagGroups (SPaymentCharge.paymentChargeDetailsTagList res.paymentChargeDetails <> SPaymentCharge.platformDeductionsTagList res.platformDeductions))
 
 mkDisplayBookingIdTagGroup :: Data.Text.Text -> Spec.TagGroup
 mkDisplayBookingIdTagGroup displayBookingId =

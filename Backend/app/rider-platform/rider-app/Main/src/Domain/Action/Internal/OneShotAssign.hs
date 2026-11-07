@@ -20,6 +20,8 @@
 -- BPP retries on failure, so every step is guarded by an existence check.
 module Domain.Action.Internal.OneShotAssign where
 
+import BecknV2.OnDemand.FareBreakup.Tax (TaxBreakup)
+import BecknV2.OnDemand.PaymentCharge (PaymentChargeDetails (..))
 import qualified Domain.Action.Beckn.Common as DCommon
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
@@ -58,8 +60,10 @@ data OneShotAssignReq = OneShotAssignReq
     currency :: Currency,
     estimatedFare :: HighPrecMoney,
     commission :: Maybe HighPrecMoney,
+    commissionTaxBreakup :: Maybe TaxBreakup,
     paymentCharge :: Maybe HighPrecMoney,
-    paymentChargeBearer :: Maybe Text,
+    paymentChargeTaxBreakup :: Maybe TaxBreakup,
+    paymentChargeDetails :: Maybe PaymentChargeDetails,
     fareBreakups :: [OneShotFareBreakupItem],
     quoteValidTill :: UTCTime,
     otp :: Text,
@@ -222,8 +226,10 @@ processAssignment req = do
                     SConfirm.OneShotConfirmDetails
                       { bppBookingId = Id req.bppBookingId,
                         commission = req.commission,
+                        commissionTaxBreakup = req.commissionTaxBreakup,
                         paymentCharge = req.paymentCharge,
-                        paymentChargeBearer = req.paymentChargeBearer
+                        paymentChargeTaxBreakup = req.paymentChargeTaxBreakup,
+                        paymentChargeBearer = show . (.bearer) <$> req.paymentChargeDetails
                       }
               }
         pure dConfirmRes.booking

@@ -41,9 +41,13 @@ where
 import qualified API.Types.UI.Payment as PaymentAPI
 import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Confirm as ACL
-import qualified BecknV2.OnDemand.Enums as Enums
-import Control.Applicative ((<|>))
 -- import Data.Aeson (defaultOptions, withObject, (.:?))
+
+-- TODO: Uncomment when PaytmEDC module is available in shared-kernel
+-- import qualified Kernel.External.Payment.PaytmEDC.Checksum as PaytmEDCChecksum
+
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
+import Control.Applicative ((<|>))
 import Data.Aeson.Types ()
 import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.OpenApi ()
@@ -55,15 +59,11 @@ import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
 import qualified Domain.Action.UI.Pass as Pass
 import qualified Domain.Action.UI.RidePayment as DRidePayment
-import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingPayment as DBP
 import qualified Domain.Types.BookingStatus as SRB
 import Domain.Types.CancellationReason (CancellationReasonCode (..), CancellationStage (..))
--- TODO: Uncomment when PaytmEDC module is available in shared-kernel
--- import qualified Kernel.External.Payment.PaytmEDC.Checksum as PaytmEDCChecksum
-
 import Domain.Types.Extra.MerchantPaymentMethod ()
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FareBreakup as DFareBreakup
@@ -224,9 +224,10 @@ createRideBookingPaymentOrder booking = do
             booking.id.getId
             DFareBreakup.BOOKING
             (QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING)
-        let resolvedParkingAmount = case RD.parseProjectFareParamsBreakup ((\b -> (b.description, b.amount.amount)) <$> breakups) of
-              Just b -> b.parkingChargeTaxExclusive + b.parkingChargeTax
-              Nothing -> sumByDescription (show Enums.PARKING_CHARGE) breakups
+        let resolvedParkingAmount =
+              if null breakups
+                then 0
+                else uncurry (+) ((FB.componentLines (map (\fb -> FB.BreakupLine fb.description fb.amount.amount) breakups)).parking)
         when (resolvedParkingAmount == 0) $
           logError $
             "createRideBookingPaymentOrder: resolved parking amount is 0 for bookingId="
@@ -693,11 +694,7 @@ resumeBookingDepositConfirm bookingId = do
     Left () -> logInfo $ "Booking fee confirm resume for " <> bookingIdText <> " skipped: another resumer holds the lock"
     Right mbConfirmFor -> whenJust mbConfirmFor $ sendWithheldConfirm bookingId
 
--- | Sum fare breakup line items matching an exact description (fallback path when the breakup
---   isn't in the canonical V2 tax-slot shape parseProjectFareParamsBreakup expects).
-sumByDescription :: Text -> [DFareBreakup.FareBreakup] -> HighPrecMoney
-sumByDescription description_ = sum . map (.amount.amount) . filter ((== description_) . (.description))
-
+-- | Sum fare breakup line items matching an exact description
 isTerminalStatus :: Payment.TransactionStatus -> Bool
 isTerminalStatus = \case
   Payment.CHARGED -> True

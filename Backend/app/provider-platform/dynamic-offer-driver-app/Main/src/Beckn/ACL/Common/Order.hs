@@ -40,7 +40,6 @@ import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.RideCompletedQuote as Quote
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified BecknV2.OnDemand.Enums as EventEnum
-import qualified BecknV2.OnDemand.Tags as BecknV2Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
 import BecknV2.OnDemand.Utils.Payment (mkPaymentTags)
@@ -228,7 +227,6 @@ buildRideCompletedQuote isValueAddNP ride fareParams = do
           }
       breakup =
         Fare.mkFareParamsBreakups isValueAddNP (Breakup.BreakupItemPrice currency . DecimalValue.DecimalValue . getHighPrecMoney) Breakup.BreakupItem fareParams
-          & filter (ACLCommon.filterRequiredBreakups $ DFParams.getFareParametersType fareParams) -- TODO: Remove after roll out
   pure
     Quote.RideCompletedQuote
       { price,
@@ -329,22 +327,7 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
   let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
   let items = UtilsOU.tfItems ride booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId
   let payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
-      commissionTag =
-        let settlementTags =
-              catMaybes
-                [ (BecknV2Tags.COMMISSION BecknV2Tags.~=) . highPrecMoneyToText <$> ride.commission,
-                  (BecknV2Tags.PAYMENT_CHARGE BecknV2Tags.~=) . highPrecMoneyToText <$> ride.paymentCharge,
-                  (BecknV2Tags.PAYMENT_CHARGE_BEARER BecknV2Tags.~=) <$> ride.paymentChargeBearer
-                ]
-         in if null settlementTags then Nothing else BecknV2Tags.buildTagGroups settlementTags
-      paymentWithCommission =
-        payment
-          { Spec.paymentTags = case (payment.paymentTags, commissionTag) of
-              (Just existing, Just extra) -> Just (existing <> extra)
-              (Just existing, Nothing) -> Just existing
-              (Nothing, Just extra) -> Just extra
-              (Nothing, Nothing) -> Nothing
-          }
+      paymentWithCommission = payment {Spec.paymentTags = payment.paymentTags <> ACLCommon.mkSettlementTagGroups ride booking.paymentChargeDetails}
   let orderSettlementTags = mkOrderSettlementTags bppConfig merchant
   pure $
     Spec.Order

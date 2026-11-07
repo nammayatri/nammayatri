@@ -37,6 +37,7 @@ where
 
 import qualified Beckn.ACL.Cancel as CancelACL
 import qualified BecknV2.FRFS.Enums as FRFSEnums
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.List (nub)
@@ -46,7 +47,6 @@ import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Location as DL
 import qualified Domain.Action.UI.MerchantPaymentMethod as DMPM
-import qualified Domain.SharedLogic.RideDiscount as RD
 import Domain.Types.Booking
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -90,9 +90,11 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified SharedLogic.BetterRoutePoint as BRP
 import qualified SharedLogic.BetterRoutePointCache as BRPC
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.FareBreakupLines as FBL
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import qualified SharedLogic.Offer as SOffer
+import qualified SharedLogic.PaymentCharge as SPaymentCharge
 import SharedLogic.Quote
 import qualified SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -586,10 +588,8 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
         zip
           (mkQAPIEntityList quoteList bppDetailList isValueAddNPList)
           ( quoteList <&> \q ->
-              let mbBreakup = RD.parseProjectFareParamsBreakup $ quoteBreakupToFareTuple <$> q.quoteBreakupList
-                  offerBaseAmount = case mbBreakup of
-                    Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
-                    Nothing -> q.estimatedFare.amount
+              let mbBreakup = FBL.fareLinesFromPairs q.estimatedFare.amount $ quoteBreakupToFareTuple <$> q.quoteBreakupList
+                  offerBaseAmount = maybe q.estimatedFare.amount FBL.offerBasePrice mbBreakup
                   offerBasePrice = mkPrice (Just q.estimatedFare.currency) offerBaseAmount
                in (show q.vehicleServiceTierType, mbBreakup, offerBasePrice)
           )
@@ -610,13 +610,17 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
   let offerMap = Map.fromList productOffers
   -- The rules depend only on the city, so fetch them once for the whole search, and only when some product has offers.
   cumulativeLogics <- if Map.null offerMap then pure [] else SOffer.getCumulativeOfferLogics searchReq.merchantOperatingCityId
+  paymentMethods <- SPaymentCharge.merchantPaymentMethods searchReq.merchantOperatingCityId
   forM quoteEntitiesWithCtx $ \(quoteEntity, (productId, mbBreakup, _)) -> do
     mbOffer <- case Map.lookup productId offerMap of
       Nothing -> pure Nothing
       Just resp -> SOffer.mkCumulativeOfferRespWithLogics cumulativeLogics searchReq.merchantOperatingCityId resp [] mbBreakup Nothing
     serviceTierName <- translateServiceTierText searchReq.merchantOperatingCityId language quoteEntity.serviceTierName
     serviceTierShortDesc <- translateServiceTierText searchReq.merchantOperatingCityId language quoteEntity.serviceTierShortDesc
-    pure quoteEntity {customerOffers = mbOffer, SharedLogic.Quote.serviceTierName = serviceTierName, SharedLogic.Quote.serviceTierShortDesc = serviceTierShortDesc}
+    let currency = quoteEntity.estimatedFareWithCurrency.currency
+        fareTax = sum [breakup.priceWithCurrency.amount | breakup <- quoteEntity.quoteFareBreakup, FB.isTaxTitle breakup.title]
+        farePayable = SPaymentCharge.mkFarePayable currency paymentMethods (quoteEntity.estimatedFareWithCurrency.amount - maybe 0 (.amount) quoteEntity.discountWithCurrency) fareTax
+    pure quoteEntity {customerOffers = SOffer.withPostOfferPayable currency paymentMethods fareTax <$> mbOffer, SharedLogic.Quote.serviceTierName = serviceTierName, SharedLogic.Quote.serviceTierShortDesc = serviceTierShortDesc, SharedLogic.Quote.farePayable = Just farePayable}
 
 quoteBreakupToFareTuple :: DQB.QuoteBreakup -> (Text, HighPrecMoney)
 quoteBreakupToFareTuple qb = (qb.title, qb.price.amount)
@@ -652,10 +656,8 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
       estimatesWithCtx =
         map
           ( \e ->
-              let mbBreakup = RD.parseProjectFareParamsBreakup $ (\eb -> (eb.title, eb.price.value.amount)) <$> e.estimateBreakupList
-                  offerBaseAmount = case mbBreakup of
-                    Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
-                    Nothing -> e.estimatedFare.amount
+              let mbBreakup = FBL.fareLinesFromPairs e.estimatedFare.amount $ (\eb -> (eb.title, eb.price.value.amount)) <$> e.estimateBreakupList
+                  offerBaseAmount = maybe e.estimatedFare.amount FBL.offerBasePrice mbBreakup
                   offerBasePrice = mkPrice (Just e.estimatedFare.currency) offerBaseAmount
                in (e, mbBreakup, offerBasePrice)
           )

@@ -5,6 +5,7 @@
 module Domain.Types.Booking (module Domain.Types.Booking, module ReExport) where
 
 import qualified BecknV2.OnDemand.Enums
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import Data.Aeson
 import qualified Domain.Types.BookingStatus
 import qualified Domain.Types.Client
@@ -46,6 +47,7 @@ data Booking = Booking
     clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     commission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    commissionTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
     createdAt :: Kernel.Prelude.UTCTime,
     dashboardAgentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -89,6 +91,7 @@ data Booking = Booking
     parentSearchRequestLocationInfo :: Kernel.Prelude.Maybe Domain.Types.Extra.Booking.ParentSearchRequestLocationInfo,
     paymentCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     paymentChargeBearer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    paymentChargeTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     paymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,

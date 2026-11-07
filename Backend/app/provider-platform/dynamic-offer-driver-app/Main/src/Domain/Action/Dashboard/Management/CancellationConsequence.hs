@@ -161,6 +161,7 @@ buildRow merchantId merchantOpCityId rowId apiRow = do
       mbDriverDeduction = toDomainDeduction <$> apiRow.driverDeduction
   whenJust mbCustomerDeduction $ validateDeduction "customerDeduction"
   whenJust mbDriverDeduction $ validateDeduction "driverDeduction"
+  whenJust apiRow.customerCommissionAndTax validateTaxSplit
   -- Coin consequences fire straight from the matrix (no coin_config prerequisite any
   -- more), so a coin row in a city without the coin feature would write coins the driver
   -- can never see — reject at config time.
@@ -280,6 +281,13 @@ isCoinConsequence = \case
   DExtra.CoinAddition {} -> True
   _ -> False
 
+validateTaxSplit :: Common.CommissionAndTaxAPI -> Environment.Flow ()
+validateTaxSplit c = do
+  let parts = catMaybes [c.cgstPercentage, c.sgstPercentage, c.igstPercentage]
+  unless (null parts) $ case c.taxPercentage of
+    Nothing -> throwError (InvalidRequest "customerCommissionAndTax: cgst/sgst/igst percentages require taxPercentage")
+    Just total -> unless (sum parts == total) $ throwError (InvalidRequest "customerCommissionAndTax: cgst + sgst + igst percentages must equal taxPercentage")
+
 -- | All amounts in a deduction/addition are POSITIVE; direction lives in the constructor.
 -- Signed values are rejected so "give back" can never be smuggled in as a negative charge.
 validateDeduction :: Text -> DExtra.ConsequenceDeduction -> Environment.Flow ()
@@ -315,11 +323,15 @@ toDomainCommissionAndTax :: Common.CommissionAndTaxAPI -> DExtra.CommissionAndTa
 toDomainCommissionAndTax c =
   DExtra.CommissionAndTax
     { taxPercentage = c.taxPercentage,
+      cgstPercentage = c.cgstPercentage,
+      sgstPercentage = c.sgstPercentage,
+      igstPercentage = c.igstPercentage,
       commission =
         c.commission <&> \case
           Common.FixedRateAPIEntity amt -> DExtra.FixedRate {amount = amt}
           Common.PercentageRateAPIEntity pct -> DExtra.PercentageRate {percentage = pct},
-      amountsInclusiveOfTax = c.amountsInclusiveOfTax
+      amountsInclusiveOfTax = c.amountsInclusiveOfTax,
+      commissionTax = c.commissionTax
     }
 
 toListItem :: DCCM.CancellationConsequenceMatrix -> Common.CancellationConsequenceListItem
@@ -375,9 +387,13 @@ toAPICommissionAndTax :: DExtra.CommissionAndTax -> Common.CommissionAndTaxAPI
 toAPICommissionAndTax c =
   Common.CommissionAndTaxAPI
     { taxPercentage = c.taxPercentage,
+      cgstPercentage = c.cgstPercentage,
+      sgstPercentage = c.sgstPercentage,
+      igstPercentage = c.igstPercentage,
       commission =
         c.commission <&> \case
           DExtra.FixedRate {amount} -> Common.FixedRateAPIEntity amount
           DExtra.PercentageRate {percentage} -> Common.PercentageRateAPIEntity percentage,
-      amountsInclusiveOfTax = c.amountsInclusiveOfTax
+      amountsInclusiveOfTax = c.amountsInclusiveOfTax,
+      commissionTax = c.commissionTax
     }

@@ -12,6 +12,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.RiderDetails as Beam
 
 instance FromTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails where
@@ -22,7 +23,10 @@ instance FromTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails whe
           { bapId = bapId,
             cancellationDueRides = fromMaybe 0 cancellationDueRides,
             cancellationDues = cancellationDues,
+            cancellationDuesCommission = cancellationDuesCommission,
+            cancellationDuesCommissionTaxBreakup = Kernel.Utils.JSON.valueToMaybe =<< cancellationDuesCommissionTaxBreakup,
             cancellationDuesPaid = fromMaybe 0 cancellationDuesPaid,
+            cancellationDuesTaxBreakup = Kernel.Utils.JSON.valueToMaybe =<< cancellationDuesTaxBreakup,
             cancelledRides = fromMaybe 0 cancelledRides,
             completedRides = fromMaybe 0 completedRides,
             consentToShareMobileNumber = consentToShareMobileNumber,
@@ -63,7 +67,10 @@ instance ToTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails where
       { Beam.bapId = bapId,
         Beam.cancellationDueRides = Kernel.Prelude.Just cancellationDueRides,
         Beam.cancellationDues = cancellationDues,
+        Beam.cancellationDuesCommission = cancellationDuesCommission,
+        Beam.cancellationDuesCommissionTaxBreakup = toJSON <$> cancellationDuesCommissionTaxBreakup,
         Beam.cancellationDuesPaid = Kernel.Prelude.Just cancellationDuesPaid,
+        Beam.cancellationDuesTaxBreakup = toJSON <$> cancellationDuesTaxBreakup,
         Beam.cancelledRides = Kernel.Prelude.Just cancelledRides,
         Beam.completedRides = Kernel.Prelude.Just completedRides,
         Beam.consentToShareMobileNumber = consentToShareMobileNumber,

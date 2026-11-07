@@ -15,8 +15,9 @@
 module Domain.Action.UI.Estimate where
 
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
+import qualified BecknV2.OnDemand.Tags as Tags
 import Data.Aeson
-import Domain.SharedLogic.RideDiscount (isProjectedFareParamTag)
 import Domain.Types.BppDetails
 import Domain.Types.Estimate
 import Domain.Types.EstimateStatus
@@ -29,6 +30,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Offer as SOffer
+import qualified SharedLogic.PaymentCharge as SPaymentCharge
 
 data EstimateAPIEntity = EstimateAPIEntity
   { id :: Id Estimate,
@@ -83,7 +85,20 @@ data EstimateAPIEntity = EstimateAPIEntity
     insuredAmount :: Maybe Text,
     offer :: Maybe SOffer.CumulativeOfferResp,
     area :: Maybe Text,
-    navigationInstruction :: Maybe Text
+    navigationInstruction :: Maybe Text,
+    farePayable :: SPaymentCharge.PayableAmount,
+    optionalCharges :: OptionalChargesAPIEntity
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data OptionalChargesAPIEntity = OptionalChargesAPIEntity
+  { petCharges :: Maybe SPaymentCharge.PayableAmount,
+    waitingChargePerMin :: Maybe SPaymentCharge.PayableAmount,
+    tipOptions :: [SPaymentCharge.PayableAmount],
+    smartTipSuggestion :: Maybe SPaymentCharge.PayableAmount,
+    perStopCharge :: Maybe SPaymentCharge.PayableAmount,
+    perLuggageCharge :: Maybe SPaymentCharge.PayableAmount,
+    safetyPlusCharge :: Maybe SPaymentCharge.PayableAmount
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -106,16 +121,32 @@ data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
 -- Redis hits (CQBppDetails.findBySubscriberIdAndDomain + QNP.isValueAddNP)
 -- can be skipped.
 mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Bool -> Maybe SOffer.CumulativeOfferResp -> BppDetails -> Bool -> Estimate -> m EstimateAPIEntity
-mkEstimateAPIEntity isReferredRide offer bppDetails valueAddNPRes (Estimate {..}) = do
+mkEstimateAPIEntity isReferredRide mbOffer bppDetails valueAddNPRes (Estimate {..}) = do
   let mbBaseFareEB = find (\x -> x.title == show Enums.BASE_FARE) estimateBreakupList
       mbBaseDistanceFareEB = maybeToList $ addBaseDisatanceFareEB mbBaseFareEB -- TODO::Remove it after UI stops consuming it,
+  paymentMethods <- maybe (pure []) SPaymentCharge.merchantPaymentMethods merchantOperatingCityId
+  let fareTax = sum [breakup.price.value.amount | breakup <- estimateBreakupList, FB.isTaxTitle breakup.title]
+      farePayable = SPaymentCharge.mkFarePayable estimatedFare.currency paymentMethods (estimatedFare.amount - maybe 0 (.amount) discount) fareTax
+      offer = SOffer.withPostOfferPayable estimatedFare.currency paymentMethods fareTax <$> mbOffer
+      payableOf = SPaymentCharge.mkChargePayable estimatedFare.currency riderTaxRates paymentMethods
+      breakupAmount breakupTitle = (\breakup -> breakup.price.value.amount) <$> find (\breakup -> breakup.title == breakupTitle) estimateBreakupList
+      estimateOptionalCharges =
+        OptionalChargesAPIEntity
+          { petCharges = payableOf <$> breakupAmount (show Tags.PET_CHARGES),
+            waitingChargePerMin = payableOf . (.amount) <$> waitingCharges.waitingChargePerMin,
+            tipOptions = payableOf . fromIntegral <$> fromMaybe [] tipOptions,
+            smartTipSuggestion = payableOf <$> smartTipSuggestion,
+            perStopCharge = payableOf <$> breakupAmount (show Tags.PER_STOP_CHARGES),
+            perLuggageCharge = payableOf <$> breakupAmount (show Tags.LUGGAGE_CHARGE),
+            safetyPlusCharge = payableOf <$> breakupAmount (show Enums.SAFETY_PLUS_CHARGES)
+          }
   return
     EstimateAPIEntity
       { agencyName = providerName,
         agencyNumber = providerMobileNumber,
         agencyCompletedRidesCount = providerCompletedRidesCount,
         tripTerms = [],
-        estimateFareBreakup = filter (not . isProjectedFareParamTag . (.title)) (mkEstimateBreakupAPIEntity <$> (estimateBreakupList <> mbBaseDistanceFareEB)),
+        estimateFareBreakup = (mkEstimateBreakupAPIEntity <$> (estimateBreakupList <> mbBaseDistanceFareEB)),
         driversLatLong = driversLocation,
         nightShiftRate = mkNightShiftRateAPIEntity <$> nightShiftInfo,
         providerId = providerId,
@@ -139,6 +170,7 @@ mkEstimateAPIEntity isReferredRide offer bppDetails valueAddNPRes (Estimate {..}
         serviceTierType = vehicleServiceTierType,
         vehicleIconUrl = showBaseUrl <$> vehicleIconUrl,
         isInsured = Just isInsured,
+        optionalCharges = estimateOptionalCharges,
         ..
       }
   where

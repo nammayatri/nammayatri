@@ -120,7 +120,7 @@ mkPriceFromQuote quote =
 
 mkItemTagsFromQuote :: DQuote.Quote -> Maybe FarePolicyD.FullFarePolicy -> Bool -> Maybe [Spec.TagGroup]
 mkItemTagsFromQuote quote mbFarePolicy hasStops =
-  Utils.mkRateCardTag quote.distance quote.fareParams.customerCancellationDues Nothing quote.estimatedFare quote.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing Nothing hasStops
+  Utils.mkRateCardTag quote.distance quote.fareParams.customerCancellationDues Nothing quote.estimatedFare quote.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing hasStops
 
 mkQuoteFromQuote :: Bool -> DQuote.Quote -> UTCTime -> Spec.Quotation
 mkQuoteFromQuote isValueAddNP quote now = do

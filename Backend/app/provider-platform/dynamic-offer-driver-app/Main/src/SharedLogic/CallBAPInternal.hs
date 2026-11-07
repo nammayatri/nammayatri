@@ -18,13 +18,15 @@ import qualified API.Types.UI.FRFSFleetOperator as FRFSFleetOperatorAPI
 import API.Types.UI.MeterRide
 import qualified API.Types.UI.PickupInstructions as PickupInstructions
 import qualified API.Types.UI.TicketVerify as TicketVerifyAPI
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
+import BecknV2.OnDemand.FareBreakup.Tax (TaxBreakup)
+import BecknV2.OnDemand.PaymentCharge (PaymentChargeDetails)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Encoding.Error as TE
-import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.MultimodalTicketVerify as TicketVerifyExtra
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.ServiceTierType as DVST
@@ -316,8 +318,10 @@ data OneShotAssignReq = OneShotAssignReq
     currency :: Currency,
     estimatedFare :: HighPrecMoney,
     commission :: Maybe HighPrecMoney,
+    commissionTaxBreakup :: Maybe TaxBreakup,
     paymentCharge :: Maybe HighPrecMoney,
-    paymentChargeBearer :: Maybe Text,
+    paymentChargeTaxBreakup :: Maybe TaxBreakup,
+    paymentChargeDetails :: Maybe PaymentChargeDetails,
     fareBreakups :: [OneShotFareBreakupItem],
     quoteValidTill :: UTCTime,
     otp :: Text,
@@ -469,7 +473,7 @@ type OfferDiscountAPI =
 
 data OfferDiscountReq = OfferDiscountReq
   { fareAmount :: Maybe HighPrecMoney,
-    projectFareParamsBreakup :: Maybe RD.ProjectFareParamsBreakup
+    fareBreakups :: Maybe [FB.BreakupLine]
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 

@@ -2,6 +2,7 @@ module Beckn.OnDemand.Transformer.OnSearch where
 
 import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.OnSearch
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified Domain.Action.Beckn.OnSearch
@@ -175,7 +176,8 @@ tfQuotesInfo provider fulfillments validTill item = do
               qar = qar_,
               smartTipReason,
               area = area_,
-              navigationInstruction = navigationInstruction_
+              navigationInstruction = navigationInstruction_,
+              riderTaxRates = BecknV2.OnDemand.FareBreakup.Tax.riderTaxRatesFromTags item.itemTags
             }
     QuoteBased _ -> do
       quoteBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildQuoteBreakupList item currency

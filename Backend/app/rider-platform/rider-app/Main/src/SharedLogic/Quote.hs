@@ -8,7 +8,6 @@ import qualified Domain.Action.UI.DriverOffer as UDriverOffer
 import qualified Domain.Action.UI.InterCityDetails as DInterCityDetails
 import qualified Domain.Action.UI.RentalDetails as DRentalDetails
 import qualified Domain.Action.UI.SpecialZoneQuote as USpecialZoneQuote
-import Domain.SharedLogic.RideDiscount (isProjectedFareParamTag)
 import Domain.Types.BppDetails as DBppDetails
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import Domain.Types.Quote
@@ -21,6 +20,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Offer as SOffer
+import qualified SharedLogic.PaymentCharge as SPaymentCharge
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
 
@@ -56,7 +56,8 @@ data QuoteAPIEntity = QuoteAPIEntity
     validTill :: UTCTime,
     vehicleIconUrl :: Maybe Text,
     area :: Maybe Text,
-    navigationInstruction :: Maybe Text
+    navigationInstruction :: Maybe Text,
+    farePayable :: Maybe SPaymentCharge.PayableAmount
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -84,8 +85,9 @@ makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
           bookingDepositWithCurrency = mkPriceAPIEntity . mkPrice (Just estimatedFare.currency) <$> bookingDeposit,
           vehicleVariant = vehicleServiceTierType,
           customerOffers = Nothing,
-          quoteFareBreakup = filter (not . isProjectedFareParamTag . (.title)) (mkQuoteBreakupAPIEntity <$> quoteBreakupList),
+          quoteFareBreakup = mkQuoteBreakupAPIEntity <$> quoteBreakupList,
           vehicleIconUrl = showBaseUrl <$> vehicleIconUrl,
+          farePayable = Nothing,
           ..
         }
 

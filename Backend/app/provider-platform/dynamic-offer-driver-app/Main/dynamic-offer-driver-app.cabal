@@ -690,6 +690,7 @@ library
       SharedLogic.CancellationFault
       SharedLogic.CancellationOrchestrator
       SharedLogic.CancellationSignals
+      SharedLogic.ComponentCharge
       SharedLogic.DashboardAlert
       SharedLogic.DeleteDriver
       SharedLogic.DriverCancellationPenalty
@@ -836,6 +837,7 @@ library
       SharedLogic.RideFeedback.Validation
       SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
+      SharedLogic.RideTax
       SharedLogic.RSFLedger
       SharedLogic.RuleBasedTierUpgrade
       SharedLogic.ScheduledBooking.OverlapCheck

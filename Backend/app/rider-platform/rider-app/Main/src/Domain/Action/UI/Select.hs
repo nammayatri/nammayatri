@@ -85,6 +85,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.LocationAddressEnrichment as LAE
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.PaymentCharge as SPaymentCharge
 import SharedLogic.Quote
 import SharedLogic.Type
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -224,6 +225,7 @@ data DSelectRes = DSelectRes
     mbJourneyId :: Maybe (Id DJ.Journey),
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
+    paymentChargeDetails :: Maybe SPaymentCharge.PaymentChargeDetails,
     paymentMode :: Maybe DMPM.PaymentMode,
     emailDomain :: Maybe Text,
     customerRating :: Maybe Centesimal,
@@ -286,7 +288,8 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
 
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-  let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee)
+  selectedPaymentCharge <- SPaymentCharge.resolvePaymentChargeDetails merchantOperatingCityId req.paymentInstrument
+  let mbCustomerExtraFee = (\fee -> mkPrice (Just fee.currency) (SPaymentCharge.chargeAmountFromPayable fee.currency estimate.riderTaxRates selectedPaymentCharge fee.amount)) <$> ((mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee))
   let mbNegativeFareAdjustment = (mkPriceFromAPIEntity <$> req.negativeFareAdjustmentWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.negativeFareAdjustment)
   Kernel.Prelude.whenJust req.customerExtraFeeWithCurrency $ \reqWithCurrency -> do
     unless (estimate.estimatedFare.currency == reqWithCurrency.currency) $
@@ -330,6 +333,7 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
 
   merchantPaymentMethod <- maybe (return Nothing) (\pmId -> getOneConfig (MerchantPaymentMethodDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, configId = Just pmId}) (Just (maybeToList <$> QMPM.findById (Id pmId)))) req.paymentMethodId
   let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
+  paymentChargeDetails <- SPaymentCharge.resolvePaymentChargeDetails merchantOperatingCityId paymentInstrument
   when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
     validDeliveryDetails <- deliveryDetails & fromMaybeM (InvalidRequest "Delivery details not found for trip category Delivery")
     updateRequiredDeliveryDetails searchRequestId searchRequest.merchantId searchRequest.merchantOperatingCityId validDeliveryDetails

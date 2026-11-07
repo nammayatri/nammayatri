@@ -34,6 +34,7 @@ data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
     platformFeeCharge :: B.C f (Maybe Domain.PlatformFeeCharge),
     platformFeeCgst :: B.C f (Maybe Double),
     platformFeeSgst :: B.C f (Maybe Double),
+    platformFeeVat :: B.C f (Maybe Double),
     waitingCharge :: B.C f (Maybe Domain.WaitingCharge),
     freeWatingTime :: B.C f (Maybe Minutes), -- FIXME typo
     nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)

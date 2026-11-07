@@ -22,6 +22,7 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as BUtils
 import qualified Beckn.OnDemand.Utils.OndcScheduledRide.Common as OSRCommon
 import qualified BecknV2.OnDemand.Enums as Enums
+import BecknV2.OnDemand.FareBreakup.Tax (mkTaxBreakup)
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -232,14 +233,8 @@ mkQuotationBreakup booking mbCancellationDuesDetails' =
   Just $
     case mbCancellationDuesDetails' of
       Just cancellationDuesDetails ->
-        mkProjectFareParamsTagBreakupItemsForCancellation
-          mkPrice
-          mkQuotationBreakupInner
-          (fromMaybe 0 cancellationDuesDetails.cancellationFee)
-          (fromMaybe 0 cancellationDuesDetails.cancellationFeeTax)
-          <> [ mkQuotationBreakupInner (show Enums.RIDE_CANCELLATION_CHARGES) (mkPrice (fromMaybe 0 cancellationDuesDetails.cancellationFee)),
-               mkQuotationBreakupInner (show Enums.RIDE_CANCELLATION_TAX) (mkPrice (fromMaybe 0 cancellationDuesDetails.cancellationFeeTax))
-             ]
+        mkQuotationBreakupInner (show Enums.RIDE_CANCELLATION_CHARGES) (mkPrice (fromMaybe 0 cancellationDuesDetails.cancellationFee)) :
+        map (\(title, amount) -> mkQuotationBreakupInner title (mkPrice amount)) (cancellationTaxLines (cancellationDuesDetails.cancellationFeeTaxBreakup <|> mkTaxBreakup cancellationDuesDetails.cancellationFeeTax Nothing Nothing Nothing))
       Nothing -> []
   where
     mkPrice money =
@@ -271,7 +266,7 @@ tfItems booking merchant mbFarePolicy =
           Spec.itemCategoryIds = Just [BUtils.tripCategoryToCategoryCode booking.tripCategory],
           Spec.itemPaymentIds = tfPaymentId booking.paymentId,
           Spec.itemPrice = tfItemPrice booking,
-          Spec.itemTags = BUtils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing Nothing (not $ null booking.stops)
+          Spec.itemTags = BUtils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing (not $ null booking.stops)
         }
     ]
 

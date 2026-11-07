@@ -43,6 +43,7 @@ where
 import qualified API.UI.Select as DSelect
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import qualified Data.Aeson
 import Data.List (sortBy)
 import Data.Maybe ()
@@ -182,7 +183,8 @@ data EstimateInfo = EstimateInfo
     smartTipReason :: Maybe Text,
     negativeFareSuggestion :: Maybe HighPrecMoney,
     area :: Maybe Text,
-    navigationInstruction :: Maybe Text
+    navigationInstruction :: Maybe Text,
+    riderTaxRates :: Maybe Tax.RiderTaxRates
   }
 
 data NightShiftInfo = NightShiftInfo

@@ -38,6 +38,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.MerchantPaymentMethod as SLMPM
+import qualified SharedLogic.PaymentCharge as SPaymentCharge
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -157,6 +158,7 @@ mkItemTags res =
             Tags.NEGATIVE_FARE_ADJUSTMENT Tags.~=? ((\charges -> show charges.getMoney) <$> res.negativeFareAdjustment),
             Tags.OTHER_SELECT_ESTIMATES Tags.~=| (not (null res.remainingEstimateBppIds), show (getId <$> res.remainingEstimateBppIds))
           ]
+            <> SPaymentCharge.paymentChargeDetailsTagList res.paymentChargeDetails
       deliveryTags = mkSelectResDetailsTagGroup res
    in fromMaybe [] baseTags <> deliveryTags
 

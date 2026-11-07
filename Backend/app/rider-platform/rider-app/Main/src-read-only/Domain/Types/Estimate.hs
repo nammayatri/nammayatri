@@ -4,6 +4,7 @@
 module Domain.Types.Estimate where
 
 import qualified BecknV2.OnDemand.Enums
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.EstimateStatus
@@ -67,6 +68,7 @@ data Estimate = Estimate
     providerUrl :: Servant.Client.Core.BaseUrl,
     qar :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
+    riderTaxRates :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.RiderTaxRates,
     selectedOfferId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierShortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -603,6 +603,7 @@ library
       SharedLogic.External.Nandi.Types
       SharedLogic.FareBreakdown
       SharedLogic.FareBreakupInfo
+      SharedLogic.FareBreakupLines
       SharedLogic.FeedbackForm
       SharedLogic.Finance.CashbackPayout
       SharedLogic.Finance.Rails
@@ -652,6 +653,7 @@ library
       SharedLogic.PassExpiryReminder
       SharedLogic.PassRestore
       SharedLogic.Payment
+      SharedLogic.PaymentCharge
       SharedLogic.PaymentVendorSplits
       SharedLogic.PayoutStatusCheck
       SharedLogic.Person
@@ -666,6 +668,7 @@ library
       SharedLogic.Ride
       SharedLogic.RideFeedback.Actions
       SharedLogic.RideFeedback.Types
+      SharedLogic.RideLedgerLines
       SharedLogic.RiderConsentPush
       SharedLogic.RoutePassPricing
       SharedLogic.ScheduledNotifications

@@ -3,6 +3,7 @@
 
 module Domain.Types.CancellationDuesDetails where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -17,15 +18,19 @@ data CancellationDuesDetails = CancellationDuesDetails
   { cancellationAmount :: Kernel.Types.Common.HighPrecMoney,
     cancellationCollectionMode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationCommissionTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     cancellationConsequenceRowId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationFeeTax :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationFeeTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     id :: Kernel.Types.Id.Id Domain.Types.CancellationDuesDetails.CancellationDuesDetails,
     overdueCancellationCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     overdueCancellationCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    overdueCancellationCommissionTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     overdueCancellationTax :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    overdueCancellationTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     paymentStatus :: Domain.Types.CancellationDuesDetails.CancellationDuesPaymentStatus,
     rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
     riderId :: Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails,

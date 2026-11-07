@@ -27,6 +27,7 @@ data FareParametersSlabDetailsT f = FareParametersSlabDetailsT
     platformFee :: B.C f (Maybe HighPrecMoney),
     sgst :: B.C f (Maybe HighPrecMoney),
     cgst :: B.C f (Maybe HighPrecMoney),
+    vat :: B.C f (Maybe HighPrecMoney),
     currency :: B.C f (Maybe Currency)
   }
   deriving (Generic, B.Beamable)

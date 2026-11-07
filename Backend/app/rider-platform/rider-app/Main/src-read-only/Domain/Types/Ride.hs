@@ -3,6 +3,7 @@
 
 module Domain.Types.Ride where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import Data.Aeson
 import qualified Domain.Types.Booking
 import qualified Domain.Types.Client
@@ -48,6 +49,7 @@ data RideE e = Ride
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
     commission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    commissionTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     createdAt :: Kernel.Prelude.UTCTime,
     destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
@@ -87,6 +89,7 @@ data RideE e = Ride
     otp :: Kernel.Prelude.Text,
     paymentCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     paymentChargeBearer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    paymentChargeTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     paymentStatus :: Domain.Types.Ride.PaymentStatus,
     pickupEtaLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickupRouteCallCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -155,6 +158,7 @@ instance EncryptedItem Ride where
           clientSdkVersion = clientSdkVersion entity,
           cloudType = cloudType entity,
           commission = commission entity,
+          commissionTaxBreakup = commissionTaxBreakup entity,
           createdAt = createdAt entity,
           destinationReachedAt = destinationReachedAt entity,
           distanceUnit = distanceUnit entity,
@@ -194,6 +198,7 @@ instance EncryptedItem Ride where
           otp = otp entity,
           paymentCharge = paymentCharge entity,
           paymentChargeBearer = paymentChargeBearer entity,
+          paymentChargeTaxBreakup = paymentChargeTaxBreakup entity,
           paymentStatus = paymentStatus entity,
           pickupEtaLogicVersion = pickupEtaLogicVersion entity,
           pickupRouteCallCount = pickupRouteCallCount entity,
@@ -254,6 +259,7 @@ instance EncryptedItem Ride where
             clientSdkVersion = clientSdkVersion entity,
             cloudType = cloudType entity,
             commission = commission entity,
+            commissionTaxBreakup = commissionTaxBreakup entity,
             createdAt = createdAt entity,
             destinationReachedAt = destinationReachedAt entity,
             distanceUnit = distanceUnit entity,
@@ -293,6 +299,7 @@ instance EncryptedItem Ride where
             otp = otp entity,
             paymentCharge = paymentCharge entity,
             paymentChargeBearer = paymentChargeBearer entity,
+            paymentChargeTaxBreakup = paymentChargeTaxBreakup entity,
             paymentStatus = paymentStatus entity,
             pickupEtaLogicVersion = pickupEtaLogicVersion entity,
             pickupRouteCallCount = pickupRouteCallCount entity,

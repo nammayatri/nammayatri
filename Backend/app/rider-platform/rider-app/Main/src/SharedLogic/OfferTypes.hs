@@ -4,6 +4,7 @@ import qualified Data.Aeson
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
 import qualified Lib.Payment.Domain.Types.Offer as DOffer
+import qualified SharedLogic.PaymentCharge as SPaymentCharge
 
 data CumulativeOfferResp = CumulativeOfferResp
   { offerTitle :: Text,
@@ -63,6 +64,7 @@ data OfferRespAPIEntity = OfferRespAPIEntity
     isHidden :: Bool,
     amountSaved :: HighPrecMoney,
     postOfferAmount :: HighPrecMoney,
+    postOfferPayable :: Maybe SPaymentCharge.PayableAmount,
     estimatedAmountSaved :: HighPrecMoney,
     estimatedPostOfferAmount :: HighPrecMoney,
     offerType :: Maybe DOffer.OfferType,

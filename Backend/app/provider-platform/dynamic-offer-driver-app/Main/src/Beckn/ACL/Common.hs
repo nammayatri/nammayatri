@@ -14,19 +14,46 @@
 
 module Beckn.ACL.Common where
 
-import qualified Beckn.Types.Core.Taxi.Common.BreakupItem as Common
 import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Common
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import BecknV2.OnDemand.FareBreakup.Tax (TaxBreakup (..))
+import qualified BecknV2.OnDemand.PaymentCharge as PaymentCharge
+import qualified BecknV2.OnDemand.Tags as BecknTags
 import qualified BecknV2.OnDemand.Types as Spec
 import Data.Maybe
 import Domain.Types
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney, highPrecMoneyToText)
+
+mkSettlementTagGroups ::
+  ( HasField "commission" r (Maybe HighPrecMoney),
+    HasField "commissionTaxBreakup" r (Maybe TaxBreakup),
+    HasField "paymentCharge" r (Maybe HighPrecMoney),
+    HasField "paymentChargeTaxBreakup" r (Maybe TaxBreakup)
+  ) =>
+  r ->
+  Maybe PaymentCharge.PaymentChargeDetails ->
+  Maybe [Spec.TagGroup]
+mkSettlementTagGroups entity paymentChargeDetails =
+  if null tags then Nothing else BecknTags.buildTagGroups tags
+  where
+    tags =
+      chargeTags (BecknTags.COMMISSION, BecknTags.COMMISSION_TAX, BecknTags.COMMISSION_CGST, BecknTags.COMMISSION_SGST, BecknTags.COMMISSION_IGST) entity.commission entity.commissionTaxBreakup
+        <> chargeTags (BecknTags.PAYMENT_CHARGE, BecknTags.PAYMENT_CHARGE_TAX, BecknTags.PAYMENT_CHARGE_CGST, BecknTags.PAYMENT_CHARGE_SGST, BecknTags.PAYMENT_CHARGE_IGST) entity.paymentCharge entity.paymentChargeTaxBreakup
+        <> PaymentCharge.paymentChargeDetailsTagList paymentChargeDetails
+    chargeTags (chargeTag, taxTag, cgstTag, sgstTag, igstTag) charge taxBreakup =
+      catMaybes
+        [ (chargeTag BecknTags.~=) . highPrecMoneyToText <$> charge,
+          (taxTag BecknTags.~=) . highPrecMoneyToText . (.total) <$> taxBreakup,
+          (cgstTag BecknTags.~=) . highPrecMoneyToText <$> (taxBreakup >>= (.cgst)),
+          (sgstTag BecknTags.~=) . highPrecMoneyToText <$> (taxBreakup >>= (.sgst)),
+          (igstTag BecknTags.~=) . highPrecMoneyToText <$> (taxBreakup >>= (.igst))
+        ]
 
 castDPaymentCollector :: DMPM.PaymentCollector -> Payment.PaymentCollector
 castDPaymentCollector DMPM.BAP = Payment.BAP
@@ -100,178 +127,6 @@ castCancellationSource = \case
   DBCR.ByAllocator -> Common.ByAllocator
   DBCR.ByApplication -> Common.ByApplication
   DBCR.ByFleetOwner -> Common.ByFleetOwner
-
-filterRequiredBreakups :: DFParams.FareParametersType -> Common.BreakupItem -> Bool
-filterRequiredBreakups fParamsType breakup = do
-  let title = breakup.title
-  case fParamsType of
-    DFParams.Progressive ->
-      title
-        `elem` [ "BASE_FARE",
-                 "SERVICE_CHARGE",
-                 "DEAD_KILOMETER_FARE",
-                 "DISTANCE_FARE",
-                 "DRIVER_SELECTED_FARE",
-                 "CUSTOMER_SELECTED_FARE",
-                 "TOTAL_FARE",
-                 "WAITING_OR_PICKUP_CHARGES",
-                 "EXTRA_TIME_FARE",
-                 "CANCELLATION_CHARGES",
-                 "TOLL_CHARGES",
-                 "PARKING_CHARGE",
-                 "NIGHT_SHIFT_CHARGE",
-                 "RIDE_STOP_CHARGES",
-                 "PER_STOP_CHARGES",
-                 "LUGGAGE_CHARGE",
-                 "RETURN_FEE",
-                 "BOOTH_CHARGE",
-                 "SCHEDULING_CHARGE",
-                 "DRIVER_ALLOWANCE",
-                 "AIRPORT_CONVENIENCE_FEE",
-                 "RIDE_VAT",
-                 "TOLL_VAT",
-                 "TOLL_FARE_TAX_EXCLUSIVE",
-                 "TOLL_FARE_TAX",
-                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
-                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX",
-                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
-                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX",
-                 "CANCELLATION_FEE_TAX_EXCLUSIVE",
-                 "CANCELLATION_TAX",
-                 "PARKING_CHARGE_TAX_EXCLUSIVE",
-                 "PARKING_CHARGE_TAX",
-                 "PAYMENT_CHARGE",
-                 "PAYMENT_CHARGE_TAX_EXCLUSIVE",
-                 "PAYMENT_CHARGE_TAX",
-                 "PAYMENT_CHARGE_RATE",
-                 "PAYMENT_CHARGE_VAT_PCT",
-                 "CONGESTION_CHARGE"
-               ]
-    DFParams.Slab ->
-      title
-        `elem` [ "BASE_FARE",
-                 "SERVICE_CHARGE",
-                 "WAITING_OR_PICKUP_CHARGES",
-                 "PLATFORM_FEE",
-                 "SGST",
-                 "CGST",
-                 "FIXED_GOVERNMENT_RATE",
-                 "CUSTOMER_SELECTED_FARE",
-                 "TOTAL_FARE",
-                 "NIGHT_SHIFT_CHARGE",
-                 "EXTRA_TIME_FARE",
-                 "CANCELLATION_CHARGES",
-                 "TOLL_CHARGES",
-                 "PARKING_CHARGE",
-                 "LUGGAGE_CHARGE",
-                 "DRIVER_ALLOWANCE",
-                 "AIRPORT_CONVENIENCE_FEE",
-                 "RETURN_FEE",
-                 "BOOTH_CHARGE",
-                 "SCHEDULING_CHARGE",
-                 "RIDE_VAT",
-                 "TOLL_VAT",
-                 "TOLL_FARE_TAX_EXCLUSIVE",
-                 "TOLL_FARE_TAX",
-                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
-                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX",
-                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
-                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX",
-                 "CANCELLATION_FEE_TAX_EXCLUSIVE",
-                 "CANCELLATION_TAX",
-                 "PARKING_CHARGE_TAX_EXCLUSIVE",
-                 "PARKING_CHARGE_TAX",
-                 "PAYMENT_CHARGE",
-                 "PAYMENT_CHARGE_TAX_EXCLUSIVE",
-                 "PAYMENT_CHARGE_TAX",
-                 "PAYMENT_CHARGE_RATE",
-                 "PAYMENT_CHARGE_VAT_PCT",
-                 "CONGESTION_CHARGE"
-               ]
-    DFParams.Rental ->
-      title
-        `elem` [ "BASE_FARE",
-                 "SERVICE_CHARGE",
-                 "DEAD_KILOMETER_FARE",
-                 "DIST_BASED_FARE",
-                 "TIME_BASED_FARE",
-                 "NIGHT_SHIFT_CHARGE",
-                 "DRIVER_SELECTED_FARE",
-                 "CUSTOMER_SELECTED_FARE",
-                 "TOTAL_FARE",
-                 "WAITING_OR_PICKUP_CHARGES",
-                 "EXTRA_TIME_FARE",
-                 "CANCELLATION_CHARGES",
-                 "TOLL_CHARGES",
-                 "PARKING_CHARGE",
-                 "LUGGAGE_CHARGE",
-                 "DRIVER_ALLOWANCE",
-                 "AIRPORT_CONVENIENCE_FEE",
-                 "RETURN_FEE",
-                 "BOOTH_CHARGE",
-                 "SCHEDULING_CHARGE",
-                 "RIDE_VAT",
-                 "TOLL_VAT",
-                 "TOLL_FARE_TAX_EXCLUSIVE",
-                 "TOLL_FARE_TAX",
-                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
-                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX",
-                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
-                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX",
-                 "CANCELLATION_FEE_TAX_EXCLUSIVE",
-                 "CANCELLATION_TAX",
-                 "PARKING_CHARGE_TAX_EXCLUSIVE",
-                 "PARKING_CHARGE_TAX",
-                 "PAYMENT_CHARGE",
-                 "PAYMENT_CHARGE_TAX_EXCLUSIVE",
-                 "PAYMENT_CHARGE_TAX",
-                 "PAYMENT_CHARGE_RATE",
-                 "PAYMENT_CHARGE_VAT_PCT",
-                 "CONGESTION_CHARGE"
-               ]
-    DFParams.InterCity ->
-      title
-        `elem` [ "BASE_FARE",
-                 "SERVICE_CHARGE",
-                 "DEAD_KILOMETER_FARE",
-                 "DIST_BASED_FARE",
-                 "TIME_BASED_FARE",
-                 "NIGHT_SHIFT_CHARGE",
-                 "DRIVER_SELECTED_FARE",
-                 "CUSTOMER_SELECTED_FARE",
-                 "TOTAL_FARE",
-                 "WAITING_OR_PICKUP_CHARGES",
-                 "EXTRA_TIME_FARE",
-                 "EXTRA_DISTANCE_FARE",
-                 "CANCELLATION_CHARGES",
-                 "TOLL_CHARGES",
-                 "PARKING_CHARGE",
-                 "LUGGAGE_CHARGE",
-                 "DRIVER_ALLOWANCE",
-                 "AIRPORT_CONVENIENCE_FEE",
-                 "RETURN_FEE",
-                 "BOOTH_CHARGE",
-                 "SCHEDULING_CHARGE",
-                 "RIDE_VAT",
-                 "TOLL_VAT",
-                 "TOLL_FARE_TAX_EXCLUSIVE",
-                 "TOLL_FARE_TAX",
-                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
-                 "RIDE_FARE_DISCOUNT_APPLICABLE_TAX",
-                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE",
-                 "RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX",
-                 "CANCELLATION_FEE_TAX_EXCLUSIVE",
-                 "CANCELLATION_TAX",
-                 "PARKING_CHARGE_TAX_EXCLUSIVE",
-                 "PARKING_CHARGE_TAX",
-                 "PAYMENT_CHARGE",
-                 "PAYMENT_CHARGE_TAX_EXCLUSIVE",
-                 "PAYMENT_CHARGE_TAX",
-                 "PAYMENT_CHARGE_RATE",
-                 "PAYMENT_CHARGE_VAT_PCT",
-                 "CONGESTION_CHARGE"
-               ]
-    _ -> True
 
 tfContact :: Maybe Text -> Maybe Spec.Contact
 tfContact phoneNum =

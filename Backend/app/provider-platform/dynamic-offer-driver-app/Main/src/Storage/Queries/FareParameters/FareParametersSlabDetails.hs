@@ -40,6 +40,7 @@ instance ToTType' FareParametersSlabDetails BeamFPSD.FullFareParametersSlabDetai
         platformFee = platformFee,
         sgst = sgst,
         cgst = cgst,
+        vat = vat,
         currency = Just currency
       }
 
@@ -52,6 +53,7 @@ instance FromTType' FareParametersSlabDetails BeamFPSD.FullFareParametersSlabDet
             { platformFee = platformFee,
               sgst = sgst,
               cgst = cgst,
+              vat = vat,
               currency = fromMaybe INR currency
             }
         )

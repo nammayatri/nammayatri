@@ -48,7 +48,7 @@ data RefundRequest = RefundRequest
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data RefundComponentAmount = RefundComponentAmount {amount :: Kernel.Types.Common.HighPrecMoney, component :: Domain.Types.FareBreakup.FareComponent}
+data RefundComponentAmount = RefundComponentAmount {amount :: Kernel.Types.Common.HighPrecMoney, component :: Domain.Types.FareBreakup.RefundFareComponent}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data RefundPurpose = RIDE_FARE | CANCELLATION_FEE | BOOKING_DEPOSIT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)

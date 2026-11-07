@@ -14,6 +14,8 @@
 
 module SharedLogic.Ride where
 
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
+import BecknV2.OnDemand.FareBreakup.Tax (TaxBreakup)
 import Control.Applicative ((<|>))
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
@@ -71,6 +73,7 @@ import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet (getPrepaidOfferHoldTotalExcluding, makeWalletRunningBalanceLockKey, removePrepaidOfferHold, reserveWalletForCashRide, resolveIsOnlineFromBooking, voidWalletHoldByReference)
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
+import qualified SharedLogic.RideTax as RideTax
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -201,8 +204,13 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-  commission <- FC.calculateCommission booking.fareParams mbFarePolicy
-  cancellationCommission <- FC.calculateCancellationCommission booking.fareParams mbFarePolicy
+  commissionCharges <- FC.calculateCommission booking.fareParams mbFarePolicy
+  let commission = commissionCharges.rideCommission
+      cancellationCommission = commissionCharges.duesCommission
+  let bookingTax = RideTax.bookingRideTax booking transporterConfig
+      taxBreakups = RideTax.resolveTaxBreakups booking.currency bookingTax (Just booking.fareParams) RideTax.TaxableAmounts {commission = commission, cancellationFee = Nothing, cancellationCommission = Nothing, paymentCharge = booking.paymentCharge}
+      rideCommissionTax = taxBreakups.driverDeductible.commission
+      rideCancellationCommissionTax = taxBreakups.driverDeductible.cancellationCommission
   let (mbPaymentCharge, mbPaymentChargeBearer) = (booking.paymentCharge, booking.paymentChargeBearer)
       -- A dashboard/fleet assignment always wins regardless of timing; only a genuine
       -- driver self-accept falls back to the broadcast-window timing check. A driver
@@ -213,7 +221,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
         | isJust mbForcedScheduledAcceptanceMode = mbForcedScheduledAcceptanceMode
         | DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime now = Just DRide.AcceptedFromBroadcast
         | otherwise = Just DRide.AcceptedAsScheduled
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission rideCommissionTax cancellationCommission rideCancellationCommissionTax mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode
   rideDetails <- buildRideDetails booking ride driver vehicle
   unless bookingPreAssigned $ QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
@@ -304,8 +312,14 @@ recomputeRideFinancialsForFareUpdate ::
 recomputeRideFinancialsForFareUpdate booking ride bookingUpdateReq = do
   newFareParams <- QFP.findById bookingUpdateReq.fareParamsId >>= fromMaybeM (FareParametersNotFound bookingUpdateReq.fareParamsId.getId)
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-  newCommission <- FC.calculateCommission newFareParams mbFarePolicy
-  newCancellationCommission <- FC.calculateCancellationCommission newFareParams mbFarePolicy
+  newCommissionCharges <- FC.calculateCommission newFareParams mbFarePolicy
+  let newCommission = newCommissionCharges.rideCommission
+      newCancellationCommission = newCommissionCharges.duesCommission
+  mbCityTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+  let bookingTax = mbCityTransporterConfig >>= RideTax.bookingRideTax booking
+      newTaxBreakups = RideTax.resolveTaxBreakups booking.currency bookingTax (Just newFareParams) RideTax.TaxableAmounts {commission = newCommission, cancellationFee = Nothing, cancellationCommission = Nothing, paymentCharge = booking.paymentCharge}
+      newCommissionTax = newTaxBreakups.driverDeductible.commission
+      newCancellationCommissionTax = newTaxBreakups.driverDeductible.cancellationCommission
   let softStaleAgainstBooking = booking.estimatedFare /= bookingUpdateReq.oldEstimatedFare
       currentDiscount = if softStaleAgainstBooking then ride.discountAmount else bookingUpdateReq.discountAmount <|> ride.discountAmount
   rawDiscountAmount <-
@@ -315,7 +329,7 @@ recomputeRideFinancialsForFareUpdate booking ride bookingUpdateReq = do
         let reqBody =
               CallBAPInternal.OfferDiscountReq
                 { fareAmount = Just bookingUpdateReq.estimatedFare,
-                  projectFareParamsBreakup = FC.projectFareParamsBreakup newFareParams
+                  fareBreakups = Just (FC.mkFareParamsBreakups True (\amount -> amount) FB.BreakupLine newFareParams)
                 }
         result <-
           withTryCatch "getOfferDiscount:recomputeRideFinancialsForFareUpdate" $
@@ -327,7 +341,7 @@ recomputeRideFinancialsForFareUpdate booking ride bookingUpdateReq = do
             pure currentDiscount
       else pure currentDiscount
   let finalDiscount = FC.clampDiscountToDiscountable newFareParams rawDiscountAmount
-  QRide.updateCommissionAndDiscount newCommission newCancellationCommission finalDiscount ride.id
+  QRide.updateCommissionAndDiscount newCommission newCommissionTax newCancellationCommission newCancellationCommissionTax finalDiscount ride.id
 
 releaseLien ::
   ( Finance.HasActorInfo m r,
@@ -572,12 +586,14 @@ buildRide ::
   Maybe Bool ->
   Maybe (Id Person) ->
   Maybe HighPrecMoney ->
+  Maybe TaxBreakup ->
   Maybe HighPrecMoney ->
+  Maybe TaxBreakup ->
   Maybe HighPrecMoney ->
   Maybe Text ->
   Maybe DRide.ScheduledAcceptanceMode ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission rideCommissionTax cancellationCommission rideCancellationCommissionTax mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   envCloudType <- asks (.cloudType)
@@ -687,8 +703,11 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         isPickupOrDestinationEdited = Just False,
         isInsured = booking.isInsured,
         commission = commission,
+        commissionTaxBreakup = rideCommissionTax,
         cancellationCommission = cancellationCommission,
+        cancellationCommissionTaxBreakup = rideCancellationCommissionTax,
         paymentCharge = mbPaymentCharge,
+        paymentChargeTaxBreakup = booking.paymentChargeTaxBreakup,
         paymentChargeBearer = mbPaymentChargeBearer,
         discountAmount = booking.discountAmount,
         driverGpsTurnedOff = Nothing,
@@ -697,6 +716,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         driverCancellationPenaltyFeeId = Nothing,
         driverCancellationPenaltyAmount = Nothing,
         cancellationChargesOnCancel = Nothing,
+        cancellationChargesOnCancelTax = Nothing,
         driverCancellationPenaltyWaivedReason = Nothing,
         finalFarePolicyId = Nothing,
         subscriptionPurchaseIds = Nothing,
@@ -706,6 +726,9 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         cancellationFaultRule = Nothing,
         cancellationFeeTaxIfCancelled = Nothing,
         cancellationConsequenceRowIdIfCancelled = Nothing,
+        cancellationFeeTaxBreakupIfCancelled = Nothing,
+        cancellationCommissionIfCancelled = Nothing,
+        cancellationCommissionTaxBreakupIfCancelled = Nothing,
         cancellationFaultVerdict = Nothing,
         pickupBehaviour = Nothing,
         pickupDarkSeconds = Nothing,

@@ -160,7 +160,7 @@ mkPriceV2 quote =
 
 mkItemTagsV2 :: HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FullFarePolicy -> Tags.Taggings -> Bool -> Maybe [Spec.TagGroup]
 mkItemTagsV2 estimatedFare mbCancellationCharge congestionChargeViaDp mbFarePolicy taggings hasStops = do
-  let farePolicyTag = Utils.mkRateCardTag Nothing mbCancellationCharge Nothing estimatedFare congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing Nothing hasStops
+  let farePolicyTag = Utils.mkRateCardTag Nothing mbCancellationCharge Nothing estimatedFare congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing hasStops
   Tags.convertToTagGroup taggings.itemTags <> farePolicyTag
 
 mkQuoteV2 :: Bool -> DQuote.DriverQuote -> UTCTime -> Spec.Quotation
@@ -174,8 +174,7 @@ mkQuoteV2 isValueAddNP quote now = do
 
 mkQuoteBreakupInner :: Bool -> DQuote.DriverQuote -> [Spec.QuotationBreakupInner]
 mkQuoteBreakupInner isValueAddNP quote = do
-  let fareParams = mkFareParamsBreakups isValueAddNP mkBreakupPrice mkQuotationBreakupInner quote.fareParams
-   in filter filterRequiredBreakups fareParams
+  mkFareParamsBreakups isValueAddNP mkBreakupPrice mkQuotationBreakupInner quote.fareParams
   where
     mkBreakupPrice money =
       Just
@@ -188,45 +187,6 @@ mkQuoteBreakupInner isValueAddNP quote = do
         { quotationBreakupInnerPrice = price,
           quotationBreakupInnerTitle = Just title
         }
-    filterRequiredBreakups breakup =
-      breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.DEAD_KILOMETER_FARE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.DISTANCE_FARE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.DRIVER_SELECTED_FARE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.CUSTOMER_SELECTED_FARE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.SAFETY_PLUS_CHARGES)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_STOP_CHARGES)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.PER_STOP_CHARGES)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.LUGGAGE_CHARGE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.DRIVER_ALLOWANCE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.AIRPORT_CONVENIENCE_FEE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.RETURN_FEE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.BOOTH_CHARGE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.SCHEDULING_CHARGE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_VAT)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_VAT)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_FARE_TAX_EXCLUSIVE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_FARE_TAX)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_TAX)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_TAX_EXCLUSIVE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_TAX)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_RATE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_VAT_PCT)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.CONGESTION_CHARGE)
 
 mkQuotationPrice :: DQuote.DriverQuote -> Maybe Spec.Price
 mkQuotationPrice quote =

@@ -21,6 +21,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
 import Beckn.Types.Core.Taxi.API.OnCancel as OnCancel
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -148,16 +149,20 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI subscriber.subsc
                   cancelRideReq.cancellationReason
               mbChargesOutcome <- maybe (return Nothing) (\ride -> DCancel.getCancellationCharges booking ride DBCR.ByUser (DTCR.CancellationReasonCode <$> resolvedReasonCode)) mbRide
               -- getCancellationCharges returns the base (tax-exclusive); add tax to get the total fee
-              let cancellationCharges = (\base -> PriceAPIEntity {amount = base + fromMaybe 0 (mbChargesOutcome >>= (.tax)), currency = booking.currency}) <$> (mbChargesOutcome >>= (.fee))
+              let mbFeeTax = mbChargesOutcome >>= (.feeTax)
+                  cancellationCharges = (\base -> PriceAPIEntity {amount = base + Tax.taxTotal mbFeeTax, currency = booking.currency}) <$> (mbChargesOutcome >>= (.fee))
               let mbQuotedRide =
                     mbRide <&> \ride ->
                       ride
                         { DRide.cancellationFeeIfCancelled = (.amount) <$> cancellationCharges,
-                          DRide.cancellationFeeTaxIfCancelled = mbChargesOutcome >>= (.tax),
+                          DRide.cancellationFeeTaxIfCancelled = (.total) <$> mbFeeTax,
+                          DRide.cancellationFeeTaxBreakupIfCancelled = mbFeeTax,
+                          DRide.cancellationCommissionIfCancelled = mbChargesOutcome >>= (.commission),
+                          DRide.cancellationCommissionTaxBreakupIfCancelled = mbChargesOutcome >>= (.commissionTax),
                           DRide.cancellationConsequenceRowIdIfCancelled = mbChargesOutcome >>= (.consequenceRowId)
                         }
               whenJust mbQuotedRide $ \ride ->
-                QRide.updateCancellationQuoteIfCancelled ride.cancellationFeeIfCancelled ride.cancellationFeeTaxIfCancelled ride.cancellationConsequenceRowIdIfCancelled ride.id
+                QRide.updateCancellationQuoteIfCancelled ride.cancellationFeeIfCancelled ride.cancellationFeeTaxIfCancelled ride.cancellationFeeTaxBreakupIfCancelled ride.cancellationCommissionIfCancelled ride.cancellationCommissionTaxBreakupIfCancelled ride.cancellationConsequenceRowIdIfCancelled ride.id
               let onCancelBuildReq =
                     OC.DBookingCancelledReqV2
                       { booking = booking,

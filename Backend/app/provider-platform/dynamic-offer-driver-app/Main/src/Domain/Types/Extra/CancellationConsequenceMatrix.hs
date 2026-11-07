@@ -21,6 +21,7 @@
 -- commission is fixed or percentage; neither applies to additions.
 module Domain.Types.Extra.CancellationConsequenceMatrix where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import Data.Aeson
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
@@ -74,6 +75,9 @@ data ChargeRate
 data CommissionAndTax = CommissionAndTax
   { -- tax is always a percentage of the base charge
     taxPercentage :: Maybe HighPrecMoney,
+    cgstPercentage :: Maybe HighPrecMoney,
+    sgstPercentage :: Maybe HighPrecMoney,
+    igstPercentage :: Maybe HighPrecMoney,
     -- commission on the base charge: fixed amount or percentage
     commission :: Maybe ChargeRate,
     -- When True, every amount in the paired deduction (fixed amount, and a
@@ -81,7 +85,8 @@ data CommissionAndTax = CommissionAndTax
     -- tax is already inside it and gets backed out rather than added on top.
     -- So a PercentageMoney capped at 100 charges the customer 100, not 100 + tax.
     -- Absent/False keeps the legacy reading: the amounts are net and tax is added.
-    amountsInclusiveOfTax :: Maybe Bool
+    amountsInclusiveOfTax :: Maybe Bool,
+    commissionTax :: Maybe Tax.TaxConfig
   }
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)

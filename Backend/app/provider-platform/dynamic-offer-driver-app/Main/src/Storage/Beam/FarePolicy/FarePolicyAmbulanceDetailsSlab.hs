@@ -28,6 +28,7 @@ data FarePolicyAmbulanceDetailsSlabT f = FarePolicyAmbulanceDetailsSlabT
     platformFeeCharge :: B.C f (Maybe Domain.PlatformFeeCharge),
     platformFeeCgst :: B.C f (Maybe Double),
     platformFeeSgst :: B.C f (Maybe Double),
+    platformFeeVat :: B.C f (Maybe Double),
     waitingCharge :: B.C f (Maybe Domain.WaitingCharge),
     freeWaitingTime :: B.C f (Maybe Minutes),
     nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)

@@ -3,6 +3,7 @@
 
 module Domain.Types.Ride where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import Data.Aeson
 import qualified Domain.Types.Booking
 import qualified Domain.Types.CancellationReason
@@ -38,11 +39,16 @@ data Ride = Ride
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     cancellationAdditionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationChargesOnCancel :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationChargesOnCancelTax :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationCommissionIfCancelled :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationCommissionTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
+    cancellationCommissionTaxBreakupIfCancelled :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     cancellationConsequenceRowIdIfCancelled :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationFaultRule :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationFaultVerdict :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationFeeIfCancelled :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationFeeTaxBreakupIfCancelled :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     cancellationFeeTaxIfCancelled :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationReasonCode :: Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationReasonCode,
     cancelledBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -54,6 +60,7 @@ data Ride = Ride
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
     commission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    commissionTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     deliveryFileIds :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile],
@@ -105,6 +112,7 @@ data Ride = Ride
     passedThroughDestination :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     paymentCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     paymentChargeBearer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    paymentChargeTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     pickupBehaviour :: Kernel.Prelude.Maybe Domain.Types.Ride.PickupBehaviour,
     pickupDarkSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickupDistanceCalculationFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -164,12 +172,12 @@ data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (
 
 data ScheduledAcceptanceMode = AcceptedAsScheduled | AcceptedFromBroadcast | AssignedByOps | AssignedByFleetOwner deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PickupBehaviour))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PickupBehaviour)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
-$(mkHttpInstancesForEnum (''RideStatus))
+$(mkHttpInstancesForEnum ''RideStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ScheduledAcceptanceMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ScheduledAcceptanceMode)

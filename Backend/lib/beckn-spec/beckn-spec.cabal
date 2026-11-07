@@ -208,6 +208,9 @@ library
       BecknV2.NTS10.APIs
       BecknV2.NTS10.Types
       BecknV2.OnDemand.Enums
+      BecknV2.OnDemand.FareBreakup.Core
+      BecknV2.OnDemand.FareBreakup.Tax
+      BecknV2.OnDemand.PaymentCharge
       BecknV2.OnDemand.Tags
       BecknV2.OnDemand.Types
       BecknV2.OnDemand.Utils.Common
@@ -221,7 +224,6 @@ library
       BecknV2.RSF.Utils
       BecknV2.Utils
       Domain.SharedLogic.Cancel
-      Domain.SharedLogic.RideDiscount
       Domain.Tools.Error
       Domain.Types
       Domain.Types.Alert
@@ -249,6 +251,7 @@ library
       Domain.Types.JourneyLegStatus
       Domain.Types.MultimodalTicketVerify
       Domain.Types.ParcelType
+      Domain.Types.PaymentChargeBearer
       Domain.Types.PaymentMode
       Domain.Types.RefereeLink
       Domain.Types.RiderPreferredOption

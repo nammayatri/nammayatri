@@ -67,6 +67,7 @@ import qualified SharedLogic.FareProduct as FareProduct
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Pricing
+import qualified SharedLogic.RideTax as RideTax
 import qualified SharedLogic.SurgeConfig as SSC
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.FarePolicy as QFP
@@ -535,13 +536,14 @@ calculateFareParametersForFarePolicy transporterConfig fullFarePolicy mbDistance
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOperatingCityId
   distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOperatingCityId
   now <- getCurrentTime
-  let gstBreakup = Just transporterConfig.taxConfig.rideGst
   let params =
         SFC.CalculateFareParametersParams
           { farePolicy = fullFarePolicy,
             computationPhase = SFC.FCEstimate,
             mbCapConfig = Nothing,
             mbEstimateFareParams = Nothing,
+            paymentChargeDetails = Nothing,
+            buyerOfferDiscount = Nothing,
             actualDistance = mbDistance,
             rideTime = now, ----------assumption as this logic should work only for one way book now trips
             returnTime = Nothing,
@@ -555,6 +557,9 @@ calculateFareParametersForFarePolicy transporterConfig fullFarePolicy mbDistance
             negativeFareAdjustment = Nothing,
             nightShiftCharge = Nothing,
             customerCancellationDues = Nothing,
+            customerCancellationDuesTaxBreakup = Nothing,
+            customerCancellationDuesCommission = Nothing,
+            customerCancellationDuesCommissionTaxBreakup = Nothing,
             nightShiftOverlapChecking = False, ---------considered only for one way
             isScheduled = False, ---------this rate-card path is for one-way book-now trips only
             estimatedDistance = mbDistance,
@@ -575,15 +580,15 @@ calculateFareParametersForFarePolicy transporterConfig fullFarePolicy mbDistance
             merchantOperatingCityId = Just merchantOperatingCityId,
             mbAdditonalChargeCategories = Nothing,
             numberOfLuggages = Nothing,
-            govtChargesRate = gstBreakup,
             pickupGateId = Nothing,
             fareSettlementType = fullFarePolicy.fareSettlementType,
             isParkingFeeExempt = False
           }
   SFC.calculateFareParameters params
 
-mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe Double -> Bool -> FarePolicyD.FarePolicy -> [breakupItem]
-mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTollCharges estimatedTotalFare congestionChargeViaDp mbGovtChargesRate hasStops farePolicy = do
+mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe TransporterConfig -> Bool -> FarePolicyD.FarePolicy -> [breakupItem]
+mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTollCharges estimatedTotalFare congestionChargeViaDp mbTransporterConfig hasStops farePolicy = do
+  let mbGovtChargesRate = (/ 100) <$> RideTax.taxPctOf ((\tc -> RideTax.resolveTaxRates tc (Just farePolicy) Nothing) <$> mbTransporterConfig) (.rideFare)
   let distance = fromMaybe 0 mbDistance -- TODO: Fix Later
       driverExtraFeeBounds = FarePolicyD.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
       nightShiftBounds = farePolicy.nightShiftBounds
@@ -699,15 +704,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       fixedCardChargeCaption = show Tags.FIXED_CARD_CHARGE
       fixedCardChargeItem = mkBreakupItem fixedCardChargeCaption . (mkValue . highPrecMoneyToText) <$> (farePolicy.cardCharge >>= (.fixed))
 
-      customerExtraFeeTaxItem = do
-        config <- farePolicy.vatChargeConfig
-        guard (FarePolicyD.CustomerExtraFeeComponent `elem` config.appliesOn)
-        case SFC.parseCodeValue config.value of
-          Just (SFC.ParsedPercentage pct) ->
-            Just $ mkBreakupItem (show Tags.CUSTOMER_EXTRA_FEE_TAX_MULTIPLIER) (mkValue $ show (1 + fromRational pct :: Double))
-          Just (SFC.ParsedFixed amount) ->
-            Just $ mkBreakupItem (show Tags.CUSTOMER_EXTRA_FEE_TAX_FIXED) (mkValue $ highPrecMoneyToText amount)
-          Nothing -> Nothing
+      customerExtraFeeTaxItem = mbGovtChargesRate <&> \rate -> mkBreakupItem (show Tags.CUSTOMER_EXTRA_FEE_TAX_MULTIPLIER) (mkValue $ show (1 + rate))
 
       additionalDetailsBreakups = processAdditionalDetails farePolicy.farePolicyDetails
       conditionalCharges = processAdditionalCharges farePolicy.conditionalCharges

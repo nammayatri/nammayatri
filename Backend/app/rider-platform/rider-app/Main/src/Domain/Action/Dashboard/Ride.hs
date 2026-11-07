@@ -44,7 +44,6 @@ import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.RideFlowDebug as RideFlowDebug
 import Domain.Action.Dashboard.Route (mkGetLocation)
 import qualified Domain.Action.UI.EstimateBP as EstimateBP
-import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
@@ -91,6 +90,7 @@ import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.DriverNumber (getDriverMobileNumber)
 import qualified SharedLogic.FareBreakdown as SFareBreakdown
+import qualified SharedLogic.FareBreakupLines as FBL
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Offer as SOffer
@@ -772,10 +772,8 @@ postRidePayoutOfferSync merchantShortId _ _mbRequestorId req = withDynamicLogLev
               person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
               totalFare <- ride.totalFare & fromMaybeM (RideFieldNotPresent "totalFare")
               breakups <- QFareBreakup.findAllByEntityIdAndEntityType ride.id.getId DFareBreakup.RIDE
-              let fareCtx = RD.parseProjectFareParamsBreakup $ (\fb -> (fb.description, fb.amount.amount)) <$> breakups
-                  discountApplicableFareAmountTaxIncl = case fareCtx of
-                    Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
-                    Nothing -> totalFare.amount
+              let fareCtx = FBL.fareLinesFromBreakups totalFare.amount breakups
+                  discountApplicableFareAmountTaxIncl = maybe totalFare.amount FBL.offerBasePrice fareCtx
                   offerBasePrice = mkPrice (Just totalFare.currency) discountApplicableFareAmountTaxIncl
               offerStatsInput <- SPayment.buildOfferStatsInput person
               mbRideOfferEntity <- SOffer.processRideOffer (Just offerStatsInput) booking person ride offerBasePrice fareCtx

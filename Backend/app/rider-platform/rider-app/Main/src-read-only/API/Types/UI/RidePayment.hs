@@ -48,7 +48,7 @@ data DueAmountRide = DueAmountRide {amount :: Kernel.Types.Common.HighPrecMoney,
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FareBreakupComponent = FareBreakupComponent
-  { component :: Domain.Types.FareBreakup.FareComponent,
+  { component :: Domain.Types.FareBreakup.RefundFareComponent,
     exclTax :: Kernel.Types.Common.PriceAPIEntity,
     tax :: Kernel.Types.Common.PriceAPIEntity,
     total :: Kernel.Types.Common.PriceAPIEntity
@@ -81,7 +81,7 @@ data PaymentMethodsResponse = PaymentMethodsResponse {defaultPaymentMethodId :: 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RefundComponentReq = RefundComponentReq {amount :: Kernel.Types.Common.PriceAPIEntity, component :: Domain.Types.FareBreakup.FareComponent}
+data RefundComponentReq = RefundComponentReq {amount :: Kernel.Types.Common.PriceAPIEntity, component :: Domain.Types.FareBreakup.RefundFareComponent}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

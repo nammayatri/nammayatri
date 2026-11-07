@@ -1,5 +1,6 @@
 module Storage.Queries.BookingExtra where
 
+import BecknV2.OnDemand.FareBreakup.Tax (TaxBreakup)
 import Control.Applicative
 import Data.List.Extra (notNull)
 import qualified Data.Time as T
@@ -328,20 +329,22 @@ findByTransactionIdAndStatusWithKVAndDB transactionId statusList =
     (Just (Se.Desc BeamB.createdAt))
     <&> listToMaybe
 
-updateCommission :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe HighPrecMoney -> m ()
-updateCommission rbId mbCommission = do
+updateCommission :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe HighPrecMoney -> Maybe TaxBreakup -> m ()
+updateCommission rbId mbCommission mbCommissionTaxBreakup = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamB.commission mbCommission,
+      Se.Set BeamB.commissionTaxBreakup (toJSON <$> mbCommissionTaxBreakup),
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updatePaymentCharge :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe HighPrecMoney -> Maybe Text -> m ()
-updatePaymentCharge rbId mbPaymentCharge mbPaymentChargeBearer = do
+updatePaymentCharge :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe HighPrecMoney -> Maybe TaxBreakup -> Maybe Text -> m ()
+updatePaymentCharge rbId mbPaymentCharge mbPaymentChargeTaxBreakup mbPaymentChargeBearer = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamB.paymentCharge mbPaymentCharge,
+      Se.Set BeamB.paymentChargeTaxBreakup (toJSON <$> mbPaymentChargeTaxBreakup),
       Se.Set BeamB.paymentChargeBearer mbPaymentChargeBearer,
       Se.Set BeamB.updatedAt now
     ]

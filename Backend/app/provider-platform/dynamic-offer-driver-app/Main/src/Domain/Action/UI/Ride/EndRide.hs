@@ -32,6 +32,7 @@ where
 
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List.NonEmpty as NE
@@ -102,6 +103,7 @@ import qualified SharedLogic.ManualTollCharge as ManualTollCharge
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.ParkingFeeExemption as SPFE
 import SharedLogic.Ride (validateRideLocation)
+import qualified SharedLogic.RideTax as RideTax
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
@@ -562,7 +564,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
           let reqBody =
                 CallBAPInternal.OfferDiscountReq
                   { fareAmount = Just finalFare,
-                    projectFareParamsBreakup = Fare.projectFareParamsBreakup baseFareParams
+                    fareBreakups = Just (Fare.mkFareParamsBreakups True (\amount -> amount) FB.BreakupLine baseFareParams)
                   }
           result <-
             withTryCatch "getOfferDiscount:endRideTransaction" $
@@ -576,20 +578,20 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     let discountAmount = Fare.clampDiscountToDiscountable baseFareParams rawDiscountAmount
     -- Airport/parking charge is already in fareParams and finalFare from estimate/quote.
     mbFarePolicy <- FarePolicy.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-    finalCommission <- Fare.calculateCommission baseFareParams mbFarePolicy
-    finalCancellationCommission <- Fare.calculateCancellationCommission baseFareParams mbFarePolicy
+    commissionCharges <- Fare.calculateCommission baseFareParams mbFarePolicy
+    let finalCommission = commissionCharges.rideCommission
+        finalCancellationCommission = commissionCharges.duesCommission
+    let bookingTax = RideTax.bookingRideTax booking thresholdConfig
     -- SHADOW MODE: the legacy ladder above did the billing; this evaluates the
     -- unified decision core on the same inputs, persists its reason on the
     -- ride, and logs/counts divergence. See RecomputeDecision module header.
     mbRecomputeDecision <- shadowRecomputeDecision req booking ride mbOdometer pickupDropOutsideOfThreshold distanceCalculationFailed mbShadowApprox chargeableDistance tripEndPoint thresholdConfig mbFarePolicy now
-    let appliedCharge = case mbUpdatedFareParams of
-          Just recalculatedParams -> fromMaybe 0 recalculatedParams.paymentProcessingFee + fromMaybe 0 recalculatedParams.paymentProcessingFeeVat
-          Nothing -> fromMaybe 0 baseFareParams.paymentProcessingFee + fromMaybe 0 baseFareParams.paymentProcessingFeeVat
-        chargeRes = Fare.finalisePaymentCharge (Just thresholdConfig.driverWalletConfig) finalFare appliedCharge discountAmount baseFareParams
+    let chargeRes = Fare.paymentChargeResult booking.paymentChargeDetails discountAmount finalFare baseFareParams
         finalFareWithPaymentCharge = chargeRes.adjustedFare
         mbPaymentCharge = chargeRes.paymentCharge
         mbPaymentChargeBearer = chargeRes.paymentChargeBearer
         rideFareParams = chargeRes.adjustedFareParams
+        taxBreakups = RideTax.resolveTaxBreakups booking.currency bookingTax (Just rideFareParams) RideTax.TaxableAmounts {commission = finalCommission, cancellationFee = Nothing, cancellationCommission = Nothing, paymentCharge = mbPaymentCharge}
         mbFareParamsToPersist = chargeRes.adjustedFareParams <$ mbUpdatedFareParams
     clearEditDestinationWayAndSnappedPointsFork <- awaitableFork "endRide->clearEditDestinationWayAndSnappedPoints" $ withTimeAPI "endRide" "clearEditDestinationWayAndSnappedPoints" $ clearEditDestinationWayAndSnappedPoints driverId
     clearReachedStopLocationsFork <- awaitableFork "endRide->clearReachedStopLocations" $ withTimeAPI "endRide" "clearReachedStopLocations" $ clearReachedStopLocations rideOld.id
@@ -608,8 +610,11 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                driverGoHomeRequestId = ghInfo.driverGoHomeRequestId,
                hasStops = Just (not $ null ride.stops),
                commission = finalCommission,
+               commissionTaxBreakup = taxBreakups.driverDeductible.commission,
                cancellationCommission = finalCancellationCommission,
+               cancellationCommissionTaxBreakup = taxBreakups.driverDeductible.cancellationCommission,
                paymentCharge = mbPaymentCharge,
+               paymentChargeTaxBreakup = taxBreakups.driverDeductible.paymentCharge <|> taxBreakups.platformDeductible.paymentCharge,
                paymentChargeBearer = mbPaymentChargeBearer,
                discountAmount = discountAmount,
                recomputeReason = (\d -> RD.mkShadowRecordText d chargeableDistance) <$> mbRecomputeDecision
@@ -954,6 +959,8 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
               computationPhase = Fare.FCRecompute,
               mbCapConfig = farePolicy.fareRecomputeCapConfig,
               mbEstimateFareParams = Just booking.fareParams,
+              paymentChargeDetails = booking.paymentChargeDetails,
+              buyerOfferDiscount = booking.discountAmount,
               actualDistance = Just chargeableDistance,
               estimatedDistance = Just oldDistance,
               rideTime = booking.startTime,
@@ -974,6 +981,9 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
               estimatedCongestionCharge = endRideCongestionCharge,
               isScheduled = booking.isScheduled,
               customerCancellationDues = booking.fareParams.customerCancellationDues,
+              customerCancellationDuesTaxBreakup = (RideTax.resolveTaxBreakups booking.fareParams.currency Nothing (Just booking.fareParams) RideTax.noTaxableAmounts).riderPayable.cancellationFee,
+              customerCancellationDuesCommission = booking.fareParams.customerCancellationDuesCommission,
+              customerCancellationDuesCommissionTaxBreakup = (RideTax.resolveTaxBreakups booking.fareParams.currency Nothing (Just booking.fareParams) RideTax.noTaxableAmounts).driverDeductible.cancellationCommission,
               nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
               timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
               tollCharges = ride.tollCharges,
@@ -987,7 +997,6 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
               merchantOperatingCityId = Just booking.merchantOperatingCityId,
               mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
               numberOfLuggages = booking.numberOfLuggages,
-              govtChargesRate = Just thresholdConfig.taxConfig.rideGst,
               pickupGateId = booking.pickupGateId,
               fareSettlementType = booking.fareSettlementType,
               isParkingFeeExempt = rcParkingFeeExempt

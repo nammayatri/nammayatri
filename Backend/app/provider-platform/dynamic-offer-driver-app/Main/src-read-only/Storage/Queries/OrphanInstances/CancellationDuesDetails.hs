@@ -12,6 +12,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.CancellationDuesDetails as Beam
 
 instance FromTType' Beam.CancellationDuesDetails Domain.Types.CancellationDuesDetails.CancellationDuesDetails where
@@ -22,15 +23,19 @@ instance FromTType' Beam.CancellationDuesDetails Domain.Types.CancellationDuesDe
           { cancellationAmount = cancellationAmount,
             cancellationCollectionMode = cancellationCollectionMode,
             cancellationCommission = cancellationCommission,
+            cancellationCommissionTaxBreakup = Kernel.Utils.JSON.valueToMaybe =<< cancellationCommissionTaxBreakup,
             cancellationConsequenceRowId = cancellationConsequenceRowId,
             cancellationFee = cancellationFee,
             cancellationFeeTax = cancellationFeeTax,
+            cancellationFeeTaxBreakup = Kernel.Utils.JSON.valueToMaybe =<< cancellationFeeTaxBreakup,
             createdAt = createdAt,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             id = Kernel.Types.Id.Id id,
             overdueCancellationCharge = overdueCancellationCharge,
             overdueCancellationCommission = overdueCancellationCommission,
+            overdueCancellationCommissionTaxBreakup = Kernel.Utils.JSON.valueToMaybe =<< overdueCancellationCommissionTaxBreakup,
             overdueCancellationTax = overdueCancellationTax,
+            overdueCancellationTaxBreakup = Kernel.Utils.JSON.valueToMaybe =<< overdueCancellationTaxBreakup,
             paymentStatus = paymentStatus,
             rideId = Kernel.Types.Id.Id rideId,
             riderId = Kernel.Types.Id.Id riderId,
@@ -45,15 +50,19 @@ instance ToTType' Beam.CancellationDuesDetails Domain.Types.CancellationDuesDeta
       { Beam.cancellationAmount = cancellationAmount,
         Beam.cancellationCollectionMode = cancellationCollectionMode,
         Beam.cancellationCommission = cancellationCommission,
+        Beam.cancellationCommissionTaxBreakup = toJSON <$> cancellationCommissionTaxBreakup,
         Beam.cancellationConsequenceRowId = cancellationConsequenceRowId,
         Beam.cancellationFee = cancellationFee,
         Beam.cancellationFeeTax = cancellationFeeTax,
+        Beam.cancellationFeeTaxBreakup = toJSON <$> cancellationFeeTaxBreakup,
         Beam.createdAt = createdAt,
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.overdueCancellationCharge = overdueCancellationCharge,
         Beam.overdueCancellationCommission = overdueCancellationCommission,
+        Beam.overdueCancellationCommissionTaxBreakup = toJSON <$> overdueCancellationCommissionTaxBreakup,
         Beam.overdueCancellationTax = overdueCancellationTax,
+        Beam.overdueCancellationTaxBreakup = toJSON <$> overdueCancellationTaxBreakup,
         Beam.paymentStatus = paymentStatus,
         Beam.rideId = Kernel.Types.Id.getId rideId,
         Beam.riderId = Kernel.Types.Id.getId riderId,

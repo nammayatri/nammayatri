@@ -42,6 +42,7 @@ imports:
   VehicleCategory : BecknV2.OnDemand.Enums
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
   ParentSearchRequestLocationInfo: Domain.Types.Extra.Booking
+  TaxBreakup: BecknV2.OnDemand.FareBreakup.Tax
 
 BookingLocation:
   tableName: booking_location
@@ -273,7 +274,9 @@ Booking:
     # avoid a self-import.
     supersededByBookingId: Maybe Text
     commission: Maybe HighPrecMoney
+    commissionTaxBreakup: Maybe TaxBreakup
     paymentCharge: Maybe HighPrecMoney
+    paymentChargeTaxBreakup: Maybe TaxBreakup
     paymentChargeBearer: Maybe Text
     paymentMode: Maybe PaymentMode
     dashboardAgentId: Maybe Text
@@ -348,6 +351,8 @@ Booking:
     isPetRide: Maybe Bool
     requiresPaymentBeforeConfirm: Maybe Bool
     parentSearchRequestLocationInfo: Maybe Value
+    commissionTaxBreakup: Maybe Value
+    paymentChargeTaxBreakup: Maybe Value
 
 
   sqlType:
@@ -401,6 +406,8 @@ Booking:
     displayBookingId: character varying(25)
     requiresPaymentBeforeConfirm: boolean
     parentSearchRequestLocationInfo: jsonb
+    commissionTaxBreakup: json
+    paymentChargeTaxBreakup: json
 
   default:
     fareProductType: "'ONE_WAY'"
@@ -449,6 +456,8 @@ Booking:
     requiresPaymentBeforeConfirm: Kernel.Prelude.Just|I
     billingCategory: Kernel.Prelude.Just billingCategory|E
     parentSearchRequestLocationInfo: fmap toJSON parentSearchRequestLocationInfo|E
+    commissionTaxBreakup: toJSON <$> commissionTaxBreakup|E
+    paymentChargeTaxBreakup: toJSON <$> paymentChargeTaxBreakup|E
 
   intermediateTransformers:
     toTType:
@@ -483,6 +492,8 @@ Booking:
     requiresPaymentBeforeConfirm: fromMaybe False requiresPaymentBeforeConfirm | E
     billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
     parentSearchRequestLocationInfo: (Kernel.Utils.JSON.valueToMaybe =<< parentSearchRequestLocationInfo)|E
+    commissionTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< commissionTaxBreakup|E
+    paymentChargeTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< paymentChargeTaxBreakup|E
 
   extraOperations:
     - EXTRA_QUERY_FILE

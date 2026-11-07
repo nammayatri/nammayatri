@@ -3,6 +3,8 @@
 
 module Domain.Types.Booking where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
+import qualified BecknV2.OnDemand.PaymentCharge
 import Data.Aeson
 import qualified Domain.Types.AddOnConfig
 import qualified Domain.Types.Common
@@ -41,8 +43,11 @@ data Booking = Booking
     bookingDeposit :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     businessEmailDomain :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationCommissionTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     coinsRewardedOnGoldTierRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     commission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    commissionDeductedAtPayment :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    commissionTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Utils.Common.Currency,
@@ -89,6 +94,9 @@ data Booking = Booking
     parcelType :: Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType,
     paymentCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     paymentChargeBearer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    paymentChargeDeductedAtPayment :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    paymentChargeDetails :: Kernel.Prelude.Maybe BecknV2.OnDemand.PaymentCharge.PaymentChargeDetails,
+    paymentChargeTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     paymentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     paymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod),
@@ -102,6 +110,7 @@ data Booking = Booking
     receiverDetails :: Kernel.Prelude.Maybe Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails,
     reconciliationStatus :: Kernel.Prelude.Maybe Data.Aeson.Value,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    rideTax :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.RideTax,
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
     riderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

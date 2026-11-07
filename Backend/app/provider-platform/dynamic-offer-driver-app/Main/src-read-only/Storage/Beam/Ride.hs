@@ -3,6 +3,7 @@
 
 module Storage.Beam.Ride where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
@@ -19,19 +20,24 @@ import qualified SharedLogic.Type
 import Tools.Beam.UtilsTH
 
 data RideT f = RideT
-  { backendAppVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    backendConfigVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    bapSettled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    billingCategory :: (B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory)),
-    bookingId :: (B.C f Kernel.Prelude.Text),
+  { backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bapSettled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    billingCategory :: B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory),
+    bookingId :: B.C f Kernel.Prelude.Text,
     cancellationAdditionalInfo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    cancellationChargesOnCancel :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    cancellationCommission :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    cancellationConsequenceRowIdIfCancelled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    cancellationFaultRule :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    cancellationFaultVerdict :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    cancellationFeeIfCancelled :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    cancellationFeeTaxIfCancelled :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    cancellationChargesOnCancel :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationChargesOnCancelTax :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationCommission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationCommissionIfCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationCommissionTaxBreakup :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    cancellationCommissionTaxBreakupIfCancelled :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    cancellationConsequenceRowIdIfCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cancellationFaultRule :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cancellationFaultVerdict :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cancellationFeeIfCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationFeeTaxBreakupIfCancelled :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    cancellationFeeTaxIfCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     cancellationReasonCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cancelledBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     chargeableDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
@@ -45,6 +51,7 @@ data RideT f = RideT
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType),
     commission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    commissionTaxBreakup :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     deliveryFileIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
@@ -98,6 +105,7 @@ data RideT f = RideT
     passedThroughDestination :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     paymentCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     paymentChargeBearer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    paymentChargeTaxBreakup :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     pickupBehaviour :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.PickupBehaviour),
     pickupDarkSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     pickupDistanceCalculationFailed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -152,6 +160,6 @@ instance B.Table RideT where
 
 type Ride = RideT Identity
 
-$(enableKVPG (''RideT) [('id)] [[('bookingId)], [('driverGoHomeRequestId)], [('driverId)], [('fleetOwnerId)], [('shortId)]])
+$(enableKVPG ''RideT ['id] [['bookingId], ['driverGoHomeRequestId], ['driverId], ['fleetOwnerId], ['shortId]])
 
-$(mkTableInstances (''RideT) "ride")
+$(mkTableInstances ''RideT "ride")

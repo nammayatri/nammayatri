@@ -3,6 +3,7 @@
 
 module API.Types.ProviderPlatform.Management.Endpoints.FarePolicyV2 where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import qualified Dashboard.Common
 import Data.Aeson
 import Data.OpenApi (ToSchema)
@@ -312,7 +313,7 @@ data FPV2PlatformFeeCharge
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FPV2PlatformFeeInfo = FPV2PlatformFeeInfo {platformFeeCharge :: FPV2PlatformFeeCharge, cgst :: Kernel.Prelude.Double, sgst :: Kernel.Prelude.Double}
+data FPV2PlatformFeeInfo = FPV2PlatformFeeInfo {platformFeeCharge :: FPV2PlatformFeeCharge, cgst :: Kernel.Prelude.Double, sgst :: Kernel.Prelude.Double, vat :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -352,10 +353,12 @@ data FPV2Policy = FPV2Policy
     congestionChargeMultiplier :: Kernel.Prelude.Maybe FPV2CongestionChargeMultiplier,
     perDistanceUnitInsuranceCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cardCharge :: Kernel.Prelude.Maybe FPV2CardCharge,
-    vatChargeConfig :: Kernel.Prelude.Maybe FPV2FareChargeConfig,
     commissionChargeConfig :: Kernel.Prelude.Maybe FPV2FareChargeConfig,
     cancellationCommissionChargeConfig :: Kernel.Prelude.Maybe FPV2FareChargeConfig,
-    tollTaxChargeConfig :: Kernel.Prelude.Maybe FPV2FareChargeConfig,
+    rideTaxConfig :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig,
+    tollTaxConfig :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig,
+    parkingTaxConfig :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig,
+    commissionTaxConfig :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig,
     platformFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     platformFeeCgst :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     platformFeeSgst :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,

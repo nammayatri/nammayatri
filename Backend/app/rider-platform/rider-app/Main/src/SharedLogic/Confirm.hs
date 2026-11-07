@@ -14,6 +14,7 @@
 
 module SharedLogic.Confirm where
 
+import BecknV2.OnDemand.FareBreakup.Tax (TaxBreakup)
 import qualified BecknV2.OnDemand.Utils.Common as BecknUtils
 import Control.Monad.Extra (anyM, maybeM)
 import qualified Data.HashMap.Strict as HM
@@ -21,7 +22,6 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Quote as DQuote
-import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingPartiesLink as DBPL
 import qualified Domain.Types.BookingStatus as DRB
@@ -60,10 +60,12 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.DisplayBookingId as DBI
+import qualified SharedLogic.FareBreakupLines as FBL
 import SharedLogic.JobScheduler
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.PaymentCharge as SPaymentCharge
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -110,7 +112,9 @@ data DConfirmReq = DConfirmReq
 data OneShotConfirmDetails = OneShotConfirmDetails
   { bppBookingId :: Id DRB.BPPBooking,
     commission :: Maybe HighPrecMoney,
+    commissionTaxBreakup :: Maybe TaxBreakup,
     paymentCharge :: Maybe HighPrecMoney,
+    paymentChargeTaxBreakup :: Maybe TaxBreakup,
     paymentChargeBearer :: Maybe Text
   }
 
@@ -144,6 +148,8 @@ data DConfirmRes = DConfirmRes
     paymentMode :: Maybe DMPM.PaymentMode,
     riderGender :: Maybe Text,
     bookingOfferEntity :: Maybe DOfferEntity.OfferEntity,
+    paymentChargeDetails :: Maybe SPaymentCharge.PaymentChargeDetails,
+    platformDeductions :: SPaymentCharge.PlatformDeductions,
     bookingFeePending :: Bool
   }
   deriving (Show, Generic)
@@ -228,10 +234,8 @@ confirm DConfirmReq {..} = do
   mbBookingOfferEntity <-
     case booking0.selectedOfferId of
       Just offerId -> do
-        let fareCtx = RD.parseProjectFareParamsBreakup $ (\qb -> (qb.title, qb.price.amount)) <$> quote.quoteBreakupList
-            offerBaseAmount = case fareCtx of
-              Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
-              Nothing -> booking0.estimatedTotalFare.amount
+        let fareCtx = FBL.fareLinesFromPairs booking0.estimatedTotalFare.amount $ (\qb -> (qb.title, qb.price.amount)) <$> quote.quoteBreakupList
+            offerBaseAmount = maybe booking0.estimatedTotalFare.amount FBL.offerBasePrice fareCtx
             offerBasePrice = mkPrice (Just booking0.estimatedTotalFare.currency) offerBaseAmount
         mbOfferDetails <- SOffer.getSelectedOfferDetailsWithBasket searchRequest.merchantId person.id merchantOperatingCityId DOrder.RideHailing (show quote.vehicleServiceTierType) offerBasePrice offerId fareCtx Nothing (Just booking0) (Just searchRequest)
         case mbOfferDetails of
@@ -348,6 +352,7 @@ confirm DConfirmReq {..} = do
             then pure (Nothing, True)
             else pure (Nothing, False)
 
+  paymentChargeDetails <- SPaymentCharge.resolvePaymentChargeDetails merchantOperatingCityId paymentInstrument
   return $
     DConfirmRes
       { booking,
@@ -370,6 +375,7 @@ confirm DConfirmReq {..} = do
         riderGender = Just (show person.gender),
         bookingOfferEntity = mbBookingOfferEntity,
         bookingFeePending = needsFeePayment,
+        platformDeductions = SPaymentCharge.platformDeductionsAtPayment (SPayment.isOnlinePayment (Just merchant) booking) paymentChargeDetails,
         ..
       }
   where
@@ -582,7 +588,9 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           -- receives it via on_init (updateCommission/updatePaymentCharge); one-shot
           -- carries it in the internal payload and sets it at build time.
           commission = mbOneShotDetails >>= (.commission),
+          commissionTaxBreakup = mbOneShotDetails >>= (.commissionTaxBreakup),
           paymentCharge = mbOneShotDetails >>= (.paymentCharge),
+          paymentChargeTaxBreakup = mbOneShotDetails >>= (.paymentChargeTaxBreakup),
           paymentChargeBearer = mbOneShotDetails >>= (.paymentChargeBearer),
           selectedOfferId = quote.selectedOfferId,
           offersFraudCheckFailureReason = Nothing,

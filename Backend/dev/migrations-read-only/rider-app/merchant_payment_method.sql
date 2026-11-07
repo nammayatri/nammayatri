@@ -10,3 +10,11 @@ ALTER TABLE atlas_app.merchant_payment_method ADD COLUMN payment_type character 
 ALTER TABLE atlas_app.merchant_payment_method ADD COLUMN priority int NOT NULL;
 ALTER TABLE atlas_app.merchant_payment_method ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.merchant_payment_method ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_payment_method ADD COLUMN payment_charge_type text ;
+ALTER TABLE atlas_app.merchant_payment_method ADD COLUMN payment_charge_tax json ;
+ALTER TABLE atlas_app.merchant_payment_method ADD COLUMN payment_charge_bearer text ;
+ALTER TABLE atlas_app.merchant_payment_method ADD COLUMN payment_charge double precision ;

@@ -58,7 +58,6 @@ import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedgerEntry
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPayoutRequest
 import qualified SharedLogic.DriverFyEarnings as SDFE
-import qualified SharedLogic.FareCalculator as SFC
 import SharedLogic.Finance.LedgerAdjustmentCast
 import qualified SharedLogic.Finance.PostActions as PostActions
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
@@ -72,7 +71,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QPanCard
-import qualified Storage.Queries.FareParameters as QFareParams
+import qualified Storage.Queries.FareParameters as QFPRide
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.LedgerAdjustmentRequest as QLedgerAdjustmentRequest
@@ -362,10 +361,7 @@ validateBaseRideAdjustment personId direction booking req = do
 
   when (direction == DLA.Debit) $ do
     totalFare <- ride.fare & fromMaybeM (InvalidRequest "Ride fare is not present.")
-    fareParams <- case ride.fareParametersId of
-      Just fareParametersId | fareParametersId /= booking.fareParams.id -> do
-        B.runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
-      _ -> pure booking.fareParams
+    fareParams <- QFPRide.rideFareParams ride booking
     let gstAmount = fromMaybe 0 fareParams.govtCharges
         tollAmount = fromMaybe 0 fareParams.tollCharges
         parkingAmount = fromMaybe 0 fareParams.parkingCharge
@@ -382,7 +378,7 @@ validateCancellationAdjustment ::
   Id DP.Person ->
   DBooking.Booking ->
   Flow ()
-validateCancellationAdjustment isDriverCancellation transporterConfig direction amount personId booking = do
+validateCancellationAdjustment isDriverCancellation _transporterConfig direction amount personId booking = do
   unless (booking.status == DBooking.CANCELLED) $
     throwError (BookingInvalidStatus "Booking should be CANCELLED")
   ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
@@ -396,12 +392,7 @@ validateCancellationAdjustment isDriverCancellation transporterConfig direction 
         throwError (InvalidRequest "Could not credit more than cancellation penalty amount")
     else do
       maxAmountWithGst <- ride.cancellationChargesOnCancel & fromMaybeM (InvalidRequest "User cancellation amount is not present.")
-      let mbGstRate = SFC.computeTotalGstRate transporterConfig.taxConfig.rideGst
-          gstPct :: Double = fromMaybe 0.0 mbGstRate
-          maxAmountExcludingGst =
-            if gstPct > 0
-              then HighPrecMoney $ maxAmountWithGst.getHighPrecMoney / (1 + toRational gstPct)
-              else maxAmountWithGst
+      let maxAmountExcludingGst = maxAmountWithGst - fromMaybe 0 ride.cancellationChargesOnCancelTax
       when (direction == DLA.Debit && amount > maxAmountExcludingGst) $
         throwError (InvalidRequest $ "Could not debit more than cancellation charges, exluding gst: " <> show maxAmountExcludingGst)
 

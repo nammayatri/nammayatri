@@ -16,6 +16,7 @@ module Beckn.OnDemand.Utils.OnSearch where
 
 import qualified Beckn.OnDemand.Utils.Common as CUtils
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Payment as OUP
@@ -92,13 +93,13 @@ mkPayment merchant bppConfig mbPaymentId mPaymentInstrument = do
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
   List.singleton $ OUP.mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
 
-mkItemTags :: CUtils.Pricing -> Bool -> Maybe Bool -> Bool -> Maybe Seconds -> Maybe [Spec.TagGroup]
-mkItemTags pricing isValueAddNP fareParametersInRateCard hasStops reservedTime = do
+mkItemTags :: CUtils.Pricing -> Bool -> Bool -> Maybe Seconds -> Maybe Tax.RiderTaxRates -> Maybe [Spec.TagGroup]
+mkItemTags pricing isValueAddNP hasStops reservedTime mbRiderTaxRates = do
   let tripDurationItem = CUtils.mkRateCardBreakupItem (show Tags.PLANNED_TRIP_DURATION_IN_MINS) . show . (.getMinutes) . secondsToMinutes <$> reservedTime
-      rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance (pricing.fareParams >>= (.customerCancellationDues)) (pricing.fareParams >>= (.tollCharges)) pricing.pricingMaxFare (pricing.fareParams >>= (.congestionChargeViaDp)) pricing.farePolicy fareParametersInRateCard ((isValueAddNP,) <$> pricing.fareParams) tripDurationItem Nothing hasStops
+      rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance (pricing.fareParams >>= (.customerCancellationDues)) (pricing.fareParams >>= (.tollCharges)) pricing.pricingMaxFare (pricing.fareParams >>= (.congestionChargeViaDp)) pricing.farePolicy ((isValueAddNP,) <$> pricing.fareParams) tripDurationItem Nothing hasStops
   let vehicleIconTag = CUtils.mkVehicleIconTag pricing.vehicleIconUrl
   let featureListTag = mkFeatureListTags pricing.isAirConditioned
-  vehicleIconTag <> rateCardTag <> CUtils.mkGeneralInfoTagGroup pricing isValueAddNP <> featureListTag
+  vehicleIconTag <> rateCardTag <> CUtils.mkGeneralInfoTagGroup pricing isValueAddNP mbRiderTaxRates <> featureListTag
 
 -- | Map TripCategory to ONDC 2.1.0 category descriptor code
 -- Re-exports from Common for backward compatibility

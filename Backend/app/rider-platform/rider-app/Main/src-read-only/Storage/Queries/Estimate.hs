@@ -112,6 +112,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.providerUrl (Kernel.Prelude.showBaseUrl providerUrl),
       Se.Set Beam.qar qar,
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
+      Se.Set Beam.riderTaxRates (Kernel.Prelude.toJSON <$> riderTaxRates),
       Se.Set Beam.selectedOfferId selectedOfferId,
       Se.Set Beam.serviceTierName serviceTierName,
       Se.Set Beam.serviceTierShortDesc serviceTierShortDesc,

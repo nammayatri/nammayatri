@@ -3,6 +3,7 @@
 
 module Storage.Beam.CancellationDuesDetails where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import qualified Domain.Types.CancellationDuesDetails
 import Domain.Types.Common ()
@@ -16,15 +17,19 @@ data CancellationDuesDetailsT f = CancellationDuesDetailsT
   { cancellationAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
     cancellationCollectionMode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cancellationCommission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationCommissionTaxBreakup :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     cancellationConsequenceRowId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cancellationFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     cancellationFeeTax :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationFeeTaxBreakup :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     id :: B.C f Kernel.Prelude.Text,
     overdueCancellationCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     overdueCancellationCommission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    overdueCancellationCommissionTaxBreakup :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     overdueCancellationTax :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    overdueCancellationTaxBreakup :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     paymentStatus :: B.C f Domain.Types.CancellationDuesDetails.CancellationDuesPaymentStatus,
     rideId :: B.C f Kernel.Prelude.Text,
     riderId :: B.C f Kernel.Prelude.Text,
