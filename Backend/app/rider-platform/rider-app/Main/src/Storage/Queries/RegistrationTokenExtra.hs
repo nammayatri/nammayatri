@@ -15,8 +15,39 @@ import Storage.Queries.OrphanInstances.RegistrationToken ()
 
 -- Extra code goes here --
 
+-- | Ends the rider's other app sessions when they log in again. Tokens a partner holds
+-- (createdViaPartnerOrgId set) are left alone: the rider granted them separately, and
+-- logging in to the app on a new phone must not silently disconnect a linked partner.
+-- Logout ('deleteByPersonId') still ends everything.
 deleteByPersonIdExceptNew :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Id RegistrationToken -> m ()
-deleteByPersonIdExceptNew (Id personId) (Id newRT) = deleteWithKV [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Not $ Se.Eq newRT)]]
+deleteByPersonIdExceptNew (Id personId) (Id newRT) =
+  deleteWithKV
+    [ Se.And
+        [ Se.Is BeamRT.entityId (Se.Eq personId),
+          Se.Is BeamRT.id (Se.Not $ Se.Eq newRT),
+          Se.Is BeamRT.createdViaPartnerOrgId (Se.Eq Nothing)
+        ]
+    ]
+
+-- | A partner holds one token per rider: a fresh link replaces the previous one.
+deleteByPersonIdAndPartnerOrgIdExceptNew :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Id DPOrg.PartnerOrganization -> Id RegistrationToken -> m ()
+deleteByPersonIdAndPartnerOrgIdExceptNew (Id personId) (Id orgId) (Id newRT) =
+  deleteWithKV
+    [ Se.And
+        [ Se.Is BeamRT.entityId (Se.Eq personId),
+          Se.Is BeamRT.id (Se.Not $ Se.Eq newRT),
+          Se.Is BeamRT.createdViaPartnerOrgId (Se.Eq (Just orgId))
+        ]
+    ]
+
+findAllByPersonIdAndPartnerOrgId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id DPOrg.PartnerOrganization -> m [RegistrationToken]
+findAllByPersonIdAndPartnerOrgId (Id personId) (Id orgId) =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamRT.entityId (Se.Eq personId),
+          Se.Is BeamRT.createdViaPartnerOrgId (Se.Eq (Just orgId))
+        ]
+    ]
 
 findByToken :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => RegToken -> m (Maybe RegistrationToken)
 findByToken token = findOneWithKV [Se.Is BeamRT.token $ Se.Eq token]

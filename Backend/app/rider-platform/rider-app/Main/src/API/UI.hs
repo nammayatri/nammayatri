@@ -36,6 +36,7 @@ import qualified API.Action.UI.NearbyDrivers as NearbyDrivers
 import qualified API.Action.UI.NyRegularSubscription as NYRegular
 import qualified API.Action.UI.Offers as Offers
 import qualified API.Action.UI.OpenMeter as OpenMeter
+import qualified API.Action.UI.PartnerAccountLink as PartnerAccountLink
 import qualified API.Action.UI.PartnerBookingStatement as PartnerBookingStatement
 import qualified API.Action.UI.PassDetails as PassDetails
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
@@ -80,6 +81,7 @@ import qualified API.UI.HotSpot as HotSpot
 import qualified API.UI.Issue as Issue
 import qualified API.UI.Maps as MapsProxy
 import qualified API.UI.ParkingBooking as ParkingBooking
+import qualified API.UI.PartnerAccountLinkPage as PartnerAccountLinkPage
 import qualified API.UI.PartnerOrganizationFRFS as PartnerOrgFRFS
 import qualified API.UI.Pass as Pass
 import qualified API.UI.Payment as Payment
@@ -179,6 +181,8 @@ type API =
            :<|> FavouriteDriver.API
            :<|> BlackListDriver.API
            :<|> PartnerOrgFRFS.API
+           :<|> PartnerAccountLink.API
+           :<|> PartnerAccountLinkPage.API
            :<|> TriggerFCM.API
            :<|> MultimodalConfirm.API
            :<|> AssetManifest.API
@@ -324,6 +328,8 @@ handler =
     :<|> FavouriteDriver.handler
     :<|> BlackListDriver.handler
     :<|> PartnerOrgFRFS.handler
+    :<|> PartnerAccountLink.handler
+    :<|> PartnerAccountLinkPage.handler
     :<|> TriggerFCM.handler
     :<|> MultimodalConfirm.handler
     :<|> AssetManifest.handler
