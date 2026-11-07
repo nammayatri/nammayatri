@@ -1151,7 +1151,14 @@ getIsInterCity merchantId apiKey IsIntercityReq {..} = do
   let bapCity = nearestOperatingCity.city
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
-  (isInterCity, isCrossCity, _, _) <- checkForIntercityOrCrossCity transporterConfig mbDropLatLong [] Nothing sourceCity merchant
+  (isGeographicallyInterCity, isCrossCity, _, _) <- checkForIntercityOrCrossCity transporterConfig mbDropLatLong [] Nothing sourceCity merchant
+  isInterCity <- case (isGeographicallyInterCity, isCrossCity, transporterConfig.tripConfig >>= (.interCity) >>= (.minDistance), mbDropLatLong) of
+    (False, _, _, _) -> pure False
+    (True, True, _, _) -> pure True
+    (True, False, Nothing, _) -> pure True
+    (True, False, Just _, Nothing) -> pure False
+    (True, False, Just minDistance, Just dropLatLong) ->
+      pure $ highPrecMetersToMeters (distanceBetweenInMeters pickupLatLong dropLatLong) >= minDistance
   return $ IsIntercityResp {..}
 
 checkForIntercityOrCrossCity :: DTMT.TransporterConfig -> Maybe LatLong -> [LatLong] -> Maybe (Id SL.SpecialLocation) -> CityState -> DM.Merchant -> Flow (Bool, Bool, Maybe Text, Maybe Context.IndianState)
