@@ -293,8 +293,8 @@ data DriverWithRidesCount = DriverWithRidesCount
     ridesCount :: Maybe Int
   }
 
-fetchDriverInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> Maybe Text -> Maybe (Id Person) -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
-fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash mbEmail mbPersonId = do
+fetchDriverInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> Maybe Text -> Maybe (Id Person) -> Maybe Text -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
+fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash mbEmail mbPersonId mbOperatorBadgeToken = do
   dbConf <- getReplicaBeamConfig
   now <- getCurrentTime
   result <- L.runDB dbConf $
@@ -304,7 +304,10 @@ fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbD
           ( \(person, _driverInfo, vehicle, driverLicense, _driverRCAssociation, vehicleRegistrationCertificate) ->
               person.merchantId B.==?. B.val_ merchant.id.getId
                 B.&&?. (person.merchantOperatingCityId B.==?. B.val_ (Just $ getId moCity.id) B.||?. (B.sqlBool_ (B.isNothing_ person.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == moCity.city))))
-                B.&&?. person.role B.==?. B.val_ Person.DRIVER
+                B.&&?. maybe
+                  (person.role B.==?. B.val_ Person.DRIVER)
+                  (const $ person.role B.==?. B.val_ Person.BUS_DRIVER B.||?. person.role B.==?. B.val_ Person.BUS_CONDUCTOR)
+                  mbOperatorBadgeToken
                 B.&&?. maybe
                   (B.sqlBool_ $ B.val_ True)
                   ( \(mobileNumberDbHash, mobileCountryCode) ->
@@ -317,6 +320,7 @@ fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbD
                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rcNumberHash -> vehicleRegistrationCertificate.certificateNumberHash B.==?. B.val_ (Just rcNumberHash)) mbRcNumberHash
                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\email -> person.email B.==?. B.val_ (Just email)) mbEmail
                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\personId -> person.id B.==?. B.val_ (getId personId)) mbPersonId
+                B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\badgeToken -> person.operatorBadgeToken B.==?. B.val_ (Just badgeToken)) mbOperatorBadgeToken
           )
           do
             person <- B.all_ (BeamCommon.person BeamCommon.atlasDB)
