@@ -3,5 +3,5 @@
 \ctx pipeline ->
   pipeline
     { signoff.enable = False
-    , cache.url = Just "https://cache.nixos.asia/oss"
+    , cache.url = Nothing -- Just "https://cache.nixos.asia/oss"
     }
