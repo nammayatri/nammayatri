@@ -1,5 +1,5 @@
 -- RUN THIS BEFORE --
-CREATE OR REPLACE FUNCTION drop_not_null_if_exists(target_schema_name TEXT, target_table_name TEXT, target_column_name TEXT)
+CREATE OR REPLACE FUNCTION atlas_driver_offer_bpp.drop_not_null_if_exists(target_schema_name TEXT, target_table_name TEXT, target_column_name TEXT)
 RETURNS void AS $$
 BEGIN
     IF EXISTS (
