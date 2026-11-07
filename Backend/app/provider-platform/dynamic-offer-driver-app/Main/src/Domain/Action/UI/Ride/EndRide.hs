@@ -186,7 +186,7 @@ data ServiceHandle m = ServiceHandle
     clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: Maybe CacKey -> m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: forall a. Id DP.Person -> m a -> m a,
-    getRouteAndDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> Meters -> m ([LatLong], Meters),
+    getRouteAndDistanceBetweenPoints :: Maybe Text -> LatLong -> LatLong -> [LatLong] -> Meters -> m ([LatLong], Meters),
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DMOC.MerchantOperatingCity -> m (Maybe DMPM.MerchantPaymentMethod),
     uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m (),
     getCongestionChargeOnEndRide :: Seconds -> Maybe LatLong -> Maybe Text -> Maybe Text -> DVST.ServiceTierType -> Maybe Meters -> Maybe Seconds -> Maybe Double -> Maybe FarePolicy.DropQARConfig -> Maybe Text -> Maybe Int -> Id DMOC.MerchantOperatingCity -> Maybe Seconds -> Maybe Seconds -> Maybe DTC.TripCategory -> Maybe Text -> Maybe SL.Area -> m (Maybe FarePolicy.CongestionChargeDetailsModel)
@@ -1165,7 +1165,7 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
       (d, f, p) <- recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig False tripEndPoint -- TODO: Fix with rentals
       pure (d, f, p, Nothing)
     else do
-      (_routePoints, approxTraveledDistance) <- getRouteAndDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints estimatedDistance
+      (_routePoints, approxTraveledDistance) <- getRouteAndDistanceBetweenPoints (Just $ ride.id.getId <> LocUpd.approxRouteEntityIdSuffix) tripStartPoint tripEndPoint interpolatedPoints estimatedDistance
       logTagInfo "endRide" $ "approxTraveledDistance when pickup and drop are not outside threshold: " <> show approxTraveledDistance
       distanceDiff <- getDistanceDiff booking approxTraveledDistance
       -- Same bands gate both directions on the approx route: a sub-band
