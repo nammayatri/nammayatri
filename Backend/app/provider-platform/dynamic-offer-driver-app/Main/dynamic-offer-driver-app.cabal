@@ -667,6 +667,7 @@ library
       SharedLogic.BehaviourManagement.AutoAcceptCancellation
       SharedLogic.BehaviourManagement.CancellationRate
       SharedLogic.BehaviourManagement.ConsequenceDispatcher
+      SharedLogic.BehaviourManagement.EventsWindow
       SharedLogic.BehaviourManagement.GpsTollBehavior
       SharedLogic.BehaviourManagement.IssueBreach
       SharedLogic.BehaviourManagement.IssueBreachMitigation
@@ -921,6 +922,7 @@ library
       Storage.Cac.GoHomeConfig
       Storage.Cac.MerchantServiceUsageConfig
       Storage.Cac.TransporterConfig
+      Storage.CachedQueries.AppDynamicLogicWindowConfigExtra
       Storage.CachedQueries.BapMetadata
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
@@ -1634,6 +1636,7 @@ library
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
       Domain.Types.AddOnConfig
+      Domain.Types.AppDynamicLogicWindowConfig
       Domain.Types.BackgroundVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
@@ -1844,6 +1847,7 @@ library
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
       Storage.Beam.AddOnConfig
+      Storage.Beam.AppDynamicLogicWindowConfig
       Storage.Beam.BackgroundVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
@@ -2050,6 +2054,7 @@ library
       Storage.Beam.Volunteer
       Storage.Beam.WalletTransaction
       Storage.Beam.WhiteListOrg
+      Storage.CachedQueries.AppDynamicLogicWindowConfig
       Storage.CachedQueries.CancellationFarePolicy
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.FleetBadgeAssociation
@@ -2059,6 +2064,7 @@ library
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
       Storage.Queries.AddOnConfig
+      Storage.Queries.AppDynamicLogicWindowConfig
       Storage.Queries.BackgroundVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig

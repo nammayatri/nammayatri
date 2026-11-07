@@ -1,0 +1,39 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  LogicDomain: Lib.Yudhishthira.Types
+  RulebookWindowMode: Lib.Yudhishthira.Types
+
+# How a behaviour rulebook version counts offences: one row per (domain, version), written
+# once when the version is saved. A version with no row is TIME (daily/weekly counters).
+# EVENTS = "offences in the driver's last windowSize events". Versions are global and never
+# change, so neither does a row: a different X means saving a new version. The rollout
+# table is untouched; the version a city's rollout picks decides the mode.
+# The default merchantId column records the merchant that saved the version (like
+# app_dynamic_logic_element); merchantOperatingCityId stays null because rows are global.
+AppDynamicLogicWindowConfig:
+  tableName: app_dynamic_logic_window_config
+
+  fields:
+    domain: LogicDomain
+    version: Int
+    windowMode: RulebookWindowMode
+    windowSize: Int
+
+  derives: "Generic,Show,ToJSON,FromJSON,Eq"
+
+  constraints:
+    domain: "PrimaryKey | SecondaryKey"
+    version: PrimaryKey
+
+  sqlType:
+    domain: text
+    windowMode: text
+
+  queries:
+    findAllByDomain:
+      kvFunction: findAllWithKV
+      where: domain
+
+  extraOperations:
+    - EXTRA_CACHED_QUERY_FILE

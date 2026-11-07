@@ -25,6 +25,8 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Lib.BehaviorTracker.Accumulator
+import qualified Lib.BehaviorTracker.EventsWindow as BTEW
+import qualified Lib.BehaviorTracker.EventsWindowSettings as EWS
 import Lib.BehaviorTracker.Types
 
 -- | Full pipeline: increment counters + build unified snapshot
@@ -96,14 +98,16 @@ incrementCounterOnly ::
   Text -> -- actionType
   CounterType ->
   m ()
-incrementCounterOnly config entityType entityId actionType counterType =
+incrementCounterOnly config entityType entityId actionType counterType = do
   incrementCounter config.hashTagEntityId entityType actionType counterType entityId config.windowSizeDays
+  recordInEventsWindow config entityType entityId actionType counterType
 
 -- | Decrement a specific counter in the bucket of the original event time.
 --
 -- Counterpart of incrementCounterOnly for retroactive corrections: pass the time
 -- the reversed event was originally counted at (e.g. a request's sentAt when a
 -- customer cancel voids it), so the decrement lands in that day's bucket.
+-- The events window is not touched: it holds no event ids, so a past event can't be removed.
 decrementCounterOnly ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
@@ -131,7 +135,7 @@ incrementCounters ::
   ActionEvent ->
   m ()
 incrementCounters config event =
-  forM_ config.counters $ \counterType ->
+  forM_ config.counters $ \counterType -> do
     incrementCounter
       config.hashTagEntityId
       event.entityType
@@ -139,6 +143,42 @@ incrementCounters config event =
       counterType
       event.entityId
       config.windowSizeDays
+    recordInEventsWindow config event.entityType event.entityId event.actionType counterType
+
+-- | Mirrors a counter increment into the entity's events window when the behaviour keeps one
+-- ('CounterConfig.eventsWindow'): ELIGIBLE_COUNT appends '0', ACTION_COUNT marks a '1'.
+-- A failure is logged and never fails the counter increment or the caller's flow; the
+-- rules then read the window without this event.
+recordInEventsWindow ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r
+  ) =>
+  CounterConfig ->
+  EntityType ->
+  Text -> -- entityId
+  Text -> -- actionType
+  CounterType ->
+  m ()
+recordInEventsWindow config entityType entityId actionType counterType =
+  whenJust config.eventsWindow $ \mark -> do
+    result <- withTryCatch "eventsWindow:record" $ case counterType of
+      ELIGIBLE_COUNT -> BTEW.recordEligible entityType actionType entityId
+      ACTION_COUNT -> BTEW.recordAction entityType actionType entityId mark
+    case result of
+      Right Nothing -> pure ()
+      Right (Just foundLength) ->
+        logError $
+          "Events window: the " <> actionType <> " window of " <> show entityType <> " " <> entityId <> " had " <> show foundLength
+            <> " characters, over the limit of "
+            <> show EWS.oversizedWindowLength
+            <> " that the window code never writes past, so it was cleared and restarted at this "
+            <> show counterType
+            <> " event"
+      Left err ->
+        logError $
+          "Events window: " <> show counterType <> " for " <> actionType <> " of " <> show entityType <> " " <> entityId
+            <> " wasn't recorded because the Redis window update failed: "
+            <> show err
 
 -- | Build the counter map for all configured periods
 buildCounterMap ::

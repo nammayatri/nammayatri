@@ -40,7 +40,8 @@ defaultDriverDomainConfig =
               { windowSizeDays = 30,
                 counters = [BTT.ACTION_COUNT],
                 periods = [BTT.mkPeriodConfig "window" 15],
-                hashTagEntityId = False
+                hashTagEntityId = False,
+                eventsWindow = Nothing
               }
           ),
           -- window/periods come from the SAME config the writers and snapshots use,
@@ -54,7 +55,8 @@ defaultDriverDomainConfig =
                   [ BTT.mkPeriodConfig "daily" 1,
                     BTT.mkPeriodConfig "weekly" 7
                   ],
-                hashTagEntityId = False
+                hashTagEntityId = False,
+                eventsWindow = Nothing
               }
           ),
           ( "DRUNK_AND_DRIVE",
@@ -62,7 +64,8 @@ defaultDriverDomainConfig =
               { windowSizeDays = 365,
                 counters = [BTT.ACTION_COUNT],
                 periods = [],
-                hashTagEntityId = False
+                hashTagEntityId = False,
+                eventsWindow = Nothing
               }
           ),
           ( "TOLL_RELATED_ISSUE",
@@ -70,7 +73,8 @@ defaultDriverDomainConfig =
               { windowSizeDays = 30,
                 counters = [BTT.ACTION_COUNT],
                 periods = [BTT.mkPeriodConfig "window" 30],
-                hashTagEntityId = False
+                hashTagEntityId = False,
+                eventsWindow = Nothing
               }
           ),
           ( "AC_RESTRICTION",
@@ -78,7 +82,8 @@ defaultDriverDomainConfig =
               { windowSizeDays = 365,
                 counters = [BTT.ACTION_COUNT],
                 periods = [],
-                hashTagEntityId = False
+                hashTagEntityId = False,
+                eventsWindow = Nothing
               }
           ),
           ( "PICKUP_STALL",
@@ -90,7 +95,8 @@ defaultDriverDomainConfig =
                     BTT.mkPeriodConfig "weekly" 7,
                     BTT.mkPeriodConfig "monthly" 30
                   ],
-                hashTagEntityId = False
+                hashTagEntityId = False,
+                eventsWindow = Nothing
               }
           ),
           (DP.quoteResponseAcceptActionType, DP.quoteResponseCounterConfig),
@@ -105,7 +111,8 @@ defaultDriverDomainConfig =
               { windowSizeDays = 365,
                 counters = [BTT.ACTION_COUNT],
                 periods = [],
-                hashTagEntityId = False
+                hashTagEntityId = False,
+                eventsWindow = Nothing
               }
           ),
           ( "VEHICLE_UNSAFE",
@@ -113,7 +120,8 @@ defaultDriverDomainConfig =
               { windowSizeDays = 365,
                 counters = [BTT.ACTION_COUNT],
                 periods = [],
-                hashTagEntityId = False
+                hashTagEntityId = False,
+                eventsWindow = Nothing
               }
           )
         ],

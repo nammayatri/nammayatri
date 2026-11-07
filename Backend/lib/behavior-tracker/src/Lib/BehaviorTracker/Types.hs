@@ -17,6 +17,7 @@ module Lib.BehaviorTracker.Types
     CounterType (..),
     ActionEvent (..),
     CounterConfig (..),
+    EventsWindowMark (..),
     PeriodConfig (..),
     CounterValues (..),
     BehaviorSnapshot (..),
@@ -73,9 +74,22 @@ data CounterConfig = CounterConfig
   { windowSizeDays :: Integer, -- SWC storage window
     counters :: [CounterType], -- which counters to increment
     periods :: [PeriodConfig], -- which time periods to compute in snapshot
-    hashTagEntityId :: Bool
+    hashTagEntityId :: Bool,
+    -- | Also keep the entity's last events as a 0/1 window for "offences in the last X
+    -- events" rulebooks (Lib.BehaviorTracker.EventsWindow): ELIGIBLE_COUNT appends '0',
+    -- ACTION_COUNT marks a '1' as set here. Nothing = no window (daily/weekly only).
+    eventsWindow :: Maybe EventsWindowMark
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Where an action (ACTION_COUNT) goes in the events window.
+data EventsWindowMark
+  = -- | The action belongs to the eligible event just before it, e.g. a cancel of the ride
+    -- just assigned: the most recent '0' becomes '1' (a '1' is appended when there is no '0').
+    MarkLatestEligible
+  | -- | The action is an event of its own: a '1' is appended.
+    AppendAction
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | A time period to compute counter values for
 data PeriodConfig = PeriodConfig

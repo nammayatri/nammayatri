@@ -45,6 +45,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.BehaviorEngine.EventLog as EventLog
 import qualified Lib.BehaviorTracker.BlockTracker as BT
+import qualified Lib.BehaviorTracker.EventsWindow as BTEW
 import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.CommunicationEngine.Parser as CMParser
@@ -191,6 +192,7 @@ dispatchConsequence ctx driverId = \case
         UnblockDriverRequestJobData {driverId = cast driverId}
     let tag = fromMaybe "HARD_BLOCK" params.blockReasonTag
     BT.writeBlockAndCooldownKeys BTT.DRIVER driverId.getId BTT.HARD_BLOCK tag params.blockDurationHours params.blockReason (A.Object mempty) params.cooldownHours
+    resetEventsWindow ctx driverId
   CET.PermanentBlock params -> do
     logWarning $ "Permanently blocking driver " <> driverId.getId <> ", reason: " <> params.blockReason
     SFlags.markBlockFlags (cast driverId) $
@@ -203,6 +205,7 @@ dispatchConsequence ctx driverId = \case
           }
     let tag = fromMaybe "PERMANENT_BLOCK" params.blockReasonTag
     BT.writeBlockKey BTT.DRIVER driverId.getId BTT.PERMANENT_BLOCK tag 0 params.blockReason (A.Object mempty)
+    resetEventsWindow ctx driverId
   CET.Nudge params -> void $ sendOverlayByKey ctx driverId params.nudgeKey params.templateParams
   CET.Warn params -> do
     mbSentOverlay <- sendOverlayByKey ctx driverId params.warnKey params.templateParams
@@ -287,6 +290,18 @@ dispatchConsequence ctx driverId = \case
         let remainingServiceTiers = filter (`notElem` autoAcceptOnlyTierTypes cityServiceTiers) vehicle.selectedServiceTiers
         when (not (null (fromMaybe [] vehicle.selectedAutoAcceptTiers)) || remainingServiceTiers /= vehicle.selectedServiceTiers) $
           QVehicle.updateSelectedServiceTiersAndAutoAcceptTiers remainingServiceTiers [] driverId
+
+-- | A hard or permanent block clears the events window of the behaviour that fired it, so
+-- the driver starts fresh (Time and Events versions alike; windows are kept in every city).
+-- Behaviours without a window have no key, so the delete does nothing. A failed reset is
+-- logged and never undoes the block.
+resetEventsWindow :: (MonadFlow m, Redis.HedisFlow m r) => DispatchContext -> Id DP.Person -> m ()
+resetEventsWindow ctx driverId =
+  whenJust ctx.actionEvent $ \event -> do
+    result <- withTryCatch "eventsWindow:resetAfterBlock" $ BTEW.resetWindow event.entityType event.actionType event.entityId
+    case result of
+      Right () -> logInfo $ "Events window reset after a block for driver " <> driverId.getId <> " (" <> event.actionType <> ")"
+      Left err -> logError $ "Events window: reset after a block failed for driver " <> driverId.getId <> " (" <> event.actionType <> ") because the Redis delete failed: " <> show err
 
 autoAcceptOnlyTierTypes :: [DVST.VehicleServiceTier] -> [DriverInfo.ServiceTierType]
 autoAcceptOnlyTierTypes cityServiceTiers =

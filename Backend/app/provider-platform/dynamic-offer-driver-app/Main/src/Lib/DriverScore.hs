@@ -49,6 +49,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
+import qualified SharedLogic.BehaviourManagement.EventsWindow as EventsWindow
 import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
 import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
@@ -65,7 +66,7 @@ import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as FPPDQ
 import qualified Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as RQ
-import Tools.DynamicLogic (getAppDynamicLogic)
+import Tools.DynamicLogic (getAppDynamicLogic, selectAppDynamicLogicVersion)
 import Tools.Error
 import qualified Tools.EventTracking as ET
 import Tools.MarketingEvents as TM
@@ -98,6 +99,7 @@ eventPayloadHandler merchantOpCityId DST.OnNewRideAssigned {..} = do
   void $ case mbDriverStats of
     Just driverStats -> incrementOrSetTotalRides driverId driverStats
     Nothing -> createDriverStat currency distanceUnit driverId
+  -- ELIGIBLE_COUNT +1; also appends '0' to the driver's events window (the counter config keeps one).
   DP.incrementTotalRidesCount merchantOpCityId driverId
 eventPayloadHandler _merchantOpCityId DST.OnNewSearchRequestForDrivers {..} =
   -- Shared quote-response eligibility is NOT counted here: DP.incrementSrdSentCount (called
@@ -113,6 +115,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   -- Count this cancellation BEFORE the ladder reads the counters. ELIGIBLE_COUNT already
   -- includes this ride (incremented at assignment), so incrementing ACTION_COUNT after the
   -- evaluation made every rung fire one offence late and understated the rate.
+  -- The same call marks this cancel as a '1' in the driver's events window.
   when countsTowardCancellationCount $ DP.incrementCancellationCount merchantOpCityId driverId
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   IBM.issueBreachMitigation EXTRA_FARE_MITIGATION merchantConfig driverInfo
@@ -127,7 +130,11 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
                 [ BTT.mkPeriodConfig "daily" 1,
                   BTT.mkPeriodConfig "weekly" 7
                 ],
-              hashTagEntityId = DP.rideCancellationCounterConfig.hashTagEntityId
+              hashTagEntityId = DP.rideCancellationCounterConfig.hashTagEntityId,
+              -- The events window gets one '1' per at-fault cancel, written by
+              -- DP.incrementCancellationCount above. This config also serves a rule's
+              -- INCREMENT_COUNTER consequence, which must not add a second offence to it.
+              eventsWindow = Nothing
             }
     eventTime <- getCurrentTime
     let actionEvent =
@@ -146,11 +153,18 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
             }
         entityState = A.object []
         cooldownTags = ["CancellationRateDaily", "CancellationRateWeekly"]
-        fetchRules = \domain -> do
-          localTime <- getLocalCurrentTime merchantConfig.timeDiffFromUtc
-          getAppDynamicLogic (cast merchantOpCityId) domain localTime Nothing Nothing
+        domain = LYT.CANCELLATION_RATE_BEHAVIOR
+    localTime <- getLocalCurrentTime merchantConfig.timeDiffFromUtc
+    -- One version per evaluation: its rules, and its window (Time, or Events with X).
+    let pickVersion = selectAppDynamicLogicVersion (cast merchantOpCityId) domain localTime Nothing
+        fetchVersion version = do
+          logics <- fst <$> getAppDynamicLogic (cast merchantOpCityId) domain localTime (Just version) Nothing
+          -- Backstop for the save check: a TIME version reading counters.events never fires.
+          EventsWindow.checkTimeVersionRules domain version logics
+          pure logics
+        readWindow = EventsWindow.cancellationWindowRead driverId
     snapshot <- BTSnap.buildSnapshotWithCooldowns counterConfig actionEvent entityState cooldownTags
-    output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) (BehaviorDispatch.behaviourEventCity (cast merchantOpCityId)) LYT.CANCELLATION_RATE_BEHAVIOR fetchRules
+    output <- BEOrch.orchestrateByVersion snapshot LYDL.Driver (cast merchantOpCityId) (BehaviorDispatch.behaviourEventCity (cast merchantOpCityId)) domain pickVersion fetchVersion readWindow
     logInfo $ "CancellationRate behavior evaluation: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
     let dispatchCtx =
           BehaviorDispatch.DispatchContext

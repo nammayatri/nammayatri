@@ -129,3 +129,17 @@ hasExtraFareIssueBreachConfig tc =
 
 findPack :: LYT.LogicDomain -> Maybe BehaviourPack
 findPack d = find (\p -> p.packDomain == d) behaviourPacks
+
+-- | Overlays an EVENTS version ("offences in the last X events") of the behaviour needs, in
+-- place of 'requiredOverlayKeys', which belong to the TIME (daily/weekly) template. Their
+-- templates live under the "default" city (migration 0018), like the pack's other overlays.
+eventsOverlayKeys :: LYT.LogicDomain -> [Text]
+eventsOverlayKeys domain
+  | domain == LYT.CANCELLATION_RATE_BEHAVIOR = ["CANCELLATION_RATE_NUDGE_EVENTS", "CANCELLATION_RATE_WARN_EVENTS"]
+  | otherwise = []
+
+-- | The pack's overlays for a version of the given type (True = EVENTS).
+packOverlayKeys :: BehaviourPack -> Bool -> [Text]
+packOverlayKeys pack isEvents
+  | isEvents = eventsOverlayKeys pack.packDomain
+  | otherwise = pack.requiredOverlayKeys

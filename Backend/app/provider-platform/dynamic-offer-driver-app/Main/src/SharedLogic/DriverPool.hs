@@ -214,7 +214,8 @@ quoteResponseCounterConfig =
     { windowSizeDays = 7,
       counters = [BTT.ACTION_COUNT, BTT.ELIGIBLE_COUNT],
       periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7],
-      hashTagEntityId = True
+      hashTagEntityId = True,
+      eventsWindow = Nothing
     }
 
 -- | Snapshot for one quote-response outcome. Rates are computed against the shared
@@ -458,13 +459,16 @@ removeSearchReqIdFromMap merchantId driverId searchReqId = do
 -- Ride-lifecycle counters, stored as the bt: RIDE_CANCELLATION series (ELIGIBLE = rides
 -- assigned, ACTION = cancellations) — the same series getSrdStatsCountersBulk feeds to the
 -- POOLING dynamic logic and the behavior framework's snapshots read.
+-- It also keeps each driver's events window (last 1000 rides as 0/1) for Events rulebooks:
+-- a ride assigned appends '0', an at-fault cancel turns that ride's '0' into '1'.
 rideCancellationCounterConfig :: BTT.CounterConfig
 rideCancellationCounterConfig =
   BTT.CounterConfig
     { windowSizeDays = 7,
       counters = [BTT.ACTION_COUNT, BTT.ELIGIBLE_COUNT],
       periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7],
-      hashTagEntityId = True
+      hashTagEntityId = True,
+      eventsWindow = Just BTT.MarkLatestEligible
     }
 
 incrementTotalRidesCount ::

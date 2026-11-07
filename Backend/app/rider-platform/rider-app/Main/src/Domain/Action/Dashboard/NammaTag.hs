@@ -1212,7 +1212,9 @@ postNammaTagConfigPilotVerify merchantShortId opCity configType req =
         description = req.description,
         shouldUpdateRule = req.shouldUpdateRule,
         verifyOutput = req.verifyOutput,
-        domain = LYTU.RIDER_CONFIG configType
+        domain = LYTU.RIDER_CONFIG configType,
+        windowMode = Nothing,
+        windowSize = Nothing
       }
 
 postNammaTagConfigPilotUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigType -> LYTU.ConfigPilotRolloutReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
