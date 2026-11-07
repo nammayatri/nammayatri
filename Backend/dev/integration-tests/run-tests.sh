@@ -141,6 +141,18 @@ seed_ophub() {
         fi
     done
 }
+
+# Put the fixed dashboard test tokens back (e.g. local-admin-token-bangalore-namma-yatri).
+# Since "one token per person", every login / switchMerchantAndCity deletes ALL of
+# that person's tokens, including the fixed one every collection starts with, so
+# without this every collection after the first gets 401 INVALID_TOKEN.
+# dashboard.sql only inserts with ON CONFLICT DO NOTHING, so re-running it is safe.
+reseed_dashboard_token() {
+    [ -f "$PROVIDER_DASHBOARD_SEED_SQL" ] || return 0
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" \
+        -f "$PROVIDER_DASHBOARD_SEED_SQL" > /dev/null 2>&1 || \
+        echo "WARNING: could not re-seed dashboard token (postgres on $DB_HOST:$DB_PORT?)"
+}
 REWARDS_SETUP_SQL="$SCRIPT_DIR/../local-testing-data/rewards-dashboard-setup.sql"
 # Rider-side dashboard users/tokens now live in the unified dashboard seed
 # (rider-dashboard.sql was deleted with the standalone rider-dashboard service).
@@ -348,6 +360,7 @@ run_single() {
 
     flush_redis
     enable_all_drivers
+    reseed_dashboard_token
 
     mkdir -p "$REPORTS_DIR"
     echo "Running: $suite_name ($env_name)"
