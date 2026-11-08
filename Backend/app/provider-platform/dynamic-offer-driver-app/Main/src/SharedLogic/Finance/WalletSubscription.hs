@@ -48,6 +48,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance hiding (runFinance)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import SharedLogic.Finance.Wallet (buildDriverChargeCtx)
 import SharedLogic.Finance.WalletAccount (resolveWalletOwner)
@@ -144,7 +145,8 @@ debitDriverFeeFromWallet ::
     HasActorInfo m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    PostActionsEnv r
+    PostActionsEnv r,
+    DriverPoolStateEnv r
   ) =>
   DTC.TransporterConfig ->
   WalletDebitKind ->
@@ -186,7 +188,8 @@ debitBehaviourPenaltyFromWallet ::
     HasActorInfo m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    PostActionsEnv r
+    PostActionsEnv r,
+    DriverPoolStateEnv r
   ) =>
   DTC.TransporterConfig ->
   Text ->
@@ -224,7 +227,8 @@ creditWalletForPaidDriverFees ::
     HasActorInfo m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    PostActionsEnv r
+    PostActionsEnv r,
+    DriverPoolStateEnv r
   ) =>
   DTC.TransporterConfig ->
   DP.Person ->

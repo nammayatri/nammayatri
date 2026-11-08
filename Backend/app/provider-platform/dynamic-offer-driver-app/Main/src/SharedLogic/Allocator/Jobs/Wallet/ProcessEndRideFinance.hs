@@ -40,6 +40,7 @@ import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import SharedLogic.Allocator
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.PostActions (PostActionsEnv)
 import Storage.Beam.IncentiveJourney ()
@@ -73,7 +74,8 @@ processEndRideFinanceJob ::
     Redis.HedisLTSFlowEnv r,
     BeamFlow m r,
     IJBeamFlow.BeamFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    DriverPoolStateEnv r
   ) =>
   Job 'ProcessEndRideFinance ->
   m ExecutionResult

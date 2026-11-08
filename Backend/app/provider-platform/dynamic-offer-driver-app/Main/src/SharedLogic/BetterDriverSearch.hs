@@ -54,6 +54,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestT
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DriverPool as DP
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.DriverPool.Types as SDT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -128,7 +129,8 @@ startBetterDriverSearch ::
     HasField "quoteRespondCoolDown" r Int,
     HasField "driverUnlockDelay" r Seconds,
     C.MonadCatch m,
-    Analytics.PublishesFleetAnalytics m
+    Analytics.PublishesFleetAnalytics m,
+    DriverPoolStateEnv r
   ) =>
   DMerc.Merchant ->
   SRB.Booking ->

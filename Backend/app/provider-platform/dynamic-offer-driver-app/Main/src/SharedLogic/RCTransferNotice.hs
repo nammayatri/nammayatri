@@ -39,6 +39,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.Queries.DriverRCAssociation as QDRCA
@@ -56,7 +57,7 @@ hasOtherVehiclesUdf = "HAS_OTHER_VEHICLES"
 -- | Push the overlay to the previous holder. Call only after the new driver's activation has succeeded.
 --   The new driver's id is only logged: the push never identifies them.
 notifyRCTransfer ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Id DP.Person ->
   DVRC.VehicleRegistrationCertificate ->
@@ -83,7 +84,7 @@ isFleetHandover rc previousDriverId newDriverId = do
     else pure False
 
 notify ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Id DP.Person ->
   DVRC.VehicleRegistrationCertificate ->

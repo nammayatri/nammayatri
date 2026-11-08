@@ -40,6 +40,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaign
 import Storage.Beam.IncentiveJourney ()
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
@@ -90,7 +91,7 @@ getDriverFleetAutoAssignConfig driverId merchantOpCityId = do
 -- switch), then area preference off and trip-distance preference off when the fleet ignores them. No-op for a driver
 -- whose fleet has no auto-assign settings, unless forced.
 applyFleetSettings ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r, DriverPoolStateEnv r) =>
   Bool ->
   [DVST.VehicleServiceTier] ->
   Person ->
@@ -125,7 +126,7 @@ applyFleetSettings forceAutoAssign cityTiers driver vehicle = do
 
 -- | For a driver who becomes active in a fleet: applies the fleet's settings to the vehicle they already have, if any.
 applyFleetSettingsToDriver ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r, DriverPoolStateEnv r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m ()
@@ -205,7 +206,7 @@ restoreFleetAutoAssignOrKeep driverId =
 
 -- | The fleet's per-driver switch turned off: these tiers come off the AutoAssign tag and the vehicle's auto-accept tiers.
 removeAutoAssign ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   [ServiceTierType] ->
   Person ->
   DV.Vehicle ->
@@ -225,7 +226,7 @@ setTag name value tags =
   Yudhishthira.removeTagName (Just tags) (LYT.TagNameValue name) <> [Yudhishthira.mkTagNameValueExpiryAt (LYT.TagName name) value Nothing]
 
 updateAutoAcceptTiers ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   DV.Vehicle ->
   [ServiceTierType] ->
   m ()

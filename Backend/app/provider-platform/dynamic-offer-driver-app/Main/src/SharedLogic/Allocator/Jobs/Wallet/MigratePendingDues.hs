@@ -34,6 +34,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 import SharedLogic.Allocator
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
 import SharedLogic.Finance.WalletFloor (WalletFloorOfflineFlow)
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor

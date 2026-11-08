@@ -124,7 +124,7 @@ data AppCfg = AppCfg
     ltsRedisCfgs :: [HedisCloudCfg],
     ltsReplicaRedisCfg :: Maybe HedisCfg,
     hedisClusterCfgs :: [HedisCloudCfg],
-    -- | The sessionizer's own state store (DRIVER_POOL_STATE / SESSIONIZER / DRIVER_PERFORMANCE only).
+    -- | The sessionizer's own state store (DRIVER_POOL_STATE / SESSIONIZER only).
     driverStateRedisCfg :: Maybe HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,

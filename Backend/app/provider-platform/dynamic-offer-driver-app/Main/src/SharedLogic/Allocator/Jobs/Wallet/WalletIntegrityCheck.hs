@@ -49,6 +49,7 @@ import Lib.Scheduler
 import qualified Sequelize as Se
 import SharedLogic.Allocator
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.PostActions (PostActionsEnv)
 import SharedLogic.Finance.WalletAccount (getWalletBalanceByOwner, isWalletSubscriptionCity)
 import SharedLogic.Finance.WalletBalanceCache (setDriverWalletBalanceInPool)
@@ -68,7 +69,8 @@ walletIntegrityCheck ::
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    PostActionsEnv r
+    PostActionsEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'WalletIntegrityCheck ->
   m ExecutionResult
@@ -135,7 +137,8 @@ retryFailedNightlyDebits ::
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    PostActionsEnv r
+    PostActionsEnv r,
+    DriverPoolStateEnv r
   ) =>
   DTC.TransporterConfig ->
   Id MerchantOperatingCity ->

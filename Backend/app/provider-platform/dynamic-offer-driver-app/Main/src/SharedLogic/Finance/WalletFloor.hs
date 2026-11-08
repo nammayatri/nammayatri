@@ -57,6 +57,7 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.WalletAccount
 import SharedLogic.Finance.WalletAutopay (ensureAutopayRecharge)
 import SharedLogic.Finance.WalletBalanceCache (setDriverWalletBalanceInPool)
@@ -118,7 +119,8 @@ type WalletFloorOfflineFlow m r =
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg)
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    DriverPoolStateEnv r
   )
 
 enforceWalletFloorForOwner ::
