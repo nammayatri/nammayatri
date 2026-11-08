@@ -8,7 +8,10 @@ table:
 
 - **presence** from LTS pings (`location-updates`): every ping whose mode is
   not OFFLINE adds to `pings` and sets `online = 1` on the row of its bucket
-  and of the state in force at its `st`. Online time is not a column: it is
+  and of the state in force at its `st`. A point the phone recorded on a ride
+  and sent later (`st - ts` over 60 s, `onRide` true at `ts`) counts at its
+  `ts` and the state then. Other batched points count at `st`, because LTS
+  gives a batch one `st`. Online time is not a column: it is
   the number of distinct online buckets × 5 minutes,
   `uniqExactIf(bucket, online = 1) * 5` minutes per driver. Count buckets,
   never rows: a bucket with a state change has a row per state.
@@ -59,8 +62,8 @@ keeps each driver's state in memory for good (history trimmed at each flush)
 and reads Redis only for a driver not in memory, once the writer has applied
 that driver's events. A record waits, with no timeout, until every state event
 published up to 30 s after its time has been read; waiting never blocks
-polling. An event older than the history kept in memory takes its state from
-the writer's Redis history (`sessionizer_history_fallbacks`).
+polling. An event or buffered ping older than the history kept in memory takes
+its state from the writer's Redis history (`sessionizer_history_fallbacks`).
 
 Always `sum()` the measures, and group by the state columns to split by state:
 
@@ -151,6 +154,8 @@ state row.
 | `event_unknown_column` | A key that isn't a table column is ignored. |
 | `event_rating_changed` | A changed rating adds only its difference. |
 | `event_old_state` | An event an hour old takes the state in force an hour ago. |
+| `batched_on_ride`, `batched_ride_ended_in_outage`, `batched_older_than_memory` | A point recorded on a ride counts at its `ts`, split by the state then; the state can come from Redis. |
+| `batched_not_on_ride`, `batched_under_gap`, `batched_clock_behind`, `batched_clock_ahead`, `batched_before_any_state` | Everything else stays at `st`. |
 | `edge_st_missing_uses_ts`, `edge_future_*`, `edge_ancient_pings_skipped` | No `st` falls back to `ts`; implausible times are skipped without blocking. |
 | `edge_burst_200_pings`, `edge_weird_ids` | 200 pings; quotes, unicode and 300-char ids. |
 
@@ -175,6 +180,9 @@ booking, start, end or cancel).
 - **The ping's mode decides "online".** A driver whose state is OFFLINE but
   whose pings say ONLINE is counted as online.
 - **A session's first and last bucket count in full** (5 minutes each).
+- **Network outages.** While idle, an outage shows as offline: the batch lands in
+  the bucket it reached LTS. On a ride, it counts at `ts`, but a change only the
+  phone can make (ending the ride) takes effect when the request reaches the server.
 - **Restarts.** Records up to the last flushed offset are skipped on replay. A
   crash between the deliveries and the Redis write of the flushed offsets
   counts that window again. To check by hand, stop `kafka-sessionizer-exe`
@@ -187,7 +195,7 @@ booking, start, end or cancel).
 | `sessionizer_state_read_lag_ms` | above a few minutes: the state consumer is behind, records are held |
 | `sessionizer_oldest_held_age_ms` | above a few minutes: records wait (state topic or writer behind) |
 | `sessionizer_writer_lag_ms` | above a few minutes: the DRIVER_POOL_STATE writer is behind |
-| `rate(sessionizer_history_fallbacks[10m])` | rises: many late events (taking their state from Redis) |
+| `rate(sessionizer_history_fallbacks[10m])` | rises: many late events or buffered pings (taking their state from Redis) |
 | `rate(sessionizer_flush_failures[10m])` | above 0: producing to `driver-analytics-5m` fails |
 | Kafka engine lag | consumer group `ch-atlas_kafka-driver_analytics_5m` on `driver-analytics-5m` lags (`system.kafka_consumers` in ClickHouse, or the Kafka exporter) |
 
