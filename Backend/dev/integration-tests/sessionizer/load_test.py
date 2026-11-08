@@ -144,7 +144,7 @@ def main():
         rep.check(want == have, f"total {m}: {have}", f"want {want}")
     bad = [k for k in set(expected) | set(got) if expected.get(k) != got.get(k)]
     rep.check(not bad, f"every (bucket, city, driver) row matches the model ({len(expected):,} rows)",
-              "\n        ".join(f"{ts.iso(k[0])} {k[2]}  model: {ts.fmt(expected.get(k, {}))}  |  got: {ts.fmt(got.get(k, {}))}"
+              f"{len(bad):,} rows differ\n        " + "\n        ".join(f"{ts.iso(k[0])} {k[2]}  model: {ts.fmt(expected.get(k, {}))}  |  got: {ts.fmt(got.get(k, {}))}"
                                 for k in sorted(bad)[:20]))
     print(f"\n{'ALL PASS' if not rep.failures else f'{rep.failures} FAILED'}  (run {run_id})")
     return 1 if rep.failures else 0

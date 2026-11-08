@@ -61,6 +61,7 @@ EVENTS_TOPIC = "driver-analytics-events"
 # Mirrors Processor.Sessionizer.Processor / Processor.DriverPoolState.Types.
 BUCKET_MS = 5 * 60 * 1000
 MIN_PLAUSIBLE_MS = 1577836800000          # 2020-01-01: older pings are skipped
+BUFFERED_PING_GAP_MS = 60_000
 MAX_FUTURE_SKEW_MS = 5 * 60 * 1000        # pings further ahead of the wall clock are skipped
 STATE_EXPIRY_S = 30 * 24 * 60 * 60
 HISTORY_CAP = 100                         # Processor.DriverPoolState.Processor.historyCap
@@ -355,6 +356,55 @@ def build_plan(t0_ms: int, run_id: str) -> tuple[Plan, float, int]:
     p.state(1, d, onRide=False)
     p.event(10, d, {"finished_rides": 1}, ts_ms=p.t0 - 3_000_000)
 
+    # ── batched pings: LTS stamps a whole batch with one st; ts is when the phone recorded each point ──
+    sc = p.scenario("batched_on_ride", "a point recorded on a ride and sent later counts at its ts, in its own bucket", pings=2)
+    d = p.driver(sc)
+    p.state(b - 25, d, **IDLE)
+    p.state(b - 22, d, onRide=True)
+    p.ping_at(b + 45, d, ts_ms=p.ms(b - 20))
+    p.ping(b + 50, d)
+
+    sc = p.scenario("batched_ride_ended_in_outage", "the ride ends mid-outage: on-ride points at ts, later ones at st", pings=2)
+    d = p.driver(sc)
+    p.state(0, d, **IDLE)
+    p.state(1, d, onRide=True)
+    p.state(30, d, onRide=False)
+    p.ping_at(100, d, ts_ms=p.ms(10))
+    p.ping_at(100, d, ts_ms=p.ms(40))
+
+    sc = p.scenario("batched_not_on_ride", "a point recorded while idle stays at st", pings=1)
+    d = p.driver(sc)
+    p.state(0, d, **IDLE)
+    p.ping_at(90, d, ts_ms=p.ms(5))
+
+    sc = p.scenario("batched_under_gap", "ts within 60 s of st is a live ping: stays at st", pings=1)
+    d = p.driver(sc)
+    p.state(0, d, **{**IDLE, "onRide": True})
+    p.ping_at(60, d, ts_ms=p.ms(10))
+
+    sc = p.scenario("batched_clock_behind", "a phone clock before the ride started falls back to st", pings=1)
+    d = p.driver(sc)
+    p.state(0, d, **IDLE)
+    p.state(60, d, onRide=True)
+    p.ping_at(100, d, ts_ms=p.ms(5))
+
+    sc = p.scenario("batched_clock_ahead", "a phone clock an hour ahead stays at st", pings=1)
+    d = p.driver(sc)
+    p.state(0, d, **{**IDLE, "onRide": True})
+    p.ping_at(30, d, ts_ms=p.ms(30) + 3_600_000)
+
+    sc = p.scenario("batched_before_any_state", "no state at ts falls back to st", pings=1)
+    d = p.driver(sc)
+    p.state(60, d, **IDLE)
+    p.ping_at(100, d, ts_ms=p.ms(5))
+
+    sc = p.scenario("batched_older_than_memory", "after a flush trims history, the state at ts comes from Redis", pings=1)
+    d = p.driver(sc)
+    p.state(0, d, **IDLE)
+    p.state(1, d, onRide=True)
+    p.state(2, d, onRide=False)
+    p.ping_at(340, d, ts_ms=p.ms(1.5))
+
     # ── extreme / edge cases ──
     sc = p.scenario("edge_ping_on_bucket_edge", "a ping exactly on a 5-min edge belongs to the later bucket",
                     online=2, pings=3)
@@ -579,8 +629,11 @@ def model(plan: Plan):
             st = int(datetime.fromisoformat((v.get("st") or v["ts"]).replace("Z", "+00:00")).timestamp() * 1000)
             if not plausible(st, m) or v["mode"] == "OFFLINE":
                 continue                                  # skipped by the sessionizer
-            entry = in_force(d, st)
-            r = row(floor_bucket(st), v["mocid"], d, entry)
+            at, entry = st, in_force(d, st)
+            ts = int(datetime.fromisoformat(v["ts"].replace("Z", "+00:00")).timestamp() * 1000)
+            if st - ts > BUFFERED_PING_GAP_MS and on_ride(in_force(d, ts)):
+                at, entry = ts, in_force(d, ts)   # recorded on a ride, sent later
+            r = row(floor_bucket(at), v["mocid"], d, entry)
             r["pings"] += 1
             r["online"] = 1
             if on_ride(entry):
@@ -656,6 +709,14 @@ def state_checks(rows: dict, by_name: dict, t0: int) -> list[tuple[bool, str, st
     split = sorted((dict(k)["onRide"], v["finished_rides"]) for k, v in ps.items() if k)
     out.append((None not in ps and split == [(True, 1)],
                 "event_old_state: counted in the onRide state in force an hour ago", brief(ps)))
+    for name, want in [("batched_on_ride", [(True, 2)]),
+                       ("batched_ride_ended_in_outage", [(False, 1), (True, 1)]),
+                       ("batched_not_on_ride", [(False, 1)]),
+                       ("batched_clock_behind", [(True, 1)]),
+                       ("batched_older_than_memory", [(True, 1)])]:
+        ps = states(name)
+        split = sorted((dict(k)["onRide"], v["pings"]) for k, v in ps.items() if k)
+        out.append((None not in ps and split == want, f"{name}: pings by onRide = {want}", brief(ps)))
     return out
 
 

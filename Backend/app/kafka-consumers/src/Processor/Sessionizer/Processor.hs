@@ -3,7 +3,8 @@
 -- ClickHouse. A row is (bucket, city, driver, driver state): the driver was in
 -- that state during that 5-minute bucket. Every ping whose mode is not OFFLINE
 -- adds to the row of the bucket of its st and of the state in force at its st,
--- marking it online; every event adds its counts to the row of its own time
+-- marking it online, except a point the phone recorded on a ride and sent later
+-- ('placePing'), which goes at its ts; every event adds its counts to the row of its own time
 -- and the state in force then; a state change inside a bucket gives another
 -- row. Online time is not computed here: it is the number of distinct online
 -- buckets per driver, times 5 minutes. Both topics are keyed by driver id with
@@ -30,8 +31,8 @@
 -- the state partitions) and, for a driver not in memory, until the writer is
 -- that far too. Waiting never blocks: both consumers keep polling, and held
 -- records stay uncommitted. Lag on the publishing side is assumed not to
--- happen. An event older than the history kept in memory (late, or replayed)
--- takes its state from the writer's Redis history instead.
+-- happen. An event or buffered ping older than the history kept in memory (late,
+-- or replayed) takes its state from the writer's Redis history instead.
 --
 -- Every 'flushEveryMs' the rows are produced to 'analyticsTopic' and every
 -- delivery is awaited. Then the last applied offset per partition
@@ -126,6 +127,11 @@ maxFutureSkewMs, minPlausiblePingMs :: Integer
 maxFutureSkewMs = 5 * 60 * 1000
 minPlausiblePingMs = 1577836800000
 
+-- | A ping whose st is more than this after its ts was recorded by the phone and
+-- sent later, when it had network again. LTS gives a whole batch one st.
+bufferedPingGapMs :: Integer
+bufferedPingGapMs = 60 * 1000
+
 pollBatchSize, loadChunk, rowsPerMessage :: Int
 pollBatchSize = 1000
 loadChunk = 500
@@ -140,6 +146,7 @@ ignoredDriverIds = ["", "drivers-not-found"]
 data PingAt = PingAt
   { pingDriverId :: Text,
     pingStMs :: Integer,
+    pingTsMs :: Integer,
     pingCity :: Text,
     pingLat :: Double,
     pingLon :: Double
@@ -233,7 +240,7 @@ data Metrics = Metrics
     stateReadLagMs :: P.Gauge,
     -- | now minus the state writer's watermark
     writerLagMs :: P.Gauge,
-    -- | events whose state came from the writer's Redis history, not memory
+    -- | events and buffered pings whose state came from the writer's Redis history, not memory
     historyFallbacks :: P.Counter,
     -- | flushes that failed to produce to the analytics topic
     flushFailures :: P.Counter
@@ -245,7 +252,7 @@ registerMetrics =
     <$> regGauge "sessionizer_oldest_held_age_ms" "How long the oldest held record has waited"
     <*> regGauge "sessionizer_state_read_lag_ms" "Now minus the time up to which every driver-pool-state event has been read"
     <*> regGauge "sessionizer_writer_lag_ms" "Now minus the state writer's watermark"
-    <*> P.register (P.counter (P.Info "sessionizer_history_fallbacks" "Events whose state came from the writer's Redis history"))
+    <*> P.register (P.counter (P.Info "sessionizer_history_fallbacks" "Events and buffered pings whose state came from the writer's Redis history"))
     <*> P.register (P.counter (P.Info "sessionizer_flush_failures" "Flushes that failed to produce to the analytics topic"))
   where
     regGauge name help = P.register (P.gauge (P.Info name help))
@@ -492,7 +499,7 @@ runSessionizer flowRt appEnv kc = do
       let plausible t = t >= minPlausiblePingMs && t <= batchNow + maxFutureSkewMs
           decoded = [(hr, d) | hr <- released, Just d <- [hr.hrDecoded], plausible (snd (decodedAt d))]
           pingsAt =
-            [ PingAt {pingDriverId = did, pingStMs = st, pingCity = fromMaybe "" lu.mocid, pingLat = lu.pt.lat, pingLon = lu.pt.lon}
+            [ PingAt {pingDriverId = did, pingStMs = st, pingTsMs = utcToMs lu.ts, pingCity = fromMaybe "" lu.mocid, pingLat = lu.pt.lat, pingLon = lu.pt.lon}
               | (_, DecodedPing did lu st) <- decoded,
                 lu.mode /= Just "OFFLINE"
             ]
@@ -502,19 +509,26 @@ runSessionizer flowRt appEnv kc = do
               { recordProgress = foldl' (\m (tp, t) -> M.insert tp t m) acc.recordProgress [(topicPartition hr.hrRecord, snd (decodedAt d)) | (hr, d) <- decoded]
               }
       loaded <- hydrate stateEnv progressed [did | (_, d) <- decoded, let did = fst (decodedAt d), M.notMember did progressed.drivers]
-      let withPings =
-            foldl'
-              (\a p -> addToRow (floorBucket p.pingStMs, p.pingCity, p.pingDriverId) (entryAt a p.pingDriverId p.pingStMs) mempty {pings = 1, online = True, lastPing = Just (p.pingStMs, p.pingLat, p.pingLon)} a)
-              loaded
-              pingsAt
-          -- Older than the history kept in memory: the writer's history.
-          late = [(ev.driverId, ev.ts) | ev <- eventsAt, isNothing (entryAt withPings ev.driverId ev.ts)]
+      -- Older than the history kept in memory: the writer's history.
+      let late =
+            filter
+              (\(did, atMs) -> isNothing (entryAt loaded did atMs))
+              ([(p.pingDriverId, p.pingTsMs) | p <- pingsAt, isBufferedPing p] <> [(ev.driverId, ev.ts) | ev <- eventsAt])
       fallback <- if null late then pure M.empty else lateStatesRetrying stateEnv.hedisConnection late
       void $ P.addCounter acc.metrics.historyFallbacks (fromIntegral (length late))
-      unless (null late) $ flow $ logInfo $ "sessionizer: " <> show (length late) <> " events took their state from Redis history (" <> show (M.size fallback) <> " found)"
+      unless (null late) $ flow $ logInfo $ "sessionizer: " <> show (length late) <> " records took their state from Redis history (" <> show (M.size fallback) <> " found)"
+      let stateAt did atMs = entryAt loaded did atMs <|> M.lookup (did, atMs) fallback
+          withPings =
+            foldl'
+              ( \a p ->
+                  let (atMs, entry) = placePing stateAt p
+                   in addToRow (floorBucket atMs, p.pingCity, p.pingDriverId) entry mempty {pings = 1, online = True, lastPing = Just (atMs, p.pingLat, p.pingLon)} a
+              )
+              loaded
+              pingsAt
       pure $
         foldl'
-          (\a ev -> addToRow (floorBucket ev.ts, ev.merchantOperatingCityId, ev.driverId) (entryAt a ev.driverId ev.ts <|> M.lookup (ev.driverId, ev.ts) fallback) mempty {counts = eventCounts ev} a)
+          (\a ev -> addToRow (floorBucket ev.ts, ev.merchantOperatingCityId, ev.driverId) (stateAt ev.driverId ev.ts) mempty {counts = eventCounts ev} a)
           withPings
           eventsAt
 
@@ -597,6 +611,21 @@ applyEvent acc ev = case M.lookup ev.driverId acc.drivers of
 -- | The history entry in force at @atMs@.
 entryAt :: Acc -> Text -> Integer -> Maybe (Integer, DriverStateSnapshot)
 entryAt acc did atMs = M.lookup did acc.drivers >>= M.lookupLE atMs . (.dmHistory)
+
+isBufferedPing :: PingAt -> Bool
+isBufferedPing p = p.pingStMs - p.pingTsMs > bufferedPingGapMs
+
+-- | Where a ping counts: at its st and the state then, unless the phone recorded
+-- it on a ride and sent it later, when it counts at its ts and the state then. A
+-- driver with no network can't be offered a ride, but one on a ride is working.
+-- A phone clock far behind lands outside the ride, so it falls back to st too.
+placePing :: (Text -> Integer -> Maybe (Integer, DriverStateSnapshot)) -> PingAt -> (Integer, Maybe (Integer, DriverStateSnapshot))
+placePing stateAt p = case stateAt p.pingDriverId p.pingTsMs of
+  Just entry | isBufferedPing p, entryOnRide entry -> (p.pingTsMs, Just entry)
+  _ -> (p.pingStMs, stateAt p.pingDriverId p.pingStMs)
+
+entryOnRide :: (Integer, DriverStateSnapshot) -> Bool
+entryOnRide (_, snapshot) = AKM.lookup "onRide" snapshot.state == Just (A.Bool True)
 
 -- | Adds to the row of the state from a history entry (ts, snapshot), or to
 -- the unknown-state row. An entry with no state columns counts as no state.
