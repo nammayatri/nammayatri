@@ -121,7 +121,7 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
 -- A plain 'create' would leave the pool data with the fleetOwnerId an earlier unlink
 -- cleared, dropping the re-linked driver from pooling.
 createFleetDriverAssociationWithLTSSync ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id Person ->
   Id Person ->
   Maybe (Id Person) ->

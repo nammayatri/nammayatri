@@ -40,8 +40,8 @@ import Kernel.Utils.Shutdown
 import Lib.Scheduler.InMemManagement (inMemManagementApp)
 import Network.Wai.Handler.Warp
 import qualified Processor.BroadcastMessage.Processor as BMProcessor
-import qualified Processor.FleetAnalytics.Realtime as FleetAnalyticsProcessor
 import qualified Processor.DriverPoolState.Processor as DPSProcessor
+import qualified Processor.FleetAnalytics.Realtime as FleetAnalyticsProcessor
 import qualified Processor.FleetCommunication.Processor as FCProcessor
 import qualified Processor.LocationUpdate.Processor as LCProcessor
 import qualified Processor.LocationUpdate.Types as LU
@@ -129,9 +129,11 @@ startKafkaTransport flowRt appEnv = do
       kc <- KafkaFlow.newKafkaConsumer appEnv
       KafkaFlow.runPerEvent flowRt appEnv kc $ \payload _key ->
         FCProcessor.processFleetCommunicationDelivery payload
-    DRIVER_POOL_STATE ->
+    DRIVER_POOL_STATE -> do
+      kc <- KafkaFlow.newKafkaConsumer appEnv
       KafkaCommitting.runOrderedCommitting flowRt appEnv kc (\ev -> ev.ts) DPSProcessor.processDriverPoolState DPSProcessor.publishWriterWatermark
-    SESSIONIZER ->
+    SESSIONIZER -> do
+      kc <- KafkaFlow.newKafkaConsumer appEnv
       SessionizerProcessor.runSessionizer flowRt appEnv kc
     LOCATION_UPDATE -> do
       kc <- KafkaFlow.newKafkaConsumer appEnv

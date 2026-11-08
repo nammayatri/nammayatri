@@ -32,10 +32,10 @@ library
       DriverTrackingHealthCheck.Service.Runner
       Environment
       Processor.BroadcastMessage.Processor
-      Processor.FleetAnalytics.Realtime
       Processor.ClickhouseText
       Processor.DriverPoolState.Processor
       Processor.DriverPoolState.Types
+      Processor.FleetAnalytics.Realtime
       Processor.FleetCommunication.Processor
       Processor.LocationUpdate.Processor
       Processor.LocationUpdate.Types
