@@ -30,13 +30,14 @@ import qualified Lib.Finance as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.Finance.WalletBalanceCache (syncWalletBalanceToPool)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 -- | Same shape as the kernel's own runFinance -- call sites don't change their call pattern.
 --   Reads ctx.enableWalletGatedTierCheck (caller-resolved) to gate the recheck below.
 runFinance ::
-  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Finance.FinanceCtx ->
   Finance.FinanceM m a ->
   m (Either Finance.FinanceError (a, [Id Finance.LedgerEntry]))
@@ -51,7 +52,7 @@ runFinance ctx action = do
 
 -- | Runs 'runPostActionsForAccount' against every account a runFinance call touched.
 runPostActions ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Bool ->
   Finance.FinanceState ->
   m ()
@@ -73,7 +74,7 @@ runPostActions walletGateEnabled finalState = do
 --   outside this module (createWalletEntryDelta now goes through runFinance); kept as
 --   the single-account entry point for future direct dispatch needs.
 runPostActionsForAccount ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
   Bool -> -- the city has driverWalletConfig.enableDriverWallet: keep the pool's cached balance in sync
   Finance.AffectedAccount ->

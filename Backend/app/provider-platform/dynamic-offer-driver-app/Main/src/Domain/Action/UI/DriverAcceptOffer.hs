@@ -66,6 +66,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.AddOn as SAddOn
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.CallBAP (sendDriverOffer)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
@@ -111,6 +112,7 @@ type AcceptDynamicOfferFlow m r c =
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     ServiceFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,

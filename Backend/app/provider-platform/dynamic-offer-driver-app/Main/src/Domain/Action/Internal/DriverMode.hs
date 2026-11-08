@@ -31,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverFlowStatus as SDF
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverOperatorAssociationExtra as QDriverOperatorAssociationExtra
@@ -253,7 +254,7 @@ decrementOperatorStatusKeyForFleetOwner = updateAtomicallyOperatorStatusKeyForFl
 
 -- | Common function to update both the fleet/operator status key and the driver activity in the DB
 updateDriverModeAndFlowStatus ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   DTC.TransporterConfig ->
   Bool ->
@@ -274,7 +275,7 @@ updateDriverModeAndFlowStatus driverId transporterConfig isActive mbNewMode newF
     processingChangeOnline driverId transporterConfig mbNewMode oldDriverInfo.mode
 
 forceDriverOfflineOnVehicleChange ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   DTC.TransporterConfig ->
   DI.DriverInformation ->

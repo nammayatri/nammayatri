@@ -50,6 +50,7 @@ import SharedLogic.Allocator.Jobs.CheckBetterDriverSearchProximity (betterDriver
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DriverPool as DP
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.DriverPool.Types as SDT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -119,7 +120,8 @@ startBetterDriverSearch ::
     ServiceFlow m r,
     HasField "quoteRespondCoolDown" r Int,
     HasField "driverUnlockDelay" r Seconds,
-    C.MonadCatch m
+    C.MonadCatch m,
+    DriverPoolStateEnv r
   ) =>
   DMerc.Merchant ->
   SRB.Booking ->

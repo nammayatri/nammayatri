@@ -41,6 +41,7 @@ import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool as SDP
 import qualified SharedLogic.Beckn.Common as DTS
 import SharedLogic.DriverPool
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FarePolicy as SFarePolicy
 import qualified SharedLogic.ScheduledRideTopDrivers as SRTD
@@ -65,6 +66,7 @@ getNextDriverPoolBatch ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
@@ -122,6 +124,7 @@ prepareDriverPoolBatch ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
@@ -544,7 +547,8 @@ assignDriverGoHomeTags ::
     HasKafkaProducer r,
     Redis.HedisLTSFlowEnv r,
     HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    DriverPoolStateEnv r
   ) =>
   [DriverPoolWithActualDistResult] ->
   DSR.SearchRequest ->

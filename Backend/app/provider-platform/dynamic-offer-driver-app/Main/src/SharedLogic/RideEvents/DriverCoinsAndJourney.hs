@@ -47,6 +47,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Types.SpecialLocation as SL
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -65,6 +66,7 @@ processRideEndedCoinsAndJourney ::
     ClickhouseFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
@@ -201,7 +203,7 @@ isDriverCoinsBlockedForDay id = do
   pure $ fromMaybe False (mbBlocked :: Maybe Bool)
 
 blockDriverCoinsForToday ::
-  (MonadFlow m, Esq.EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, ClickhouseFlow m r, MonadReader r m) =>
+  (MonadFlow m, Esq.EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r, ClickhouseFlow m r, MonadReader r m) =>
   Id DP.Person ->
   Seconds ->
   m ()

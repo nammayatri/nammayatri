@@ -54,6 +54,8 @@ import SharedLogic.Booking
 import SharedLogic.Cancel
 import qualified SharedLogic.CancellationOrchestrator as Orchestrator
 import qualified SharedLogic.DriverPool as DP
+import qualified SharedLogic.DriverPool.DriverAnalyticsEvent as DAE
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -132,6 +134,7 @@ cancel req merchant booking mbActiveSearchTry = do
     let currentLocation = getCoordinates <$> mbLocation
     bookingCR <- buildBookingCancellationReason transporterConfig disToPickup currentLocation mbRide
     QBCR.upsert bookingCR
+    whenJust mbRide $ \ride -> DAE.publishRideCancelled booking ride bookingCR.source
     let resolvedReasonCode = (\(DTCR.CancellationReasonCode code) -> code) <$> bookingCR.reasonCode
     cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
     let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
@@ -269,6 +272,7 @@ cancelSearch ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Analytics.PublishesFleetAnalytics m,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Esq.EsqDBReplicaFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv

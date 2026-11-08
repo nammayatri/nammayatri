@@ -25,6 +25,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant.Client.Core ()
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverIdentityInfo as QDII
@@ -48,7 +49,8 @@ triggerIffcoTokioInsurance ::
     MonadTime m,
     Log m,
     MonadReader r m,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DP.Person ->
   Id DM.Merchant ->

@@ -89,6 +89,8 @@ data HandlerEnv = HandlerEnv
     secondaryLTSHedisEnv :: Maybe HedisEnv,
     ltsReplicaHedisEnv :: Maybe HedisEnv,
     kafkaProducerTools :: KafkaProducerTools,
+    driverPoolStateTopic :: Maybe Text,
+    driverAnalyticsEventsTopic :: Maybe Text,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,

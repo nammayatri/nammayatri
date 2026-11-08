@@ -50,6 +50,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.WalletAccount
 import SharedLogic.Finance.WalletAutopay (ensureAutopayRecharge)
 import SharedLogic.Finance.WalletBalanceCache (setDriverWalletBalanceInPool)
@@ -107,7 +108,8 @@ enforceWalletFloorForOwner ::
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    DriverPoolStateEnv r
   ) =>
   DTC.TransporterConfig ->
   FAccount.CounterpartyType ->
@@ -129,7 +131,8 @@ enforceWalletFloorForDriver ::
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    DriverPoolStateEnv r
   ) =>
   DTC.TransporterConfig ->
   FAccount.CounterpartyType ->
@@ -157,7 +160,8 @@ setOfflineIfBelowFloor ::
     CacheFlow m r,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    DriverPoolStateEnv r
   ) =>
   DTC.TransporterConfig ->
   DP.Person ->
@@ -187,7 +191,8 @@ afterWalletDebit ::
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    DriverPoolStateEnv r
   ) =>
   DTC.TransporterConfig ->
   DP.Person ->

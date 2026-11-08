@@ -134,8 +134,20 @@ newKafkaConsumerWith :: Consumer.Subscription -> AppEnv -> IO Consumer.KafkaCons
 newKafkaConsumerWith extraSub appEnv =
   either (error . ("Unable to open a kafka consumer: " <>) . show) id
     <$> Consumer.newConsumer
-      (appEnv.kafkaConsumerCfg.consumerProperties)
+      (appEnv.kafkaConsumerCfg.consumerProperties <> sessionizerProps)
       (Consumer.topics appEnv.kafkaConsumerCfg.topicNames <> extraSub)
+  where
+    -- SESSIONIZER: its loop can still stall on a Redis or Kafka outage (it
+    -- retries without a timeout); past librdkafka's default 5-minute
+    -- max.poll.interval.ms the consumer would leave the group mid-window, so
+    -- allow the broker's maximum (24 h); heartbeats run on their own thread.
+    -- It reads location-updates and driver-analytics-events, both keyed by
+    -- driver id with the same partition count: the range assignor gives one
+    -- member the same partition number of both topics, so all of a driver's
+    -- records reach the same pod.
+    sessionizerProps
+      | appEnv.consumerType == SESSIONIZER = Consumer.extraProp "max.poll.interval.ms" "86400000" <> Consumer.extraProp "partition.assignment.strategy" "range"
+      | otherwise = mempty
 
 commitRecord :: Consumer.KafkaConsumer -> ConsumerRecordD -> IO ()
 commitRecord kafkaConsumer cr = do
@@ -155,3 +167,5 @@ getConfigNameFromConsumertype = \case
   FLEET_COMMUNICATION_DISPATCH -> pure "fleet-communication-dispatch"
   RIDE_EVENTS_CONSUMER -> pure "ride-events-consumer"
   FLEET_ANALYTICS_REALTIME -> pure "fleet-analytics-realtime"
+  DRIVER_POOL_STATE -> pure "driver-pool-state-writer"
+  SESSIONIZER -> pure "sessionizer"

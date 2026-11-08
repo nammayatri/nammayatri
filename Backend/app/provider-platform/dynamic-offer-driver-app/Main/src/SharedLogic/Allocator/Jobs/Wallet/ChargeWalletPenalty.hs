@@ -33,6 +33,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import SharedLogic.Allocator
 import qualified SharedLogic.DriverCancellationPenalty as DCP
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.Finance.WalletSubscription as WalletSubscription
@@ -48,7 +49,8 @@ chargeWalletPenaltyJob ::
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    DriverPoolStateEnv r
   ) =>
   Job 'ChargeWalletPenalty ->
   m ExecutionResult

@@ -26,6 +26,7 @@ import Kernel.Streaming.Kafka.Commons (KafkaTopic)
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Utils.Common
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 
 type OnboardingFlow m r =
   ( MonadFlow m,
@@ -35,6 +36,7 @@ type OnboardingFlow m r =
     EncFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     ServiceFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
     HasField "broadcastMessageTopic" r KafkaTopic,

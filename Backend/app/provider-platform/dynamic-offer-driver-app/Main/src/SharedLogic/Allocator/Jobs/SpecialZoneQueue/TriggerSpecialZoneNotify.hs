@@ -26,6 +26,7 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.Beam.SpecialZone ()
@@ -55,6 +56,7 @@ triggerSpecialZoneNotify ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "gateNotifiedKeyShards" r Int
   ) =>
   Job 'TriggerSpecialZoneNotify ->

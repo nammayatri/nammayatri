@@ -44,6 +44,8 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.LowRating as LowRating
+import qualified SharedLogic.DriverPool.DriverAnalyticsEvent as DAE
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.VehicleServiceTier (recomputeSelectedServiceTiers)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -163,6 +165,7 @@ handler merchantId req ride = do
               newRatingValue = ratingValue
           QRating.updateRating newRatingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
           pure (newRatingValue - oldRatingValue, False)
+      DAE.publishRating ride shouldIncrementCount netRatingValue
       freshDriverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
       -- Prefer the locked re-read. Fall back to the values computed before the lock when
       -- this request just backfilled an empty driver_stats row and the re-read is still empty.
@@ -185,7 +188,7 @@ handler merchantId req ride = do
     LowRating.recordDriverRating transporterConfig driverId ride.merchantOperatingCityId ride.id ratingValue shouldIncrementCount newRating newRatingCount
 
 syncServiceTiersOnRatingChange ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   DDriverStats.DriverStats ->
   Maybe Centesimal ->
   Id DP.Person ->

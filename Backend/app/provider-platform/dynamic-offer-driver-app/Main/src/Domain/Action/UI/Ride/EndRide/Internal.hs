@@ -113,6 +113,8 @@ import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.DriverFee (calculatePlatformFeeAttr)
 import qualified SharedLogic.DriverFyEarnings as SDFE
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverPool.DriverAnalyticsEvent as DAE
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
@@ -188,6 +190,7 @@ endRideTransaction ::
     HasKafkaProducer r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     CoreMetrics m
   ) =>
   Id DP.Driver ->
@@ -230,6 +233,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     markPrepaidSettlementPending settlementOwnerId ride.id.getId
   QRB.updateStatus booking.id SRB.COMPLETED
   QRide.updateAll ride.id ride
+  DAE.publishRideCompleted booking ride
   let safetyPlusCharges = maybe Nothing (\a -> find (\ac -> ac.chargeCategory == DAC.SAFETY_PLUS_CHARGES) a) $ (mbFareParams <&> (.conditionalCharges)) <|> (Just newFareParams.conditionalCharges)
   -- driverRideCount is incremented here for stats persistence; RC-stats-reminders and
   -- fleet/operator-dashboard side-effects now run in kafka-consumers RIDE_EVENTS_CONSUMER.
@@ -327,6 +331,7 @@ processEndRideFinance ::
     HasField "enableDriverFeeShardedFanOut" r Bool,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     BeamFlow m r
   ) =>
   Merchant ->
@@ -526,6 +531,7 @@ createDriverWalletTransaction ::
     BeamFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
@@ -1164,7 +1170,8 @@ createDriverFee ::
     HasField "activeDriversListKeyShards" r Int,
     HasField "enableDriverFeeShardedFanOut" r Bool,
     HasKafkaProducer r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id Merchant ->
   Id DMOC.MerchantOperatingCity ->

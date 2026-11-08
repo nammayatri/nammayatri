@@ -36,6 +36,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import SharedLogic.Allocator
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -66,6 +67,7 @@ processEndRideFinanceJob ::
     HasField "enableDriverFeeShardedFanOut" r Bool,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     BeamFlow m r
   ) =>
   Job 'ProcessEndRideFinance ->

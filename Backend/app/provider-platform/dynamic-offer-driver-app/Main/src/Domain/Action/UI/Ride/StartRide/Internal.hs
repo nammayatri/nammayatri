@@ -31,6 +31,8 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, HasShortDurationRetryCfg, logTagInfo)
 import Lib.SessionizerMetrics.Types.Event
+import qualified SharedLogic.DriverPool.DriverAnalyticsEvent as DAE
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -47,7 +49,8 @@ startRideTransaction ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "minDistanceBetweenTwoPoints" r Int,
     HasShortDurationRetryCfg r c,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id SP.Person ->
   SRide.Ride ->
@@ -67,4 +70,5 @@ startRideTransaction driverId ride bookingId firstPoint merchantId odometer tran
   logTagInfo "startRide" ("Updating driver_flow_status to ON_RIDE for DriverId " <> getId driverId)
   DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig driverInfo.active Nothing DDFS.ON_RIDE driverInfo (Just True) Nothing
   QRide.updateStatus ride.id SRide.INPROGRESS
+  DAE.publishRideStarted ride
   QBE.logRideCommencedEvent (cast driverId) bookingId ride.id ride.distanceUnit

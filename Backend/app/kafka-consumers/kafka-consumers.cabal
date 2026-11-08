@@ -32,6 +32,9 @@ library
       DriverTrackingHealthCheck.Service.Runner
       Environment
       Processor.BroadcastMessage.Processor
+      Processor.ClickhouseText
+      Processor.DriverPoolState.Processor
+      Processor.DriverPoolState.Types
       Processor.FleetAnalytics.Realtime
       Processor.FleetCommunication.Processor
       Processor.LocationUpdate.Processor
@@ -40,7 +43,10 @@ library
       Processor.RideEvents.Idempotency
       Processor.RideEvents.InternalHelpers
       Processor.RideEvents.Processor
+      Processor.Sessionizer.Processor
+      Processor.StateColumns
       SystemConfigsOverride
+      Transporter.Kafka.Committing
       Transporter.Kafka.Flow
       Transporter.RedisStream.Flow
       Transporter.RedisStream.Types
@@ -117,10 +123,12 @@ library
     , persistent
     , persistent-postgresql
     , postgresql-simple
+    , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
     , scheduler
+    , scientific
     , sequelize
     , servant-openapi3
     , servant-server
@@ -217,9 +225,11 @@ executable kafka-consumers-exe
     , persistent
     , persistent-postgresql
     , postgresql-simple
+    , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
     , scheduler
+    , scientific
     , sequelize
     , servant-openapi3
     , servant-server

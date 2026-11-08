@@ -99,6 +99,7 @@ import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding (isFleetRole)
 import SharedLogic.Finance.PostActions (runFinance)
 import qualified SharedLogic.Finance.Rails as Rails
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.IncentiveJourney as SLIJ
 import SharedLogic.Merchant
@@ -145,6 +146,7 @@ type PayoutSettlementFlow m r =
     FinanceBeamFlow.BeamFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     ClickhouseFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig]
   )

@@ -384,6 +384,8 @@ in
         cabalExecutables ++ [
           "rider-producer-exe"
           "kafka-ride-events-consumer-exe"
+          "kafka-driver-pool-state-writer-exe"
+          "kafka-sessionizer-exe"
           "kafka-fleet-analytics-consumer-exe"
           "ride-events-stream-groups"
           "nammayatri-init"
@@ -1237,6 +1239,52 @@ in
               shutdown.signal = 9;
             };
 
+            # State writer for the driver sessionizer: same binary as
+            # kafka-consumers-exe with CONSUMER_TYPE = DRIVER_POOL_STATE. Applies
+            # driver-pool-state events to the sessionizer's state store (Redis
+            # DB 2 locally; see driver-pool-state-writer.dhall).
+            kafka-driver-pool-state-writer-exe = {
+              imports = [
+                common
+                (haskellProcessFor "kafka-consumers-exe")
+              ];
+              environment = {
+                CONSUMER_TYPE = "DRIVER_POOL_STATE";
+                METRICS_PORT = toString ports.kafka-driver-pool-state-writer-metrics;
+                # See kafka-consumers-exe above.
+                GET_MY_SCHEMA = "atlas_driver_offer_bpp";
+              };
+              depends_on = {
+                "nammayatri-init".condition = "process_completed_successfully";
+                "kafka".condition = "process_healthy";
+              };
+              shutdown.signal = 9;
+            };
+
+            # Driver sessionizer: same binary as kafka-consumers-exe with
+            # CONSUMER_TYPE = SESSIONIZER. Reads LTS pings, driver analytics
+            # events and driver-pool-state, keeps driver state in memory
+            # (loaded from the state writer's Redis, DB 2 locally, on first
+            # sight) and flushes 5-minute rows to ClickHouse atlas_kafka.
+            kafka-sessionizer-exe = {
+              imports = [
+                common
+                (haskellProcessFor "kafka-consumers-exe")
+              ];
+              environment = {
+                CONSUMER_TYPE = "SESSIONIZER";
+                METRICS_PORT = toString ports.kafka-sessionizer-metrics;
+                # See kafka-consumers-exe above.
+                GET_MY_SCHEMA = "atlas_driver_offer_bpp";
+              };
+              depends_on = {
+                "nammayatri-init".condition = "process_completed_successfully";
+                "kafka".condition = "process_healthy";
+                "kafka-driver-pool-state-writer-exe".condition = "process_started";
+              };
+              shutdown.signal = 9;
+            };
+
             # Fleet analytics consumer: same binary, CONSUMER_TYPE = FLEET_ANALYTICS_REALTIME.
             # Restarts after a handler throw. Offsets are committed only after a
             # successful apply, so the new process reads the failed record again.
@@ -1911,6 +1959,7 @@ in
                 schemas = [
                   ../../dev/clickhouse/sql-seed/atlas-kafka-seed.sql
                   ../../dev/clickhouse/local-testing-data/atlas-kafka.sql
+                  ../../dev/clickhouse/sql-seed/sessionizer-tables.sql
                 ];
               }
               {

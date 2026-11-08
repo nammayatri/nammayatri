@@ -717,9 +717,11 @@ library
       SharedLogic.DriverPool.AreaPreference
       SharedLogic.DriverPool.AvailableForRides
       SharedLogic.DriverPool.Config
+      SharedLogic.DriverPool.DriverAnalyticsEvent
       SharedLogic.DriverPool.DriverPoolData
       SharedLogic.DriverPool.DriverPoolDataBuilder
       SharedLogic.DriverPool.DriverPoolMigrations
+      SharedLogic.DriverPool.DriverPoolStateEvent
       SharedLogic.DriverPool.LTSDataSync
       SharedLogic.DriverPool.Types
       SharedLogic.DriverSupplyCounter

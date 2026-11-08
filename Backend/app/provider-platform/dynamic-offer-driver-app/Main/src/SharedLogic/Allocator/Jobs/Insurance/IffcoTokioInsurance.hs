@@ -12,6 +12,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.DriverInformationExtra as QDIE
@@ -24,7 +25,8 @@ triggerIffcoTokioInsuranceForOnRideDrivers ::
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text],
     Log m,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'IffcoTokioInsurance ->
   m ExecutionResult
@@ -61,7 +63,8 @@ processDriverInsurance ::
     CacheFlow m r,
     Log m,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DI.DriverInformation ->
   m ()
