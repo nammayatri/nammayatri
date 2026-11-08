@@ -41,13 +41,15 @@ processDriverPoolState ev = do
   isSeeded :: Maybe Bool <- inStateRedis $ Hedis.hGet ck seededField
   -- Retry on every event until it works: a driver's first events (login,
   -- onboarding) arrive before they have a vehicle, and the DB builder needs one.
-  -- The DB already holds each change (the app publishes after writing), so
-  -- seeding before applying the event's changes is safe. The seed is the DB as
-  -- of now: live, that is milliseconds after the event; when catching up on a
-  -- backlog, the first history entry carries the event's ts but today's values.
-  -- Seed outside inStateRedis: the DB queries cache through the app's Redis.
+  -- The seed is the app's pool data (LTS Redis), which holds state not yet in
+  -- the DB; a driver with no pool data yet is built from the DB, as dispatch
+  -- does. Seeding before applying the event's changes is safe, as the app
+  -- publishes after writing. The seed is the state as of now: live, that is
+  -- milliseconds after the event; when catching up on a backlog, the first
+  -- history entry carries the event's ts but today's values.
+  -- Seed outside inStateRedis: the reads go through the app's Redis.
   unless (isSeeded == Just True) $ do
-    seeded <- DPDBuilder.buildDriverPoolDataFromDB False False [Id ev.driverId]
+    seeded <- DPDBuilder.getOrBuildDriverPoolDataBatch False False [Id ev.driverId]
     case map A.toJSON seeded of
       (A.Object record : _) -> inStateRedis $ do
         writeFields ck record
