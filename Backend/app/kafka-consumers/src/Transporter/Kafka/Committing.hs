@@ -2,7 +2,9 @@
 -- (DRIVER_POOL_STATE). Unlike 'Transporter.Kafka.Flow':
 --
 --   * messages are handled one at a time, in order, and a failing message is
---     retried until it succeeds, so nothing is skipped;
+--     retried with backoff; after 'maxAttempts' failures the consumer stops
+--     (the process exits) without committing it, so nothing is skipped and the
+--     restart reads it again;
 --   * offsets are committed explicitly, only after messages are handled;
 --   * a watermark (epoch ms) is reported per owned partition, about once a
 --     second: the current time when the partition is caught up (consumed up to
@@ -35,6 +37,10 @@ import qualified Prelude as P
 -- | Commit and report the watermark at most this often (ms).
 progressEveryMs :: Integer
 progressEveryMs = 1000
+
+-- | Tries per message before the consumer stops; waits 1, 2, 4, 8 s between.
+maxAttempts :: Int
+maxAttempts = 5
 
 -- | Broker round trips for the watermark (high offsets, committed offsets).
 brokerTimeout :: Consumer.Timeout
@@ -75,11 +81,18 @@ runOrderedCommitting flowRt appEnv kc eventTime handler reportWatermark = go M.e
         then progress nowMs lastByPartition' >> go lastByPartition' nowMs
         else go lastByPartition' lastProgress
 
-    handleWithRetry event =
-      flow (handler event) `E.catch` \(e :: E.SomeException) -> do
-        flow $ logError $ "handler failed, retrying in 1s: " <> show e
-        CC.threadDelay 1000000
-        handleWithRetry event
+    handleWithRetry = handleAttempt 1
+    handleAttempt attempt event =
+      flow (handler event) `E.catch` \(e :: E.SomeException) ->
+        if attempt >= maxAttempts
+          then do
+            flow $ logError $ "handler failed " <> show attempt <> " times, stopping the consumer: " <> show e
+            E.throwIO e
+          else do
+            let delaySec = 2 ^ (attempt - 1) :: Int
+            flow $ logError $ "handler failed (attempt " <> show attempt <> " of " <> show maxAttempts <> "), retrying in " <> show delaySec <> "s: " <> show e
+            CC.threadDelay (delaySec * 1000000)
+            handleAttempt (attempt + 1) event
 
     progress nowMs lastByPartition = do
       commitErr <- Consumer.commitAllOffsets Consumer.OffsetCommit kc
