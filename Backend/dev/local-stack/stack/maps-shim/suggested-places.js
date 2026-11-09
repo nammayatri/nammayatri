@@ -187,16 +187,19 @@ function liveGeo(pool) {
       );
       return rows;
     },
-    /** OSM points of interest of one of our types within `metres`, nearest first. */
+    /**
+     * OSM points of interest of one of our types within `metres`, nearest
+     * first. NO Arabic locality here: the first version joined it per row,
+     * and the live probe of 2026-11-09 measured 12 s for cafés within 5 km of
+     * Algiers -- the join ran for every café in the radius (hundreds), each a
+     * scan of the whole index (display_name has no index), before the LIMIT.
+     * The caller asks localitiesInArabic once, for the 20 kept.
+     */
     async osmOfType(type, lat, lon, metres, limit) {
       const { rows } = await pool.query(
-        `SELECT p.place_id, p.display_name, p.name_ar, p.locality, l.name_ar AS locality_ar,
+        `SELECT p.place_id, p.display_name, p.name_ar, p.locality,
                 p.lat, p.lon, st_distance(p.geog, ${point('$2', '$3')}, false) AS distance_m
            FROM geo.place p
-           LEFT JOIN LATERAL (
-                SELECT l2.name_ar FROM geo.place l2
-                 WHERE l2.display_name = p.locality AND l2.name_ar IS NOT NULL
-                 ORDER BY l2.importance DESC LIMIT 1) l ON true
           WHERE p.kind = 'poi'
             AND st_dwithin(p.geog, ${point('$2', '$3')}, $4)
             AND movin.place_type_of(p.class, p.subclass, p.display_name) = $1
@@ -390,12 +393,14 @@ async function within(env, type, lat, lon, metres) {
     env.geo.osmOfType(type, lat, lon, metres, NEARBY_LIMIT),
     proposedOfType(env.pool, type, lat, lon, metres),
   ]);
+  // The Arabic names of the localities, ONE query for all of them -- map
+  // places and proposals alike -- rather than one per place (see osmOfType).
   const arabic = await env.geo.localitiesInArabic(
-    [...new Set(proposed.map((p) => p.locality).filter(Boolean))]);
+    [...new Set([...osm, ...proposed].map((p) => p.locality).filter(Boolean))]);
   const all = [
     ...osm.map((p) => ({
       placeId: p.place_id, name: p.display_name, nameAr: p.name_ar || null,
-      locality: p.locality || null, localityAr: p.locality_ar || null,
+      locality: p.locality || null, localityAr: (p.locality && arabic[p.locality]) || null,
       lat: p.lat, lon: p.lon, distance: p.distance_m, source: 'map',
     })),
     ...proposed.map((p) => ({

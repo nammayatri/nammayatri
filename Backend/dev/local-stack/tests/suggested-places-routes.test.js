@@ -67,7 +67,8 @@ const north = (p, metres) => ({ lat: p.lat + metres / 111195, lon: p.lon });
     },
     async localitiesInArabic(names) {
       this.calls.push(['localitiesInArabic', names]);
-      return Object.fromEntries(names.filter((n) => n === 'Tevragh Zeina').map((n) => [n, 'تفرغ زينة']));
+      const known = { 'Tevragh Zeina': 'تفرغ زينة', Ksar: 'لكصر' };
+      return Object.fromEntries(names.filter((n) => known[n]).map((n) => [n, known[n]]));
     },
   };
   const opts = { pool: db.pool, riderUrl: who.url, driverUrl: who.url, geo };
@@ -290,9 +291,9 @@ const north = (p, metres) => ({ lat: p.lat + metres / 111195, lon: p.lon });
                   author_side, author_id) VALUES ('Café En Attente', 'cafe', 'Café En Attente', 'cafe', $1, $2, 'MR', 'rider', 'rider-x')`,
   [north(person, 300).lat, person.lon]);
   geo.ofType = [
-    { type: 'cafe', place_id: 'n1', display_name: 'Café OSM 2 km', name_ar: 'مقهى', locality: 'Ksar', locality_ar: 'لكصر', lat: 1, lon: 1, distance_m: 2000 },
-    { type: 'cafe', place_id: 'n2', display_name: 'Café OSM 400 m', name_ar: null, locality: 'Ksar', locality_ar: null, lat: 1, lon: 1, distance_m: 400 },
-    { type: 'pharmacy', place_id: 'n3', display_name: 'Pharmacie OSM', name_ar: null, locality: null, locality_ar: null, lat: 1, lon: 1, distance_m: 100 },
+    { type: 'cafe', place_id: 'n1', display_name: 'Café OSM 2 km', name_ar: 'مقهى', locality: 'Ksar', lat: 1, lon: 1, distance_m: 2000 },
+    { type: 'cafe', place_id: 'n2', display_name: 'Café OSM 400 m', name_ar: null, locality: 'Ksar', lat: 1, lon: 1, distance_m: 400 },
+    { type: 'pharmacy', place_id: 'n3', display_name: 'Pharmacie OSM', name_ar: null, locality: null, lat: 1, lon: 1, distance_m: 100 },
   ];
   const near = (q, token = 'tok-r1') => call('GET', `/places/nearby?${q}`, { token });
   geo.calls = [];
@@ -308,9 +309,13 @@ const north = (p, metres) => ({ lat: p.lat + metres / 111195, lon: p.lon });
     "a proposal carries its u-id, its locality's Arabic name and its distance in metres", JSON.stringify(proposedHit));
   t.ok(j.results[2].nameAr === 'مقهى' && j.results[2].localityAr === 'لكصر', 'an OSM place carries its Arabic names');
   t.ok(geo.calls.filter((c) => c[0] === 'osmOfType').length === 1, 'found something at 5 km: no second search');
+  const arabicCalls = geo.calls.filter((c) => c[0] === 'localitiesInArabic');
+  t.ok(arabicCalls.length === 1 && JSON.stringify([...arabicCalls[0][1]].sort()) === JSON.stringify(['Ksar', 'Tevragh Zeina']),
+    'the localities in Arabic: ONE lookup for the map places and the proposals together (12 s on the live index when it was one per place)',
+    JSON.stringify(arabicCalls));
 
   geo.calls = [];
-  geo.ofType = [{ type: 'market', place_id: 'n9', display_name: 'Marché à 12 km', name_ar: null, locality: null, locality_ar: null, lat: 1, lon: 1, distance_m: 12000 }];
+  geo.ofType = [{ type: 'market', place_id: 'n9', display_name: 'Marché à 12 km', name_ar: null, locality: null, lat: 1, lon: 1, distance_m: 12000 }];
   r = await near(`type=market&lat=${person.lat}&lon=${person.lon}`, 'tok-d1');
   j = r.json();
   const radii = geo.calls.filter((c) => c[0] === 'osmOfType').map((c) => c[2]);
@@ -321,7 +326,7 @@ const north = (p, metres) => ({ lat: p.lat + metres / 111195, lon: p.lon });
   t.ok(r.status === 200 && r.json().radius === 15000 && r.json().results.length === 0, 'nothing even at 15 km: an empty list, not an error');
 
   geo.ofType = Array.from({ length: 30 }, (_, i) => ({ type: 'shop', place_id: `s${i}`, display_name: `Shop ${i}`,
-    name_ar: null, locality: null, locality_ar: null, lat: 1, lon: 1, distance_m: 4000 - i * 100 }));
+    name_ar: null, locality: null, lat: 1, lon: 1, distance_m: 4000 - i * 100 }));
   r = await near(`type=shop&lat=${person.lat}&lon=${person.lon}`);
   j = r.json();
   t.ok(j.results.length === 20 && j.results[0].distance <= j.results[19].distance, '20 at most, nearest first');

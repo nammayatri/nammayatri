@@ -80,13 +80,9 @@ EXECUTE osm_near(36.7538, 3.0588, 100);
 
 \echo '=== 4. osmOfType (search by type): 5 km first, 15 km when 5 finds nothing'
 PREPARE osm_of_type AS
-  SELECT p.place_id, p.display_name, p.name_ar, p.locality, l.name_ar AS locality_ar,
+  SELECT p.place_id, p.display_name, p.name_ar, p.locality,
   p.lat, p.lon, st_distance(p.geog, st_setsrid(st_makepoint($3::float8, $2::float8), 4326)::geography, false) AS distance_m
   FROM geo.place p
-  LEFT JOIN LATERAL (
-  SELECT l2.name_ar FROM geo.place l2
-  WHERE l2.display_name = p.locality AND l2.name_ar IS NOT NULL
-  ORDER BY l2.importance DESC LIMIT 1) l ON true
   WHERE p.kind = 'poi'
   AND st_dwithin(p.geog, st_setsrid(st_makepoint($3::float8, $2::float8), 4326)::geography, $4)
   AND movin.place_type_of(p.class, p.subclass, p.display_name) = $1
@@ -94,8 +90,10 @@ PREPARE osm_of_type AS
   LIMIT $5;
 \echo '--- cafés, Nouakchott, 5 km'
 EXECUTE osm_of_type('cafe', 18.0858, -15.9785, 5000, 20);
-\echo '--- cafés, Algiers, 5 km'
+\echo '--- cafés, Algiers, 5 km (12 s on 2026-11-09 with the per-row Arabic join; expect well under a second)'
 EXECUTE osm_of_type('cafe', 36.7538, 3.0588, 5000, 20);
+\echo '--- how Postgres runs that, the densest case'
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF) EXECUTE osm_of_type('cafe', 36.7538, 3.0588, 5000, 20);
 \echo '--- markets, Nouakchott, 5 km'
 EXECUTE osm_of_type('market', 18.0858, -15.9785, 5000, 20);
 \echo '--- markets, Nouakchott, 15 km'
@@ -120,8 +118,8 @@ PREPARE localities_ar AS
   FROM geo.place
   WHERE display_name = ANY($1) AND name_ar IS NOT NULL
   ORDER BY display_name, importance DESC;
-\echo '--- four localities'
-EXECUTE localities_ar(ARRAY(SELECT DISTINCT locality FROM pg_temp.suggested_place WHERE locality IS NOT NULL) || ARRAY['Tevragh Zeina', 'Alger Centre']);
+\echo '--- the localities of one search: one query for all'
+EXECUTE localities_ar(ARRAY['Nouakchott', 'E-Nord', 'Las Palmas', 'Ksar', 'Belcourt', 'Sidi M''Hamed', 'El Mouradia', 'Hydra', 'Tamanrasset']);
 
 \echo '=== 6. approvedMatching (autocomplete), on the copy: approved only, nearest first'
 PREPARE approved_matching AS

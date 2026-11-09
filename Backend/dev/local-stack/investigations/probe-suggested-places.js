@@ -135,7 +135,9 @@ SELECT v.n, v.t, v.n, v.t, v.ar, v.lat, v.lon, v.c,
 
   L(`\\echo '=== 4. osmOfType (search by type): 5 km first, 15 km when 5 finds nothing'`, prep('osm_of_type', s.osmOfType),
     run('cafés, Nouakchott, 5 km', 'osm_of_type', "'cafe', 18.0858, -15.9785, 5000, 20"),
-    run('cafés, Algiers, 5 km', 'osm_of_type', "'cafe', 36.7538, 3.0588, 5000, 20"),
+    run('cafés, Algiers, 5 km (12 s on 2026-11-09 with the per-row Arabic join; expect well under a second)', 'osm_of_type', "'cafe', 36.7538, 3.0588, 5000, 20"),
+    `\\echo '--- how Postgres runs that, the densest case'`,
+    "EXPLAIN (ANALYZE, BUFFERS, COSTS OFF) EXECUTE osm_of_type('cafe', 36.7538, 3.0588, 5000, 20);",
     run('markets, Nouakchott, 5 km', 'osm_of_type', "'market', 18.0858, -15.9785, 5000, 20"),
     run('markets, Nouakchott, 15 km', 'osm_of_type', "'market', 18.0858, -15.9785, 15000, 20"),
     run('pharmacies, Tamanrasset, 5 km', 'osm_of_type', "'pharmacy', 22.7850, 5.5228, 5000, 20"),
@@ -151,7 +153,11 @@ SELECT v.n, v.t, v.n, v.t, v.ar, v.lat, v.lon, v.c,
 
   L(`\\echo '=== 5. localitiesInArabic: the Arabic names the index holds for these localities'`,
     prep('localities_ar', s.localitiesInArabic),
-    run('four localities', 'localities_ar', "ARRAY(SELECT DISTINCT locality FROM pg_temp.suggested_place WHERE locality IS NOT NULL) || ARRAY['Tevragh Zeina', 'Alger Centre']"), '');
+    // A literal list: EXECUTE refuses a subquery as a parameter (the first
+    // live run, 2026-11-09, stopped here). These are the localities sections 0
+    // and 4 returned -- the ones one search by type will ask about at once.
+    run('the localities of one search: one query for all', 'localities_ar',
+      "ARRAY['Nouakchott', 'E-Nord', 'Las Palmas', 'Ksar', 'Belcourt', 'Sidi M''Hamed', 'El Mouradia', 'Hydra', 'Tamanrasset']"), '');
 
   L(`\\echo '=== 6. approvedMatching (autocomplete), on the copy: approved only, nearest first'`,
     prep('approved_matching', s.approvedMatching),

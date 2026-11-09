@@ -9,12 +9,15 @@
 //   1. no drift      -- regenerated from the shim, it is the committed file
 //   2. read-only     -- every write targets pg_temp (this session's schema)
 //   3. what it asks  -- place_type_of WITH the name; the 15 km fallback
-//   4. it runs       -- sections 6-8 (search, details, labels on the copy),
+//   4. it runs       -- sections 5-8 (Arabic localities; search, details,
+//                       labels on the copy),
 //                       in PGlite with a stand-in for geo.normalise and
 //                       geo.place: proves their PREPARE, their parameters'
 //                       types, and the answers the probe's titles promise.
-//                       Sections 0-5 need PostGIS and the index: only the
-//                       live run can show those.
+//                       Sections 0-4 need PostGIS: only the live run can
+//                       show those. (Section 5 was not run here at first,
+//                       and the first live run stopped on it: EXECUTE
+//                       refuses a subquery as a parameter.)
 const fs = require('fs');
 const path = require('path');
 const { open } = require('./lib/db');
@@ -54,7 +57,7 @@ const { build, OUT } = require(path.join(__dirname, '..', 'investigations', 'pro
     'the 5 km search and the 15 km one are both measured');
   t.ok(/churches_as_mosques/.test(committed), 'and it counts churches left under « mosque » near Algiers');
 
-  t.section('4. sections 6-8 run (PGlite, stand-ins for the index)');
+  t.section('4. sections 5-8 run (PGlite, stand-ins for the index)');
   const db = await open();
   // The two things from `geo` these statements read, cut down: the normaliser
   // (lower case is enough for these inputs) and the names table.
@@ -80,11 +83,14 @@ const { build, OUT } = require(path.join(__dirname, '..', 'investigations', 'pro
   const executes = (name) => [...committed.matchAll(new RegExp(`EXECUTE ${name}\\((.*)\\);`, 'g'))].map((m) => `EXECUTE ${name}(${m[1]})`);
   const rowsOf = async (sql) => (await db.exec(sql)).at(-1).rows;
 
-  for (const name of ['approved_matching', 'approved_place', 'labels']) {
+  for (const name of ['localities_ar', 'approved_matching', 'approved_place', 'labels']) {
     let err = null;
     try { await db.exec(block(name)); } catch (e) { err = e.message; }
     t.ok(block(name) && err === null, `PREPARE ${name} is accepted by Postgres`, err || 'not found in the probe');
   }
+  const ar = (await rowsOf(executes('localities_ar')[0])).map((r) => `${r.display_name}:${r.name_ar}`).sort();
+  t.ok(executes('localities_ar').length === 1 && JSON.stringify(ar) === JSON.stringify(['Hydra:حيدرة']),
+    'the localities in Arabic: one EXECUTE, a literal list, the names the index holds', ar.join(' '));
   const [tfeila, arabic, attente, percent] = executes('approved_matching');
   const names = async (sql) => (await rowsOf(sql)).map((r) => r.display_name);
   t.ok(JSON.stringify(await names(tfeila)) === JSON.stringify(['Café Sonde Tfeila']), '« tfeila » finds the approved café');

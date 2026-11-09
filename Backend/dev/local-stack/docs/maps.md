@@ -548,6 +548,13 @@ nothing in the body names anybody.
 - **Search by type** (owner, 2026-11-09): 5 km, 20, nearest first; if 5 km
   finds nothing, once more at 15 km. It calls `place_type_of` with the
   **name** — the test reads the SQL to make sure.
+- **The Arabic name of each result's locality is ONE query for all 20**, after
+  the search, never a join inside it. Measured on the live index, 2026-11-09:
+  the first version joined it per row and took **12 s** for cafés within 5 km
+  of Algiers (2 s in Nouakchott) — the join ran for every café in the radius,
+  hundreds, each a scan of the whole index (`geo.place.display_name` has no
+  index), before the `LIMIT`. The probe found it; the route test now checks
+  there is exactly one locality lookup per search.
 
 **What only the live database can answer** — the pin's country, its locality,
 the OSM places near it, the OSM places of a type — is `liveGeo()` in the
