@@ -53,6 +53,7 @@ import qualified API.Internal.TollChargeApproval as TollChargeApproval
 import qualified API.Internal.TollList as TollList
 import qualified API.Internal.TollUpsert as TollUpsert
 import qualified API.Internal.VehicleServiceTierList as VehicleServiceTierList
+import qualified API.Internal.VehicleTripOwner as VehicleTripOwner
 import qualified API.Internal.VerifyEmailUpdate as VerifyEmailUpdate
 import qualified API.Internal.ViolationDetection as ViolationDetection
 import qualified API.Internal.XyneWebhook as XyneWebhook
@@ -116,6 +117,7 @@ type API =
            :<|> VehicleServiceTierList.API
            :<|> BetterDriverSearch.API
            :<|> SharedCabInternal.API
+           :<|> VehicleTripOwner.API
        )
 
 handler :: AppEnv -> FlowServer API
@@ -174,3 +176,4 @@ handler env =
     :<|> VehicleServiceTierList.handler
     :<|> BetterDriverSearch.handler
     :<|> SharedCabInternal.handler
+    :<|> VehicleTripOwner.handler

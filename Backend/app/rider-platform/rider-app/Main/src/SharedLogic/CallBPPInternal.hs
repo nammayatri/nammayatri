@@ -211,6 +211,45 @@ callCustomerFCM apiKey internalUrl bppRideId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callCustomerFCMClient bppRideId (Just apiKey)) "CallCustomerFCM" callCustomerFCMApi
 
+data VehicleTripOwnerWaybillChangedReq = VehicleTripOwnerWaybillChangedReq
+  { city :: Context.City,
+    gtfsId :: Text,
+    waybillNo :: Text,
+    status :: Maybe Text,
+    vehicleNumber :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+type VehicleTripOwnerWaybillChangedAPI =
+  "internal"
+    :> "vehicleTripOwner"
+    :> Capture "merchantId" Text
+    :> "waybillChanged"
+    :> Header "api-key" Text
+    :> ReqBody '[JSON] VehicleTripOwnerWaybillChangedReq
+    :> Post '[JSON] APISuccess
+
+vehicleTripOwnerWaybillChangedClient :: Text -> Maybe Text -> VehicleTripOwnerWaybillChangedReq -> EulerClient APISuccess
+vehicleTripOwnerWaybillChangedClient = client vehicleTripOwnerWaybillChangedApi
+
+vehicleTripOwnerWaybillChangedApi :: Proxy VehicleTripOwnerWaybillChangedAPI
+vehicleTripOwnerWaybillChangedApi = Proxy
+
+vehicleTripOwnerWaybillChanged ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  VehicleTripOwnerWaybillChangedReq ->
+  m APISuccess
+vehicleTripOwnerWaybillChanged apiKey internalUrl driverMerchantId req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (vehicleTripOwnerWaybillChangedClient driverMerchantId (Just apiKey) req) "VehicleTripOwnerWaybillChanged" vehicleTripOwnerWaybillChangedApi
+
 data FeedbackFormReq = FeedbackFormReq
   { rideId :: Text,
     rating :: Maybe Int,

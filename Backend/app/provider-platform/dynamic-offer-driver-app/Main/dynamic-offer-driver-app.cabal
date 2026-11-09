@@ -103,6 +103,7 @@ library
       API.Internal.TollList
       API.Internal.TollUpsert
       API.Internal.VehicleServiceTierList
+      API.Internal.VehicleTripOwner
       API.Internal.VerifyEmailUpdate
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
@@ -375,6 +376,7 @@ library
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.TollUpsert
       Domain.Action.Internal.VehicleServiceTierList
+      Domain.Action.Internal.VehicleTripOwner
       Domain.Action.Internal.VerifyEmailUpdate
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.Aarokya
@@ -861,6 +863,7 @@ library
       SharedLogic.Type
       SharedLogic.VehicleServiceTier
       SharedLogic.VehicleServiceTierAreaRestriction
+      SharedLogic.VehicleTripOwner
       SharedLogic.WMB
       Storage.Beam.BecknRequest
       Storage.Beam.Coins.CoinHistory

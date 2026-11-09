@@ -19,10 +19,12 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id (ShortId (..))
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JMU
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.External.Nandi.Types
 import SharedLogic.FRFSUtils (unixToUTC)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
@@ -189,9 +191,30 @@ transitOperatorUpdateWaybillFleetUtil merchantShortId city vehicleCategory req =
 transitOperatorUpdateWaybillDetailsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> UpdateWaybillDetailsReq -> Flow RowsAffectedResp
 transitOperatorUpdateWaybillDetailsUtil merchantShortId city vehicleCategory req = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  let changesTripOwner = isJust req.vehicle_no || isJust req.driver_token_no || isJust req.conductor_token_no || isJust req.status
+  mbBusBefore <-
+    if changesTripOwner
+      then either (const Nothing) (Just . T.strip . (.vehicle_no)) <$> withTryCatch "updateWaybillDetails:busBefore" (NandiFlow.getWaybillMetadata baseUrl gtfsId req.waybill_no)
+      else pure Nothing
   gimsReq <- validateVehicleChange baseUrl gtfsId req
   res <- NandiFlow.operatorWaybillDetails baseUrl gtfsId gimsReq
   fanOutWaybillRefresh baseUrl gtfsId req.waybill_no
+  whenJust mbBusBefore $ \busBefore -> do
+    notified <- withTryCatch "updateWaybillDetails:vehicleTripOwnerWaybillChanged" $ do
+      merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
+      void $
+        CallBPPInternal.vehicleTripOwnerWaybillChanged
+          merchant.driverOfferApiKey
+          merchant.driverOfferBaseUrl
+          merchant.driverOfferMerchantId
+          CallBPPInternal.VehicleTripOwnerWaybillChangedReq
+            { city = city,
+              gtfsId = gtfsId,
+              waybillNo = req.waybill_no,
+              status = req.status,
+              vehicleNumber = busBefore
+            }
+    whenLeft notified $ \err -> logError $ "updateWaybillDetails: vehicle trip owner refresh failed for waybillNo=" <> req.waybill_no <> ": " <> show err
   pure res
 
 -- | The bus being replaced is read off the waybill rather than taken from the request, and both buses must

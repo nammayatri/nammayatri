@@ -55,6 +55,7 @@ import qualified Lib.GtfsDataServer.Flow as NandiFlow
 import Lib.GtfsDataServer.Types
 import SharedLogic.CallBAPInternal (getFrfsTripManifest, notifyFrfsTripEnded, notifyFrfsTripStarted)
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, findIntegratedBPPConfig, getGimsBaseUrl)
+import SharedLogic.VehicleTripOwner (TripOwnerTarget (..), activeOwnerTtl, markNoActiveTrip, runOwnerUpdate, setActiveTripOwner)
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -320,12 +321,36 @@ postFrfsFleetOperatorTripAction' (mbPersonId, merchantId, merchantOpCityId) isDa
       handleTripEnd integratedBPPConfig mbTransporterConfig baseUrl gtfsId anchor redisKey epochNow tripNums wbNo
     TripReset -> handleTripReset baseUrl gtfsId anchor redisKey tripNums wbNo
     TripRollback -> handleTripRollback baseUrl gtfsId anchor redisKey epochNow tripNums wbNo
+  updateVehicleTripOwner integratedBPPConfig gtfsId gimsOps result.currentTripNumber
   -- Ops-initiated change the driver's own app has no other way of hearing about; a driver's own
   -- action never sets isDashboard, so this can't notify a driver about their own tap.
   when isDashboard $ notifyDriverOfTripChange merchantId req gimsOps
   pure result
   where
     getTransporterConfig = getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+    callerIds = if isDashboard then [] else maybe [] pure mbPersonId
+    updateVehicleTripOwner integratedBPPConfig gtfsId gimsOps tripNo = case gimsOps.vehicleNumber of
+      Nothing -> logWarning $ "FRFSFleetOperator: vehicle trip owner not updated, GIMS returned no vehicle_number for waybill " <> gimsOps.waybill_no
+      Just busNo ->
+        runOwnerUpdate (show req.action) $ case req.action of
+          TripStart -> setOwner busNo
+          TripRollback -> setOwner busNo
+          TripEnd -> markNoActiveTrip gtfsId busNo gimsOps.waybill_no
+          TripReset -> markNoActiveTrip gtfsId busNo gimsOps.waybill_no
+      where
+        setOwner busNo =
+          void $
+            setActiveTripOwner
+              integratedBPPConfig
+              gtfsId
+              callerIds
+              TripOwnerTarget
+                { targetWaybillNo = gimsOps.waybill_no,
+                  targetVehicleNumber = busNo,
+                  crewBadges = catMaybes [gimsOps.gimsDriverId, gimsOps.gimsConductorId]
+                }
+              tripNo
+              activeOwnerTtl
     handleTripStart integratedBPPConfig mbTransporterConfig baseUrl gtfsId anchor tripNums redisKey epochNow wbNo = do
       let lockKey = redisKey <> ":lock"
       lockAcquired <- Hedis.setNxExpire lockKey 30 ("1" :: Text)

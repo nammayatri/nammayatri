@@ -306,7 +306,8 @@ data GimsCurrentOperationResp = GimsCurrentOperationResp
     number_of_trips :: Int,
     trip_numbers :: Maybe [Int],
     gimsConductorId :: Maybe Text,
-    gimsDriverId :: Maybe Text
+    gimsDriverId :: Maybe Text,
+    vehicleNumber :: Maybe Text
   }
   deriving (Generic, Show)
 
@@ -318,6 +319,7 @@ instance FromJSON GimsCurrentOperationResp where
       <*> o .:? "trip_numbers"
       <*> o .:? "conductor_token"
       <*> o .:? "driver_token"
+      <*> o .:? "vehicle_number"
 
 instance ToJSON GimsCurrentOperationResp where
   toJSON GimsCurrentOperationResp {..} =
@@ -326,7 +328,8 @@ instance ToJSON GimsCurrentOperationResp where
         "number_of_trips" .= number_of_trips,
         "trip_numbers" .= trip_numbers,
         "conductor_token" .= gimsConductorId,
-        "driver_token" .= gimsDriverId
+        "driver_token" .= gimsDriverId,
+        "vehicle_number" .= vehicleNumber
       ]
 
 data GimsActiveTripResp = GimsActiveTripResp
