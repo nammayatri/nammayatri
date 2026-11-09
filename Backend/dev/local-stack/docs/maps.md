@@ -582,8 +582,25 @@ search with the proposals query failing, details / labels / geocode for an
 approved and a non-approved `u…` id, and the `/places/` router's 401, 405 and
 404.
 
-The edge does not publish `/places/` yet: until its nginx block exists (day 2,
-item 8), these routes answer only on the box.
+**Published by the edge as `location /places/`** (`edge/nginx.conf`, day 2):
+its own prefix, zone `api`, a 4 KB body — the shim's own limit, so nginx
+refuses a bigger proposal first. Plural on purpose: `/place/autocomplete/json`
+does not start with `/places/`, so the block cannot widen the singular, which
+stays unpublished except `= /place/labels/json`. `tests/edge-places.test.js`
+reads the file and chooses a location for each address the way nginx does; a
+block written `location /place` instead is caught naming the two geocoder
+paths it would publish.
+
+After the release, check from the **public** host, never `127.0.0.1:8030` —
+that is the check that passed while the wallet answered 404 to every phone
+(docs/gotchas.md):
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' https://api.movinapp.net/places/mine                # 401: published, asks for a token
+curl -s -o /dev/null -w '%{http_code}\n' https://api.movinapp.net/place/autocomplete/json    # 404: still not published
+```
+
+A 404 on the first means the edge has no block for it.
 
 ### Not done yet
 

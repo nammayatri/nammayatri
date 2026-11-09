@@ -493,6 +493,6 @@ async function handle(req, res, url, opts) {
 module.exports = {
   handle,
   // For the tests, which hold these to the SQL and to each other.
-  PLACE_TYPES, NAME_MIN, NAME_MAX, PER_DAY, MAX_PENDING,
+  PLACE_TYPES, NAME_MIN, NAME_MAX, PER_DAY, MAX_PENDING, BODY_LIMIT,
   cleanName, normalise, metresBetween, liveGeo,
 };
