@@ -6,6 +6,26 @@ Every automated test, the three workflows, and what a red tick does and does not
 
 ## Tests, and what CI actually runs
 
+> **Since early November 2026, none of the three runs** (measured 2026-11-09).
+> GitHub disabled the workflows on this repository because it is a FORK of
+> upstream Namma Yatri (« Workflows on this fork have been disabled to reduce
+> compute », on the Actions tab). The last push that started a run was
+> 2026-10-25; the last scheduled ride regression, 2026-11-02 (green); pushes on
+> 3 and 5 November and every push since started nothing, and said nothing.
+> **The owner chose not to re-enable them (2026-11-09).** Until that changes:
+>
+> - **the gate is `bash tests/run-all.sh` on the laptop** — the same 29 files
+>   `algeria: node tests` ran, nothing missing;
+> - **nothing replaces the ride regression before a release.** After one, the
+>   whole ride on the server ([release runbook](runbooks/release.md), step 4.3)
+>   is the ride check — and it needs the simulated fleet, so after the launch
+>   clean-up there is none;
+> - **a Haskell rebuild is impossible** until the workflows are re-enabled:
+>   `algeria: build backend` is one of them. Re-enable on the Actions tab of
+>   `nammayatri-algeria/nammayatri` (the green button) before planning one.
+>
+> The table below is what each workflow does when it runs.
+
 Three workflows, none of which deploys anything:
 
 | Workflow | What it proves | When |
@@ -15,7 +35,7 @@ Three workflows, none of which deploys anything:
 | `algeria: build backend` | The Haskell binaries. 44 minutes; nothing else triggers it | Push to `algeria/build-backend` |
 
 ```bash
-(cd tests && npm ci) && bash tests/run-all.sh   # every test, as CI runs them
+(cd tests && npm ci) && bash tests/run-all.sh   # every test -- THE gate while CI is off
 node tests/wallet.test.js              # the money path: canWork, top-up, credit, the day
 ./setup.sh price                       # sign in, ask for a priced ride
 ```

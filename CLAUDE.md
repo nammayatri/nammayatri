@@ -223,6 +223,10 @@ Anything about screens, the APK, the signing key or the map UI belongs there.
 
 The services run as **prebuilt images** from a CI job
 (`.github/workflows/algeria-backend-build.yml`, free GitHub Actions).
+**GitHub has disabled the workflows on this fork since early November 2026,
+and the owner chose to leave them off (2026-11-09): a rebuild needs them
+re-enabled first** (Actions tab of `nammayatri-algeria/nammayatri`, the green
+button). `local-stack/docs/testing.md`.
 
 **Rebuilding is affordable, and the reason to avoid it is not the clock.**
 Measured: **44 minutes cold**, 33 on the company org, 8 warm. The
@@ -467,6 +471,13 @@ rclone sees only what it uploaded since then; older backups are in Drive's
   commit, and say so; a refactor must pass them untouched. The money path's
   SQL is tested for real in PGlite (`tests/wallet.test.js` etc.); run
   everything with `(cd tests && npm ci) && bash tests/run-all.sh`.
+- **CI does not run at all since early November 2026.** GitHub disabled the
+  workflows on this fork, silently: pushes since 2026-10-25 started nothing
+  while the docs promised « every push ». The owner chose to leave them off
+  (2026-11-09), so the gate is `bash tests/run-all.sh` on the laptop and the
+  only ride check is the whole ride on the server after a release (release
+  runbook, step 4.3). The bullet below is how the ride regression behaves WHEN
+  it runs. `local-stack/docs/testing.md`, `docs/gotchas.md`.
 - **The CI ride regression was red for its first 19 runs for reasons unrelated
   to any commit** (no routing: the image's mock-google has no
   `/directions/json`; a pipefail-killed poll; two columns of ours the live DB

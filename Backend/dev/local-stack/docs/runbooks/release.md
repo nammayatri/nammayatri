@@ -14,7 +14,8 @@ connection within 30 seconds, so do not loop `ssh` while a release runs.
 
 1. Everything the server runs is under `Backend/dev/local-stack/stack/`. A
    change anywhere else is not released by this.
-2. Run the tests — the same set CI runs:
+2. Run the tests — the same set CI runs, and while GitHub keeps CI off on
+   this fork (since November 2026, [testing.md](../testing.md)) the only gate:
 
        cd Backend/dev/local-stack
        (cd tests && npm ci) && bash tests/run-all.sh
@@ -27,8 +28,12 @@ connection within 30 seconds, so do not loop `ssh` while a release runs.
    commit — and an untracked file counts. Park the next change *outside* the
    repository, not just unstaged: a new `db/*.sql` is applied by whichever
    release carries it.
-4. Wait for both workflows on that commit to be green: `algeria: node tests`
-   and `algeria: ride regression` ([testing.md](../testing.md)).
+4. **While CI is off there is nothing to wait for**: step 2 is the gate, and
+   step 4.3 below — a whole ride in each country, on the server — is the only
+   ride check. Check the Actions tab before trusting this sentence either way:
+   if the workflows are on again, wait for both on that commit to be green,
+   `algeria: node tests` and `algeria: ride regression`
+   ([testing.md](../testing.md)).
 
 ## 2. Look before writing
 

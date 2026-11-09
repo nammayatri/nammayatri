@@ -74,6 +74,16 @@ restart: `docker exec ny-driver sh -c ': > /tmp/dynamic-offer-driver-app.log'`.
 Test: `tests/compose-logfiles.test.js`. Why it is not changed in dhall: dhall is
 in the image.
 
+**GitHub switched CI off on this repository, and a push said nothing about
+it (found 2026-11-09).** The repository is a fork of upstream Namma Yatri, and
+GitHub disables the workflows of forks it judges idle « to reduce compute ». No
+email, no failed run, no red tick: pushes on 3 and 5 November simply started
+nothing, while the docs still promised « every push to `algeria/**` ». It was
+found only because a new branch's runs never appeared. **A missing run is not a
+green run** — after a push, look for the run itself. The owner chose to leave
+CI off (2026-11-09); what that costs, including no Haskell rebuild until it is
+re-enabled, is in [testing.md](testing.md).
+
 ## Known limitations
 
 - **This is the 2023 baseline, not current `main`.** Running today's backend

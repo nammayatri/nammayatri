@@ -132,10 +132,10 @@ Comments in the code and in `CLAUDE.md` cite README sections by name ("README �
 
 From nothing to a change running on the server, using only these docs.
 
-1. **Bring a stack up** on your machine: `cd stack && ./setup.sh` (first run ~10 minutes). `./setup.sh price` signs a `+213` number in and asks for a priced ride — the same check CI runs. A dev stack has no drivers until `./setup.sh drivers`.
+1. **Bring a stack up** on your machine: `cd stack && ./setup.sh` (first run ~10 minutes). `./setup.sh price` signs a `+213` number in and asks for a priced ride — the same check the CI's ride regression runs (off since November 2026: [testing.md](docs/testing.md)). A dev stack has no drivers until `./setup.sh drivers`.
 2. **Find where the change goes.** Almost never the Haskell ([decision 0001](docs/adr/0001-shims-not-haskell.md)). Config and SQL are under `stack/db/` and `docker-compose.yml`; behaviour beside the backend is `stack/maps-shim/` (one module per subject; `server.js` is only the router) or `stack/auth-guard/`.
 3. **Change it and test it:** `(cd tests && npm ci) && bash tests/run-all.sh`. The golden files `tests/*-routes.test.js` compare every answer the shims give; a change that is *meant* to alter one re-records with `--record` in the same commit ([testing.md](docs/testing.md)).
-4. **Commit and push**; both workflows go green on the commit.
+4. **Commit and push.** GitHub has kept this fork's workflows off since November 2026, so a push proves nothing by itself: step 3 is the gate ([testing.md](docs/testing.md)).
 5. **Release it** with the [release runbook](docs/runbooks/release.md): dry run, the owner's OK, `ops/deploy.sh`, then prove it from outside. If it went wrong: the [rollback runbook](docs/runbooks/rollback.md).
 
 ---
