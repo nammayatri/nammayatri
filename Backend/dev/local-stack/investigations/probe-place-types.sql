@@ -15,7 +15,7 @@
 --   1. per type, per country           -- is « search by type » worth offering?
 --   2. near the two capitals           -- what a rider in town actually sees
 --   3. the biggest `other` tags        -- what the mapping may be missing
---   4. places of worship named church  -- how wrong « mosque » is, by name
+--   4. places of worship named church  -- that none is left under « mosque »
 --   5. name lengths                    -- is 80 characters (PLACE_NAME_MAX) enough?
 
 \pset footer off
@@ -31,7 +31,7 @@ SELECT kind, count(*) AS places FROM geo.place GROUP BY 1 ORDER BY 2 DESC;
 -- geometry, which PostGIS prepares once instead of once per row.
 CREATE TEMP TABLE poi AS
 SELECT p.place_id, p.class, p.subclass, p.display_name, p.lat, p.lon, p.geog,
-       pg_temp.place_type_of(p.class, p.subclass) AS type,
+       pg_temp.place_type_of(p.class, p.subclass, p.display_name) AS type,
        'none'::text AS country
   FROM geo.place p
  WHERE p.kind = 'poi';
@@ -76,15 +76,17 @@ SELECT country, class, subclass, places
  ORDER BY country, places DESC;
 
 \echo ''
-\echo '=== 4. « mosque » places whose name says church, chapel or temple ==='
-SELECT country, class, subclass, display_name
+\echo '=== 4. places of worship whose name says church, chapel or temple, and the type they got ==='
+\echo '    (since 2026-11-09 the mapping makes them other: 26 of 4,978 that day, all under mosque before)'
+SELECT country, type, display_name
   FROM poi
- WHERE type = 'mosque'
+ WHERE class = 'amenity' AND subclass = 'place_of_worship'
    AND display_name ~* '(église|eglise|cathédrale|cathedrale|chapelle|church|chapel|temple|كنيسة)'
- ORDER BY country, display_name;
-SELECT count(*) AS mosque_total,
-       count(*) FILTER (WHERE display_name ~* '(église|eglise|cathédrale|cathedrale|chapelle|church|chapel|temple|كنيسة)') AS named_like_a_church
-  FROM poi WHERE type = 'mosque';
+ ORDER BY type, country, display_name;
+SELECT count(*) FILTER (WHERE type = 'mosque') AS mosque_total,
+       count(*) FILTER (WHERE type = 'mosque'
+                          AND display_name ~* '(église|eglise|cathédrale|cathedrale|chapelle|church|chapel|temple|كنيسة)') AS church_left_as_mosque
+  FROM poi;
 
 \echo ''
 \echo '=== 5. name lengths of points of interest (characters) ==='

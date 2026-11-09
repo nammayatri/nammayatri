@@ -8,7 +8,7 @@
 -- The plan: docs/maps.md, « Proposed places ».
 --
 -- This file holds two things:
---   1. movin.place_type_of(class, subclass) -- which of our types an
+--   1. movin.place_type_of(class, subclass, name) -- which of our types an
 --      OpenStreetMap place is, from the tag the place index kept;
 --   2. movin.suggested_place -- the proposals, and their current state.
 --
@@ -59,16 +59,25 @@ CREATE SCHEMA IF NOT EXISTS movin;
 -- one tagged only healthcare=pharmacy as healthcare=pharmacy: both are mapped.
 --
 -- What each type takes, and the choices in it:
---   * hospital       -- clinics and doctors too: « where do I get seen ».
---   * mosque         -- every place_of_worship, and building=mosque. The
---                       extract does NOT keep OSM's `religion` tag, so the few
---                       churches (Algiers, Nouakchott) land here too; the probe
---                       counts them by name. Fixing it needs a re-extract.
+--   * hospital       -- clinics, doctors and dentists too: « where do I get
+--                       seen » (dentists: 314 in DZ, 14 in MR, owner 2026-11-09).
+--   * mosque         -- place_of_worship and building=mosque, EXCEPT a
+--                       place_of_worship whose `name` says church, chapel or
+--                       temple: that is `other` (owner, 2026-11-09). The
+--                       extract does not keep OSM's `religion` tag, so the name
+--                       is the only sign left -- 26 of 4,978 places of worship,
+--                       measured 2026-11-09 (Notre-Dame d'Afrique, the Sacré-
+--                       Cœur, the Nouakchott mission…). A church whose name
+--                       says nothing of it stays a « mosque » until somebody
+--                       corrects OSM; a re-extract keeping `religion` is the
+--                       real fix.
 --   * school         -- universities, colleges and kindergartens too.
 --   * shop           -- every shop=*, supermarkets and malls included; a
 --                       shop=chemist is a drugstore, not a pharmacy.
---   * bank           -- banks only. An ATM is not where anybody asks a driver
---                       to go; it stays `other`.
+--   * bank           -- banks and money-transfer agencies (where people go for
+--                       money in Mauritania: 163 there, owner 2026-11-09). An
+--                       ATM is not where anybody asks a driver to go: it stays
+--                       `other` (2,165 in DZ would bury the banks).
 --   * administration -- town halls, police, post offices, courts, government
 --                       and diplomatic offices, embassies.
 --   * a named building (class `building`) counts only where its value says
@@ -76,9 +85,12 @@ CREATE SCHEMA IF NOT EXISTS movin;
 -- Everything else is `other`, including every street, town and transport
 -- stop: « search by type » never offers `other`.
 --
+-- `name` is geo.place.display_name, and optional: only the church test reads
+-- it, and a caller without one gets the tag's answer.
+--
 -- IMMUTABLE and plain SQL, so it can sit in an index expression one day, runs
 -- in PGlite (no PostGIS needed), and costs nothing per row.
-CREATE OR REPLACE FUNCTION movin.place_type_of(class text, subclass text)
+CREATE OR REPLACE FUNCTION movin.place_type_of(class text, subclass text, name text DEFAULT NULL)
   RETURNS text
   LANGUAGE sql IMMUTABLE PARALLEL SAFE
 AS $$
@@ -89,12 +101,16 @@ AS $$
       THEN 'restaurant'
     WHEN class IN ('amenity', 'healthcare') AND subclass = 'pharmacy'
       THEN 'pharmacy'
-    WHEN class = 'amenity' AND subclass IN ('hospital', 'clinic', 'doctors')
+    WHEN class = 'amenity' AND subclass IN ('hospital', 'clinic', 'doctors', 'dentist')
       THEN 'hospital'
-    WHEN class = 'healthcare' AND subclass IN ('hospital', 'clinic', 'doctor', 'centre')
+    WHEN class = 'healthcare' AND subclass IN ('hospital', 'clinic', 'doctor', 'dentist', 'centre')
       THEN 'hospital'
     WHEN class = 'building' AND subclass = 'hospital'
       THEN 'hospital'
+    -- The same words investigations/probe-place-types.sql counts with.
+    WHEN class = 'amenity' AND subclass = 'place_of_worship'
+         AND coalesce(name, '') ~* '(église|eglise|cathédrale|cathedrale|chapelle|church|chapel|temple|كنيسة)'
+      THEN 'other'
     WHEN class = 'amenity' AND subclass = 'place_of_worship'
       THEN 'mosque'
     WHEN class = 'building' AND subclass = 'mosque'
@@ -109,7 +125,7 @@ AS $$
       THEN 'shop'
     WHEN class = 'amenity' AND subclass = 'marketplace'
       THEN 'market'
-    WHEN class = 'amenity' AND subclass = 'bank'
+    WHEN class = 'amenity' AND subclass IN ('bank', 'money_transfer')
       THEN 'bank'
     WHEN class = 'tourism' AND subclass IN ('hotel', 'guest_house', 'hostel', 'motel')
       THEN 'hotel'
@@ -126,9 +142,10 @@ AS $$
 $$;
 -- <<< place_type_of
 
-COMMENT ON FUNCTION movin.place_type_of(text, text) IS
+COMMENT ON FUNCTION movin.place_type_of(text, text, text) IS
   'Which of our place types (the website''s packages/domain place-types.ts) an '
-  'OpenStreetMap class/subclass from geo.place is. ''other'' when none.';
+  'OpenStreetMap class/subclass (and, for places of worship, display_name) '
+  'from geo.place is. ''other'' when none.';
 
 CREATE TABLE IF NOT EXISTS movin.suggested_place (
   id               bigint      GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

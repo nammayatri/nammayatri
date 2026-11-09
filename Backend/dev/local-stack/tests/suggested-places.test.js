@@ -97,8 +97,20 @@ const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].s
     ['amenity', 'hospital', 'hospital'],
     ['amenity', 'clinic', 'hospital'],
     ['healthcare', 'doctor', 'hospital'],
+    ['amenity', 'dentist', 'hospital'], // owner, 2026-11-09
+    ['healthcare', 'dentist', 'hospital'],
     ['building', 'hospital', 'hospital'],
-    ['amenity', 'place_of_worship', 'mosque'],
+    ['amenity', 'place_of_worship', 'mosque'], // no name: the tag decides
+    ['amenity', 'place_of_worship', 'mosque', 'Mosquée Ibn Abbas'],
+    ['amenity', 'place_of_worship', 'mosque', 'مسجد النور'],
+    // Churches are `other` (owner, 2026-11-09): names from the probe of that day.
+    ['amenity', 'place_of_worship', 'other', "Cathédrale Notre-Dame d'Afrique"],
+    ['amenity', 'place_of_worship', 'other', 'Église de Blida'],
+    ['amenity', 'place_of_worship', 'other', 'Eglise protestante'],
+    ['amenity', 'place_of_worship', 'other', "Église de l'Immaculée"],
+    ['amenity', 'place_of_worship', 'other', 'La chapelle des femmes'],
+    ['amenity', 'place_of_worship', 'other', 'كنيسة القلب المقدس'],
+    ['building', 'mosque', 'mosque', 'Église'], // building=mosque is a mosque, whatever its name says
     ['building', 'mosque', 'mosque'],
     ['amenity', 'university', 'school'],
     ['building', 'school', 'school'],
@@ -106,6 +118,7 @@ const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].s
     ['shop', 'mall', 'shop'],
     ['amenity', 'marketplace', 'market'],
     ['amenity', 'bank', 'bank'],
+    ['amenity', 'money_transfer', 'bank'], // owner, 2026-11-09: 163 in Mauritania
     ['amenity', 'atm', 'other'], // nobody asks a driver for an ATM
     ['tourism', 'guest_house', 'hotel'],
     ['amenity', 'fuel', 'fuel'],
@@ -119,9 +132,11 @@ const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].s
     ['public_transport', 'station', 'other'],
     [null, null, 'other'],
   ];
-  for (const [cls, sub, want] of cases) {
-    const got = (await db.sql('SELECT movin.place_type_of($1, $2) AS t', [cls, sub]))[0].t;
-    t.ok(got === want, `${cls}=${sub} -> ${want}`, `got ${got}`);
+  for (const [cls, sub, want, name] of cases) {
+    const got = name === undefined
+      ? (await db.sql('SELECT movin.place_type_of($1, $2) AS t', [cls, sub]))[0].t
+      : (await db.sql('SELECT movin.place_type_of($1, $2, $3) AS t', [cls, sub, name]))[0].t;
+    t.ok(got === want, `${cls}=${sub}${name ? ` « ${name} »` : ''} -> ${want}`, `got ${got}`);
   }
 
   /* ── 4. the rules ───────────────────────────────────────────────────── */
