@@ -522,6 +522,46 @@ ships even before a release has installed it. Reads `geo.place` and
 assistant's live reads are refused); it stops itself after 120 s
 (`statement_timeout`).
 
+### The routes — `maps-shim/suggested-places.js` (day 2)
+
+Everything under **`/places/`** (plural: `/place/` is the backend's Google-shaped
+search and stays unpublished). Every route needs a token — a passenger's or a
+driver's — and the person is whoever the backend says the token belongs to;
+nothing in the body names anybody.
+
+| Route | Does | Refuses |
+|---|---|---|
+| `POST /places/suggest` `{name, type, lat, lon}` | stores a `pending` proposal: country and locality from the pin, the author from the token; `201 {placeId: "u…", status, name, type, locality, country}` | `400 bad_name / bad_type / bad_position / bad_body`, `413` over 4 KB, `422 outside_service_area`, `409 duplicate` (with the existing place), `429 daily_limit / too_many_pending` |
+| `GET /places/mine` | the person's own, newest first (50): shown name, what they typed, type, status, refusal reason code | `401` |
+| `GET /places/nearby?type=&lat=&lon=` | OSM places of that type plus approved proposals, nearest first, 20; names and localities in French and Arabic; `radius` says 5000 or 15000 | `400` for `other`, an unknown type or a bad position |
+
+- **Names** are NFKC-normalised (Arabic presentation forms become ordinary
+  letters), every run of whitespace becomes one space, bidi controls are
+  removed; 2–80 characters, counted as Postgres counts them.
+- **Duplicates**: the same name within 100 m among pending and approved
+  proposals and the OSM places on the map; compared without case, accents or
+  punctuation, Arabic letter variants folded as `geo.normalise` folds them. A
+  pending twin is answered « already proposed » with no id (nobody can see it
+  yet); an approved one or an OSM one with its id. A refused one does not block.
+- **Limits** (owner, 2026-11-09): 5 per person in any 24 hours, 20 pending at
+  once, counted under a per-person advisory lock.
+- **Search by type** (owner, 2026-11-09): 5 km, 20, nearest first; if 5 km
+  finds nothing, once more at 15 km. It calls `place_type_of` with the
+  **name** — the test reads the SQL to make sure.
+
+**What only the live database can answer** — the pin's country, its locality,
+the OSM places near it, the OSM places of a type — is `liveGeo()` in the
+module, and nothing else is. `tests/suggested-places-routes.test.js` replaces
+it with a scripted fake and runs everything else for real in PGlite (70
+checks); `investigations/probe-suggested-places.sql` runs those statements on
+the live index before the release. One thing PGlite cannot show: two taps
+truly at once, because its pool runs one transaction at a time — the test
+proves the lock is taken first in the transaction instead (a mutation that
+removed it passed the old « two taps » check, which is why).
+
+The edge does not publish `/places/` yet: until its nginx block exists (day 2,
+item 8), these routes answer only on the box.
+
 ### Not done yet
 
 - **Day 2:** the shim's routes (propose, « Mes lieux proposés », search by

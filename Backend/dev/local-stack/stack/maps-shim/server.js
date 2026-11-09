@@ -9,6 +9,7 @@
 //   push-relay.js, driver-push.js, number-change.js
 //
 //   places.js       search, details, labels, reverse geocoding (geo.place)
+//   suggested-places.js  /places/: proposing a place, my proposals, search by type
 //
 // No dependencies beyond `pg`: Node's built-in http plus global fetch.
 
@@ -27,6 +28,7 @@ const numberChange = require('./number-change');
 const { directions, OSRM_URL } = require('./directions');
 const { send } = require('./reply');
 const places = require('./places');
+const suggestedPlaces = require('./suggested-places');
 
 const PORT           = Number(process.env.PORT || 8020);
 const MOCK_GOOGLE_URL= (process.env.MOCK_GOOGLE_URL || 'http://localhost:8019').replace(/\/$/, '');
@@ -248,6 +250,19 @@ http.createServer((req, res) => {
       return wallet.topupState(pool, token, decodeURIComponent(rest.join('/')), res);
     }
     return send(res, 404, { error: 'no such wallet route' });
+  }
+
+  // Places proposed by passengers and drivers, and « search by type » (day 2
+  // of « Lieux proposés », 2026-11-09). PLURAL: /place/ (singular) is the
+  // backend's Google-shaped search and is not published; /places/ is the
+  // apps', with its own nginx block. Every route needs a token. See
+  // suggested-places.js.
+  //
+  //   POST /places/suggest                  propose a missing place
+  //   GET  /places/mine                     my proposals and their state
+  //   GET  /places/nearby?type=&lat=&lon=   places of one type around me
+  if (url.pathname === '/places' || url.pathname.startsWith('/places/')) {
+    return suggestedPlaces.handle(req, res, url, { pool, riderUrl: RIDER_URL, driverUrl: DRIVER_URL });
   }
 
   // Account deletion requests. Google Play requires the path to exist INSIDE
