@@ -359,3 +359,171 @@ their own. Not done, because it cannot be proved without a full rebuild.
   campuses are missing.
 - **A street's point is the average of its ways** within one locality. For a
   long street that is the middle of it, not the nearest end.
+
+## Proposed places — `suggested-places.sql`
+
+« Lieux proposés par les utilisateurs », asked for by the boss on 2026-11-08:
+a passenger or a driver proposes a place the map does not have (a name, a
+type, a pin), the office approves or refuses it in the console, and an
+approved place is found in search by everyone. The same list of types drives
+« search by type » (café, pharmacie, mosquée…) over the OpenStreetMap places as
+well. A seven-day plan; **day 1 (2026-11-09) built the base and nothing a
+phone can reach yet** — no route, no screen, no change to search.
+
+### What exists after day 1
+
+| | Where | What |
+|---|---|---|
+| The types | website `packages/domain/src/place-types.ts` | 13 keys with French, English and Arabic words — the source. The app has a synced copy. |
+| `movin.place_type_of(class, subclass, name)` | `stack/db/suggested-places.sql` | which of our types an OSM place in `geo.place` is; `other` when none |
+| `movin.suggested_place` | `stack/db/suggested-places.sql` | the proposals and their current state: `pending` / `approved` / `refused` |
+| `movin.suggested_place_decision` | website migration 023 | the office's history: one row per edit, approval, refusal. Live since 2026-11-09 |
+| The counts | `investigations/probe-place-types.sh` | how many OSM places of each type, per country, near each capital |
+
+### The rules the table enforces
+
+- **`place_id` is `'u' || id`**, computed by Postgres. OSM places are `n…` /
+  `w…`, so the two never collide, and an id is never reused — the rider app
+  caches names by `place_id` (`atlas_app.place_name_cache`).
+- **What the person typed is kept**: `proposed_name` / `proposed_type` never
+  change; the office corrects `name` / `type` / `name_ar`, which is what
+  search shows. The website's driver declaration / correction split, in one
+  row.
+- **The author is `author_side` + `author_id`**, taken from the token by the
+  shim, never from the request — the `deletion_request` pattern. No foreign
+  key into upstream's person tables.
+- **The country is the server's**, from the pin against the service areas
+  (`countryAt()` in `places.js`), never the phone's.
+- **The pin must be inside the box around both countries** (14–38°N,
+  18°W–12.5°E). It is not a border check — the server does that — it catches
+  latitude and longitude swapped, which puts Nouakchott at −15.97°N.
+- **Names are 2–80 characters, trimmed, with no control character.** 80 is
+  the website's `PLACE_NAME_MAX`, and it is enough (measured 2026-11-09): the
+  longest point of interest in Mauritania is 78 characters, 99% of Algeria's
+  are 51 or fewer, and the 48 over 80 (of 75,138) are descriptions, not
+  names — « Dr Benadla Ramdane Medecin spécialiste OTR Orthopédie,
+  traumatologie… ».
+- **A refusal has a reason code, and only a refusal does**; an approval or a
+  refusal names the agent (`decided_by_email`). An approved place found wrong
+  later is refused, never deleted.
+
+### Why it is in `stack/db/` and not `geocoder/`
+
+**A release applies `stack/db/*.sql` that is new or changed, and nothing
+else** (`plan['sql']` in `ops/release-remote.py`). Nothing ever applies
+`geocoder/*.sql`: those run by hand on a map rebuild. The mapping was first
+planned as `geocoder/place-types.sql` and would have worked on every laptop and
+existed nowhere on the server, silently. The same holds for day 2: the change
+that makes search include approved places must not go into
+`geocoder/search.sql` either.
+
+It is in `movin`, not `geo`, because `geocoder-prepare.sh load` drops
+`geo.place` and `backup.sh` skips `geo` as rebuildable. A proposal exists
+nowhere else.
+
+### The type list is written in four places
+
+The website's `place-types.ts` (the source), the app's synced copy, and twice
+in `suggested-places.sql`: the `CHECK` on `type` / `proposed_type`, and the
+values `place_type_of` returns. Nothing syncs the SQL, so
+`tests/suggested-places.test.js` fails if the `CHECK`, the function and its
+own copy of the list disagree — and compares that copy with the website's file
+itself when a checkout is at `~/movin-website-release` (or `$MOVA_WEBSITE`).
+**Adding a type is a change in all four**, and in this file a `DROP
+CONSTRAINT` + `ADD CONSTRAINT` of the two named checks.
+
+### The mapping
+
+The feature covers **the whole of both countries**, not their capitals: a
+pin anywhere inside Algeria or Mauritania may be proposed, and « search by
+type » looks around wherever the person is.
+
+`geo.place` keeps ONE `class`/`subclass` per place — the first key in
+`extract.py`'s order — so each type lists both the `amenity=` and the
+`healthcare=` / `building=` forms that can arrive. Each choice is a line in the
+function's comment and a line in section 3 of the test. Those the owner took on
+2026-11-09, after the counts below:
+
+- **dentists are `hospital`** (314 in Algeria, 14 in Mauritania) — « where do
+  I get seen », like clinics and doctors;
+- **money-transfer agencies are `bank`** (163 in Mauritania) — where people go
+  for money there;
+- **ATMs stay `other`** — nobody asks a driver for a cash machine, and the
+  2,165 in Algeria would bury its 1,169 banks;
+- **churches are `other`.** The extract never kept OSM's `religion` tag, so
+  every `place_of_worship` arrived as a mosque, churches included — 26 of
+  4,978, among them Notre-Dame d'Afrique and the Sacré-Cœur in Algiers and the
+  Catholic mission in Nouakchott. The name is the only sign left, so the
+  function takes it as an optional third argument and a place of worship
+  whose name says église, cathédrale, chapelle, church, chapel, temple or
+  كنيسة is `other`. A church whose name says none of that stays a mosque until
+  OSM is corrected; a re-extract keeping `religion` is the real fix, and costs
+  the reviewed Arabic names (`geocoder-prepare.sh load`).
+
+### What the index already holds — measured 2026-11-09
+
+`investigations/probe-place-types.sh`, on the live index (81,088 points of
+interest), before the dentist / money-transfer / church decisions above:
+
+| Type | Mauritania | Algeria | within 10 km of Nouakchott | of Algiers |
+|---|---:|---:|---:|---:|
+| shop | 741 | 13,108 | 601 | 1,625 |
+| administration | 251 | 11,588 | 151 | 762 |
+| school | 251 | 10,316 | 116 | 788 |
+| mosque | 253 | 4,715 | 83 | 227 |
+| hospital | 195 | 4,498 | 66 | 678 |
+| restaurant | 186 | 2,932 | 143 | 499 |
+| cafe | 27 | 2,750 | 20 | 198 |
+| pharmacy | 185 | 2,489 | 166 | 303 |
+| hotel | 276 | 1,427 | 139 | 107 |
+| fuel | 171 | 1,158 | 126 | 79 |
+| bank | 92 | 1,169 | 58 | 182 |
+| market | 78 | 511 | 28 | 41 |
+| other | 3,152 | 18,477 | | |
+
+92 points fall outside both service areas. Mauritania is thin, as expected —
+5,858 points of interest against 75,138 — but every button finds something in
+Nouakchott; cafés (20) and markets (28) are where proposals will matter most.
+The biggest tags left in `other` are meant to be there: toilets and showers in
+Mauritania (1,534 and 323, humanitarian mapping), car parks, stadiums,
+company offices, monuments, bus stations.
+
+### No position index, and why every line is tested
+
+« Near me » and the 100 m duplicate check read a table of hundreds, at most a
+few thousand rows — a scan takes a millisecond. A PostGIS GiST index on the
+pin was written first and removed the same day (owner, 2026-11-09): it was the
+one part of the file PGlite cannot run, and with GitHub's workflows disabled on
+this fork (since early November 2026) nothing else would have built it before
+a live release. Without it, `tests/suggested-places.test.js` runs every line
+of the file, and a release cannot fail on it for a reason no test saw. The
+index is written out in the file's comment for the day the table reaches tens
+of thousands of rows.
+
+### Counting what the index already has
+
+```bash
+scp investigations/probe-place-types.sh investigations/probe-place-types.sql \
+    stack/db/suggested-places.sql ny:/tmp/
+ssh ny 'bash /tmp/probe-place-types.sh' | tee ~/probe-place-types.log
+```
+
+It copies `place_type_of` out of `suggested-places.sql` into `pg_temp` (this
+session's schema, gone when psql exits), so it counts with the mapping that
+ships even before a release has installed it. Reads `geo.place` and
+`atlas_app.geometry` only — map data, no person. Run by the owner (an
+assistant's live reads are refused); it stops itself after 120 s
+(`statement_timeout`).
+
+### Not done yet
+
+- **Day 2:** the shim's routes (propose, « Mes lieux proposés », search by
+  type), approved places in autocomplete / details / labels, the daily cap and
+  the 100 m duplicate check. **Search by type must call
+  `place_type_of(class, subclass, display_name)` — three arguments**: with two,
+  the name is NULL and every church is a mosque again. And **account
+  deletion**: the website's
+  `counts.sql` and `anonymise.sql` must count and treat this table together,
+  and the public deletion page must say so. Moved from day 1 because
+  `counts.sql` is one statement and cannot name a table that may not exist.
+- Days 3–7: the console screen, the app screens, the release.

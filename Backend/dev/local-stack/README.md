@@ -91,6 +91,7 @@ Comments in the code and in `CLAUDE.md` cite README sections by name ("README �
 | OSRM — real Algerian routing | [docs/maps.md](docs/maps.md#osrm--real-algerian-routing) |
 | Map tiles — the picture under the route | [docs/maps.md](docs/maps.md#map-tiles--the-picture-under-the-route) |
 | Place search — finding somewhere to go | [docs/maps.md](docs/maps.md#place-search--finding-somewhere-to-go) |
+| Proposed places — `suggested-places.sql` | [docs/maps.md](docs/maps.md#proposed-places--suggested-placessql) |
 | Published on the internet — TLS, and the lock that had to come first | [docs/edge.md](docs/edge.md#published-on-the-internet--tls-and-the-lock-that-had-to-come-first) |
 | The domain — `./switch-domain.sh` | [docs/edge.md](docs/edge.md#the-domain--switch-domainsh) |
 | What a person may send — the bounds, audited 2026-09-27 | [docs/edge.md](docs/edge.md#what-a-person-may-send--the-bounds-audited-2026-09-27) |
