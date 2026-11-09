@@ -1,7 +1,7 @@
 # investigations/
 
-How this system was understood: 35 probes, written between August and
-October 2026, each answering one question by asking the running stack —
+How this system was understood: 36 probes, written between August and
+November 2026, each answering one question by asking the running stack —
 how a booking behaves, what a route costs, why a driver was not offered a
 ride, whether a push arrives. Kept, because several answer questions that
 will be asked again. **None of them is part of anything that runs**, and
@@ -19,3 +19,9 @@ Three of them test the driver's monthly subscription, retired on 2026-10-07
 gone, so they fail; they stay as the record of how it was proved.
 `probe-subscription.sql`, which measured that the backend has no billing
 tables of its own, is still true.
+
+`probe-place-types.sh` (2026-11-09, « Lieux proposés ») is a pair with its
+`.sql` and needs `stack/db/suggested-places.sql` copied beside it: it counts
+the place index per type and country with the mapping that ships. Read-only
+map data; its header has the two commands. See docs/maps.md, *Proposed
+places*.

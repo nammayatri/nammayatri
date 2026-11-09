@@ -55,7 +55,7 @@ const UPSTREAM = `
 `;
 
 /** Our own migrations, exactly as the server applied them. */
-const OURS = ['driver-wallet.sql', 'account-deletion.sql'];
+const OURS = ['driver-wallet.sql', 'account-deletion.sql', 'suggested-places.sql'];
 
 let PGlite;
 function load() {
