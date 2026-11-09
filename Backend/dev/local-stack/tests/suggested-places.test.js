@@ -49,6 +49,23 @@ const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].s
     'the key, the unique place_id, the console queue and the per-author index -- nothing else',
     names.join(', '));
 
+  // The release of day 2, exactly: the live table was made on day 1 WITHOUT
+  // `locality`, and the release applies the changed file to it (a release
+  // applies a changed stack/db file; a later one may apply it again).
+  const localityCol = async () => (await db.sql(
+    `SELECT data_type, is_nullable FROM information_schema.columns
+      WHERE table_schema = 'movin' AND table_name = 'suggested_place' AND column_name = 'locality'`))[0];
+  const col = await localityCol();
+  t.ok(col && col.data_type === 'text' && col.is_nullable === 'YES', 'the table has `locality`: text, nullable',
+    JSON.stringify(col));
+  await db.exec('ALTER TABLE movin.suggested_place DROP COLUMN locality'); // the table as day 1 left it
+  let onDay1 = null;
+  try { await db.exec(sqlText); await db.exec(sqlText); } catch (e) { onDay1 = e.message; }
+  const added = await localityCol();
+  const shape = await db.sql(`SELECT 1 FROM pg_constraint WHERE conname = 'suggested_place_locality_shape'`);
+  t.ok(onDay1 === null && added && shape.length === 1,
+    "applied (twice) to day 1's table, it adds `locality` and its check", onDay1 || JSON.stringify(added));
+
   /* ── 2. the types ───────────────────────────────────────────────────── */
   t.section('2. one list of types: the CHECK, the mapping, the website');
   const checkWords = async (name) => {
@@ -178,6 +195,15 @@ const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].s
   await refused({ proposed_name: ' Café ', name: ' Café ' }, /name_shape/, 'an untrimmed name');
   await refused({ name: 'Café\nTfeila' }, /suggested_place_name_shape/, 'a newline in the shown name');
   await refused({ name_ar: 'ص' }, /name_ar_shape/, 'a one-letter Arabic name');
+  await refused({ locality: '' }, /locality_shape/, 'an empty locality (no locality is NULL, not "")');
+  await refused({ locality: 'x'.repeat(201) }, /locality_shape/, 'a 201-character locality');
+  await refused({ locality: 'Tevragh\nZeina' }, /locality_shape/, 'a newline in the locality');
+  const named = await insert({ locality: 'Tevragh Zeina', proposed_name: 'Café Zeina', name: 'Café Zeina',
+    proposed_type: 'cafe', type: 'cafe' });
+  const loc = await db.sql('SELECT locality FROM movin.suggested_place WHERE id = $1', [named.id]);
+  t.ok(loc[0].locality === 'Tevragh Zeina', 'a proposal with its locality keeps it');
+  t.ok((await db.sql('SELECT locality FROM movin.suggested_place WHERE id = $1', [first.id]))[0].locality === null,
+    'one without (a pin far from any named place) has NULL, and is accepted');
   await refused({ lat: -15.975, lon: 18.0866 }, /in_our_box/, 'Nouakchott with latitude and longitude swapped');
   await refused({ lat: 3.0588, lon: 36.7538, country: 'DZ' }, /in_our_box/, 'Algiers swapped');
   await refused({ lat: 48.85, lon: 2.35 }, /in_our_box/, 'Paris');

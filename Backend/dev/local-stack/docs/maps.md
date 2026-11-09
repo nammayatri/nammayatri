@@ -394,6 +394,13 @@ phone can reach yet** — no route, no screen, no change to search.
   key into upstream's person tables.
 - **The country is the server's**, from the pin against the service areas
   (`countryAt()` in `places.js`), never the phone's.
+- **So is the locality** (day 2): `geo.locality_of()` on the pin, the nearest
+  town or district in the index, stored when the proposal arrives. It is the
+  second line of the suggestion — « Café X, Tevragh Zeina » — and, being a
+  `display_name` of the index, the labels route finds its Arabic name the way
+  it does for OSM places. NULL when nothing is near; the name then stands
+  alone. Added by `ALTER TABLE … ADD COLUMN IF NOT EXISTS` after the table,
+  so one statement serves day 1's live table and a fresh database.
 - **The pin must be inside the box around both countries** (14–38°N,
   18°W–12.5°E). It is not a border check — the server does that — it catches
   latitude and longitude swapped, which puts Nouakchott at −15.97°N.

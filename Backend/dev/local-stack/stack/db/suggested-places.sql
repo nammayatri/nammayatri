@@ -239,6 +239,23 @@ CREATE TABLE IF NOT EXISTS movin.suggested_place (
     status = 'pending' OR (decided_at IS NOT NULL AND decided_by_email IS NOT NULL))
 );
 
+-- The town or district the pin is in (day 2, 2026-11-09). Every OSM suggestion
+-- carries one as its second line -- « Pharmacie X, Tevragh Zeina » -- and a
+-- proposed place without it would show a bare name, so two places of the same
+-- name could not be told apart. Set by the SERVER when the proposal arrives,
+-- from geo.locality_of() on the pin: the display_name of the nearest town or
+-- district in the place index, which is also what lets the labels route find
+-- its Arabic name. NULL when the index cannot name one (a pin far from any
+-- named place): search then shows the name alone, as it does today.
+--
+-- Added here, and not in the CREATE TABLE above, so ONE statement covers both
+-- databases: the live table made on day 1 gains the column, a fresh one gets
+-- it right after the CREATE. A copy in both places could drift.
+ALTER TABLE movin.suggested_place
+  ADD COLUMN IF NOT EXISTS locality text
+    CONSTRAINT suggested_place_locality_shape CHECK (
+      locality IS NULL OR (char_length(locality) BETWEEN 1 AND 200 AND locality !~ '[[:cntrl:]]'));
+
 -- The console's queue: what is pending, oldest first or newest first.
 CREATE INDEX IF NOT EXISTS suggested_place_queue
   ON movin.suggested_place (status, created_at DESC);
@@ -272,5 +289,8 @@ COMMENT ON COLUMN movin.suggested_place.author_id IS
   '(driver), from the token. Deliberately NOT a foreign key.';
 COMMENT ON COLUMN movin.suggested_place.country IS
   'Set by the server from the pin against the service areas, never by the phone.';
+COMMENT ON COLUMN movin.suggested_place.locality IS
+  'The nearest town or district (geo.locality_of on the pin), set by the server '
+  'at proposal time: the second line of a suggestion. NULL when none is near.';
 
 COMMIT;
