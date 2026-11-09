@@ -21,11 +21,35 @@ const PLACES = {
   'osm:n3': { place_id: 'osm:n3', display_name: 'Nouakchott', locality: null, kind: 'place', lat: 18.0790, lon: -15.9650, name_ar: 'نواكشوط', locality_ar: null },
 };
 
+// Places proposed by passengers and drivers (movin.suggested_place, day 2,
+// 2026-11-09): u5 is approved, with an Arabic name; u6 exists but is not
+// approved (pending or refused), so it must answer like an unknown id.
+const PROPOSED = {
+  u5: { place_id: 'u5', display_name: 'Café Tfeila', locality: 'Tevragh Zeina', kind: 'poi',
+        lat: 18.0901, lon: -15.9702, country: 'MR', name_ar: 'مقهى تفيلة', locality_ar: 'تفرغ زينة' },
+};
+
 function answer(text, params) {
   const sql = text.replace(/\s+/g, ' ');
+  if (/from movin\.suggested_place where status = 'approved'/.test(sql)) {
+    if (params[0] === 'pboom') throw new Error('proposals unavailable (test)');
+    return params[0] === 'tfeila' ? [{ ...PROPOSED.u5, distance_m: 420.4 }] : [];
+  }
+  if (/from movin\.suggested_place where place_id = \$1/.test(sql)) {
+    return PROPOSED[params[0]] ? [PROPOSED[params[0]]] : [];
+  }
+  if (/from movin\.suggested_place p left join lateral/.test(sql)) {
+    return params[0].filter((id) => PROPOSED[id]).map((id) => ({
+      place_id: id, name_ar: PROPOSED[id].name_ar, locality: PROPOSED[id].locality, locality_ar: PROPOSED[id].locality_ar,
+    }));
+  }
   if (/from geo\.search\(/.test(sql)) {
     if (params[0] === 'zzz') return [];
     if (params[0] === 'boom') throw new Error('index unavailable (test)');
+    // A full screen from the index, so the cap shows: one proposal + seven.
+    if (params[0] === 'tfeila') {
+      return Array.from({ length: 8 }, (_, i) => ({ ...PLACES['osm:n1'], place_id: `osm:t${i}`, distance_m: 900 + i }));
+    }
     return [
       { ...PLACES['osm:n1'], distance_m: 812.4 },
       { ...PLACES['osm:n3'], distance_m: 1500.6 },
@@ -59,7 +83,7 @@ class Pool {
     const sql = String(text).replace(/\s+/g, ' ').trim();
     // Only the place index is recorded: the wallet sweep and the dispatch
     // list also query on timers, at moments no test can pin down.
-    if (LOG && /geo\.|atlas_app\.geometry/.test(sql)) {
+    if (LOG && /geo\.|atlas_app\.geometry|movin\.suggested_place/.test(sql)) {
       fs.appendFileSync(LOG, JSON.stringify({ sql, params }) + '\n');
     }
     return { rows: answer(sql, params), rowCount: 0 };

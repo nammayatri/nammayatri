@@ -80,6 +80,19 @@ const REQUESTS = [
   'GET /wallet/status',
   'GET /some/other/google/path?x=1',
   'POST /directions/json?origin=18.0858,-15.9785&destination=18.1,-15.95',
+  // Proposed places (day 2, 2026-11-09). At the END, so every request above
+  // keeps its index and its recording can be compared one for one.
+  'GET /place/autocomplete/json?input=tfeila&location=18.0858,-15.9785',
+  'GET /place/autocomplete/json?input=pboom&location=18.0858,-15.9785',
+  'GET /place/details/json?place_id=u5',
+  'GET /place/details/json?place_id=u6',
+  'GET /place/labels/json?ids=osm:n1,u5,u6&lang=ar',
+  'GET /place/labels/json?ids=u5&lang=ar',
+  'GET /geocode/json?place_id=u5',
+  'GET /geocode/json?place_id=u6',
+  'GET /places/mine',
+  'POST /places/mine',
+  'GET /places/nowhere',
 ];
 
 const listen = (handler) => new Promise((r) => { const s = http.createServer(handler); s.listen(0, '127.0.0.1', () => r(s)); });

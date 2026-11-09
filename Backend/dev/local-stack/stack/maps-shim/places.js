@@ -78,6 +78,60 @@ const COUNTRY_OF_REGION = {
 };
 const FALLBACK_COUNTRY = { name: COUNTRY_NAME, code: COUNTRY_CODE };
 
+// ═══════════════════════════════════════════════ proposed places ════════
+//
+// Places proposed by passengers and drivers and APPROVED by the office
+// (movin.suggested_place, day 2 of « Lieux proposés », 2026-11-09). They live
+// in `movin`, not in geo.place -- a map rebuild drops geo.place, and the
+// backup skips it -- so search reads them beside the index, here, and never
+// through geocoder/search.sql, which no release applies.
+//
+// Their ids are `u<id>`; OSM's are `n…` / `w…`, so the two never collide. Only
+// `approved` rows are ever answered: a pending place is nobody's to see, and a
+// refused one -- even one approved before -- answers « not found ».
+
+const USER_PLACE = /^u\d+$/;
+/** At most this many proposals at the top of a search; the index fills the rest. */
+const PROPOSALS_IN_SEARCH = Number(process.env.PROPOSALS_IN_SEARCH || 3);
+const COUNTRY_OF_CODE = { DZ: COUNTRY_OF_REGION.Algeria, MR: COUNTRY_OF_REGION.Mauritania };
+
+/** One approved proposal, in the shape the index's rows have. */
+async function approvedPlace(placeId) {
+  const { rows } = await pool.query(
+    `select place_id, name as display_name, locality, 'poi' as kind, lat, lon, country
+       from movin.suggested_place
+      where place_id = $1 and status = 'approved'`,
+    [placeId],
+  );
+  return rows[0] || null;
+}
+
+/**
+ * Approved proposals whose name or Arabic name contains what was typed,
+ * nearest first. geo.normalise on both sides -- the index's own rule, Arabic
+ * folding included -- so a proposal is matched exactly as an OSM place would
+ * be; `strpos` rather than LIKE, so a typed % or _ is a character, not a
+ * wildcard. A query that normalises to nothing (« -- ») matches nothing.
+ * The distance is plain trigonometry: the table is small and needs no index.
+ */
+async function approvedMatching(input, lat, lon, limit) {
+  const { rows } = await pool.query(
+    `select place_id, name as display_name, locality, 'poi' as kind,
+            2 * 6371008.8 * asin(sqrt(
+              power(sin(radians(lat - $2) / 2), 2)
+              + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m
+       from movin.suggested_place
+      where status = 'approved'
+        and geo.normalise($1) <> ''
+        and (strpos(geo.normalise(name), geo.normalise($1)) > 0
+             or strpos(geo.normalise(coalesce(name_ar, '')), geo.normalise($1)) > 0)
+      order by distance_m
+      limit $4`,
+    [input, lat, lon, limit],
+  );
+  return rows;
+}
+
 async function countryAt(lat, lon) {
   try {
     const { rows } = await pool.query(
@@ -144,7 +198,19 @@ async function autocomplete(query, res) {
     return send(res, 200, { status: 'UNKNOWN_ERROR', predictions: [] });
   }
 
-  console.log(`[autocomplete] "${input}" -> ${rows.length}`);
+  // Approved proposals that match go first (a handful at most): somebody who
+  // types the name of a place the office has just put on the map is looking
+  // for it. The index fills the rest of the screen. A failure here costs the
+  // proposals, never the search.
+  let proposed = [];
+  try {
+    proposed = await approvedMatching(input, centre[0], centre[1], PROPOSALS_IN_SEARCH);
+  } catch (err) {
+    console.error(`[autocomplete] proposed places, "${input}": ${err.message}`);
+  }
+  rows = [...proposed, ...rows.slice(0, Math.max(SEARCH_LIMIT - proposed.length, 0))];
+
+  console.log(`[autocomplete] "${input}" -> ${rows.length}${proposed.length ? ` (${proposed.length} proposed)` : ''}`);
   send(res, 200, {
     status: rows.length ? 'OK' : 'ZERO_RESULTS',
     predictions: rows.map((row) => ({
@@ -201,9 +267,14 @@ async function placeLabels(query, res) {
 
   if (lang !== 'ar' || !ids.length) return send(res, 200, { status: 'OK', labels: {} });
 
-  let rows;
+  // Proposed places' ids go to their own table; the index's query is sent
+  // exactly as before for the rest, and not at all when there is no rest.
+  const osmIds = ids.filter((id) => !USER_PLACE.test(id));
+  const userIds = ids.filter((id) => USER_PLACE.test(id));
+
+  let rows = [];
   try {
-    ({ rows } = await pool.query(
+    if (osmIds.length) ({ rows } = await pool.query(
       `select p.place_id,
               p.name_ar,
               p.locality,
@@ -219,8 +290,30 @@ async function placeLabels(query, res) {
               ) l on true
         where p.place_id = any($1)
           and p.name_ar is not null`,
-      [ids],
+      [osmIds],
     ));
+    if (userIds.length) {
+      const { rows: proposed } = await pool.query(
+        `select p.place_id,
+                p.name_ar,
+                p.locality,
+                l.name_ar as locality_ar
+           from movin.suggested_place p
+           left join lateral (
+                select l2.name_ar
+                  from geo.place l2
+                 where l2.display_name = p.locality
+                   and l2.name_ar is not null
+                 order by l2.importance desc
+                 limit 1
+                ) l on true
+          where p.place_id = any($1)
+            and p.status = 'approved'
+            and p.name_ar is not null`,
+        [userIds],
+      );
+      rows = [...rows, ...proposed];
+    }
   } catch (err) {
     // Never an error to the phone. A label lookup that fails must cost the
     // rider nothing more than seeing the French name he would have seen
@@ -244,16 +337,23 @@ async function placeDetails(query, res) {
 
   let rows;
   try {
-    ({ rows } = await pool.query(
-      'select place_id, display_name, locality, kind, lat, lon from geo.place where place_id = $1',
-      [placeId],
-    ));
+    if (USER_PLACE.test(placeId)) {
+      const row = await approvedPlace(placeId);
+      rows = row ? [row] : [];
+    } else {
+      ({ rows } = await pool.query(
+        'select place_id, display_name, locality, kind, lat, lon from geo.place where place_id = $1',
+        [placeId],
+      ));
+    }
   } catch (err) {
     console.error(`[details] ${placeId}: ${err.message}`);
     return send(res, 200, { status: 'UNKNOWN_ERROR' });
   }
 
   if (!rows.length) {
+    // A proposed place that is pending, refused or unknown: nothing to say.
+    if (USER_PLACE.test(placeId)) return send(res, 200, { status: 'ZERO_RESULTS' });
     // Only reachable if the index was rebuilt from a different extract: place
     // ids are derived from OSM identity precisely so they survive a rebuild.
     console.warn(`[details] unknown place_id ${placeId}`);
@@ -261,7 +361,9 @@ async function placeDetails(query, res) {
   }
 
   const row = rows[0];
-  const country = await countryAt(row.lat, row.lon);
+  // A proposed place carries the country the server gave it; an OSM one is
+  // asked of the service areas.
+  const country = COUNTRY_OF_CODE[row.country] || await countryAt(row.lat, row.lon);
   send(res, 200, {
     status: 'OK',
     result: {
@@ -281,6 +383,9 @@ async function reverseGeocode(query, res) {
   try {
     if (at) {
       ({ rows } = await pool.query('select * from geo.reverse($1, $2)', [at[0], at[1]]));
+    } else if (placeId && USER_PLACE.test(placeId)) {
+      const row = await approvedPlace(placeId);
+      rows = row ? [row] : [];
     } else if (placeId) {
       ({ rows } = await pool.query(
         'select place_id, display_name, locality, kind, lat, lon from geo.place where place_id = $1',
@@ -299,7 +404,7 @@ async function reverseGeocode(query, res) {
   const row = rows[0];
   // The country of the point asked about (the dropped pin), not of the feature
   // matched near it -- a pin by a border names the country it is standing in.
-  const country = await countryAt(at ? at[0] : row.lat, at ? at[1] : row.lon);
+  const country = (!at && COUNTRY_OF_CODE[row.country]) || await countryAt(at ? at[0] : row.lat, at ? at[1] : row.lon);
   console.log(`[geocode] ${at ? at.join(',') : placeId} -> ${row.display_name}, ${country.name}`);
   send(res, 200, {
     status: 'OK',

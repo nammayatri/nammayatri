@@ -559,6 +559,29 @@ truly at once, because its pool runs one transaction at a time — the test
 proves the lock is taken first in the transaction instead (a mutation that
 removed it passed the old « two taps » check, which is why).
 
+### Approved places in search — `places.js` (day 2)
+
+The four routes that answer the backend's Google calls know `u…` ids now, and
+read them from `movin.suggested_place` beside the index — never through
+`geocoder/search.sql`, which no release applies. Only `approved` rows are ever
+answered: pending, refused, or approved-then-refused all say « not found ».
+
+| Route | With proposals |
+|---|---|
+| `/place/autocomplete/json` | approved proposals whose name or Arabic name contains what was typed (`geo.normalise` on both sides, `strpos` so `%` is a character) go first — 3 at most, nearest first — and the index fills the rest of the 8. If that query fails, the search answers from the index alone. |
+| `/place/details/json?place_id=u…` | the place, signed with the country it was given |
+| `/place/labels/json?ids=…,u…` | its Arabic name, and its locality's, as for an OSM place; the index is not asked when every id is a `u…` |
+| `/geocode/json?place_id=u…` | as details. A dropped pin (`latlng=`) still names the nearest OSM feature: proposals are not in reverse geocoding |
+
+The golden test (`tests/maps-shim-routes.test.js`) was re-recorded for this,
+and checked line by line against the previous recording before it was kept:
+the 32 requests already there answer exactly as before, with one difference —
+the four searches that reach the index now also send the proposals query. Eleven
+requests were added at the end: a search led by an approved café, the same
+search with the proposals query failing, details / labels / geocode for an
+approved and a non-approved `u…` id, and the `/places/` router's 401, 405 and
+404.
+
 The edge does not publish `/places/` yet: until its nginx block exists (day 2,
 item 8), these routes answer only on the box.
 

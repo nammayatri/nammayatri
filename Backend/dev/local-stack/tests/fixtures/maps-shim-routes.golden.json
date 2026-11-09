@@ -623,6 +623,15 @@
      -15.9785,
      8
     ]
+   },
+   {
+    "sql": "select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and geo.normalise($1) <> '' and (strpos(geo.normalise(name), geo.normalise($1)) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), geo.normalise($1)) > 0) order by distance_m limit $4",
+    "params": [
+     "ma",
+     18.0858,
+     -15.9785,
+     3
+    ]
    }
   ],
   "asked": []
@@ -664,6 +673,15 @@
      3.0588,
      8
     ]
+   },
+   {
+    "sql": "select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and geo.normalise($1) <> '' and (strpos(geo.normalise(name), geo.normalise($1)) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), geo.normalise($1)) > 0) order by distance_m limit $4",
+    "params": [
+     "marche",
+     36.7538,
+     3.0588,
+     3
+    ]
    }
   ],
   "asked": []
@@ -695,6 +713,15 @@
      18.0858,
      -15.9785,
      8
+    ]
+   },
+   {
+    "sql": "select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and geo.normalise($1) <> '' and (strpos(geo.normalise(name), geo.normalise($1)) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), geo.normalise($1)) > 0) order by distance_m limit $4",
+    "params": [
+     "zzz",
+     18.0858,
+     -15.9785,
+     3
     ]
    }
   ],
@@ -757,6 +784,15 @@
      36.7538,
      3.0588,
      8
+    ]
+   },
+   {
+    "sql": "select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and geo.normalise($1) <> '' and (strpos(geo.normalise(name), geo.normalise($1)) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), geo.normalise($1)) > 0) order by distance_m limit $4",
+    "params": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     36.7538,
+     3.0588,
+     3
     ]
    }
   ],
@@ -1423,5 +1459,385 @@
   "asked": [
    "osrm /route/v1/driving/-15.9785,18.0858;-15.95,18.1?overview=false&steps=true&geometries=polyline&alternatives=false"
   ]
+ },
+ {
+  "request": "GET /place/autocomplete/json?input=tfeila&location=18.0858,-15.9785",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "predictions": [
+    {
+     "description": "Café Tfeila, Tevragh Zeina",
+     "place_id": "u5",
+     "distance_meters": 420,
+     "types": [
+      "point_of_interest",
+      "establishment"
+     ]
+    },
+    {
+     "description": "Marché Capitale, Tevragh Zeina",
+     "place_id": "osm:t0",
+     "distance_meters": 900,
+     "types": [
+      "point_of_interest",
+      "establishment"
+     ]
+    },
+    {
+     "description": "Marché Capitale, Tevragh Zeina",
+     "place_id": "osm:t1",
+     "distance_meters": 901,
+     "types": [
+      "point_of_interest",
+      "establishment"
+     ]
+    },
+    {
+     "description": "Marché Capitale, Tevragh Zeina",
+     "place_id": "osm:t2",
+     "distance_meters": 902,
+     "types": [
+      "point_of_interest",
+      "establishment"
+     ]
+    },
+    {
+     "description": "Marché Capitale, Tevragh Zeina",
+     "place_id": "osm:t3",
+     "distance_meters": 903,
+     "types": [
+      "point_of_interest",
+      "establishment"
+     ]
+    },
+    {
+     "description": "Marché Capitale, Tevragh Zeina",
+     "place_id": "osm:t4",
+     "distance_meters": 904,
+     "types": [
+      "point_of_interest",
+      "establishment"
+     ]
+    },
+    {
+     "description": "Marché Capitale, Tevragh Zeina",
+     "place_id": "osm:t5",
+     "distance_meters": 905,
+     "types": [
+      "point_of_interest",
+      "establishment"
+     ]
+    },
+    {
+     "description": "Marché Capitale, Tevragh Zeina",
+     "place_id": "osm:t6",
+     "distance_meters": 906,
+     "types": [
+      "point_of_interest",
+      "establishment"
+     ]
+    }
+   ]
+  },
+  "queries": [
+   {
+    "sql": "select place_id, display_name, locality, kind, distance_m from geo.search($1, $2, $3, $4)",
+    "params": [
+     "tfeila",
+     18.0858,
+     -15.9785,
+     8
+    ]
+   },
+   {
+    "sql": "select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and geo.normalise($1) <> '' and (strpos(geo.normalise(name), geo.normalise($1)) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), geo.normalise($1)) > 0) order by distance_m limit $4",
+    "params": [
+     "tfeila",
+     18.0858,
+     -15.9785,
+     3
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /place/autocomplete/json?input=pboom&location=18.0858,-15.9785",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "predictions": [
+    {
+     "description": "Marché Capitale, Tevragh Zeina",
+     "place_id": "osm:n1",
+     "distance_meters": 812,
+     "types": [
+      "point_of_interest",
+      "establishment"
+     ]
+    },
+    {
+     "description": "Nouakchott",
+     "place_id": "osm:n3",
+     "distance_meters": 1501,
+     "types": [
+      "locality",
+      "political",
+      "geocode"
+     ]
+    }
+   ]
+  },
+  "queries": [
+   {
+    "sql": "select place_id, display_name, locality, kind, distance_m from geo.search($1, $2, $3, $4)",
+    "params": [
+     "pboom",
+     18.0858,
+     -15.9785,
+     8
+    ]
+   },
+   {
+    "sql": "select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and geo.normalise($1) <> '' and (strpos(geo.normalise(name), geo.normalise($1)) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), geo.normalise($1)) > 0) order by distance_m limit $4",
+    "params": [
+     "pboom",
+     18.0858,
+     -15.9785,
+     3
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /place/details/json?place_id=u5",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "result": {
+    "place_id": "u5",
+    "formatted_address": "Café Tfeila, Tevragh Zeina, Mauritanie",
+    "address_components": [
+     {
+      "long_name": "Café Tfeila",
+      "short_name": "Café Tfeila",
+      "types": [
+       "point_of_interest",
+       "establishment"
+      ]
+     },
+     {
+      "long_name": "Tevragh Zeina",
+      "short_name": "Tevragh Zeina",
+      "types": [
+       "locality",
+       "political"
+      ]
+     },
+     {
+      "long_name": "Mauritanie",
+      "short_name": "MR",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 18.0901,
+      "lng": -15.9702
+     }
+    }
+   }
+  },
+  "queries": [
+   {
+    "sql": "select place_id, name as display_name, locality, 'poi' as kind, lat, lon, country from movin.suggested_place where place_id = $1 and status = 'approved'",
+    "params": [
+     "u5"
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /place/details/json?place_id=u6",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "ZERO_RESULTS"
+  },
+  "queries": [
+   {
+    "sql": "select place_id, name as display_name, locality, 'poi' as kind, lat, lon, country from movin.suggested_place where place_id = $1 and status = 'approved'",
+    "params": [
+     "u6"
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /place/labels/json?ids=osm:n1,u5,u6&lang=ar",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "labels": {
+    "osm:n1": "سوق العاصمة, تفرغ زينة",
+    "u5": "مقهى تفيلة, تفرغ زينة"
+   }
+  },
+  "queries": [
+   {
+    "sql": "select p.place_id, p.name_ar, p.locality, l.name_ar as locality_ar from geo.place p left join lateral ( select l2.name_ar from geo.place l2 where l2.display_name = p.locality and l2.name_ar is not null order by l2.importance desc limit 1 ) l on true where p.place_id = any($1) and p.name_ar is not null",
+    "params": [
+     [
+      "osm:n1"
+     ]
+    ]
+   },
+   {
+    "sql": "select p.place_id, p.name_ar, p.locality, l.name_ar as locality_ar from movin.suggested_place p left join lateral ( select l2.name_ar from geo.place l2 where l2.display_name = p.locality and l2.name_ar is not null order by l2.importance desc limit 1 ) l on true where p.place_id = any($1) and p.status = 'approved' and p.name_ar is not null",
+    "params": [
+     [
+      "u5",
+      "u6"
+     ]
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /place/labels/json?ids=u5&lang=ar",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "labels": {
+    "u5": "مقهى تفيلة, تفرغ زينة"
+   }
+  },
+  "queries": [
+   {
+    "sql": "select p.place_id, p.name_ar, p.locality, l.name_ar as locality_ar from movin.suggested_place p left join lateral ( select l2.name_ar from geo.place l2 where l2.display_name = p.locality and l2.name_ar is not null order by l2.importance desc limit 1 ) l on true where p.place_id = any($1) and p.status = 'approved' and p.name_ar is not null",
+    "params": [
+     [
+      "u5"
+     ]
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /geocode/json?place_id=u5",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "results": [
+    {
+     "place_id": "u5",
+     "formatted_address": "Café Tfeila, Tevragh Zeina, Mauritanie",
+     "address_components": [
+      {
+       "long_name": "Café Tfeila",
+       "short_name": "Café Tfeila",
+       "types": [
+        "point_of_interest",
+        "establishment"
+       ]
+      },
+      {
+       "long_name": "Tevragh Zeina",
+       "short_name": "Tevragh Zeina",
+       "types": [
+        "locality",
+        "political"
+       ]
+      },
+      {
+       "long_name": "Mauritanie",
+       "short_name": "MR",
+       "types": [
+        "country",
+        "political"
+       ]
+      }
+     ],
+     "geometry": {
+      "location": {
+       "lat": 18.0901,
+       "lng": -15.9702
+      }
+     }
+    }
+   ]
+  },
+  "queries": [
+   {
+    "sql": "select place_id, name as display_name, locality, 'poi' as kind, lat, lon, country from movin.suggested_place where place_id = $1 and status = 'approved'",
+    "params": [
+     "u5"
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /geocode/json?place_id=u6",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "ZERO_RESULTS",
+   "results": []
+  },
+  "queries": [
+   {
+    "sql": "select place_id, name as display_name, locality, 'poi' as kind, lat, lon, country from movin.suggested_place where place_id = $1 and status = 'approved'",
+    "params": [
+     "u6"
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /places/mine",
+  "status": 401,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "error": "sign in first"
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "POST /places/mine",
+  "status": 405,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "error": "method not allowed"
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "GET /places/nowhere",
+  "status": 404,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "error": "no such places route"
+  },
+  "queries": [],
+  "asked": []
  }
 ]
