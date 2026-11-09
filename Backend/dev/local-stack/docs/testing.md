@@ -11,7 +11,7 @@ Three workflows, none of which deploys anything:
 | Workflow | What it proves | When |
 |---|---|---|
 | `algeria: node tests` | **Every** test in `tests/` (`run-all.sh` globs), on Node 20 and 22: sign-in rules, the push relay, the release rehearsal — and the money path (`wallet`, `restricted`, `deletion`, the guard's `WALLET_EMPTY`) with its SQL run in a real Postgres (PGlite, in-process) | Every push to `algeria/**`, and pull requests |
-| `algeria: ride regression` | A whole backend, brought up from nothing on a throwaway runner from **the image the server runs**, with real routing on an Algiers + Nouakchott map. Then the **live two-country layout** from the server's own SQL files, and a priced ride in each country — `+213` in Algiers, `+222` in Nouakchott — each priced **only by its own country's merchant**. On the way it applies `db/suggested-places.sql` twice on the server's PostGIS image and checks its GiST index (2026-11-09), the one part of that file PGlite cannot run | Every push to `algeria/**`, Mondays 06:00 UTC, and on demand |
+| `algeria: ride regression` | A whole backend, brought up from nothing on a throwaway runner from **the image the server runs**, with real routing on an Algiers + Nouakchott map. Then the **live two-country layout** from the server's own SQL files, and a priced ride in each country — `+213` in Algiers, `+222` in Nouakchott — each priced **only by its own country's merchant** | Every push to `algeria/**`, Mondays 06:00 UTC, and on demand |
 | `algeria: build backend` | The Haskell binaries. 44 minutes; nothing else triggers it | Push to `algeria/build-backend` |
 
 ```bash

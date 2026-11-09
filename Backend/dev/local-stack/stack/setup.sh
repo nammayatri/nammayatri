@@ -272,23 +272,6 @@ seed_movin_columns() {
   done
 }
 
-# The proposed places' table (db/suggested-places.sql, 2026-11-09). Nothing in
-# a ride reads it; it is here so the CI's ride regression applies it to the
-# same postgis/postgis:15-3.4 the server runs -- the only place its PostGIS
-# index is built before a release would build it on the live database. The
-# tests' PGlite has no PostGIS and skips that index. Applied TWICE, because a
-# release re-applies the file whenever it changes.
-seed_suggested_places() {
-  log "Applying the proposed places' table, twice"
-  docker cp db/suggested-places.sql ny-postgres:/tmp/suggested-places.sql
-  $PG -q -v ON_ERROR_STOP=1 -f /tmp/suggested-places.sql >/dev/null \
-    && $PG -q -v ON_ERROR_STOP=1 -f /tmp/suggested-places.sql >/dev/null \
-    || die "could not apply suggested-places.sql"
-  [ "$($PG -tAc "SELECT to_regclass('movin.suggested_place_position') IS NOT NULL")" = t ] \
-    || die "suggested-places.sql applied, but its PostGIS index is missing"
-  ok "suggested-places.sql (with its PostGIS index)"
-}
-
 seed_algeria() {
   # Must run *after* rider-app has migrated: atlas_app.geometry only exists
   # once its migrations have been applied.
@@ -952,7 +935,6 @@ wait_for_api
 wait_for_driver_api
 # After both apps' migrations (the tables must exist), before anything searches.
 seed_movin_columns
-seed_suggested_places
 # Repoints both apps at OSRM and restarts them, so wait for them again.
 if [ "${SKIP_OSRM:-0}" != "1" ]; then
   # Pointing the backend at a routing service that is not running turns every

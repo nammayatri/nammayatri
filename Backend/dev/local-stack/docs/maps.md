@@ -488,15 +488,17 @@ The biggest tags left in `other` are meant to be there: toilets and showers in
 Mauritania (1,534 and 323, humanitarian mapping), car parks, stadiums,
 company offices, monuments, bus stations.
 
-### The PostGIS index is proven by the CI, not by the tests
+### No position index, and why every line is tested
 
-`suggested_place_position` (GiST on the pin, pending and approved rows — the
-duplicate check must see two pending proposals of the same café) is created
-only where PostGIS exists. PGlite has none, so the unit test checks that the
-file applies WITHOUT it. `setup.sh`'s `seed_suggested_places` applies the file
-twice on `postgis/postgis:15-3.4` — the server's image — and fails if the index
-is missing, so the CI's ride regression proves it on every push to an
-`algeria/**` branch, before a release would build it on the live database.
+« Near me » and the 100 m duplicate check read a table of hundreds, at most a
+few thousand rows — a scan takes a millisecond. A PostGIS GiST index on the
+pin was written first and removed the same day (owner, 2026-11-09): it was the
+one part of the file PGlite cannot run, and with GitHub's workflows disabled on
+this fork (since early November 2026) nothing else would have built it before
+a live release. Without it, `tests/suggested-places.test.js` runs every line
+of the file, and a release cannot fail on it for a reason no test saw. The
+index is written out in the file's comment for the day the table reaches tens
+of thousands of rows.
 
 ### Counting what the index already has
 

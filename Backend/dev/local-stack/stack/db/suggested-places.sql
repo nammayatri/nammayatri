@@ -168,9 +168,8 @@ CREATE TABLE IF NOT EXISTS movin.suggested_place (
   -- maps-shim placeLabels, answers from here).
   name_ar          text,
 
-  -- WGS84, as the phone sends it. Plain numbers rather than PostGIS, so this
-  -- table is testable in PGlite; the GiST index below adds PostGIS where it
-  -- exists.
+  -- WGS84, as the phone sends it. Plain numbers rather than PostGIS, so every
+  -- line of this file is testable in PGlite.
   lat              double precision NOT NULL,
   lon              double precision NOT NULL,
   -- Decided by the SERVER from the pin (atlas_app.geometry, as maps-shim's
@@ -247,24 +246,16 @@ CREATE INDEX IF NOT EXISTS suggested_place_queue
 CREATE INDEX IF NOT EXISTS suggested_place_by_author
   ON movin.suggested_place (author_side, author_id, created_at DESC);
 
--- « Near me », and the duplicate check (same name within 100 m). Covers
--- PENDING places as well as approved ones: two people proposing the same café
--- on the same day are both still pending, and the second must be caught.
---
--- Only where PostGIS exists. The live database has it; PGlite (the tests) does
--- not, and this file must apply there too.
-DO $$
-BEGIN
-  IF to_regtype('geography') IS NOT NULL THEN
-    EXECUTE $idx$
-      CREATE INDEX IF NOT EXISTS suggested_place_position
-        ON movin.suggested_place
-        USING gist ((st_setsrid(st_makepoint(lon, lat), 4326)::geography))
-        WHERE status <> 'refused'
-    $idx$;
-  END IF;
-END
-$$;
+-- No position index, on purpose (owner, 2026-11-09). « Near me » and the
+-- duplicate check (same name within 100 m, pending places included) read a
+-- table of hundreds, at most a few thousand rows: a scan takes a millisecond.
+-- A PostGIS GiST index was written first, and was the one part of this file
+-- PGlite cannot run -- with the GitHub CI switched off (GitHub disabled
+-- workflows on this fork in November 2026), its first real build would have
+-- been a live release. If the table ever reaches tens of thousands of rows:
+--   CREATE INDEX IF NOT EXISTS suggested_place_position ON movin.suggested_place
+--     USING gist ((st_setsrid(st_makepoint(lon, lat), 4326)::geography))
+--     WHERE status <> 'refused';
 
 COMMENT ON TABLE movin.suggested_place IS
   'Places proposed by passengers and drivers, and their current state '

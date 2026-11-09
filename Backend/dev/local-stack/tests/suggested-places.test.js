@@ -5,14 +5,14 @@
 //
 //   cd Backend/dev/local-stack/tests && npm ci && node suggested-places.test.js
 //
-//   1. the file     -- applies twice; no PostGIS needed
+//   1. the file     -- applies twice; exactly its four indexes
 //   2. the types    -- the CHECK, the mapping and the website's list agree
 //   3. the mapping  -- OpenStreetMap tags to our types, one line per decision
 //   4. the rules    -- every CHECK refuses what it is there to refuse
 //
-// PGlite has no PostGIS, so the GiST index is NOT built here (section 1 says
-// so). The CI's ride regression builds it on postgis/postgis:15-3.4 through
-// setup.sh's seed_suggested_places.
+// Every line of the file runs here: it uses no PostGIS (no position index, on
+// purpose -- see the file), so PGlite is the same database for it as the
+// server's. That is what lets this test stand without the GitHub CI.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -37,17 +37,17 @@ const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].s
   const sqlText = fs.readFileSync(FILE, 'utf8');
 
   /* ── 1. the file ────────────────────────────────────────────────────── */
-  t.section('1. the file applies twice, with no PostGIS');
+  t.section('1. the file applies twice, and makes exactly its four indexes');
   let again = null;
   try { await db.exec(sqlText); } catch (e) { again = e.message; }
   t.ok(again === null, 'a second application changes nothing and raises nothing', again || '');
   const idx = await db.sql(
     `SELECT indexname FROM pg_indexes WHERE schemaname = 'movin' AND tablename = 'suggested_place' ORDER BY 1`);
   const names = idx.map((r) => r.indexname);
-  t.ok(names.includes('suggested_place_queue') && names.includes('suggested_place_by_author'),
-    'the console queue and per-author indexes exist', names.join(', '));
-  t.ok(!names.includes('suggested_place_position'),
-    'no PostGIS here, so no position index -- and no error for it');
+  t.ok(JSON.stringify(names) === JSON.stringify([
+    'suggested_place_by_author', 'suggested_place_pkey', 'suggested_place_place_id_key', 'suggested_place_queue']),
+    'the key, the unique place_id, the console queue and the per-author index -- nothing else',
+    names.join(', '));
 
   /* ── 2. the types ───────────────────────────────────────────────────── */
   t.section('2. one list of types: the CHECK, the mapping, the website');
