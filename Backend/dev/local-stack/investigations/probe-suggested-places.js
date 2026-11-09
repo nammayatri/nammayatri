@@ -29,12 +29,12 @@ const OUT = path.join(__dirname, 'probe-suggested-places.sql');
 
 const CHURCH = '(église|eglise|cathédrale|cathedrale|chapelle|church|chapel|temple|كنيسة)';
 
-/** A pool that records each statement and answers nothing. */
-function recorder() {
+/** A pool that records each statement and answers nothing -- or `answer(text)` when given. */
+function recorder(answer = () => []) {
   const seen = [];
   return {
     seen,
-    async query(text, params) { seen.push({ text: String(text), params }); return { rows: [] }; },
+    async query(text, params) { seen.push({ text: String(text), params }); return { rows: answer(String(text)) }; },
     async connect() { return { query: this.query.bind(this), release() {} }; },
   };
 }
@@ -64,9 +64,16 @@ async function capture() {
   p.seen.length = 0;
   await places.placeDetails(q('place_id=u1'), quietRes());
   out.approvedPlace = p.seen[0].text;
-  p.seen.length = 0;
-  await places.placeLabels(q('lang=ar&ids=u1'), quietRes());
-  out.labels = p.seen[0].text;
+  // An OSM id and a u-id: the two row lookups, then the localities -- which
+  // are only asked about when a row comes back, so this recorder answers one.
+  const l = recorder((text) => (/distinct on/.test(text) ? [] : [{ place_id: 'n1', name_ar: 'x', locality: 'L' }]));
+  places.usePool(l);
+  await places.placeLabels(q('lang=ar&ids=n1,u1'), quietRes());
+  out.labelsOsm = l.seen.find((x) => /from geo\.place\s+where place_id = any/.test(x.text)).text;
+  out.labels = l.seen.find((x) => /from movin\.suggested_place/.test(x.text)).text;
+  // The labels route and « search by type » must ask the same question.
+  const shared = l.seen.find((x) => /distinct on \(display_name\)/.test(x.text)).text;
+  if (shared !== out.localitiesInArabic) throw new Error('labels and search by type ask the localities differently');
   return out;
 }
 
@@ -171,9 +178,17 @@ SELECT v.n, v.t, v.n, v.t, v.ar, v.lat, v.lon, v.c,
     prep('approved_place', s.approvedPlace),
     run('u1', 'approved_place', "'u1'"), run('u4 (expect no row)', 'approved_place', "'u4'"), '');
 
-  L(`\\echo '=== 8. labels for u-ids: u1 and u3 (approved, with an Arabic name); not u2 (none), not u4 (pending)'`,
+  L(`\\echo '=== 8. labels for u-ids: rows for u1 and u3 (approved, with an Arabic name); not u2 (none), not u4 (pending)'`,
+    `\\echo '    (their localities in Arabic are section 5''s query: 220 ms for these two rows with the old per-row join)'`,
     prep('labels', s.labels),
     run('u1..u4', 'labels', "ARRAY['u1', 'u2', 'u3', 'u4']"), '');
+
+  L(`\\echo '=== 9. labels for map places, the route the app already calls: the 8 nearest cafés of Algiers'`,
+    `\\echo '    (the app gives up on labels after 1.2 s; about 110 ms a row with the old per-row join)'`,
+    prep('labels_osm', s.labelsOsm),
+    run('8 ids', 'labels_osm',
+      "ARRAY['n6681061586', 'n2964284346', 'n3053783706', 'n11664840369', 'n2776940563', 'n11664868869', 'n11676294969', 'n3217759804']"),
+    run('their localities, one query', 'localities_ar', "ARRAY['Belcourt', 'Sidi M''Hamed']"), '');
 
   L(`\\echo '=== done: the copy and the prepared statements end with this session'`, '');
   return lines.join('\n');

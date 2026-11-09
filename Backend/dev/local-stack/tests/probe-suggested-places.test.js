@@ -70,8 +70,10 @@ const { build, OUT } = require(path.join(__dirname, '..', 'investigations', 'pro
       $$ SELECT regexp_replace(
                   translate(regexp_replace(lower(t), '[ًٌٍَُِّْـ]', '', 'g'), 'أإآٱىةؤئ', 'اااايهوي'),
                   '[^a-z0-9ء-ي]+', ' ', 'g') $$;
-    CREATE TABLE geo.place (display_name text, name_ar text, importance real);
-    INSERT INTO geo.place VALUES ('Tevragh Zeina', 'تفرغ زينة', 0.8), ('Hydra', 'حيدرة', 0.8);
+    CREATE TABLE geo.place (place_id text, display_name text, name_ar text, locality text, importance real);
+    INSERT INTO geo.place VALUES
+      ('r1', 'Tevragh Zeina', 'تفرغ زينة', NULL, 0.8), ('r2', 'Hydra', 'حيدرة', NULL, 0.8),
+      ('n6681061586', 'Café Serina', 'مقهى سيرينا', 'Belcourt', 0.5), ('n2964284346', 'L''Univers', NULL, 'Belcourt', 0.5);
     CREATE TEMP TABLE suggested_place (LIKE movin.suggested_place INCLUDING ALL);
     INSERT INTO pg_temp.suggested_place
       (proposed_name, proposed_type, name, type, name_ar, lat, lon, country, locality,
@@ -88,14 +90,14 @@ const { build, OUT } = require(path.join(__dirname, '..', 'investigations', 'pro
   const executes = (name) => [...committed.matchAll(new RegExp(`EXECUTE ${name}\\((.*)\\);`, 'g'))].map((m) => `EXECUTE ${name}(${m[1]})`);
   const rowsOf = async (sql) => (await db.exec(sql)).at(-1).rows;
 
-  for (const name of ['localities_ar', 'approved_matching', 'approved_place', 'labels']) {
+  for (const name of ['localities_ar', 'approved_matching', 'approved_place', 'labels', 'labels_osm']) {
     let err = null;
     try { await db.exec(block(name)); } catch (e) { err = e.message; }
     t.ok(block(name) && err === null, `PREPARE ${name} is accepted by Postgres`, err || 'not found in the probe');
   }
   const ar = (await rowsOf(executes('localities_ar')[0])).map((r) => `${r.display_name}:${r.name_ar}`).sort();
-  t.ok(executes('localities_ar').length === 1 && JSON.stringify(ar) === JSON.stringify(['Hydra:حيدرة']),
-    'the localities in Arabic: one EXECUTE, a literal list, the names the index holds', ar.join(' '));
+  t.ok(executes('localities_ar').length === 2 && JSON.stringify(ar) === JSON.stringify(['Hydra:حيدرة']),
+    'the localities in Arabic: literal lists (sections 5 and 9), the names the index holds', ar.join(' '));
   const [tfeila, arabic, attente, percent, punct] = executes('approved_matching');
   const names = async (sql) => (await rowsOf(sql)).map((r) => r.display_name);
   t.ok(JSON.stringify(await names(tfeila)) === JSON.stringify(['Café Sonde Tfeila']), '« tfeila » finds the approved café');
@@ -108,9 +110,13 @@ const { build, OUT } = require(path.join(__dirname, '..', 'investigations', 'pro
     '« Tfeila! »: the café -- trailing punctuation does not leave a space to match');
   const [u1, u4] = executes('approved_place');
   t.ok((await rowsOf(u1)).length === 1 && (await rowsOf(u4)).length === 0, 'details: u1 (approved) answers, u4 (pending) does not');
-  const labels = (await rowsOf(executes('labels')[0])).map((r) => `${r.place_id}:${r.locality_ar || ''}`).sort();
-  t.ok(JSON.stringify(labels) === JSON.stringify(['u1:تفرغ زينة', 'u3:حيدرة']),
-    'labels: u1 and u3 with their localities in Arabic; not u2 (no Arabic name), not u4 (pending)', labels.join(' '));
+  const labels = (await rowsOf(executes('labels')[0])).map((r) => `${r.place_id}:${r.locality}`).sort();
+  t.ok(JSON.stringify(labels) === JSON.stringify(['u1:Tevragh Zeina', 'u3:Hydra']),
+    'labels: rows for u1 and u3 with their localities; not u2 (no Arabic name), not u4 (pending)', labels.join(' '));
+  const osmLabels = (await rowsOf(executes('labels_osm')[0])).map((r) => r.place_id);
+  t.ok(JSON.stringify(osmLabels) === JSON.stringify(['n6681061586']),
+    'labels for map places: only those with an Arabic name, with no join per row', osmLabels.join(' '));
+  t.ok(!/lateral/i.test(committed), 'no LATERAL join left anywhere in the probe (the shim sends none)');
 
   await db.close();
   t.finish();

@@ -52,6 +52,7 @@
  */
 const { driverFromToken, riderFromToken } = require('./identity');
 const { send } = require('./reply');
+const { arabicLocalities } = require('./places');
 
 /** The website's packages/domain place-types.ts; the SQL CHECK holds the same 13. */
 const PLACE_TYPES = [
@@ -209,17 +210,9 @@ function liveGeo(pool) {
       );
       return rows;
     },
-    /** The Arabic names of these localities, where the index holds one. */
-    async localitiesInArabic(names) {
-      if (!names.length) return {};
-      const { rows } = await pool.query(
-        `SELECT DISTINCT ON (display_name) display_name, name_ar
-           FROM geo.place
-          WHERE display_name = ANY($1) AND name_ar IS NOT NULL
-          ORDER BY display_name, importance DESC`,
-        [names],
-      );
-      return Object.fromEntries(rows.map((r) => [r.display_name, r.name_ar]));
+    /** The Arabic names of these localities: places.js's arabicLocalities, ONE query, the labels route's rule. */
+    localitiesInArabic(names) {
+      return arabicLocalities(pool, names);
     },
   };
 }

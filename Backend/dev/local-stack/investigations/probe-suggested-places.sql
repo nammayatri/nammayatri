@@ -114,10 +114,11 @@ SELECT count(*) AS churches_as_mosques
 
 \echo '=== 5. localitiesInArabic: the Arabic names the index holds for these localities'
 PREPARE localities_ar AS
-  SELECT DISTINCT ON (display_name) display_name, name_ar
-  FROM geo.place
-  WHERE display_name = ANY($1) AND name_ar IS NOT NULL
-  ORDER BY display_name, importance DESC;
+  select distinct on (display_name) display_name, name_ar
+  from geo.place
+  where display_name = any($1)
+  and name_ar is not null
+  order by display_name, importance desc;
 \echo '--- the localities of one search: one query for all'
 EXECUTE localities_ar(ARRAY['Nouakchott', 'E-Nord', 'Las Palmas', 'Ksar', 'Belcourt', 'Sidi M''Hamed', 'El Mouradia', 'Hydra', 'Tamanrasset']);
 
@@ -155,25 +156,27 @@ EXECUTE approved_place('u1');
 \echo '--- u4 (expect no row)'
 EXECUTE approved_place('u4');
 
-\echo '=== 8. labels for u-ids: u1 and u3 (approved, with an Arabic name); not u2 (none), not u4 (pending)'
+\echo '=== 8. labels for u-ids: rows for u1 and u3 (approved, with an Arabic name); not u2 (none), not u4 (pending)'
+\echo '    (their localities in Arabic are section 5''s query: 220 ms for these two rows with the old per-row join)'
 PREPARE labels AS
-  select p.place_id,
-  p.name_ar,
-  p.locality,
-  l.name_ar as locality_ar
-  from pg_temp.suggested_place p
-  left join lateral (
-  select l2.name_ar
-  from geo.place l2
-  where l2.display_name = p.locality
-  and l2.name_ar is not null
-  order by l2.importance desc
-  limit 1
-  ) l on true
-  where p.place_id = any($1)
-  and p.status = 'approved'
-  and p.name_ar is not null;
+  select place_id, name_ar, locality
+  from pg_temp.suggested_place
+  where place_id = any($1)
+  and status = 'approved'
+  and name_ar is not null;
 \echo '--- u1..u4'
 EXECUTE labels(ARRAY['u1', 'u2', 'u3', 'u4']);
+
+\echo '=== 9. labels for map places, the route the app already calls: the 8 nearest cafés of Algiers'
+\echo '    (the app gives up on labels after 1.2 s; about 110 ms a row with the old per-row join)'
+PREPARE labels_osm AS
+  select place_id, name_ar, locality
+  from geo.place
+  where place_id = any($1)
+  and name_ar is not null;
+\echo '--- 8 ids'
+EXECUTE labels_osm(ARRAY['n6681061586', 'n2964284346', 'n3053783706', 'n11664840369', 'n2776940563', 'n11664868869', 'n11676294969', 'n3217759804']);
+\echo '--- their localities, one query'
+EXECUTE localities_ar(ARRAY['Belcourt', 'Sidi M''Hamed']);
 
 \echo '=== done: the copy and the prepared statements end with this session'

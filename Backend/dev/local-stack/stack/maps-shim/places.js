@@ -138,6 +138,33 @@ async function approvedMatching(input, lat, lon, limit) {
   return rows;
 }
 
+/**
+ * The Arabic names of these localities, where the index holds one -- ONE
+ * query for all of them. The rule is the one the labels route always had: a
+ * place of that display_name with an Arabic name, the most important if
+ * several. Shared by the labels route and « search by type »
+ * (suggested-places.js), so the two cannot pick differently.
+ *
+ * It used to be a LEFT JOIN LATERAL per row, and geo.place.display_name has
+ * no index, so each row scanned the whole index: about 110 ms a row on the
+ * live probe of 2026-11-09 (two labels, 220 ms), 12 s for a search by type
+ * that joined it for every café within 5 km of Algiers -- and the app gives
+ * up on labels after 1.2 s, silently showing French. One scan, whatever the
+ * number of rows.
+ */
+async function arabicLocalities(db, names) {
+  if (!names.length) return {};
+  const { rows } = await db.query(
+    `select distinct on (display_name) display_name, name_ar
+       from geo.place
+      where display_name = any($1)
+        and name_ar is not null
+      order by display_name, importance desc`,
+    [names],
+  );
+  return Object.fromEntries(rows.map((r) => [r.display_name, r.name_ar]));
+}
+
 async function countryAt(lat, lon) {
   try {
     const { rows } = await pool.query(
@@ -278,48 +305,30 @@ async function placeLabels(query, res) {
   const osmIds = ids.filter((id) => !USER_PLACE.test(id));
   const userIds = ids.filter((id) => USER_PLACE.test(id));
 
+  // The places first, by id; then their localities' Arabic names, all in one
+  // query (arabicLocalities) -- never a join per row.
   let rows = [];
+  let localitiesAr = {};
   try {
     if (osmIds.length) ({ rows } = await pool.query(
-      `select p.place_id,
-              p.name_ar,
-              p.locality,
-              l.name_ar as locality_ar
-         from geo.place p
-         left join lateral (
-              select l2.name_ar
-                from geo.place l2
-               where l2.display_name = p.locality
-                 and l2.name_ar is not null
-               order by l2.importance desc
-               limit 1
-              ) l on true
-        where p.place_id = any($1)
-          and p.name_ar is not null`,
+      `select place_id, name_ar, locality
+         from geo.place
+        where place_id = any($1)
+          and name_ar is not null`,
       [osmIds],
     ));
     if (userIds.length) {
       const { rows: proposed } = await pool.query(
-        `select p.place_id,
-                p.name_ar,
-                p.locality,
-                l.name_ar as locality_ar
-           from movin.suggested_place p
-           left join lateral (
-                select l2.name_ar
-                  from geo.place l2
-                 where l2.display_name = p.locality
-                   and l2.name_ar is not null
-                 order by l2.importance desc
-                 limit 1
-                ) l on true
-          where p.place_id = any($1)
-            and p.status = 'approved'
-            and p.name_ar is not null`,
+        `select place_id, name_ar, locality
+           from movin.suggested_place
+          where place_id = any($1)
+            and status = 'approved'
+            and name_ar is not null`,
         [userIds],
       );
       rows = [...rows, ...proposed];
     }
+    localitiesAr = await arabicLocalities(pool, [...new Set(rows.map((r) => r.locality).filter(Boolean))]);
   } catch (err) {
     // Never an error to the phone. A label lookup that fails must cost the
     // rider nothing more than seeing the French name he would have seen
@@ -330,7 +339,7 @@ async function placeLabels(query, res) {
 
   const labels = {};
   for (const row of rows) {
-    const where = row.locality_ar || row.locality;
+    const where = localitiesAr[row.locality] || row.locality;
     labels[row.place_id] = where ? `${row.name_ar}, ${where}` : row.name_ar;
   }
   console.log(`[labels] ${ids.length} asked -> ${rows.length} in ${lang}`);
@@ -426,4 +435,4 @@ async function reverseGeocode(query, res) {
   });
 }
 
-module.exports = { usePool, autocomplete, placeDetails, placeLabels, reverseGeocode };
+module.exports = { usePool, autocomplete, placeDetails, placeLabels, reverseGeocode, arabicLocalities };

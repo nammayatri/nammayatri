@@ -38,10 +38,19 @@ function answer(text, params) {
   if (/from movin\.suggested_place where place_id = \$1/.test(sql)) {
     return PROPOSED[params[0]] ? [PROPOSED[params[0]]] : [];
   }
-  if (/from movin\.suggested_place p left join lateral/.test(sql)) {
+  // The labels route since 2026-11-09: rows by id, then the localities' Arabic
+  // names in one query (places.js arabicLocalities) -- no join per row.
+  if (/from movin\.suggested_place where place_id = any\(\$1\) and status = 'approved'/.test(sql)) {
     return params[0].filter((id) => PROPOSED[id]).map((id) => ({
-      place_id: id, name_ar: PROPOSED[id].name_ar, locality: PROPOSED[id].locality, locality_ar: PROPOSED[id].locality_ar,
+      place_id: id, name_ar: PROPOSED[id].name_ar, locality: PROPOSED[id].locality,
     }));
+  }
+  if (/select distinct on \(display_name\) display_name, name_ar from geo\.place/.test(sql)) {
+    const known = {};
+    for (const p of [...Object.values(PLACES), ...Object.values(PROPOSED)]) {
+      if (p.locality && p.locality_ar) known[p.locality] = p.locality_ar;
+    }
+    return params[0].filter((n) => known[n]).map((n) => ({ display_name: n, name_ar: known[n] }));
   }
   if (/from geo\.search\(/.test(sql)) {
     if (params[0] === 'zzz') return [];
@@ -65,9 +74,9 @@ function answer(text, params) {
     if (lon < -20) return [];
     return [{ region: lon < 0 ? 'Mauritania' : 'Algeria' }];
   }
-  if (/from geo\.place p left join lateral/.test(sql)) {
+  if (/from geo\.place where place_id = any\(\$1\) and name_ar is not null/.test(sql)) {
     return params[0].filter((id) => PLACES[id] && PLACES[id].name_ar).map((id) => ({
-      place_id: id, name_ar: PLACES[id].name_ar, locality: PLACES[id].locality, locality_ar: PLACES[id].locality_ar,
+      place_id: id, name_ar: PLACES[id].name_ar, locality: PLACES[id].locality,
     }));
   }
   if (/from geo\.place where place_id = \$1/.test(sql)) {

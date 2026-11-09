@@ -958,12 +958,20 @@
   },
   "queries": [
    {
-    "sql": "select p.place_id, p.name_ar, p.locality, l.name_ar as locality_ar from geo.place p left join lateral ( select l2.name_ar from geo.place l2 where l2.display_name = p.locality and l2.name_ar is not null order by l2.importance desc limit 1 ) l on true where p.place_id = any($1) and p.name_ar is not null",
+    "sql": "select place_id, name_ar, locality from geo.place where place_id = any($1) and name_ar is not null",
     "params": [
      [
       "osm:n1",
       "osm:w2",
       "osm:n3"
+     ]
+    ]
+   },
+   {
+    "sql": "select distinct on (display_name) display_name, name_ar from geo.place where display_name = any($1) and name_ar is not null order by display_name, importance desc",
+    "params": [
+     [
+      "Tevragh Zeina"
      ]
     ]
    }
@@ -1002,7 +1010,7 @@
   },
   "queries": [
    {
-    "sql": "select p.place_id, p.name_ar, p.locality, l.name_ar as locality_ar from geo.place p left join lateral ( select l2.name_ar from geo.place l2 where l2.display_name = p.locality and l2.name_ar is not null order by l2.importance desc limit 1 ) l on true where p.place_id = any($1) and p.name_ar is not null",
+    "sql": "select place_id, name_ar, locality from geo.place where place_id = any($1) and name_ar is not null",
     "params": [
      [
       "osm:x0",
@@ -1696,7 +1704,7 @@
   },
   "queries": [
    {
-    "sql": "select p.place_id, p.name_ar, p.locality, l.name_ar as locality_ar from geo.place p left join lateral ( select l2.name_ar from geo.place l2 where l2.display_name = p.locality and l2.name_ar is not null order by l2.importance desc limit 1 ) l on true where p.place_id = any($1) and p.name_ar is not null",
+    "sql": "select place_id, name_ar, locality from geo.place where place_id = any($1) and name_ar is not null",
     "params": [
      [
       "osm:n1"
@@ -1704,11 +1712,19 @@
     ]
    },
    {
-    "sql": "select p.place_id, p.name_ar, p.locality, l.name_ar as locality_ar from movin.suggested_place p left join lateral ( select l2.name_ar from geo.place l2 where l2.display_name = p.locality and l2.name_ar is not null order by l2.importance desc limit 1 ) l on true where p.place_id = any($1) and p.status = 'approved' and p.name_ar is not null",
+    "sql": "select place_id, name_ar, locality from movin.suggested_place where place_id = any($1) and status = 'approved' and name_ar is not null",
     "params": [
      [
       "u5",
       "u6"
+     ]
+    ]
+   },
+   {
+    "sql": "select distinct on (display_name) display_name, name_ar from geo.place where display_name = any($1) and name_ar is not null order by display_name, importance desc",
+    "params": [
+     [
+      "Tevragh Zeina"
      ]
     ]
    }
@@ -1727,10 +1743,18 @@
   },
   "queries": [
    {
-    "sql": "select p.place_id, p.name_ar, p.locality, l.name_ar as locality_ar from movin.suggested_place p left join lateral ( select l2.name_ar from geo.place l2 where l2.display_name = p.locality and l2.name_ar is not null order by l2.importance desc limit 1 ) l on true where p.place_id = any($1) and p.status = 'approved' and p.name_ar is not null",
+    "sql": "select place_id, name_ar, locality from movin.suggested_place where place_id = any($1) and status = 'approved' and name_ar is not null",
     "params": [
      [
       "u5"
+     ]
+    ]
+   },
+   {
+    "sql": "select distinct on (display_name) display_name, name_ar from geo.place where display_name = any($1) and name_ar is not null order by display_name, importance desc",
+    "params": [
+     [
+      "Tevragh Zeina"
      ]
     ]
    }
