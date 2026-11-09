@@ -8,8 +8,10 @@ import Data.Aeson
 import qualified Data.Text
 import Domain.Types.Extra.ConditionalCharges as ReExport
 import qualified Domain.Types.Extra.ConditionalCharges
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
 import qualified Kernel.Utils.GenericPretty
 import qualified Tools.Beam.UtilsTH
 
@@ -18,6 +20,7 @@ data ConditionalCharges = ConditionalCharges
     charge :: Kernel.Types.Common.HighPrecMoney,
     chargeCategory :: Domain.Types.Extra.ConditionalCharges.ConditionalChargesCategories,
     farePolicyId :: Data.Text.Text,
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     sgstPercentage :: Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
