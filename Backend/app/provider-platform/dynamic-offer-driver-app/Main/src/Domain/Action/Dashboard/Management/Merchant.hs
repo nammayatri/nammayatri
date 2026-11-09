@@ -143,6 +143,7 @@ import qualified Domain.Types.Geometry as DGEO
 import qualified Domain.Types.GoHomeConfig as DGoHomeConfig
 import qualified Domain.Types.LeaderBoardConfigs as DLC
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant as DMerchant (MerchantD (..))
 import qualified Domain.Types.MerchantMessage as DMM
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -186,7 +187,7 @@ import Kernel.Types.Id
 import Kernel.Types.Registry (SimpleLookupRequest (..), lookupRequestToRedisKey)
 import qualified Kernel.Types.Registry.Subscriber as BecknSub
 import Kernel.Types.TimeBound as TB
-import Kernel.Types.Value (MandatoryValue, OptionalValue)
+import Kernel.Types.Value (MandatoryValue (..), OptionalValue (..))
 import Kernel.Utils.Common
 import Kernel.Utils.Geometry
 import qualified Kernel.Utils.Registry as Registry
@@ -194,8 +195,10 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.AccountConfig as Fields
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Finance.Reconciliation.Job
+import qualified Lib.Finance.Reconciliation.Types as Fields
 import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
@@ -203,6 +206,7 @@ import qualified Lib.Queries.SpecialLocationGeom as QSLG
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (AnyJob (..))
+import qualified Lib.Scheduler.Types as Fields
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
@@ -213,6 +217,7 @@ import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, MigratePendingDuesToWalletJobData (..), RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SendLegalPolicyNotificationJobData (..), SupplyDemandRequestJobData)
+import qualified SharedLogic.Allocator as Fields
 import SharedLogic.Allocator.Jobs.FarePolicy.DeleteUnreferencedFarePolicies (scheduleDeleteUnreferencedFarePolicies)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.Allocator.Jobs.Wallet.MigratePendingDues as WalletDuesMigration
@@ -314,9 +319,9 @@ postMerchantUpdate merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let updMerchant =
-        merchant{DM.name = fromMaybe merchant.name req.name,
-                 DM.description = req.description <|> merchant.description,
-                 DM.enabled = fromMaybe merchant.enabled req.enabled
+        merchant{DMerchant.name = fromMaybe merchant.name req.name,
+                 DMerchant.description = req.description <|> merchant.description,
+                 DMerchant.enabled = fromMaybe merchant.enabled req.enabled
                 }
   now <- getCurrentTime
 
@@ -477,50 +482,50 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
       Nothing -> pure Nothing
       Just stagesJson -> either (throwError . InvalidRequest) (pure . Just) (SRV.parseVisibilityStagesJson stagesJson)
   let updConfig =
-        config{pickupLocThreshold = mkDistanceField config.pickupLocThreshold req.pickupLocThresholdWithUnit req.pickupLocThreshold,
-               dropLocThreshold = mkDistanceField config.dropLocThreshold req.dropLocThresholdWithUnit req.dropLocThreshold,
-               rideTimeEstimatedThreshold = maybe config.rideTimeEstimatedThreshold (.value) req.rideTimeEstimatedThreshold,
-               defaultPopupDelay = maybe config.defaultPopupDelay (.value) req.defaultPopupDelay,
-               popupDelayToAddAsPenalty = maybe config.popupDelayToAddAsPenalty (.value) req.popupDelayToAddAsPenalty,
-               thresholdCancellationScore = maybe config.thresholdCancellationScore (.value) req.thresholdCancellationScore,
-               minRidesForCancellationScore = maybe config.minRidesForCancellationScore (.value) req.minRidesForCancellationScore,
-               negativeFareAdjustmentCongestionThreshold = maybe config.negativeFareAdjustmentCongestionThreshold (.value) req.negativeFareAdjustmentCongestionThreshold,
-               negativeFareAdjustmentMinDistanceMeters = maybe config.negativeFareAdjustmentMinDistanceMeters (.value) req.negativeFareAdjustmentMinDistanceMeters,
-               negativeFareAdjustmentMaxAmount = maybe config.negativeFareAdjustmentMaxAmount (.value) req.negativeFareAdjustmentMaxAmount,
-               mediaFileUrlPattern = maybe config.mediaFileUrlPattern (.value) req.mediaFileUrlPattern,
-               mediaFileSizeUpperLimit = maybe config.mediaFileSizeUpperLimit (.value) req.mediaFileSizeUpperLimit,
-               onboardingTryLimit = maybe config.onboardingTryLimit (.value) req.onboardingTryLimit,
-               onboardingRetryTimeInHours = maybe config.onboardingRetryTimeInHours (.value) req.onboardingRetryTimeInHours,
-               checkImageExtractionForDashboard = maybe config.checkImageExtractionForDashboard (.value) req.checkImageExtractionForDashboard,
-               searchRepeatLimit = maybe config.searchRepeatLimit (.value) req.searchRepeatLimit,
-               driverPaymentCycleBuffer = maybe config.driverPaymentCycleBuffer (.value) req.driverPaymentCycleBuffer,
-               driverPaymentCycleDuration = maybe config.driverPaymentCycleDuration (.value) req.driverPaymentCycleDuration,
-               driverPaymentCycleStartTime = maybe config.driverPaymentCycleStartTime (.value) req.driverPaymentCycleStartTime,
-               driverPaymentReminderInterval = maybe config.driverPaymentReminderInterval (.value) req.driverPaymentReminderInterval,
-               timeDiffFromUtc = maybe config.timeDiffFromUtc (.value) req.timeDiffFromUtc,
-               driverAutoPayNotificationTime = maybe config.driverAutoPayNotificationTime (.value) req.driverAutoPayNotificationTime,
-               driverAutoPayExecutionTime = maybe config.driverAutoPayExecutionTime (.value) req.driverAutoPayExecutionTime,
-               driverFeeMandateNotificationBatchSize = maybe config.driverFeeMandateNotificationBatchSize (.value) req.driverFeeMandateNotificationBatchSize,
-               driverFeeMandateExecutionBatchSize = maybe config.driverFeeMandateExecutionBatchSize (.value) req.driverFeeMandateExecutionBatchSize,
-               mandateNotificationRescheduleInterval = maybe config.mandateNotificationRescheduleInterval (.value) req.mandateNotificationRescheduleInterval,
-               mandateExecutionRescheduleInterval = maybe config.mandateExecutionRescheduleInterval (.value) req.mandateExecutionRescheduleInterval,
-               driverFeeCalculationTime = maybe config.driverFeeCalculationTime (.value) req.driverFeeCalculationTime,
-               driverFeeCalculatorBatchSize = maybe config.driverFeeCalculatorBatchSize (.value) req.driverFeeCalculatorBatchSize,
-               driverFeeCalculatorBatchGap = maybe config.driverFeeCalculatorBatchGap (.value) req.driverFeeCalculatorBatchGap,
-               orderAndNotificationStatusCheckTime = fromMaybe config.orderAndNotificationStatusCheckTime (req.orderAndNotificationStatusCheckTime >>= (.value)),
-               orderAndNotificationStatusCheckTimeLimit = fromMaybe config.orderAndNotificationStatusCheckTimeLimit (req.orderAndNotificationStatusCheckTimeLimit >>= (.value)),
-               snapToRoadConfidenceThreshold = maybe config.snapToRoadConfidenceThreshold (.value) req.snapToRoadConfidenceThreshold,
-               useWithSnapToRoadFallback = maybe config.useWithSnapToRoadFallback (.value) req.useWithSnapToRoadFallback,
-               graceTimeForScheduledRidePickup = maybe config.graceTimeForScheduledRidePickup (.value) req.graceTimeForScheduledRidePickup,
-               scheduleRideBufferTime = maybe config.scheduleRideBufferTime (.value) req.scheduleRideBufferTime,
-               scheduledRideJobRescheduleTime = maybe config.scheduledRideJobRescheduleTime (.value) req.scheduledRideJobRescheduleTime,
-               scheduledRideSearchRepeatLimit = maybe config.scheduledRideSearchRepeatLimit (.value) req.scheduledRideSearchRepeatLimit,
-               enableScheduleReallocation = maybe config.enableScheduleReallocation (.value) req.enableScheduleReallocation,
-               disableListScheduledBookingAPI = maybe config.disableListScheduledBookingAPI (.value) req.disableListScheduledBookingAPI,
-               driverCoolOffPeriod = maybe config.driverCoolOffPeriod (.value) req.driverCoolOffPeriod,
-               manualTollChargeConfig = maybe config.manualTollChargeConfig (fmap mkManualTollChargeConfig . (.value)) req.manualTollChargeConfig,
-               rideEvidenceConfig = maybe config.rideEvidenceConfig (fmap mkRideEvidenceConfig . (.value)) req.rideEvidenceConfig,
-               scheduledRideConfig =
+        config{DTC.pickupLocThreshold = mkDistanceField config.pickupLocThreshold req.pickupLocThresholdWithUnit req.pickupLocThreshold,
+               DTC.dropLocThreshold = mkDistanceField config.dropLocThreshold req.dropLocThresholdWithUnit req.dropLocThreshold,
+               DTC.rideTimeEstimatedThreshold = maybe config.rideTimeEstimatedThreshold (.value) req.rideTimeEstimatedThreshold,
+               DTC.defaultPopupDelay = maybe config.defaultPopupDelay (.value) req.defaultPopupDelay,
+               DTC.popupDelayToAddAsPenalty = maybe config.popupDelayToAddAsPenalty (.value) req.popupDelayToAddAsPenalty,
+               DTC.thresholdCancellationScore = maybe config.thresholdCancellationScore (.value) req.thresholdCancellationScore,
+               DTC.minRidesForCancellationScore = maybe config.minRidesForCancellationScore (.value) req.minRidesForCancellationScore,
+               DTC.negativeFareAdjustmentCongestionThreshold = maybe config.negativeFareAdjustmentCongestionThreshold (.value) req.negativeFareAdjustmentCongestionThreshold,
+               DTC.negativeFareAdjustmentMinDistanceMeters = maybe config.negativeFareAdjustmentMinDistanceMeters (.value) req.negativeFareAdjustmentMinDistanceMeters,
+               DTC.negativeFareAdjustmentMaxAmount = maybe config.negativeFareAdjustmentMaxAmount (.value) req.negativeFareAdjustmentMaxAmount,
+               DTC.mediaFileUrlPattern = maybe config.mediaFileUrlPattern (.value) req.mediaFileUrlPattern,
+               DTC.mediaFileSizeUpperLimit = maybe config.mediaFileSizeUpperLimit (.value) req.mediaFileSizeUpperLimit,
+               DTC.onboardingTryLimit = maybe config.onboardingTryLimit (.value) req.onboardingTryLimit,
+               DTC.onboardingRetryTimeInHours = maybe config.onboardingRetryTimeInHours (.value) req.onboardingRetryTimeInHours,
+               DTC.checkImageExtractionForDashboard = maybe config.checkImageExtractionForDashboard (.value) req.checkImageExtractionForDashboard,
+               DTC.searchRepeatLimit = maybe config.searchRepeatLimit (.value) req.searchRepeatLimit,
+               DTC.driverPaymentCycleBuffer = maybe config.driverPaymentCycleBuffer (.value) req.driverPaymentCycleBuffer,
+               DTC.driverPaymentCycleDuration = maybe config.driverPaymentCycleDuration (.value) req.driverPaymentCycleDuration,
+               DTC.driverPaymentCycleStartTime = maybe config.driverPaymentCycleStartTime (.value) req.driverPaymentCycleStartTime,
+               DTC.driverPaymentReminderInterval = maybe config.driverPaymentReminderInterval (.value) req.driverPaymentReminderInterval,
+               DTC.timeDiffFromUtc = maybe config.timeDiffFromUtc (.value) req.timeDiffFromUtc,
+               DTC.driverAutoPayNotificationTime = maybe config.driverAutoPayNotificationTime (.value) req.driverAutoPayNotificationTime,
+               DTC.driverAutoPayExecutionTime = maybe config.driverAutoPayExecutionTime (.value) req.driverAutoPayExecutionTime,
+               DTC.driverFeeMandateNotificationBatchSize = maybe config.driverFeeMandateNotificationBatchSize (.value) req.driverFeeMandateNotificationBatchSize,
+               DTC.driverFeeMandateExecutionBatchSize = maybe config.driverFeeMandateExecutionBatchSize (.value) req.driverFeeMandateExecutionBatchSize,
+               DTC.mandateNotificationRescheduleInterval = maybe config.mandateNotificationRescheduleInterval (.value) req.mandateNotificationRescheduleInterval,
+               DTC.mandateExecutionRescheduleInterval = maybe config.mandateExecutionRescheduleInterval (.value) req.mandateExecutionRescheduleInterval,
+               DTC.driverFeeCalculationTime = maybe config.driverFeeCalculationTime (.value) req.driverFeeCalculationTime,
+               DTC.driverFeeCalculatorBatchSize = maybe config.driverFeeCalculatorBatchSize (.value) req.driverFeeCalculatorBatchSize,
+               DTC.driverFeeCalculatorBatchGap = maybe config.driverFeeCalculatorBatchGap (.value) req.driverFeeCalculatorBatchGap,
+               DTC.orderAndNotificationStatusCheckTime = fromMaybe config.orderAndNotificationStatusCheckTime (req.orderAndNotificationStatusCheckTime >>= (.value)),
+               DTC.orderAndNotificationStatusCheckTimeLimit = fromMaybe config.orderAndNotificationStatusCheckTimeLimit (req.orderAndNotificationStatusCheckTimeLimit >>= (.value)),
+               DTC.snapToRoadConfidenceThreshold = maybe config.snapToRoadConfidenceThreshold (.value) req.snapToRoadConfidenceThreshold,
+               DTC.useWithSnapToRoadFallback = maybe config.useWithSnapToRoadFallback (.value) req.useWithSnapToRoadFallback,
+               DTC.graceTimeForScheduledRidePickup = maybe config.graceTimeForScheduledRidePickup (.value) req.graceTimeForScheduledRidePickup,
+               DTC.scheduleRideBufferTime = maybe config.scheduleRideBufferTime (.value) req.scheduleRideBufferTime,
+               DTC.scheduledRideJobRescheduleTime = maybe config.scheduledRideJobRescheduleTime (.value) req.scheduledRideJobRescheduleTime,
+               DTC.scheduledRideSearchRepeatLimit = maybe config.scheduledRideSearchRepeatLimit (.value) req.scheduledRideSearchRepeatLimit,
+               DTC.enableScheduleReallocation = maybe config.enableScheduleReallocation (.value) req.enableScheduleReallocation,
+               DTC.disableListScheduledBookingAPI = maybe config.disableListScheduledBookingAPI (.value) req.disableListScheduledBookingAPI,
+               DTC.driverCoolOffPeriod = maybe config.driverCoolOffPeriod (.value) req.driverCoolOffPeriod,
+               DTC.manualTollChargeConfig = maybe config.manualTollChargeConfig (fmap mkManualTollChargeConfig . (.value)) req.manualTollChargeConfig,
+               DTC.rideEvidenceConfig = maybe config.rideEvidenceConfig (fmap mkRideEvidenceConfig . (.value)) req.rideEvidenceConfig,
+               DTC.scheduledRideConfig =
                  DTC.ScheduledRideConfig
                    { maxHoldsPerDriver = maybe config.scheduledRideConfig.maxHoldsPerDriver (.value) req.maxScheduledHoldsPerDriver,
                      avgSpeedKmph = maybe config.scheduledRideConfig.avgSpeedKmph (.value) req.scheduledRideAvgSpeedKmph,
@@ -770,20 +775,20 @@ postMerchantConfigDriverPoolUpdate merchantShortId opCity reqTripDistanceValue r
   let serviceTier = DVeh.castVariantToServiceTier <$> mbVariant
   config <- getOneConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Just tripDistance, area = Just area, vehicleVariant = serviceTier, tripCategory = Just tripCategory}) (Just (maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area (Just []) Nothing)) >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
   let updConfig =
-        config{minRadiusOfSearch = mkDistanceField config.minRadiusOfSearch req.minRadiusOfSearchWithUnit req.minRadiusOfSearch,
-               maxRadiusOfSearch = mkDistanceField config.maxRadiusOfSearch req.maxRadiusOfSearchWithUnit req.maxRadiusOfSearch,
-               driverPositionInfoExpiry = maybe config.driverPositionInfoExpiry (.value) req.driverPositionInfoExpiry,
-               actualDistanceThreshold = mkOptionalDistanceField config.actualDistanceThreshold req.actualDistanceThresholdWithUnit req.actualDistanceThreshold,
-               actualDistanceThresholdOnRide = mkOptionalDistanceField config.actualDistanceThresholdOnRide req.actualDistanceThresholdOnRideWithUnit req.actualDistanceThresholdOnRide,
-               maxDriverQuotesRequired = maybe config.maxDriverQuotesRequired (.value) req.maxDriverQuotesRequired,
-               driverQuoteLimit = maybe config.driverQuoteLimit (.value) req.driverQuoteLimit,
-               driverRequestCountLimit = maybe config.driverRequestCountLimit (.value) req.driverRequestCountLimit,
-               driverBatchSize = maybe config.driverBatchSize (.value) req.driverBatchSize,
-               maxNumberOfBatches = maybe config.maxNumberOfBatches (.value) req.maxNumberOfBatches,
-               maxParallelSearchRequests = maybe config.maxParallelSearchRequests (.value) req.maxParallelSearchRequests,
-               maxParallelSearchRequestsOnRide = maybe config.maxParallelSearchRequestsOnRide (.value) req.maxParallelSearchRequestsOnRide,
-               singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime,
-               distanceBasedBatchSplit = maybe config.distanceBasedBatchSplit (map castBatchSplitByPickupDistance . (.value)) req.distanceBasedBatchSplit
+        config{DDPC.minRadiusOfSearch = mkDistanceField config.minRadiusOfSearch req.minRadiusOfSearchWithUnit req.minRadiusOfSearch,
+               DDPC.maxRadiusOfSearch = mkDistanceField config.maxRadiusOfSearch req.maxRadiusOfSearchWithUnit req.maxRadiusOfSearch,
+               DDPC.driverPositionInfoExpiry = maybe config.driverPositionInfoExpiry (.value) req.driverPositionInfoExpiry,
+               DDPC.actualDistanceThreshold = mkOptionalDistanceField config.actualDistanceThreshold req.actualDistanceThresholdWithUnit req.actualDistanceThreshold,
+               DDPC.actualDistanceThresholdOnRide = mkOptionalDistanceField config.actualDistanceThresholdOnRide req.actualDistanceThresholdOnRideWithUnit req.actualDistanceThresholdOnRide,
+               DDPC.maxDriverQuotesRequired = maybe config.maxDriverQuotesRequired (.value) req.maxDriverQuotesRequired,
+               DDPC.driverQuoteLimit = maybe config.driverQuoteLimit (.value) req.driverQuoteLimit,
+               DDPC.driverRequestCountLimit = maybe config.driverRequestCountLimit (.value) req.driverRequestCountLimit,
+               DDPC.driverBatchSize = maybe config.driverBatchSize (.value) req.driverBatchSize,
+               DDPC.maxNumberOfBatches = maybe config.maxNumberOfBatches (.value) req.maxNumberOfBatches,
+               DDPC.maxParallelSearchRequests = maybe config.maxParallelSearchRequests (.value) req.maxParallelSearchRequests,
+               DDPC.maxParallelSearchRequestsOnRide = maybe config.maxParallelSearchRequestsOnRide (.value) req.maxParallelSearchRequestsOnRide,
+               DDPC.singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime,
+               DDPC.distanceBasedBatchSplit = maybe config.distanceBasedBatchSplit (map castBatchSplitByPickupDistance . (.value)) req.distanceBasedBatchSplit
               }
   _ <- CQDPC.update updConfig
   CQDPC.clearCache merchantOpCityId
@@ -1152,20 +1157,20 @@ postMerchantConfigDriverIntelligentPoolUpdate merchantShortId opCity req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   config <- CDIPC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
   let updConfig =
-        config{availabilityTimeWeightage = maybe config.availabilityTimeWeightage (.value) req.availabilityTimeWeightage,
-               availabilityTimeWindowOption = fromMaybe config.availabilityTimeWindowOption req.availabilityTimeWindowOption,
-               acceptanceRatioWeightage = maybe config.acceptanceRatioWeightage (.value) req.acceptanceRatioWeightage,
-               acceptanceRatioWindowOption = fromMaybe config.acceptanceRatioWindowOption req.acceptanceRatioWindowOption,
-               cancellationRatioWeightage = maybe config.cancellationRatioWeightage (.value) req.cancellationRatioWeightage,
-               cancellationAndRideFrequencyRatioWindowOption = fromMaybe config.cancellationAndRideFrequencyRatioWindowOption req.cancellationAndRideFrequencyRatioWindowOption,
-               minQuotesToQualifyForIntelligentPool = maybe config.minQuotesToQualifyForIntelligentPool (.value) req.minQuotesToQualifyForIntelligentPool,
-               minQuotesToQualifyForIntelligentPoolWindowOption = fromMaybe config.minQuotesToQualifyForIntelligentPoolWindowOption req.minQuotesToQualifyForIntelligentPoolWindowOption,
-               intelligentPoolPercentage = maybe config.intelligentPoolPercentage (.value) req.intelligentPoolPercentage,
-               speedNormalizer = maybe config.speedNormalizer (.value) req.speedNormalizer,
-               driverSpeedWeightage = maybe config.driverSpeedWeightage (.value) req.driverSpeedWeightage,
-               minLocationUpdates = maybe config.minLocationUpdates (.value) req.minLocationUpdates,
-               locationUpdateSampleTime = maybe config.locationUpdateSampleTime (.value) req.locationUpdateSampleTime,
-               defaultDriverSpeed = maybe config.defaultDriverSpeed (.value) req.defaultDriverSpeed
+        config{DDIPC.availabilityTimeWeightage = maybe config.availabilityTimeWeightage (.value) req.availabilityTimeWeightage,
+               DDIPC.availabilityTimeWindowOption = fromMaybe config.availabilityTimeWindowOption req.availabilityTimeWindowOption,
+               DDIPC.acceptanceRatioWeightage = maybe config.acceptanceRatioWeightage (.value) req.acceptanceRatioWeightage,
+               DDIPC.acceptanceRatioWindowOption = fromMaybe config.acceptanceRatioWindowOption req.acceptanceRatioWindowOption,
+               DDIPC.cancellationRatioWeightage = maybe config.cancellationRatioWeightage (.value) req.cancellationRatioWeightage,
+               DDIPC.cancellationAndRideFrequencyRatioWindowOption = fromMaybe config.cancellationAndRideFrequencyRatioWindowOption req.cancellationAndRideFrequencyRatioWindowOption,
+               DDIPC.minQuotesToQualifyForIntelligentPool = maybe config.minQuotesToQualifyForIntelligentPool (.value) req.minQuotesToQualifyForIntelligentPool,
+               DDIPC.minQuotesToQualifyForIntelligentPoolWindowOption = fromMaybe config.minQuotesToQualifyForIntelligentPoolWindowOption req.minQuotesToQualifyForIntelligentPoolWindowOption,
+               DDIPC.intelligentPoolPercentage = maybe config.intelligentPoolPercentage (.value) req.intelligentPoolPercentage,
+               DDIPC.speedNormalizer = maybe config.speedNormalizer (.value) req.speedNormalizer,
+               DDIPC.driverSpeedWeightage = maybe config.driverSpeedWeightage (.value) req.driverSpeedWeightage,
+               DDIPC.minLocationUpdates = maybe config.minLocationUpdates (.value) req.minLocationUpdates,
+               DDIPC.locationUpdateSampleTime = maybe config.locationUpdateSampleTime (.value) req.locationUpdateSampleTime,
+               DDIPC.defaultDriverSpeed = maybe config.defaultDriverSpeed (.value) req.defaultDriverSpeed
               }
   _ <- CQDIPC.update updConfig
   CQDIPC.clearCache merchantOpCityId
@@ -1304,13 +1309,13 @@ postMerchantConfigOnboardingDocumentUpdate merchantShortId opCity reqDocumentTyp
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   config <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType, vehicleCategory = Just reqCategory}) Nothing >>= fromMaybeM (DocumentVerificationConfigDoesNotExist merchantOpCityId.getId $ show documentType)
   let updConfig =
-        config{checkExtraction = maybe config.checkExtraction (.value) req.checkExtraction,
-               checkExpiry = maybe config.checkExpiry (.value) req.checkExpiry,
-               supportedVehicleClasses = maybe config.supportedVehicleClasses castSupportedVehicleClasses req.supportedVehicleClasses,
-               vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType,
-               rcNumberPrefixList = maybe config.rcNumberPrefixList (.value) req.rcNumberPrefixList,
-               maxRetryCount = maybe config.maxRetryCount (.value) req.maxRetryCount,
-               documentFlowGrouping = maybe config.documentFlowGrouping (Just . castDocumentFlowGroupingFromReq . (.value)) req.documentFlowGrouping
+        config{DVC.checkExtraction = maybe config.checkExtraction (.value) req.checkExtraction,
+               DVC.checkExpiry = maybe config.checkExpiry (.value) req.checkExpiry,
+               DVC.supportedVehicleClasses = maybe config.supportedVehicleClasses castSupportedVehicleClasses req.supportedVehicleClasses,
+               DVC.vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType,
+               DVC.rcNumberPrefixList = maybe config.rcNumberPrefixList (.value) req.rcNumberPrefixList,
+               DVC.maxRetryCount = maybe config.maxRetryCount (.value) req.maxRetryCount,
+               DVC.documentFlowGrouping = maybe config.documentFlowGrouping (Just . castDocumentFlowGroupingFromReq . (.value)) req.documentFlowGrouping
               }
   _ <- CQDVC.update updConfig
   CQDVC.clearCache merchantOpCityId
@@ -1570,14 +1575,14 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId opCity req = do
     getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let updMerchantServiceUsageConfig =
-        merchantServiceUsageConfig{getDistances = fromMaybe merchantServiceUsageConfig.getDistances req.getDistances,
-                                   getEstimatedPickupDistances = fromMaybe merchantServiceUsageConfig.getEstimatedPickupDistances req.getEstimatedPickupDistances,
-                                   getRoutes = fromMaybe merchantServiceUsageConfig.getRoutes req.getRoutes,
-                                   snapToRoad = fromMaybe merchantServiceUsageConfig.snapToRoad req.snapToRoad,
-                                   getPlaceName = fromMaybe merchantServiceUsageConfig.getPlaceName req.getPlaceName,
-                                   getPlaceDetails = fromMaybe merchantServiceUsageConfig.getPlaceDetails req.getPlaceDetails,
-                                   autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete,
-                                   getEstimatedPickupDistancesFallback = fromMaybe merchantServiceUsageConfig.getEstimatedPickupDistancesFallback (Just <$> req.getEstimatedPickupDistancesFallback)
+        merchantServiceUsageConfig{DMSUC.getDistances = fromMaybe merchantServiceUsageConfig.getDistances req.getDistances,
+                                   DMSUC.getEstimatedPickupDistances = fromMaybe merchantServiceUsageConfig.getEstimatedPickupDistances req.getEstimatedPickupDistances,
+                                   DMSUC.getRoutes = fromMaybe merchantServiceUsageConfig.getRoutes req.getRoutes,
+                                   DMSUC.snapToRoad = fromMaybe merchantServiceUsageConfig.snapToRoad req.snapToRoad,
+                                   DMSUC.getPlaceName = fromMaybe merchantServiceUsageConfig.getPlaceName req.getPlaceName,
+                                   DMSUC.getPlaceDetails = fromMaybe merchantServiceUsageConfig.getPlaceDetails req.getPlaceDetails,
+                                   DMSUC.autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete,
+                                   DMSUC.getEstimatedPickupDistancesFallback = fromMaybe merchantServiceUsageConfig.getEstimatedPickupDistancesFallback (Just <$> req.getEstimatedPickupDistancesFallback)
                                   }
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchantOpCityId
@@ -1605,7 +1610,7 @@ postMerchantServiceUsageConfigSmsUpdate merchantShortId opCity req = do
     getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let updMerchantServiceUsageConfig =
-        merchantServiceUsageConfig{smsProvidersPriorityList = req.smsProvidersPriorityList
+        merchantServiceUsageConfig{DMSUC.smsProvidersPriorityList = req.smsProvidersPriorityList
                                   }
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchantOpCityId

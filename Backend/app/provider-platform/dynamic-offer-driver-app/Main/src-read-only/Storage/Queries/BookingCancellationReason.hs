@@ -18,6 +18,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as Beam
 import Storage.Queries.BookingCancellationReasonExtra as ReExport
+import qualified Tools.Fields as Fields
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingCancellationReason.BookingCancellationReason -> m ())
 create = createWithKV

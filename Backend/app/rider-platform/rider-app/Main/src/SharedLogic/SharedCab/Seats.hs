@@ -38,6 +38,7 @@ module SharedLogic.SharedCab.Seats
 where
 
 import Data.List (elemIndex, sortOn)
+import qualified Domain.Types.FRFSTicket as Fields
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (CONFIRMED))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket

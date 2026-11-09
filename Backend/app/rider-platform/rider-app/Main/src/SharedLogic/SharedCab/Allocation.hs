@@ -42,6 +42,7 @@ import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
 import SharedLogic.SharedCab.Schedule (withCityTickLease)
 import qualified SharedLogic.SharedCab.Seats as Seats
 import SharedLogic.SharedCab.SessionState (Session, SessionStatus (ACTIVE))
+import qualified SharedLogic.SharedCab.SessionState as Fields
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
 cityLiveBookings ::

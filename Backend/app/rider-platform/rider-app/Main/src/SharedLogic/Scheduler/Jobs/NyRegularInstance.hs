@@ -4,6 +4,7 @@ module SharedLogic.Scheduler.Jobs.NyRegularInstance where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.NyRegularInstanceLog as NyRegularInstanceLog
+import qualified Domain.Types.NyRegularSubscription as Fields
 import Kernel.External.Encryption (EncFlow)
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
@@ -19,12 +20,15 @@ import Kernel.Utils.Common (CacheFlow, type (:::))
 import Kernel.Utils.Logging (logError, logInfo, withLogTag)
 import Kernel.Utils.Servant.Client (RetryCfg)
 import Lib.Scheduler (ExecutionResult (..), Job (..))
+import qualified Lib.Scheduler.Types as Fields
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import SharedLogic.JobScheduler (RiderJobType (..))
+import qualified SharedLogic.JobScheduler as Fields
 import SharedLogic.NyRegularSubscriptionHasher (calculateSubscriptionSchedulingHash)
 import qualified SharedLogic.NySubscription as NySubscription
 import qualified Storage.Queries.NyRegularInstanceLog as NyRegularInstanceLog
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
+import qualified Tools.Fields as Fields
 import Tools.Metrics.BAPMetrics.Types
 import Tools.Metrics.BAPMetrics.Types ()
 import TransactionLogs.Types

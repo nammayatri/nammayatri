@@ -19,6 +19,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RiderConfig as Fields
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.IncidentReport as IncidentReport
 import Kernel.External.IncidentReport.Interface.Types as IncidentReportTypes

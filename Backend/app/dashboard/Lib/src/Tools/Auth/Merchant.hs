@@ -16,6 +16,7 @@
 module Tools.Auth.Merchant (merchantCityAccessCheck, merchantServerAccessCheck, CheckedShortId, skipMerchantCityAccessCheck) where
 
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantPair as Fields
 import qualified Domain.Types.ServerName as DTServer
 import Kernel.Prelude
 import Kernel.Types.Beckn.City as City

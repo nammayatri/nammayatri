@@ -49,6 +49,7 @@ import SharedLogic.Payment (applyPseudoClientId)
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Payment as TPayment
 
 -- | The rail keys are the kernel's own enum ('DT.RailKey'); the domain only picks one.

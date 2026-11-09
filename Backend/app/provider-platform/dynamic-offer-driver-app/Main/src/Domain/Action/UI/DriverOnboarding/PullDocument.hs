@@ -29,6 +29,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.DigilockerVerification as DDV
 import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverLicense as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -52,6 +53,7 @@ import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverLicenseExtra as QDLE
 import qualified Storage.Queries.Person as PersonQuery
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Verification as Verification
 
 pullDocuments ::

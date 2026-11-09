@@ -53,6 +53,7 @@ import qualified SharedLogic.SharedCab.TripClient as TripClient
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QBooking
 import Tools.Error (SharedCabSessionError (..))
+import qualified Tools.Fields as Fields
 
 data CabDriverInfo = CabDriverInfo {driverName :: Maybe Text, vehicleModel :: Maybe Text}
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

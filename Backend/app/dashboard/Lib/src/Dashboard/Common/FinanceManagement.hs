@@ -3,4 +3,3 @@
 module Dashboard.Common.FinanceManagement (module ReExport) where
 
 import Dashboard.Common as ReExport
-import Kernel.Prelude

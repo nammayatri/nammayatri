@@ -23,6 +23,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.RideFeedback.Actions (ActionEnv (..), runActionsAndReport)
+import qualified SharedLogic.RideFeedback.Types as Fields
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB

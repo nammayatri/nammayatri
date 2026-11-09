@@ -21,12 +21,14 @@ import API.Types.UI.SubscriptionTransaction
 import qualified Data.Map as M
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
+import qualified Domain.Types.Booking as Fields
 import Domain.Types.DriverWallet
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleVariant as Vehicle
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Common
@@ -42,6 +44,7 @@ import qualified Storage.Queries.BookingExtra as QBookingE
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Tools.Fields as Fields
 
 getSubscriptionTransactions ::
   (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

@@ -1,5 +1,6 @@
 module Domain.Action.Internal.DriverSourceDeparted where
 
+import qualified API.Types.UI.WMB as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.TripTransaction

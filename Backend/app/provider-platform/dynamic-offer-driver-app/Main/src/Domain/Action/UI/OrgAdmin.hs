@@ -69,10 +69,10 @@ updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, Hedis.
 updateProfile admin req = do
   let merchantId = admin.merchantId
       updAdmin =
-        admin{firstName = fromMaybe admin.firstName req.firstName,
-              middleName = req.middleName <|> admin.middleName,
-              lastName = req.lastName <|> admin.lastName,
-              deviceToken = req.deviceToken <|> admin.deviceToken
+        admin{SP.firstName = fromMaybe admin.firstName req.firstName,
+              SP.middleName = req.middleName <|> admin.middleName,
+              SP.lastName = req.lastName <|> admin.lastName,
+              SP.deviceToken = req.deviceToken <|> admin.deviceToken
              }
   _ <- QPerson.updatePersonRec updAdmin.id updAdmin
   org <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)

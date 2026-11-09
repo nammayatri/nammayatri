@@ -15,6 +15,7 @@
 module SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge (sendConnectAccountCharge) where
 
 import qualified Data.Time as Time
+import qualified Domain.Types.DriverBankAccount as Fields
 import qualified Domain.Types.TransporterConfig as DTConf
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -39,6 +40,7 @@ import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverBankAccountExtra as QDBA
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 
 -- | Scheduled job that deducts the Stripe connect-account maintenance charge from
 --   every active connected account in the operating city, per the configured bearer.

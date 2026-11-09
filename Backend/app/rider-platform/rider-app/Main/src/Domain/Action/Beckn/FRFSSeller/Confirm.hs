@@ -42,6 +42,7 @@ import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QBooking
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
 data ConfirmDisposition

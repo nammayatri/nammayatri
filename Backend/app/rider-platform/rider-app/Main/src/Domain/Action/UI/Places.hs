@@ -1,13 +1,13 @@
 module Domain.Action.UI.Places (postPlaces) where
 
+import qualified API.Types.UI.MultimodalConfirm as Fields
 import qualified API.Types.UI.Places as API
--- import Data.Time (UTCTime, getCurrentTime)
-
 import qualified Domain.Action.UI.MultimodalConfirm as DAUM
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.PopularLocation as Fields
 import qualified Domain.Types.RecentLocation as DRecntLoc
 import qualified Environment as Env
 import EulerHS.Prelude hiding (id, null)
@@ -25,6 +25,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PopularLocation as QPopularLocation
 import qualified Storage.Queries.RecentLocation as QRecentLocation
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.MultiModal as TMultiModal
 
 mkWayPointV2 :: Double -> Double -> WayPointV2

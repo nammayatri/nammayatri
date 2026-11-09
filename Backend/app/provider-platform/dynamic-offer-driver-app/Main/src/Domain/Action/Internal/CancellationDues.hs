@@ -1,10 +1,12 @@
 module Domain.Action.Internal.CancellationDues where
 
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.CancellationConsequenceMatrix as Fields
 import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
+import qualified Environment as Fields
 import qualified EulerHS.Language as L
 import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
@@ -20,6 +22,7 @@ import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data CustomerCancellationDuesWaiveOffReq = CustomerCancellationDuesWaiveOffReq
   { rideId :: Text,

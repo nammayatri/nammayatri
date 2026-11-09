@@ -9,6 +9,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Common.FRFS as CFRFS
 import Lib.JourneyLeg.Types.Bus
 import qualified Lib.JourneyModule.Types as JT
+import qualified Tools.Fields as Fields
 
 instance JT.JourneyLeg BusLegRequest m where
   search (BusLegRequestSearch BusLegRequestSearchData {..}) = CFRFS.search Spec.BUS personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId serviceTier upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbHasPasses mbEnforceFRFSPass

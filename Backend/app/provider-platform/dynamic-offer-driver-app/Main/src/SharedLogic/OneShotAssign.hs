@@ -73,6 +73,7 @@ import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.StopInformation as QSI
 import Tools.Error
 import Tools.Event
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 
 data OneShotAssignReq = OneShotAssignReq

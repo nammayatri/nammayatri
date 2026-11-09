@@ -19,10 +19,13 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Data.Time (NominalDiffTime, addUTCTime, diffUTCTime)
 import qualified Data.Vector as V
+import qualified Domain.Types.DriverLocation as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
+import qualified Domain.Types.Vehicle as Fields
+import qualified Domain.Types.VehicleServiceTier as Fields
 import Domain.Types.VehicleVariant (castServiceTierToVariant)
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -40,8 +43,10 @@ import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.GateInfoExtra as DGI
+import qualified Lib.Types.SpecialLocation as Fields
 import SharedLogic.Allocator (AllocatorJobType (..), TriggerSpecialZoneNotifyJobData (..))
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
+import qualified SharedLogic.External.LocationTrackingService.Types as Fields
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.Beam.SchedulerJob ()
@@ -52,6 +57,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SpecialZoneQueueRequestExtra as QSZQR
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- | Dashboard trigger: previously ran the full force-notify pipeline (LTS queue
 -- lookup, eligibility filtering, FCM/GRPC fan-out) synchronously, which made the

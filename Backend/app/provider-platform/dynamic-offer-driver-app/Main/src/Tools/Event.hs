@@ -26,6 +26,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import Domain.Types.SearchTry
 import Kernel.Prelude
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Fields
 import Kernel.Types.Id
 import Kernel.Utils.JSON (constructorsWithSnakeCase)
 import Lib.SessionizerMetrics.EventStream

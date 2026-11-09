@@ -25,6 +25,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Reconciliation.Job as ReconJob
+import qualified Lib.Finance.Reconciliation.Recipe as Fields
 import qualified Lib.Finance.Reconciliation.Runner as ReconRunner
 import qualified Lib.Finance.Reconciliation.Types as ReconT
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinBeamFlow
@@ -32,6 +33,7 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.Allocator as Fields
 import SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation (reconciliationRegistry)
 import Storage.Beam.SchedulerJob ()
 

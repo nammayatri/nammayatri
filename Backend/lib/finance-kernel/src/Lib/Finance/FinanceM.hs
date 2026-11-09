@@ -90,7 +90,7 @@ import Lib.Finance.Domain.Types.DirectTaxTransaction (DirectTaxTransaction, TdsR
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import Lib.Finance.Domain.Types.IndirectTaxTransaction (GstCreditType, IndirectTaxTransaction)
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
-import Lib.Finance.Domain.Types.Invoice (Invoice)
+import Lib.Finance.Domain.Types.Invoice (Invoice (..))
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.Error.Types (FinanceError (..))
 import Lib.Finance.Invoice.Interface (DirectTaxInput (..), GstAmountBreakdown, IndirectTaxInput (..), InvoiceInput (..), InvoiceLineItem)

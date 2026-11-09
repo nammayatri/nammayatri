@@ -23,6 +23,7 @@ import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
 import Domain.Action.Beckn.Confirm as DConfirm
 import Domain.Types.Booking (BookingStatus (NEW))
+import qualified Domain.Types.Booking as Fields
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.App

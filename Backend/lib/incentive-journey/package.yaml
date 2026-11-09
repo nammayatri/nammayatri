@@ -50,12 +50,11 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - OverloadedRecordDot
 
 dependencies:
   - base >= 4.7 && < 5
   - bytestring
-  - record-dot-preprocessor
-  - record-hasfield
   - text
   - time
   - aeson
@@ -79,7 +78,6 @@ dependencies:
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs:

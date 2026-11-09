@@ -8,11 +8,13 @@ import qualified Domain.Action.UI.Driver as DD
 import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PayoutConfig as DPC
 import Domain.Types.Person
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -35,6 +37,8 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
+import qualified Lib.Payment.Domain.Types.PaymentOrder as Fields
+import qualified Lib.Payment.Domain.Types.PayoutOrder as Fields
 import qualified Lib.Payment.Payout.Registration as Registration
 import qualified Lib.Payment.Payout.Status as PayoutStatus
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
@@ -52,6 +56,7 @@ import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TP
 

@@ -32,6 +32,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.GeometryGeom as QGEO
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data GeometryUpdateReq = GeometryUpdateReq
   { region :: Text,

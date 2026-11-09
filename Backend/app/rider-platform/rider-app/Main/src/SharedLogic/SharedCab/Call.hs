@@ -20,6 +20,7 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (sortOn)
 import qualified Data.Text as T
 import Domain.Types.Exophone (Exophone)
+import qualified Domain.Types.Exophone as Fields
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -46,6 +47,7 @@ import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- | The cab session of a held seat on the booking's plate that is still running (not ENDED) the trip the rider boarded on. `enabled` is
 -- the city's call or chat switch; Nothing when it is off, the booking is outside the call window or its offer is still open.

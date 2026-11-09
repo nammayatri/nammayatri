@@ -27,6 +27,7 @@ module API.DashboardInternalAuth
   )
 where
 
+import qualified DashboardAlert.Domain.Types.Audience as Fields
 import Data.Aeson as DA
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import Environment

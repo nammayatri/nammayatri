@@ -23,6 +23,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.JobScheduler (RiderJobType (..))
+import qualified SharedLogic.JobScheduler as Fields
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.FollowRide
 import qualified Tools.SMS as Sms

@@ -33,6 +33,7 @@ import qualified SharedLogic.SharedCab.Session as Session
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Error (SharedCabCancelError (CancelLimitReached))
+import qualified Tools.Fields as Fields
 
 data CancelStage = SoftCancel | ConfirmCancel
   deriving (Eq)

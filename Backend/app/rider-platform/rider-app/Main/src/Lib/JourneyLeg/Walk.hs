@@ -2,6 +2,8 @@
 
 module Lib.JourneyLeg.Walk where
 
+import qualified API.Types.UI.MultimodalConfirm as Fields
+import qualified Domain.Types.JourneyLeg as Fields
 import Domain.Types.Trip as DTrip
 import Kernel.Prelude
 import Kernel.Types.Error

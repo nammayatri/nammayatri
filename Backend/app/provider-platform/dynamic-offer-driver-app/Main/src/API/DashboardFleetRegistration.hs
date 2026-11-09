@@ -35,6 +35,7 @@ import qualified Domain.Action.Dashboard.Fleet.Registration as DP
 import qualified "lib-dashboard" Domain.Action.Dashboard.Registration as DashboardReg
 import qualified Domain.Types.FleetOwnerInformation as FOI
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified Domain.Types.Person.Type as Fields
 import Environment
 import Kernel.Beam.Functions (runInDashboardDb)
 import Kernel.Prelude

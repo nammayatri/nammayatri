@@ -8,6 +8,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import Data.Aeson
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.IntegratedBPPConfig as Fields
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -15,11 +16,13 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JourneyUtils
+import qualified SharedLogic.External.Nandi.Types as Fields
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Tools.Fields as Fields
 
 data LiveTripDecision = LiveTripDecision
   { canCancel :: Bool,

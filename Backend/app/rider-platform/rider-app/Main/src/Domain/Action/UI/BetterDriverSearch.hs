@@ -19,7 +19,9 @@ where
 
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingStatus as DRB
+import qualified Domain.Types.Merchant as Fields
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.RiderConfig as Fields
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess

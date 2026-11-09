@@ -36,6 +36,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Ride as QRide
 import Tools.Event
+import qualified Tools.Fields as Fields
 
 startRideTransaction ::
   ( MonadFlow m,
@@ -59,7 +60,7 @@ startRideTransaction ::
   DDI.DriverInformation ->
   m ()
 startRideTransaction driverId ride bookingId firstPoint merchantId odometer transporterConfig driverInfo = do
-  triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
+  triggerRideStartEvent RideEventData {ride = ride{SRide.status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
   rideInfo <- mkInProgressRideLtsInfo ride firstPoint
   void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon merchantId driverId (Just rideInfo)
   QRide.updateStartTimeAndLoc ride.id firstPoint

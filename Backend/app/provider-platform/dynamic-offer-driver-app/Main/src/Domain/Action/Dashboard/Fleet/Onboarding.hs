@@ -31,9 +31,11 @@ import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
 import qualified Domain.Types.DocumentVerificationStagesConfig
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
+import qualified Domain.Types.DriverReferral as Fields
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleRegistrationCertificate as Fields
 import qualified Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
@@ -56,6 +58,7 @@ import qualified Storage.Queries.DriverLicense as DLQuery
 import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import qualified Tools.Fields as Fields
 
 getOnboardingDocumentConfigs ::
   ShortId DM.Merchant ->

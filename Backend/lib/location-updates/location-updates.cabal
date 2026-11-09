@@ -67,7 +67,8 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -80,8 +81,6 @@ library
     , http-client
     , http-types
     , mobility-core
-    , record-dot-preprocessor
-    , record-hasfield
     , servant
     , servant-client
     , servant-server
@@ -141,7 +140,8 @@ test-suite location-updates-tests
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Werror
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wall -Werror
   build-depends:
       QuickCheck
     , aeson
@@ -159,8 +159,6 @@ test-suite location-updates-tests
     , lens
     , location-updates
     , mobility-core
-    , record-dot-preprocessor
-    , record-hasfield
     , servant
     , servant-client
     , servant-server

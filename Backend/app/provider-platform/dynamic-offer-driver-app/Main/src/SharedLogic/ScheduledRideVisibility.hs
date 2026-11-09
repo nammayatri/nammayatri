@@ -34,7 +34,7 @@ import Data.List (nub, sortOn)
 import qualified Data.Text as T
 import Domain.Types.Common (ServiceTierType)
 import qualified Domain.Types.DriverStats as DStats
-import Domain.Types.TransporterConfig (ScheduledRideVisibilityRules, ScheduledRideVisibilityStage)
+import Domain.Types.TransporterConfig (ScheduledRideVisibilityRules (..), ScheduledRideVisibilityStage (..))
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)

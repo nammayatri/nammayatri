@@ -19,9 +19,9 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
+import qualified Domain.Types.BecknConfig as Fields
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
@@ -30,6 +30,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 buildCancelReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>

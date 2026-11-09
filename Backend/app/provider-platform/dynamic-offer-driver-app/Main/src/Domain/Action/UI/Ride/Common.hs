@@ -48,6 +48,7 @@ import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.CancellationReason as DTCR
+import qualified Domain.Types.DeliveryPersonDetails as Fields
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
@@ -57,12 +58,14 @@ import Domain.Types.FarePolicy (FareChargeComponent (PaymentChargePaidByCustomer
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy.Common as DFPC
 import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.StopInformation as DSI
+import qualified Domain.Types.Translations as Fields
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.VehicleVariant as DVeh
 import GHC.Generics (Generic)
@@ -104,6 +107,7 @@ import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Translations as QTranslations
 import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error (LocationMappingError (..))
+import qualified Tools.Fields as Fields
 import qualified Tools.Utils as Tools
 import Prelude hiding (id)
 
@@ -589,7 +593,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         | customerBearsCharge = quoteTimeCharge
         | driverBearsCharge = bookingPaymentCharge
         | otherwise = 0
-      estimatedBaseFareGross = fareSum (estimatedFareParams{driverSelectedFare = Nothing}) Nothing -- driverSelectedFare should not be part of estimatedBaseFare
+      estimatedBaseFareGross = fareSum (estimatedFareParams{DFareParams.driverSelectedFare = Nothing}) Nothing -- driverSelectedFare should not be part of estimatedBaseFare
       estimatedCommission = fromMaybe 0 booking.commission
       estimatedBaseFare = max 0 (estimatedBaseFareGross - estimatedCommission - bookingAppFeeP)
       estimatedBaseFareGrossV2 = fareSum estimatedFareParams Nothing

@@ -6,6 +6,7 @@ import Data.Aeson (Object, Value (..))
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMap
 import Environment (Flow)
+import qualified Environment as Fields
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (getDbHash)
 import Kernel.Utils.Common (throwError)

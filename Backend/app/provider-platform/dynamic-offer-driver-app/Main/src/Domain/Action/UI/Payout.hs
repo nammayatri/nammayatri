@@ -34,8 +34,10 @@ where
 
 import Data.Time (utctDay)
 import qualified Domain.Action.UI.DriverCoin as DriverCoin
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.DriverFee as DDF
+import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant as DM
@@ -45,7 +47,9 @@ import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.ScheduledPayout as DSP
+import qualified Domain.Types.SubscriptionConfig as Fields
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
 import Environment
 import Kernel.Beam.Functions as B (runInReplica)
@@ -61,7 +65,7 @@ import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import qualified Kernel.External.Payout.Types as TPayout
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig)
+import Kernel.Sms.Config (SmsConfig (..))
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -76,6 +80,8 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Balance (withOwnerLock)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.Account (CounterpartyType)
+import qualified Lib.Finance.Domain.Types.Account as Fields
+import qualified Lib.Finance.Domain.Types.LedgerEntry as Fields
 import qualified Lib.Finance.Domain.Types.Transfer as DTransfer
 import Lib.Finance.FinanceM (FinanceCtx)
 import Lib.Finance.Ledger.PayoutSettlement (findActivePayoutHold, postOnceByReference)
@@ -123,6 +129,7 @@ import qualified Storage.Queries.ScheduledPayout as QSP
 import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
 import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout
 import qualified Tools.SMS as Sms

@@ -7,7 +7,7 @@ import Control.Applicative ((<|>))
 import Data.List (findIndex, sortOn)
 import Data.Ord (comparing)
 import Domain.Types.SharedCabSession
-import Kernel.External.Maps.Types (LatLong)
+import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)

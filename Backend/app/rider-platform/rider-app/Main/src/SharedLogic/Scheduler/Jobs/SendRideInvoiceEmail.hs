@@ -17,6 +17,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 sendRideInvoiceEmailJob ::
   InvoiceEmailFlow m r =>

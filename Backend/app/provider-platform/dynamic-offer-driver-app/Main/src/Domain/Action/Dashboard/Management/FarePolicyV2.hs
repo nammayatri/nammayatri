@@ -65,6 +65,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.ServiceTierType (ServiceTierType)
 import Domain.Types.TransporterConfig (TransporterConfig)
+import qualified Domain.Types.VehicleServiceTier as Fields
 import qualified Email.Flow as Email
 import qualified Email.Types as EmailT
 import Environment
@@ -93,6 +94,7 @@ import qualified Storage.Queries.FarePolicy.FarePolicyAmbulanceDetailsSlab as QF
 import qualified Storage.Queries.FarePolicyChangeRequest as QFPCR
 import qualified Storage.Queries.FareProduct as QFareProduct
 import qualified Storage.Queries.FareProductExtra as QFareProductExtra
+import qualified Tools.Fields as Fields
 
 --------------------------------------------------------------------------------
 -- context resolution

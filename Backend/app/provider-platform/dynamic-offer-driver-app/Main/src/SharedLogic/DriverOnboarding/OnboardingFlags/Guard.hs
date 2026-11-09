@@ -12,6 +12,7 @@ import qualified Domain.Types.Alert.AlertEntityType as DAlertEntity
 import qualified Domain.Types.Alert.OnboardingAlertAction as DOnboardingAlertAction
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.VehicleRegistrationCertificate as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id (Id (..))
@@ -24,6 +25,7 @@ import Storage.Beam.DashboardAlert ()
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import qualified Tools.Fields as Fields
 
 defaultRecomputeSpec :: GuardTarget -> RecomputeSpec
 defaultRecomputeSpec = \case

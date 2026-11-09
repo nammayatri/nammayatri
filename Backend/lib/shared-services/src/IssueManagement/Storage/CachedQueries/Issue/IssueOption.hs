@@ -24,7 +24,7 @@ import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheConfig (..), CacheFlow)
 
 findAllByCategoryAndLanguage :: BeamFlow m r => Id IssueCategory -> Language -> Identifier -> m [(IssueOption, Maybe IssueTranslation)]
 findAllByCategoryAndLanguage issueCategoryId language identifier =

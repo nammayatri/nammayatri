@@ -20,6 +20,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage (MediaChannel (..), MessageKey (..))
+import qualified Domain.Types.MerchantMessage as Fields
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
@@ -29,6 +30,7 @@ import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Sms.Config as Fields
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
@@ -39,6 +41,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.Queries.FleetOwnerInformation as QFI
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.SMS as Sms
 import Tools.Whatsapp as Whatsapp
 

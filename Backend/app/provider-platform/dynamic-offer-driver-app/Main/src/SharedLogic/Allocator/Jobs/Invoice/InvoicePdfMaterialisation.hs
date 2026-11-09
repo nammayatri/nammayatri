@@ -22,6 +22,7 @@ import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.Allocator as Fields
 import SharedLogic.Finance.InvoiceDocument (InvoicePdfFlow, materialiseInvoicePdf)
 
 -- | Render + store an invoice PDF in S3 (stamping 'pdfS3Path'). Scheduled right

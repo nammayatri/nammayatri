@@ -16,6 +16,7 @@ module SharedLogic.Scheduler.Jobs.SafetyIVR where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.Call as DCall
+import qualified Domain.Types.Booking as Fields
 import Domain.Types.CallStatus
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide

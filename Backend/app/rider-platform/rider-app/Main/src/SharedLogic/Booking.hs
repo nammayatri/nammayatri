@@ -4,6 +4,7 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingStatus as DBooking
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Journey as DJourney
+import qualified Domain.Types.JourneyLeg as Fields
 import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.Prelude

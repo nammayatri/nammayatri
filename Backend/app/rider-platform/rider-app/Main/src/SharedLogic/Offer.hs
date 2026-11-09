@@ -16,14 +16,17 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OfferEntity as DOfferEntity
+import qualified Domain.Types.PayoutConfig as Fields
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonStats as DPS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as SSR
+import qualified Domain.Types.Translations as Fields
 import qualified Domain.Types.VehicleVariant as DV
 import qualified Domain.Types.Yudhishthira as Y
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Encryption as Fields
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (Language (ENGLISH), SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
@@ -68,6 +71,7 @@ import qualified Storage.Queries.RideExtra as QRide
 import qualified Storage.Queries.SearchRequestExtra as QSearchRequest
 import qualified Tools.DynamicLogic as TDL
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Payment as TPayment
 
 data CumulativeOfferRespI = CumulativeOfferRespI

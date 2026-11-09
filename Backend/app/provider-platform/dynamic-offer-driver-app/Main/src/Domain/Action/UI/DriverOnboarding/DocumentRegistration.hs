@@ -26,12 +26,14 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as Fields
 import qualified Domain.Types.Image as Domain hiding (SelfieFetchStatus (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Domain.Types.VehicleCategory
 import Environment
+import qualified Kernel.External.Verification.Idfy.Types.Response as Fields
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis

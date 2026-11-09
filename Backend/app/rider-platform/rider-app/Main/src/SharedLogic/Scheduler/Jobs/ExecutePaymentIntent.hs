@@ -16,6 +16,7 @@ module SharedLogic.Scheduler.Jobs.ExecutePaymentIntent where
 
 import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.LocationAddress as Fields
 import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions
@@ -44,6 +45,7 @@ import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 executePaymentIntentJob ::
   ( EncFlow m r,

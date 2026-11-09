@@ -93,7 +93,7 @@ quote t = "'" <> Text.replace "'" "''" t <> "'"
 
 generateInsertQuery :: Text -> [(Text, Value)] -> Maybe Text
 generateInsertQuery tableName setClause =
-  Just $ "INSERT INTO " <> tableName <> " (" <> Text.intercalate " , " (fst <$> setClause) <> ") VALUES (" <> Text.intercalate " , " ((valueToSQL .snd) <$> setClause) <> ");"
+  Just $ "INSERT INTO " <> tableName <> " (" <> Text.intercalate " , " (fst <$> setClause) <> ") VALUES (" <> Text.intercalate " , " ((valueToSQL . snd) <$> setClause) <> ");"
 
 generateUpdateQuery :: Text -> [(Text, Value)] -> [(Text, Value)] -> Maybe Text
 generateUpdateQuery tableName setClause whereClause = do

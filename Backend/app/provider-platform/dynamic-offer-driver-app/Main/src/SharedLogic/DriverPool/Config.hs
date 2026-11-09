@@ -60,6 +60,7 @@ import Storage.ConfigPilot.Config.DriverPoolConfig (DriverPoolConfigDimensions (
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Tools.DynamicLogic as TDL
+import qualified Tools.Fields as Fields
 import Utils.Common.CacUtils
 
 getDriverPoolConfigFromDB' ::

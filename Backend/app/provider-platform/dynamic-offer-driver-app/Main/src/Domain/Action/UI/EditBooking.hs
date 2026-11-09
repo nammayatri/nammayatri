@@ -6,6 +6,7 @@ import Data.Text as T
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Booking
 import Domain.Types.BookingUpdateRequest
+import qualified Domain.Types.DriverInformation as Fields
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant

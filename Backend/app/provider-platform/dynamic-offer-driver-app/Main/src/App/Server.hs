@@ -19,6 +19,7 @@ import App.CrossCloudProxy (crossCloudProxy)
 import Environment
 import EulerHS.Prelude
 import Kernel.Tools.Metrics.Init
+import qualified Kernel.Types.App as Fields
 import Kernel.Types.Flow
 import Kernel.Utils.App
 import Kernel.Utils.Monitoring.Prometheus.Servant ()

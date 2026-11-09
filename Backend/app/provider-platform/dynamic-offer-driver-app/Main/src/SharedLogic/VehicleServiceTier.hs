@@ -22,12 +22,14 @@ import qualified Data.Text as T
 import Data.Time (diffDays, utctDay)
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverRCAssociation as Fields
 import qualified Domain.Types.DriverStats as DDriverStats
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTPC
 import qualified Domain.Types.Vehicle as DV
 import qualified Domain.Types.VehicleCategory as VC
+import qualified Domain.Types.VehiclePermit as Fields
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Utils (getVehicleAge)
 import Kernel.Prelude

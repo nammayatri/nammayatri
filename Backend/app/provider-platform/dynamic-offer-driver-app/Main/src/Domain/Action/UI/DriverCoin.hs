@@ -19,14 +19,20 @@ import Data.OpenApi hiding (description, title, value)
 import qualified Data.Text as Text
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import Domain.Types.Coins.CoinHistory
+import qualified Domain.Types.Coins.CoinsConfig as Fields
 import qualified Domain.Types.DailyStats as DS
+import qualified Domain.Types.DriverInformation as Fields
+import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.PayoutConfig as Fields
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Plan as DPlan
 import Domain.Types.PurchaseHistory
+import qualified Domain.Types.Translations as Fields
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as VecVarient
 import Environment

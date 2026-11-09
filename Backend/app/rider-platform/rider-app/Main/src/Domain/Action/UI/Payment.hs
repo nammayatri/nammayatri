@@ -61,6 +61,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingPayment as DBP
 import qualified Domain.Types.BookingStatus as SRB
 import Domain.Types.CancellationReason (CancellationReasonCode (..), CancellationStage (..))
+import qualified Domain.Types.EDCMachineMapping as Fields
 -- TODO: Uncomment when PaytmEDC module is available in shared-kernel
 -- import qualified Kernel.External.Payment.PaytmEDC.Checksum as PaytmEDCChecksum
 
@@ -72,8 +73,10 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
+import qualified Domain.Types.PlaceBasedServiceConfig as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
+import qualified Domain.Types.TicketBooking as Fields
 import Environment
 import GHC.Generics ()
 import Kernel.Beam.Functions as B
@@ -99,6 +102,8 @@ import Kernel.Types.Id
 import Kernel.Types.Servant (RawByteString (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Domain.Types.Account as Fields
+import qualified Lib.Finance.Domain.Types.LedgerEntry as Fields
 import qualified Lib.Finance.Domain.Types.Transfer as DT
 import qualified Lib.Finance.Transfer.Inbound as Inbound
 import qualified Lib.Finance.Transfer.Rail as Rail

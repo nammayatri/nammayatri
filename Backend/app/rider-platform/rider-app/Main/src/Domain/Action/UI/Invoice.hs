@@ -9,6 +9,7 @@ import qualified API.Types.UI.Invoice as DTInvoice
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Text as T
 import qualified Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.FareBreakupInfo as Fields
 import Domain.Types.Invoice (InvoiceType, IssuedToType (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -19,6 +20,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
+import qualified Lib.Finance.Domain.Types.LedgerEntry as Fields
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import Storage.Beam.Payment ()
@@ -30,6 +32,7 @@ import qualified Storage.Clickhouse.FareBreakupInfo as CHFBI
 import qualified Storage.Clickhouse.Location as CHL
 import qualified Storage.Clickhouse.Ride as CHR
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getInvoice :: (Maybe (Id DP.Person), Id DM.Merchant) -> UTCTime -> UTCTime -> Flow [DTInvoice.InvoiceRes]
 getInvoice (mbPersonId, merchantId) from to = do

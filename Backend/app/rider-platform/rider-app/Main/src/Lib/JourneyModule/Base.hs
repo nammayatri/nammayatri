@@ -20,8 +20,10 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DTaxiEstimate
 import Domain.Types.Extra.Ride as DRide
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
+import qualified Domain.Types.FRFSQuoteCategory as Fields
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
+import qualified Domain.Types.FRFSSearch as Fields
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
@@ -35,9 +37,11 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.Ride as Fields
 import qualified Domain.Types.RideStatus as DTaxiRide
 import qualified Domain.Types.RiderConfig
 import qualified Domain.Types.RouteDetails as DRouteDetails
+import qualified Domain.Types.SearchRequest as Fields
 import qualified Domain.Types.Trip as DTrip
 import Environment
 import EulerHS.Prelude hiding (id, state)

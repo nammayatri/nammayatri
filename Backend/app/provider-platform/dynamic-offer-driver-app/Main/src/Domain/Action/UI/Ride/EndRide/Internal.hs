@@ -63,6 +63,7 @@ import qualified Domain.Types.LeaderBoardConfigs as LConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as Fields
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import qualified Domain.Types.Ride as Ride
@@ -73,6 +74,7 @@ import Domain.Types.TransporterConfig hiding (InvoiceConfig)
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Variant
 import qualified Domain.Types.VendorFee as DVF
+import qualified Domain.Types.VendorSplitDetails as Fields
 import qualified Environment
 import EulerHS.Prelude hiding (elem, foldr, id, length, map, mapM_, null)
 import GHC.Float (double2Int)
@@ -155,6 +157,7 @@ import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 import qualified Storage.Queries.VendorFee as QVF
 import Toll.SharedLogic.TollsDetector
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import Tools.Notifications
@@ -1346,7 +1349,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
     createWithMbSibling driverFee lastElderSiblingDriverFee ldFee = do
       let elderSiblingId = if (lastElderSiblingDriverFee <&> (.id)) == Just ldFee.id then Nothing else lastElderSiblingDriverFee <&> (.id)
       whenJust elderSiblingId $ \elderSiblingId' -> QDF.updateHasSiblingInDriverFee elderSiblingId'
-      let driverFeeToCreate = driverFee{siblingFeeId = elderSiblingId}
+      let driverFeeToCreate = driverFee{DF.siblingFeeId = elderSiblingId}
       QDF.create driverFeeToCreate
 
 scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, HasField "activeDriversListKeyShards" r Int, HasField "enableDriverFeeShardedFanOut" r Bool) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> UTCTime -> m ()

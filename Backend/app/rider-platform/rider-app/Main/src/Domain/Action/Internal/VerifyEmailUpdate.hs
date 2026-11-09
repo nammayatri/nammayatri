@@ -14,6 +14,7 @@ import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SocialLogin as SSL
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 
 data VerifyEmailUpdateReq = VerifyEmailUpdateReq
   { email :: Text,

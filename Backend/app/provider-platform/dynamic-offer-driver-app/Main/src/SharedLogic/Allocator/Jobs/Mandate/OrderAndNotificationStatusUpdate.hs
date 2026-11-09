@@ -3,7 +3,9 @@ module SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate where
 import Data.List (nubBy)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.UI.Payment as SharedPayment
+import qualified Domain.Types.DriverFee as Fields
 import qualified Domain.Types.Invoice as INV
+import qualified Domain.Types.Notification as Fields
 import Domain.Types.TransporterConfig
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
@@ -25,6 +27,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Notification as QNTF
+import qualified Tools.Fields as Fields
 
 notificationAndOrderStatusUpdate ::
   ( CacheFlow m r,

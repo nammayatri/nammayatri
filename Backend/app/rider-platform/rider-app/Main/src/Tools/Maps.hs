@@ -38,10 +38,12 @@ module Tools.Maps
 where
 
 import qualified Data.Text as T
+import qualified Domain.Action.UI.Person as Fields
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity (..))
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
+import qualified Domain.Types.MerchantServiceUsageConfig as Fields
 import Domain.Types.Person (Person)
 import Kernel.External.Maps as Reexport hiding
   ( autoComplete,

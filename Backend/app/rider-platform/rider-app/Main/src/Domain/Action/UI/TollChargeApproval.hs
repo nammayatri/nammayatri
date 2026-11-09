@@ -25,6 +25,7 @@ import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Metrics (CoreMetrics)
 
 data TollChargeApprovalDecisionReq = TollChargeApprovalDecisionReq

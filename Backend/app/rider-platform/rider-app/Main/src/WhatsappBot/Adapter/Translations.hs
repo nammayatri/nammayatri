@@ -50,7 +50,9 @@ where
 
 import qualified Data.Map.Strict as Map
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Translations as Fields
 import Environment (Flow)
+import qualified Environment as Fields
 import Kernel.External.Types as Lang
 import Kernel.Prelude
 import Kernel.Types.Id (Id)

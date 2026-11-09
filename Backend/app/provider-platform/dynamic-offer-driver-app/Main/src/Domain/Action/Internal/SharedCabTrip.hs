@@ -8,6 +8,7 @@ where
 
 import API.Types.UI.SharedCabInternal (SharedCabTrip (..))
 import Domain.Types.IntegratedBPPConfig (PlatformType (..))
+import qualified Domain.Types.IntegratedBPPConfig as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.VehicleTrip as DVT
 import Environment

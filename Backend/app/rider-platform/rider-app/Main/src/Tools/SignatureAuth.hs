@@ -30,6 +30,7 @@ import qualified Data.Text.Encoding as TE
 import Data.Typeable (typeRep)
 import Data.X509 (PubKey (PubKeyRSA))
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant as Fields
 import EulerHS.Prelude hiding (fromList, (.~))
 import GHC.Exts (fromList)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)

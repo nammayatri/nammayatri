@@ -25,18 +25,20 @@ import Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Core.Taxi.API.Status as API
 import Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Core.Taxi.API.Update as API
+import qualified BecknV2.OnDemand.Types as Fields
 import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.UUID as UUID
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified EulerHS.Types as Euler
-import GHC.Records.Extra
 import qualified Kernel.External.Maps.Types as MapSearch
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import qualified Kernel.Types.Beckn.Context as Fields
 import qualified Kernel.Types.Beckn.Domain as BecknDomain
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Error

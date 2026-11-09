@@ -10,7 +10,8 @@ module Domain.Types.RouteDetailsAPI where
 import Control.Applicative ((<|>))
 import Data.Aeson
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
-import Domain.Types.RouteDetails (RouteDetails)
+import qualified Domain.Types.RiderConfig as Fields
+import Domain.Types.RouteDetails (RouteDetails (..))
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 

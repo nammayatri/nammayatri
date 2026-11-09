@@ -35,6 +35,7 @@ import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import SharedLogic.SharedCab.Config (SharedCabTunables)
+import qualified SharedLogic.SharedCab.Config as Fields
 
 -- | The value stored under @sharedcab:alloc:{bookingId}@. Claimed while stationary -> stand or away timer; claimed while moving ->
 -- no timer, and the tick clears a stand or away timer once the cab moves.

@@ -28,6 +28,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import Storage.Queries.DriverGoHomeRequest as QDGR
 import Storage.Queries.Ride as Ride
 import Tools.Error (GenericError (..))
+import qualified Tools.Fields as Fields
 
 makeGoHomeReqKey :: Id DP.Driver -> Text
 makeGoHomeReqKey = pack . ("CachedQueries:GoHomeRequest-driverId:" <>) . show

@@ -24,6 +24,7 @@ where
 import Control.Applicative
 import qualified Domain.Action.UI.Merchant as DM
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant as DMerchant (MerchantD (..))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Kernel.Prelude
@@ -65,9 +66,9 @@ updateTransporter admin merchantId req = do
     CQM.findById merchantId
       >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   let updOrg =
-        org{DM.name = fromMaybe (org.name) (req.name),
-            DM.description = (req.description) <|> (org.description),
-            DM.enabled = fromMaybe (org.enabled) (req.enabled)
+        org{DMerchant.name = fromMaybe (org.name) (req.name),
+            DMerchant.description = (req.description) <|> (org.description),
+            DMerchant.enabled = fromMaybe (org.enabled) (req.enabled)
            }
   _ <- CQM.update updOrg
   CQM.clearCache updOrg

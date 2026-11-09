@@ -3,6 +3,7 @@ module SharedLogic.FleetVehicleStats where
 import Data.Time hiding (diffUTCTime, getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Domain.Types.FleetRcDailyStats as DFRDS
 import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.RideDetails as Fields
 import qualified Domain.Types.TransporterConfig as DTTC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -11,6 +12,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Storage.Queries.FleetRcDailyStats as QFRDS
 import qualified Storage.Queries.RideDetails as QRideDetails
+import qualified Tools.Fields as Fields
 
 makeFleetRcMetricLockKey :: Text -> Text -> Text
 makeFleetRcMetricLockKey fleetOwnerId rcId = "FleetRcStats:Lock:" <> fleetOwnerId <> ":" <> rcId

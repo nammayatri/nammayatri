@@ -10,6 +10,7 @@ import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PurchasedPassPayment as DPPP
 import qualified Domain.Types.Trip as DTrip
+import qualified Kernel.External.Maps.Google.MapsClient.Types as Fields
 import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)

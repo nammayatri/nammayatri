@@ -29,9 +29,9 @@ import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Cac
-import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common (CacheConfig (..), CacheFlow)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.GoHomeConfig as Queries
 

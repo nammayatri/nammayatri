@@ -13,6 +13,7 @@ import qualified Domain.Action.Beckn.FRFSSeller.Confirm as Confirm
 import qualified Domain.Action.Beckn.FRFSSeller.Init as Init
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.FRFSTicket as DTicket
+import qualified Domain.Types.FRFSTicketBooking as Fields
 import qualified Domain.Types.FRFSTicketStatus as DTicketStatus
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Environment (Flow)
@@ -26,6 +27,7 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QBooking
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
 data StatusFailure

@@ -303,7 +303,8 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wwarn=ambiguous-fields
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , aeson-casing
@@ -349,8 +350,6 @@ library
     , prometheus-metrics-ghc
     , prometheus-proc
     , pureMD5
-    , record-dot-preprocessor
-    , record-hasfield
     , regex-applicative
     , regex-posix
     , relude
@@ -438,7 +437,8 @@ test-suite beckn-spec-test
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wwarn=ambiguous-fields -threaded -rtsopts -with-rtsopts=-N
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , aeson-casing
@@ -485,8 +485,6 @@ test-suite beckn-spec-test
     , prometheus-metrics-ghc
     , prometheus-proc
     , pureMD5
-    , record-dot-preprocessor
-    , record-hasfield
     , regex-applicative
     , regex-posix
     , relude

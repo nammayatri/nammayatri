@@ -18,6 +18,7 @@ import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common
+import qualified Lib.Finance.Domain.Types.InvoiceTemplate as Fields
 import qualified Lib.Finance.Invoice.RenderTemplate as RT
 import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow
@@ -26,6 +27,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.InvoiceTemplate as CQIT
 import Tools.DynamicLogic (getAppDynamicLogic)
+import qualified Tools.Fields as Fields
 
 -- | Look up the per-(mocId,scope,language) HTML template + INVOICE_TEMPLATE JL
 -- rule, run the rule on the 'InvoiceContext', then substitute the cleaned

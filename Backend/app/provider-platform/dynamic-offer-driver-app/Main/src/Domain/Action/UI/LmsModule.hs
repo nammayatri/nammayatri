@@ -1,13 +1,18 @@
 module Domain.Action.UI.LmsModule where
 
 import API.Types.UI.LmsModule
+import qualified Domain.Types.Coins.CoinHistory as Fields
+import qualified Domain.Types.Coins.CoinsConfig as Fields
 import qualified Domain.Types.DocumentReminderHistory as DRH
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverModuleCompletion as DTDMC
+import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.LmsCertificate as DTLC
 import Domain.Types.LmsModule
 import Domain.Types.LmsModule as LmsModule
+import qualified Domain.Types.LmsModuleTranslation as Fields
 import Domain.Types.LmsModuleVideoInformation as LmsModuleVideoInformation
+import qualified Domain.Types.LmsVideoTranslation as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ModuleCompletionInformation as DTMCI

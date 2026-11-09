@@ -19,6 +19,7 @@ module SharedLogic.Allocator.Jobs.Payout.BulkPayoutStatusCheck (runBulkPayoutSta
 import qualified Domain.Action.UI.Payout as UIPayout
 import Kernel.Prelude
 import Kernel.Utils.Common
+import qualified Lib.Finance.Domain.Types.ScheduledTransferRule as Fields
 import qualified Lib.Payment.Payout.Bulk.StatusCheck as Bulk
 import Lib.Scheduler
 import SharedLogic.Allocator
@@ -26,6 +27,7 @@ import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (findKernelSweepRu
 import SharedLogic.Payout.Bulk.Driver (driverBulkHandle)
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
+import qualified Tools.Fields as Fields
 
 runBulkPayoutStatusCheck ::
   ( UIPayout.PayoutSettlementFlow m r,

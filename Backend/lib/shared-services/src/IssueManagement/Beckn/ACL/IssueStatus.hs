@@ -6,9 +6,11 @@ import qualified IGM.Types as Spec
 import IGM.Utils (mkOrgName)
 import qualified IGM.Utils as Utils
 import qualified IssueManagement.Beckn.ACL.IGM.Utils as Utils
+import qualified IssueManagement.Common as Fields
 import qualified IssueManagement.Domain.Action.Beckn.IssueStatus as DIssueStatus
 import Kernel.Prelude
 import Kernel.Types.Error
+import qualified Kernel.Types.Id as Fields
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 

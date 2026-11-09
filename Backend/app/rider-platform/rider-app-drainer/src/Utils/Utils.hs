@@ -24,7 +24,7 @@ import Kafka.Producer
 import qualified Kafka.Producer as KafkaProd
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Streaming.Kafka.Producer (produceToSecondaryProducer)
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools (..))
 import Kernel.Types.Common
 import System.Posix.Signals (raiseSignal, sigKILL)
 import System.Random.PCG

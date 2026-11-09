@@ -22,6 +22,7 @@ import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.AddOnConfig as DAddOnConfig
+import qualified Domain.Types.Booking as Fields
 import Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DriverPoolConfig
 import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DYNAMIC_PRICING))
@@ -31,6 +32,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTTC
+import qualified Domain.Types.VehicleServiceTier as Fields
 import qualified EulerHS.Language as L
 import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.Maps
@@ -70,6 +72,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types

@@ -18,6 +18,7 @@ import qualified Domain.Action.UI.Whatsapp as Whatsapp
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment (FlowHandler, FlowServer)
+import qualified Environment as Fields
 import EulerHS.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id

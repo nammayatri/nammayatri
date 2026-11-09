@@ -11,10 +11,13 @@ import BecknV2.OnDemand.Utils.Payment
 import Data.Text as T
 import Domain.Types
 import Domain.Types.BecknConfig
+import qualified Domain.Types.Merchant as Fields
 import qualified Domain.Types.RiderPreferredOption as DRPO
+import qualified Domain.Types.SearchRequest as Fields
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
+import qualified Kernel.Types.Id as Fields
 import SharedLogic.Search as SLS
 
 buildBecknSearchReqV2 :: SLS.SearchRes -> BecknConfig -> Kernel.Prelude.BaseUrl -> Text -> Either Text BecknV2.OnDemand.Types.SearchReq

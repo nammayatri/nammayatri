@@ -76,7 +76,6 @@ import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import Data.Default.Class
 import qualified Data.HashMap.Strict as HMS
@@ -96,12 +95,14 @@ import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.ConditionalCharges as DTCC
 import qualified Domain.Types.DocumentVerificationConfig as DIT
+import qualified Domain.Types.DriverBankAccount as Fields
 import qualified Domain.Types.DriverInformation as DDInfo
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.DriverStats as DDriverStats
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.FareParameters as Fare
+import qualified Domain.Types.IdfyVerification as Fields
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -123,6 +124,7 @@ import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as Variant
 import qualified EulerHS.Types as Euler
+import qualified IssueManagement.Domain.Types.MediaFile as Fields
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
@@ -176,6 +178,7 @@ import qualified Storage.Queries.RiderDetails as QRD
 import Storage.Queries.RiderDriverCorrelation as SQR
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 import TransactionLogs.PushLogs

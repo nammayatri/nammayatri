@@ -18,6 +18,7 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.RiderDetailsExtra as QRDE
+import qualified Tools.Fields as Fields
 
 data RiderConsentItem = RiderConsentItem
   { customerMobileNumber :: Text,

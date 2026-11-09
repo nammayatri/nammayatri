@@ -4,6 +4,7 @@ module SharedLogic.Allocator.Jobs.FleetAnalytics.RedisRecon
 where
 
 import qualified Data.Map as M
+import qualified Domain.Types.FleetOperatorStats as Fields
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
@@ -18,6 +19,7 @@ import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetOperatorStatsExtra as QFleetOpsExtra
 import qualified Storage.Queries.PersonExtra as QPerson
+import qualified Tools.Fields as Fields
 
 -- Held for one batch so two runs do not write the same keys together.
 -- Released before the next batch is enqueued.

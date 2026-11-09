@@ -23,6 +23,7 @@ import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 postDriverAvailableForRidesActivate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

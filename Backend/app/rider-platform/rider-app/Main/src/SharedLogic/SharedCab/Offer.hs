@@ -12,6 +12,7 @@ module SharedLogic.SharedCab.Offer
 where
 
 import qualified Domain.Types.FRFSTicketBooking as DFTB
+import qualified Domain.Types.RouteStopMapping as Fields
 import qualified Environment
 import Kernel.Prelude
 import Kernel.Types.Id

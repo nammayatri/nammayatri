@@ -21,6 +21,7 @@ where
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantServiceUsageConfig as Fields
 import Kernel.External.SMS as Reexport hiding
   ( sendSMS,
   )

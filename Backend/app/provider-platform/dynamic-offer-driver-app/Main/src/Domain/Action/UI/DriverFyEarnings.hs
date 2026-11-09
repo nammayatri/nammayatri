@@ -15,6 +15,7 @@ module Domain.Action.UI.DriverFyEarnings (getDriverFyEarnings) where
 
 import qualified API.Types.UI.DriverFyEarnings as APIT
 import Data.Time (utctDay)
+import qualified Domain.Types.DriverFyEarnings as Fields
 import Domain.Types.FinancialYear (financialYearOf)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -30,6 +31,7 @@ import qualified SharedLogic.DriverFyEarnings as SDFE
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getDriverFyEarnings ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

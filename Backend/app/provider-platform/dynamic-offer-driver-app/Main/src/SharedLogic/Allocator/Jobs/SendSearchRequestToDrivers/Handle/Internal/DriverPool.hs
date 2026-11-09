@@ -49,6 +49,7 @@ import qualified Domain.Types as DVST
 import qualified Domain.Types.Common as DriverInfo
 import Domain.Types.DriverPoolConfig
 import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DRIVER_ACCEPTANCE_SCORES))
+import qualified Domain.Types.FleetConfig as Fields
 import Domain.Types.FleetPoolingPriority (FleetPoolingPriority, resolvePoolingPriority)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person (Driver)

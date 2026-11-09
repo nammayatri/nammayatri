@@ -57,6 +57,7 @@ import qualified SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPayoutVsPay
 import qualified SharedLogic.Finance.Reconciliation.Recipes.PrepaidSubscriptionPurchaseVsTransaction as PrepaidSubscriptionPurchaseVsTransaction
 import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Tools.Fields as Fields
 
 -- | App-side dispatch table. Extend this map when a new recipe module lands.
 --   Kept as a list-comprehension over a where-bound 'allRecipes' so the

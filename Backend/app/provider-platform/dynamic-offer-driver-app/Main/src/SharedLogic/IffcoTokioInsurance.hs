@@ -6,6 +6,7 @@ where
 import qualified Data.Text as Text
 import Data.Time (UTCTime (..), utctDay)
 import qualified Data.Time.Calendar as Cal
+import qualified Domain.Types.DriverLicense as Fields
 import qualified Domain.Types.Extra.MerchantServiceConfig as ExtraMSC
 import qualified Domain.Types.IffcoTokioInsurance as DITI
 import qualified Domain.Types.Merchant as DM
@@ -33,6 +34,7 @@ import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.IffcoTokioInsurance as QIffco
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 
 -- | Trigger IffcoTokio insurance for a driver at ride start.

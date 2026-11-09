@@ -19,6 +19,7 @@ import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.PaymentCustomer as DPaymentCustomer
 import qualified Domain.Types.Person
 import qualified Domain.Types.Plan
+import qualified Domain.Types.SubscriptionConfig as Fields
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B (runInReplica)

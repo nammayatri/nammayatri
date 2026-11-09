@@ -15,6 +15,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Price
+import qualified Tools.Fields as Fields
 
 buildOnSearchMessage :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool -> Maybe BecknV2.OnDemand.Types.OnSearchReqMessage
 buildOnSearchMessage res bppConfig isValueAddNP = do

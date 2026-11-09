@@ -14,7 +14,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Ord (comparing)
 import Domain.Types.Common
 import Kernel.Prelude
-import Kernel.Utils.Common (Seconds)
+import Kernel.Utils.Common (Seconds (..))
 
 data FPRentalDetailsDistanceBuffersD (s :: UsageSafety) = FPRentalDetailsDistanceBuffers
   { rideDuration :: Seconds,

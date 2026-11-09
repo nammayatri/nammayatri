@@ -26,6 +26,7 @@ import SharedLogic.SharedCab.RateLimit (RiderAction (RiderSkip), riderActionsLef
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 skipReason :: API.SharedCabSkipReason -> SkipReason
 skipReason = \case

@@ -14,6 +14,7 @@ import qualified API.Types.UI.OpenMeter as API
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OpenMeterRide as DOMR
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.RiderConfig as Fields
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis

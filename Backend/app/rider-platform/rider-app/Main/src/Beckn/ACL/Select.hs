@@ -24,13 +24,15 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import BecknV2.OnDemand.Utils.Payment
-import Control.Lens ((%~))
 import qualified Data.List as L
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Select as DSelect
 import Domain.Types.BecknConfig
+import qualified Domain.Types.Estimate as Fields
 import qualified Domain.Types.Location as Location
+import qualified Domain.Types.ParcelDetails as Fields
 import Domain.Types.RiderConfig
+import qualified Domain.Types.SearchRequest as Fields
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -43,6 +45,7 @@ import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 buildSelectReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>

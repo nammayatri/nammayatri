@@ -6,8 +6,13 @@ import qualified BecknV2.FRFS.Enums as SpecEnums
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified Domain.Action.Beckn.FRFSSeller.Init as Init
+import qualified Domain.Types.BecknConfig as Fields
+import qualified Domain.Types.IntegratedBPPConfig as Fields
+import qualified Domain.Types.Merchant as Fields
 import Environment (Flow)
+import qualified Environment as Fields
 import Kernel.Prelude
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSSeller.CallBAP as CallBAP
 import qualified SharedLogic.FRFSSeller.Common as Common

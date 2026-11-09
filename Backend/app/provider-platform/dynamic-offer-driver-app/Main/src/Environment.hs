@@ -25,11 +25,13 @@ import Database.PostgreSQL.Simple as PG
 import Domain.Types (GatewayAndRegistryService (..))
 import Domain.Types.External.LiveEKD
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.RegistryMapFallback as Fields
 import "lib-dashboard" Domain.Types.ServerName (DataServer)
 import Email.Types (EmailServiceConfig)
 import EulerHS.Prelude
 import Kernel.External.BapHostRedirect (BapHostRedirectMap)
 import Kernel.External.Encryption (EncTools)
+import qualified Kernel.External.Encryption as Fields
 import qualified Kernel.External.MasterCloudForward as MCF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.External.SocialLogin.Types (SocialLoginConfig)
@@ -44,7 +46,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Cache
 import qualified Kernel.Types.CacheFlow as KTC
-import Kernel.Types.Common (Days, HighPrecMeters, Seconds)
+import Kernel.Types.Common (Days, HighPrecMeters, Seconds (..))
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Error
 import Kernel.Types.Flow (FlowR)

@@ -78,6 +78,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Payout as TP
 
 payoutServer ::

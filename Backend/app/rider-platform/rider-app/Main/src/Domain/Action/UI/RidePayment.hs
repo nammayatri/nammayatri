@@ -10,10 +10,12 @@ import qualified Domain.Types.Booking
 import qualified Domain.Types.EmailTemplate as DET
 import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.FareBreakupInfo as DFareBreakupInfo
+import qualified Domain.Types.LocationAddress as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.PaymentCustomer as DPaymentCustomer
+import qualified Domain.Types.PayoutConfig as Fields
 import qualified Domain.Types.Person
 import qualified Domain.Types.RefundRequest as DRefundRequest
 import qualified Domain.Types.Ride
@@ -62,6 +64,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payment as TPayment
 
@@ -809,7 +812,7 @@ fetchPaymentRefundRequestInfo h refreshRefunds refundRequest = do
             let updStatus = SPayment.refundStatusToRequestStatus result.status
                 refundId = Kernel.Types.Id.Id result.refundId
             processRefundResult refundRequest updStatus (Just refundId)
-            let updRefundRequest = refundRequest{refundsId = Just refundId, status = updStatus}
+            let updRefundRequest = refundRequest{DRefundRequest.refundsId = Just refundId, DRefundRequest.status = updStatus}
             pure $ h.mkRefundRequestInfoResp updRefundRequest evidence (Just result.status) result.errorCode
       else do
         mbRefunds <- case refundRequest.refundsId of
@@ -1047,7 +1050,7 @@ processRefundResult refundRequest updStatus mbRefundsId =
         Nothing -> QRefundRequest.updateRefundStatus updStatus refundRequest.id
       rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
       QRide.updateRefundRequestStatus (Just updStatus) rideId
-      let updRefundRequest = refundRequest{status = updStatus, refundsId = mbRefundsId <|> refundRequest.refundsId}
+      let updRefundRequest = refundRequest{DRefundRequest.status = updStatus, DRefundRequest.refundsId = mbRefundsId <|> refundRequest.refundsId}
       Notify.notifyRefunds updRefundRequest
       -- Canonical money status on the kernel transfer row (keyed by the Refunds attempt
       -- id); the refund ledger legs below are unchanged. Missing row = pre-migration.
@@ -1177,7 +1180,7 @@ postPaymentVerifyVpa (mbPersonId, _merchantId) vpa = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   QPerson.updatePayoutVpa (Just vpa) personId
   when (isNothing person.payoutVpa) $ do
-    triggerPendingCashRideCashbackPayoutJob person{payoutVpa = Just vpa}
+    triggerPendingCashRideCashbackPayoutJob person{Domain.Types.Person.payoutVpa = Just vpa}
   pure Success
 
 -- else throwError $ InvalidRequest $ "VPA Verification Failed with status: " <> response.status
@@ -1208,7 +1211,7 @@ getPaymentVpaFromNumber (mbPersonId, merchantId) = do
       Right response -> do
         if response.status == "VALID"
           then do
-            let updatedPerson = person{payoutVpa = Just response.vpa}
+            let updatedPerson = person{Domain.Types.Person.payoutVpa = Just response.vpa}
             QPerson.updateByPrimaryKey updatedPerson
             when (isNothing person.payoutVpa) $
               triggerPendingCashRideCashbackPayoutJob updatedPerson

@@ -64,7 +64,9 @@ import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.UI.OpenMeter as DOpenMeter
 import Domain.Action.UI.Person as SP
 import qualified Domain.Types.CustomerBlockTransactions as DCBT
+import qualified Domain.Types.DeletedPerson as Fields
 import qualified Domain.Types.Depot as DDepot
+import qualified Domain.Types.DepotManager as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DMerchant
@@ -72,6 +74,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrganization as DPO
 import Domain.Types.Person (PersonE (updatedAt))
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.PersonDisability as Fields
 import qualified Domain.Types.PersonStats as DPS
 import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
@@ -82,6 +85,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import qualified Kernel.External.Encryption as Fields
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Types as Language
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
@@ -112,6 +116,7 @@ import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.External.Nandi.Types (GimsVerifyReq (..))
+import qualified SharedLogic.External.Nandi.Types as Fields
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.OTP as SOTP
@@ -141,6 +146,7 @@ import TempAppCode.Types
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
 import qualified Tools.EventTracking as ET
+import qualified Tools.Fields as Fields
 import qualified Tools.MultiModal as MM
 import qualified Tools.Notifications as Notify
 import Tools.SignatureResponseBody (SignatureResponseConfig (..), SignedResponse, wrapWithSignature)

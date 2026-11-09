@@ -13,6 +13,7 @@
 -- -}
 module SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider where
 
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.BookingStatus as DTB
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -23,6 +24,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.JobScheduler
 import qualified Storage.Queries.Booking as QBooking
+import qualified Tools.Fields as Fields
 import Tools.Notifications (notifyAboutScheduledRide)
 
 sendScheduledRidePopupToRider ::

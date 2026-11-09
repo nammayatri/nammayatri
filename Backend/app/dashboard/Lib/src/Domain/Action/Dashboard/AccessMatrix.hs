@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.AccessMatrix where
 
 import qualified Data.Text as T
+import qualified Domain.Types.Merchant as Fields
 import qualified Domain.Types.MerchantCityList as DMatrix
 import Kernel.Beam.Functions as B
 import Kernel.Prelude

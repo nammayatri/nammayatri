@@ -16,6 +16,7 @@ module API.Dashboard.Person where
 
 import qualified Domain.Action.Dashboard.Person as DPerson
 import qualified Domain.Action.Dashboard.Roles as DRoles
+import qualified Domain.Types.Merchant as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
 import Kernel.Prelude

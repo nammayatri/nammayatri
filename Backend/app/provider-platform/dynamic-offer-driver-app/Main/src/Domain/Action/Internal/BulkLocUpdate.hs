@@ -20,6 +20,7 @@ import Data.OpenApi (ToSchema)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Action.UI.Ride.EndRide.Internal (getRouteInfoWithShortestDuration)
 import qualified Domain.Types as DC
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
@@ -38,6 +39,7 @@ import SharedLogic.Ride as SRide
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.Fields as Fields
 import qualified Tools.Maps as TM
 import Tools.Utils (isDropInsideThreshold)
 

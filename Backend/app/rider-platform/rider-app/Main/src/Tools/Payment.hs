@@ -79,6 +79,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
+import qualified Domain.Types.PlaceBasedServiceConfig as Fields
 import Domain.Types.TicketPlace
 import qualified EulerHS.Language as L
 import Kernel.External.Payment.Interface as Reexport hiding

@@ -6,6 +6,7 @@ module SharedLogic.Association.Change
   )
 where
 
+import qualified Domain.Types.DriverRCAssociation as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Kernel.Prelude

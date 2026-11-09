@@ -20,6 +20,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Person as DPerson
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantAccess as Fields
 import qualified Domain.Types.Person.API as AP
 import qualified Domain.Types.Person.Type as SP
 import qualified Domain.Types.Role as DRole

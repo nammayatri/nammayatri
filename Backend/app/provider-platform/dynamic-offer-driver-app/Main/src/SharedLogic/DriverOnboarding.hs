@@ -32,15 +32,19 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types as DVST
+import qualified Domain.Types.AadhaarCard as Fields
 import qualified Domain.Types.DocumentOnboardingStage
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DocumentVerificationConfig as ODC
+import qualified Domain.Types.DriverGstin as Fields
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverLicense as Fields
 import qualified Domain.Types.DriverPanCard as DPan
 import Domain.Types.DriverRCAssociation
 import Domain.Types.Extra.IdfyVerification (docTypeToText, faceCompareDocTag, inProgressIdfyStatuses, parseDocType)
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig
+import qualified Domain.Types.FleetOwnerInformation as Fields
 import qualified Domain.Types.FleetRCAssociation as FRCA
 import qualified Domain.Types.HyperVergeVerification as DHV
 import qualified Domain.Types.IdfyVerification as DIdfy
@@ -52,6 +56,7 @@ import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Translations as Fields
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.Vehicle as DV
 import qualified Domain.Types.VehicleCategory as DVC
@@ -64,6 +69,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.External.Types (Language, VerificationFlow)
+import qualified Kernel.External.Verification.Idfy.Types.Response as Fields
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude

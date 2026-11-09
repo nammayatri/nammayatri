@@ -15,7 +15,9 @@ import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
+import qualified Domain.Types.DriverRCAssociation as Fields
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
+import qualified Domain.Types.FleetOwnerInformation as Fields
 import qualified Domain.Types.HyperVergeVerification as HV
 import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Image as DImage
@@ -24,6 +26,8 @@ import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.ReviewRequest as DRR
+import qualified Domain.Types.Translations as Fields
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleFitnessCertificate as VFC
 import qualified Domain.Types.VehicleInsurance as VIns
@@ -63,6 +67,7 @@ import qualified Storage.Queries.VehiclePUC as VPUCQuery
 import qualified Storage.Queries.VehiclePermit as VPQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Tools.Error (DriverOnboardingError (FaceMatchFailed, ImageNotValid))
+import qualified Tools.Fields as Fields
 
 type DocVerificationConfigs = Either [FODVC.FleetOwnerDocumentVerificationConfig] [DVC.DocumentVerificationConfig]
 

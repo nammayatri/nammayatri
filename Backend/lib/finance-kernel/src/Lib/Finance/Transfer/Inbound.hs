@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.AccountConfig as AccountConfig
 import Lib.Finance.Balance (withAccountBalanceLock)
 import Lib.Finance.Domain.Types.Account (Account, CounterpartyType (SELLER))
+import qualified Lib.Finance.Domain.Types.Account as Fields
 import qualified Lib.Finance.Domain.Types.Transfer as DT
 import Lib.Finance.Error.Types
 import Lib.Finance.FinanceM (AccountRole, FinanceCtx (..), InvoiceConfig, invoice, transfer)

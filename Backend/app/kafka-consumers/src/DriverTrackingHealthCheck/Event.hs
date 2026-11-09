@@ -10,6 +10,7 @@
 module DriverTrackingHealthCheck.Event where
 
 import Environment (Flow)
+import qualified Environment as Fields
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Prelude
 

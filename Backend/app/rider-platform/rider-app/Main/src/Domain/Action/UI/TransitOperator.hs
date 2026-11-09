@@ -10,7 +10,9 @@ import qualified Data.Text as T
 import Domain.Action.UI.TransitOperator.Validation (preprocessUpsertBody, preprocessUpsertBodyAtIdx)
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.JourneyLeg as Fields
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.VehicleSeatLayoutMapping as Fields
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Hedis
@@ -21,15 +23,18 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.External.Nandi.Types
+import qualified SharedLogic.External.Nandi.Types as VehicleUpsertRequest (VehicleUpsertRequest (..))
 import SharedLogic.FRFSUtils (unixToUTC)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MultiModalBus as Fields
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.MultiModal as MM
 import qualified Tools.Notifications as Notifications
 
@@ -376,13 +381,13 @@ transitOperatorUpsertVehiclesUtil merchantShortId city vehicleCategory items = d
       let vNo = T.strip req.vehicle_no
       when (T.null vNo) $ throwError $ InvalidRequest "upsertVehicles: vehicle_no must not be blank"
       pure
-        req{vehicle_no = vNo,
-            fleet_no = nonBlankText req.fleet_no,
-            tag_number = nonBlankText req.tag_number,
-            status = nonBlankText req.status,
-            bus_service_type_id = nonBlankText req.bus_service_type_id,
-            entity_id = nonBlankText req.entity_id,
-            organization_id = nonBlankText req.organization_id
+        req{VehicleUpsertRequest.vehicle_no = vNo,
+            VehicleUpsertRequest.fleet_no = nonBlankText req.fleet_no,
+            VehicleUpsertRequest.tag_number = nonBlankText req.tag_number,
+            VehicleUpsertRequest.status = nonBlankText req.status,
+            VehicleUpsertRequest.bus_service_type_id = nonBlankText req.bus_service_type_id,
+            VehicleUpsertRequest.entity_id = nonBlankText req.entity_id,
+            VehicleUpsertRequest.organization_id = nonBlankText req.organization_id
            }
 
 transitOperatorDeleteVehicleUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Flow RowsAffectedResp

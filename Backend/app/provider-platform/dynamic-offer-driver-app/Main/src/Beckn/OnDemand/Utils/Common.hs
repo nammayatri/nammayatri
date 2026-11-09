@@ -79,6 +79,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data Pricing = Pricing
   { pricingId :: Text,

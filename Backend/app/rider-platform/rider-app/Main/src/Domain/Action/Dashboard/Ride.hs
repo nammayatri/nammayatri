@@ -37,6 +37,7 @@ where
 import qualified "this" API.Types.RiderPlatform.Management.Ride as Common
 import qualified Beckn.ACL.Common as Common
 import Beckn.ACL.Status
+import qualified BecknV2.OnDemand.Types as Fields
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Dashboard.Common
 import qualified "lib-dashboard" Dashboard.Common.RideDebug as ProviderCommon
@@ -60,8 +61,10 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
+import qualified Domain.Types.Quote as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
+import qualified Domain.Types.SearchRequest as Fields
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -83,6 +86,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (Validate, runRequestValidation, validateField)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
+import qualified Lib.Payment.Domain.Types.OfflineOffer as Fields
+import qualified Lib.Payment.Domain.Types.PaymentOrder as Fields
+import qualified Lib.Payment.Domain.Types.PaymentOrderOffer as Fields
 import qualified Lib.Payment.Storage.Queries.OfflineOffer as QOfflineOffer
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QPaymentOrderOffer
@@ -110,6 +116,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import qualified Tools.Fields as Fields
 
 mkCommonRideStatus :: DRide.RideStatus -> Common.RideStatus
 mkCommonRideStatus rs = case rs of

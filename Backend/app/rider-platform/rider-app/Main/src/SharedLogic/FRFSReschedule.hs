@@ -2,6 +2,7 @@ module SharedLogic.FRFSReschedule where
 
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified Data.Time as Time
+import qualified Domain.Types.FRFSConfig as Fields
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSRecon as DFRFSRecon
@@ -14,6 +15,7 @@ import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
+import qualified Domain.Types.PurchasedPassPayment as Fields
 import qualified Domain.Types.RouteDetails as DRouteDetails
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.MultiModal.Interface.Types (MultiModalStopDetails (..))
@@ -24,6 +26,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Utils as JourneyUtils
+import qualified SharedLogic.External.Nandi.Types as Fields
 import qualified SharedLogic.FRFSLiveTrip as FRFSLiveTrip
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSPassTicketStatistics as FRFSPassTicketStatistics
@@ -33,6 +36,7 @@ import SharedLogic.SharedCab (isSharedCabBooking)
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
 import Storage.CachedQueries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.JourneyLeg as CQJourneyLeg
+import qualified Storage.CachedQueries.Merchant.MultiModalBus as Fields
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQP
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -50,6 +54,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 
 validateRescheduleEligibility ::

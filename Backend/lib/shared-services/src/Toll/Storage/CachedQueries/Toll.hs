@@ -22,7 +22,7 @@ where
 
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheConfig (..), CacheFlow)
 import Toll.Domain.Types.Toll
 import Toll.Storage.BeamFlow (BeamFlow)
 import qualified Toll.Storage.Queries.Toll as Queries

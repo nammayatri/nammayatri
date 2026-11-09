@@ -25,6 +25,7 @@ import Kernel.Prelude
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..))
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 import Tools.Notifications (createNotificationReq, dynamicNotifyPerson)
 
 data SharedCabNotificationType

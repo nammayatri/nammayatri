@@ -5,8 +5,10 @@ import qualified Data.Text as T
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverOperatorAssociation as DDOA
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantPushNotification as Fields
 import Domain.Types.Person
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Environment
@@ -29,6 +31,7 @@ import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperatorAss
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as TN
 
 postOperatorConsent ::
@@ -49,7 +52,7 @@ postOperatorConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
   SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id (cast driverId)) SGuard.LinkToOperator (SGuard.TargetDriver (cast driverId)) $ do
     SA.endAssociationsForOperatorLink merchantOperatingCityId transporterConfig driver operator.id
     DOR.makeDriverReferredByOperator merchantOperatingCityId driverId operator.id
-    QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{isActive = True}
+    QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{DDOA.isActive = True}
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig
       driverOperatorAssociation.driverId

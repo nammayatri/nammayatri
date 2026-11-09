@@ -24,6 +24,7 @@ module SharedLogic.Allocator.Jobs.CheckBetterDriverSearchProximity (checkBetterD
 import qualified AWS.S3 as S3
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.SearchTry as DST
 import Kernel.External.Maps (HasCoordinates (getCoordinates))
 import Kernel.External.Maps.Types
@@ -50,6 +51,7 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.SearchTry as QST
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
 

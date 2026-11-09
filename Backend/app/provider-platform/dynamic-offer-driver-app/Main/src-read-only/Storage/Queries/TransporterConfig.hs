@@ -11,6 +11,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TransporterConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Notification.FCM.Types as Fields
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common

@@ -40,6 +40,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 
 type InternalEndpointFlow m r = HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
 

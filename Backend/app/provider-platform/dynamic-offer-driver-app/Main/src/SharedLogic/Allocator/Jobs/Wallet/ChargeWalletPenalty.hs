@@ -38,6 +38,7 @@ import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.Finance.WalletSubscription as WalletSubscription
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 
 chargeWalletPenaltyJob ::
   ( MonadFlow m,

@@ -19,6 +19,8 @@ import qualified Data.Aeson
 import qualified Data.Time as T
 import qualified Domain.Types as DTC
 import Domain.Types.AddOnConfig (AddOnData)
+import qualified Domain.Types.FareParameters as Fields
+import qualified Domain.Types.FarePolicy as Fields
 import Domain.Types.Quote
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Beam.Functions

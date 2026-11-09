@@ -32,6 +32,7 @@ import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import Tools.Error (SharedCabDriverActionError (..), SharedCabSessionError (SessionNotFound))
+import qualified Tools.Fields as Fields
 
 data DriverAction
   = -- | Cancel an allocation the rider hasn't boarded: the booking goes back to FINDING.

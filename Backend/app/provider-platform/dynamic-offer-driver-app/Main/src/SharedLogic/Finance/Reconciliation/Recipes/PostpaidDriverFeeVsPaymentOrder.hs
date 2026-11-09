@@ -35,9 +35,11 @@ import Kernel.Utils.Common
 import Lib.Finance.Reconciliation.Recipe (Recipe (..), defaultClassify)
 import qualified Lib.Finance.Reconciliation.Types as ReconT
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Payment.Domain.Types.PaymentOrder as Fields
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Storage.Queries.DriverFee as QDriverFee
 import qualified Storage.Queries.Invoice as QInvoice
+import qualified Tools.Fields as Fields
 
 recipe ::
   ( BeamFlow m r,

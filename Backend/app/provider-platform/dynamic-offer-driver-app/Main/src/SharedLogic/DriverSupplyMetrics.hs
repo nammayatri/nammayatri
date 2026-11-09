@@ -49,6 +49,7 @@ import SharedLogic.DriverSupplyCounter (onRideCountKey, onlineCountKey)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.DriverInformation as CHDI
+import qualified Tools.Fields as Fields
 import Tools.Metrics.DriverSupplyMetrics.Types
 
 publishTickSecs :: Int

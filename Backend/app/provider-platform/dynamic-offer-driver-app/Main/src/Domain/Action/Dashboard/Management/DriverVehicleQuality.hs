@@ -13,6 +13,7 @@ import qualified Domain.Types.FeedbackBadge as DFB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleRegistrationCertificate as Fields
 import qualified Domain.Types.VehicleVariant as DVariant
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -31,6 +32,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QVRC
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getDriverVehicleQualityList ::
   ShortId DM.Merchant ->

@@ -11,6 +11,7 @@ import Lib.Scheduler
 import SharedLogic.Finance.CashbackPayout (runCashbackPayout)
 import SharedLogic.JobScheduler
 import Storage.Beam.Payment ()
+import qualified Tools.Fields as Fields
 
 executeCashRideCashbackPayoutJob ::
   ( EncFlow m r,

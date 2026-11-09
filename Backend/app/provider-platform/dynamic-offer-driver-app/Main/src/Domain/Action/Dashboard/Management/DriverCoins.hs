@@ -31,6 +31,7 @@ import qualified Domain.Types.Person as SP
 import Domain.Types.PurchaseHistory as PurchaseHistory
 import Domain.Types.Ride as Ride
 import Domain.Types.TransporterConfig
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleVariant as VecVarient
 import Environment
 import EulerHS.Prelude hiding (id)

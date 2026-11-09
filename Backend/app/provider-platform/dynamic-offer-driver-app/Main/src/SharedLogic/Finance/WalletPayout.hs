@@ -12,11 +12,13 @@ module SharedLogic.Finance.WalletPayout
     PayoutPrefetch (..),
     initiateWalletPayoutWith,
     reversalPendingPrefix,
+    WalletPayoutPlan (..),
   )
 where
 
 import qualified Data.Text as T
 import qualified Domain.Types.DriverBankAccount as DDBA
+import qualified Domain.Types.DriverInformation as Fields
 import Domain.Types.Extra.Plan
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -33,6 +35,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance (LedgerEntryMetadata (..))
+import qualified Lib.Finance.AccountConfig as Fields
 import Lib.Finance.Balance (TransferAmount (..), ownerLockKey)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Transfer as DTransfer
@@ -60,6 +63,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOI
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout
 

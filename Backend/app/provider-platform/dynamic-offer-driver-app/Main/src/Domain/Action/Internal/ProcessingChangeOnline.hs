@@ -4,6 +4,9 @@ import Data.Time (Day, DiffTime, UTCTime (..), addUTCTime, diffUTCTime)
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverInformation as DriverInfo
+import qualified Domain.Types.DriverOperatorAssociation as Fields
+import qualified Domain.Types.DriverStats as Fields
+import qualified Domain.Types.FleetOperatorDailyStats as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import EulerHS.Prelude hiding (id, state)
@@ -26,6 +29,7 @@ import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFleetOpsDailyExtra
 import Tools.DriverOnlineSessionEvent (emitClosedSessionEvents)
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 processingChangeOnline ::
   (CacheFlow m r, EsqDBFlow m r) =>

@@ -19,6 +19,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 
 data RideNotificationStatus

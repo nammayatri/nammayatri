@@ -35,6 +35,7 @@ import qualified Kernel.External.SMS as Sms
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import qualified Kernel.Sms.Config as Fields
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -45,6 +46,7 @@ import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsa
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 sendSMS :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> SendSMSReq -> m SendSMSRes
 sendSMS merchantId merchantOpCityId = Sms.sendSMS handler

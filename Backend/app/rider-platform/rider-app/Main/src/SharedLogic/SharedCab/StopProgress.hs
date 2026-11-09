@@ -38,6 +38,7 @@ import SharedLogic.SharedCab.SessionState (PauseReason (OFF_ROUTE), Session (..)
 import SharedLogic.SharedCab.StopProgress.Rules
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Tools.Fields as Fields
 
 type StopProgressFlow m r c =
   ( SessionFlow m r c,

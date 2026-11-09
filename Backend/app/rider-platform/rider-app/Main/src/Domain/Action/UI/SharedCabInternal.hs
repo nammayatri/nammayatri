@@ -61,6 +61,7 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Notifications (SharedCabChatEntityData (..), notifyChatMessage)
 
 checkToken :: Maybe Text -> Environment.Flow ()

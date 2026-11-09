@@ -5,6 +5,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.SharedLogic.RideDiscount as RD
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
+import qualified Kernel.External.Payment.Interface.Types as Fields
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
@@ -20,6 +21,7 @@ import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.Fields as Fields
 
 -- | Request body for the BPP → BAP internal offer-discount lookup.
 --   BPP sends the post-EndRide eight-slot breakup ('projectFareParamsBreakup');

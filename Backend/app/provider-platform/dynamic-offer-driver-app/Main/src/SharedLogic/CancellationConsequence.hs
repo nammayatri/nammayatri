@@ -28,6 +28,7 @@ import Data.Ord (Down (..))
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CancellationConsequenceMatrix as DCCM
 import qualified Domain.Types.Common as DTC
+import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.Extra.CancellationConsequenceMatrix as DExtra
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM

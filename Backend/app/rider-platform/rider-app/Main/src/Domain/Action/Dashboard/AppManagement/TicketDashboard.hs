@@ -16,6 +16,7 @@ import qualified "this" Domain.Action.UI.TicketService as ATS
 import qualified Domain.Types.EventManagement as DEM
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.SeatManagement
+import qualified Domain.Types.ServiceCategory as Fields
 import qualified "this" Domain.Types.TicketPlace
 import qualified Environment
 import EulerHS.Prelude hiding (elem, id, length, notElem, whenJust)
@@ -32,6 +33,7 @@ import qualified Storage.Queries.SeatManagement as QTSM
 import qualified Storage.Queries.ServiceCategory as QSC
 import qualified Storage.Queries.TicketPlace as QTP
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 ticketDashboardUploadAsset :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.Dashboard.AppManagement.TicketDashboard.UploadPublicFileRequest -> Environment.Flow API.Types.Dashboard.AppManagement.TicketDashboard.UploadPublicFileResponse)
 ticketDashboardUploadAsset _merchantShortId _opCity ticketPlaceId (UploadPublicFileRequest {..}) = do

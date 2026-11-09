@@ -17,13 +17,16 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.JobScheduler
 import qualified SharedLogic.SharedCab.Allocation as Allocation
+import qualified SharedLogic.SharedCab.Allocation.Select as Fields
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (SessionClosed))
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
 import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.RefundRetry as RefundRetry
 import SharedLogic.SharedCab.Schedule (claimExpiryRun, claimedTick, ensureDegradedSweep, ownExpiryChain, reseedAllocationTick, scheduleNextExpiry, watchPlan)
+import qualified SharedLogic.SharedCab.Schedule as Fields
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
+import qualified Tools.Fields as Fields
 
 -- rider_config.noLocationPauseMin / noLocationEndMin defaults; read from config once those fields exist.
 pauseAfter :: NominalDiffTime

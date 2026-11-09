@@ -28,10 +28,12 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Domain.Types.DriverFlowStatus as DDF
+import qualified Domain.Types.DriverInformation as Fields
 import qualified Domain.Types.FleetOperatorStats as DFS
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.TransporterConfig as TC
+import qualified Domain.Types.Vehicle as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis

@@ -23,6 +23,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
+import qualified Tools.Fields as Fields
 
 buildSearchReqV2 ::
   (HasFlowEnv m r '["_version" ::: Text, "cloudType" ::: Maybe CloudType, "bapHostRedirectMap" ::: BapHostRedirectMap], CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>

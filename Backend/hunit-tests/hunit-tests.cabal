@@ -75,6 +75,7 @@ library
       TypeFamilies
       TypeOperators
       ViewPatterns
+      OverloadedRecordDot
   build-depends:
       HUnit
     , aeson
@@ -96,8 +97,6 @@ library
     , mobility-core
     , mock-sms
     , mtl
-    , record-dot-preprocessor
-    , record-hasfield
     , rider-app
     , shared-services
     , string-conversions
@@ -149,6 +148,7 @@ executable hunit-tests
       TypeFamilies
       TypeOperators
       ViewPatterns
+      OverloadedRecordDot
   ghc-options: -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       HUnit
@@ -172,8 +172,6 @@ executable hunit-tests
     , mobility-core
     , mock-sms
     , mtl
-    , record-dot-preprocessor
-    , record-hasfield
     , rider-app
     , shared-services
     , string-conversions

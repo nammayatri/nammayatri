@@ -25,7 +25,10 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Domain.Action.UI.PartnerBookingStatement as PBS
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.PartnerInvoiceDataLog as DPIL
+import qualified Domain.Types.Person as Fields
+import qualified Domain.Types.Ride as Fields
 import qualified Domain.Types.RideStatus as DRideStatus
 import Environment (SFTPConfig (..))
 import qualified Kernel.Beam.Functions as B
@@ -34,6 +37,7 @@ import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude hiding (hPutStr)
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common hiding (HasField)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)

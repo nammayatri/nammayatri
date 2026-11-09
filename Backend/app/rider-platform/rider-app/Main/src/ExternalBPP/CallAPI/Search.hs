@@ -12,6 +12,7 @@ import Domain.Types.FRFSSearch as DSearch
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.RouteStopMapping as Fields
 import qualified Domain.Types.Station as DStation
 import ExternalBPP.CallAPI.Types
 import qualified ExternalBPP.Flow as Flow
@@ -26,6 +27,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 
 discoverySearch :: FRFSSearchFlow m r => Merchant -> BecknConfig -> IntegratedBPPConfig -> Bool -> API.FRFSDiscoverySearchAPIReq -> m ()

@@ -33,6 +33,8 @@ import Lib.Yudhishthira.Tools.DynamicLogicGroup (chooseWithGroups)
 import qualified Lib.Yudhishthira.Tools.TimeBoundRollout as LYTB
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as Fields
+import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as Fields
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType)
 import System.Environment (lookupEnv)
 

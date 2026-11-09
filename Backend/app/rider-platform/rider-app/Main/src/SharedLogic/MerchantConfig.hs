@@ -39,13 +39,16 @@ import qualified Domain.Types.BookingStatus as BT
 import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceUsageConfig as Fields
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.RegistrationToken as Fields
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
+import qualified Kernel.Types.SlidingWindowCounters as Fields
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig)

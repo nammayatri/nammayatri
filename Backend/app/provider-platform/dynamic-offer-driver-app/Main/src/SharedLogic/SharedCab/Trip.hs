@@ -15,10 +15,12 @@ import Data.Maybe (listToMaybe)
 import Data.Time (utctDay)
 import qualified Domain.Types.DailyStats as DDS
 import Domain.Types.IntegratedBPPConfig (IntegratedBPPConfig)
+import qualified Domain.Types.IntegratedBPPConfig as Fields
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.Person as SP
 import Domain.Types.SharedCabSession (SessionStatus (ENDED), SharedCabSession)
+import qualified Domain.Types.SharedCabSession as Fields
 import qualified Domain.Types.Vehicle as DVehicle
 import Domain.Types.VehicleTrip
 import EulerHS.Prelude hiding (id)
@@ -35,6 +37,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DailyStats as SQDS
 import qualified Storage.Queries.VehicleTrip as QVT
+import qualified Tools.Fields as Fields
 
 -- | A run is also the driver's LTS ride: LTS forwards the cab's pings with the ride's id as their trip and its route and plate, so
 -- the phone sets none of them, and refuses them without one. A driver changes route only through a new run (and ride).

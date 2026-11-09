@@ -13,8 +13,13 @@ import Domain.Action.UI.Person (getPersonNumber)
 import qualified Domain.Types.DocumentVerificationConfig as DDoc
 import qualified Domain.Types.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DDI
+import qualified Domain.Types.DriverLocation as Fields
+import qualified Domain.Types.DriverOperatorAssociation as Fields
+import qualified Domain.Types.Image as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Vehicle as Fields
+import qualified Domain.Types.VehicleServiceTier as Fields
 import qualified Domain.Types.VehicleVariant as DV
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -48,6 +53,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Vehicle as QV
 import Tools.Error (GenericError (InvalidRequest))
+import qualified Tools.Fields as Fields
 
 getLiveMapDrivers ::
   ID.ShortId Domain.Types.Merchant.Merchant ->

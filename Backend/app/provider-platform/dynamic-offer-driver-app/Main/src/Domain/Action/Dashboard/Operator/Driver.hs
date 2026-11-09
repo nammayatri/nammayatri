@@ -44,12 +44,18 @@ import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
 import qualified Domain.Types.DocumentReminderHistory as DRH
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverGstin as DDGST
+import qualified Domain.Types.DriverIdentityInfo as Fields
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as DDL
+import qualified Domain.Types.DriverOperatorAssociation as Fields
 import qualified Domain.Types.DriverPanCard as DDPC
+import qualified Domain.Types.DriverRCAssociation as Fields
 import qualified Domain.Types.DriverSSN as DDSSN
 import qualified Domain.Types.DriverUdyam as DDUDYAM
+import qualified Domain.Types.FleetOperatorStats as Fields
+import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as Fields
 import qualified Domain.Types.FleetOwnerInformation as DFOI
+import qualified Domain.Types.Image as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -60,6 +66,7 @@ import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.ReviewRequest as DRR
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Domain.Types.TransporterConfig (TransporterConfig)
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Environment
 import EulerHS.Prelude (whenNothing_, (<|>))
@@ -132,6 +139,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as QVRC
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as QVRCE
 import qualified Tools.ChallanSearch as ChallanSearch
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.SMS as Sms hiding (Success)
 
 getDriverOperationGetAllHubs ::

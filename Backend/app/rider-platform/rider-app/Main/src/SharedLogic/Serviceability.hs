@@ -1,11 +1,13 @@
 module SharedLogic.Serviceability where
 
 import qualified Domain.Action.UI.Serviceability as Serviceability
+import qualified Domain.Types.MerchantState as Fields
 import Domain.Types.Person
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Geofencing as Fields
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantState as QMMS
 import Tools.Error

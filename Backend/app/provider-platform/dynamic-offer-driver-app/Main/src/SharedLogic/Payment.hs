@@ -26,7 +26,7 @@ import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.StclMembership as StclMembership
-import Domain.Types.SubscriptionConfig (SubscriptionConfig, VendorMigrationMapping (..))
+import Domain.Types.SubscriptionConfig (SubscriptionConfig (..), VendorMigrationMapping (..))
 import qualified Domain.Types.VendorFee as VF
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Functions as B
@@ -37,7 +37,7 @@ import Kernel.External.Payment.Juspay.Types.CreateOrder (clientId, payload)
 import qualified Kernel.External.Payment.Types as PaymentTypes
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig)
+import Kernel.Sms.Config (SmsConfig (..))
 import Kernel.Storage.Esqueleto as Esq hiding (Value, groupBy, on)
 import Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -59,6 +59,7 @@ import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.StclMembership as QStclMembership
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Metrics
 import qualified Tools.Payment as TPayment
 import qualified Tools.SMS as Sms

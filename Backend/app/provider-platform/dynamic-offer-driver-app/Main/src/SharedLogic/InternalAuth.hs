@@ -8,6 +8,7 @@ module SharedLogic.InternalAuth
 where
 
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant as Fields
 import Environment
 import Kernel.Prelude
 import Kernel.Types.Error

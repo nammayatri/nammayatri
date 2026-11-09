@@ -14,6 +14,7 @@
 
 module SharedLogic.Scheduler.Jobs.PostRideSafetyNotification where
 
+import qualified Domain.Types.Ride as Fields
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Notification
 import Kernel.External.Types (SchedulerFlow)
@@ -29,6 +30,7 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Notifications
 
 postRideSafetyNotification ::

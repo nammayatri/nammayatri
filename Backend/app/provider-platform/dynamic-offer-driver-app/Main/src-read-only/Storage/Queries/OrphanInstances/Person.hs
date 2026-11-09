@@ -15,6 +15,7 @@ import qualified Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.Utils
 import qualified Storage.Beam.Person as Beam
 import qualified Storage.Queries.Transformers.Person
+import qualified Tools.Fields as Fields
 
 instance FromTType' Beam.Person Domain.Types.Person.Person where
   fromTType' (Beam.PersonT {..}) = do

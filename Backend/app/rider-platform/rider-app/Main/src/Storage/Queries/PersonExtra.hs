@@ -6,6 +6,7 @@ import qualified Data.Time as T
 import Domain.Action.UI.Person
 import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant as Fields
 import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person

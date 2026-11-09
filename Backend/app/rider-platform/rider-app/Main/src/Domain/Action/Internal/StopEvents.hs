@@ -16,6 +16,8 @@ module Domain.Action.Internal.StopEvents where
 
 import Data.Foldable ()
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.LocationMapping as Fields
+import qualified Domain.Types.Person as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.StopInformation as DSI

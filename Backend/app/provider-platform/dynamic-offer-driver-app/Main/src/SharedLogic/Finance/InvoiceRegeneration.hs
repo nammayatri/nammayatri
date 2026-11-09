@@ -25,6 +25,7 @@ import qualified Lib.Finance.Invoice.Service as InvoiceSvc
 import qualified Lib.Finance.Ledger.Service as LedgerSvc
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified SharedLogic.Finance.Wallet as Wallet
+import qualified Tools.Fields as Fields
 
 data PriorInvoiceContext = PriorInvoiceContext
   { priorInvoice :: FInvoice.Invoice,

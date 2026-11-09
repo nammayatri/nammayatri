@@ -26,6 +26,7 @@ import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.Finance.Balance (withAccountBalanceLock)
 import Lib.Finance.Domain.Types.LedgerEntry (EntryType (Reversal), LedgerEntry)
+import qualified Lib.Finance.Domain.Types.LedgerEntry as Fields
 import qualified Lib.Finance.Domain.Types.Transfer as DT
 import Lib.Finance.Error.Types
 import Lib.Finance.FinanceM (FinanceCtx (..))

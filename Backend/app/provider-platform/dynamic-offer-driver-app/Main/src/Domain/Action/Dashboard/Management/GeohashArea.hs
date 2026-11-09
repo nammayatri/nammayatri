@@ -24,6 +24,7 @@ module Domain.Action.Dashboard.Management.GeohashArea
 where
 
 import qualified "this" API.Types.ProviderPlatform.Management.GeohashArea as Common
+import qualified Domain.Types.GeohashArea as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Environment

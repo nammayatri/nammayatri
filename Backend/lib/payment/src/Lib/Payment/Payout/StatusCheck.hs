@@ -16,7 +16,7 @@ import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (incrementGenericMetrics)
 import Kernel.Utils.Common
-import Lib.Payment.Domain.Types.PayoutOrder (PayoutOrder)
+import Lib.Payment.Domain.Types.PayoutOrder (PayoutOrder, PayoutOrderE (..))
 import Lib.Payment.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import Lib.Scheduler.Types (ExecutionResult (..))

@@ -55,6 +55,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
+import qualified SharedLogic.CallBAPInternal as Fields
 import qualified SharedLogic.DriverPool as DP
 import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
 import qualified SharedLogic.SharedCab.RiderClient as SharedCabBAP
@@ -67,6 +68,7 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleTrip as QVT
 import qualified Tools.Call as TCall
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 type DriverAuthInfo = (Id SP.Person, Id Merchant, Id MerchantOperatingCity)
 

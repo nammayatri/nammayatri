@@ -16,6 +16,8 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.RiderConfig as DRC
+import qualified Domain.Types.RouteDetails as Fields
+import qualified Domain.Types.RouteStopMapping as Fields
 import qualified Domain.Types.Trip as DTrip
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
@@ -31,6 +33,7 @@ import SharedLogic.SharedCab.Allocation.Types (RiderFix (..), allocationDeadline
 import qualified SharedLogic.SharedCab.Approach as Approach
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
 import SharedLogic.SharedCab.BookingState (readBookingState)
+import qualified SharedLogic.SharedCab.BookingState as Fields
 import qualified SharedLogic.SharedCab.Call as SharedCabCall
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as SharedCabDegraded

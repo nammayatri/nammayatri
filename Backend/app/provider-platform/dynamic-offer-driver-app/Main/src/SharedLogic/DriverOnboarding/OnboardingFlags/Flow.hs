@@ -33,6 +33,7 @@ import qualified Domain.Types.Common as Common
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverRCAssociation as Fields
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -64,6 +65,7 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCEQuery
 import Tools.Error (BlockReasonFlag (..))
+import qualified Tools.Fields as Fields
 
 data VehicleDocsEntry = VehicleDocsEntry
   { vdeRegistrationNo :: Text,

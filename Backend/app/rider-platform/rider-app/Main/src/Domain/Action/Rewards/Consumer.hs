@@ -40,6 +40,7 @@ import qualified Storage.Queries.RewardCohort as QRC
 import qualified Storage.Queries.RewardUnlock as QRU
 import qualified Storage.Queries.RewardUnlockExtra as QRUE
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 import qualified Tools.Rewards.RedisPool as Pool
 import qualified Tools.Rewards.RiderContextReader as Ctx

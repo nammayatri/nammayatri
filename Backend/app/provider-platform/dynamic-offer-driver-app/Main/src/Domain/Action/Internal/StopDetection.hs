@@ -2,10 +2,13 @@ module Domain.Action.Internal.StopDetection where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.Booking as Fields
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as DP
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Trip as DTC
+import qualified Domain.Types.VehicleServiceTier as Fields
 import Environment
 import EulerHS.Prelude
 import Kernel.External.Maps.Types
@@ -27,6 +30,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 
 data StopDetectionReq = StopDetectionReq

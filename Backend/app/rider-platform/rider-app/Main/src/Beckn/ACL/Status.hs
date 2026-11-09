@@ -19,15 +19,18 @@ import qualified Beckn.Types.Core.Taxi.Status as Status
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import Control.Lens ((%~))
 import qualified Data.Text as T
+import qualified Domain.Types.BecknConfig as Fields
 import Domain.Types.Booking (Booking)
+import qualified Domain.Types.Booking as Fields
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant as Fields
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
 import Kernel.Types.Error
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))

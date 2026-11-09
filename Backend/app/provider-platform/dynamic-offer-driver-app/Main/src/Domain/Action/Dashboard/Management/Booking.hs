@@ -148,7 +148,7 @@ postBookingSyncMultiple merchantShortId opCity req = do
               unless (bookingNewStatus == booking.status) $ do
                 QBooking.updateStatus bookingId bookingNewStatus
                 whenJust mbCancellationReason QBCR.upsert
-              let updBooking = booking{status = bookingNewStatus}
+              let updBooking = booking{DBooking.status = bookingNewStatus}
               void $ SyncRide.rideSync (mbCancellationReason <&> (.source)) (Just ride) updBooking merchant True
             Nothing -> do
               let mbCancellationReason =
@@ -158,7 +158,7 @@ postBookingSyncMultiple merchantShortId opCity req = do
               when (booking.status /= DBooking.CANCELLED) $ do
                 QBooking.updateStatus bookingId DBooking.CANCELLED
                 whenJust mbCancellationReason QBCR.upsert
-              let updBooking = booking{status = DBooking.CANCELLED}
+              let updBooking = booking{DBooking.status = DBooking.CANCELLED}
               void $ SyncRide.rideSync (mbCancellationReason <&> (.source)) Nothing updBooking merchant True
           pure Common.SuccessItem
     pure $ Common.MultipleBookingSyncRespItem {bookingId = reqItem.bookingId, info}

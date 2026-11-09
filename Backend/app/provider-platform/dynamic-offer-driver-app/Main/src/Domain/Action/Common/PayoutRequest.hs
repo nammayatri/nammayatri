@@ -17,6 +17,7 @@ import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.LocationUpdates (LocationUpdateFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DCommon
+import qualified Lib.Payment.Domain.Types.PayoutOrder as Fields
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Payout.Order as PayoutOrder
 import qualified Lib.Payment.Payout.RequestStatus as RequestStatus

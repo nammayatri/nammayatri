@@ -223,7 +223,8 @@ library
       TypeSynonymInstances
       UndecidableInstances
       DerivingStrategies
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -245,8 +246,6 @@ library
     , openapi3
     , postgresql-simple
     , process
-    , record-dot-preprocessor
-    , record-hasfield
     , sequelize
     , servant-server
     , text

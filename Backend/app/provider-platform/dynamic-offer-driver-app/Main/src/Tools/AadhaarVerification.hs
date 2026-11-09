@@ -35,6 +35,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 generateAadhaarOtp ::
   ServiceFlow m r =>

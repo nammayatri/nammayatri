@@ -36,6 +36,7 @@ import qualified "this" Domain.Types.EventManagement
 import qualified Domain.Types.EventManagement.Permissions as Permissions
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.RiderConfig as Fields
 import qualified Domain.Types.ServiceCategory
 import qualified Domain.Types.ServiceCategory as DServiceCategory
 import qualified Domain.Types.ServicePeopleCategory

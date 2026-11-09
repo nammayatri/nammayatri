@@ -22,6 +22,7 @@ import qualified API.Types.Dashboard.RideBooking.Volunteer as Common
 import qualified "lib-dashboard" Dashboard.Common as Common
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Ride as DRide
+import qualified Domain.Action.UI.Ride.Common as Fields
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as Domain
@@ -51,6 +52,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.SMS as Sms
 
 getVolunteerBooking :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.BookingInfoResponse

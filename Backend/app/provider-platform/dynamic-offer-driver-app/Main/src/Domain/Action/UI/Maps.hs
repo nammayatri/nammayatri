@@ -42,6 +42,7 @@ import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Tools.Fields as Fields
 import qualified Tools.Maps as Maps
 
 data AutoCompleteReq = AutoCompleteReq

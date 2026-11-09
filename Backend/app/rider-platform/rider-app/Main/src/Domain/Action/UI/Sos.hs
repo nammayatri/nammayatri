@@ -26,6 +26,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.PersonDisability as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderConfig as DRC
 import Environment
@@ -45,6 +46,7 @@ import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.SOS as PoliceSOS
 import qualified Kernel.External.SOS.ERSS.Auth as ERSSAuth
+import qualified Kernel.External.SOS.ERSS.Config as Fields
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -59,6 +61,8 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Common as SafetyCommon
+import qualified Safety.Domain.Types.PersonDefaultEmergencyNumber as Fields
+import qualified Safety.Domain.Types.SafetySettings as Fields
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
@@ -90,6 +94,7 @@ import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.Call as Call
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Ticket as Ticket
 
 data SOSVideoUploadReq = SOSVideoUploadReq

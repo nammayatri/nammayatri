@@ -39,6 +39,7 @@ import Storage.Clickhouse.ExternalApiCallLogs (decodePayload)
 import qualified Storage.Clickhouse.ExternalApiCallLogs as CHExternalApiCallLogs
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Tools.Fields as Fields
 
 googleSnapApiName, osrmSnapApiName :: Text
 googleSnapApiName = "snapToRoad"

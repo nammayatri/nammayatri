@@ -27,18 +27,27 @@ import qualified Domain.Types.BookingPartiesLink as DBPL
 import qualified Domain.Types.BookingStatus as DRB
 import Domain.Types.CancellationReason
 import qualified Domain.Types.DeliveryDetails as DTDD
+import qualified Domain.Types.DriverOffer as Fields
+import qualified Domain.Types.Estimate as Fields
 import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.InsuranceConfig as Fields
+import qualified Domain.Types.InterCityDetails as Fields
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.OfferEntity as DOfferEntity
+import qualified Domain.Types.ParcelDetails as Fields
 import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.QuoteBreakup as Fields
+import qualified Domain.Types.RentalDetails as Fields
 import qualified Domain.Types.SearchRequest as DSReq
+import qualified Domain.Types.SearchRequestPartiesLink as Fields
+import qualified Domain.Types.SpecialZoneQuote as Fields
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Encryption (decrypt)
@@ -54,6 +63,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Payment.Domain.Action as Fields
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
@@ -85,6 +95,7 @@ import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
 import Tools.Event
+import qualified Tools.Fields as Fields
 import TransactionLogs.Types
 
 data DConfirmReq = DConfirmReq
