@@ -622,15 +622,27 @@ curl -s -o /dev/null -w '%{http_code}\n' https://api.movinapp.net/place/autocomp
 
 A 404 on the first means the edge has no block for it.
 
-### Not done yet
+### Where it stands, and what is left
 
-- **Day 2:** the shim's routes (propose, « Mes lieux proposés », search by
-  type), approved places in autocomplete / details / labels, the daily cap and
-  the 100 m duplicate check. **Search by type must call
-  `place_type_of(class, subclass, display_name)` — three arguments**: with two,
-  the name is NULL and every church is a mosque again. And **account
-  deletion**: the website's
-  `counts.sql` and `anonymise.sql` must count and treat this table together,
-  and the public deletion page must say so. Moved from day 1 because
-  `counts.sql` is one statement and cannot name a table that may not exist.
-- Days 3–7: the console screen, the app screens, the release.
+**Day 2 (2026-11-09) is done**: the `locality` column, the `/places/` routes and
+their edge block, approved places in search / details / labels, the live probe
+(three runs, three fixes), and — in the website — account deletion (`counts.sql`
+and `anonymise.sql`: pending and refused proposals erased with their history,
+approved ones kept; the public page in French, Arabic and English). Phones see
+nothing until the app ships the screens.
+
+Left:
+
+- **Day 3:** the console's « Lieux proposés » screen (edit, approve, refuse
+  with a reason code, the history from `movin.suggested_place_decision`).
+- **Days 4–5:** the app — « Ajouter un lieu », « Mes lieux proposés », the
+  type buttons, the driver's side; and the app's own deletion screen
+  (« Ce qui est supprimé / Ce qui reste ») gets the proposed places, to say
+  what the website already says.
+- **Before the app goes to the stores:** the privacy policy page, Google
+  Play's « Sécurité des données » and App Store Connect's « Confidentialité de
+  l'app » must name the proposed places — a place name and a pin, linked to
+  the account. Written in the plan, day 7.
+- **Worth doing:** keep the localities' Arabic names in the shim's memory
+  (they change only with a map rebuild) — the one query left that scans the
+  index, usually ~100 ms, 879 ms once.
