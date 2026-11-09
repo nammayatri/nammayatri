@@ -575,7 +575,7 @@ answered: pending, refused, or approved-then-refused all say « not found ».
 
 | Route | With proposals |
 |---|---|
-| `/place/autocomplete/json` | approved proposals whose name or Arabic name contains what was typed (`geo.normalise` on both sides, `strpos` so `%` is a character) go first — 3 at most, nearest first — and the index fills the rest of the 8. If that query fails, the search answers from the index alone. |
+| `/place/autocomplete/json` | approved proposals whose name or Arabic name contains what was typed (`geo.normalise` on both sides, `strpos` so `%` is a character, the typed side TRIMMED: `geo.normalise` turns every run of punctuation into a space and keeps it, so « %% » once matched every name with a space in it — live probe, 2026-11-09) go first — 3 at most, nearest first — and the index fills the rest of the 8. If that query fails, the search answers from the index alone. |
 | `/place/details/json?place_id=u…` | the place, signed with the country it was given |
 | `/place/labels/json?ids=…,u…` | its Arabic name, and its locality's, as for an OSM place; the index is not asked when every id is a `u…` |
 | `/geocode/json?place_id=u…` | as details. A dropped pin (`latlng=`) still names the nearest OSM feature: proposals are not in reverse geocoding |

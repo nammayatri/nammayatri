@@ -129,9 +129,9 @@ PREPARE approved_matching AS
   + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m
   from pg_temp.suggested_place
   where status = 'approved'
-  and geo.normalise($1) <> ''
-  and (strpos(geo.normalise(name), geo.normalise($1)) > 0
-  or strpos(geo.normalise(coalesce(name_ar, '')), geo.normalise($1)) > 0)
+  and btrim(geo.normalise($1)) <> ''
+  and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0
+  or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0)
   order by distance_m
   limit $4;
 \echo '--- « tfeila » -> Café Sonde Tfeila'
@@ -140,8 +140,10 @@ EXECUTE approved_matching('tfeila', 18.0858, -15.9785, 3);
 EXECUTE approved_matching('المسبار', 18.0858, -15.9785, 3);
 \echo '--- « attente » -> nothing (pending is never shown)'
 EXECUTE approved_matching('attente', 18.0858, -15.9785, 3);
-\echo '--- « %% » -> nothing (normalises to empty; % is not a wildcard)'
+\echo '--- « %% » -> nothing (normalises to a lone space, trimmed to empty; ALL THREE before the trim, live run 2026-11-09)'
 EXECUTE approved_matching('%%', 18.0858, -15.9785, 3);
+\echo '--- « Tfeila! » -> the café (trailing punctuation is a trailing space until trimmed)'
+EXECUTE approved_matching('Tfeila!', 18.0858, -15.9785, 3);
 
 \echo '=== 7. approvedPlace (details, geocode by id): u1 approved, u4 pending -> no row'
 PREPARE approved_place AS

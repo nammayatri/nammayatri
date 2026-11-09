@@ -59,12 +59,17 @@ const { build, OUT } = require(path.join(__dirname, '..', 'investigations', 'pro
 
   t.section('4. sections 5-8 run (PGlite, stand-ins for the index)');
   const db = await open();
-  // The two things from `geo` these statements read, cut down: the normaliser
-  // (lower case is enough for these inputs) and the names table.
+  // The two things from `geo` these statements read: the names table, cut
+  // down, and the normaliser AS THE LIVE ONE IS (geocoder/arabic-search.sql),
+  // minus unaccent, which PGlite lacks -- above all it does NOT trim. The first
+  // stand-in trimmed, and so passed a guard the live index then failed: « %% »
+  // matched every proposal on the live run of 2026-11-09.
   await db.exec(`
     CREATE SCHEMA IF NOT EXISTS geo;
-    CREATE FUNCTION geo.normalise(t text) RETURNS text LANGUAGE sql IMMUTABLE AS
-      $$ SELECT btrim(regexp_replace(lower(t), '[^[:alnum:]]+', ' ', 'g')) $$;
+    CREATE FUNCTION geo.normalise(t text) RETURNS text LANGUAGE sql IMMUTABLE STRICT AS
+      $$ SELECT regexp_replace(
+                  translate(regexp_replace(lower(t), '[ًٌٍَُِّْـ]', '', 'g'), 'أإآٱىةؤئ', 'اااايهوي'),
+                  '[^a-z0-9ء-ي]+', ' ', 'g') $$;
     CREATE TABLE geo.place (display_name text, name_ar text, importance real);
     INSERT INTO geo.place VALUES ('Tevragh Zeina', 'تفرغ زينة', 0.8), ('Hydra', 'حيدرة', 0.8);
     CREATE TEMP TABLE suggested_place (LIKE movin.suggested_place INCLUDING ALL);
@@ -91,13 +96,16 @@ const { build, OUT } = require(path.join(__dirname, '..', 'investigations', 'pro
   const ar = (await rowsOf(executes('localities_ar')[0])).map((r) => `${r.display_name}:${r.name_ar}`).sort();
   t.ok(executes('localities_ar').length === 1 && JSON.stringify(ar) === JSON.stringify(['Hydra:حيدرة']),
     'the localities in Arabic: one EXECUTE, a literal list, the names the index holds', ar.join(' '));
-  const [tfeila, arabic, attente, percent] = executes('approved_matching');
+  const [tfeila, arabic, attente, percent, punct] = executes('approved_matching');
   const names = async (sql) => (await rowsOf(sql)).map((r) => r.display_name);
   t.ok(JSON.stringify(await names(tfeila)) === JSON.stringify(['Café Sonde Tfeila']), '« tfeila » finds the approved café');
   t.ok(JSON.stringify(await names(arabic)) === JSON.stringify(['Café Sonde Tfeila', 'Pharmacie Sonde Hydra']),
     '« المسبار » finds both by their Arabic names, the near one first');
   t.ok((await names(attente)).length === 0, '« attente »: the pending café is never shown');
-  t.ok((await names(percent)).length === 0, '« %% »: nothing (it normalises to empty)');
+  t.ok((await names(percent)).length === 0, '« %% »: nothing (normalised to a lone space, trimmed to empty)',
+    JSON.stringify(await names(percent)));
+  t.ok(JSON.stringify(await names(punct)) === JSON.stringify(['Café Sonde Tfeila']),
+    '« Tfeila! »: the café -- trailing punctuation does not leave a space to match');
   const [u1, u4] = executes('approved_place');
   t.ok((await rowsOf(u1)).length === 1 && (await rowsOf(u4)).length === 0, 'details: u1 (approved) answers, u4 (pending) does not');
   const labels = (await rowsOf(executes('labels')[0])).map((r) => `${r.place_id}:${r.locality_ar || ''}`).sort();

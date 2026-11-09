@@ -112,6 +112,12 @@ async function approvedPlace(placeId) {
  * folding included -- so a proposal is matched exactly as an OSM place would
  * be; `strpos` rather than LIKE, so a typed % or _ is a character, not a
  * wildcard. A query that normalises to nothing (« -- ») matches nothing.
+ *
+ * TRIMMED, because geo.normalise does not trim: every run of anything that
+ * is not a letter or a digit becomes ONE SPACE, ends included. Untrimmed,
+ * « %% » normalised to ' ', passed the « not empty » test and matched every
+ * name with a space in it -- all of them, on the live run of 2026-11-09 --
+ * and « café, » looked for 'cafe ' and missed « Grand Café ».
  * The distance is plain trigonometry: the table is small and needs no index.
  */
 async function approvedMatching(input, lat, lon, limit) {
@@ -122,9 +128,9 @@ async function approvedMatching(input, lat, lon, limit) {
               + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m
        from movin.suggested_place
       where status = 'approved'
-        and geo.normalise($1) <> ''
-        and (strpos(geo.normalise(name), geo.normalise($1)) > 0
-             or strpos(geo.normalise(coalesce(name_ar, '')), geo.normalise($1)) > 0)
+        and btrim(geo.normalise($1)) <> ''
+        and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0
+             or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0)
       order by distance_m
       limit $4`,
     [input, lat, lon, limit],

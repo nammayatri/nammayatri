@@ -164,7 +164,8 @@ SELECT v.n, v.t, v.n, v.t, v.ar, v.lat, v.lon, v.c,
     run('« tfeila » -> Café Sonde Tfeila', 'approved_matching', "'tfeila', 18.0858, -15.9785, 3"),
     run('« المسبار » (Arabic name) -> the café, then the Algiers pharmacy', 'approved_matching', "'المسبار', 18.0858, -15.9785, 3"),
     run('« attente » -> nothing (pending is never shown)', 'approved_matching', "'attente', 18.0858, -15.9785, 3"),
-    run('« %% » -> nothing (normalises to empty; % is not a wildcard)', 'approved_matching', "'%%', 18.0858, -15.9785, 3"), '');
+    run('« %% » -> nothing (normalises to a lone space, trimmed to empty; ALL THREE before the trim, live run 2026-11-09)', 'approved_matching', "'%%', 18.0858, -15.9785, 3"),
+    run('« Tfeila! » -> the café (trailing punctuation is a trailing space until trimmed)', 'approved_matching', "'Tfeila!', 18.0858, -15.9785, 3"), '');
 
   L(`\\echo '=== 7. approvedPlace (details, geocode by id): u1 approved, u4 pending -> no row'`,
     prep('approved_place', s.approvedPlace),
