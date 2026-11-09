@@ -115,6 +115,7 @@ library
       API.UI.Issue
       API.UI.Maps
       API.UI.ParkingBooking
+      API.UI.PartnerAccountLinkPage
       API.UI.PartnerOrganizationFRFS
       API.UI.Pass
       API.UI.Payment
@@ -382,6 +383,7 @@ library
       Domain.Action.UI.OpenMeter
       Domain.Action.UI.ParkingBooking
       Domain.Action.UI.PartnerBookingStatement
+      Domain.Action.UI.PartnerAccountLink
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Pass
       Domain.Action.UI.PassDetails
@@ -1135,6 +1137,7 @@ library
       API.Action.UI.Offers
       API.Action.UI.OpenMeter
       API.Action.UI.ParkingBooking
+      API.Action.UI.PartnerAccountLink
       API.Action.UI.PartnerBookingStatement
       API.Action.UI.Pass
       API.Action.UI.PassDetails
@@ -1303,6 +1306,7 @@ library
       API.Types.UI.NyRegularSubscription
       API.Types.UI.OpenMeter
       API.Types.UI.ParkingBooking
+      API.Types.UI.PartnerAccountLink
       API.Types.UI.PartnerBookingStatement
       API.Types.UI.Pass
       API.Types.UI.PassDetails

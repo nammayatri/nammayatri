@@ -505,6 +505,47 @@ instance IsHTTPError PartnerOrgConfigError where
 
 instance IsAPIError PartnerOrgConfigError
 
+-- | Errors of the partner account-link flow. Messages never echo the phone number or
+-- the link: both reach a browser page and partner logs.
+data PartnerAccountLinkError
+  = AccountLinkNotFound
+  | AccountLinkWrongStep
+  | AccountLinkBusy
+  | AccountLinkOtpSendLimitExceeded
+  | AccountLinkOtpAttemptsExceeded
+  | AccountLinkPersonBlocked
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''PartnerAccountLinkError
+
+instance IsBaseError PartnerAccountLinkError where
+  toMessage = \case
+    AccountLinkNotFound -> Just "This link is invalid or has expired."
+    AccountLinkWrongStep -> Just "This step is already done. Reload the page."
+    AccountLinkBusy -> Just "Please wait, your last request is still running."
+    AccountLinkOtpSendLimitExceeded -> Just "Too many OTP requests for this link."
+    AccountLinkOtpAttemptsExceeded -> Just "Too many wrong OTPs. Start again from the app."
+    AccountLinkPersonBlocked -> Just "This account cannot be linked."
+
+instance IsHTTPError PartnerAccountLinkError where
+  toErrorCode = \case
+    AccountLinkNotFound -> "ACCOUNT_LINK_NOT_FOUND"
+    AccountLinkWrongStep -> "ACCOUNT_LINK_WRONG_STEP"
+    AccountLinkBusy -> "ACCOUNT_LINK_BUSY"
+    AccountLinkOtpSendLimitExceeded -> "ACCOUNT_LINK_OTP_SEND_LIMIT_EXCEEDED"
+    AccountLinkOtpAttemptsExceeded -> "ACCOUNT_LINK_OTP_ATTEMPTS_EXCEEDED"
+    AccountLinkPersonBlocked -> "ACCOUNT_LINK_PERSON_BLOCKED"
+
+  toHttpCode = \case
+    AccountLinkNotFound -> E404
+    AccountLinkWrongStep -> E400
+    AccountLinkBusy -> E429
+    AccountLinkOtpSendLimitExceeded -> E429
+    AccountLinkOtpAttemptsExceeded -> E429
+    AccountLinkPersonBlocked -> E403
+
+instance IsAPIError PartnerAccountLinkError
+
 data RouteError
   = RouteNotFound Text
   | RouteDoesNotExist Text
