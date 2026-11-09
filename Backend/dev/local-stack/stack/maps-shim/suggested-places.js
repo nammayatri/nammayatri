@@ -80,6 +80,11 @@ const inOurBox = (lat, lon) => lat >= 14 && lat <= 38 && lon >= -18 && lon <= 12
 // Bidi overrides and isolates: invisible, and able to make a name READ
 // differently in the console from what it is. Nothing a place name needs.
 const BIDI_CONTROLS = /[‪-‮⁦-⁩‎‏]/g;
+// Characters that print as nothing: zero-width space, word joiner, byte-order
+// mark, soft hyphen. Removed, so they neither count towards the two-character
+// minimum nor make two names that look alike differ. (ZWNJ and ZWJ stay:
+// some Arabic-script spellings and emoji need them.)
+const INVISIBLE = /[\u200B\u2060\uFEFF\u00AD]/g;
 
 /**
  * A typed name as it will be stored, or null if it cannot be one.
@@ -88,13 +93,15 @@ const BIDI_CONTROLS = /[‪-‮⁦-⁩‎‏]/g;
  * letters and match nothing typed on a keyboard -- docs/maps.md, the Arabic
  * names. Then every run of whitespace (newlines included) becomes one space,
  * and the ends are trimmed: the table's CHECK refuses an untrimmed name, so a
- * friendly cleanup here beats a 500 there. Length in code points, as
+ * friendly cleanup here beats a 500 there. A name must hold at least one
+ * letter or digit: « ---- », or zero-width spaces alone, name nothing. Length in code points, as
  * Postgres's char_length counts them -- an emoji is one, not two.
  */
 function cleanName(raw) {
   if (typeof raw !== 'string') return null;
-  const name = raw.normalize('NFKC').replace(BIDI_CONTROLS, '').replace(/\s+/gu, ' ').trim();
-  if (/\p{Cc}/u.test(name)) return null;
+  const name = raw.normalize('NFKC').replace(BIDI_CONTROLS, '').replace(INVISIBLE, '')
+    .replace(/\s+/gu, ' ').trim();
+  if (/\p{Cc}/u.test(name) || !/[\p{L}\p{N}]/u.test(name)) return null;
   const length = [...name].length;
   return length >= NAME_MIN && length <= NAME_MAX ? name : null;
 }

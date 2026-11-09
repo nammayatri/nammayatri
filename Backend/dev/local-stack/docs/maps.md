@@ -536,8 +536,10 @@ nothing in the body names anybody.
 | `GET /places/nearby?type=&lat=&lon=` | OSM places of that type plus approved proposals, nearest first, 20; names and localities in French and Arabic; `radius` says 5000 or 15000 | `400` for `other`, an unknown type or a bad position |
 
 - **Names** are NFKC-normalised (Arabic presentation forms become ordinary
-  letters), every run of whitespace becomes one space, bidi controls are
-  removed; 2–80 characters, counted as Postgres counts them.
+  letters), every run of whitespace becomes one space, bidi controls and
+  invisible characters (zero-width space, word joiner, BOM, soft hyphen) are
+  removed; 2–80 characters, counted as Postgres counts them, at least one of
+  them a letter or a digit.
 - **Duplicates**: the same name within 100 m among pending and approved
   proposals and the OSM places on the map; compared without case, accents or
   punctuation, Arabic letter variants folded as `geo.normalise` folds them. A
@@ -575,7 +577,7 @@ answered: pending, refused, or approved-then-refused all say « not found ».
 
 | Route | With proposals |
 |---|---|
-| `/place/autocomplete/json` | approved proposals whose name or Arabic name contains what was typed (`geo.normalise` on both sides, `strpos` so `%` is a character, the typed side TRIMMED: `geo.normalise` turns every run of punctuation into a space and keeps it, so « %% » once matched every name with a space in it — live probe, 2026-11-09) go first — 3 at most, nearest first — and the index fills the rest of the 8. If that query fails, the search answers from the index alone. |
+| `/place/autocomplete/json` | approved proposals whose name or Arabic name contains what was typed (`geo.normalise` on both sides, `strpos` so `%` is a character, the typed side TRIMMED: `geo.normalise` turns every run of punctuation into a space and keeps it, so « %% » once matched every name with a space in it — live probe, 2026-11-09) go first — 3 at most, nearest first, and only within 50 km of the person (`PROPOSALS_RADIUS_M`; before 2026-11-09 there was no limit, and « pharmacie » typed in Nouakchott would have listed approved pharmacies in Algiers first) — and the index fills the rest of the 8. If that query fails, the search answers from the index alone. |
 | `/place/details/json?place_id=u…` | the place, signed with the country it was given |
 | `/place/labels/json?ids=…,u…` | its Arabic name, and its locality's, as for an OSM place; the index's rows are not asked for when every id is a `u…`. Since 2026-11-09 for OSM ids too: the places by id, then all their localities' Arabic names in ONE query (`arabicLocalities`, shared with search by type) — it was a join per row, about 110 ms a row on the live index, against an app that gives up on labels after 1.2 s |
 | `/geocode/json?place_id=u…` | as details. A dropped pin (`latlng=`) still names the nearest OSM feature: proposals are not in reverse geocoding |

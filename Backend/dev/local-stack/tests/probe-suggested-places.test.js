@@ -98,11 +98,18 @@ const { build, OUT } = require(path.join(__dirname, '..', 'investigations', 'pro
   const ar = (await rowsOf(executes('localities_ar')[0])).map((r) => `${r.display_name}:${r.name_ar}`).sort();
   t.ok(executes('localities_ar').length === 2 && JSON.stringify(ar) === JSON.stringify(['Hydra:حيدرة']),
     'the localities in Arabic: literal lists (sections 5 and 9), the names the index holds', ar.join(' '));
-  const [tfeila, arabic, attente, percent, punct] = executes('approved_matching');
+  const [tfeila, arabic, arabicAlgiers, attente, percent, punct] = executes('approved_matching');
   const names = async (sql) => (await rowsOf(sql)).map((r) => r.display_name);
   t.ok(JSON.stringify(await names(tfeila)) === JSON.stringify(['Café Sonde Tfeila']), '« tfeila » finds the approved café');
-  t.ok(JSON.stringify(await names(arabic)) === JSON.stringify(['Café Sonde Tfeila', 'Pharmacie Sonde Hydra']),
-    '« المسبار » finds both by their Arabic names, the near one first');
+  // Both have المسبار in their Arabic names; before the 50 km limit, a search
+  // in Nouakchott listed the Algiers pharmacy too, above the map's own places.
+  t.ok(JSON.stringify(await names(arabic)) === JSON.stringify(['Café Sonde Tfeila']),
+    '« المسبار » from Nouakchott: the café only -- the Algiers pharmacy is 2,600 km away', JSON.stringify(await names(arabic)));
+  t.ok(JSON.stringify(await names(arabicAlgiers)) === JSON.stringify(['Pharmacie Sonde Hydra']),
+    '« المسبار » from Algiers: the pharmacy only', JSON.stringify(await names(arabicAlgiers)));
+  const wide = arabic.replace(/50000\)$/, '5000000)');
+  t.ok(JSON.stringify(await names(wide)) === JSON.stringify(['Café Sonde Tfeila', 'Pharmacie Sonde Hydra']),
+    'with a 5,000 km radius both come back, the near one first: the radius alone made the difference');
   t.ok((await names(attente)).length === 0, '« attente »: the pending café is never shown');
   t.ok((await names(percent)).length === 0, '« %% »: nothing (normalised to a lone space, trimmed to empty)',
     JSON.stringify(await names(percent)));

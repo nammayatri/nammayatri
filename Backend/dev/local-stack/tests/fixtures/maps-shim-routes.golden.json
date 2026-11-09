@@ -625,12 +625,13 @@
     ]
    },
    {
-    "sql": "select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and btrim(geo.normalise($1)) <> '' and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0) order by distance_m limit $4",
+    "sql": "select * from ( select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and btrim(geo.normalise($1)) <> '' and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0) ) near where distance_m <= $5 order by distance_m limit $4",
     "params": [
      "ma",
      18.0858,
      -15.9785,
-     3
+     3,
+     50000
     ]
    }
   ],
@@ -675,12 +676,13 @@
     ]
    },
    {
-    "sql": "select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and btrim(geo.normalise($1)) <> '' and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0) order by distance_m limit $4",
+    "sql": "select * from ( select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and btrim(geo.normalise($1)) <> '' and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0) ) near where distance_m <= $5 order by distance_m limit $4",
     "params": [
      "marche",
      36.7538,
      3.0588,
-     3
+     3,
+     50000
     ]
    }
   ],
@@ -716,12 +718,13 @@
     ]
    },
    {
-    "sql": "select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and btrim(geo.normalise($1)) <> '' and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0) order by distance_m limit $4",
+    "sql": "select * from ( select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and btrim(geo.normalise($1)) <> '' and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0) ) near where distance_m <= $5 order by distance_m limit $4",
     "params": [
      "zzz",
      18.0858,
      -15.9785,
-     3
+     3,
+     50000
     ]
    }
   ],
@@ -787,12 +790,13 @@
     ]
    },
    {
-    "sql": "select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and btrim(geo.normalise($1)) <> '' and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0) order by distance_m limit $4",
+    "sql": "select * from ( select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and btrim(geo.normalise($1)) <> '' and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0) ) near where distance_m <= $5 order by distance_m limit $4",
     "params": [
      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
      36.7538,
      3.0588,
-     3
+     3,
+     50000
     ]
    }
   ],
@@ -1560,12 +1564,13 @@
     ]
    },
    {
-    "sql": "select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and btrim(geo.normalise($1)) <> '' and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0) order by distance_m limit $4",
+    "sql": "select * from ( select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and btrim(geo.normalise($1)) <> '' and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0) ) near where distance_m <= $5 order by distance_m limit $4",
     "params": [
      "tfeila",
      18.0858,
      -15.9785,
-     3
+     3,
+     50000
     ]
    }
   ],
@@ -1610,12 +1615,13 @@
     ]
    },
    {
-    "sql": "select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and btrim(geo.normalise($1)) <> '' and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0) order by distance_m limit $4",
+    "sql": "select * from ( select place_id, name as display_name, locality, 'poi' as kind, 2 * 6371008.8 * asin(sqrt( power(sin(radians(lat - $2) / 2), 2) + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m from movin.suggested_place where status = 'approved' and btrim(geo.normalise($1)) <> '' and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0 or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0) ) near where distance_m <= $5 order by distance_m limit $4",
     "params": [
      "pboom",
      18.0858,
      -15.9785,
-     3
+     3,
+     50000
     ]
    }
   ],

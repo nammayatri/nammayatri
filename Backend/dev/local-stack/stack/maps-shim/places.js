@@ -93,6 +93,14 @@ const FALLBACK_COUNTRY = { name: COUNTRY_NAME, code: COUNTRY_CODE };
 const USER_PLACE = /^u\d+$/;
 /** At most this many proposals at the top of a search; the index fills the rest. */
 const PROPOSALS_IN_SEARCH = Number(process.env.PROPOSALS_IN_SEARCH || 3);
+/**
+ * ...and only those this close to the person searching. With no limit, the
+ * three nearest MATCHES went first wherever they were: once the office has
+ * approved a few pharmacies in Algiers, « pharmacie » typed in Nouakchott
+ * would put three of them, 2,600 km away, above the three nearest real ones.
+ * 50 km covers a whole city and its outskirts, in either country.
+ */
+const PROPOSALS_RADIUS_M = Number(process.env.PROPOSALS_RADIUS_M || 50000);
 const COUNTRY_OF_CODE = { DZ: COUNTRY_OF_REGION.Algeria, MR: COUNTRY_OF_REGION.Mauritania };
 
 /** One approved proposal, in the shape the index's rows have. */
@@ -118,22 +126,26 @@ async function approvedPlace(placeId) {
  * « %% » normalised to ' ', passed the « not empty » test and matched every
  * name with a space in it -- all of them, on the live run of 2026-11-09 --
  * and « café, » looked for 'cafe ' and missed « Grand Café ».
+ * Within PROPOSALS_RADIUS_M of the person only (50 km).
  * The distance is plain trigonometry: the table is small and needs no index.
  */
-async function approvedMatching(input, lat, lon, limit) {
+async function approvedMatching(input, lat, lon, limit, radius = PROPOSALS_RADIUS_M) {
   const { rows } = await pool.query(
-    `select place_id, name as display_name, locality, 'poi' as kind,
-            2 * 6371008.8 * asin(sqrt(
-              power(sin(radians(lat - $2) / 2), 2)
-              + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m
-       from movin.suggested_place
-      where status = 'approved'
-        and btrim(geo.normalise($1)) <> ''
-        and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0
-             or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0)
+    `select * from (
+       select place_id, name as display_name, locality, 'poi' as kind,
+              2 * 6371008.8 * asin(sqrt(
+                power(sin(radians(lat - $2) / 2), 2)
+                + cos(radians($2)) * cos(radians(lat)) * power(sin(radians(lon - $3) / 2), 2))) as distance_m
+         from movin.suggested_place
+        where status = 'approved'
+          and btrim(geo.normalise($1)) <> ''
+          and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0
+               or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0)
+     ) near
+      where distance_m <= $5
       order by distance_m
       limit $4`,
-    [input, lat, lon, limit],
+    [input, lat, lon, limit, radius],
   );
   return rows;
 }

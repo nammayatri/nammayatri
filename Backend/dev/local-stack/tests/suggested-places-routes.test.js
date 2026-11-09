@@ -125,6 +125,10 @@ const north = (p, metres) => ({ lat: p.lat + metres / 111195, lon: p.lon });
   await refusedWith(place('   '), 400, 'bad_name', 'a name of spaces');
   await refusedWith({ ...place('ok'), name: 42 }, 400, 'bad_name', 'a name that is not text');
   await refusedWith(place('Café\u0000Bar'), 400, 'bad_name', 'a control character in the name');
+  await refusedWith(place('\u200B\u200B\u200B'), 400, 'bad_name', 'a name of zero-width spaces only');
+  await refusedWith(place('X\u200B\uFEFF'), 400, 'bad_name', 'one letter padded with invisible characters to look long enough');
+  await refusedWith(place('\u200C\u200D'), 400, 'bad_name', 'a name of joiners only');
+  await refusedWith(place('-- ..'), 400, 'bad_name', 'a name of punctuation only');
   await refusedWith(place('Pharmacie', 'pharmacie'), 400, 'bad_type', 'the French word instead of the key');
   await refusedWith({ name: 'Café Sans Type', lat: NKC.lat, lon: NKC.lon }, 400, 'bad_type', 'no type');
   await refusedWith({ ...place('Pharmacie A'), lat: '18.08' }, 400, 'bad_position', 'a latitude sent as text');
@@ -360,6 +364,9 @@ const north = (p, metres) => ({ lat: p.lat + metres / 111195, lon: p.lon });
     'the live search by type passes the NAME to place_type_of -- with two arguments churches are mosques again');
   t.ok(routes.normalise('Pharmacie de l’Espoir') === routes.normalise("PHARMACIE DE L'ESPOIR"),
     'names compare without case, accents or punctuation');
+  t.ok(routes.cleanName('Café\u200B Tfeila\u00AD') === 'Café Tfeila',
+    'invisible characters inside a real name are removed, not refused');
+  t.ok(routes.cleanName('ZW') === 'ZW', 'two letters are still a name');
   t.ok(routes.cleanName('a'.repeat(78) + '☕☕') !== null && [...routes.cleanName('a'.repeat(78) + '☕☕')].length === 80,
     'an emoji is one character, as char_length counts it');
 

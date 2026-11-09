@@ -122,8 +122,9 @@ PREPARE localities_ar AS
 \echo '--- the localities of one search: one query for all'
 EXECUTE localities_ar(ARRAY['Nouakchott', 'E-Nord', 'Las Palmas', 'Ksar', 'Belcourt', 'Sidi M''Hamed', 'El Mouradia', 'Hydra', 'Tamanrasset']);
 
-\echo '=== 6. approvedMatching (autocomplete), on the copy: approved only, nearest first'
+\echo '=== 6. approvedMatching (autocomplete), on the copy: approved only, within 50 km, nearest first'
 PREPARE approved_matching AS
+  select * from (
   select place_id, name as display_name, locality, 'poi' as kind,
   2 * 6371008.8 * asin(sqrt(
   power(sin(radians(lat - $2) / 2), 2)
@@ -133,18 +134,22 @@ PREPARE approved_matching AS
   and btrim(geo.normalise($1)) <> ''
   and (strpos(geo.normalise(name), btrim(geo.normalise($1))) > 0
   or strpos(geo.normalise(coalesce(name_ar, '')), btrim(geo.normalise($1))) > 0)
+     ) near
+  where distance_m <= $5
   order by distance_m
   limit $4;
 \echo '--- « tfeila » -> Café Sonde Tfeila'
-EXECUTE approved_matching('tfeila', 18.0858, -15.9785, 3);
-\echo '--- « المسبار » (Arabic name) -> the café, then the Algiers pharmacy'
-EXECUTE approved_matching('المسبار', 18.0858, -15.9785, 3);
+EXECUTE approved_matching('tfeila', 18.0858, -15.9785, 3, 50000);
+\echo '--- « المسبار » (Arabic name) from Nouakchott -> the café only (the Algiers pharmacy is 2,600 km away)'
+EXECUTE approved_matching('المسبار', 18.0858, -15.9785, 3, 50000);
+\echo '--- « المسبار » from Algiers -> the pharmacy only'
+EXECUTE approved_matching('المسبار', 36.7538, 3.0588, 3, 50000);
 \echo '--- « attente » -> nothing (pending is never shown)'
-EXECUTE approved_matching('attente', 18.0858, -15.9785, 3);
+EXECUTE approved_matching('attente', 18.0858, -15.9785, 3, 50000);
 \echo '--- « %% » -> nothing (normalises to a lone space, trimmed to empty; ALL THREE before the trim, live run 2026-11-09)'
-EXECUTE approved_matching('%%', 18.0858, -15.9785, 3);
+EXECUTE approved_matching('%%', 18.0858, -15.9785, 3, 50000);
 \echo '--- « Tfeila! » -> the café (trailing punctuation is a trailing space until trimmed)'
-EXECUTE approved_matching('Tfeila!', 18.0858, -15.9785, 3);
+EXECUTE approved_matching('Tfeila!', 18.0858, -15.9785, 3, 50000);
 
 \echo '=== 7. approvedPlace (details, geocode by id): u1 approved, u4 pending -> no row'
 PREPARE approved_place AS
