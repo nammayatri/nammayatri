@@ -580,6 +580,19 @@ answered: pending, refused, or approved-then-refused all say « not found ».
 | `/place/labels/json?ids=…,u…` | its Arabic name, and its locality's, as for an OSM place; the index's rows are not asked for when every id is a `u…`. Since 2026-11-09 for OSM ids too: the places by id, then all their localities' Arabic names in ONE query (`arabicLocalities`, shared with search by type) — it was a join per row, about 110 ms a row on the live index, against an app that gives up on labels after 1.2 s |
 | `/geocode/json?place_id=u…` | as details. A dropped pin (`latlng=`) still names the nearest OSM feature: proposals are not in reverse geocoding |
 
+**Measured on the live index, 2026-11-09** (`investigations/probe-suggested-places.sql`,
+third run, after the fixes): search by type 6–63 ms (cafés within 5 km of
+Algiers 63 ms, the densest case — a bitmap scan of 20 ms); the duplicate test
+4–5 ms; country and locality under 2 ms; search, details and labels for
+proposals under 10 ms; labels for the 8 nearest cafés of Algiers 11 ms for the
+rows plus **99 ms** for their localities in Arabic. That one query is a full
+scan of the index (no index on `display_name`): 99 ms there, 155 ms in the
+second run — and **879 ms** once, in the same run, for a similar list, most
+likely cold pages. Under the app's 1.2 s, far under the ~0.9 s eight labels
+cost before, but not a promise. **Not done, worth doing:** the localities'
+Arabic names change only with a map rebuild, so the shim could keep them in
+memory and skip that query almost always.
+
 The golden test (`tests/maps-shim-routes.test.js`) was re-recorded for this,
 and checked line by line against the previous recording before it was kept:
 the 32 requests already there answer exactly as before, with one difference —
