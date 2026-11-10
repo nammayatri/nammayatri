@@ -144,7 +144,8 @@ data SharedCabSession = SharedCabSession
     stops :: [SessionStop],
     shapePolyline :: Maybe Text,
     vehicle :: Maybe LatLong,
-    demandAhead :: [DemandAtStop]
+    demandAhead :: [DemandAtStop],
+    tripEarnings :: Maybe HighPrecMoney
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 

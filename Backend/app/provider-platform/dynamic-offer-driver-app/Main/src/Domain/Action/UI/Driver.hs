@@ -492,6 +492,7 @@ data DriverInformationRes = DriverInformationRes
     activeRideType :: Maybe ActiveRideType,
     -- | The feed version the app checks its cached shared-cab routes against.
     publicTransportVersion :: Maybe Text,
+    sharedCabTripActive :: Maybe Bool,
     onboardingVehicleCategory :: Maybe VehicleCategory,
     subscriptionDown :: Maybe Bool,
     qrUrl :: Maybe Text,
@@ -1967,6 +1968,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           -- module-qualified: VehicleVariant's SHARED_CAB is also in scope
           activeRideType = if ((.variant) <$> mbVehicle) == Just DV.SHARED_CAB then Just Domain.Action.UI.Driver.SHARED_CAB else Nothing,
           publicTransportVersion = Nothing,
+          sharedCabTripActive = Nothing,
           ..
         }
 

@@ -10,6 +10,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
@@ -17,8 +18,10 @@ data VehicleTrip = VehicleTrip
   { capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    earnings :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     endReason :: Kernel.Prelude.Maybe Domain.Types.VehicleTrip.VehicleTripEndReason,
     endedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    fromStop :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -26,6 +29,7 @@ data VehicleTrip = VehicleTrip
     routeCode :: Kernel.Prelude.Text,
     startedAt :: Kernel.Prelude.UTCTime,
     status :: Domain.Types.VehicleTrip.VehicleTripStatus,
+    toStop :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleNumber :: Kernel.Prelude.Text,
     walkupCount :: Kernel.Prelude.Int

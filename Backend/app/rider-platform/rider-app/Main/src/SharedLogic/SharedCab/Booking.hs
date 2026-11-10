@@ -26,6 +26,8 @@ module SharedLogic.SharedCab.Booking
     readRiderFixes,
     alignByKey,
     stopAddresses,
+    recordBoardedFare,
+    tripEarnings,
   )
 where
 
@@ -40,7 +42,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Allocation.Types (RiderFix)
-import SharedLogic.SharedCab.Keys (bookingLockKey, cabBookingsKey, cancelReasonKey, riderFixKey)
+import SharedLogic.SharedCab.Keys (bookingLockKey, cabBookingsKey, cancelReasonKey, riderFixKey, tripFaresKey)
 import SharedLogic.SharedCab.LegState (CancelReason, seatsHeld)
 import SharedLogic.SharedCab.Lock (shared, tryWithOwnedLock, withOwnedLock)
 import SharedLogic.SharedCab.RefundDecision (isSharedCabBooking)
@@ -49,6 +51,13 @@ import qualified Storage.CachedQueries.StationsExtraInformation as CQStationsExt
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+
+recordBoardedFare :: (Redis.HedisFlow m r, MonadFlow m) => Text -> DFRFSTicketBooking.FRFSTicketBooking -> m ()
+recordBoardedFare tripId booking =
+  shared $ Redis.hSetExp (tripFaresKey tripId) booking.id.getId booking.totalPrice.amount sessionTtlSec
+
+tripEarnings :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m HighPrecMoney
+tripEarnings tripId = sum . map snd <$> shared (Redis.hGetAll @HighPrecMoney (tripFaresKey tripId))
 
 -- | The stops' addresses from the city's station information (cached); a stop without one is left out.
 stopAddresses :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> [Text] -> m (Map.Map Text Text)

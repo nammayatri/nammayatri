@@ -36,7 +36,7 @@ import Kernel.Utils.Common
 import Lib.JourneyLeg.Common.FRFSJourneyUtils (VehicleProximity (..), riderNearVehicle)
 import qualified Lib.JourneyModule.Location as JMLocation
 import SharedLogic.SharedCab.Allocation.Types (parseLtsTimestamp)
-import SharedLogic.SharedCab.Booking (isSharedCabBooking, partyOf, partySizes, withBookingLock)
+import SharedLogic.SharedCab.Booking (isSharedCabBooking, partyOf, partySizes, recordBoardedFare, withBookingLock)
 import SharedLogic.SharedCab.BookingState (clearAlloc)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
@@ -234,6 +234,7 @@ applyBoarding journeyLeg booking freshBooking fresh eligible = do
   -- CAS vehicleNumber against the fresh read.
   QBooking.updateAllocatedVehicle (Just fresh.vehicleNumber) booking.id freshBooking.vehicleNumber
   QBooking.updateVehicleTripId (Just fresh.vehicleTripId) booking.id
+  recordBoardedFare fresh.vehicleTripId booking
   -- Old cab's seat release is derived: no attempts bump and no blame.
   clearAlloc booking.id
   Degraded.clearDegradedMarker booking.id

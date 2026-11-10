@@ -9,14 +9,17 @@ import qualified Domain.Types.VehicleTrip
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data VehicleTripT f = VehicleTripT
   { capacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverId :: B.C f Kernel.Prelude.Text,
+    earnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     endReason :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleTrip.VehicleTripEndReason),
     endedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    fromStop :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
@@ -24,6 +27,7 @@ data VehicleTripT f = VehicleTripT
     routeCode :: B.C f Kernel.Prelude.Text,
     startedAt :: B.C f Kernel.Prelude.UTCTime,
     status :: B.C f Domain.Types.VehicleTrip.VehicleTripStatus,
+    toStop :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     vehicleNumber :: B.C f Kernel.Prelude.Text,
     walkupCount :: B.C f Kernel.Prelude.Int
@@ -36,6 +40,6 @@ instance B.Table VehicleTripT where
 
 type VehicleTrip = VehicleTripT Identity
 
-$(enableKVPG ''VehicleTripT ['id] [['vehicleNumber]])
+$(enableKVPG ''VehicleTripT ['id] [['driverId], ['vehicleNumber]])
 
 $(mkTableInstances ''VehicleTripT "vehicle_trip")

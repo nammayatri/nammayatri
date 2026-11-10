@@ -3,9 +3,12 @@
 module API.Types.UI.SharedCab where
 
 import Data.OpenApi (ToSchema)
+import qualified Data.Time
 import qualified Domain.Types.SharedCabSession
+import qualified Domain.Types.VehicleTrip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Servant
 import Tools.Auth
 
@@ -71,5 +74,31 @@ data SharedCabSessionOperation
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SharedCabSessionOperationReq = SharedCabSessionOperationReq {operation :: SharedCabSessionOperation, version :: Kernel.Prelude.Maybe Kernel.Prelude.Int, walkupCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedCabTripSummary = SharedCabTripSummary
+  { earnings :: Kernel.Types.Common.HighPrecMoney,
+    endedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    fromStop :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    routeCode :: Kernel.Prelude.Text,
+    startedAt :: Kernel.Prelude.UTCTime,
+    status :: Domain.Types.VehicleTrip.VehicleTripStatus,
+    toStop :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tripId :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedCabTripsResp = SharedCabTripsResp
+  { activeTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    currency :: Kernel.Types.Common.Currency,
+    date :: Data.Time.Day,
+    earnings :: Kernel.Types.Common.HighPrecMoney,
+    targetPerDay :: Kernel.Prelude.Int,
+    targetPerTrip :: Kernel.Types.Common.HighPrecMoney,
+    trips :: [SharedCabTripSummary],
+    tripsCompleted :: Kernel.Prelude.Int
+  }
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

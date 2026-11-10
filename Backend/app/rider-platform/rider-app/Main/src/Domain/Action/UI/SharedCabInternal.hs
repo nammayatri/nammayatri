@@ -349,6 +349,7 @@ mkSessionRespFrom cabReads s = do
       (mbTrack,) <$> Seats.freeAhead s ((.vehicleInfo) <$> mbTrack)
   let vehicle = (\v -> LatLong v.vehicleInfo.latitude v.vehicleInfo.longitude) <$> mbTrack
   riderRows <- liveRiderRows cfg s.vehicleTripId [(stop.stopCode, stop.stopPoint) | stop <- stops] polyline addresses s.vehicleNumber
+  tripEarnings <- Booking.tripEarnings s.vehicleTripId
   pure
     View.SharedCabSession
       { route,
@@ -367,7 +368,8 @@ mkSessionRespFrom cabReads s = do
         stops = [View.sessionStopOf st.stopCode st.stopName st.stopPoint | st <- stops],
         shapePolyline,
         vehicle,
-        demandAhead = Demand.demandAheadRows [(st.stopCode, st.stopName) | st <- stops] demand
+        demandAhead = Demand.demandAheadRows [(st.stopCode, st.stopName) | st <- stops] demand,
+        tripEarnings = Just tripEarnings
       }
 
 -- | The rider's number for a driver-initiated masked call; only for the driver whose live cab holds the booking, inside the call window.

@@ -36,6 +36,9 @@ activeTrip =
       DVT.endedAt = Nothing,
       DVT.endReason = Nothing,
       DVT.walkupCount = 1,
+      DVT.earnings = Just 40,
+      DVT.fromStop = Nothing,
+      DVT.toStop = Nothing,
       DVT.createdAt = t0,
       DVT.updatedAt = t0
     }
@@ -85,21 +88,26 @@ tests =
         ]
           @?= [True, False, False, False, False],
       testCase "the plate's trip row follows rider-app's session: same run, another run, or none" $
-        let run tripId walkups = Just RiderRun {tripId, routeCode = "R2", walkupCount = walkups}
+        let runOf tripId walkups earnings = RiderRun {tripId, routeCode = "R2", walkupCount = walkups, earnings, fromStop = Nothing, toStop = Nothing}
+            run tripId walkups earnings = Just (runOf tripId walkups earnings)
             sync driver = tripAction (Id driver) DVT.END_ROUTE
-         in [ sync "d1" (Just activeTrip) (run "T1" 1),
-              sync "d1" (Just activeTrip) (run "T1" 3),
-              sync "d1" (Just activeTrip) (run "T2" 0),
-              sync "d2" (Just activeTrip) (run "T2" 0),
-              sync "d1" Nothing (run "T2" 0),
+         in [ sync "d1" (Just activeTrip) (run "T1" 1 40),
+              sync "d1" (Just activeTrip) (run "T1" 3 40),
+              sync "d1" (Just activeTrip) (run "T1" 1 90),
+              sync "d1" (Just activeTrip) (run "T1" 1 0),
+              sync "d1" (Just activeTrip) (run "T2" 0 0),
+              sync "d2" (Just activeTrip) (run "T2" 0 0),
+              sync "d1" Nothing (run "T2" 0 0),
               sync "d1" (Just activeTrip) Nothing,
               sync "d1" Nothing Nothing
             ]
               @?= [ TripUnchanged,
-                    SetWalkups (Id "T1") 3,
-                    OpenTrip (Just (Id "T1", DVT.ROUTE_CHANGED)) (RiderRun "T2" "R2" 0),
-                    OpenTrip (Just (Id "T1", DVT.SESSION_TIMEOUT)) (RiderRun "T2" "R2" 0),
-                    OpenTrip Nothing (RiderRun "T2" "R2" 0),
+                    SetProgress (Id "T1") 3 40,
+                    SetProgress (Id "T1") 1 90,
+                    TripUnchanged,
+                    OpenTrip (Just (Id "T1", DVT.ROUTE_CHANGED)) (runOf "T2" 0 0),
+                    OpenTrip (Just (Id "T1", DVT.SESSION_TIMEOUT)) (runOf "T2" 0 0),
+                    OpenTrip Nothing (runOf "T2" 0 0),
                     CloseTrip (Id "T1") DVT.END_ROUTE,
                     TripUnchanged
                   ]
