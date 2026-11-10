@@ -348,7 +348,7 @@ activateRCAutomatically personId merchantId merchantOpCityId rcNumber = do
           { rcNo = rcNumber,
             isActivate = True
           }
-  void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) False rcStatusReq
+  void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) DomainRC.AutoOnboarding rcStatusReq
 
 sendEnablementSms :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> DTC.TransporterConfig -> Id DM.Merchant -> m ()
 sendEnablementSms merchantOpCityId personId transporterConfig merchantId =

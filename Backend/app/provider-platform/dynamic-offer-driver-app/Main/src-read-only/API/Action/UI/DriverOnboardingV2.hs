@@ -98,6 +98,17 @@ type API =
            API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
       :<|> TokenAuth
       :> "driver"
+      :> "rc"
+      :> "takeover"
+      :> "verifyPhoto"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.RCTakeoverPhotoReq
+      :> Post
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.RCTakeoverPhotoResp
+      :<|> TokenAuth
+      :> "driver"
       :> "updateAirCondition"
       :> ReqBody
            '[JSON]
@@ -308,7 +319,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverVerifyBankAccount :<|> getInfoBankAccount :<|> postDriverDeleteBankAccount :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> getDriverFleetRcs :<|> postDriverLinkToFleet :<|> postDriverOnboardingShareLink :<|> getDriverRegisterVehicleStatus :<|> postDriverDigilockerInitiate :<|> postDriverDigilockerPullDocuments
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverRcTakeoverVerifyPhoto :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverVerifyBankAccount :<|> getInfoBankAccount :<|> postDriverDeleteBankAccount :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> getDriverFleetRcs :<|> postDriverLinkToFleet :<|> postDriverOnboardingShareLink :<|> getDriverRegisterVehicleStatus :<|> postDriverDigilockerInitiate :<|> postDriverDigilockerPullDocuments
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -361,6 +372,16 @@ getDriverVehiclePhotosB64 ::
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
   )
 getDriverVehiclePhotosB64 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a10) $ Domain.Action.UI.DriverOnboardingV2.getDriverVehiclePhotosB64 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a10) a9 a8 a7 a6 a5 a4 a3 a2 a1
+
+postDriverRcTakeoverVerifyPhoto ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.RCTakeoverPhotoReq ->
+    Environment.FlowHandler API.Types.UI.DriverOnboardingV2.RCTakeoverPhotoResp
+  )
+postDriverRcTakeoverVerifyPhoto a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.postDriverRcTakeoverVerifyPhoto (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postDriverUpdateAirCondition ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

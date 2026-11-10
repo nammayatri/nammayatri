@@ -21,6 +21,7 @@
 --   this (see linkRCStatus).
 module SharedLogic.RCTransferNotice
   ( notifyRCTransfer,
+    isFleetHandover,
   )
 where
 
@@ -59,16 +60,25 @@ notifyRCTransfer ::
   DVRC.VehicleRegistrationCertificate ->
   m ()
 notifyRCTransfer previousDriverId newDriverId rc = do
-  -- A handover only when both drivers are in the RC's fleet; an outsider taking a fleet RC still gets the push.
-  -- Fleet lookups only for a fleet RC: an RC without a fleet owner is never a handover.
-  let inRcFleet driverId = (\mbFda -> (mbFda <&> (.fleetOwnerId)) == rc.fleetOwnerId) <$> QFDA.findByDriverId driverId True
-  isFleetHandover <-
-    if isJust rc.fleetOwnerId
-      then (&&) <$> inRcFleet previousDriverId <*> inRcFleet newDriverId
-      else pure False
-  if isFleetHandover
+  handover <- isFleetHandover rc previousDriverId newDriverId
+  if handover
     then logTagInfo "RC_TRANSFER" $ "rcId: " <> rc.id.getId <> ", fleet handover from driver " <> previousDriverId.getId <> " to " <> newDriverId.getId <> ", no push"
     else notify previousDriverId newDriverId rc
+
+-- | A handover only when both drivers are in the RC's fleet; an outsider taking a fleet RC is not one.
+--   Fleet lookups only for a fleet RC: an RC without a fleet owner is never a handover. Shared by the
+--   transfer push (no push) and the takeover photo gate (no photo).
+isFleetHandover ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  DVRC.VehicleRegistrationCertificate ->
+  Id DP.Person ->
+  Id DP.Person ->
+  m Bool
+isFleetHandover rc previousDriverId newDriverId = do
+  let inRcFleet driverId = (\mbFda -> (mbFda <&> (.fleetOwnerId)) == rc.fleetOwnerId) <$> QFDA.findByDriverId driverId True
+  if isJust rc.fleetOwnerId
+    then (&&) <$> inRcFleet previousDriverId <*> inRcFleet newDriverId
+    else pure False
 
 notify ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Redis.HedisLTSFlowEnv r) =>

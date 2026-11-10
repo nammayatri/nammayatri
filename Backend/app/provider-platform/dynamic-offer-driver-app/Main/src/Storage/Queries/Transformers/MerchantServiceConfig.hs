@@ -164,6 +164,7 @@ getConfigJSON = \case
     EventTrackingInterface.ClevertapConfig cfg -> toJSON cfg
     EventTrackingInterface.FirebaseAnalyticsConfig cfg -> toJSON cfg
     EventTrackingInterface.BreezeConfig cfg -> toJSON cfg
+  Domain.GridServiceConfig cfg -> toJSON cfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -267,6 +268,7 @@ getServiceName = \case
     EventTrackingInterface.ClevertapConfig _ -> Domain.EventTrackingService EventTracking.Clevertap
     EventTrackingInterface.FirebaseAnalyticsConfig _ -> Domain.EventTrackingService EventTracking.FirebaseAnalytics
     EventTrackingInterface.BreezeConfig _ -> Domain.EventTrackingService EventTracking.Breeze
+  Domain.GridServiceConfig _ -> Domain.GridService Domain.Grid
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
 getPaymentServiceConfigJson = \case
@@ -381,6 +383,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.EventTrackingService EventTracking.Clevertap -> Domain.EventTrackingServiceConfig . EventTrackingInterface.ClevertapConfig <$> eitherValue configJSON
   Domain.EventTrackingService EventTracking.FirebaseAnalytics -> Domain.EventTrackingServiceConfig . EventTrackingInterface.FirebaseAnalyticsConfig <$> eitherValue configJSON
   Domain.EventTrackingService EventTracking.Breeze -> Domain.EventTrackingServiceConfig . EventTrackingInterface.BreezeConfig <$> eitherValue configJSON
+  Domain.GridService Domain.Grid -> Domain.GridServiceConfig <$> eitherValue configJSON
 
 eitherValue :: FromJSON a => A.Value -> Either Text a
 eitherValue value = case A.fromJSON value of

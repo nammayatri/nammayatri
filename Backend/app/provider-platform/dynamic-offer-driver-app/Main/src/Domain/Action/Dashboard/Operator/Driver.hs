@@ -334,7 +334,8 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         whenJust mbPersonId $ \personId -> do
           mbVehicle <- QVehicle.findById personId
           when (isNothing mbVehicle && allVehicleDocsVerified) $
-            void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity.merchantId merchantOpCity.id registrationNo)
+            -- OperatorHub, not AutoOnboarding: the operator checked the vehicle in person, so a clash needs no photo.
+            void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (DomainRC.linkRCStatus (personId, merchantOpCity.merchantId, merchantOpCity.id) DomainRC.OperatorHub (DomainRC.RCStatusReq {rcNo = registrationNo, isActivate = True}))
 
     handleDriverInspectionApproval mShortId city request now personId merchantOpCity transporterConfig = do
       person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
