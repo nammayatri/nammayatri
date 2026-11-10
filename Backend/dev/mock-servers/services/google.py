@@ -15,13 +15,16 @@ Returns minimal Google-shaped responses. The Haskell mock had a hand-curated
 Place table to make distances deterministic per origin/destination; the Python
 port derives directions distance/duration from the straight-line distance between
 origin and destination (x1.3 road factor, ~30 km/h), so fares follow the destination.
+Place search returns real places near the rider from Photon (OpenStreetMap), falling
+back to a few fixed Bangalore places when Photon can't be reached.
 """
 
+import base64
 import math
 import os
 import urllib.request
 import json as _json
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 
 def _osrm_base_url():
@@ -108,9 +111,7 @@ def _road_estimate(origin, destination):
         (lat1, lon1), (lat2, lon2) = ((float(x) for x in s.split(",")) for s in (origin, destination))
     except (ValueError, AttributeError):
         return 5000, 600
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    a = math.sin((p2 - p1) / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(math.radians(lon2 - lon1) / 2) ** 2
-    meters = round(2 * 6371000 * math.asin(math.sqrt(a)) * _ROAD_FACTOR)
+    meters = round(_straight_meters(lat1, lon1, lat2, lon2) * _ROAD_FACTOR)
     return meters, round(meters / _SPEED_MPS)
 
 
@@ -194,7 +195,122 @@ def _directions(handler):
     return {"geocoded_waypoints": [], "routes": [route], "status": "OK"}
 
 
-# Fixed places the mock search returns, with real Bangalore coordinates, so a
+# Place search is answered by Photon (https://photon.komoot.io), a free search
+# over OpenStreetMap data: real places near the rider, in any city. PHOTON_URL
+# points it at another Photon server (e.g. a self-hosted one).
+_PHOTON_URL = os.environ.get("PHOTON_URL", "https://photon.komoot.io")
+_PHOTON_TIMEOUT_S = 3
+_PHOTON_LIMIT = 5
+_USER_AGENT = "nammayatri-devbox-mock/1.0"
+
+# A Photon result's id carries its point and label ("osm_<lat>_<lon>_<base64url label>"),
+# so place details answer from the id alone, with no second call and no stored state.
+_PLACE_ID_PREFIX = "osm_"
+_MAX_LABEL_CHARS = 100
+
+
+def _straight_meters(lat1, lon1, lat2, lon2):
+    """Great-circle distance in meters."""
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    a = math.sin((p2 - p1) / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(math.radians(lon2 - lon1) / 2) ** 2
+    return 2 * 6371000 * math.asin(math.sqrt(a))
+
+
+def _photon_label(props):
+    """"Name, street, area, city, state" from a Photon feature, without repeats or blanks."""
+    street = " ".join(p for p in (props.get("housenumber"), props.get("street")) if p)
+    parts = []
+    for part in (props.get("name"), street, props.get("district"), props.get("city"), props.get("state")):
+        if part and part not in parts:
+            parts.append(part)
+    return ", ".join(parts)[:_MAX_LABEL_CHARS]
+
+
+def _photon_search(text, centre):
+    """[(label, lat, lon)] from Photon for the typed text, nearest to centre first;
+    [] when the text is blank or Photon fails, is slow or finds nothing."""
+    if not text.strip():
+        return []
+    params = {"q": text, "limit": _PHOTON_LIMIT, "lang": "en"}
+    if centre:
+        params["lat"], params["lon"] = centre
+    req = urllib.request.Request(f"{_PHOTON_URL}/api/?{urlencode(params)}", headers={"User-Agent": _USER_AGENT})
+    try:
+        with urllib.request.urlopen(req, timeout=_PHOTON_TIMEOUT_S) as resp:
+            features = _json.loads(resp.read()).get("features", [])
+        places = []
+        for f in features:
+            lon, lat = f["geometry"]["coordinates"][:2]
+            label = _photon_label(f.get("properties", {}))
+            if label and all(label != seen for seen, _, _ in places):
+                places.append((label, float(lat), float(lon)))
+        return places
+    except Exception:
+        return []
+
+
+def _photon_place_id(label, lat, lon):
+    encoded = base64.urlsafe_b64encode(label.encode()).decode().rstrip("=")
+    return f"{_PLACE_ID_PREFIX}{lat:.6f}_{lon:.6f}_{encoded}"
+
+
+def _place_from_photon_id(place_id):
+    """(label, lat, lon) from an id made by _photon_place_id, or None."""
+    if not place_id.startswith(_PLACE_ID_PREFIX):
+        return None
+    try:
+        lat, lon, encoded = place_id[len(_PLACE_ID_PREFIX):].split("_", 2)
+        label = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)).decode()
+        return label, float(lat), float(lon)
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+
+def _parse_lat_lon(value):
+    """(lat, lon) from a "lat,lon" string, or None."""
+    try:
+        lat, lon = (float(x) for x in value.split(","))
+        return lat, lon
+    except (ValueError, AttributeError):
+        return None
+
+
+def _centre_v2(req):
+    """The rider's point in a Places API (New) autocomplete request: origin, else the
+    centre of locationBias or locationRestriction, else None."""
+    candidates = [req.get("origin")]
+    for key in ("locationBias", "locationRestriction"):
+        area = req.get(key)
+        candidates.append(area.get("circle", {}).get("center") if isinstance(area, dict) else None)
+    for point in candidates:
+        try:
+            return float(point["latitude"]), float(point["longitude"])
+        except (KeyError, TypeError, ValueError):
+            continue
+    return None
+
+
+def _search(text, centre):
+    """[(place_id, label, meters or None)] for the rider's search: Photon's places
+    near centre, else the fixed Bangalore places below so the rider always has a pick."""
+    found = _photon_search(text, centre)
+    if found:
+        return [
+            (_photon_place_id(label, lat, lon), label, round(_straight_meters(*centre, lat, lon)) if centre else None)
+            for label, lat, lon in found
+        ]
+    return [(pid, name, None) for pid, name, _, _ in _matching_places(text)]
+
+
+def _place_for_id(place_id):
+    """(place_id, label, lat, lon) for a place id from _search."""
+    photon = _place_from_photon_id(place_id)
+    if photon:
+        return (place_id, *photon)
+    return _place_by_id(place_id)
+
+
+# Fallback places when Photon gives nothing, with real Bangalore coordinates, so a
 # picked pickup or drop gives a sensible route and fare.
 _PLACES = [
     ("mock-blr-koramangala", "Koramangala, Bengaluru, Karnataka", 12.9352, 77.6245),
@@ -220,47 +336,54 @@ def _place_by_id(place_id):
 
 
 def _autocomplete(handler):
-    inp = _qp(handler).get("input", [""])[0]
-    return {
-        "predictions": [
-            {
-                "description": name,
-                "matched_substrings": [],
-                "place_id": pid,
-                "reference": pid,
-                "structured_formatting": {"main_text": name.split(",")[0], "secondary_text": "Bengaluru, Karnataka"},
-                "terms": [{"offset": 0, "value": name}],
-                "types": ["geocode"],
-            }
-            for pid, name, _, _ in _matching_places(inp)
-        ],
-        "status": "OK",
-    }
+    """Classic GET place/autocomplete/json, around the request's origin or location."""
+    qp = _qp(handler)
+    inp = qp.get("input", [""])[0]
+    centre = _parse_lat_lon(qp.get("origin", [""])[0]) or _parse_lat_lon(qp.get("location", [""])[0])
+    predictions = []
+    for pid, name, meters in _search(inp, centre):
+        main, _, secondary = name.partition(", ")
+        prediction = {
+            "description": name,
+            "matched_substrings": [],
+            "place_id": pid,
+            "reference": pid,
+            "structured_formatting": {"main_text": main, "secondary_text": secondary},
+            "terms": [{"offset": 0, "value": name}],
+            "types": ["geocode"],
+        }
+        if meters is not None:
+            prediction["distance_meters"] = meters
+        predictions.append(prediction)
+    return {"predictions": predictions, "status": "OK"}
 
 
 def _autocomplete_v2(body):
     """Places API (New) POST places:autocomplete, used for the rider's pickup and drop search."""
     try:
-        text = _json.loads(body or b"{}").get("input", "")
-    except (ValueError, AttributeError):
-        text = ""
-    return {
-        "suggestions": [
-            {"placePrediction": {"placeId": pid, "text": {"text": name}, "types": ["geocode"]}}
-            for pid, name, _, _ in _matching_places(text)
-        ]
-    }
+        req = _json.loads(body or b"{}")
+    except ValueError:
+        req = {}
+    if not isinstance(req, dict):
+        req = {}
+    suggestions = []
+    for pid, name, meters in _search(str(req.get("input") or ""), _centre_v2(req)):
+        prediction = {"placeId": pid, "text": {"text": name}, "types": ["geocode"]}
+        if meters is not None:
+            prediction["distanceMeters"] = meters
+        suggestions.append({"placePrediction": prediction})
+    return {"suggestions": suggestions}
 
 
 def _place_details_v2(place_id):
     """Places API (New) GET places/{placeId}: the lat/lon of a picked place."""
-    _, name, lat, lon = _place_by_id(place_id)
+    _, name, lat, lon = _place_for_id(place_id)
     return {"formattedAddress": name, "location": {"latitude": lat, "longitude": lon}, "addressComponents": []}
 
 
 def _place_details(handler):
     """Classic GET place/details/json, the backend's fallback when the new API fails."""
-    pid, name, lat, lon = _place_by_id(_qp(handler).get("place_id", [""])[0])
+    pid, name, lat, lon = _place_for_id(_qp(handler).get("place_id", [""])[0])
     return {
         "status": "OK",
         "result": {
