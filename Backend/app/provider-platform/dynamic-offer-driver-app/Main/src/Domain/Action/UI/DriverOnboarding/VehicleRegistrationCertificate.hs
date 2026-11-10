@@ -25,6 +25,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     convertUTCTimetoDate,
     deactivateCurrentRC,
     linkRCStatus,
+    RCActivationSource (..),
     removeVehicle,
     endAllRCAssociationsAndRemoveVehicle,
     deleteRC,
@@ -93,6 +94,7 @@ import SharedLogic.DriverOnboarding.DocumentProtection (readDocument)
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboardingDocumentVersion (saveRCVersionMetadata)
 import qualified SharedLogic.FleetDriverSettings as FDS
+import qualified SharedLogic.RCTakeoverVerification as RCTakeover
 import qualified SharedLogic.RCTransferNotice as RCTransferNotice
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
@@ -111,7 +113,6 @@ import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.MorthVerification as MorthQuery
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.RCValidationRules
-import Storage.Queries.Ride as RQuery
 import qualified Storage.Queries.TranslationsExtra as QTranslation
 import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleDetails as CQVD
@@ -808,30 +809,118 @@ compareRegistrationDates actualDate providedDate =
   isJust providedDate
     && ((convertUTCTimetoDate <$> providedDate) /= (convertUTCTimetoDate <$> convertTextToUTC actualDate))
 
-linkRCStatus :: OnboardingFlow m r => (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> RCStatusReq -> m APISuccess
-linkRCStatus (driverId, merchantId, merchantOpCityId) isTaxiBoothRequest req@RCStatusReq {..} = runInMasterDbAndRedis $ do
+-- | Who is activating the RC. Decides both the taxi-booth behaviour and the takeover photo rule, so call sites
+--   pass one value instead of positional Bools.
+data RCActivationSource = DriverApp | TaxiBooth | DashboardOps | Fleet | WMB | OperatorHub | AutoOnboarding
+  deriving (Eq, Show)
+
+-- | What a case 1 clash (RC active for another driver) needs, per source. Applies only while
+--   transporterConfig.requireRcTakeoverPhoto is on; when off, every source behaves as before.
+data TakeoverRule = RequirePhoto | RefuseTakeover | Exempt
+  deriving (Eq)
+
+takeoverRule :: RCActivationSource -> TakeoverRule
+takeoverRule = \case
+  DriverApp -> RequirePhoto
+  AutoOnboarding -> RefuseTakeover -- never take over a clashed RC automatically
+  TaxiBooth -> Exempt
+  -- (to build later) an audit row with source and actor, no photo.
+  DashboardOps -> Exempt
+  Fleet -> Exempt
+  WMB -> Exempt
+  -- an operator approving a hub inspection: the vehicle was checked in person
+  OperatorHub -> Exempt
+
+-- | takeoverRule for this clash: a same-fleet shift handover (both drivers in the RC's fleet) needs neither a
+--   photo nor a refusal, as the transfer push skips it too. The one place the rule is decided.
+clashTakeoverRule :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => RCActivationSource -> Domain.VehicleRegistrationCertificate -> Id Person.Person -> Id Person.Person -> m TakeoverRule
+clashTakeoverRule source rc holderId driverId = case takeoverRule source of
+  Exempt -> pure Exempt
+  rule -> do
+    handover <- RCTransferNotice.isFleetHandover rc holderId driverId
+    pure $ if handover then Exempt else rule
+
+-- | The message already on the driver's link, if known, saves a repeated write.
+refuseAutoTakeover :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Id Person.Person -> Domain.VehicleRegistrationCertificate -> m a
+refuseAutoTakeover storedMessage driverId rc = do
+  let message = "Vehicle is active on another driver account and was not switched automatically"
+  unless (storedMessage == Just message) $ DAQuery.updateRcErrorMessage driverId rc.id message
+  throwError RCActivationAutoTakeoverRefused
+
+linkRCStatus :: OnboardingFlow m r => (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> RCActivationSource -> RCStatusReq -> m APISuccess
+linkRCStatus (driverId, merchantId, merchantOpCityId) source req@RCStatusReq {..} = runInMasterDbAndRedis $ do
+  let isTaxiBoothRequest = source == TaxiBooth
   driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   -- Activation gets its specific code; deactivation keeps the neutral error so clients never show activation copy for it.
   unless (rc.verificationStatus == Documents.VALID) $ do
     DAQuery.updateRcErrorMessage driverId rc.id "Vehicle is not ready to be linked"
     if req.isActivate then throwError RCActivationRCNotValid else throwError (InvalidRequest "Vehicle is not ready to be linked")
-  now <- getCurrentTime
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let takeoverGateOn = transporterConfig.requireRcTakeoverPhoto == Just True
+  -- A source that never takes over (AutoOnboarding) is refused here, before the lock and the holder checks:
+  -- the status poll retries auto-activation on every call. Only for a driver already linked to the RC with
+  -- no blocker of their own, so the fleet-RC link is still created and the driver's own blocker still
+  -- reported by the full path. takeoverGate's refusal still covers a clash that appears after this read.
+  -- The clash read comes first: with no clash (the common case) this costs one read.
+  when (req.isActivate && takeoverGateOn && takeoverRule source == RefuseTakeover) $
+    DAQuery.findActiveAssociationByRC rc.id True >>= \case
+      Just holder | holder.driverId /= driverId -> do
+        now <- getCurrentTime
+        DAQuery.findLinkedByRCIdAndDriverId driverId rc.id now >>= mapM_ \link -> do
+          ownBlocker <- RCTakeover.driverActivationBlocker driverInfo transporterConfig rc
+          rule <- clashTakeoverRule source rc holder.driverId driverId
+          when (isNothing ownBlocker && rule == RefuseTakeover) $ refuseAutoTakeover link.errorMessage driverId rc
+      _ -> pure ()
+  let withActivationLock
+        | takeoverGateOn = Redis.withWaitAndLockRedis ("RCActivation:" <> rc.id.getId) 60 100000
+        | otherwise = identity
   if req.isActivate
-    then do
-      activationCheck <- validateRCActivation isTaxiBoothRequest driverInfo transporterConfig rc
+    then -- With the takeover gate on, one activation per RC at a time: two drivers verified against the same
+    -- holder can't both win; the second sees the new holder and gets RCTakeoverVerificationStale. The lock
+    -- expires after 60s, well past a normal activation. With the gate off, no lock: activation as before.
+    withActivationLock $ do
+      -- With the lock, read again after it: a request that waited must not use driver or RC state from before
+      -- the wait (the RC may have been invalidated meanwhile). Without it, the reads above, as before.
+      (lockedDriverInfo, lockedRc) <-
+        if takeoverGateOn
+          then do
+            di <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+            r <- RCQuery.findById rc.id >>= fromMaybeM (RCNotFound rcNo)
+            unless (r.verificationStatus == Documents.VALID) $ do
+              DAQuery.updateRcErrorMessage driverId r.id "Vehicle is not ready to be linked"
+              throwError RCActivationRCNotValid
+            pure (di, r)
+          else pure (driverInfo, rc)
+      now <- getCurrentTime
+      activationCheck <- validateRCActivation source lockedDriverInfo transporterConfig lockedRc
       case activationCheck of
         RCAlreadyActive -> pure ()
-        RCCanBeActivated mbPreviousHolderId -> do
-          activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc
-          -- Only once the new driver's activation has succeeded. The previous holder was already unlinked in
-          -- validateRCActivation, with no rollback if activateRC throws. One best-effort push in the background,
+        RCCanBeActivated mbPreviousHolderId mbStagedFromGate -> do
+          activateRC lockedDriverInfo merchantId merchantOpCityId transporterConfig now lockedRc
+          -- The holder is unlinked in validateRCActivation before activateRC, with no rollback. If activateRC
+          -- threw, the retry finds no clash and the gate doesn't run, so use the staged check, if any.
+          -- Only a driver-app activation that found no clash can be that retry; a clash means the gate ran
+          -- (or the source is exempt), so a staged check from earlier must not be used up or misattributed.
+          mbStaged <- case mbStagedFromGate of
+            Just staged -> pure (Just staged)
+            Nothing
+              | takeoverGateOn && source == DriverApp && isNothing mbPreviousHolderId ->
+                RCTakeover.findStagedTakeoverVerification driverId lockedRc.id
+              | otherwise -> pure Nothing
+          let holderUnlinkedEarlier = isNothing mbStagedFromGate && isJust mbStaged
+              stagedHolder = (.holder.holderDriverId) <$> mbStaged
+              -- On a no-clash retry, the staged holder lost the RC to this driver only if the earlier attempt
+              -- unlinked them; one who gave the RC up themselves gets no push (still in the audit log).
+              unlinkedByThisTakeover = (.holder.holderDriverId) <$> mfilter (isJust . (.holderUnlinkedAt)) mbStaged
+              pushTo = mbPreviousHolderId <|> unlinkedByThisTakeover
+          whenJust mbStaged $ RCTakeover.persistTakeoverAudit lockedRc (mbPreviousHolderId <|> stagedHolder) holderUnlinkedEarlier
+          -- Only once the new driver's activation has succeeded. One best-effort push in the background,
           -- so it never fails the activation. No push for taxi-booth requests: the booth assigns vehicles to
           -- drivers per booking (normal rotation, possibly mid-ride), not a lost vehicle.
           unless isTaxiBoothRequest $
-            whenJust mbPreviousHolderId $ \previousHolderId ->
-              fork "notifyRCTransfer" $ RCTransferNotice.notifyRCTransfer previousHolderId driverId rc
+            whenJust pushTo $ \previousHolderId ->
+              fork "notifyRCTransfer" $ RCTransferNotice.notifyRCTransfer previousHolderId driverId lockedRc
     else do
       deactivateRC isTaxiBoothRequest transporterConfig rc driverId
   return Success
@@ -900,26 +989,21 @@ forceDriverOffline transporterConfig driverId = do
 
 data RCActivationCheck
   = RCAlreadyActive
-  | -- | Carries the driver the RC (or its vehicle) was taken away from, if any.
-    RCCanBeActivated (Maybe (Id Person.Person))
+  | -- | Carries the driver the RC (or its vehicle) was taken away from, if any, and the staged photo check
+    --   the takeover gate used, if any.
+    RCCanBeActivated (Maybe (Id Person.Person)) (Maybe RCTakeover.StagedTakeoverVerification)
 
-validateRCActivation :: OnboardingFlow m r => Bool -> DI.DriverInformation -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> m RCActivationCheck
-validateRCActivation isTaxiBoothRequest driverInfo transporterConfig rc = do
+validateRCActivation :: OnboardingFlow m r => RCActivationSource -> DI.DriverInformation -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> m RCActivationCheck
+validateRCActivation source driverInfo transporterConfig rc = do
   let driverId = driverInfo.driverId
   now <- getCurrentTime
-  mAssoc <- DAQuery.findLinkedByRCIdAndDriverId driverId rc.id now
-  case mAssoc of
-    Just _ -> return ()
-    Nothing -> do
-      unless (transporterConfig.allowDriverToUseFleetRcs == Just True) $ do
-        DAQuery.updateRcErrorMessage driverId rc.id "RC is not associated with the driver"
-        throwError RCActivationRCNotLinked
-      fleetDriverAssociation <- FDA.findByDriverId driverId True >>= fromMaybeM RCActivationRCNotLinked
-      let fleetOwnerId = fleetDriverAssociation.fleetOwnerId
-      unless (rc.fleetOwnerId == Just fleetOwnerId) $ do
-        DAQuery.updateRcErrorMessage driverId rc.id "RC does not belong to you or your fleet."
-        throwError RCActivationRCNotInFleet
-      createDriverRCAssociationIfPossible transporterConfig driverId rc
+  -- Same link check verify runs, from one place; only activation records the reason and creates the link.
+  RCTakeover.rcLinkCheck transporterConfig driverId rc now >>= \case
+    Right RCTakeover.Linked -> pure ()
+    Right RCTakeover.UsableFleetRc -> createDriverRCAssociationIfPossible transporterConfig driverId rc
+    Left (err, mbMessage) -> do
+      whenJust mbMessage $ DAQuery.updateRcErrorMessage driverId rc.id
+      throwError err
 
   -- check if rc is already active to other driver
   mActiveAssociation <- DAQuery.findActiveAssociationByRC rc.id True
@@ -929,8 +1013,8 @@ validateRCActivation isTaxiBoothRequest driverInfo transporterConfig rc = do
         then return RCAlreadyActive
         else do
           ensureDriverCanActivateRC driverInfo transporterConfig rc
-          deactivateIfWeCanDeactivate activeAssociation.driverId now (deactivateRC isTaxiBoothRequest transporterConfig rc)
-          return $ RCCanBeActivated (Just activeAssociation.driverId)
+          mbStaged <- deactivateIfWeCanDeactivate activeAssociation.driverId now (takeoverGate activeAssociation.driverId) (deactivateRC isTaxiBoothRequest transporterConfig rc)
+          return $ RCCanBeActivated (Just activeAssociation.driverId) mbStaged
     Nothing -> do
       ensureDriverCanActivateRC driverInfo transporterConfig rc
       -- check if vehicle of that rc number is already with other driver
@@ -939,29 +1023,44 @@ validateRCActivation isTaxiBoothRequest driverInfo transporterConfig rc = do
         Just vehicle -> do
           if vehicle.driverId /= driverId
             then do
-              deactivateIfWeCanDeactivate vehicle.driverId now removeVehicleAndGoOffline
-              return $ RCCanBeActivated (Just vehicle.driverId)
+              -- clash case 2 (only the vehicle row is with another driver): no photo, as before
+              void $ deactivateIfWeCanDeactivate vehicle.driverId now (pure Nothing) removeVehicleAndGoOffline
+              return $ RCCanBeActivated (Just vehicle.driverId) Nothing
             else do
               removeVehicle isTaxiBoothRequest driverId
-              return $ RCCanBeActivated Nothing
-        Nothing -> return $ RCCanBeActivated Nothing
+              return $ RCCanBeActivated Nothing Nothing
+        Nothing -> return $ RCCanBeActivated Nothing Nothing
   where
-    deactivateIfWeCanDeactivate oldDriverId now deactivateFunc
-      | isTaxiBoothRequest = deactivateFunc oldDriverId
+    isTaxiBoothRequest = source == TaxiBooth
+
+    -- Clash case 1 only. Runs after every existing holder check and right before the holder is unlinked, so a
+    -- photo never skips a check and a refused photo never strips the holder.
+    takeoverGate holderId
+      | transporterConfig.requireRcTakeoverPhoto /= Just True = pure Nothing
+      | otherwise =
+        clashTakeoverRule source rc holderId driverInfo.driverId >>= \case
+          Exempt -> pure Nothing
+          RequirePhoto
+            -- A vehicle type Grid can't check (TOTO, AMBULANCE, BUS, ..., or no variant): no photo is possible,
+            -- so none is required until Grid supports it. Logged, so these takeovers stay visible.
+            | isNothing (RCTakeover.expectedGridVehicleType rc) -> do
+              logInfo $ "RC takeover without photo, vehicle type not checkable: rcId=" <> rc.id.getId <> ", driverId=" <> driverInfo.driverId.getId <> ", variant=" <> show rc.vehicleVariant
+              pure Nothing
+            | otherwise -> Just <$> RCTakeover.requireFreshTakeoverVerification driverInfo.driverId rc
+          RefuseTakeover -> refuseAutoTakeover Nothing driverInfo.driverId rc
+
+    deactivateIfWeCanDeactivate oldDriverId now gate deactivateFunc
+      | isTaxiBoothRequest = Nothing <$ deactivateFunc oldDriverId
       | otherwise = do
-        oldDriverInfo <- DIQuery.findById oldDriverId >>= fromMaybeM (PersonNotFound oldDriverId.getId)
-        when oldDriverInfo.onRide $ rejectActivation RCOtherDriverOnRide
-        let canUnlinkWhenOffline = transporterConfig.allowRcUnlinkWhenDriverOffline == Just True && oldDriverInfo.mode == Just DCommon.OFFLINE
-            withinCutOff since = nominalDiffTimeToSeconds (diffUTCTime now since) <= transporterConfig.automaticRCActivationCutOff
-        unless canUnlinkWhenOffline $ do
-          mLastRideAssigned <- RQuery.findLastRideAssigned oldDriverId
-          case mLastRideAssigned of
-            Just lastRide -> when (withinCutOff lastRide.createdAt) $ rejectActivation RCOtherDriverRecentRide
-            Nothing -> do
-              -- the other driver hasn't taken a ride yet: protect a freshly created account instead
-              person <- Person.findById oldDriverId >>= fromMaybeM (PersonNotFound oldDriverId.getId)
-              when (withinCutOff person.createdAt) $ rejectActivation RCOtherDriverAccountNew
-        deactivateFunc oldDriverId
+        -- Holder on a ride, a recent ride within the cutoff (unless offline and allowed), or a new account.
+        -- The same checks verify runs, from one place.
+        RCTakeover.holderUnlinkBlocker transporterConfig now oldDriverId >>= mapM_ \(err, message) -> do
+          -- The failed attempt is the activating driver's, so the readable text goes on their link.
+          DAQuery.updateRcErrorMessage driverInfo.driverId rc.id message
+          throwError err
+        mbStaged <- gate
+        RCTakeover.withHolderUnlinkMark mbStaged . void $ deactivateFunc oldDriverId
+        pure mbStaged
 
     -- Same end state as deactivateRC: a previous holder left without a vehicle must not stay online.
     -- Taxi-booth requests skip removeVehicle's ride check, so a holder on a ride is not set OFFLINE here.
@@ -972,27 +1071,14 @@ validateRCActivation isTaxiBoothRequest driverInfo transporterConfig rc = do
         offlineAt <- getCurrentTime
         DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just offlineAt) (cast oldDriverId)
 
-    -- The failed attempt is the activating driver's, so the error goes on their link, not the holder's.
-    rejectActivation err = do
-      DAQuery.updateRcErrorMessage driverInfo.driverId rc.id (show err)
-      throwError err
-
 -- | Everything that can stop the activating driver from taking the RC. Runs before the RC (or its
 --   vehicle) is taken away from its current holder, so a rejected activation never strips them.
 ensureDriverCanActivateRC :: OnboardingFlow m r => DI.DriverInformation -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> m ()
-ensureDriverCanActivateRC driverInfo transporterConfig rc = do
-  when (transporterConfig.requiresOnboardingInspection == Just True || transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $ do
-    unless driverInfo.enabled $ do
-      DAQuery.updateRcErrorMessage driverInfo.driverId rc.id "Driver is not enabled"
-      throwError RCActivationDriverNotEnabled
-    unless (fromMaybe False rc.approved) $ do
-      DAQuery.updateRcErrorMessage driverInfo.driverId rc.id "Vehicle is not approved"
-      throwError RCActivationRCNotApproved
-  -- activateRC swaps out the driver's current vehicle, which is refused mid-ride
-  isOnRide <- DIQuery.findByDriverIdActiveRide (cast driverInfo.driverId)
-  when (isJust isOnRide) $ do
-    DAQuery.updateRcErrorMessage driverInfo.driverId rc.id "Driver is on a ride"
-    throwError RCActivationDriverOnRide
+ensureDriverCanActivateRC driverInfo transporterConfig rc =
+  -- Same checks verify runs, from one place; only activation records the reason on the driver's link.
+  RCTakeover.driverActivationBlocker driverInfo transporterConfig rc >>= mapM_ \(err, message) -> do
+    DAQuery.updateRcErrorMessage driverInfo.driverId rc.id message
+    throwError err
 
 activateRC :: OnboardingFlow m r => DI.DriverInformation -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> UTCTime -> Domain.VehicleRegistrationCertificate -> m ()
 activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do

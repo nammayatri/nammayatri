@@ -99,6 +99,7 @@ import qualified SharedLogic.Finance.Wallet as SFWallet
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.PersonBankAccount as SPBA
+import qualified SharedLogic.RCTakeoverVerification as RCTakeover
 import SharedLogic.VehicleServiceTier
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.DocumentVerificationStagesConfig as CQDVSC
@@ -2026,3 +2027,16 @@ mkIdfyVerificationEntityPanAadhaarLink person imageId1 requestId now encryptedPa
         createdAt = now,
         updatedAt = now
       }
+
+postDriverRcTakeoverVerifyPhoto ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.RCTakeoverPhotoReq ->
+    Environment.Flow API.Types.UI.DriverOnboardingV2.RCTakeoverPhotoResp
+  )
+postDriverRcTakeoverVerifyPhoto (mbPersonId, merchantId, merchantOpCityId) req = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  isValid <- RCTakeover.verifyTakeoverPhoto (personId, merchantId, merchantOpCityId) req.rcNo req.image
+  pure $ API.Types.UI.DriverOnboardingV2.RCTakeoverPhotoResp {result = if isValid then API.Types.UI.DriverOnboardingV2.VALID else API.Types.UI.DriverOnboardingV2.INVALID}

@@ -1165,7 +1165,7 @@ bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
               { rcNo = req.vehicleNumber,
                 isActivate = True
               }
-      void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) True rcStatusReq
+      void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) DomainRC.TaxiBooth rcStatusReq
     createRCAssociation driverId rc = do
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       createDriverRCAssociationIfPossible transporterConfig driverId rc

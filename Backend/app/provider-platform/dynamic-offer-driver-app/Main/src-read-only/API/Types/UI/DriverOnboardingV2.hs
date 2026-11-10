@@ -275,6 +275,20 @@ data PullDocumentReq = PullDocumentReq {docType :: Domain.Types.DocumentVerifica
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data RCTakeoverPhotoReq = RCTakeoverPhotoReq {image :: Kernel.Prelude.Text, rcNo :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RCTakeoverPhotoResp = RCTakeoverPhotoResp {result :: RCTakeoverPhotoResult}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RCTakeoverPhotoResult
+  = VALID
+  | INVALID
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RateCardItem = RateCardItem {price :: Kernel.Types.Common.Money, priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity, title :: Kernel.Prelude.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
