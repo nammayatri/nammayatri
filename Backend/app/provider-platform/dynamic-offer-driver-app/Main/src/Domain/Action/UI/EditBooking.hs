@@ -3,6 +3,7 @@ module Domain.Action.UI.EditBooking where
 import API.Types.UI.EditBooking
 import qualified Data.Geohash as DG
 import Data.Text as T
+import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Booking
 import Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Location
@@ -11,6 +12,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.OnUpdate as OU
 import qualified Domain.Types.Person
+import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideRoute
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -26,6 +28,7 @@ import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging (logError)
 import Lib.LocationUpdates.Internal (updatePassedThroughDrop)
 import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.LocationMapping as SLM
@@ -105,6 +108,10 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
               Redis.setExp (editDestinationUpdatedLocGeohashKey driverId) geohash (2 * 60 * 60)
             fork "FleetEngine:notifyDropoffChanged" $
               FleetEngine.notifyDropoffChanged ride.merchantOperatingCityId ride.id LatLong {lat = lat, lon = lon}
+            when (ride.status == DRide.INPROGRESS) $
+              whenJust ride.tripStartPos $ \startPoint -> do
+                rideInfo <- SInternal.mkInProgressRideLtsInfo ride {DRide.toLocation = Just updatedloc} startPoint
+                void $ LF.rideStart ride.id startPoint.lat startPoint.lon bookingUpdateReq.merchantId driverId (Just rideInfo)
           Notify.notifyEditDestination ride.merchantOperatingCityId driverId driver.deviceToken -- when ride.status in [INPROGRESS, NEW]
           return Success
     else do
