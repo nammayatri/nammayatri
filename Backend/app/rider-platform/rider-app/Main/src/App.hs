@@ -45,6 +45,7 @@ import Kernel.Utils.App
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
+import qualified Kernel.Utils.PayloadEncryption as PayloadEncryption
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Network.HTTP.Client.TLS as HttpTLS
 import Network.HTTP.Types (status408)
@@ -168,4 +169,5 @@ runRiderApp' appCfg = do
     -- is enabled, so a separate "should this process even start" switch was
     -- redundant with logic the loop already has to do anyway.
     runFlowR flowRt' appEnv startWhatsAppTracker
-    runSettings settings $ timeoutMiddleware (App.run proxyManager (App.EnvR flowRt' appEnv))
+    payloadEncryption <- PayloadEncryption.payloadEncryptionMiddleware <$> PayloadEncryption.loadPayloadEncryptionConfig "RIDER_PAYLOAD_ENC_PRIVATE_KEYS"
+    runSettings settings $ timeoutMiddleware (payloadEncryption (App.run proxyManager (App.EnvR flowRt' appEnv)))
