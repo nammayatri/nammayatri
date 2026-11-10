@@ -4,6 +4,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  HighPrecMoney: Kernel.Types.Common
 
 # One shared-cab run of a plate on a route. driver-app opens and closes it around its rider-app call; rider-app keeps only the id.
 VehicleTrip:
@@ -23,6 +24,9 @@ VehicleTrip:
     endedAt: Maybe UTCTime
     endReason: Maybe VehicleTripEndReason
     walkupCount: Int
+    earnings: Maybe HighPrecMoney
+    fromStop: Maybe Text
+    toStop: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -47,6 +51,7 @@ VehicleTrip:
   constraints:
     id: PrimaryKey
     vehicleNumber: SecondaryKey
+    driverId: SecondaryKey
 
   queries:
     findById:
@@ -65,10 +70,21 @@ VehicleTrip:
       params: [status, endReason, endedAt]
       where: id
 
-    updateWalkupCount:
+    updateProgress:
       kvFunction: updateOneWithKV
-      params: [walkupCount]
+      params: [walkupCount, earnings]
       where: id
+
+    findAllByDriverIdStartedSince:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - driverId
+          - gte:
+              - startedAt
+      orderBy:
+        field: startedAt
+        order: desc
 
   default:
     walkupCount: "0"

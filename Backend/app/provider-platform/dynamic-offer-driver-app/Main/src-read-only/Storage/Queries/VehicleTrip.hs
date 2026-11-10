@@ -4,11 +4,13 @@
 
 module Storage.Queries.VehicleTrip where
 
+import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleTrip
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -31,11 +33,29 @@ closeTrip status endReason endedAt id = do
 findActiveByVehicleNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.VehicleTrip.VehicleTrip))
 findActiveByVehicleNumber vehicleNumber = do findOneWithKV [Se.And [Se.Is Beam.vehicleNumber $ Se.Eq vehicleNumber, Se.Is Beam.status $ Se.Eq Domain.Types.VehicleTrip.ACTIVE]]
 
+findAllByDriverIdStartedSince ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.UTCTime -> m [Domain.Types.VehicleTrip.VehicleTrip])
+findAllByDriverIdStartedSince limit offset driverId startedAt = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.startedAt $ Se.GreaterThanOrEq startedAt
+        ]
+    ]
+    (Se.Desc Beam.startedAt)
+    limit
+    offset
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip -> m (Maybe Domain.Types.VehicleTrip.VehicleTrip))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateWalkupCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip -> m ())
-updateWalkupCount walkupCount id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.walkupCount walkupCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateProgress ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip -> m ())
+updateProgress walkupCount earnings id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.walkupCount walkupCount, Se.Set Beam.earnings earnings, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip -> m (Maybe Domain.Types.VehicleTrip.VehicleTrip))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -46,14 +66,17 @@ updateByPrimaryKey (Domain.Types.VehicleTrip.VehicleTrip {..}) = do
   updateWithKV
     [ Se.Set Beam.capacity capacity,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
+      Se.Set Beam.earnings earnings,
       Se.Set Beam.endReason endReason,
       Se.Set Beam.endedAt endedAt,
+      Se.Set Beam.fromStop fromStop,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.routeCode routeCode,
       Se.Set Beam.startedAt startedAt,
       Se.Set Beam.status status,
+      Se.Set Beam.toStop toStop,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vehicleNumber vehicleNumber,
       Se.Set Beam.walkupCount walkupCount
@@ -68,8 +91,10 @@ instance FromTType' Beam.VehicleTrip Domain.Types.VehicleTrip.VehicleTrip where
           { capacity = capacity,
             createdAt = createdAt,
             driverId = Kernel.Types.Id.Id driverId,
+            earnings = earnings,
             endReason = endReason,
             endedAt = endedAt,
+            fromStop = fromStop,
             id = Kernel.Types.Id.Id id,
             integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -77,6 +102,7 @@ instance FromTType' Beam.VehicleTrip Domain.Types.VehicleTrip.VehicleTrip where
             routeCode = routeCode,
             startedAt = startedAt,
             status = status,
+            toStop = toStop,
             updatedAt = updatedAt,
             vehicleNumber = vehicleNumber,
             walkupCount = walkupCount
@@ -88,8 +114,10 @@ instance ToTType' Beam.VehicleTrip Domain.Types.VehicleTrip.VehicleTrip where
       { Beam.capacity = capacity,
         Beam.createdAt = createdAt,
         Beam.driverId = Kernel.Types.Id.getId driverId,
+        Beam.earnings = earnings,
         Beam.endReason = endReason,
         Beam.endedAt = endedAt,
+        Beam.fromStop = fromStop,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
@@ -97,6 +125,7 @@ instance ToTType' Beam.VehicleTrip Domain.Types.VehicleTrip.VehicleTrip where
         Beam.routeCode = routeCode,
         Beam.startedAt = startedAt,
         Beam.status = status,
+        Beam.toStop = toStop,
         Beam.updatedAt = updatedAt,
         Beam.vehicleNumber = vehicleNumber,
         Beam.walkupCount = walkupCount

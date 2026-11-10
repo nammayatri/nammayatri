@@ -28,18 +28,34 @@ import qualified Storage.Queries.VehicleTrip as QVT
 withTripLock :: (Redis.HedisFlow m r, MonadMask m) => Text -> m a -> m a
 withTripLock plate = Redis.withWaitAndLockRedis ("sharedcab:trip:lock:" <> plate) 10 100000
 
--- | The run rider-app's live session is on.
-data RiderRun = RiderRun {tripId :: Text, routeCode :: Text, walkupCount :: Int}
+-- | The run rider-app's live session is on, with its route's first and last stop.
+data RiderRun = RiderRun
+  { tripId :: Text,
+    routeCode :: Text,
+    walkupCount :: Int,
+    earnings :: HighPrecMoney,
+    fromStop :: Maybe Text,
+    toStop :: Maybe Text
+  }
   deriving (Show, Eq)
 
 riderRun :: SharedCabSession -> Maybe RiderRun
 riderRun s
   | s.status == ENDED = Nothing
-  | otherwise = Just RiderRun {tripId = s.tripId, routeCode = s.route.code, walkupCount = s.walkupCount}
+  | otherwise =
+    Just
+      RiderRun
+        { tripId = s.tripId,
+          routeCode = s.route.code,
+          walkupCount = s.walkupCount,
+          earnings = fromMaybe 0 s.tripEarnings,
+          fromStop = (.name) <$> listToMaybe s.stops,
+          toStop = (.name) <$> listToMaybe (reverse s.stops)
+        }
 
 data TripAction
   = TripUnchanged
-  | SetWalkups (Id VehicleTrip) Int
+  | SetProgress (Id VehicleTrip) Int HighPrecMoney
   | CloseTrip (Id VehicleTrip) VehicleTripEndReason
   | OpenTrip (Maybe (Id VehicleTrip, VehicleTripEndReason)) RiderRun
   deriving (Show, Eq)
@@ -50,7 +66,10 @@ tripAction :: Id SP.Person -> VehicleTripEndReason -> Maybe VehicleTrip -> Maybe
 tripAction driverId endReason active = \case
   Just run -> case active of
     Just t
-      | t.id.getId == run.tripId -> if t.walkupCount == run.walkupCount then TripUnchanged else SetWalkups t.id run.walkupCount
+      | t.id.getId == run.tripId ->
+        let stored = fromMaybe 0 t.earnings
+            earnings = max stored run.earnings
+         in if t.walkupCount == run.walkupCount && stored == earnings then TripUnchanged else SetProgress t.id run.walkupCount earnings
     _ -> OpenTrip ((\t -> (t.id, if t.driverId == driverId then ROUTE_CHANGED else SESSION_TIMEOUT)) <$> active) run
   Nothing -> maybe TripUnchanged (\t -> CloseTrip t.id endReason) active
 
@@ -68,7 +87,7 @@ syncTrip driverId merchantId merchantOperatingCityId integratedBppConfig vehicle
   active <- QVT.findActiveByVehicleNumber vehicle.registrationNo
   case tripAction driverId endReason active mbRun of
     TripUnchanged -> pure ()
-    SetWalkups tripId count -> QVT.updateWalkupCount count tripId
+    SetProgress tripId count earnings -> QVT.updateProgress count (Just earnings) tripId
     CloseTrip tripId reason -> closeTrip reason tripId
     OpenTrip mbClose run -> do
       whenJust mbClose $ \(tripId, reason) -> closeTrip reason tripId
@@ -88,6 +107,9 @@ syncTrip driverId merchantId merchantOperatingCityId integratedBppConfig vehicle
             endedAt = Nothing,
             endReason = Nothing,
             walkupCount = run.walkupCount,
+            earnings = Just run.earnings,
+            fromStop = run.fromStop,
+            toStop = run.toStop,
             createdAt = now,
             updatedAt = now
           }

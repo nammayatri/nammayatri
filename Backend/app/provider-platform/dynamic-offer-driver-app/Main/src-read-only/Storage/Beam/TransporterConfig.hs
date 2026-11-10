@@ -342,6 +342,8 @@ data TransporterConfigT f = TransporterConfigT
     sendMembershipIdInProfile :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     sendSmsOnEnablement :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     separateDriverVehicleEnablement :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    sharedCabDailyTripTarget :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    sharedCabTripEarningsTarget :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     showRoutePerRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     snapToRoadConfidenceThreshold :: B.C f Kernel.Prelude.Double,
     specialDrivers :: B.C f [Kernel.Prelude.Text],

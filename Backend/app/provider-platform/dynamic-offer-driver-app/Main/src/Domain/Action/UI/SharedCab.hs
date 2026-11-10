@@ -20,6 +20,8 @@ module Domain.Action.UI.SharedCab
     postSharedCabBookingCall,
     postSharedCabBookingMessage,
     getSharedCabCallStatus,
+    getSharedCabTrips,
+    sharedCabTripActive,
     sharedCabFeedVersion,
     BookingAction (..),
     actionReason,
@@ -28,6 +30,7 @@ module Domain.Action.UI.SharedCab
 where
 
 import API.Types.UI.SharedCab
+import Data.Time (Day, UTCTime (..), utctDay)
 import qualified Domain.Action.UI.Call as DCall
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Common as DCommon
@@ -47,14 +50,18 @@ import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.DriverPool as DP
 import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
 import qualified SharedLogic.SharedCab.RiderClient as SharedCabBAP
 import qualified SharedLogic.SharedCab.Trip as Trip
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Storage.Queries.VehicleTrip as QVT
 import qualified Tools.Call as TCall
 import Tools.Error
 
@@ -88,6 +95,58 @@ postSharedCabBookingMessage auth bookingId req = requireDriver auth >>= \driver 
 
 getSharedCabCallStatus :: TokenAuthInfo -> Id SCS.CallStatus -> Flow DCall.GetCallStatusRes
 getSharedCabCallStatus _ = DCall.getCallStatus
+
+getSharedCabTrips :: TokenAuthInfo -> Maybe Day -> Flow SharedCabTripsResp
+getSharedCabTrips auth mbDate = requireDriver auth >>= (`tripsOfDay` mbDate)
+
+defaultDailyTripTarget :: Int
+defaultDailyTripTarget = 10
+
+defaultTripEarningsTarget :: HighPrecMoney
+defaultTripEarningsTarget = 100
+
+tripsOfDay :: DriverAuthInfo -> Maybe Day -> Flow SharedCabTripsResp
+tripsOfDay (personId, _merchantId, merchantOpCityId) mbDate = do
+  _ <- validateSharedCabDriver personId
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  now <- getCurrentTime
+  let offset = fromIntegral transporterConfig.timeDiffFromUtc
+      day = fromMaybe (utctDay (addUTCTime offset now)) mbDate
+      dayStart = addUTCTime (negate offset) (UTCTime day 0)
+      dayEnd = addUTCTime 86400 dayStart
+  trips <- filter ((< dayEnd) . (.startedAt)) <$> QVT.findAllByDriverIdStartedSince Nothing Nothing personId dayStart
+  pure
+    SharedCabTripsResp
+      { date = day,
+        currency = merchantOpCity.currency,
+        tripsCompleted = length (filter ((== DVT.COMPLETED) . (.status)) trips),
+        earnings = sum (map (fromMaybe 0 . (.earnings)) trips),
+        targetPerDay = fromMaybe defaultDailyTripTarget transporterConfig.sharedCabDailyTripTarget,
+        targetPerTrip = fromMaybe defaultTripEarningsTarget transporterConfig.sharedCabTripEarningsTarget,
+        activeTripId = (.id.getId) <$> find ((== DVT.ACTIVE) . (.status)) trips,
+        trips = map tripSummary trips
+      }
+
+sharedCabTripActive :: Id SP.Person -> Maybe DVehicle.VehicleAPIEntity -> Flow (Maybe Bool)
+sharedCabTripActive personId = \case
+  Just vehicle
+    | vehicle.variant == DV.SHARED_CAB ->
+      Just . maybe False ((== personId) . (.driverId)) <$> QVT.findActiveByVehicleNumber vehicle.registrationNo
+  _ -> pure Nothing
+
+tripSummary :: DVT.VehicleTrip -> SharedCabTripSummary
+tripSummary trip =
+  SharedCabTripSummary
+    { tripId = trip.id.getId,
+      routeCode = trip.routeCode,
+      fromStop = trip.fromStop,
+      toStop = trip.toStop,
+      status = trip.status,
+      startedAt = trip.startedAt,
+      endedAt = trip.endedAt,
+      earnings = fromMaybe 0 trip.earnings
+    }
 
 requireDriver :: TokenAuthInfo -> Flow DriverAuthInfo
 requireDriver (mbPersonId, merchantId, merchantOpCityId) = do

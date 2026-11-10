@@ -9,6 +9,7 @@ where
 
 import qualified API.Types.UI.SharedCab
 import qualified Control.Lens
+import qualified Data.Time
 import qualified Domain.Action.UI.Call
 import qualified Domain.Action.UI.SharedCab
 import qualified Domain.Types.CallStatus
@@ -28,38 +29,38 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "publicTransport" :> "data" :> Get ('[JSON]) Domain.Types.SharedCabSession.SharedCabRouteDataResp :<|> TokenAuth :> "sharedCab" :> "routes" :> "demand"
+  ( TokenAuth :> "publicTransport" :> "data" :> Get '[JSON] Domain.Types.SharedCabSession.SharedCabRouteDataResp :<|> TokenAuth :> "sharedCab" :> "routes" :> "demand"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SharedCab.SharedCabDemandReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Domain.Types.SharedCabSession.SharedCabDemandResp
       :<|> TokenAuth
       :> "sharedCab"
       :> "route"
       :> "operations"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SharedCab.SharedCabRouteOperationReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SharedCab.SelectRouteResp
       :<|> TokenAuth
       :> "sharedCab"
       :> "session"
       :> Get
-           ('[JSON])
-           ((Kernel.Prelude.Maybe Domain.Types.SharedCabSession.SharedCabSession))
+           '[JSON]
+           (Kernel.Prelude.Maybe Domain.Types.SharedCabSession.SharedCabSession)
       :<|> TokenAuth
       :> "sharedCab"
       :> "session"
       :> "operations"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SharedCab.SharedCabSessionOperationReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Domain.Types.SharedCabSession.SharedCabSession
       :<|> TokenAuth
       :> "sharedCab"
@@ -69,10 +70,10 @@ type API =
            Kernel.Prelude.Text
       :> "operations"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SharedCab.SharedCabBookingOperationReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Domain.Types.SharedCabSession.SharedCabSession
       :<|> TokenAuth
       :> "sharedCab"
@@ -82,7 +83,7 @@ type API =
            Kernel.Prelude.Text
       :> "call"
       :> Post
-           ('[JSON])
+           '[JSON]
            Domain.Action.UI.Call.CallRes
       :<|> TokenAuth
       :> "sharedCab"
@@ -92,10 +93,10 @@ type API =
            Kernel.Prelude.Text
       :> "message"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SharedCab.SharedCabMessageReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "sharedCab"
@@ -105,12 +106,21 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus)
       :> "status"
       :> Get
-           ('[JSON])
+           '[JSON]
            Domain.Action.UI.Call.GetCallStatusRes
+      :<|> TokenAuth
+      :> "sharedCab"
+      :> "trips"
+      :> QueryParam
+           "date"
+           Data.Time.Day
+      :> Get
+           '[JSON]
+           API.Types.UI.SharedCab.SharedCabTripsResp
   )
 
 handler :: Environment.FlowServer API
-handler = getPublicTransportData :<|> postSharedCabRoutesDemand :<|> postSharedCabRouteOperations :<|> getSharedCabSession :<|> postSharedCabSessionOperations :<|> postSharedCabBookingOperations :<|> postSharedCabBookingCall :<|> postSharedCabBookingMessage :<|> getSharedCabCallStatus
+handler = getPublicTransportData :<|> postSharedCabRoutesDemand :<|> postSharedCabRouteOperations :<|> getSharedCabSession :<|> postSharedCabSessionOperations :<|> postSharedCabBookingOperations :<|> postSharedCabBookingCall :<|> postSharedCabBookingMessage :<|> getSharedCabCallStatus :<|> getSharedCabTrips
 
 getPublicTransportData ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -201,3 +211,13 @@ getSharedCabCallStatus ::
     Environment.FlowHandler Domain.Action.UI.Call.GetCallStatusRes
   )
 getSharedCabCallStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.SharedCab.getSharedCabCallStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getSharedCabTrips ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Maybe Data.Time.Day ->
+    Environment.FlowHandler API.Types.UI.SharedCab.SharedCabTripsResp
+  )
+getSharedCabTrips a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.SharedCab.getSharedCabTrips (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

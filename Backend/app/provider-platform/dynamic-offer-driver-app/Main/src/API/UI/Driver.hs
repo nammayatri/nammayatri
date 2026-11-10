@@ -318,12 +318,14 @@ handler =
     :<|> marketingEventsPostLogin
 
 getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> Maybe Bool -> FlowHandler DDriver.DriverInformationRes
-getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName Nothing mbFleetInfo >>= withPublicTransportVersion merchantOpCityId
+getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName Nothing mbFleetInfo >>= withSharedCabInfo merchantOpCityId
 
-withPublicTransportVersion :: Id DMOC.MerchantOperatingCity -> DDriver.DriverInformationRes -> Flow DDriver.DriverInformationRes
-withPublicTransportVersion merchantOpCityId res = do
-  version <- SharedCab.sharedCabFeedVersion merchantOpCityId ((.variant) <$> res.linkedVehicle)
-  pure res {DDriver.publicTransportVersion = version}
+withSharedCabInfo :: Id DMOC.MerchantOperatingCity -> DDriver.DriverInformationRes -> Flow DDriver.DriverInformationRes
+withSharedCabInfo merchantOpCityId res = do
+  let variant = (.variant) <$> res.linkedVehicle
+  version <- SharedCab.sharedCabFeedVersion merchantOpCityId variant
+  tripActive <- SharedCab.sharedCabTripActive res.id res.linkedVehicle
+  pure res {DDriver.publicTransportVersion = version, DDriver.sharedCabTripActive = tripActive}
 
 marketingEventsPostLogin :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DRegistration.MarketEventReq -> FlowHandler APISuccess
 marketingEventsPostLogin auth req = withFlowHandlerAPI $ DRegistration.marketingEventsPostLogin auth req
@@ -446,7 +448,7 @@ acceptScheduledBooking :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantO
 acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId = withFlowHandlerAPI $ DDriver.acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId Nothing
 
 getInformationV2 :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> Maybe Bool -> DDriver.UpdateProfileInfoPoints -> FlowHandler DDriver.DriverInformationRes
-getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req >>= withPublicTransportVersion merchantOpCityId
+getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req >>= withSharedCabInfo merchantOpCityId
 
 getEarnings :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> DCommon.EarningType -> FlowHandler DCommon.EarningPeriodStatsRes
 getEarnings (personId, merchantId, merchantOpCityId) from to earningType = withFlowHandlerAPI $ DDriver.getEarnings (personId, merchantId, merchantOpCityId) from to earningType
