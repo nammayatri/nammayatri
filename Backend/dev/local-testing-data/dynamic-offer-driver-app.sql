@@ -174,6 +174,7 @@ INSERT INTO atlas_driver_offer_bpp.vehicle
   , category
   , make
   , capacity
+  , selected_service_tiers
   , created_at
   , updated_at
   )
@@ -188,6 +189,10 @@ SELECT
   , 'CAR'
   , 'Maruti'
   , 4
+  -- Every tier a SEDAN can serve. Left empty, the app falls back to the
+  -- tier marked default_for SEDAN (BLACK), which most cities don't offer,
+  -- so the seed driver never lands in the driver pool.
+  , ARRAY['COMFY', 'ECO', 'TAXI', 'PREMIUM_SEDAN', 'HATCHBACK', 'BLACK']
   , now()
   , now()
 FROM atlas_driver_offer_bpp.merchant m
