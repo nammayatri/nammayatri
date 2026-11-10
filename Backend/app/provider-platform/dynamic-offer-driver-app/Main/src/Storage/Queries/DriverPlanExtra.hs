@@ -143,17 +143,17 @@ findAllByDriverIdsPaymentModeAndServiceName ::
   DPlan.ServiceNames ->
   Maybe DriverAutoPayStatus ->
   m [DriverPlan]
-findAllByDriverIdsPaymentModeAndServiceName driverIds paymentMode serviceName autoPayStatus = do
-  -- need DSL Fix
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds),
-          Se.Is BeamDF.planType $ Se.Eq paymentMode,
-          Se.Is BeamDF.enableServiceUsageCharge $ Se.Eq (Just True),
-          Se.Is BeamDF.autoPayStatus $ Se.Eq autoPayStatus,
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
-        ]
-    ]
+findAllByDriverIdsPaymentModeAndServiceName driverIds paymentMode serviceName autoPayStatus =
+  -- Fetch the plans by key (Redis first, Postgres only for drivers missing from Redis) and apply the
+  -- mutable filters in memory. Filtering inside the batch query would let a stale Postgres row come back
+  -- for a driver whose newer Redis row no longer matches (e.g. autopay just paused).
+  filter
+    ( \plan ->
+        plan.planType == paymentMode
+          && plan.enableServiceUsageCharge
+          && plan.autoPayStatus == autoPayStatus
+    )
+    <$> findAllByDriverIdsAndServiceName driverIds serviceName
 
 findAllDriversEligibleForService ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

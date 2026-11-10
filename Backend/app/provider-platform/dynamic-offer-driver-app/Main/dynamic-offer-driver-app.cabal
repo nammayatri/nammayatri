@@ -1146,6 +1146,7 @@ library
       Storage.Queries.RideDetailsExtra
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
+      Storage.Queries.RiderDriverCorrelationExtra
       Storage.Queries.RouteExtra
       Storage.Queries.RsfLedgerAggregates
       Storage.Queries.RsfOrderStateExtra

@@ -121,7 +121,7 @@ import qualified Storage.Queries.DriverStatsExtra as QDriverStatsExtra
 import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.Person.GetNearestDrivers (isDriverModeEligibleHelper, isWalletMinBalanceEligible)
 import qualified Storage.Queries.PersonExtra as QPersonExtra
-import Storage.Queries.RiderDriverCorrelation
+import qualified Storage.Queries.RiderDriverCorrelationExtra as QRDCExtra
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Error
@@ -452,9 +452,9 @@ fetchBatchDriverReads ::
   m BatchDriverReads
 fetchBatchDriverReads riderId dispatchPool = do
   let driverIds = map (\dp -> dp.driverPoolResult.driverId) dispatchPool
-  stats <- runInReplica $ QDriverStatsExtra.findAllByDriverIdList driverIds
+  stats <- runInReplica $ QDriverStatsExtra.findAllByDriverIdListInBatch driverIds
   plans <- QDPExtra.findAllByDriverIdsAndServiceName driverIds (DPlan.DASHCAM_RENTAL DPlan.CAUTIO)
-  correlations <- maybe (pure []) findAllCorrelationsForRider riderId
+  correlations <- maybe (pure []) (\rid -> QRDCExtra.findAllByRiderIdAndDriverIds rid (cast <$> driverIds)) riderId
   pure
     BatchDriverReads
       { driverStatsById = M.fromList $ map (\st -> (st.driverId.getId, st)) stats,
@@ -469,7 +469,7 @@ fetchDriverPersons ::
 fetchDriverPersons dispatchPool
   | null dispatchPool = pure M.empty
   | otherwise = do
-    persons <- QPersonExtra.getDriversByIdIn (map (\dp -> dp.driverPoolResult.driverId) dispatchPool)
+    persons <- QPersonExtra.getDriversByIdInBatch (map (\dp -> dp.driverPoolResult.driverId) dispatchPool)
     pure $ M.fromList $ map (\p -> (p.id.getId, p)) persons
 
 -- | Extracted from sendSearchRequestToDrivers' where-clause so DriverPoolUnified's priority-assign path can reuse it too.
