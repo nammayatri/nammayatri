@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.UI.Ride.StartRide.Internal (startRideTransaction) where
+module Domain.Action.UI.Ride.StartRide.Internal (startRideTransaction, mkInProgressRideLtsInfo) where
 
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Types as DTC
@@ -60,11 +60,23 @@ startRideTransaction ::
   m ()
 startRideTransaction driverId ride bookingId firstPoint merchantId odometer transporterConfig driverInfo = do
   triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
-  minDistanceBetweenTwoPoints <- bool (pure Nothing) (Just <$> asks (.minDistanceBetweenTwoPoints)) (ride.tripCategory == DTC.OneWay DTC.MeterRide)
-  void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon merchantId driverId (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = firstPoint, minDistanceBetweenTwoPoints = minDistanceBetweenTwoPoints, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) ride.stops}))
+  rideInfo <- mkInProgressRideLtsInfo ride firstPoint
+  void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon merchantId driverId (Just rideInfo)
   QRide.updateStartTimeAndLoc ride.id firstPoint
   whenJust odometer $ \odometerReading -> QRide.updateStartOdometerReading ride.id odometerReading
   logTagInfo "startRide" ("Updating driver_flow_status to ON_RIDE for DriverId " <> getId driverId)
   DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig driverInfo.active Nothing DDFS.ON_RIDE driverInfo (Just True) Nothing
   QRide.updateStatus ride.id SRide.INPROGRESS
   QBE.logRideCommencedEvent (cast driverId) bookingId ride.id ride.distanceUnit
+
+mkInProgressRideLtsInfo :: (MonadReader r m, HasField "minDistanceBetweenTwoPoints" r Int) => SRide.Ride -> LatLong -> m LT.RideInfo
+mkInProgressRideLtsInfo ride startPoint = do
+  minDistanceBetweenTwoPoints <- bool (pure Nothing) (Just <$> asks (.minDistanceBetweenTwoPoints)) (ride.tripCategory == DTC.OneWay DTC.MeterRide)
+  pure $
+    LT.Car
+      LT.CarRideInfo
+        { pickupLocation = startPoint,
+          minDistanceBetweenTwoPoints,
+          rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) ride.stops,
+          dropLocation = (\loc -> LatLong loc.lat loc.lon) <$> ride.toLocation
+        }
