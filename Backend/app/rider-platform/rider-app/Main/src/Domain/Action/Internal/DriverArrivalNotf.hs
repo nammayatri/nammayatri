@@ -9,6 +9,7 @@ import Domain.Types.RideStatus
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -18,6 +19,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Notifications as Notify
 
 data RideNotificationStatus
   = IDLE
@@ -25,6 +27,7 @@ data RideNotificationStatus
   | DRIVER_PICKUP_INSTRUCTION
   | DRIVER_REACHING
   | DRIVER_REACHED
+  | DRIVER_REACHING_DESTINATION
   deriving (Show, Eq, Generic, ToSchema, ToJSON, FromJSON)
 
 data DANTypeValidationReq = DANTypeValidationReq
@@ -54,6 +57,13 @@ driverArrivalNotfHandler (DANTypeValidationReq bppRideId driverIdValue status) =
     DRIVER_REACHED -> do
       whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing JMState.Arrived now
       Common.updateAndNotifyDriverArrivalStatus booking ride DRide.DRIVER_REACHED
+    DRIVER_REACHING_DESTINATION ->
+      when (ride.status == INPROGRESS) $ do
+        isFirst <- Redis.tryLockRedis (driverReachingDestinationKey ride.id.getId) 21600
+        when isFirst $ Notify.notifyDriverReachingDestination booking.riderId booking.tripCategory
     _ -> throwError $ InvalidRequest "Unexpected ride notification status"
 
   pure Kernel.Types.APISuccess.Success
+
+driverReachingDestinationKey :: Text -> Text
+driverReachingDestinationKey rideId = "Ride:DriverReachingDestination:Notified:" <> rideId

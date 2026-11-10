@@ -1197,6 +1197,24 @@ notifyOnQuoteReceived quote = do
 --       show quote.estimatedFare <> "."
 --     ]
 
+notifyDriverReachingDestination ::
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
+  Id Person ->
+  Maybe TripCategory ->
+  m ()
+notifyDriverReachingDestination personId tripCategory = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let entity = Notification.Entity Notification.Product personId.getId ()
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "DRIVER_REACHING_DESTINATION" identity)
+    EmptyDynamicParam
+    entity
+    tripCategory
+    []
+    Nothing
+    Nothing
+
 notifyDriverOnTheWay ::
   (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Id Person ->
