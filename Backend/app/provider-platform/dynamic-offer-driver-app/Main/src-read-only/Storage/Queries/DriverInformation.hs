@@ -11,6 +11,7 @@ import qualified Domain.Types.UpgradedTier
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -23,15 +24,16 @@ import qualified Storage.Beam.DriverInformation as Beam
 import Storage.Queries.DriverInformationExtra as ReExport
 import qualified Storage.Queries.Transformers.FleetOwnerInformation
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverInformation.DriverInformation -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DriverInformation.DriverInformation -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverInformation.DriverInformation] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.DriverInformation.DriverInformation] -> m ()
 createMany = traverse_ create
 
 addReferralCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()))
 addReferralCode referralCode referredByDriverId driverId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -41,29 +43,30 @@ addReferralCode referralCode referredByDriverId driverId = do
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-incrementReferralCountByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+incrementReferralCountByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 incrementReferralCountByPersonId totalReferred driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.totalReferred totalReferred, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateAadhaarVerifiedState :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateAadhaarVerifiedState :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateAadhaarVerifiedState aadhaarVerified driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.aadhaarVerified aadhaarVerified, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateAirConditionScore :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateAirConditionScore :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Double -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateAirConditionScore airConditionScore driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.airConditionScore airConditionScore, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateCompAadhaarImagePath :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateCompAadhaarImagePath :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateCompAadhaarImagePath compAadhaarImagePath driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.compAadhaarImagePath compAadhaarImagePath, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateDailyAndWeeklyCancellationRateBlockingCooldown ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()))
 updateDailyAndWeeklyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown driverId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -75,38 +78,42 @@ updateDailyAndWeeklyCancellationRateBlockingCooldown dailyCancellationRateBlocki
 
 updateDailyAndWeeklyExtraKms ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters ->
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()))
 updateDailyAndWeeklyExtraKms dailyExtraKms weeklyExtraKms driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.dailyExtraKms dailyExtraKms, Se.Set Beam.weeklyExtraKms weeklyExtraKms, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateDailyCancellationRateBlockingCooldown :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDailyCancellationRateBlockingCooldown :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDailyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldown driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.dailyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldown, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateDriverAddress ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  (Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()))
 updateDriverAddress address addressDocumentType driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.address address, Se.Set Beam.addressDocumentType addressDocumentType, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateDriverBankAccountDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverBankAccountDetails -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverBankAccountDetails ->
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDriverBankAccountDetails driverBankAccountDetails driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.driverBankAccountDetails (Kernel.Prelude.toJSON <$> driverBankAccountDetails), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateDriverDob :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDriverDob :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDriverDob driverDob driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.driverDob driverDob, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateDriverDobAndAddress ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())))
 updateDriverDobAndAddress driverDob address addressDocumentType driverId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -117,7 +124,7 @@ updateDriverDobAndAddress driverDob address addressDocumentType driverId = do
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateDriverDowngradeForSuv :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDriverDowngradeForSuv :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Bool -> (Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()))
 updateDriverDowngradeForSuv canDowngradeToHatchback canDowngradeToTaxi driverId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -127,74 +134,76 @@ updateDriverDowngradeForSuv canDowngradeToHatchback canDowngradeToTaxi driverId 
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateDrunkAndDriveViolationCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDrunkAndDriveViolationCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDrunkAndDriveViolationCount drunkAndDriveViolationCount driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.drunkAndDriveViolationCount drunkAndDriveViolationCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateExtraFareMitigation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateExtraFareMitigation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateExtraFareMitigation extraFareMitigationFlag driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.extraFareMitigationFlag extraFareMitigationFlag, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateIsInteroperable :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateIsInteroperable :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateIsInteroperable isInteroperable driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isInteroperable (Kernel.Prelude.Just isInteroperable), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateIsNew :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateIsNew :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateIsNew isNew driverId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.isNew isNew, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateIssueBreachCooldownTimes ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachCooldownTime] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachCooldownTime] ->
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateIssueBreachCooldownTimes issueBreachCooldownTimes driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.issueBreachCooldownTimes (Kernel.Prelude.toJSON <$> issueBreachCooldownTimes), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateLastACStatusCheckedAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateLastACStatusCheckedAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateLastACStatusCheckedAt lastACStatusCheckedAt driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.lastACStatusCheckedAt lastACStatusCheckedAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updatePayoutRegAmountRefunded :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePayoutRegAmountRefunded :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutRegAmountRefunded payoutRegAmountRefunded driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.payoutRegAmountRefunded payoutRegAmountRefunded, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updatePayoutRegistrationOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePayoutRegistrationOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutRegistrationOrderId payoutRegistrationOrderId driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.payoutRegistrationOrderId payoutRegistrationOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updatePayoutVpaAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  (Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()))
 updatePayoutVpaAndStatus payoutVpa payoutVpaStatus driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.payoutVpa payoutVpa, Se.Set Beam.payoutVpaStatus payoutVpaStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updatePayoutVpaStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePayoutVpaStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutVpaStatus payoutVpaStatus driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.payoutVpaStatus payoutVpaStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updatePendingPayment :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePendingPayment :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePendingPayment paymentPending driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.paymentPending paymentPending, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateReferredByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateReferredByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateReferredByFleetOwnerId referredByFleetOwnerId driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.referredByFleetOwnerId referredByFleetOwnerId, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateReferredByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateReferredByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateReferredByOperatorId referredByOperatorId driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.referredByOperatorId referredByOperatorId, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateServicesEnabledForSubscription :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Extra.Plan.ServiceNames] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateServicesEnabledForSubscription :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Extra.Plan.ServiceNames] -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateServicesEnabledForSubscription servicesEnabledForSubscription driverId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -203,48 +212,48 @@ updateServicesEnabledForSubscription servicesEnabledForSubscription driverId = d
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateTdsRate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateTdsRate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Double -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateTdsRate tdsRate driverId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.tdsRate tdsRate, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateTollRelatedIssueCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateTollRelatedIssueCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateTollRelatedIssueCount tollRelatedIssueCount driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.tollRelatedIssueCount tollRelatedIssueCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateTripEndLocation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.External.Maps.LatLong -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateTripEndLocation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.External.Maps.LatLong -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateTripEndLocation driverTripEndLocation driverId = do
   _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.driverTripEndLocationLat (Kernel.Prelude.fmap (.lat) driverTripEndLocation),
-      Se.Set Beam.driverTripEndLocationLon (Kernel.Prelude.fmap (.lon) driverTripEndLocation),
+    [ Se.Set Beam.driverTripEndLocationLat (Kernel.Prelude.fmap Kernel.External.Maps.Types.lat driverTripEndLocation),
+      Se.Set Beam.driverTripEndLocationLon (Kernel.Prelude.fmap Kernel.External.Maps.Types.lon driverTripEndLocation),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateUnhygienicVehicleViolationCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateUnhygienicVehicleViolationCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateUnhygienicVehicleViolationCount unhygienicVehicleViolationCount driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.unhygienicVehicleViolationCount unhygienicVehicleViolationCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateUpgradedTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Domain.Types.UpgradedTier.UpgradedTier] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateUpgradedTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe [Domain.Types.UpgradedTier.UpgradedTier] -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateUpgradedTiers ruleBasedUpgradeTiers driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.ruleBasedUpgradeTiers (Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateVehicleUnsafeViolationCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateVehicleUnsafeViolationCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateVehicleUnsafeViolationCount vehicleUnsafeViolationCount driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.vehicleUnsafeViolationCount vehicleUnsafeViolationCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateWeeklyCancellationRateBlockingCooldown :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateWeeklyCancellationRateBlockingCooldown :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateWeeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.weeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverInformation.DriverInformation))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverInformation.DriverInformation)
 findByPrimaryKey driverId = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverInformation.DriverInformation -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DriverInformation.DriverInformation -> m ()
 updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -283,8 +292,8 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.driverBankAccountDetails (Kernel.Prelude.toJSON <$> driverBankAccountDetails),
       Se.Set Beam.driverDob driverDob,
       Se.Set Beam.driverFlowStatus driverFlowStatus,
-      Se.Set Beam.driverTripEndLocationLat (Kernel.Prelude.fmap (.lat) driverTripEndLocation),
-      Se.Set Beam.driverTripEndLocationLon (Kernel.Prelude.fmap (.lon) driverTripEndLocation),
+      Se.Set Beam.driverTripEndLocationLat (Kernel.Prelude.fmap Kernel.External.Maps.Types.lat driverTripEndLocation),
+      Se.Set Beam.driverTripEndLocationLon (Kernel.Prelude.fmap Kernel.External.Maps.Types.lon driverTripEndLocation),
       Se.Set Beam.drunkAndDriveViolationCount drunkAndDriveViolationCount,
       Se.Set Beam.enableCashRide enableCashRide,
       Se.Set Beam.enableForAirport (Kernel.Prelude.Just enableForAirport),
@@ -311,8 +320,8 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.lastEnabledOn lastEnabledOn,
       Se.Set Beam.lastOfflineTime lastOfflineTime,
       Se.Set Beam.latestScheduledBooking latestScheduledBooking,
-      Se.Set Beam.latestScheduledPickupLat (Kernel.Prelude.fmap (.lat) latestScheduledPickup),
-      Se.Set Beam.latestScheduledPickupLon (Kernel.Prelude.fmap (.lon) latestScheduledPickup),
+      Se.Set Beam.latestScheduledPickupLat (Kernel.Prelude.fmap Kernel.External.Maps.Types.lat latestScheduledPickup),
+      Se.Set Beam.latestScheduledPickupLon (Kernel.Prelude.fmap Kernel.External.Maps.Types.lon latestScheduledPickup),
       Se.Set Beam.maxPickupRadius maxPickupRadius,
       Se.Set Beam.mode mode,
       Se.Set Beam.nomineeName nomineeName,

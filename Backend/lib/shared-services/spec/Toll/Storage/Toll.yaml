@@ -38,8 +38,8 @@ Toll:
     price: Kernel.Types.Common.mkPrice currency price|E
 
   toTType:
-    price: (.amount)|I
-    currency: (Kernel.Prelude.Just . (.currency))|I
+    price: Kernel.Types.Price.getPriceAmount|I
+    currency: (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency)|I
 
   queries:
     findAllTollsByMerchantOperatingCity:

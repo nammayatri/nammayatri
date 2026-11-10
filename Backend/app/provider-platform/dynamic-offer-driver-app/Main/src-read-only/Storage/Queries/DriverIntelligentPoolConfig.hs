@@ -15,18 +15,19 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverIntelligentPoolConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverIntelligentPoolConfig.DriverIntelligentPoolConfig -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DriverIntelligentPoolConfig.DriverIntelligentPoolConfig -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverIntelligentPoolConfig.DriverIntelligentPoolConfig] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.DriverIntelligentPoolConfig.DriverIntelligentPoolConfig] -> m ()
 createMany = traverse_ create
 
 findByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.DriverIntelligentPoolConfig.DriverIntelligentPoolConfig))
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  m (Maybe Domain.Types.DriverIntelligentPoolConfig.DriverIntelligentPoolConfig)
 findByMerchantOpCityId merchantOperatingCityId = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
-update :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverIntelligentPoolConfig.DriverIntelligentPoolConfig -> m ())
+update :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DriverIntelligentPoolConfig.DriverIntelligentPoolConfig -> m ()
 update (Domain.Types.DriverIntelligentPoolConfig.DriverIntelligentPoolConfig {..}) = do
   _now <- getCurrentTime
   updateOneWithKV

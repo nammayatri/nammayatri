@@ -17,15 +17,16 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSTicketCategoryMetadataConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig] -> m ()
 createMany = traverse_ create
 
 findByCategoryVehicleAndCity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType -> BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig))
+  Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType ->
+  (BecknV2.FRFS.Enums.VehicleCategory -> (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig)))
 findByCategoryVehicleAndCity category vehicleCategory merchantOperatingCityId = do
   findOneWithKV
     [ Se.And
@@ -37,15 +38,17 @@ findByCategoryVehicleAndCity category vehicleCategory merchantOperatingCityId = 
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig -> m (Maybe Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig))
+  Kernel.Types.Id.Id Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig ->
+  m (Maybe Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig -> m (Maybe Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig))
+  Kernel.Types.Id.Id Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig ->
+  m (Maybe Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig -> m ()
 updateByPrimaryKey (Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV

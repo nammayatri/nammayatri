@@ -14,56 +14,59 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSRecon as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSRecon.FRFSRecon -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSRecon.FRFSRecon -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSRecon.FRFSRecon] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSRecon.FRFSRecon] -> m ()
 createMany = traverse_ create
 
-findAllByFrfsTicketBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m [Domain.Types.FRFSRecon.FRFSRecon])
+findAllByFrfsTicketBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m [Domain.Types.FRFSRecon.FRFSRecon]
 findAllByFrfsTicketBookingId frfsTicketBookingId = do findAllWithKV [Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId)]
 
 updateStatusByTicketBookingId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.FRFSTicketStatus.FRFSTicketStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+  Kernel.Prelude.Maybe Domain.Types.FRFSTicketStatus.FRFSTicketStatus ->
+  (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateStatusByTicketBookingId ticketStatus frfsTicketBookingId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.ticketStatus ticketStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId)]
 
 updateTOrderValueAndSettlementAmountById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Common.Price -> Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+  Kernel.Types.Common.Price ->
+  (Kernel.Types.Common.Price -> (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()))
 updateTOrderValueAndSettlementAmountById settlementAmount totalOrderValue frfsTicketBookingId = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.settlementAmount ((.amount) settlementAmount),
-      Se.Set Beam.totalOrderValue ((.amount) totalOrderValue),
+    [ Se.Set Beam.settlementAmount (Kernel.Types.Price.getPriceAmount settlementAmount),
+      Se.Set Beam.totalOrderValue (Kernel.Types.Price.getPriceAmount totalOrderValue),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSRecon.FRFSRecon -> m (Maybe Domain.Types.FRFSRecon.FRFSRecon))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSRecon.FRFSRecon -> m (Maybe Domain.Types.FRFSRecon.FRFSRecon)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSRecon.FRFSRecon -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSRecon.FRFSRecon -> m ()
 updateByPrimaryKey (Domain.Types.FRFSRecon.FRFSRecon {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.beneficiaryBankAccount beneficiaryBankAccount,
       Se.Set Beam.beneficiaryIFSC beneficiaryIFSC,
-      Se.Set Beam.buyerFinderFee ((.amount) buyerFinderFee),
+      Se.Set Beam.buyerFinderFee (Kernel.Types.Price.getPriceAmount buyerFinderFee),
       Se.Set Beam.collectorIFSC collectorIFSC,
       Se.Set Beam.collectorSubscriberId collectorSubscriberId,
       Se.Set Beam.date date,
       Se.Set Beam.destinationStationCode destinationStationCode,
-      Se.Set Beam.differenceAmount (Kernel.Prelude.fmap (.amount) differenceAmount),
+      Se.Set Beam.differenceAmount (Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount differenceAmount),
       Se.Set Beam.entityType entityType,
-      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) fare),
-      Se.Set Beam.fare ((.amount) fare),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) fare),
+      Se.Set Beam.fare (Kernel.Types.Price.getPriceAmount fare),
       Se.Set Beam.frfsTicketBookingId (Kernel.Types.Id.getId frfsTicketBookingId),
       Se.Set Beam.message message,
       Se.Set Beam.mobileNumber mobileNumber,
@@ -76,7 +79,7 @@ updateByPrimaryKey (Domain.Types.FRFSRecon.FRFSRecon {..}) = do
       Se.Set Beam.providerName providerName,
       Se.Set Beam.receiverSubscriberId receiverSubscriberId,
       Se.Set Beam.reconStatus reconStatus,
-      Se.Set Beam.settlementAmount ((.amount) settlementAmount),
+      Se.Set Beam.settlementAmount (Kernel.Types.Price.getPriceAmount settlementAmount),
       Se.Set Beam.settlementDate settlementDate,
       Se.Set Beam.settlementReferenceNumber settlementReferenceNumber,
       Se.Set Beam.sourceStationCode sourceStationCode,
@@ -84,7 +87,7 @@ updateByPrimaryKey (Domain.Types.FRFSRecon.FRFSRecon {..}) = do
       Se.Set Beam.ticketQty ticketQty,
       Se.Set Beam.ticketStatus ticketStatus,
       Se.Set Beam.time time,
-      Se.Set Beam.totalOrderValue ((.amount) totalOrderValue),
+      Se.Set Beam.totalOrderValue (Kernel.Types.Price.getPriceAmount totalOrderValue),
       Se.Set Beam.transactionRefNumber transactionRefNumber,
       Se.Set Beam.transactionUUID transactionUUID,
       Se.Set Beam.txnId txnId,
@@ -145,15 +148,15 @@ instance ToTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
     Beam.FRFSReconT
       { Beam.beneficiaryBankAccount = beneficiaryBankAccount,
         Beam.beneficiaryIFSC = beneficiaryIFSC,
-        Beam.buyerFinderFee = (.amount) buyerFinderFee,
+        Beam.buyerFinderFee = Kernel.Types.Price.getPriceAmount buyerFinderFee,
         Beam.collectorIFSC = collectorIFSC,
         Beam.collectorSubscriberId = collectorSubscriberId,
         Beam.date = date,
         Beam.destinationStationCode = destinationStationCode,
-        Beam.differenceAmount = Kernel.Prelude.fmap (.amount) differenceAmount,
+        Beam.differenceAmount = Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount differenceAmount,
         Beam.entityType = entityType,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) fare,
-        Beam.fare = (.amount) fare,
+        Beam.currency = (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) fare,
+        Beam.fare = Kernel.Types.Price.getPriceAmount fare,
         Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.message = message,
@@ -167,7 +170,7 @@ instance ToTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
         Beam.providerName = providerName,
         Beam.receiverSubscriberId = receiverSubscriberId,
         Beam.reconStatus = reconStatus,
-        Beam.settlementAmount = (.amount) settlementAmount,
+        Beam.settlementAmount = Kernel.Types.Price.getPriceAmount settlementAmount,
         Beam.settlementDate = settlementDate,
         Beam.settlementReferenceNumber = settlementReferenceNumber,
         Beam.sourceStationCode = sourceStationCode,
@@ -175,7 +178,7 @@ instance ToTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
         Beam.ticketQty = ticketQty,
         Beam.ticketStatus = ticketStatus,
         Beam.time = time,
-        Beam.totalOrderValue = (.amount) totalOrderValue,
+        Beam.totalOrderValue = Kernel.Types.Price.getPriceAmount totalOrderValue,
         Beam.transactionRefNumber = transactionRefNumber,
         Beam.transactionUUID = transactionUUID,
         Beam.txnId = txnId,

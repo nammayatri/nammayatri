@@ -55,8 +55,8 @@ PayoutOrder:
   fromTType:
     amount: Kernel.Types.Common.mkPrice currency price|E
   toTType:
-    price: (.amount)|I
-    currency: (Kernel.Prelude.Just . (.currency))|I
+    price: Kernel.Types.Price.getPriceAmount|I
+    currency: (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency)|I
   sqlType:
     id: character varying(36)
     mobileNoEncrypted: character varying(255)
@@ -140,8 +140,8 @@ PayoutTransaction:
   fromTType:
     amount: Kernel.Types.Common.mkPrice currency price|E
   toTType:
-    price: (.amount)|I
-    currency: (Kernel.Prelude.Just . (.currency))|I
+    price: Kernel.Types.Price.getPriceAmount|I
+    currency: (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency)|I
   queries:
     findById:
       kvFunction: findOneWithKV

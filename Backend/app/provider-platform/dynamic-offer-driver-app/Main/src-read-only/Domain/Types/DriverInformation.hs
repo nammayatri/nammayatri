@@ -393,15 +393,34 @@ instance EncryptedItem' DriverInformation where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
-data AddressDocumentType = RationCard | UtilityBill | Passport | VoterId | LifeInsurancePolicy | Others deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data AddressDocumentType
+  = RationCard
+  | UtilityBill
+  | Passport
+  | VoterId
+  | LifeInsurancePolicy
+  | Others
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data AirConditionedRestrictionType = NoRestriction | ToggleAllowed | ToggleNotAllowed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data AirConditionedRestrictionType
+  = NoRestriction
+  | ToggleAllowed
+  | ToggleNotAllowed
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data AirportRestrictionType = ENABLED | DISABLED | BLOCKED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data AirportRestrictionType
+  = ENABLED
+  | DISABLED
+  | BLOCKED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data Badges = Badges {badgeCount :: Kernel.Prelude.Int, badgeName :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data DisabledReasonFlag = FleetDisabled | AdminDisabled | DriverDisabled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data DisabledReasonFlag
+  = FleetDisabled
+  | AdminDisabled
+  | DriverDisabled
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data DriverAutoPayStatus
   = PENDING
@@ -440,11 +459,22 @@ data DriverSummary = DriverSummary
 
 data EnabledReasonFlag = AdminEnabled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data MapProvider = GOOGLE_MAPS | WAZE | APPLE_MAPS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data MapProvider
+  = GOOGLE_MAPS
+  | WAZE
+  | APPLE_MAPS
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data OnboardingAs = FLEET_DRIVER | INDIVIDUAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data OnboardingAs
+  = FLEET_DRIVER
+  | INDIVIDUAL
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PayoutVpaStatus
+  = VIA_WEBHOOK
+  | MANUALLY_ADDED
+  | VERIFIED_BY_USER
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AddressDocumentType)
 

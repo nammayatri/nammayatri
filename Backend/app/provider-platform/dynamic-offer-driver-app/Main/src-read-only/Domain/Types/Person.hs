@@ -196,9 +196,21 @@ instance EncryptedItem' Person where
 
 type Driver = Person
 
-data EmailSource = SOCIAL_GOOGLE | SOCIAL_APPLE | SOCIAL_APPLE_PRIVATE_RELAY | OTP deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data EmailSource
+  = SOCIAL_GOOGLE
+  | SOCIAL_APPLE
+  | SOCIAL_APPLE_PRIVATE_RELAY
+  | OTP
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY | NON_BINARY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data Gender
+  = MALE
+  | FEMALE
+  | OTHER
+  | UNKNOWN
+  | PREFER_NOT_TO_SAY
+  | NON_BINARY
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data IdentifierType
   = MOBILENUMBER

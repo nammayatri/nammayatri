@@ -3,19 +3,18 @@
 
 module Storage.Queries.OrphanInstances.Journey where
 
--- TODO generate src-read-only via DSL or use reexport for fields?
-
 import qualified Domain.Types.Journey
-import qualified Domain.Types.Location as Fields
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Distance
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.Journey as Beam
 import qualified Storage.Queries.Transformers.Journey
+import qualified Storage.Queries.Transformers.SearchRequest
 
 instance FromTType' Beam.Journey Domain.Types.Journey.Journey where
   fromTType' (Beam.JourneyT {..}) = do
@@ -59,11 +58,11 @@ instance ToTType' Beam.Journey Domain.Types.Journey.Journey where
     Beam.JourneyT
       { Beam.convenienceCost = convenienceCost,
         Beam.endTime = endTime,
-        Beam.distanceUnit = (.unit) estimatedDistance,
-        Beam.estimatedDistance = (.value) estimatedDistance,
+        Beam.distanceUnit = Kernel.Types.Distance.unit estimatedDistance,
+        Beam.estimatedDistance = Kernel.Types.Distance.value estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
         Beam.fromLocationAddress = Nothing,
-        Beam.fromLocationId = Just $ Kernel.Types.Id.getId ((.id) fromLocation),
+        Beam.fromLocationId = Just $ Storage.Queries.Transformers.SearchRequest.getLocationId fromLocation,
         Beam.hasPreferredServiceTier = hasPreferredServiceTier,
         Beam.hasPreferredTransitModes = hasPreferredTransitModes,
         Beam.hasStartedTrackingWithoutBooking = hasStartedTrackingWithoutBooking,
@@ -84,7 +83,7 @@ instance ToTType' Beam.Journey Domain.Types.Journey.Journey where
         Beam.startTime = startTime,
         Beam.status = Just status,
         Beam.toLocationAddress = Nothing,
-        Beam.toLocationId = Kernel.Types.Id.getId <$> (toLocation <&> (.id)),
+        Beam.toLocationId = Storage.Queries.Transformers.SearchRequest.getLocationId <$> toLocation,
         Beam.totalLegs = totalLegs,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

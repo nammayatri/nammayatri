@@ -6,8 +6,9 @@ module Storage.Queries.Estimate where
 
 import qualified Domain.Types.Common
 import qualified Domain.Types.Estimate
-import qualified Domain.Types.FarePolicy as Fields
-import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as Fields
+import qualified Domain.Types.FareParameters
+import qualified Domain.Types.FarePolicy
+import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds
 import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -22,21 +23,20 @@ import qualified Storage.Beam.Estimate as Beam
 import qualified Storage.Cac.FarePolicy
 import qualified Storage.Queries.FareParameters
 import qualified Storage.Queries.Transformers.Estimate
-import qualified Tools.Fields as Fields
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.Estimate -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Estimate.Estimate -> m ()
 create tbl = do Kernel.Prelude.whenJust tbl.fareParams Storage.Queries.FareParameters.create; createWithKV tbl
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Estimate.Estimate] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Estimate.Estimate] -> m ()
 createMany = traverse_ create
 
-findAllByRequestId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Estimate.Estimate])
+findAllByRequestId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Estimate.Estimate]
 findAllByRequestId requestId = do findAllWithKVAndConditionalDB [Se.And [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)]] Nothing
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate)
 findById id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-findEligibleForCabUpgrade :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Kernel.Prelude.Bool -> m [Domain.Types.Estimate.Estimate])
+findEligibleForCabUpgrade :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> (Kernel.Prelude.Bool -> m [Domain.Types.Estimate.Estimate])
 findEligibleForCabUpgrade requestId eligibleForUpgrade = do
   findAllWithKVAndConditionalDB
     [ Se.And
@@ -48,7 +48,8 @@ findEligibleForCabUpgrade requestId eligibleForUpgrade = do
 
 updateSupplyDemandRatioByReqIdAndServiceTier ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Domain.Types.Common.ServiceTierType -> m ())
+  Kernel.Prelude.Maybe Kernel.Prelude.Double ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Double -> (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> (Domain.Types.Common.ServiceTierType -> m ())))
 updateSupplyDemandRatioByReqIdAndServiceTier supplyDemandRatioFromLoc supplyDemandRatioToLoc requestId vehicleServiceTier = do
   _now <- getCurrentTime
   updateWithKV
@@ -62,10 +63,10 @@ updateSupplyDemandRatioByReqIdAndServiceTier supplyDemandRatioFromLoc supplyDema
         ]
     ]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.Estimate -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Estimate.Estimate -> m ()
 updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -76,19 +77,19 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.dpVersion dpVersion,
-      Se.Set Beam.driverExtraFeeDefaultStepFee (driverExtraFeeBounds <&> (.defaultStepFee)),
-      Se.Set Beam.driverExtraFeeDistanceUnit (driverExtraFeeBounds <&> (.distanceUnit)),
-      Se.Set Beam.driverExtraFeeMaxFee (driverExtraFeeBounds <&> (.maxFee)),
-      Se.Set Beam.driverExtraFeeMinFee (driverExtraFeeBounds <&> (.minFee)),
-      Se.Set Beam.driverExtraFeeStartDistance (driverExtraFeeBounds <&> (.startDistance)),
-      Se.Set Beam.driverExtraFeeStepFee (driverExtraFeeBounds <&> (.stepFee)),
+      Se.Set Beam.driverExtraFeeDefaultStepFee (driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.defaultStepFee),
+      Se.Set Beam.driverExtraFeeDistanceUnit (driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.distanceUnit),
+      Se.Set Beam.driverExtraFeeMaxFee (driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.maxFee),
+      Se.Set Beam.driverExtraFeeMinFee (driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.minFee),
+      Se.Set Beam.driverExtraFeeStartDistance (driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.startDistance),
+      Se.Set Beam.driverExtraFeeStepFee (driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.stepFee),
       Se.Set Beam.eligibleForUpgrade (Kernel.Prelude.Just eligibleForUpgrade),
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.estimatedDuration estimatedDuration,
       Se.Set Beam.fareAdjustmentArm fareAdjustmentArm,
       Se.Set Beam.fareAdjustmentId fareAdjustmentId,
-      Se.Set Beam.fareParamsId ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
-      Se.Set Beam.farePolicyId ((Kernel.Types.Id.getId . (.id) <$>) farePolicy),
+      Se.Set Beam.fareParamsId (Kernel.Prelude.fmap (Kernel.Types.Id.getId . Domain.Types.FareParameters.id) fareParams),
+      Se.Set Beam.farePolicyId (Storage.Queries.Transformers.Estimate.getFarePolicyId farePolicy),
       Se.Set Beam.fromLocGeohash fromLocGeohash,
       Se.Set Beam.isBlockedRoute isBlockedRoute,
       Se.Set Beam.isCustomerPrefferedSearchRoute isCustomerPrefferedSearchRoute,
@@ -209,19 +210,19 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.dpVersion = dpVersion,
-        Beam.driverExtraFeeDefaultStepFee = driverExtraFeeBounds <&> (.defaultStepFee),
-        Beam.driverExtraFeeDistanceUnit = driverExtraFeeBounds <&> (.distanceUnit),
-        Beam.driverExtraFeeMaxFee = driverExtraFeeBounds <&> (.maxFee),
-        Beam.driverExtraFeeMinFee = driverExtraFeeBounds <&> (.minFee),
-        Beam.driverExtraFeeStartDistance = driverExtraFeeBounds <&> (.startDistance),
-        Beam.driverExtraFeeStepFee = driverExtraFeeBounds <&> (.stepFee),
+        Beam.driverExtraFeeDefaultStepFee = driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.defaultStepFee,
+        Beam.driverExtraFeeDistanceUnit = driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.distanceUnit,
+        Beam.driverExtraFeeMaxFee = driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.maxFee,
+        Beam.driverExtraFeeMinFee = driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.minFee,
+        Beam.driverExtraFeeStartDistance = driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.startDistance,
+        Beam.driverExtraFeeStepFee = driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.stepFee,
         Beam.eligibleForUpgrade = Kernel.Prelude.Just eligibleForUpgrade,
         Beam.estimatedDistance = estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
         Beam.fareAdjustmentArm = fareAdjustmentArm,
         Beam.fareAdjustmentId = fareAdjustmentId,
-        Beam.fareParamsId = (Kernel.Types.Id.getId . (.id) <$>) fareParams,
-        Beam.farePolicyId = (Kernel.Types.Id.getId . (.id) <$>) farePolicy,
+        Beam.fareParamsId = Kernel.Prelude.fmap (Kernel.Types.Id.getId . Domain.Types.FareParameters.id) fareParams,
+        Beam.farePolicyId = Storage.Queries.Transformers.Estimate.getFarePolicyId farePolicy,
         Beam.fromLocGeohash = fromLocGeohash,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isBlockedRoute = isBlockedRoute,

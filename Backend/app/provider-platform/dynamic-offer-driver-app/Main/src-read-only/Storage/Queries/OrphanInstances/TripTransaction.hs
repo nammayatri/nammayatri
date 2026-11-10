@@ -7,7 +7,7 @@ import qualified Data.Aeson
 import qualified Domain.Types.TripTransaction
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.Maps.Types as Fields
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
@@ -74,8 +74,8 @@ instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransact
         Beam.driverName = driverName,
         Beam.dutyType = dutyType,
         Beam.endAddress = endAddress,
-        Beam.endLocationLat = Kernel.Prelude.fmap (.lat) endLocation,
-        Beam.endLocationLon = Kernel.Prelude.fmap (.lon) endLocation,
+        Beam.endLocationLat = Kernel.Prelude.fmap Kernel.External.Maps.Types.lat endLocation,
+        Beam.endLocationLon = Kernel.Prelude.fmap Kernel.External.Maps.Types.lon endLocation,
         Beam.endRideApprovalRequestId = Kernel.Types.Id.getId <$> endRideApprovalRequestId,
         Beam.endStopCode = endStopCode,
         Beam.fleetOwnerId = Kernel.Types.Id.getId fleetOwnerId,
@@ -83,16 +83,16 @@ instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransact
         Beam.isCurrentlyDeviated = isCurrentlyDeviated,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.pilotDestinationLat = Kernel.Prelude.fmap (.lat) pilotDestination,
-        Beam.pilotDestinationLon = Kernel.Prelude.fmap (.lon) pilotDestination,
-        Beam.pilotSourceLat = Kernel.Prelude.fmap (.lat) pilotSource,
-        Beam.pilotSourceLon = Kernel.Prelude.fmap (.lon) pilotSource,
+        Beam.pilotDestinationLat = Kernel.Prelude.fmap Kernel.External.Maps.Types.lat pilotDestination,
+        Beam.pilotDestinationLon = Kernel.Prelude.fmap Kernel.External.Maps.Types.lon pilotDestination,
+        Beam.pilotSourceLat = Kernel.Prelude.fmap Kernel.External.Maps.Types.lat pilotSource,
+        Beam.pilotSourceLon = Kernel.Prelude.fmap Kernel.External.Maps.Types.lon pilotSource,
         Beam.roundRouteCode = roundRouteCode,
         Beam.routeCode = routeCode,
         Beam.scheduledTripTime = scheduledTripTime,
         Beam.startAddress = startAddress,
-        Beam.startLocationLat = Kernel.Prelude.fmap (.lat) startLocation,
-        Beam.startLocationLon = Kernel.Prelude.fmap (.lon) startLocation,
+        Beam.startLocationLat = Kernel.Prelude.fmap Kernel.External.Maps.Types.lat startLocation,
+        Beam.startLocationLon = Kernel.Prelude.fmap Kernel.External.Maps.Types.lon startLocation,
         Beam.startedNearStopCode = startedNearStopCode,
         Beam.status = status,
         Beam.tripCode = tripCode,

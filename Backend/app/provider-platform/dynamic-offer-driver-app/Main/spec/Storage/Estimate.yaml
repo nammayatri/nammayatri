@@ -128,13 +128,14 @@ Estimate:
       updatedAt: Kernel.Prelude.Just|I
       isScheduled: Kernel.Prelude.Just|I
       tripCategory: Kernel.Prelude.Just|I
-      driverExtraFeeStartDistance: (driverExtraFeeBounds <&> (.startDistance))|E
-      driverExtraFeeDistanceUnit: (driverExtraFeeBounds <&> (.distanceUnit))|E
-      driverExtraFeeStepFee: (driverExtraFeeBounds <&> (.stepFee))|E
-      driverExtraFeeDefaultStepFee: (driverExtraFeeBounds <&> (.defaultStepFee))|E
-      driverExtraFeeMinFee: (driverExtraFeeBounds <&> (.minFee))|E
-      driverExtraFeeMaxFee: (driverExtraFeeBounds <&> (.maxFee))|E
-      farePolicyId: (Kernel.Types.Id.getId . (.id) <$>)
+      driverExtraFeeStartDistance: (driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.startDistance)|E
+      driverExtraFeeDistanceUnit: (driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.distanceUnit)|E
+      driverExtraFeeStepFee: (driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.stepFee)|E
+      driverExtraFeeDefaultStepFee: (driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.defaultStepFee)|E
+      driverExtraFeeMinFee: (driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.minFee)|E
+      driverExtraFeeMaxFee: (driverExtraFeeBounds <&> Domain.Types.FarePolicy.DriverExtraFeeBounds.maxFee)|E
+      farePolicyId: Storage.Queries.Transformers.Estimate.getFarePolicyId|I
+      fareParamsId: Kernel.Prelude.fmap (Kernel.Types.Id.getId . Domain.Types.FareParameters.id)|I
       minFare:  Kernel.Prelude.roundToIntegral|I
       minFareAmount: Kernel.Prelude.Just|I
       currency: Kernel.Prelude.Just|I

@@ -15,55 +15,57 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantOnboarding as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantOnboarding.MerchantOnboarding -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantOnboarding.MerchantOnboarding -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantOnboarding.MerchantOnboarding] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.MerchantOnboarding.MerchantOnboarding] -> m ()
 createMany = traverse_ create
 
-deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> m ())
+deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> m ()
 deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findAllByOnboardingType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Domain.Types.MerchantOnboarding.OnboardingType -> m [Domain.Types.MerchantOnboarding.MerchantOnboarding])
+  Maybe Int ->
+  (Maybe Int -> (Domain.Types.MerchantOnboarding.OnboardingType -> m [Domain.Types.MerchantOnboarding.MerchantOnboarding]))
 findAllByOnboardingType limit offset onboardingType = do findAllWithOptionsKV [Se.Is Beam.onboardingType $ Se.Eq onboardingType] (Se.Desc Beam.createdAt) limit offset
 
-findAllByRequestorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.MerchantOnboarding.MerchantOnboarding])
+findAllByRequestorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> m [Domain.Types.MerchantOnboarding.MerchantOnboarding]
 findAllByRequestorId requestorId = do findAllWithKV [Se.Is Beam.requestorId $ Se.Eq requestorId]
 
-findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantOnboarding.OnboardingStatus -> m [Domain.Types.MerchantOnboarding.MerchantOnboarding])
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantOnboarding.OnboardingStatus -> m [Domain.Types.MerchantOnboarding.MerchantOnboarding]
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> m (Maybe Domain.Types.MerchantOnboarding.MerchantOnboarding))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> m (Maybe Domain.Types.MerchantOnboarding.MerchantOnboarding)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByRequestorIdAndOnboardingType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Domain.Types.MerchantOnboarding.OnboardingType -> m (Maybe Domain.Types.MerchantOnboarding.MerchantOnboarding))
+  Kernel.Prelude.Text ->
+  (Domain.Types.MerchantOnboarding.OnboardingType -> m (Maybe Domain.Types.MerchantOnboarding.MerchantOnboarding))
 findByRequestorIdAndOnboardingType requestorId onboardingType = do findOneWithKV [Se.And [Se.Is Beam.requestorId $ Se.Eq requestorId, Se.Is Beam.onboardingType $ Se.Eq onboardingType]]
 
-updateOnboardingRemarks :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> m ())
+updateOnboardingRemarks :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> m ())
 updateOnboardingRemarks remarks id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.remarks remarks, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateOnboardingStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.MerchantOnboarding.OnboardingStatus -> Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> m ())
+  Domain.Types.MerchantOnboarding.OnboardingStatus ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> m ())
 updateOnboardingStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateOnboardingStatusAndRemarks ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.MerchantOnboarding.OnboardingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> m ())
+  Domain.Types.MerchantOnboarding.OnboardingStatus ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> m ()))
 updateOnboardingStatusAndRemarks status remarks id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.remarks remarks, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> m (Maybe Domain.Types.MerchantOnboarding.MerchantOnboarding))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> m (Maybe Domain.Types.MerchantOnboarding.MerchantOnboarding)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantOnboarding.MerchantOnboarding -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantOnboarding.MerchantOnboarding -> m ()
 updateByPrimaryKey (Domain.Types.MerchantOnboarding.MerchantOnboarding {..}) = do
   _now <- getCurrentTime
   updateWithKV

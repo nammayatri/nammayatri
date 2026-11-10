@@ -15,13 +15,13 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.BookingLocation as Beam
 import Storage.Queries.Transformers.BookingLocation
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingLocation.BookingLocation -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.BookingLocation.BookingLocation -> m ()
 create = createWithKV
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BookingLocation.BookingLocation -> m (Maybe Domain.Types.BookingLocation.BookingLocation))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.BookingLocation.BookingLocation -> m (Maybe Domain.Types.BookingLocation.BookingLocation)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateAddress :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingLocation.LocationAddress -> Kernel.Types.Id.Id Domain.Types.BookingLocation.BookingLocation -> m ())
+updateAddress :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.BookingLocation.LocationAddress -> (Kernel.Types.Id.Id Domain.Types.BookingLocation.BookingLocation -> m ())
 updateAddress address id = do
   _now <- getCurrentTime
   updateOneWithKV

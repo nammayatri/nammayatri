@@ -442,7 +442,12 @@ data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data CallingOption = AnonymousCall | DirectCall | DualCall | ForceDirectCall deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data CallingOption
+  = AnonymousCall
+  | DirectCall
+  | DualCall
+  | ForceDirectCall
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgingAndBlockingConfig
   { cancellationRateSlabConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,
@@ -465,9 +470,17 @@ data CancellationRateSlab = CancellationRateSlab {cancellationPercentageThreshol
 data CancellationRateSlabConfig = CancellationRateSlabConfig {dailySlabs :: [Domain.Types.TransporterConfig.SlabType], weeklySlabs :: [Domain.Types.TransporterConfig.SlabType]}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data ChargeFrequency = CHARGE_DAILY | CHARGE_WEEKLY | CHARGE_MONTHLY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ChargeFrequency
+  = CHARGE_DAILY
+  | CHARGE_WEEKLY
+  | CHARGE_MONTHLY
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data CommissionAggregationFrequency = DAILY | WEEKLY | MONTHLY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data CommissionAggregationFrequency
+  = DAILY
+  | WEEKLY
+  | MONTHLY
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data CommunicationChannelCharLimits = CommunicationChannelCharLimits
   { pushBodyLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -477,7 +490,10 @@ data CommunicationChannelCharLimits = CommunicationChannelCharLimits
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data ConnectChargeBearer = CONNECT_PLATFORM | CONNECT_DRIVER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ConnectChargeBearer
+  = CONNECT_PLATFORM
+  | CONNECT_DRIVER
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data DashboardMediaSendingLimit = DashboardMediaSendingLimit {alert :: Kernel.Prelude.Int, overlay :: Kernel.Prelude.Int, sms :: Kernel.Prelude.Int, whatsapp :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
@@ -524,7 +540,11 @@ data DriverWalletConfig = DriverWalletConfig
 data FeedbackNotificationConfig = FeedbackNotificationConfig {allowNotificationOnEmptyBadge :: Kernel.Prelude.Bool, enableFeedbackNotification :: Kernel.Prelude.Bool, feedbackNotificationDelayInSec :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data FleetLinkedDriverWalletView = FLEET_ACCOUNT | OWN_ACCOUNT | HIDDEN deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FleetLinkedDriverWalletView
+  = FLEET_ACCOUNT
+  | OWN_ACCOUNT
+  | HIDDEN
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data GstBreakup = GstBreakup
   { cgstPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -579,7 +599,10 @@ data ManualTollChargeConfig = ManualTollChargeConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data PayoutChargeBearer = DRIVER_BEARER | PLATFORM_BEARER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PayoutChargeBearer
+  = DRIVER_BEARER
+  | PLATFORM_BEARER
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PayoutFeeConfig = PayoutFeeConfig
   { feeBearer :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutChargeBearer,
@@ -590,7 +613,10 @@ data PayoutFeeConfig = PayoutFeeConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq)
 
-data PayoutFeeType = PERCENTAGE | FIXED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PayoutFeeType
+  = PERCENTAGE
+  | FIXED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PickupDarkStage = PickupDarkStage
   { afterDarkSec :: Kernel.Prelude.Int,
@@ -600,7 +626,10 @@ data PickupDarkStage = PickupDarkStage
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data PickupNudgeChannel = OVERLAY | CHAT_MESSAGE deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+data PickupNudgeChannel
+  = OVERLAY
+  | CHAT_MESSAGE
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data PickupStallMonitoringConfig = PickupStallMonitoringConfig
   { darkStages :: [Domain.Types.TransporterConfig.PickupDarkStage],
@@ -625,7 +654,11 @@ data PickupStallStage = PickupStallStage
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY | REALLOCATE_SCHEDULED_RIDE deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+data PickupStallTerminalAction
+  = REALLOCATE_RIDE
+  | RECORD_ONLY
+  | REALLOCATE_SCHEDULED_RIDE
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data RideEvidenceConfig = RideEvidenceConfig
   { completedRideWindowHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -635,7 +668,10 @@ data RideEvidenceConfig = RideEvidenceConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data ScheduledPickupMonitoringMode = DISTANCE_BASED | TIME_BASED deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+data ScheduledPickupMonitoringMode
+  = DISTANCE_BASED
+  | TIME_BASED
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data ScheduledRideConfig = ScheduledRideConfig
   { avgSpeedKmph :: Kernel.Prelude.Maybe Kernel.Prelude.Double,

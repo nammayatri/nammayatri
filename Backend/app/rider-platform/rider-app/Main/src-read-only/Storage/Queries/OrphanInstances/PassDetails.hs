@@ -7,6 +7,7 @@ import qualified Data.Aeson
 import qualified Domain.Types.PassDetails
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
@@ -54,8 +55,8 @@ instance FromTType' Beam.PassDetails Domain.Types.PassDetails.PassDetails where
 instance ToTType' Beam.PassDetails Domain.Types.PassDetails.PassDetails where
   toTType' (Domain.Types.PassDetails.PassDetails {..}) = do
     Beam.PassDetailsT
-      { Beam.aadharNoEncrypted = aadharNo <&> unEncrypted . (.encrypted),
-        Beam.aadharNoHash = aadharNo <&> (.hash),
+      { Beam.aadharNoEncrypted = aadharNo <&> unEncrypted . Kernel.External.Encryption.encrypted,
+        Beam.aadharNoHash = aadharNo <&> Kernel.External.Encryption.hash,
         Beam.academicYearEnd = academicYearEnd,
         Beam.academicYearStart = academicYearStart,
         Beam.address = Kernel.Prelude.toJSON <$> address,
@@ -64,8 +65,8 @@ instance ToTType' Beam.PassDetails Domain.Types.PassDetails.PassDetails where
         Beam.createdAt = createdAt,
         Beam.department = department,
         Beam.gender = gender,
-        Beam.guardianMobileNumberEncrypted = guardianMobileNumber <&> unEncrypted . (.encrypted),
-        Beam.guardianMobileNumberHash = guardianMobileNumber <&> (.hash),
+        Beam.guardianMobileNumberEncrypted = guardianMobileNumber <&> unEncrypted . Kernel.External.Encryption.encrypted,
+        Beam.guardianMobileNumberHash = guardianMobileNumber <&> Kernel.External.Encryption.hash,
         Beam.guardianName = guardianName,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.idCardPicture = Kernel.Types.Id.getId <$> idCardPicture,

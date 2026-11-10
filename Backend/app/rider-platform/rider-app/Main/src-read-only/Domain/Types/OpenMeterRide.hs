@@ -43,12 +43,21 @@ data OpenMeterRide = OpenMeterRide
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data OpenMeterEndReason = USER | SYSTEM_PAUSED | CONFLICT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data OpenMeterEndReason
+  = USER
+  | SYSTEM_PAUSED
+  | CONFLICT
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data OpenMeterRideStatus = RUNNING | ENDED | CANCELLED | AUTO_ENDED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data OpenMeterRideStatus
+  = RUNNING
+  | ENDED
+  | CANCELLED
+  | AUTO_ENDED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OpenMeterEndReason))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OpenMeterEndReason)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OpenMeterRideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OpenMeterRideStatus)
 
-$(mkHttpInstancesForEnum (''OpenMeterRideStatus))
+$(mkHttpInstancesForEnum ''OpenMeterRideStatus)

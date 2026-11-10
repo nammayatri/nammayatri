@@ -18,33 +18,37 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as Beam
 import qualified Sequelize as Se
 
-create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())
+create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ()
 create = createWithKV
 
-createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest] -> m ())
+createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest] -> m ()
 createMany = traverse_ create
 
 findAllByBatchId ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch) -> m [Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest])
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch) ->
+  m [Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest]
 findAllByBatchId batchId = do findAllWithKV [Se.Is Beam.batchId $ Se.Eq (Kernel.Types.Id.getId <$> batchId)]
 
 findByEntity ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName -> m (Maybe Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest))
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName -> m (Maybe Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest))
 findByEntity entityId entityName = do findOneWithKV [Se.And [Se.Is Beam.entityId $ Se.Eq entityId, Se.Is Beam.entityName $ Se.Eq entityName]]
 
 findById ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m (Maybe Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest))
+  Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest ->
+  m (Maybe Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findManyByEntityIds :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Kernel.Prelude.Text] -> m [Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest])
+findManyByEntityIds :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => [Kernel.Prelude.Text] -> m [Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest]
 findManyByEntityIds entityId = do findAllWithKV [Se.And [Se.Is Beam.entityId $ Se.In entityId]]
 
 updateCashDetailsById ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())))
 updateCashDetailsById cashMarkedById cashMarkedByName cashMarkedAt id = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -57,32 +61,36 @@ updateCashDetailsById cashMarkedById cashMarkedByName cashMarkedAt id = do
 
 updatePayoutTransactionIdById ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())
 updatePayoutTransactionIdById payoutTransactionId id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.payoutTransactionId payoutTransactionId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateRetryCountById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())
+updateRetryCountById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())
 updateRetryCountById retryCount id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.retryCount retryCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatusById ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())
+  Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus ->
+  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())
 updateStatusById status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatusWithReasonById ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())
+  Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ()))
 updateStatusWithReasonById status failureReason id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.failureReason failureReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m (Maybe Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest))
+  Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest ->
+  m (Maybe Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())
+updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ()
 updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -17,7 +17,8 @@ import qualified Storage.Queries.FRFSVehicleServiceTier as Queries
 
 findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
 findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId merchantOperatingCityId integratedBppConfigId = do
   (Hedis.safeGet $ "CachedQueries:FRFSVehicleServiceTier:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":IntegratedBppConfigId-" <> Kernel.Types.Id.getId integratedBppConfigId)
     >>= ( \case
@@ -32,7 +33,8 @@ findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId merchantOperatingCityId
 
 findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (BecknV2.FRFS.Enums.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Kernel.Prelude.Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier))
+  BecknV2.FRFS.Enums.ServiceTierType ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Kernel.Prelude.Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier)))
 findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId _type merchantOperatingCityId integratedBppConfigId = do
   (Hedis.safeGet $ "CachedQueries:FRFSVehicleServiceTier:" <> ":_type-" <> show _type <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":IntegratedBppConfigId-" <> Kernel.Types.Id.getId integratedBppConfigId)
     >>= ( \case

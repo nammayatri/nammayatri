@@ -16,15 +16,16 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetRouteAssociation as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetRouteAssociation.FleetRouteAssociation -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FleetRouteAssociation.FleetRouteAssociation -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FleetRouteAssociation.FleetRouteAssociation] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FleetRouteAssociation.FleetRouteAssociation] -> m ()
 createMany = traverse_ create
 
 findAllByFleetOwnerIdAndCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FleetRouteAssociation.FleetRouteAssociation])
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FleetRouteAssociation.FleetRouteAssociation])
 findAllByFleetOwnerIdAndCityId fleetOwnerId merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -35,10 +36,11 @@ findAllByFleetOwnerIdAndCityId fleetOwnerId merchantOperatingCityId = do
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FleetRouteAssociation.FleetRouteAssociation -> m (Maybe Domain.Types.FleetRouteAssociation.FleetRouteAssociation))
+  Kernel.Types.Id.Id Domain.Types.FleetRouteAssociation.FleetRouteAssociation ->
+  m (Maybe Domain.Types.FleetRouteAssociation.FleetRouteAssociation)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetRouteAssociation.FleetRouteAssociation -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FleetRouteAssociation.FleetRouteAssociation -> m ()
 updateByPrimaryKey (Domain.Types.FleetRouteAssociation.FleetRouteAssociation {..}) = do
   _now <- getCurrentTime
   updateWithKV

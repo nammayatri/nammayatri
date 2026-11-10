@@ -50,8 +50,8 @@ BookingUpdateRequest:
 
   toTType:
     distanceUnit: Kernel.Prelude.Just|I
-    errorCode: (.errorCode) <$> errorObj|E
-    errorMessage: (.errorMessage) <$> errorObj|E
+    errorCode: (Domain.Types.BookingUpdateRequest.errorCode <$> errorObj)|E
+    errorMessage: (Domain.Types.BookingUpdateRequest.errorMessage <$> errorObj)|E
 
 
   constraints:

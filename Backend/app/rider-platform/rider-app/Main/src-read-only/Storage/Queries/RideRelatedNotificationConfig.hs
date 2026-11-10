@@ -16,20 +16,22 @@ import qualified Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.RideRelatedNotificationConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig] -> m ()
 createMany = traverse_ create
 
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig])
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  m [Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig]
 findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findAllByMerchantOperatingCityIdAndTimeDiffEvent ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.RideRelatedNotificationConfig.TimeDiffEvent -> m [Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig])
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  (Domain.Types.RideRelatedNotificationConfig.TimeDiffEvent -> m [Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig])
 findAllByMerchantOperatingCityIdAndTimeDiffEvent merchantOperatingCityId timeDiffEvent = do
   findAllWithKV
     [ Se.And
@@ -40,7 +42,8 @@ findAllByMerchantOperatingCityIdAndTimeDiffEvent merchantOperatingCityId timeDif
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig))
+  Kernel.Types.Id.Id Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig))
 findByPrimaryKey id merchantOperatingCityId = do
   findOneWithKV
     [ Se.And
@@ -49,7 +52,7 @@ findByPrimaryKey id merchantOperatingCityId = do
         ]
     ]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig -> m ()
 updateByPrimaryKey (Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV

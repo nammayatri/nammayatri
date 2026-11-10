@@ -15,13 +15,13 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.VehicleRouteMapping as Beam
 import Storage.Queries.VehicleRouteMappingExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleRouteMapping.VehicleRouteMapping -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.VehicleRouteMapping.VehicleRouteMapping -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehicleRouteMapping.VehicleRouteMapping] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.VehicleRouteMapping.VehicleRouteMapping] -> m ()
 createMany = traverse_ create
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleRouteMapping.VehicleRouteMapping -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.VehicleRouteMapping.VehicleRouteMapping -> m ()
 updateByPrimaryKey (Domain.Types.VehicleRouteMapping.VehicleRouteMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -71,6 +71,11 @@ data FRFSFareDetails = FRFSFareDetails
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FRFSQuoteType = SingleJourney | ReturnJourney | Pass | SpecialFareSingleJourney deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FRFSQuoteType
+  = SingleJourney
+  | ReturnJourney
+  | Pass
+  | SpecialFareSingleJourney
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSQuoteType)

@@ -16,18 +16,19 @@ import qualified Storage.Beam.MerchantPaymentMethod as Beam
 import Storage.Queries.MerchantPaymentMethodExtra as ReExport
 import Storage.Queries.Transformers.MerchantPaymentMethod
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod] -> m ()
 createMany = traverse_ create
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod -> m (Maybe Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod))
+  Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod ->
+  m (Maybe Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod -> m ()
 updateByPrimaryKey (Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -16,26 +16,27 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.RouteDetails as Beam
 import Storage.Queries.RouteDetailsExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RouteDetails.RouteDetails -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RouteDetails.RouteDetails -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteDetails.RouteDetails] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.RouteDetails.RouteDetails] -> m ()
 createMany = traverse_ create
 
-findAllByJourneyLegId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> m [Domain.Types.RouteDetails.RouteDetails])
+findAllByJourneyLegId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Int -> (Maybe Int -> (Kernel.Prelude.Text -> m [Domain.Types.RouteDetails.RouteDetails]))
 findAllByJourneyLegId limit offset journeyLegId = do findAllWithOptionsKV [Se.Is Beam.journeyLegId $ Se.Eq journeyLegId] (Se.Asc Beam.subLegOrder) limit offset
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails -> m (Maybe Domain.Types.RouteDetails.RouteDetails))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails -> m (Maybe Domain.Types.RouteDetails.RouteDetails)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateAlternateShortNamesAndRouteIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Prelude.Text -> m ())
+updateAlternateShortNamesAndRouteIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Kernel.Prelude.Text] -> (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> (Kernel.Prelude.Text -> m ()))
 updateAlternateShortNamesAndRouteIds alternateShortNames alternateRouteIds journeyLegId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.alternateShortNames alternateShortNames, Se.Set Beam.alternateRouteIds alternateRouteIds, Se.Set Beam.updatedAt _now] [Se.Is Beam.journeyLegId $ Se.Eq journeyLegId]
 
 updateRoute ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Text -> m ()))))
 updateRoute routeGtfsId routeCode routeLongName routeShortName journeyLegId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -47,15 +48,15 @@ updateRoute routeGtfsId routeCode routeLongName routeShortName journeyLegId = do
     ]
     [Se.Is Beam.journeyLegId $ Se.Eq journeyLegId]
 
-updateUserBookedRouteShortName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+updateUserBookedRouteShortName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Text -> m ())
 updateUserBookedRouteShortName userBookedRouteShortName journeyLegId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.userBookedRouteShortName userBookedRouteShortName, Se.Set Beam.updatedAt _now] [Se.Is Beam.journeyLegId $ Se.Eq journeyLegId]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails -> m (Maybe Domain.Types.RouteDetails.RouteDetails))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails -> m (Maybe Domain.Types.RouteDetails.RouteDetails)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RouteDetails.RouteDetails -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RouteDetails.RouteDetails -> m ()
 updateByPrimaryKey (Domain.Types.RouteDetails.RouteDetails {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -118,14 +118,14 @@ TripTransaction:
   beamType:
     tripEstimatedRouteDetails: Maybe Value
   toTType:
-    startLocationLat: Kernel.Prelude.fmap (.lat)|I
-    startLocationLon: Kernel.Prelude.fmap (.lon)|I
-    endLocationLat: Kernel.Prelude.fmap (.lat)|I
-    endLocationLon: Kernel.Prelude.fmap (.lon)|I
-    pilotSourceLat: Kernel.Prelude.fmap (.lat)|I
-    pilotSourceLon: Kernel.Prelude.fmap (.lon)|I
-    pilotDestinationLat: Kernel.Prelude.fmap (.lat)|I
-    pilotDestinationLon: Kernel.Prelude.fmap (.lon)|I
+    startLocationLat: Kernel.Prelude.fmap Kernel.External.Maps.Types.lat|I
+    startLocationLon: Kernel.Prelude.fmap Kernel.External.Maps.Types.lon|I
+    endLocationLat: Kernel.Prelude.fmap Kernel.External.Maps.Types.lat|I
+    endLocationLon: Kernel.Prelude.fmap Kernel.External.Maps.Types.lon|I
+    pilotSourceLat: Kernel.Prelude.fmap Kernel.External.Maps.Types.lat|I
+    pilotSourceLon: Kernel.Prelude.fmap Kernel.External.Maps.Types.lon|I
+    pilotDestinationLat: Kernel.Prelude.fmap Kernel.External.Maps.Types.lat|I
+    pilotDestinationLon: Kernel.Prelude.fmap Kernel.External.Maps.Types.lon|I
     tripEstimatedRouteDetails: Kernel.Prelude.toJSON <$> tripEstimatedRouteDetails | E
   fromTType:
     startLocation: Storage.Queries.Transformers.Ride.mkLatLong|I

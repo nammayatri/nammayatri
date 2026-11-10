@@ -14,22 +14,22 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSFarePolicy as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSFarePolicy.FRFSFarePolicy] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSFarePolicy.FRFSFarePolicy] -> m ()
 createMany = traverse_ create
 
-findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy] -> m [Domain.Types.FRFSFarePolicy.FRFSFarePolicy])
+findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy] -> m [Domain.Types.FRFSFarePolicy.FRFSFarePolicy]
 findAllByIds id = do findAllWithKV [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m (Maybe Domain.Types.FRFSFarePolicy.FRFSFarePolicy))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m (Maybe Domain.Types.FRFSFarePolicy.FRFSFarePolicy)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m (Maybe Domain.Types.FRFSFarePolicy.FRFSFarePolicy))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m (Maybe Domain.Types.FRFSFarePolicy.FRFSFarePolicy)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m ()
 updateByPrimaryKey (Domain.Types.FRFSFarePolicy.FRFSFarePolicy {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -19,15 +19,16 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.StopFare as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.StopFare.StopFare -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.StopFare.StopFare -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.StopFare.StopFare] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.StopFare.StopFare] -> m ()
 createMany = traverse_ create
 
 findAllByStartStopAndIntegratedBPPConfigId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.StopFare.StopFare])
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.StopFare.StopFare]))
 findAllByStartStopAndIntegratedBPPConfigId startStopCode endStopCode integratedBppConfigId = do
   findAllWithKV
     [ Se.And
@@ -37,12 +38,13 @@ findAllByStartStopAndIntegratedBPPConfigId startStopCode endStopCode integratedB
         ]
     ]
 
-findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m [Domain.Types.StopFare.StopFare])
+findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m [Domain.Types.StopFare.StopFare]
 findByRouteCode farePolicyId = do findAllWithKV [Se.And [Se.Is Beam.farePolicyId $ Se.Eq (Kernel.Types.Id.getId farePolicyId)]]
 
 findByRouteStartAndStopCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.StopFare.StopFare))
+  Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy ->
+  (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> m (Maybe Domain.Types.StopFare.StopFare)))
 findByRouteStartAndStopCode farePolicyId startStopCode endStopCode = do
   findOneWithKV
     [ Se.And
@@ -54,7 +56,8 @@ findByRouteStartAndStopCode farePolicyId startStopCode endStopCode = do
 
 findByStartAndEndStopCodeAndIntegratedBPPConfigId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.StopFare.StopFare))
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.StopFare.StopFare)))
 findByStartAndEndStopCodeAndIntegratedBPPConfigId startStopCode endStopCode integratedBppConfigId = do
   findOneWithKV
     [ Se.And
@@ -66,7 +69,8 @@ findByStartAndEndStopCodeAndIntegratedBPPConfigId startStopCode endStopCode inte
 
 updateFareByStopCodes ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType -> m ())
+  Kernel.Types.Common.HighPrecMoney ->
+  (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType -> m ()))))
 updateFareByStopCodes amount farePolicyId startStopCode endStopCode category = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -81,7 +85,8 @@ updateFareByStopCodes amount farePolicyId startStopCode endStopCode category = d
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> Kernel.Prelude.Text -> m (Maybe Domain.Types.StopFare.StopFare))
+  Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType ->
+  (Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> (Kernel.Prelude.Text -> m (Maybe Domain.Types.StopFare.StopFare))))
 findByPrimaryKey category endStopCode farePolicyId startStopCode = do
   findOneWithKV
     [ Se.And
@@ -92,7 +97,7 @@ findByPrimaryKey category endStopCode farePolicyId startStopCode = do
         ]
     ]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.StopFare.StopFare -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.StopFare.StopFare -> m ()
 updateByPrimaryKey (Domain.Types.StopFare.StopFare {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -113,9 +113,15 @@ data SearchRequestForDriver = SearchRequestForDriver
   }
   deriving (Generic, Show)
 
-data DriverSearchRequestStatus = Active | Inactive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data DriverSearchRequestStatus
+  = Active
+  | Inactive
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data NotificationSource = FCM | GRPC deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data NotificationSource
+  = FCM
+  | GRPC
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverSearchRequestStatus)
 

@@ -6,7 +6,7 @@ module Storage.Queries.OrphanInstances.BookingCancellationReason where
 import qualified Domain.Types.BookingCancellationReason
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.Maps
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -27,7 +27,7 @@ instance FromTType' Beam.BookingCancellationReason Domain.Types.BookingCancellat
             bookingId = Kernel.Types.Id.Id bookingId,
             createdAt = createdAt',
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
-            driverCancellationLocation = Kernel.External.Maps.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon,
+            driverCancellationLocation = Kernel.External.Maps.Types.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon,
             driverDistToPickup = Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit driverDistToPickupValue <$> driverDistToPickup,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             reasonCode = reasonCode,
@@ -45,8 +45,8 @@ instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellatio
         Beam.bookingId = Kernel.Types.Id.getId bookingId,
         Beam.createdAt = Kernel.Prelude.Just createdAt,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
-        Beam.driverCancellationLocationLat = driverCancellationLocation <&> (.lat),
-        Beam.driverCancellationLocationLon = driverCancellationLocation <&> (.lon),
+        Beam.driverCancellationLocationLat = driverCancellationLocation <&> Kernel.External.Maps.Types.lat,
+        Beam.driverCancellationLocationLon = driverCancellationLocation <&> Kernel.External.Maps.Types.lon,
         Beam.driverDistToPickup = Kernel.Types.Common.distanceToMeters <$> driverDistToPickup,
         Beam.driverDistToPickupValue = Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> driverDistToPickup,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

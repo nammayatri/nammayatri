@@ -40,6 +40,9 @@ data PayoutConfig = PayoutConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, Eq)
 
-data PayoutEntity = METRO_TICKET_CASHBACK | PAYOUT_AWARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PayoutEntity
+  = METRO_TICKET_CASHBACK
+  | PAYOUT_AWARD
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutEntity)

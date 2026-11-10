@@ -12,11 +12,12 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.QuoteBreakup as Beam
 
-findAllByQuoteIdT :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.QuoteBreakup.QuoteBreakup])
+findAllByQuoteIdT :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> m [Domain.Types.QuoteBreakup.QuoteBreakup]
 findAllByQuoteIdT quoteId = do findAllWithKVAndConditionalDB [Se.Is Beam.quoteId $ Se.Eq quoteId] Nothing
 
 instance FromTType' Beam.QuoteBreakup Domain.Types.QuoteBreakup.QuoteBreakup where
@@ -38,8 +39,8 @@ instance ToTType' Beam.QuoteBreakup Domain.Types.QuoteBreakup.QuoteBreakup where
   toTType' (Domain.Types.QuoteBreakup.QuoteBreakup {..}) = do
     Beam.QuoteBreakupT
       { Beam.id = Kernel.Types.Id.getId id,
-        Beam.priceCurrency = Just $ (.currency) price,
-        Beam.priceValue = (.amount) price,
+        Beam.priceCurrency = Just $ Kernel.Types.Price.getPriceCurrency price,
+        Beam.priceValue = Kernel.Types.Price.getPriceAmount price,
         Beam.quoteId = quoteId,
         Beam.title = title,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

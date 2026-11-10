@@ -12,10 +12,11 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Google.MapsClient
 import qualified Kernel.External.Maps.Google.MapsClient.Types
-import qualified Kernel.External.MultiModal.Interface.Types as Fields
+import qualified Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Distance
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -23,63 +24,65 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.JourneyLeg as Beam
 import Storage.Queries.JourneyLegExtra as ReExport
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.JourneyLeg.JourneyLeg] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.JourneyLeg.JourneyLeg] -> m ()
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m (Maybe Domain.Types.JourneyLeg.JourneyLeg))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m (Maybe Domain.Types.JourneyLeg.JourneyLeg)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByLegSearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.JourneyLeg.JourneyLeg))
+findByLegSearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.JourneyLeg.JourneyLeg)
 findByLegSearchId legSearchId = do findOneWithKV [Se.Is Beam.legId $ Se.Eq legSearchId]
 
 updateAfterEditLocation ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds -> Kernel.Prelude.Maybe Kernel.Types.Common.Distance -> Kernel.External.Maps.Google.MapsClient.Types.LatLngV2 -> Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
+  Kernel.Prelude.Maybe Kernel.Types.Common.Seconds ->
+  (Kernel.Prelude.Maybe Kernel.Types.Common.Distance -> (Kernel.External.Maps.Google.MapsClient.Types.LatLngV2 -> (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())))
 updateAfterEditLocation duration distance endLocation id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.duration duration,
-      Se.Set Beam.distance ((.value) <$> distance),
-      Se.Set Beam.distanceUnit ((.unit) <$> distance),
-      Se.Set Beam.endLocationLat (endLocation & (.latitude)),
-      Se.Set Beam.endLocationLon (endLocation & (.longitude)),
+      Se.Set Beam.distance (distance <&> Kernel.Types.Distance.value),
+      Se.Set Beam.distanceUnit (distance <&> Kernel.Types.Distance.unit),
+      Se.Set Beam.endLocationLat (Kernel.External.Maps.Google.MapsClient.Types.latitude endLocation),
+      Se.Set Beam.endLocationLon (Kernel.External.Maps.Google.MapsClient.Types.longitude endLocation),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateDistanceAndDuration ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.Distance -> Kernel.Prelude.Maybe Kernel.Types.Common.Seconds -> Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
+  Kernel.Prelude.Maybe Kernel.Types.Common.Distance ->
+  (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds -> (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ()))
 updateDistanceAndDuration distance duration id = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.distance ((.value) <$> distance),
-      Se.Set Beam.distanceUnit ((.unit) <$> distance),
+    [ Se.Set Beam.distance (distance <&> Kernel.Types.Distance.value),
+      Se.Set Beam.distanceUnit (distance <&> Kernel.Types.Distance.unit),
       Se.Set Beam.duration duration,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateLegPricingIdByLegSearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
+updateLegPricingIdByLegSearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
 updateLegPricingIdByLegSearchId legPricingId legSearchId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.legPricingId legPricingId, Se.Set Beam.updatedAt _now] [Se.Is Beam.legId $ Se.Eq legSearchId]
 
-updateLegSearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
+updateLegSearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
 updateLegSearchId legSearchId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.legId legSearchId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateMode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Common.MultimodalTravelMode -> Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
+updateMode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Common.MultimodalTravelMode -> (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
 updateMode mode id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.mode mode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m (Maybe Domain.Types.JourneyLeg.JourneyLeg))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m (Maybe Domain.Types.JourneyLeg.JourneyLeg)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.JourneyLeg.JourneyLeg -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.JourneyLeg.JourneyLeg -> m ()
 updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.agencyGtfsId (agency >>= (.gtfsId)),
-      Se.Set Beam.agencyName (agency <&> (.name)),
+    [ Se.Set Beam.agencyGtfsId (agency >>= Kernel.External.MultiModal.Interface.Types.getAgencyGtfsId),
+      Se.Set Beam.agencyName (agency <&> Kernel.External.MultiModal.Interface.Types.getAgencyName),
       Se.Set Beam.boardingConfirmedDespiteDistance boardingConfirmedDespiteDistance,
       Se.Set Beam.busConductorId busConductorId,
       Se.Set Beam.busDriverId busDriverId,
@@ -87,11 +90,11 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.busTagNumber busTagNumber,
       Se.Set Beam.busVehicleVariant busVehicleVariant,
       Se.Set Beam.changedBusesInSequence changedBusesInSequence,
-      Se.Set Beam.distance ((.value) <$> distance),
-      Se.Set Beam.distanceUnit ((.unit) <$> distance),
+      Se.Set Beam.distance (distance <&> Kernel.Types.Distance.value),
+      Se.Set Beam.distanceUnit (distance <&> Kernel.Types.Distance.unit),
       Se.Set Beam.duration duration,
-      Se.Set Beam.endLocationLat (endLocation & (.latitude)),
-      Se.Set Beam.endLocationLon (endLocation & (.longitude)),
+      Se.Set Beam.endLocationLat (Kernel.External.Maps.Google.MapsClient.Types.latitude endLocation),
+      Se.Set Beam.endLocationLon (Kernel.External.Maps.Google.MapsClient.Types.longitude endLocation),
       Se.Set Beam.estimatedMaxFare estimatedMaxFare,
       Se.Set Beam.estimatedMinFare estimatedMinFare,
       Se.Set Beam.finalBoardedBusNumber finalBoardedBusNumber,
@@ -102,10 +105,10 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.finalBoardedWaybillId finalBoardedWaybillId,
       Se.Set Beam.fromArrivalTime fromArrivalTime,
       Se.Set Beam.fromDepartureTime fromDepartureTime,
-      Se.Set Beam.fromStopCode (fromStopDetails >>= (.stopCode)),
-      Se.Set Beam.fromStopGtfsId ((fromStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode),
-      Se.Set Beam.fromStopName (fromStopDetails >>= (.name)),
-      Se.Set Beam.fromStopPlatformCode (fromStopDetails >>= (.platformCode)),
+      Se.Set Beam.fromStopCode (fromStopDetails >>= Kernel.External.MultiModal.Interface.Types.stopCode),
+      Se.Set Beam.fromStopGtfsId ((fromStopDetails >>= Kernel.External.MultiModal.Interface.Types.getStopGtfsId) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode),
+      Se.Set Beam.fromStopName (fromStopDetails >>= Kernel.External.MultiModal.Interface.Types.getStopName),
+      Se.Set Beam.fromStopPlatformCode (fromStopDetails >>= Kernel.External.MultiModal.Interface.Types.platformCode),
       Se.Set Beam.groupCode groupCode,
       Se.Set Beam.isDeleted isDeleted,
       Se.Set Beam.journeyId (Just $ Kernel.Types.Id.getId journeyId),
@@ -120,16 +123,16 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.osmExit (osmExit >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.providerRouteId providerRouteId,
       Se.Set Beam.sequenceNumber (Just sequenceNumber),
-      Se.Set Beam.startLocationLat (startLocation & (.latitude)),
-      Se.Set Beam.startLocationLon (startLocation & (.longitude)),
+      Se.Set Beam.startLocationLat (Kernel.External.Maps.Google.MapsClient.Types.latitude startLocation),
+      Se.Set Beam.startLocationLon (Kernel.External.Maps.Google.MapsClient.Types.longitude startLocation),
       Se.Set Beam.straightLineEntrance (straightLineEntrance >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.straightLineExit (straightLineExit >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.toArrivalTime toArrivalTime,
       Se.Set Beam.toDepartureTime toDepartureTime,
-      Se.Set Beam.toStopCode (toStopDetails >>= (.stopCode)),
-      Se.Set Beam.toStopGtfsId ((toStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode),
-      Se.Set Beam.toStopName (toStopDetails >>= (.name)),
-      Se.Set Beam.toStopPlatformCode (toStopDetails >>= (.platformCode)),
+      Se.Set Beam.toStopCode (toStopDetails >>= Kernel.External.MultiModal.Interface.Types.stopCode),
+      Se.Set Beam.toStopGtfsId ((toStopDetails >>= Kernel.External.MultiModal.Interface.Types.getStopGtfsId) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode),
+      Se.Set Beam.toStopName (toStopDetails >>= Kernel.External.MultiModal.Interface.Types.getStopName),
+      Se.Set Beam.toStopPlatformCode (toStopDetails >>= Kernel.External.MultiModal.Interface.Types.platformCode),
       Se.Set Beam.userBookedBusServiceTierType userBookedBusServiceTierType,
       Se.Set Beam.userPreferredServiceTier userPreferredServiceTier,
       Se.Set Beam.updatedAt _now

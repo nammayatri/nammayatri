@@ -101,7 +101,10 @@ instance EncryptedItem' TicketMerchantDetails where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
-data BankAccountType = CURRENT | SAVINGS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data BankAccountType
+  = CURRENT
+  | SAVINGS
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data ContactDetails = ContactDetails {email :: Kernel.Prelude.Text, name :: Kernel.Prelude.Text, number :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

@@ -18,15 +18,16 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSVehicleServiceTier as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier] -> m ()
 createMany = traverse_ create
 
 findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier]))
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
 findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId merchantOperatingCityId integratedBppConfigId = do
   findAllWithKV
     [ Se.And
@@ -37,12 +38,14 @@ findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId merchantOperatingCityId
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m (Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier))
+  Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier ->
+  m (Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByProviderCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier]))
+  Kernel.Prelude.Text ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
 findByProviderCode providerCode merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -53,7 +56,8 @@ findByProviderCode providerCode merchantOperatingCityId = do
 
 findByProviderCodeAndTrainType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier]))
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier]))
 findByProviderCodeAndTrainType providerCode trainType merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -65,7 +69,8 @@ findByProviderCodeAndTrainType providerCode trainType merchantOperatingCityId = 
 
 findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (BecknV2.FRFS.Enums.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier))
+  BecknV2.FRFS.Enums.ServiceTierType ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier)))
 findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId _type merchantOperatingCityId integratedBppConfigId = do
   findOneWithKV
     [ Se.And
@@ -77,10 +82,11 @@ findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId _type mercha
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m (Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier))
+  Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier ->
+  m (Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m ()
 updateByPrimaryKey (Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier {..}) = do
   _now <- getCurrentTime
   updateWithKV
