@@ -219,10 +219,11 @@ postMultimodalInitiate ::
     Kernel.Prelude.Maybe [ServiceTierType] ->
     Environment.Flow ApiTypes.JourneyInfoResp
   )
-postMultimodalInitiate (_personId, _merchantId) journeyId mbEnforceFRFSPass filterServiceAndJrnyType mbHasPasses mbNewServiceTiers = withTimeAPI "multimodalInitiate" "total" $ do
+postMultimodalInitiate (mbPersonId, _merchantId) journeyId mbEnforceFRFSPass filterServiceAndJrnyType mbHasPasses mbNewServiceTiers = withTimeAPI "multimodalInitiate" "total" $ do
   runAction journeyId $ do
     journeyLegs <- JMU.measureLatency (QJourneyLeg.getJourneyLegs journeyId) "QJourneyLeg.getJourneyLegs postMultimodalInitiate"
     journey <- JMU.measureLatency (JM.getJourney journeyId) "JM.getJourney postMultimodalInitiate"
+    checkJourneyOwner mbPersonId journey
     let alreadyInitiated = journey.status >= Domain.Types.Journey.INITIATED && all (isJust . (.legSearchId)) journeyLegs
     legs <-
       if alreadyInitiated
@@ -260,9 +261,10 @@ postMultimodalConfirm ::
     API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyConfirmResp
   )
-postMultimodalConfirm (_mbPersonId, _merchantId) journeyId forcedBookLegOrder mbIsMockPayment mbSkipCreateOrderCall journeyConfirmReq =
+postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbIsMockPayment mbSkipCreateOrderCall journeyConfirmReq =
   withTimeAPI "multimodalConfirm" "total" $ do
     journey <- JM.getJourney journeyId
+    checkJourneyOwner mbPersonId journey
     legs <- QJourneyLeg.getJourneyLegs journey.id
     let confirmElements = journeyConfirmReq.journeyConfirmReqElements
         isMockPayment = fromMaybe False mbIsMockPayment
@@ -320,8 +322,9 @@ getMultimodalBookingInfo ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Environment.Flow ApiTypes.JourneyInfoResp
   )
-getMultimodalBookingInfo (_, _) journeyId = do
+getMultimodalBookingInfo (mbPersonId, _) journeyId = do
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   legs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey legs
 
@@ -333,6 +336,7 @@ getMultimodalBookingPaymentStatus ::
     Environment.Flow ApiTypes.JourneyBookingPaymentStatus
   )
 getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   legs <- QJourneyLeg.getJourneyLegs journeyId
@@ -490,8 +494,9 @@ postMultimodalOrderSwitchTaxi ::
     API.Types.UI.MultimodalConfirm.SwitchTaxiReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
+postMultimodalOrderSwitchTaxi (mbPersonId, _) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   legs <- QJourneyLeg.getJourneyLegs journeyId
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   unless (journeyLeg.mode == DTrip.Taxi) $
@@ -539,8 +544,9 @@ postMultimodalOrderSwitchFRFSTier ::
     API.Types.UI.MultimodalConfirm.SwitchFRFSTierReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalOrderSwitchFRFSTier (_mbPersonId, _merchantId) journeyId legOrder req = do
+postMultimodalOrderSwitchFRFSTier (mbPersonId, _merchantId) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   legs <- QJourneyLeg.getJourneyLegs journeyId
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   JMU.switchFRFSQuoteTierUtil journeyLeg req.quoteId
@@ -557,6 +563,7 @@ postMultimodalSwitch ::
   ApiTypes.SwitchLegReq ->
   Environment.Flow ApiTypes.JourneyInfoResp
 postMultimodalSwitch userInfo@(mbPersonId, _) journeyId filterServiceAndJrnyType mbNewServiceTiers req = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Invalid person id")
   JM.switchLeg journeyId personId req filterServiceAndJrnyType mbNewServiceTiers
   getMultimodalBookingInfo userInfo journeyId
@@ -569,7 +576,8 @@ postMultimodalRiderLocation ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   ApiTypes.RiderLocationReq ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalRiderLocation (_, merchantId) journeyId mbFleetNo req = do
+postMultimodalRiderLocation (mbPersonId, merchantId) journeyId mbFleetNo req = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   (journeyStatus, legs) <- getMultimodalJourneyStatusAndLegs journeyId mbFleetNo
   let concatLegs =
         concatMap
@@ -608,7 +616,8 @@ postMultimodalExtendLeg ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   ApiTypes.ExtendLegReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalExtendLeg (_, _) journeyId req = do
+postMultimodalExtendLeg (mbPersonId, _) journeyId req = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   JM.extendLeg journeyId req.startLocation req.endLocation Nothing req.fare req.distance req.duration req.bookingUpdateRequestId [] []
   return Kernel.Types.APISuccess.Success
 
@@ -619,7 +628,8 @@ postMultimodalExtendLegGetfare ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   ApiTypes.ExtendLegGetFareReq ->
   Environment.Flow ApiTypes.ExtendLegGetFareResp
-postMultimodalExtendLegGetfare (_, _) journeyId req = do
+postMultimodalExtendLegGetfare (mbPersonId, _) journeyId req = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   JM.extendLegEstimatedFare journeyId req.startLocation req.endLocation Nothing
 
 -- TODO :: To be deprecated from UI @Khuzema: Call cancel instead of this API
@@ -631,7 +641,8 @@ postMultimodalJourneyLegSkip ::
     Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalJourneyLegSkip (_, _) journeyId legOrder = do
+postMultimodalJourneyLegSkip (mbPersonId, _) journeyId legOrder = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
   -- Skip runs the same CONFIRM_CANCEL as cancel, so it is capped too. Checked here because
   -- cancelLeg reaches CallExternalBPP.cancel with enforceCap = False. Design notes: scripts/testing/cancel/DESIGN.md
@@ -649,8 +660,9 @@ postMultimodalJourneyLegAddSkippedLeg ::
     Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalJourneyLegAddSkippedLeg (_, _) journeyId legOrder = do
+postMultimodalJourneyLegAddSkippedLeg (mbPersonId, _) journeyId legOrder = do
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   legs <- JM.getAllLegsInfo journey.riderId journeyId
   leg <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   void $ JM.startJourneyLeg leg journey.isSingleMode
@@ -662,7 +674,8 @@ getMultimodalJourneyStatus ::
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatusResp
-getMultimodalJourneyStatus (_, _) journeyId = do
+getMultimodalJourneyStatus (mbPersonId, _) journeyId = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   (journeyStatusResp, _) <- getMultimodalJourneyStatusAndLegs journeyId Nothing
   return journeyStatusResp
 
@@ -678,6 +691,7 @@ getMultimodalJourneyStatusAndLegs journeyId mbFleetNo = do
 postMultimodalJourneyFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> API.Types.UI.MultimodalConfirm.JourneyFeedBackForm -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalJourneyFeedback (mbPersonId, merchantId) journeyId journeyFeedbackForm = do
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   riderId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   now <- getCurrentTime
   whenJust journeyFeedbackForm.rating $ \rating -> do
@@ -738,7 +752,7 @@ postMultimodalJourneyFeedback (mbPersonId, merchantId) journeyId journeyFeedback
 
 getMultimodalFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Environment.Flow (Kernel.Prelude.Maybe ApiTypes.JourneyFeedBackForm)
 getMultimodalFeedback (mbPersonId, _) journeyId = do
-  _ <- JM.getJourney journeyId
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   _ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   mbFeedBackForjourney <- SQJFB.findByJourneyId journeyId
   case mbFeedBackForjourney of
@@ -1419,7 +1433,8 @@ getMultimodalOrderGetLegTierOptions ::
   Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Environment.Flow ApiTypes.LegServiceTierOptionsResp
-getMultimodalOrderGetLegTierOptions (_mbPersonId, _merchantId) journeyId legOrder mbEnableSuburbanRoundTrip = do
+getMultimodalOrderGetLegTierOptions (mbPersonId, _merchantId) journeyId legOrder mbEnableSuburbanRoundTrip = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   legs <- QJourneyLeg.getJourneyLegs journeyId
   journeyLegInfo <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   let enableSuburbanRoundTrip = fromMaybe False mbEnableSuburbanRoundTrip
@@ -1436,8 +1451,9 @@ postMultimodalOrderSublegSetStatus ::
   Kernel.Prelude.Int ->
   JL.JourneyLegStatus ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalOrderSublegSetStatus (_, _) journeyId legOrder subLegOrder newStatus = do
+postMultimodalOrderSublegSetStatus (mbPersonId, _) journeyId legOrder subLegOrder newStatus = do
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   now <- getCurrentTime
 
   legs <- QJourneyLeg.getJourneyLegs journeyId
@@ -1463,7 +1479,7 @@ postMultimodalOrderSublegSetTrackingStatus ::
   JMState.TrackingStatus ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalOrderSublegSetTrackingStatus (_, _) journeyId legOrder subLegOrder trackingStatus mbTrackingStatusUpdateTime = do
+postMultimodalOrderSublegSetTrackingStatus (mbPersonId, _) journeyId legOrder subLegOrder trackingStatus mbTrackingStatusUpdateTime = do
   now <- getCurrentTime
   -- In case user device time is of future, consider the updated time to be of now to avoid backend update miss
   let trackingStatusUpdateTime =
@@ -1473,6 +1489,7 @@ postMultimodalOrderSublegSetTrackingStatus (_, _) journeyId legOrder subLegOrder
             | otherwise -> t
           Nothing -> now
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
 
   legs <- QJourneyLeg.getJourneyLegs journeyId
 
@@ -1531,8 +1548,9 @@ postMultimodalComplete ::
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalComplete (_, _) journeyId = do
+postMultimodalComplete (mbPersonId, _) journeyId = do
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   legs <- QJourneyLeg.getJourneyLegs journeyId
   -- a never-boarded cab leg is cancelled instead, so it must not be marked completed after
   cancelledLegIds <- map (.id) <$> filterM dropSharedCabRider legs
@@ -1548,7 +1566,8 @@ postMultimodalOrderSoftCancel ::
     Kernel.Prelude.Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalOrderSoftCancel (_, _) journeyId legOrder = do
+postMultimodalOrderSoftCancel (mbPersonId, _) journeyId legOrder = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   legs <- QJourneyLeg.getJourneyLegs journeyId
   checkIfAnyTaxiLegOngoing legs -- check for any ongoing taxi legs, remove this once handled properly from UI
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
@@ -1565,7 +1584,8 @@ getMultimodalOrderCancelStatus ::
     Kernel.Prelude.Int ->
     Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalCancelStatusResp
   )
-getMultimodalOrderCancelStatus (_, __) journeyId legOrder = do
+getMultimodalOrderCancelStatus (mbPersonId, __) journeyId legOrder = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
   -- TODO: Move to the JourneyLeg class
   ticketBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId >>= fromMaybeM (InvalidRequest "No FRFS booking found for the leg")
@@ -1585,7 +1605,8 @@ postMultimodalOrderCancel ::
     Kernel.Prelude.Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalOrderCancel (_, _) journeyId legOrder = do
+postMultimodalOrderCancel (mbPersonId, _) journeyId legOrder = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
   -- Rider-facing, so the cap applies. Checked here because cancelLeg reaches
   -- CallExternalBPP.cancel with enforceCap = False. Design notes: scripts/testing/cancel/DESIGN.md
@@ -1600,6 +1621,11 @@ postMultimodalOrderCancel (_, _) journeyId legOrder = do
 dropSharedCabRider :: DJourneyLeg.JourneyLeg -> Environment.Flow Bool
 dropSharedCabRider journeyLeg = SharedCab.dropRider (\mbRefund -> JM.cancelLegWithRefund mbRefund Spec.CONFIRM_CANCEL journeyLeg) journeyLeg
 
+-- | Journey-keyed endpoints act only on the caller's own journey.
+checkJourneyOwner :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Domain.Types.Journey.Journey -> Environment.Flow ()
+checkJourneyOwner mbPersonId journey =
+  unless (mbPersonId == Just journey.riderId) $ throwError (JourneyNotFound journey.id.getId)
+
 postMultimodalOrderReschedule ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -1609,7 +1635,8 @@ postMultimodalOrderReschedule ::
     FRFSTicketServiceAPI.FRFSRescheduleReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalOrderReschedule userInfo journeyId legOrder req = do
+postMultimodalOrderReschedule userInfo@(mbPersonId, _) journeyId legOrder req = do
+  JM.getJourney journeyId >>= checkJourneyOwner mbPersonId
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
   legSearchId <- journeyLeg.legSearchId & fromMaybeM (InvalidRequest "No search found for the given leg")
   booking <- QFRFSTicketBooking.findBySearchId (Id legSearchId) >>= fromMaybeM (InvalidRequest "No FRFS booking found for the leg")
@@ -1635,6 +1662,7 @@ getMultimodalOrderSimilarJourneyLegs (mbPersonId, merchantId) journeyId legOrder
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   legs <- QJourneyLeg.getJourneyLegs journeyId
   mbSearchRequest <- QSearchRequestLite.findByIdLite (Id journey.searchRequestId)
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
@@ -1703,11 +1731,13 @@ postMultimodalOrderSwitchJourneyLeg ::
     API.Types.UI.MultimodalConfirm.SwitchJourneyLegReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalOrderSwitchJourneyLeg _ journeyId legOrder req = do
+postMultimodalOrderSwitchJourneyLeg (mbPersonId, _) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   currentLegs <- QJourneyLeg.getJourneyLegs journeyId
   currentJourneyLeg <- find (\leg -> leg.sequenceNumber == legOrder) currentLegs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   switchJourneyLeg <- QJourneyLeg.findById req.journeyLegId >>= fromMaybeM (InvalidRequest "No matching journey leg found for the given journeyLegId")
+  unless (switchJourneyLeg.journeyId == journeyId) $ throwError (InvalidRequest "No matching journey leg found for the given journeyLegId")
   interchangeJourneyLeg currentLegs currentJourneyLeg switchJourneyLeg
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
@@ -1788,10 +1818,11 @@ postMultimodalOrderChangeStops ::
     API.Types.UI.MultimodalConfirm.ChangeStopsReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.ChangeStopsResp
   )
-postMultimodalOrderChangeStops _ journeyId legOrder req = do
+postMultimodalOrderChangeStops (mbPersonId, _) journeyId legOrder req = do
   when (isNothing req.newSourceStation && isNothing req.newDestinationStation) $
     throwError $ InvalidStationChange "" "At least one of newSourceStation or newDestinationStation must be provided"
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   allLegs <- QJourneyLeg.getJourneyLegs journeyId
   reqJourneyLeg <- find (\leg -> leg.sequenceNumber == legOrder) allLegs & fromMaybeM (InvalidLegOrder legOrder)
   validateChangeNeededForStop reqJourneyLeg req.newSourceStation req.newDestinationStation
@@ -3002,6 +3033,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails ::
   )
 postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) journeyId legOrder subLegOrder req = runAction journeyId $ do
   journey <- JM.getJourney journeyId
+  checkJourneyOwner mbPersonId journey
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
   legSearchId <- journeyLeg.legSearchId & fromMaybeM (InvalidRequest $ "Leg search ID not found for journey: " <> journeyLeg.id.getId)
   booking <- QFRFSTicketBooking.findBySearchId (Id legSearchId) >>= fromMaybeM (BookingNotFound $ "FRFS booking with search ID:" <> legSearchId)
