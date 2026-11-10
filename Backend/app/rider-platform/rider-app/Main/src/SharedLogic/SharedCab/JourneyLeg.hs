@@ -116,7 +116,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   skipUsed <- not <$> riderActionsLeft cfg.maxSkipsAndCancels RiderSkip booking.searchId.getId
   let assignedEtaSec = cabTrack >>= \(_, boardEta, _) -> boardEta
       approaching = mbState == Just SharedCabLeg.ALLOCATED
-      skipAvailable = maybe False (\st -> SharedCabLeg.skipAvailableFor st skipUsed assignedEtaSec) mbState
+      skipAvailable = maybe False (\st -> SharedCabLeg.skipAvailableFor cfg.skipMinEtaSec st skipUsed assignedEtaSec) mbState
   upcomingCabs <- case (shown, mbRouteCode) of
     (Just plate, Just routeCode) | approaching -> do
       snapshot <- RouteSnapshot.routeSnapshot booking.merchantOperatingCityId routeCode
