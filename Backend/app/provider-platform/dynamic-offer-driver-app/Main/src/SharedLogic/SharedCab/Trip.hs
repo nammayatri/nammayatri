@@ -11,6 +11,7 @@ module SharedLogic.SharedCab.Trip
   )
 where
 
+import Data.Maybe (listToMaybe)
 import Domain.Types.IntegratedBPPConfig (IntegratedBPPConfig)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
