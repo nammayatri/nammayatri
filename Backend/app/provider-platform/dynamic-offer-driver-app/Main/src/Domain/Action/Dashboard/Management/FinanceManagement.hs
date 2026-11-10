@@ -1115,8 +1115,8 @@ getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbFrom m
       PgPaymentSettlementReport.PgPaymentSettlementReport ->
       Flow API.PaymentSettlementListItem
     buildPaymentSettlementItem latestReconByReportId report = do
-      mbSubscription <- case report.referenceId of
-        Just subscriptionPurchaseId -> QSubscriptionPurchase.findByPrimaryKey (Id subscriptionPurchaseId)
+      mbSubscription <- case report.subscriptionPurchaseId of
+        Just spId -> QSubscriptionPurchase.findByPrimaryKey (Id spId)
         Nothing -> pure Nothing
 
       mbDriver <- case mbSubscription of
@@ -1133,7 +1133,7 @@ getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbFrom m
 
       pure
         API.PaymentSettlementListItem
-          { subscriptionPurchaseId = report.referenceId,
+          { subscriptionPurchaseId = report.subscriptionPurchaseId,
             merchantRefNo = Just report.merchantId,
             merchantOperatingCityId = Just report.merchantOperatingCityId,
             pgApprovalCode = report.pgApprovalCode,
