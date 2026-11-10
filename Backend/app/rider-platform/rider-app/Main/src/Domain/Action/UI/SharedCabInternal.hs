@@ -13,6 +13,7 @@ where
 
 import qualified API.Types.UI.SharedCabInternal as API
 import qualified BecknV2.FRFS.Enums as Spec
+import Data.List (findIndex)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
@@ -32,6 +33,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Types as AllocTypes
@@ -254,7 +256,8 @@ sessionRoute integratedBppConfig code = do
       { code,
         name = maybe code (.longName) mbRoute,
         direction = routeDirection stops,
-        nextStops = map (.stopName) stops
+        nextStops = map (.stopName) stops,
+        nextStopCodes = map (.stopCode) stops
       }
 
 -- | The plate's live bookings as rider rows; status/ETA/deadline come from the booking's real state.
@@ -348,11 +351,15 @@ mkSessionRespFrom cabReads s = do
       mbTrack <- Lts.readRoutePosition s.routeCode s.vehicleNumber
       (mbTrack,) <$> Seats.freeAhead s ((.vehicleInfo) <$> mbTrack)
   let vehicle = (\v -> LatLong v.vehicleInfo.latitude v.vehicleInfo.longitude) <$> mbTrack
+      nextIdx = fromMaybe 0 $ do
+        next <- find ((== LT.Upcoming) . (.status)) =<< (.vehicleInfo.upcomingStops) =<< mbTrack
+        findIndex ((== next.stop.stopCode) . (.stopCode)) stops
+      ahead = drop nextIdx stops
   riderRows <- liveRiderRows cfg s.vehicleTripId [(stop.stopCode, stop.stopPoint) | stop <- stops] polyline addresses s.vehicleNumber
   tripEarnings <- Booking.tripEarnings s.vehicleTripId
   pure
     View.SharedCabSession
-      { route,
+      { route = route {View.nextStops = map (.stopName) ahead, View.nextStopCodes = map (.stopCode) ahead},
         tripId = s.vehicleTripId,
         gtfsId = integratedBppConfig.feedKey,
         queuedRoute,
@@ -369,7 +376,7 @@ mkSessionRespFrom cabReads s = do
         shapePolyline,
         vehicle,
         demandAhead = Demand.demandAheadRows [(st.stopCode, st.stopName) | st <- stops] demand,
-        tripEarnings = Just tripEarnings
+        tripEarnings
       }
 
 -- | The rider's number for a driver-initiated masked call; only for the driver whose live cab holds the booking, inside the call window.

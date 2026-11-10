@@ -53,11 +53,15 @@ import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
 recordBoardedFare :: (Redis.HedisFlow m r, MonadFlow m) => Text -> DFRFSTicketBooking.FRFSTicketBooking -> m ()
-recordBoardedFare tripId booking =
-  shared $ Redis.hSetExp (tripFaresKey tripId) booking.id.getId booking.totalPrice.amount sessionTtlSec
+recordBoardedFare tripId booking = shared $ do
+  forM_ (mfilter (/= tripId) booking.vehicleTripId) $ \previousTrip ->
+    Redis.hSetExp (tripFaresKey previousTrip) booking.id.getId (0 :: HighPrecMoney) sessionTtlSec
+  Redis.hSetExp (tripFaresKey tripId) booking.id.getId booking.totalPrice.amount sessionTtlSec
 
-tripEarnings :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m HighPrecMoney
-tripEarnings tripId = sum . map snd <$> shared (Redis.hGetAll @HighPrecMoney (tripFaresKey tripId))
+tripEarnings :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe HighPrecMoney)
+tripEarnings tripId = do
+  fares <- shared (Redis.hGetAll @HighPrecMoney (tripFaresKey tripId))
+  pure $ if null fares then Nothing else Just (sum (map snd fares))
 
 -- | The stops' addresses from the city's station information (cached); a stop without one is left out.
 stopAddresses :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> [Text] -> m (Map.Map Text Text)

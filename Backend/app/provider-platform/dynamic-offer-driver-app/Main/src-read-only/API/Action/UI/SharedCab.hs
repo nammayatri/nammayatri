@@ -114,6 +114,9 @@ type API =
       :> QueryParam
            "date"
            Data.Time.Day
+      :> QueryParam
+           "tripId"
+           Kernel.Prelude.Text
       :> Get
            '[JSON]
            API.Types.UI.SharedCab.SharedCabTripsResp
@@ -218,6 +221,7 @@ getSharedCabTrips ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Data.Time.Day ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.SharedCab.SharedCabTripsResp
   )
-getSharedCabTrips a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.SharedCab.getSharedCabTrips (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getSharedCabTrips a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.SharedCab.getSharedCabTrips (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

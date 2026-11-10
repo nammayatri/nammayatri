@@ -33,7 +33,7 @@ data RiderRun = RiderRun
   { tripId :: Text,
     routeCode :: Text,
     walkupCount :: Int,
-    earnings :: HighPrecMoney,
+    earnings :: Maybe HighPrecMoney,
     fromStop :: Maybe Text,
     toStop :: Maybe Text
   }
@@ -48,7 +48,7 @@ riderRun s
         { tripId = s.tripId,
           routeCode = s.route.code,
           walkupCount = s.walkupCount,
-          earnings = fromMaybe 0 s.tripEarnings,
+          earnings = s.tripEarnings,
           fromStop = (.name) <$> listToMaybe s.stops,
           toStop = (.name) <$> listToMaybe (reverse s.stops)
         }
@@ -68,7 +68,7 @@ tripAction driverId endReason active = \case
     Just t
       | t.id.getId == run.tripId ->
         let stored = fromMaybe 0 t.earnings
-            earnings = max stored run.earnings
+            earnings = fromMaybe stored run.earnings
          in if t.walkupCount == run.walkupCount && stored == earnings then TripUnchanged else SetProgress t.id run.walkupCount earnings
     _ -> OpenTrip ((\t -> (t.id, if t.driverId == driverId then ROUTE_CHANGED else SESSION_TIMEOUT)) <$> active) run
   Nothing -> maybe TripUnchanged (\t -> CloseTrip t.id endReason) active
@@ -107,7 +107,7 @@ syncTrip driverId merchantId merchantOperatingCityId integratedBppConfig vehicle
             endedAt = Nothing,
             endReason = Nothing,
             walkupCount = run.walkupCount,
-            earnings = Just run.earnings,
+            earnings = run.earnings,
             fromStop = run.fromStop,
             toStop = run.toStop,
             createdAt = now,

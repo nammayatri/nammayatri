@@ -234,7 +234,7 @@ applyBoarding journeyLeg booking freshBooking fresh eligible = do
   -- CAS vehicleNumber against the fresh read.
   QBooking.updateAllocatedVehicle (Just fresh.vehicleNumber) booking.id freshBooking.vehicleNumber
   QBooking.updateVehicleTripId (Just fresh.vehicleTripId) booking.id
-  recordBoardedFare fresh.vehicleTripId booking
+  recordBoardedFare fresh.vehicleTripId freshBooking
   -- Old cab's seat release is derived: no attempts bump and no blame.
   clearAlloc booking.id
   Degraded.clearDegradedMarker booking.id

@@ -75,13 +75,15 @@ VehicleTrip:
       params: [walkupCount, earnings]
       where: id
 
-    findAllByDriverIdStartedSince:
+    findAllByDriverIdStartedBetween:
       kvFunction: findAllWithOptionsKV
       where:
         and:
           - driverId
           - gte:
-              - startedAt
+              - startedAt: from
+          - lt:
+              - startedAt: to
       orderBy:
         field: startedAt
         order: desc

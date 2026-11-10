@@ -96,8 +96,8 @@ postSharedCabBookingMessage auth bookingId req = requireDriver auth >>= \driver 
 getSharedCabCallStatus :: TokenAuthInfo -> Id SCS.CallStatus -> Flow DCall.GetCallStatusRes
 getSharedCabCallStatus _ = DCall.getCallStatus
 
-getSharedCabTrips :: TokenAuthInfo -> Maybe Day -> Flow SharedCabTripsResp
-getSharedCabTrips auth mbDate = requireDriver auth >>= (`tripsOfDay` mbDate)
+getSharedCabTrips :: TokenAuthInfo -> Maybe Day -> Maybe Text -> Flow SharedCabTripsResp
+getSharedCabTrips auth mbDate mbTripId = requireDriver auth >>= \driver -> driverTrips driver mbDate mbTripId
 
 defaultDailyTripTarget :: Int
 defaultDailyTripTarget = 10
@@ -105,17 +105,23 @@ defaultDailyTripTarget = 10
 defaultTripEarningsTarget :: HighPrecMoney
 defaultTripEarningsTarget = 100
 
-tripsOfDay :: DriverAuthInfo -> Maybe Day -> Flow SharedCabTripsResp
-tripsOfDay (personId, _merchantId, merchantOpCityId) mbDate = do
-  _ <- validateSharedCabDriver personId
+driverTrips :: DriverAuthInfo -> Maybe Day -> Maybe Text -> Flow SharedCabTripsResp
+driverTrips (personId, _merchantId, merchantOpCityId) mbDate mbTripId = do
+  validateDriver personId
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   now <- getCurrentTime
   let offset = fromIntegral transporterConfig.timeDiffFromUtc
-      day = fromMaybe (utctDay (addUTCTime offset now)) mbDate
-      dayStart = addUTCTime (negate offset) (UTCTime day 0)
-      dayEnd = addUTCTime 86400 dayStart
-  trips <- filter ((< dayEnd) . (.startedAt)) <$> QVT.findAllByDriverIdStartedSince Nothing Nothing personId dayStart
+      localDay = utctDay . addUTCTime offset
+  (day, trips) <- case mbTripId of
+    Just tripId -> do
+      trip <- QVT.findById (Id tripId) >>= fromMaybeM (InvalidRequest "Shared cab trip not found") . mfilter ((== personId) . (.driverId))
+      pure (localDay trip.startedAt, [trip])
+    Nothing -> do
+      let day = fromMaybe (localDay now) mbDate
+          dayStart = addUTCTime (negate offset) (UTCTime day 0)
+      trips <- QVT.findAllByDriverIdStartedBetween Nothing Nothing personId dayStart (addUTCTime 86400 dayStart)
+      pure (day, trips)
   pure
     SharedCabTripsResp
       { date = day,
@@ -132,7 +138,8 @@ sharedCabTripActive :: Id SP.Person -> Maybe DVehicle.VehicleAPIEntity -> Flow (
 sharedCabTripActive personId = \case
   Just vehicle
     | vehicle.variant == DV.SHARED_CAB ->
-      Just . maybe False ((== personId) . (.driverId)) <$> QVT.findActiveByVehicleNumber vehicle.registrationNo
+      either (const Nothing) (Just . maybe False ((== personId) . (.driverId)))
+        <$> withTryCatch "sharedCabTripActive" (QVT.findActiveByVehicleNumber vehicle.registrationNo)
   _ -> pure Nothing
 
 tripSummary :: DVT.VehicleTrip -> SharedCabTripSummary
@@ -156,10 +163,14 @@ requireDriver (mbPersonId, merchantId, merchantOpCityId) = do
 sharedCabVehicleCategory :: Text
 sharedCabVehicleCategory = "SHARED_CAB"
 
-validateSharedCabDriver :: Id SP.Person -> Flow DVehicle.Vehicle
-validateSharedCabDriver personId = do
+validateDriver :: Id SP.Person -> Flow ()
+validateDriver personId = do
   driver <- QPerson.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
   unless (driver.role == SP.DRIVER) $ throwError (InvalidRequest ("Person " <> personId.getId <> " is not a driver"))
+
+validateSharedCabDriver :: Id SP.Person -> Flow DVehicle.Vehicle
+validateSharedCabDriver personId = do
+  validateDriver personId
   vehicle <- QVehicle.findById personId >>= fromMaybeM (DriverWithoutVehicle personId.getId)
   unless (vehicle.variant == DV.SHARED_CAB) $
     throwError $
