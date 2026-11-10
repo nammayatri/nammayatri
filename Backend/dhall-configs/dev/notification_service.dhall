@@ -48,7 +48,7 @@ in  { grpc_port = env:GRPC_PORT ? 50051
     , redis_cfg
     , max_shards = +128
     , channel_buffer = 100000
-    , request_timeout_seconds = 60
+    , request_timeout_seconds = 3600
     , retry_delay_millis = 1000
     , read_all_connected_client_notifications = True
     }
