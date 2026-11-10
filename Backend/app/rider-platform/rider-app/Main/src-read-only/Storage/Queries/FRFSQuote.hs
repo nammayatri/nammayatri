@@ -8,7 +8,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.Maps.Types as Fields
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -17,22 +17,22 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSQuote as Beam
 import Storage.Queries.FRFSQuoteExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSQuote.FRFSQuote -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSQuote.FRFSQuote -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSQuote.FRFSQuote] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSQuote.FRFSQuote] -> m ()
 createMany = traverse_ create
 
-findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m [Domain.Types.FRFSQuote.FRFSQuote])
+findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m [Domain.Types.FRFSQuote.FRFSQuote]
 findAllBySearchId searchId = do findAllWithKV [Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId)]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m (Maybe Domain.Types.FRFSQuote.FRFSQuote))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m (Maybe Domain.Types.FRFSQuote.FRFSQuote)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m (Maybe Domain.Types.FRFSQuote.FRFSQuote))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m (Maybe Domain.Types.FRFSQuote.FRFSQuote)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSQuote.FRFSQuote -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSQuote.FRFSQuote -> m ()
 updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -44,17 +44,17 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.busLocationData (Just $ toJSON busLocationData),
       Se.Set Beam.discountedTickets discountedTickets,
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
-      Se.Set Beam.appSession (fareDetails <&> (.appSession)),
-      Se.Set Beam.distance (fareDetails <&> (.distance)),
-      Se.Set Beam.providerRouteId (fareDetails <&> (.providerRouteId)),
-      Se.Set Beam.ticketTypeCode (fareDetails <&> (.ticketTypeCode)),
-      Se.Set Beam.trainTypeCode (fareDetails <&> (.trainTypeCode)),
-      Se.Set Beam.via (fareDetails <&> (.via)),
+      Se.Set Beam.appSession (fareDetails <&> Domain.Types.FRFSQuote.appSession),
+      Se.Set Beam.distance (fareDetails <&> Domain.Types.FRFSQuote.distance),
+      Se.Set Beam.providerRouteId (fareDetails <&> Domain.Types.FRFSQuote.providerRouteId),
+      Se.Set Beam.ticketTypeCode (fareDetails <&> Domain.Types.FRFSQuote.ticketTypeCode),
+      Se.Set Beam.trainTypeCode (fareDetails <&> Domain.Types.FRFSQuote.trainTypeCode),
+      Se.Set Beam.via (fareDetails <&> Domain.Types.FRFSQuote.via),
       Se.Set Beam.fromStationAddress fromStationAddress,
       Se.Set Beam.fromStationId fromStationCode,
       Se.Set Beam.fromStationName fromStationName,
-      Se.Set Beam.fromStationLat ((.lat) <$> fromStationPoint),
-      Se.Set Beam.fromStationLon ((.lon) <$> fromStationPoint),
+      Se.Set Beam.fromStationLat (Kernel.External.Maps.Types.lat <$> fromStationPoint),
+      Se.Set Beam.fromStationLon (Kernel.External.Maps.Types.lon <$> fromStationPoint),
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -74,8 +74,8 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.toStationAddress toStationAddress,
       Se.Set Beam.toStationId toStationCode,
       Se.Set Beam.toStationName toStationName,
-      Se.Set Beam.toStationLat ((.lat) <$> toStationPoint),
-      Se.Set Beam.toStationLon ((.lon) <$> toStationPoint),
+      Se.Set Beam.toStationLat (Kernel.External.Maps.Types.lat <$> toStationPoint),
+      Se.Set Beam.toStationLon (Kernel.External.Maps.Types.lon <$> toStationPoint),
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleNumber vehicleNumber,
       Se.Set Beam.vehicleType vehicleType,

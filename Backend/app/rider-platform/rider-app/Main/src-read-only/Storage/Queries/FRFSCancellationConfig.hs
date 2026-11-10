@@ -16,15 +16,16 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSCancellationConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSCancellationConfig.FRFSCancellationConfig -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSCancellationConfig.FRFSCancellationConfig -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSCancellationConfig.FRFSCancellationConfig] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSCancellationConfig.FRFSCancellationConfig] -> m ()
 createMany = traverse_ create
 
 findAllByMerchantOpCityAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.FRFSCancellationConfig.FRFSCancellationConfig])
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  (BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.FRFSCancellationConfig.FRFSCancellationConfig])
 findAllByMerchantOpCityAndVehicleCategory merchantOperatingCityId vehicleCategory = do
   findAllWithKV
     [ Se.And
@@ -35,10 +36,11 @@ findAllByMerchantOpCityAndVehicleCategory merchantOperatingCityId vehicleCategor
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSCancellationConfig.FRFSCancellationConfig -> m (Maybe Domain.Types.FRFSCancellationConfig.FRFSCancellationConfig))
+  Kernel.Types.Id.Id Domain.Types.FRFSCancellationConfig.FRFSCancellationConfig ->
+  m (Maybe Domain.Types.FRFSCancellationConfig.FRFSCancellationConfig)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSCancellationConfig.FRFSCancellationConfig -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSCancellationConfig.FRFSCancellationConfig -> m ()
 updateByPrimaryKey (Domain.Types.FRFSCancellationConfig.FRFSCancellationConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV

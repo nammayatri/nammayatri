@@ -35,6 +35,9 @@ data TicketBookingServiceCategory = TicketBookingServiceCategory
   }
   deriving (Generic, Show)
 
-data CancelledBy = User | Merchant deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data CancelledBy
+  = User
+  | Merchant
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancelledBy)

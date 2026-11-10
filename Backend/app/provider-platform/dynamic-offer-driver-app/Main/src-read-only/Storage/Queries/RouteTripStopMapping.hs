@@ -17,15 +17,16 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.RouteTripStopMapping as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RouteTripStopMapping.RouteTripStopMapping -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RouteTripStopMapping.RouteTripStopMapping -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteTripStopMapping.RouteTripStopMapping] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.RouteTripStopMapping.RouteTripStopMapping] -> m ()
 createMany = traverse_ create
 
 findAllByRouteCodeForStops ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Int -> Data.Time.DayOfWeek -> m [Domain.Types.RouteTripStopMapping.RouteTripStopMapping])
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Int -> (Data.Time.DayOfWeek -> m [Domain.Types.RouteTripStopMapping.RouteTripStopMapping]))
 findAllByRouteCodeForStops routeCode tripSequenceNum scheduledDay = do
   findAllWithKV
     [ Se.And
@@ -37,7 +38,8 @@ findAllByRouteCodeForStops routeCode tripSequenceNum scheduledDay = do
 
 findAllByStopCodeAndStopSequenceAndRoutes ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> Data.Time.DayOfWeek -> [Kernel.Prelude.Text] -> m [Domain.Types.RouteTripStopMapping.RouteTripStopMapping])
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Int -> (Kernel.Prelude.Int -> (Data.Time.DayOfWeek -> ([Kernel.Prelude.Text] -> m [Domain.Types.RouteTripStopMapping.RouteTripStopMapping]))))
 findAllByStopCodeAndStopSequenceAndRoutes stopCode stopSequenceNum tripSequenceNum scheduledDay routeCode = do
   findAllWithKV
     [ Se.And
@@ -49,18 +51,19 @@ findAllByStopCodeAndStopSequenceAndRoutes stopCode stopSequenceNum tripSequenceN
         ]
     ]
 
-findAllRTSMappingByRouteAndDay :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Data.Time.DayOfWeek -> m [Domain.Types.RouteTripStopMapping.RouteTripStopMapping])
+findAllRTSMappingByRouteAndDay :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> (Data.Time.DayOfWeek -> m [Domain.Types.RouteTripStopMapping.RouteTripStopMapping])
 findAllRTSMappingByRouteAndDay routeCode scheduledDay = do findAllWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.scheduledDay $ Se.Eq scheduledDay]]
 
-findByLocation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.External.Maps.Types.LatLong -> m (Maybe Domain.Types.RouteTripStopMapping.RouteTripStopMapping))
-findByLocation stopPoint = do findOneWithKV [Se.Is Beam.stopLat $ Se.Eq ((.lat) stopPoint), Se.Is Beam.stopLon $ Se.Eq ((.lon) stopPoint)]
+findByLocation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.External.Maps.Types.LatLong -> m (Maybe Domain.Types.RouteTripStopMapping.RouteTripStopMapping)
+findByLocation stopPoint = do findOneWithKV [Se.Is Beam.stopLat $ Se.Eq (Kernel.External.Maps.Types.lat stopPoint), Se.Is Beam.stopLon $ Se.Eq (Kernel.External.Maps.Types.lon stopPoint)]
 
-findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteTripStopMapping.RouteTripStopMapping])
+findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> m [Domain.Types.RouteTripStopMapping.RouteTripStopMapping]
 findByRouteCode routeCode = do findAllWithKV [Se.Is Beam.routeCode $ Se.Eq routeCode]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Data.Time.DayOfWeek -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Int -> m (Maybe Domain.Types.RouteTripStopMapping.RouteTripStopMapping))
+  Kernel.Prelude.Text ->
+  (Data.Time.DayOfWeek -> (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Int -> m (Maybe Domain.Types.RouteTripStopMapping.RouteTripStopMapping)))))
 findByPrimaryKey routeCode scheduledDay stopCode tripCode tripSequenceNum = do
   findOneWithKV
     [ Se.And
@@ -72,7 +75,7 @@ findByPrimaryKey routeCode scheduledDay stopCode tripCode tripSequenceNum = do
         ]
     ]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RouteTripStopMapping.RouteTripStopMapping -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RouteTripStopMapping.RouteTripStopMapping -> m ()
 updateByPrimaryKey (Domain.Types.RouteTripStopMapping.RouteTripStopMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -83,8 +86,8 @@ updateByPrimaryKey (Domain.Types.RouteTripStopMapping.RouteTripStopMapping {..})
       Se.Set Beam.scheduledArrival scheduledArrival,
       Se.Set Beam.scheduledDeparture scheduledDeparture,
       Se.Set Beam.stopName stopName,
-      Se.Set Beam.stopLat ((.lat) stopPoint),
-      Se.Set Beam.stopLon ((.lon) stopPoint),
+      Se.Set Beam.stopLat (Kernel.External.Maps.Types.lat stopPoint),
+      Se.Set Beam.stopLon (Kernel.External.Maps.Types.lon stopPoint),
       Se.Set Beam.stopSequenceNum stopSequenceNum,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.updatedAt _now
@@ -135,8 +138,8 @@ instance ToTType' Beam.RouteTripStopMapping Domain.Types.RouteTripStopMapping.Ro
         Beam.scheduledDeparture = scheduledDeparture,
         Beam.stopCode = stopCode,
         Beam.stopName = stopName,
-        Beam.stopLat = (.lat) stopPoint,
-        Beam.stopLon = (.lon) stopPoint,
+        Beam.stopLat = Kernel.External.Maps.Types.lat stopPoint,
+        Beam.stopLon = Kernel.External.Maps.Types.lon stopPoint,
         Beam.stopSequenceNum = stopSequenceNum,
         Beam.tripCode = tripCode,
         Beam.tripSequenceNum = tripSequenceNum,

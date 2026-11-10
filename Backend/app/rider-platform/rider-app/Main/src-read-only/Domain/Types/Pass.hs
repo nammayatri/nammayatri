@@ -64,7 +64,10 @@ data Benefit
 
 data PassConfig = PassConfig {maxSwitchCount :: Kernel.Prelude.Int} deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data PassDocumentType = ProfilePicture | Aadhaar deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PassDocumentType
+  = ProfilePicture
+  | Aadhaar
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PassDocumentType)
 

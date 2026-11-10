@@ -27,7 +27,12 @@ data DraftTicketChange = DraftTicketChange
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data DraftStatus = OPEN | APPROVAL_PENDING | REJECTED | ACCEPTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data DraftStatus
+  = OPEN
+  | APPROVAL_PENDING
+  | REJECTED
+  | ACCEPTED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DraftStatus)
 

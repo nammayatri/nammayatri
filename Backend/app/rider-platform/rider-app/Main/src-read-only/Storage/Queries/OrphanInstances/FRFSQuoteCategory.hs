@@ -12,6 +12,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.FRFSQuoteCategory as Beam
 import qualified Storage.Queries.Transformers.FRFSQuoteCategory
@@ -44,19 +45,19 @@ instance ToTType' Beam.FRFSQuoteCategory Domain.Types.FRFSQuoteCategory.FRFSQuot
     Beam.FRFSQuoteCategoryT
       { Beam.bppItemId = bppItemId,
         Beam.category = Kernel.Prelude.Just category,
-        Beam.categoryOrder = categoryMeta >>= (.categoryOrder),
-        Beam.code = categoryMeta <&> (.code),
-        Beam.description = categoryMeta <&> (.description),
-        Beam.title = categoryMeta <&> (.title),
-        Beam.tnc = categoryMeta <&> (.tnc),
-        Beam.finalPrice = Kernel.Prelude.fmap (.amount) finalPrice,
+        Beam.categoryOrder = categoryMeta >>= Domain.Types.FRFSQuoteCategory.categoryOrder,
+        Beam.code = categoryMeta <&> Domain.Types.FRFSQuoteCategory.code,
+        Beam.description = categoryMeta <&> Domain.Types.FRFSQuoteCategory.description,
+        Beam.title = categoryMeta <&> Domain.Types.FRFSQuoteCategory.title,
+        Beam.tnc = categoryMeta <&> Domain.Types.FRFSQuoteCategory.tnc,
+        Beam.finalPrice = Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount finalPrice,
         Beam.holdId = holdId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.offeredPrice = (.amount) offeredPrice,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
-        Beam.price = (.amount) price,
+        Beam.offeredPrice = Kernel.Types.Price.getPriceAmount offeredPrice,
+        Beam.currency = (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) price,
+        Beam.price = Kernel.Types.Price.getPriceAmount price,
         Beam.quoteId = Kernel.Types.Id.getId quoteId,
         Beam.seatIds = fmap Kernel.Types.Id.getId <$> seatIds,
         Beam.seatLabels = seatLabels,

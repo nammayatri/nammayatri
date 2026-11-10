@@ -25,7 +25,14 @@ data MerchantOnboardingStep = MerchantOnboardingStep
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data StepStatus = UNAVAILABLE | AVAILABLE | INPROGRESS | SUBMITTED | COMPLETED | REOPENED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data StepStatus
+  = UNAVAILABLE
+  | AVAILABLE
+  | INPROGRESS
+  | SUBMITTED
+  | COMPLETED
+  | REOPENED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''StepStatus)
 

@@ -13,6 +13,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.JSON
 import qualified Kernel.Utils.Version
@@ -159,8 +160,8 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.fromStationAddress = fromStationAddress,
         Beam.fromStationId = fromStationCode,
         Beam.fromStationName = fromStationName,
-        Beam.fromStationLat = (.lat) <$> fromStationPoint,
-        Beam.fromStationLon = (.lon) <$> fromStationPoint,
+        Beam.fromStationLat = Kernel.External.Maps.Types.lat <$> fromStationPoint,
+        Beam.fromStationLon = Kernel.External.Maps.Types.lon <$> fromStationPoint,
         Beam.fromStopIdx = fromStopIdx,
         Beam.googleWalletJWTUrl = googleWalletJWTUrl,
         Beam.holdId = holdId,
@@ -208,11 +209,11 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.toStationAddress = toStationAddress,
         Beam.toStationId = toStationCode,
         Beam.toStationName = toStationName,
-        Beam.toStationLat = (.lat) <$> toStationPoint,
-        Beam.toStationLon = (.lon) <$> toStationPoint,
+        Beam.toStationLat = Kernel.External.Maps.Types.lat <$> toStationPoint,
+        Beam.toStationLon = Kernel.External.Maps.Types.lon <$> toStationPoint,
         Beam.toStopIdx = toStopIdx,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) totalPrice,
-        Beam.price = (.amount) totalPrice,
+        Beam.currency = (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) totalPrice,
+        Beam.price = Kernel.Types.Price.getPriceAmount totalPrice,
         Beam.tripId = tripId,
         Beam.validTill = validTill,
         Beam.vehicleNumber = vehicleNumber,

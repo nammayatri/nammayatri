@@ -20,15 +20,16 @@ import qualified Storage.Beam.MerchantPaymentMethod as Beam
 import Storage.Queries.MerchantPaymentMethodExtra as ReExport
 import Storage.Queries.Transformers.MerchantPaymentMethod
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod] -> m ()
 createMany = traverse_ create
 
 updatePaymentCharge ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.PaymentChargeBearer.PaymentChargeType -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig -> Kernel.Prelude.Maybe Domain.Types.PaymentChargeBearer.PaymentChargeBearer -> Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod -> m ())
+  Kernel.Prelude.Maybe Domain.Types.PaymentChargeBearer.PaymentChargeType ->
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> (Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig -> (Kernel.Prelude.Maybe Domain.Types.PaymentChargeBearer.PaymentChargeBearer -> (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod -> m ()))))
 updatePaymentCharge paymentChargeType paymentCharge paymentChargeTax paymentChargeBearer id = do
   _now <- getCurrentTime
   updateOneWithKV

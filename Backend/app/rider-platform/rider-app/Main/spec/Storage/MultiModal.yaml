@@ -90,12 +90,12 @@ Journey:
     status: (fromMaybe Domain.Types.Journey.NEW status)|E
 
   toTType:
-    fromLocationId: (Just $ Kernel.Types.Id.getId ((.id) fromLocation))|E
-    toLocationId: (Kernel.Types.Id.getId <$> (toLocation <&> (.id)))|E
+    fromLocationId: (Just $ Storage.Queries.Transformers.SearchRequest.getLocationId fromLocation)|E
+    toLocationId: Storage.Queries.Transformers.SearchRequest.getLocationId <$> toLocation|E
     fromLocationAddress: Nothing|E
     toLocationAddress: Nothing|E
-    estimatedDistance: ((.value))|I
-    distanceUnit: ((.unit))|I
+    estimatedDistance: Kernel.Types.Distance.value|I
+    distanceUnit: Kernel.Types.Distance.unit|I
     status: (Just status)|E
 
   constraints:
@@ -367,27 +367,27 @@ JourneyLeg:
     busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
 
   toTType:
-    distance: (.value) <$> |I
-    distanceUnit: (.unit) <$> |I
-    fromStopCode: (fromStopDetails >>= (.stopCode))|E
-    fromStopName: (fromStopDetails >>= (.name))|E
-    fromStopPlatformCode: (fromStopDetails >>= (.platformCode))|E
-    fromStopGtfsId: ((fromStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode)|E
-    toStopCode: (toStopDetails >>= (.stopCode))|E
-    toStopName: (toStopDetails >>= (.name))|E
-    toStopPlatformCode: (toStopDetails >>= (.platformCode))|E
-    toStopGtfsId: ((toStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode)|E
-    startLocationLat: (startLocation & (.latitude))|E
-    startLocationLon: (startLocation & (.longitude))|E
-    endLocationLat: (endLocation & (.latitude))|E
-    endLocationLon: (endLocation & (.longitude))|E
+    distance: (distance <&> Kernel.Types.Distance.value)|E
+    distanceUnit: (distance <&> Kernel.Types.Distance.unit)|E
+    fromStopCode: (fromStopDetails >>= Kernel.External.MultiModal.Interface.Types.stopCode)|E
+    fromStopName: (fromStopDetails >>= Kernel.External.MultiModal.Interface.Types.getStopName)|E
+    fromStopPlatformCode: (fromStopDetails >>= Kernel.External.MultiModal.Interface.Types.platformCode)|E
+    fromStopGtfsId: ((fromStopDetails >>= Kernel.External.MultiModal.Interface.Types.getStopGtfsId) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode)|E
+    toStopCode: (toStopDetails >>= Kernel.External.MultiModal.Interface.Types.stopCode)|E
+    toStopName: (toStopDetails >>= Kernel.External.MultiModal.Interface.Types.getStopName)|E
+    toStopPlatformCode: (toStopDetails >>= Kernel.External.MultiModal.Interface.Types.platformCode)|E
+    toStopGtfsId: ((toStopDetails >>= Kernel.External.MultiModal.Interface.Types.getStopGtfsId) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode)|E
+    startLocationLat: Kernel.External.Maps.Google.MapsClient.Types.latitude startLocation|E
+    startLocationLon: Kernel.External.Maps.Google.MapsClient.Types.longitude startLocation|E
+    endLocationLat: Kernel.External.Maps.Google.MapsClient.Types.latitude endLocation|E
+    endLocationLon: Kernel.External.Maps.Google.MapsClient.Types.longitude endLocation|E
     legId: legSearchId|E
     straightLineEntrance: straightLineEntrance >>= Just . Data.Aeson.toJSON|E
     straightLineExit: straightLineExit >>= Just . Data.Aeson.toJSON|E
     osmEntrance: osmEntrance >>= Just . Data.Aeson.toJSON|E
     osmExit: osmExit >>= Just . Data.Aeson.toJSON|E
-    agencyGtfsId: (agency >>= (.gtfsId))|E
-    agencyName: (agency <&> (.name))|E
+    agencyGtfsId: (agency >>= Kernel.External.MultiModal.Interface.Types.getAgencyGtfsId)|E
+    agencyName: (agency <&> Kernel.External.MultiModal.Interface.Types.getAgencyName)|E
     journeyId: (Just $ Kernel.Types.Id.getId journeyId)|E
     sequenceNumber: (Just sequenceNumber)|E
     busLocationData: Just $ toJSON busLocationData|E

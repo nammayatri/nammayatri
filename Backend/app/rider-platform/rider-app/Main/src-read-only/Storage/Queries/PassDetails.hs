@@ -15,6 +15,7 @@ import qualified Domain.Types.Person
 import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
@@ -24,15 +25,16 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.PassDetails as Beam
 import Storage.Queries.PassDetailsExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PassDetails.PassDetails -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.PassDetails.PassDetails -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PassDetails.PassDetails] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.PassDetails.PassDetails] -> m ()
 createMany = traverse_ create
 
 findAllByMerchantIdAndMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.PassType.PassEnum -> [Domain.Types.PassDetails.VerificationStatus] -> m [Domain.Types.PassDetails.PassDetails])
+  Maybe Int ->
+  (Maybe Int -> (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> (Domain.Types.PassType.PassEnum -> ([Domain.Types.PassDetails.VerificationStatus] -> m [Domain.Types.PassDetails.PassDetails])))))
 findAllByMerchantIdAndMerchantOperatingCityId limit offset merchantId merchantOperatingCityId passEnum verificationStatus = do
   findAllWithOptionsKV
     [ Se.And
@@ -48,7 +50,8 @@ findAllByMerchantIdAndMerchantOperatingCityId limit offset merchantId merchantOp
 
 findAllByPassOrganizationIdAndVerificationStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> [Domain.Types.PassDetails.VerificationStatus] -> m [Domain.Types.PassDetails.PassDetails])
+  Maybe Int ->
+  (Maybe Int -> (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> ([Domain.Types.PassDetails.VerificationStatus] -> m [Domain.Types.PassDetails.PassDetails])))
 findAllByPassOrganizationIdAndVerificationStatus limit offset passOrganizationId verificationStatus = do
   findAllWithOptionsKV
     [ Se.And
@@ -62,7 +65,8 @@ findAllByPassOrganizationIdAndVerificationStatus limit offset passOrganizationId
 
 findAllByPassOrganizationIdsAndVerificationStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> [Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization] -> [Domain.Types.PassDetails.VerificationStatus] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.PassDetails.PassDetails])
+  Maybe Int ->
+  (Maybe Int -> ([Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization] -> ([Domain.Types.PassDetails.VerificationStatus] -> (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.PassDetails.PassDetails]))))
 findAllByPassOrganizationIdsAndVerificationStatus limit offset passOrganizationId verificationStatus merchantOperatingCityId = do
   findAllWithOptionsKV
     [ Se.And
@@ -75,15 +79,16 @@ findAllByPassOrganizationIdsAndVerificationStatus limit offset passOrganizationI
     limit
     offset
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails -> m (Maybe Domain.Types.PassDetails.PassDetails))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails -> m (Maybe Domain.Types.PassDetails.PassDetails)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.PassType.PassEnum -> m (Maybe Domain.Types.PassDetails.PassDetails))
+findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> (Domain.Types.PassType.PassEnum -> m (Maybe Domain.Types.PassDetails.PassDetails))
 findByPersonId personId passEnum = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.passEnum $ Se.Eq passEnum]]
 
 updatePassDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> Kernel.Prelude.Maybe Domain.Types.PassDetails.PassDetailAddress -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> [Domain.Types.PassDetails.RoutePair] -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Domain.Types.PassDetails.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.PassType.PassEnum -> m ())
+  Kernel.Prelude.Text ->
+  (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> (Kernel.Prelude.Maybe Domain.Types.PassDetails.PassDetailAddress -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> ([Domain.Types.PassDetails.RoutePair] -> (Kernel.Prelude.Maybe Data.Time.Calendar.Day -> (Kernel.Prelude.Maybe Data.Time.Calendar.Day -> (Domain.Types.PassDetails.VerificationStatus -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> (Domain.Types.PassType.PassEnum -> m ())))))))))))))))
 updatePassDetails name passOrganizationId idCardPicture address age guardianName department year routePairs academicYearStart academicYearEnd verificationStatus numberOfStages applicableRouteIds personId passEnum = do
   _now <- getCurrentTime
   updateWithKV
@@ -111,7 +116,8 @@ updatePassDetails name passOrganizationId idCardPicture address age guardianName
 
 updateVerificationStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.PassDetails.VerificationStatus -> Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> [Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails] -> m ())
+  Domain.Types.PassDetails.VerificationStatus ->
+  (Data.Time.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Data.Time.Calendar.Day -> (Kernel.Prelude.Maybe Data.Time.Calendar.Day -> ([Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails] -> m ()))))))
 updateVerificationStatus verificationStatus validTill remark numberOfStages academicYearStart academicYearEnd id = do
   _now <- getCurrentTime
   updateWithKV
@@ -125,15 +131,15 @@ updateVerificationStatus verificationStatus validTill remark numberOfStages acad
     ]
     [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails -> m (Maybe Domain.Types.PassDetails.PassDetails))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails -> m (Maybe Domain.Types.PassDetails.PassDetails)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PassDetails.PassDetails -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.PassDetails.PassDetails -> m ()
 updateByPrimaryKey (Domain.Types.PassDetails.PassDetails {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.aadharNoEncrypted (aadharNo <&> unEncrypted . (.encrypted)),
-      Se.Set Beam.aadharNoHash (aadharNo <&> (.hash)),
+    [ Se.Set Beam.aadharNoEncrypted (aadharNo <&> unEncrypted . Kernel.External.Encryption.encrypted),
+      Se.Set Beam.aadharNoHash (aadharNo <&> Kernel.External.Encryption.hash),
       Se.Set Beam.academicYearEnd academicYearEnd,
       Se.Set Beam.academicYearStart academicYearStart,
       Se.Set Beam.address (Kernel.Prelude.toJSON <$> address),
@@ -141,8 +147,8 @@ updateByPrimaryKey (Domain.Types.PassDetails.PassDetails {..}) = do
       Se.Set Beam.applicableRouteIds applicableRouteIds,
       Se.Set Beam.department department,
       Se.Set Beam.gender gender,
-      Se.Set Beam.guardianMobileNumberEncrypted (guardianMobileNumber <&> unEncrypted . (.encrypted)),
-      Se.Set Beam.guardianMobileNumberHash (guardianMobileNumber <&> (.hash)),
+      Se.Set Beam.guardianMobileNumberEncrypted (guardianMobileNumber <&> unEncrypted . Kernel.External.Encryption.encrypted),
+      Se.Set Beam.guardianMobileNumberHash (guardianMobileNumber <&> Kernel.External.Encryption.hash),
       Se.Set Beam.guardianName guardianName,
       Se.Set Beam.idCardPicture (Kernel.Types.Id.getId <$> idCardPicture),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

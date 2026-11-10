@@ -9,9 +9,11 @@ import qualified Domain.Types.JourneyLeg
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Google.MapsClient
+import qualified Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Distance
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -84,8 +86,8 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
 instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
   toTType' (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
     Beam.JourneyLegT
-      { Beam.agencyGtfsId = agency >>= (.gtfsId),
-        Beam.agencyName = agency <&> (.name),
+      { Beam.agencyGtfsId = agency >>= Kernel.External.MultiModal.Interface.Types.getAgencyGtfsId,
+        Beam.agencyName = agency <&> Kernel.External.MultiModal.Interface.Types.getAgencyName,
         Beam.boardingConfirmedDespiteDistance = boardingConfirmedDespiteDistance,
         Beam.busConductorId = busConductorId,
         Beam.busDriverId = busDriverId,
@@ -93,11 +95,11 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.busTagNumber = busTagNumber,
         Beam.busVehicleVariant = busVehicleVariant,
         Beam.changedBusesInSequence = changedBusesInSequence,
-        Beam.distance = (.value) <$> distance,
-        Beam.distanceUnit = (.unit) <$> distance,
+        Beam.distance = distance <&> Kernel.Types.Distance.value,
+        Beam.distanceUnit = distance <&> Kernel.Types.Distance.unit,
         Beam.duration = duration,
-        Beam.endLocationLat = endLocation & (.latitude),
-        Beam.endLocationLon = endLocation & (.longitude),
+        Beam.endLocationLat = Kernel.External.Maps.Google.MapsClient.Types.latitude endLocation,
+        Beam.endLocationLon = Kernel.External.Maps.Google.MapsClient.Types.longitude endLocation,
         Beam.estimatedMaxFare = estimatedMaxFare,
         Beam.estimatedMinFare = estimatedMinFare,
         Beam.finalBoardedBusNumber = finalBoardedBusNumber,
@@ -108,10 +110,10 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.finalBoardedWaybillId = finalBoardedWaybillId,
         Beam.fromArrivalTime = fromArrivalTime,
         Beam.fromDepartureTime = fromDepartureTime,
-        Beam.fromStopCode = fromStopDetails >>= (.stopCode),
-        Beam.fromStopGtfsId = (fromStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode,
-        Beam.fromStopName = fromStopDetails >>= (.name),
-        Beam.fromStopPlatformCode = fromStopDetails >>= (.platformCode),
+        Beam.fromStopCode = fromStopDetails >>= Kernel.External.MultiModal.Interface.Types.stopCode,
+        Beam.fromStopGtfsId = (fromStopDetails >>= Kernel.External.MultiModal.Interface.Types.getStopGtfsId) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode,
+        Beam.fromStopName = fromStopDetails >>= Kernel.External.MultiModal.Interface.Types.getStopName,
+        Beam.fromStopPlatformCode = fromStopDetails >>= Kernel.External.MultiModal.Interface.Types.platformCode,
         Beam.groupCode = groupCode,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isDeleted = isDeleted,
@@ -127,16 +129,16 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.osmExit = osmExit >>= Just . Data.Aeson.toJSON,
         Beam.providerRouteId = providerRouteId,
         Beam.sequenceNumber = Just sequenceNumber,
-        Beam.startLocationLat = startLocation & (.latitude),
-        Beam.startLocationLon = startLocation & (.longitude),
+        Beam.startLocationLat = Kernel.External.Maps.Google.MapsClient.Types.latitude startLocation,
+        Beam.startLocationLon = Kernel.External.Maps.Google.MapsClient.Types.longitude startLocation,
         Beam.straightLineEntrance = straightLineEntrance >>= Just . Data.Aeson.toJSON,
         Beam.straightLineExit = straightLineExit >>= Just . Data.Aeson.toJSON,
         Beam.toArrivalTime = toArrivalTime,
         Beam.toDepartureTime = toDepartureTime,
-        Beam.toStopCode = toStopDetails >>= (.stopCode),
-        Beam.toStopGtfsId = (toStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode,
-        Beam.toStopName = toStopDetails >>= (.name),
-        Beam.toStopPlatformCode = toStopDetails >>= (.platformCode),
+        Beam.toStopCode = toStopDetails >>= Kernel.External.MultiModal.Interface.Types.stopCode,
+        Beam.toStopGtfsId = (toStopDetails >>= Kernel.External.MultiModal.Interface.Types.getStopGtfsId) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode,
+        Beam.toStopName = toStopDetails >>= Kernel.External.MultiModal.Interface.Types.getStopName,
+        Beam.toStopPlatformCode = toStopDetails >>= Kernel.External.MultiModal.Interface.Types.platformCode,
         Beam.userBookedBusServiceTierType = userBookedBusServiceTierType,
         Beam.userPreferredServiceTier = userPreferredServiceTier,
         Beam.createdAt = createdAt,

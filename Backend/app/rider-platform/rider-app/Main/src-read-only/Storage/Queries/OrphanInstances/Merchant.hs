@@ -11,8 +11,9 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Distance
 import Kernel.Types.Error
-import qualified Kernel.Types.Geofencing as Fields
+import qualified Kernel.Types.Geofencing
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
@@ -85,8 +86,8 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
       { Beam.aadhaarKeyExpiryTime = aadhaarKeyExpiryTime,
         Beam.aadhaarVerificationTryLimit = aadhaarVerificationTryLimit,
         Beam.arrivedPickupThreshold = Just $ Kernel.Utils.Common.distanceToMeters arrivedPickupThreshold,
-        Beam.arrivedPickupThresholdValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivedPickupThreshold,
-        Beam.arrivingPickupThreshold = Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivingPickupThreshold,
+        Beam.arrivedPickupThresholdValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Kernel.Types.Distance.unit editPickupDistanceThreshold) arrivedPickupThreshold,
+        Beam.arrivingPickupThreshold = Kernel.Utils.Common.distanceToHighPrecDistance (Kernel.Types.Distance.unit editPickupDistanceThreshold) arrivingPickupThreshold,
         Beam.bapId = bapId,
         Beam.bapUniqueKeyId = bapUniqueKeyId,
         Beam.cipherText = cipherText,
@@ -97,23 +98,23 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.city = defaultCity,
         Beam.state = defaultState,
         Beam.driverDistanceThresholdFromPickup = Kernel.Utils.Common.distanceToHighPrecMeters driverDistanceThresholdFromPickup,
-        Beam.driverDistanceThresholdFromPickupValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) driverDistanceThresholdFromPickup,
+        Beam.driverDistanceThresholdFromPickupValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Kernel.Types.Distance.unit editPickupDistanceThreshold) driverDistanceThresholdFromPickup,
         Beam.driverOfferApiKey = driverOfferApiKey,
         Beam.driverOfferBaseUrl = Kernel.Prelude.showBaseUrl driverOfferBaseUrl,
         Beam.driverOfferMerchantId = driverOfferMerchantId,
         Beam.driverOfferMerchantShortId = driverOfferMerchantShortId,
         Beam.driverOnTheWayNotifyExpiry = Just driverOnTheWayNotifyExpiry,
-        Beam.distanceUnit = Just $ (.unit) editPickupDistanceThreshold,
+        Beam.distanceUnit = Just $ Kernel.Types.Distance.unit editPickupDistanceThreshold,
         Beam.editPickupDistanceThreshold = Kernel.Utils.Common.distanceToHighPrecMeters editPickupDistanceThreshold,
-        Beam.editPickupDistanceThresholdValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) editPickupDistanceThreshold,
+        Beam.editPickupDistanceThresholdValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Kernel.Types.Distance.unit editPickupDistanceThreshold) editPickupDistanceThreshold,
         Beam.fakeOtpEmails = fakeOtpEmails,
         Beam.fakeOtpMobileNumbers = fakeOtpMobileNumbers,
         Beam.fallbackShortId = Kernel.Types.Id.getShortId fallbackShortId,
         Beam.gatewayAndRegistryPriorityList = Kernel.Prelude.Just gatewayAndRegistryPriorityList,
         Beam.gatewayUrl = Kernel.Prelude.showBaseUrl gatewayUrl,
         Beam.geoHashPrecisionValue = geoHashPrecisionValue,
-        Beam.destinationRestriction = (.destination) geofencingConfig,
-        Beam.originRestriction = (.origin) geofencingConfig,
+        Beam.destinationRestriction = Kernel.Types.Geofencing.destination geofencingConfig,
+        Beam.originRestriction = Kernel.Types.Geofencing.origin geofencingConfig,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAvoidToll = isAvoidToll,
         Beam.isFrfsSeller = isFrfsSeller,

@@ -65,6 +65,9 @@ data DriverQuote = DriverQuote
   }
   deriving (Generic, Show)
 
-data DriverQuoteStatus = Active | Inactive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data DriverQuoteStatus
+  = Active
+  | Inactive
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverQuoteStatus)

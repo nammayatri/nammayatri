@@ -16,15 +16,16 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.RouteTripMapping as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RouteTripMapping.RouteTripMapping -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RouteTripMapping.RouteTripMapping -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteTripMapping.RouteTripMapping] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.RouteTripMapping.RouteTripMapping] -> m ()
 createMany = traverse_ create
 
 findAllTripIdByRouteCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteTripMapping.RouteTripMapping])
+  Kernel.Prelude.Text ->
+  (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteTripMapping.RouteTripMapping])
 findAllTripIdByRouteCode routeCode integratedBppConfigId = do
   findAllWithKV
     [ Se.And
@@ -33,10 +34,10 @@ findAllTripIdByRouteCode routeCode integratedBppConfigId = do
         ]
     ]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteTripMapping.RouteTripMapping))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteTripMapping.RouteTripMapping)
 findByPrimaryKey tripCode = do findOneWithKV [Se.And [Se.Is Beam.tripCode $ Se.Eq tripCode]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RouteTripMapping.RouteTripMapping -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RouteTripMapping.RouteTripMapping -> m ()
 updateByPrimaryKey (Domain.Types.RouteTripMapping.RouteTripMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV

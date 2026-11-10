@@ -16,47 +16,51 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantOnboardingStep as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep] -> m ()
 createMany = traverse_ create
 
-deleteByOnboardingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ())
+deleteByOnboardingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> m ()
 deleteByOnboardingId merchantOnboardingId = do deleteWithKV [Se.Is Beam.merchantOnboardingId $ Se.Eq merchantOnboardingId]
 
-findByMerchantOnboardingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep])
+findByMerchantOnboardingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> m [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep]
 findByMerchantOnboardingId merchantOnboardingId = do findAllWithKV [Se.Is Beam.merchantOnboardingId $ Se.Eq merchantOnboardingId]
 
 findByStepId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep -> m (Maybe Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep))
+  Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep ->
+  m (Maybe Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep)
 findByStepId id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateDependency ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep] -> Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep -> m ())
+  [Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep] ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep -> m ())
 updateDependency dependency id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.dependency (Kernel.Types.Id.getId <$> dependency), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateStepPayload :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Data.Aeson.Value -> Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep -> m ())
+updateStepPayload :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Data.Aeson.Value -> (Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep -> m ())
 updateStepPayload payload id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.payload payload, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateStepRemarks :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep -> m ())
+updateStepRemarks :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep -> m ())
 updateStepRemarks remarks id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.remarks remarks, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStepStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.MerchantOnboardingStep.StepStatus -> Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep -> m ())
+  Domain.Types.MerchantOnboardingStep.StepStatus ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep -> m ())
 updateStepStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep -> m (Maybe Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep))
+  Kernel.Types.Id.Id Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep ->
+  m (Maybe Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep -> m ()
 updateByPrimaryKey (Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep {..}) = do
   _now <- getCurrentTime
   updateWithKV

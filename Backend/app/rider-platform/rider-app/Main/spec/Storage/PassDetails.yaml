@@ -93,10 +93,10 @@ PassDetails:
   toTType:
     routePairs: Just (Kernel.Prelude.toJSON routePairs)|E
     address: (Kernel.Prelude.toJSON <$> address)|E
-    aadharNoEncrypted: (aadharNo <&> unEncrypted . (.encrypted))|E
-    aadharNoHash: (aadharNo <&> (.hash))|E
-    guardianMobileNumberEncrypted: (guardianMobileNumber <&> unEncrypted . (.encrypted))|E
-    guardianMobileNumberHash: (guardianMobileNumber <&> (.hash))|E
+    aadharNoEncrypted: (aadharNo <&> unEncrypted . Kernel.External.Encryption.encrypted)|E
+    aadharNoHash: (aadharNo <&> Kernel.External.Encryption.hash)|E
+    guardianMobileNumberEncrypted: (guardianMobileNumber <&> unEncrypted . Kernel.External.Encryption.encrypted)|E
+    guardianMobileNumberHash: (guardianMobileNumber <&> Kernel.External.Encryption.hash)|E
 
   constraints:
     id: PrimaryKey

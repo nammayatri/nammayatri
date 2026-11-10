@@ -259,7 +259,10 @@ data RiderConfig = RiderConfig
   }
   deriving (Show, Generic, ToJSON, FromJSON, Eq)
 
-data BetterPointWalkDistanceSource = STRAIGHT_LINE | MAPS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data BetterPointWalkDistanceSource
+  = STRAIGHT_LINE
+  | MAPS
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data BusTierSortingConfig = BusTierSortingConfig {rank :: Kernel.Prelude.Int, tier :: BecknV2.FRFS.Enums.ServiceTierType} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
@@ -287,9 +290,16 @@ data ExternalSOSConfig = ExternalSOSConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data ExternalSOSFlow = ERSS | GJ112 | Trinity deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ExternalSOSFlow
+  = ERSS
+  | GJ112
+  | Trinity
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data ExternalSOSTriggerSource = FRONTEND | DASHBOARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ExternalSOSTriggerSource
+  = FRONTEND
+  | DASHBOARD
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PassExtraConfig = PassExtraConfig {profilePhotoRefill :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, profilePhotoRefillMaxSdkVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
@@ -309,9 +319,15 @@ data RingBucketCfg = RingBucketCfg {radiusInMeters :: Kernel.Types.Common.Meters
 data ServiceTierRelationshipCfg = ServiceTierRelationshipCfg {canBoardIn :: [BecknV2.FRFS.Enums.ServiceTierType], serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType, vehicleType :: BecknV2.OnDemand.Enums.VehicleCategory}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data ServiceTierSource = NANDI | QUOTES deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ServiceTierSource
+  = NANDI
+  | QUOTES
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SharedCabCallMode = MASKED | DIRECT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SharedCabCallMode
+  = MASKED
+  | DIRECT
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SharedCabConfig = SharedCabConfig
   { allocationWindowSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

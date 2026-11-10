@@ -12,6 +12,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.TicketBookingPeopleCategory as Beam
 
@@ -44,8 +45,8 @@ instance ToTType' Beam.TicketBookingPeopleCategory Domain.Types.TicketBookingPeo
         Beam.numberOfUnits = numberOfUnits,
         Beam.numberOfUnitsCancelled = numberOfUnitsCancelled,
         Beam.peopleCategoryId = Kernel.Types.Id.getId <$> peopleCategoryId,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) pricePerUnit,
-        Beam.pricePerUnit = (.amount) pricePerUnit,
+        Beam.currency = (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) pricePerUnit,
+        Beam.pricePerUnit = Kernel.Types.Price.getPriceAmount pricePerUnit,
         Beam.ticketBookingServiceCategoryId = Kernel.Types.Id.getId ticketBookingServiceCategoryId,
         Beam.vendorSplitDetails = Data.Aeson.toJSON <$> vendorSplitDetails,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

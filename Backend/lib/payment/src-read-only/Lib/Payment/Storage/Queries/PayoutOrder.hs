@@ -12,7 +12,8 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, Price (..), fromMaybeM, getCurrentTime)
+import qualified Kernel.Types.Price
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Payment.Domain.Types.PayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutOrder
 import qualified Lib.Payment.Storage.Beam.BeamFlow
@@ -20,26 +21,28 @@ import qualified Lib.Payment.Storage.Beam.PayoutOrder as Beam
 import Lib.Payment.Storage.Queries.PayoutOrderExtra as ReExport
 import qualified Sequelize as Se
 
-create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> m ())
+create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> m ()
 create = createWithKV
 
-createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder] -> m ())
+createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder] -> m ()
 createMany = traverse_ create
 
 findAllByBatchId ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch) -> m [Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder])
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch) ->
+  m [Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder]
 findAllByBatchId batchId = do findAllWithKV [Se.Is Beam.batchId $ Se.Eq (Kernel.Types.Id.getId <$> batchId)]
 
-findById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> m (Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder))
+findById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> m (Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByOrderId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder))
+findByOrderId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder)
 findByOrderId orderId = do findOneWithKV [Se.Is Beam.orderId $ Se.Eq orderId]
 
 updateBulkSettled ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus -> Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.TransferStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.SettlementRefType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> m ())
+  Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus ->
+  (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.TransferStatus -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.SettlementRefType -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> m ()))))))
 updateBulkSettled status transferStatus settlementRef settlementRefType responseCode responseMessage id = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -53,38 +56,41 @@ updateBulkSettled status transferStatus settlementRef settlementRefType response
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updatePayoutOrderStatus :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus -> Kernel.Prelude.Text -> m ())
+updatePayoutOrderStatus :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus -> (Kernel.Prelude.Text -> m ())
 updatePayoutOrderStatus status orderId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq orderId]
 
 updatePayoutOrderStatusAndTransferStatus ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus -> Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.TransferStatus -> Kernel.Prelude.Text -> m ())
+  Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus ->
+  (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.TransferStatus -> (Kernel.Prelude.Text -> m ()))
 updatePayoutOrderStatusAndTransferStatus status transferStatus orderId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.transferStatus transferStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq orderId]
 
 updatePayoutOrderTxnRespInfo ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Text -> m ()))
 updatePayoutOrderTxnRespInfo responseCode responseMessage orderId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.responseCode responseCode, Se.Set Beam.responseMessage responseMessage, Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq orderId]
 
-updateRetriedOrderId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+updateRetriedOrderId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Text -> m ())
 updateRetriedOrderId retriedOrderId orderId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.retriedOrderId retriedOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq orderId]
 
 findByPrimaryKey ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> m (Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder))
+  Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder ->
+  m (Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> m ())
+updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> m ()
 updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.accountDetailsType accountDetailsType,
-      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
-      Se.Set Beam.price ((.amount) amount),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) amount),
+      Se.Set Beam.price (Kernel.Types.Price.getPriceAmount amount),
       Se.Set Beam.batchId (Kernel.Types.Id.getId <$> batchId),
       Se.Set Beam.city city,
       Se.Set Beam.customerEmailEncrypted (customerEmail & unEncrypted . encrypted),

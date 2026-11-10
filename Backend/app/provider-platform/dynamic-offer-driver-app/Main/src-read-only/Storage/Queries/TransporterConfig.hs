@@ -11,7 +11,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TransporterConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.Notification.FCM.Types as Fields
+import qualified Kernel.External.Notification.FCM.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -23,23 +23,25 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.TransporterConfig as Beam
 import Storage.Queries.TransporterConfigExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TransporterConfig.TransporterConfig -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TransporterConfig.TransporterConfig -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.TransporterConfig.TransporterConfig] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.TransporterConfig.TransporterConfig] -> m ()
 createMany = traverse_ create
 
 findByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.TransporterConfig.TransporterConfig))
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  m (Maybe Domain.Types.TransporterConfig.TransporterConfig)
 findByMerchantOpCityId merchantOperatingCityId = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findExotelAppletMappingByMOCID ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.TransporterConfig.TransporterConfig))
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  m (Maybe Domain.Types.TransporterConfig.TransporterConfig)
 findExotelAppletMappingByMOCID merchantOperatingCityId = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
-update :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TransporterConfig.TransporterConfig -> m ())
+update :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TransporterConfig.TransporterConfig -> m ()
 update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -113,7 +115,8 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
 
 updateCustomerPayableFareBreakupSubItemsConfig ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe [Domain.Types.Extra.TransporterConfig.FareBreakupNode] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+  Kernel.Prelude.Maybe [Domain.Types.Extra.TransporterConfig.FareBreakupNode] ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
 updateCustomerPayableFareBreakupSubItemsConfig customerPayableFareBreakupSubItemsConfig merchantOperatingCityId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -122,7 +125,7 @@ updateCustomerPayableFareBreakupSubItemsConfig customerPayableFareBreakupSubItem
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TransporterConfig.TransporterConfig -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TransporterConfig.TransporterConfig -> m ()
 updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -317,9 +320,9 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.fakeOtpMobileNumbers fakeOtpMobileNumbers,
       Se.Set Beam.fareRecomputePolicy (Kernel.Prelude.toJSON <$> fareRecomputePolicy),
       Se.Set Beam.favouriteDriverDailyCoinRideThreshold (Just favouriteDriverDailyCoinRideThreshold),
-      Se.Set Beam.fcmServiceAccount ((.fcmServiceAccount) fcmConfig),
-      Se.Set Beam.fcmTokenKeyPrefix ((.fcmTokenKeyPrefix) fcmConfig),
-      Se.Set Beam.fcmUrl (Kernel.Prelude.showBaseUrl $ (.fcmUrl) fcmConfig),
+      Se.Set Beam.fcmServiceAccount (Kernel.External.Notification.FCM.Types.fcmServiceAccount fcmConfig),
+      Se.Set Beam.fcmTokenKeyPrefix (Kernel.External.Notification.FCM.Types.fcmTokenKeyPrefix fcmConfig),
+      Se.Set Beam.fcmUrl (Kernel.Prelude.showBaseUrl (Kernel.External.Notification.FCM.Types.fcmUrl fcmConfig)),
       Se.Set Beam.feedbackNotificationConfig (Data.Aeson.toJSON <$> feedbackNotificationConfig),
       Se.Set Beam.fleetAlertThreshold fleetAlertThreshold,
       Se.Set Beam.fleetBankPayoutEnabled (Just fleetBankPayoutEnabled),

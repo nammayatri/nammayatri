@@ -13,8 +13,8 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import Storage.Queries.MerchantClientConfigExtra as ReExport
 import Storage.Queries.Transformers.MerchantClientConfig
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantClientConfig.MerchantClientConfig -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantClientConfig.MerchantClientConfig -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantClientConfig.MerchantClientConfig] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.MerchantClientConfig.MerchantClientConfig] -> m ()
 createMany = traverse_ create

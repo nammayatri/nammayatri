@@ -15,18 +15,19 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantOnboardingStepConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig] -> m ()
 createMany = traverse_ create
 
-findByOnboardingType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantOnboarding.OnboardingType -> m [Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig])
+findByOnboardingType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantOnboarding.OnboardingType -> m [Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig]
 findByOnboardingType onboardingType = do findAllWithKV [Se.Is Beam.onboardingType $ Se.Eq onboardingType]
 
 findByOnboardingTypeAndStepNameIdentifier ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Text -> m (Maybe Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig))
+  Domain.Types.MerchantOnboarding.OnboardingType ->
+  (Kernel.Prelude.Text -> m (Maybe Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig))
 findByOnboardingTypeAndStepNameIdentifier onboardingType stepNameIdentifier = do
   findOneWithKV
     [ Se.And
@@ -35,15 +36,16 @@ findByOnboardingTypeAndStepNameIdentifier onboardingType stepNameIdentifier = do
         ]
     ]
 
-findByStepNameIdentifier :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig))
+findByStepNameIdentifier :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> m (Maybe Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig)
 findByStepNameIdentifier stepNameIdentifier = do findOneWithKV [Se.Is Beam.stepNameIdentifier $ Se.Eq stepNameIdentifier]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Text -> m (Maybe Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig))
+  Domain.Types.MerchantOnboarding.OnboardingType ->
+  (Kernel.Prelude.Text -> m (Maybe Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig))
 findByPrimaryKey onboardingType stepNameIdentifier = do findOneWithKV [Se.And [Se.Is Beam.onboardingType $ Se.Eq onboardingType, Se.Is Beam.stepNameIdentifier $ Se.Eq stepNameIdentifier]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig -> m ()
 updateByPrimaryKey (Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV

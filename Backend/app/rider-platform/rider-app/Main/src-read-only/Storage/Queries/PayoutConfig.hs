@@ -19,20 +19,19 @@ import qualified Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.PayoutConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PayoutConfig.PayoutConfig -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.PayoutConfig.PayoutConfig -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PayoutConfig.PayoutConfig] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.PayoutConfig.PayoutConfig] -> m ()
 createMany = traverse_ create
 
-findAllByMerchantOpCityId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.PayoutConfig.PayoutConfig])
+findAllByMerchantOpCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.PayoutConfig.PayoutConfig]
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
 
 findByCityIdAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.PayoutConfig.PayoutConfig))
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.PayoutConfig.PayoutConfig))
 findByCityIdAndVehicleCategory merchantOperatingCityId vehicleCategory = do
   findOneWithKV
     [ Se.And
@@ -43,7 +42,8 @@ findByCityIdAndVehicleCategory merchantOperatingCityId vehicleCategory = do
 
 findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> Domain.Types.PayoutConfig.PayoutEntity -> m (Maybe Domain.Types.PayoutConfig.PayoutConfig))
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  (Kernel.Prelude.Bool -> (Domain.Types.PayoutConfig.PayoutEntity -> m (Maybe Domain.Types.PayoutConfig.PayoutConfig)))
 findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity merchantOperatingCityId isPayoutEnabled payoutEntity = do
   findOneWithKV
     [ Se.And
@@ -53,10 +53,10 @@ findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity merchantOperatingCityId 
         ]
     ]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PayoutConfig.PayoutConfig -> m (Maybe Domain.Types.PayoutConfig.PayoutConfig))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.PayoutConfig.PayoutConfig -> m (Maybe Domain.Types.PayoutConfig.PayoutConfig)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PayoutConfig.PayoutConfig -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.PayoutConfig.PayoutConfig -> m ()
 updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV

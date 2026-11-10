@@ -71,7 +71,11 @@ data MerchantAPIEntity = MerchantAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data Status = PENDING_VERIFICATION | APPROVED | REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data Status
+  = PENDING_VERIFICATION
+  | APPROVED
+  | REJECTED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data Subscriber = Subscriber {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

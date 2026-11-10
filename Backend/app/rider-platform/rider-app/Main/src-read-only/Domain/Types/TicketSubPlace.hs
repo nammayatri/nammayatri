@@ -28,6 +28,13 @@ data TicketSubPlace = TicketSubPlace
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SubPlaceType = Venue | Terminal | Dock | Screen | Hall | Platform deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SubPlaceType
+  = Venue
+  | Terminal
+  | Dock
+  | Screen
+  | Hall
+  | Platform
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SubPlaceType)

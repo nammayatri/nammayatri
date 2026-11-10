@@ -5,7 +5,7 @@ imports:
   CancellationStage: Domain.Types.CancellationReason
   Booking:  Domain.Types.Booking
   Ride: Domain.Types.Ride
-  LatLong: Kernel.External.Maps
+  LatLong: Kernel.External.Maps.Types
   Person: Domain.Types.Person
 
 BookingCancellationReason:
@@ -46,7 +46,7 @@ BookingCancellationReason:
       distanceUnit: Maybe DistanceUnit
 
   fromTType:
-    driverCancellationLocation: Kernel.External.Maps.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon|E
+    driverCancellationLocation: Kernel.External.Maps.Types.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon|E
     createdAt: getCreatedAt|M
     updatedAt: getUpdatedAt|M
     driverDistToPickup: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit driverDistToPickupValue <$> driverDistToPickup|E
@@ -54,8 +54,8 @@ BookingCancellationReason:
 
   # distanceUnit should be the same for all fields
   toTType:
-    driverCancellationLocationLat: (driverCancellationLocation <&> (.lat))|E
-    driverCancellationLocationLon: (driverCancellationLocation <&> (.lon))|E
+    driverCancellationLocationLat: (driverCancellationLocation <&> Kernel.External.Maps.Types.lat)|E
+    driverCancellationLocationLon: (driverCancellationLocation <&> Kernel.External.Maps.Types.lon)|E
     createdAt: Kernel.Prelude.Just|I
     updatedAt: Kernel.Prelude.Just|I
     driverDistToPickup: (Kernel.Types.Common.distanceToMeters <$> driverDistToPickup)|E

@@ -64,7 +64,11 @@ data PayoutRequestStatus
   | EXCLUDED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data PayoutType = INSTANT | SCHEDULED | ADHOC deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PayoutType
+  = INSTANT
+  | SCHEDULED
+  | ADHOC
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutRequestStatus)
 

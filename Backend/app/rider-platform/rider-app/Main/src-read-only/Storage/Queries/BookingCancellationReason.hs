@@ -8,7 +8,7 @@ import qualified Domain.Types.Booking
 import qualified Domain.Types.BookingCancellationReason
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.Maps.Types as Fields
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -20,26 +20,26 @@ import qualified Storage.Beam.BookingCancellationReason as Beam
 import Storage.Queries.BookingCancellationReasonExtra as ReExport
 import Storage.Queries.Transformers.BookingCancellationReason
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingCancellationReason.BookingCancellationReason -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.BookingCancellationReason.BookingCancellationReason -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BookingCancellationReason.BookingCancellationReason] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.BookingCancellationReason.BookingCancellationReason] -> m ()
 createMany = traverse_ create
 
-findByRideBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.BookingCancellationReason.BookingCancellationReason))
+findByRideBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.BookingCancellationReason.BookingCancellationReason)
 findByRideBookingId bookingId = do findOneWithKV [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.BookingCancellationReason.BookingCancellationReason))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.BookingCancellationReason.BookingCancellationReason)
 findByPrimaryKey bookingId = do findOneWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingCancellationReason.BookingCancellationReason -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.BookingCancellationReason.BookingCancellationReason -> m ()
 updateByPrimaryKey (Domain.Types.BookingCancellationReason.BookingCancellationReason {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.additionalInfo additionalInfo,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
-      Se.Set Beam.driverCancellationLocationLat (driverCancellationLocation <&> (.lat)),
-      Se.Set Beam.driverCancellationLocationLon (driverCancellationLocation <&> (.lon)),
+      Se.Set Beam.driverCancellationLocationLat (driverCancellationLocation <&> Kernel.External.Maps.Types.lat),
+      Se.Set Beam.driverCancellationLocationLon (driverCancellationLocation <&> Kernel.External.Maps.Types.lon),
       Se.Set Beam.driverDistToPickup (Kernel.Types.Common.distanceToMeters <$> driverDistToPickup),
       Se.Set Beam.driverDistToPickupValue (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> driverDistToPickup),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

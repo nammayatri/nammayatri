@@ -10,6 +10,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.FareBreakup as Beam
 
@@ -28,8 +29,8 @@ instance FromTType' Beam.FareBreakup Domain.Types.FareBreakup.FareBreakup where
 instance ToTType' Beam.FareBreakup Domain.Types.FareBreakup.FareBreakup where
   toTType' (Domain.Types.FareBreakup.FareBreakup {..}) = do
     Beam.FareBreakupT
-      { Beam.amount = (.amount) amount,
-        Beam.currency = Just $ (.currency) amount,
+      { Beam.amount = Kernel.Types.Price.getPriceAmount amount,
+        Beam.currency = Just $ Kernel.Types.Price.getPriceCurrency amount,
         Beam.description = description,
         Beam.bookingId = entityId,
         Beam.entityType = entityType,

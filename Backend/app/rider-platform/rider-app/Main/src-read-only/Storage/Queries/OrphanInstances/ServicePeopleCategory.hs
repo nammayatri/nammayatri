@@ -12,6 +12,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import qualified Kernel.Types.TimeBound
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.ServicePeopleCategory as Beam
@@ -50,8 +51,8 @@ instance ToTType' Beam.ServicePeopleCategory Domain.Types.ServicePeopleCategory.
         Beam.isClosed = Kernel.Prelude.Just isClosed,
         Beam.name = name,
         Beam.placeId = placeId,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) pricePerUnit,
-        Beam.pricePerUnit = (.amount) pricePerUnit,
+        Beam.currency = (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) pricePerUnit,
+        Beam.pricePerUnit = Kernel.Types.Price.getPriceAmount pricePerUnit,
         Beam.pricingType = Kernel.Prelude.Just pricingType,
         Beam.rules = Data.Aeson.toJSON <$> rules,
         Beam.timeBounds = Kernel.Prelude.Just timeBounds,

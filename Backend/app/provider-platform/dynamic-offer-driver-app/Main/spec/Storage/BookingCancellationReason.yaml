@@ -5,7 +5,7 @@ imports:
   CancellationStage: Domain.Types.CancellationReason
   Booking:  Domain.Types.Booking
   Ride: Domain.Types.Ride
-  LatLong: Kernel.External.Maps
+  LatLong: Kernel.External.Maps.Types
   Person: Domain.Types.Person
 
 BookingCancellationReason:
@@ -42,13 +42,13 @@ BookingCancellationReason:
 
   fromTType:
     reasonCode: Domain.Types.CancellationReason.CancellationReasonCode <$> reasonCode|E
-    driverCancellationLocation: Kernel.External.Maps.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon|E
+    driverCancellationLocation: Kernel.External.Maps.Types.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
   toTType:
     reasonCode: (\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> reasonCode|E
-    driverCancellationLocationLat: (driverCancellationLocation <&> (.lat))|E
-    driverCancellationLocationLon: (driverCancellationLocation <&> (.lon))|E
+    driverCancellationLocationLat: (driverCancellationLocation <&> Kernel.External.Maps.Types.lat)|E
+    driverCancellationLocationLon: (driverCancellationLocation <&> Kernel.External.Maps.Types.lon)|E
     distanceUnit: Kernel.Prelude.Just|I
 
   constraints:

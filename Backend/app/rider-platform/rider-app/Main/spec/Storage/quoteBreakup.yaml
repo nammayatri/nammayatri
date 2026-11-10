@@ -20,8 +20,8 @@ QuoteBreakup:
       priceCurrency: Maybe Currency
 
   toTType:
-    priceValue: ((.amount) price)|E
-    priceCurrency: (Just $ (.currency) price)|E
+    priceValue: Kernel.Types.Price.getPriceAmount price|E
+    priceCurrency: (Just $ Kernel.Types.Price.getPriceCurrency price)|E
 
   fromTType:
     price: Kernel.Types.Common.mkPrice priceCurrency priceValue|E
