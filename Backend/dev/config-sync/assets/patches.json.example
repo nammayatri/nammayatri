@@ -81,6 +81,13 @@
         "replace": "http://localhost:5001"
       },
       {
+        "_comment": "Cloud OSRM private IP (Maps_Disha) is unreachable locally"
+      },
+      {
+        "find": "http://10.60.31.161:5000",
+        "replace": "http://localhost:5001"
+      },
+      {
         "find": "https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send/",
         "replace": "http://localhost:4545"
       },
@@ -2543,6 +2550,10 @@
       },
       {
         "find": "http://beckn-osrm",
+        "replace": "http://localhost:5001"
+      },
+      {
+        "find": "http://10.60.31.161:5000",
         "replace": "http://localhost:5001"
       },
       {
