@@ -158,5 +158,6 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       query:
         - date: Day
+        - tripId: Text
       response:
         type: SharedCabTripsResp

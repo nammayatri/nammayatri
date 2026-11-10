@@ -50,7 +50,7 @@ data RiderRow = RiderRow
 -- | Every rider holding seats, once each, with both stops by name; the app groups them per stop. Open offers are pendingOffersOf's.
 ridersOf :: [(Text, Text)] -> [RiderRow] -> [SharedCabRider]
 ridersOf stops rows =
-  [ SharedCabRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, boardStop = nameOf r.boardStopCode, dropStop = nameOf r.dropStopCode, fare = r.fare, riderStatus = r.riderStatus, minutesAway = r.minutesAway, expiresAt = r.expiresAt, chatChannelId = r.chatChannelId, callable = r.callable, callNumber = r.callNumber, riderRating = r.riderRating, boardStopAddress = r.boardStopAddress, dropStopAddress = r.dropStopAddress, distanceMeters = r.distanceMeters}
+  [ SharedCabRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, boardStop = nameOf r.boardStopCode, dropStop = nameOf r.dropStopCode, fare = r.fare, riderStatus = r.riderStatus, minutesAway = r.minutesAway, expiresAt = r.expiresAt, chatChannelId = r.chatChannelId, callable = r.callable, callNumber = r.callNumber, riderRating = r.riderRating, boardStopAddress = r.boardStopAddress, dropStopAddress = r.dropStopAddress, distanceMeters = r.distanceMeters, boardStopCode = r.boardStopCode, dropStopCode = r.dropStopCode}
     | r <- rows,
       r.seats > 0,
       isNothing r.offerExpiresAt
@@ -114,7 +114,7 @@ pendingOffersOf :: [(Text, Text)] -> [RiderRow] -> [PendingOffer]
 pendingOffersOf stops rows =
   sortOn
     (.offerExpiresAt)
-    [ PendingOffer {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, fare = r.fare, boardStop = nameOf r.boardStopCode, dropStop = nameOf r.dropStopCode, minutesAway = r.minutesAway, offerExpiresAt = deadline, riderRating = r.riderRating, boardStopAddress = r.boardStopAddress, dropStopAddress = r.dropStopAddress, distanceMeters = r.distanceMeters}
+    [ PendingOffer {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, fare = r.fare, boardStop = nameOf r.boardStopCode, dropStop = nameOf r.dropStopCode, minutesAway = r.minutesAway, offerExpiresAt = deadline, riderRating = r.riderRating, boardStopAddress = r.boardStopAddress, dropStopAddress = r.dropStopAddress, distanceMeters = r.distanceMeters, boardStopCode = r.boardStopCode, dropStopCode = r.dropStopCode}
       | r <- rows,
         r.seats > 0,
         Just deadline <- [r.offerExpiresAt]

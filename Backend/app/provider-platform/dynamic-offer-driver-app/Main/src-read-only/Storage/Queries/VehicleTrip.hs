@@ -33,14 +33,15 @@ closeTrip status endReason endedAt id = do
 findActiveByVehicleNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.VehicleTrip.VehicleTrip))
 findActiveByVehicleNumber vehicleNumber = do findOneWithKV [Se.And [Se.Is Beam.vehicleNumber $ Se.Eq vehicleNumber, Se.Is Beam.status $ Se.Eq Domain.Types.VehicleTrip.ACTIVE]]
 
-findAllByDriverIdStartedSince ::
+findAllByDriverIdStartedBetween ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.UTCTime -> m [Domain.Types.VehicleTrip.VehicleTrip])
-findAllByDriverIdStartedSince limit offset driverId startedAt = do
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> m [Domain.Types.VehicleTrip.VehicleTrip])
+findAllByDriverIdStartedBetween limit offset driverId from to = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
-          Se.Is Beam.startedAt $ Se.GreaterThanOrEq startedAt
+          Se.Is Beam.startedAt $ Se.GreaterThanOrEq from,
+          Se.Is Beam.startedAt $ Se.LessThan to
         ]
     ]
     (Se.Desc Beam.startedAt)

@@ -174,14 +174,14 @@ tests =
                   distanceMeters = Just 2500
                 }
          in View.ridersOf routeStops [arriving]
-              @?= [View.SharedCabRider "b1" "Asha" 1 "Alpha" "Charlie" 10 View.ARRIVING (Just 3) deadline (Just "b1") True (Just "+919876543210") (Just 4.5) (Just "1 Alpha Rd") (Just "2 Charlie Rd") (Just 2500)],
+              @?= [View.SharedCabRider "b1" "Asha" 1 "Alpha" "Charlie" 10 View.ARRIVING (Just 3) deadline (Just "b1") True (Just "+919876543210") (Just 4.5) (Just "1 Alpha Rd") (Just "2 Charlie Rd") (Just 2500) "A" "C"],
       testCase "an offered rider is not in the riders list; the driver's pending offers list it, soonest to lapse first" $
         let offered b secs = ((row b "Asha" 1 "A" "C" False) :: View.RiderRow) {View.offerExpiresAt = Just (addUTCTime secs t0)}
             rows = [offered "late" 30, row "boarding" "Ravi" 1 "A" "C" False, offered "soon" 15]
          in ( map (.bookingId) (View.ridersOf routeStops rows),
-              map (\o -> (o.bookingId, o.boardStop, o.dropStop)) (View.pendingOffersOf routeStops rows)
+              map (\o -> (o.bookingId, o.boardStop, o.dropStop, o.boardStopCode, o.dropStopCode)) (View.pendingOffersOf routeStops rows)
             )
-              @?= (["boarding"], [("soon", "Alpha", "Charlie"), ("late", "Alpha", "Charlie")]),
+              @?= (["boarding"], [("soon", "Alpha", "Charlie", "A", "C"), ("late", "Alpha", "Charlie", "A", "C")]),
       testCase "a stop ships as code, name, lat and lon, and nothing else" $
         BLC.unpack (encode (View.sessionStopOf "SC_POLO" "Polo" (LatLong 25.5 91.8)))
           @?= "{\"code\":\"SC_POLO\",\"lat\":25.5,\"lon\":91.8,\"name\":\"Polo\"}",
@@ -232,4 +232,4 @@ row bookingId firstName seats boardStopCode dropStopCode boarded =
 
 rider :: Text -> Text -> Int -> Text -> Text -> View.SharedCabRider
 rider bookingId firstName seats boardStop dropStop =
-  View.SharedCabRider {bookingId, firstName, seats, boardStop, dropStop, fare = 10, riderStatus = View.MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing, chatChannelId = Nothing, callable = False, callNumber = Nothing, riderRating = Nothing, boardStopAddress = Nothing, dropStopAddress = Nothing, distanceMeters = Nothing}
+  View.SharedCabRider {bookingId, firstName, seats, boardStop, dropStop, fare = 10, riderStatus = View.MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing, chatChannelId = Nothing, callable = False, callNumber = Nothing, riderRating = Nothing, boardStopAddress = Nothing, dropStopAddress = Nothing, distanceMeters = Nothing, boardStopCode = boardStop, dropStopCode = dropStop}
