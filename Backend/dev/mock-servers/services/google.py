@@ -4,6 +4,10 @@ Routes (mounted under any path containing "/maps"):
   GET  /maps/distancematrix/json
   GET  /maps/directions/json
   GET  /maps/place/autocomplete/json
+  GET  /maps/place/details/json
+  POST /maps/places/:autocomplete      (Places API New)
+  GET  /maps/places/{placeId}          (Places API New)
+  POST /maps/directions/v2:computeRoutes
   GET  /maps/geocode/json
   GET  /maps/roads/snapToRoads
 
@@ -110,6 +114,37 @@ def _road_estimate(origin, destination):
     return meters, round(meters / _SPEED_MPS)
 
 
+def _encode_polyline(points):
+    """Google's encoded-polyline format for a list of (lat, lon)."""
+    out, prev_lat, prev_lon = [], 0, 0
+    for lat, lon in points:
+        ilat, ilon = round(lat * 1e5), round(lon * 1e5)
+        for delta in (ilat - prev_lat, ilon - prev_lon):
+            v = ~(delta << 1) if delta < 0 else delta << 1
+            while v >= 0x20:
+                out.append(chr((0x20 | (v & 0x1F)) + 63))
+                v >>= 5
+            out.append(chr(v + 63))
+        prev_lat, prev_lon = ilat, ilon
+    return "".join(out)
+
+
+# Points on the mock's straight route line. The driver app redraws the pickup
+# route whenever the driver is more than 20 m off it, so the line needs points
+# along the way, not just the two ends.
+_ROUTE_POINTS = 20
+
+
+def _straight_polyline(lat1, lon1, lat2, lon2):
+    """A straight route from origin to destination, as an encoded polyline."""
+    return _encode_polyline(
+        [
+            (lat1 + (lat2 - lat1) * i / _ROUTE_POINTS, lon1 + (lon2 - lon1) * i / _ROUTE_POINTS)
+            for i in range(_ROUTE_POINTS + 1)
+        ]
+    )
+
+
 def _directions(handler):
     qp = _qp(handler)
     origin = qp.get("origin", [""])[0]
@@ -127,6 +162,7 @@ def _directions(handler):
     meters, seconds = _road_estimate(origin, destination)
     distance = {"text": f"{meters / 1000:.1f} km", "value": meters}
     duration = {"text": f"{seconds // 60} mins", "value": seconds}
+    line = _straight_polyline(start_loc["lat"], start_loc["lng"], end_loc["lat"], end_loc["lng"])
     leg = {
         "distance": distance,
         "duration": duration,
@@ -140,7 +176,7 @@ def _directions(handler):
                 "duration": duration,
                 "end_location": end_loc,
                 "html_instructions": "Head to destination",
-                "polyline": {"points": "_p~iF~ps|U_ulLnnqC_mqNvxq`@"},
+                "polyline": {"points": line},
                 "start_location": start_loc,
                 "travel_mode": "DRIVING",
             }
@@ -150,7 +186,7 @@ def _directions(handler):
         "bounds": {"northeast": end_loc, "southwest": start_loc},
         "copyrights": "Mock data",
         "legs": [leg],
-        "overview_polyline": {"points": "_p~iF~ps|U_ulLnnqC_mqNvxq`@"},
+        "overview_polyline": {"points": line},
         "summary": "Mock route",
         "warnings": [],
         "waypoint_order": [],
@@ -158,25 +194,81 @@ def _directions(handler):
     return {"geocoded_waypoints": [], "routes": [route], "status": "OK"}
 
 
+# Fixed places the mock search returns, with real Bangalore coordinates, so a
+# picked pickup or drop gives a sensible route and fare.
+_PLACES = [
+    ("mock-blr-koramangala", "Koramangala, Bengaluru, Karnataka", 12.9352, 77.6245),
+    ("mock-blr-indiranagar", "Indiranagar, Bengaluru, Karnataka", 12.9784, 77.6408),
+    ("mock-blr-mg-road", "MG Road, Bengaluru, Karnataka", 12.9757, 77.6055),
+    ("mock-blr-majestic", "Majestic Bus Stand, Bengaluru, Karnataka", 12.9767, 77.5713),
+    ("mock-blr-whitefield", "Whitefield, Bengaluru, Karnataka", 12.9698, 77.7500),
+    ("mock-blr-electronic-city", "Electronic City, Bengaluru, Karnataka", 12.8456, 77.6603),
+    ("mock-blr-airport", "Kempegowda International Airport, Bengaluru, Karnataka", 13.1986, 77.7066),
+]
+
+
+def _matching_places(text):
+    """Places whose name contains the typed text; all of them when none does,
+    so the rider always has something to pick."""
+    hits = [p for p in _PLACES if text and text.lower() in p[1].lower()]
+    return hits or _PLACES
+
+
+def _place_by_id(place_id):
+    """The place with this id, or the first one for an id the mock never gave out."""
+    return next((p for p in _PLACES if p[0] == place_id), _PLACES[0])
+
+
 def _autocomplete(handler):
-    qp = _qp(handler)
-    inp = qp.get("input", [""])[0]
+    inp = _qp(handler).get("input", [""])[0]
     return {
         "predictions": [
             {
-                "description": f"{inp} — Mock Place",
-                "matched_substrings": [{"length": len(inp or "?"), "offset": 0}],
-                "place_id": "mock_place_id",
-                "reference": "mock_reference",
-                "structured_formatting": {
-                    "main_text": inp or "Mock Place",
-                    "secondary_text": "Mock City, India",
-                },
-                "terms": [{"offset": 0, "value": inp or "Mock"}],
+                "description": name,
+                "matched_substrings": [],
+                "place_id": pid,
+                "reference": pid,
+                "structured_formatting": {"main_text": name.split(",")[0], "secondary_text": "Bengaluru, Karnataka"},
+                "terms": [{"offset": 0, "value": name}],
                 "types": ["geocode"],
             }
+            for pid, name, _, _ in _matching_places(inp)
         ],
         "status": "OK",
+    }
+
+
+def _autocomplete_v2(body):
+    """Places API (New) POST places:autocomplete, used for the rider's pickup and drop search."""
+    try:
+        text = _json.loads(body or b"{}").get("input", "")
+    except (ValueError, AttributeError):
+        text = ""
+    return {
+        "suggestions": [
+            {"placePrediction": {"placeId": pid, "text": {"text": name}, "types": ["geocode"]}}
+            for pid, name, _, _ in _matching_places(text)
+        ]
+    }
+
+
+def _place_details_v2(place_id):
+    """Places API (New) GET places/{placeId}: the lat/lon of a picked place."""
+    _, name, lat, lon = _place_by_id(place_id)
+    return {"formattedAddress": name, "location": {"latitude": lat, "longitude": lon}, "addressComponents": []}
+
+
+def _place_details(handler):
+    """Classic GET place/details/json, the backend's fallback when the new API fails."""
+    pid, name, lat, lon = _place_by_id(_qp(handler).get("place_id", [""])[0])
+    return {
+        "status": "OK",
+        "result": {
+            "formatted_address": name,
+            "address_components": [],
+            "geometry": {"location": {"lat": lat, "lng": lon}},
+            "place_id": pid,
+        },
     }
 
 
@@ -228,17 +320,39 @@ def _snap_to_road(handler):
     }
 
 
-def _compute_routes(handler):
+def _waypoint_lat_lon(waypoint):
+    """(lat, lon) of a Routes API v2 waypoint ({"location": {"latLng": {...}}}), or None."""
+    try:
+        ll = waypoint["location"]["latLng"]
+        return float(ll["latitude"]), float(ll["longitude"])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _compute_routes(body):
     """Google Routes API v2 (POST /directions/v2:computeRoutes). Response shape differs
     entirely from the classic Directions API — LTS/driver-app consume distanceMeters,
-    duration and polyline.encodedPolyline."""
+    duration and polyline.encodedPolyline. Distance and line follow the request's
+    origin and destination, like _directions."""
+    try:
+        req = _json.loads(body or b"{}")
+    except ValueError:
+        req = {}
+    origin = _waypoint_lat_lon(req.get("origin")) if isinstance(req, dict) else None
+    destination = _waypoint_lat_lon(req.get("destination")) if isinstance(req, dict) else None
+    if origin and destination:
+        meters, seconds = _road_estimate(f"{origin[0]},{origin[1]}", f"{destination[0]},{destination[1]}")
+        line = _straight_polyline(*origin, *destination)
+    else:
+        meters, seconds = 5000, 600
+        line = _straight_polyline(12.97, 77.59, 12.97, 77.59)
     return {
         "routes": [
             {
-                "distanceMeters": 5000,
-                "duration": "600s",
-                "staticDuration": "600s",
-                "polyline": {"encodedPolyline": "_p~iF~ps|U_ulLnnqC_mqNvxq`@"},
+                "distanceMeters": meters,
+                "duration": f"{seconds}s",
+                "staticDuration": f"{seconds}s",
+                "polyline": {"encodedPolyline": line},
             }
         ]
     }
@@ -257,11 +371,17 @@ def handle(handler, path, body):
         )
 
     if "computeRoutes" in path or "/directions/v2" in path:
-        return handler._json(_compute_routes(handler))
+        return handler._json(_compute_routes(body))
     if "/distancematrix" in path:
         return handler._json(_distance_matrix(handler))
     if "/directions" in path:
         return handler._json(_directions(handler))
+    if ":autocomplete" in path:
+        return handler._json(_autocomplete_v2(body))
+    if "/places/" in path:
+        return handler._json(_place_details_v2(urlparse(path).path.rstrip("/").rsplit("/", 1)[-1]))
+    if "/place/details" in path:
+        return handler._json(_place_details(handler))
     if "/place/autocomplete" in path:
         return handler._json(_autocomplete(handler))
     if "/geocode" in path:
