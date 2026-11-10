@@ -197,19 +197,19 @@ tests =
           testCase "an upcoming cab ships its opaque id, ETA and seats, and nothing else" $
             BLC.unpack (encode (cab "trip-1" 90)) @?= "{\"cabId\":\"trip-1\",\"etaSec\":90,\"freeSeats\":2}",
           testCase "one skip per booking, never after boarding, and only while the cab is more than two minutes away" $
-            [ decideRiderSkip True False (Just 600),
-              decideRiderSkip False True (Just 600),
-              decideRiderSkip False False (Just 120),
-              decideRiderSkip False False (Just 121),
-              decideRiderSkip False False Nothing,
-              decideRiderSkip True True Nothing
+            [ decideRiderSkip 120 True False (Just 600),
+              decideRiderSkip 120 False True (Just 600),
+              decideRiderSkip 120 False False (Just 120),
+              decideRiderSkip 120 False False (Just 121),
+              decideRiderSkip 120 False False Nothing,
+              decideRiderSkip 120 True True Nothing
             ]
               @?= [SkipUsed, SkipTooLate, SkipTooLate, SkipOk, SkipTooLate, SkipUsed],
           testCase "the skip button shows only while the cab is coming, unused and far enough" $
-            [skipAvailableFor st False (Just 300) | st <- [FINDING, ALLOCATED, BOARDED, CANCELLED]]
+            [skipAvailableFor 120 st False (Just 300) | st <- [FINDING, ALLOCATED, BOARDED, CANCELLED]]
               @?= [False, True, False, False],
           testCase "the skip button hides once the skip is used or the cab is near" $
-            (skipAvailableFor ALLOCATED True (Just 300), skipAvailableFor ALLOCATED False (Just 60), skipAvailableFor ALLOCATED False Nothing)
+            (skipAvailableFor 120 ALLOCATED True (Just 300), skipAvailableFor 120 ALLOCATED False (Just 60), skipAvailableFor 120 ALLOCATED False Nothing)
               @?= (False, False, False)
         ]
     ]

@@ -59,7 +59,9 @@ data SharedCabTunables = SharedCabTunables
     offerRetryTimeoutSec :: Int,
     -- | Rider skips, and separately rider cancels, allowed per search while its counts last (skipCancelCountTtlSec).
     maxSkipsAndCancels :: Int,
-    skipCancelCountTtlSec :: Int
+    skipCancelCountTtlSec :: Int,
+    -- | The assigned cab's ETA to the board stop must be over this for the rider to skip it.
+    skipMinEtaSec :: Int
   }
   deriving (Show, Eq, Generic)
 
@@ -95,7 +97,8 @@ defaultTunables =
       offerTimeoutSec = 30,
       offerRetryTimeoutSec = 15,
       maxSkipsAndCancels = 15,
-      skipCancelCountTtlSec = 5 * 60 * 60
+      skipCancelCountTtlSec = 5 * 60 * 60,
+      skipMinEtaSec = 120
     }
 
 tunablesFrom :: Maybe DRC.RiderConfig -> SharedCabTunables
@@ -134,7 +137,8 @@ tunablesOf busPingMaxAgeSec mbConfig =
       offerTimeoutSec = pick (.offerTimeoutSec) (.offerTimeoutSec),
       offerRetryTimeoutSec = pick (.offerRetryTimeoutSec) (.offerRetryTimeoutSec),
       maxSkipsAndCancels = pick (.maxSkipsAndCancels) (.maxSkipsAndCancels),
-      skipCancelCountTtlSec = pickPositive (.skipCancelCountTtlSec) (.skipCancelCountTtlSec)
+      skipCancelCountTtlSec = pickPositive (.skipCancelCountTtlSec) (.skipCancelCountTtlSec),
+      skipMinEtaSec = pick (.skipMinEtaSec) (.skipMinEtaSec)
     }
   where
     pick :: (DRC.SharedCabConfig -> Maybe a) -> (SharedCabTunables -> a) -> a

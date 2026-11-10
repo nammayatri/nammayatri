@@ -341,6 +341,7 @@ data SharedCabConfig = SharedCabConfig
     offerTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     skipCancelCountTtlSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    skipMinEtaSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     standTimerSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     tickSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
